@@ -137,7 +137,7 @@ function VendeurPage() {
         facility_id: created.id,
         tier: "pro",
         wallet_balance: 10000,
-        expires_at: expires.toISOString(),
+        pro_active_until: expires.toISOString(),
       })
       .select("*")
       .single();
