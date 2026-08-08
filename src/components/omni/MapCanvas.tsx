@@ -17,11 +17,15 @@ type Props = {
 };
 
 function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
+  // Outer element is positioned by MapLibre (it owns `transform`/`position`).
   const el = document.createElement("div");
   el.style.cursor = "pointer";
-  el.style.position = "relative";
-  el.style.transform = selected ? "scale(1.15)" : "scale(1)";
-  el.style.transition = "transform .15s ease";
+
+  const inner = document.createElement("div");
+  inner.style.position = "relative";
+  inner.style.transform = selected ? "scale(1.15)" : "scale(1)";
+  inner.style.transition = "transform .15s ease";
+  el.appendChild(inner);
 
   const pin = document.createElement("div");
   pin.style.width = "34px";
@@ -35,7 +39,7 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
   pin.style.border = `3px solid ${STATUS_COLOR[f.status] ?? "#9a938c"}`;
   pin.style.boxShadow = "0 6px 14px rgba(60,40,20,.28)";
   pin.textContent = f.type === "mobile" ? "🛵" : "🏬";
-  el.appendChild(pin);
+  inner.appendChild(pin);
 
   if (f.isPro) {
     const ribbon = document.createElement("span");
@@ -51,10 +55,11 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
     ribbon.style.borderRadius = "999px";
     ribbon.style.background = "#e0a52a";
     ribbon.style.color = "#3a2a10";
-    el.appendChild(ribbon);
+    inner.appendChild(ribbon);
   }
   return el;
 }
+
 
 export function MapCanvas({
   facilities,
