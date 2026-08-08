@@ -65,8 +65,11 @@ export function MapCanvas({
   focus,
   interactive = true,
   className,
+  onMapClick,
 }: Props) {
   const gl = useMapLibre();
+  const clickRef = useRef(onMapClick);
+  clickRef.current = onMapClick;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
