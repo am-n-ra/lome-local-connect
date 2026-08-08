@@ -1,0 +1,265 @@
+import { useEffect, useMemo, useState } from "react";
+import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
+import {
+  categoryLabel,
+  formatDistance,
+  formatFcfa,
+  freshnessLabel,
+  isFresh,
+  STATUS_LABEL,
+  type FacilityRow,
+  type ProductRow,
+} from "@/lib/omni";
+
+type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
+
+type Props = {
+  facility: FacilityRow & { isPro?: boolean };
+  distanceKm: number | null;
+  onItinerary?: () => void;
+  routingBusy?: boolean;
+};
+
+export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }: Props) {
+  const { user } = useAuth();
+  const cart = useCart();
+  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [favorite, setFavorite] = useState(false);
+  const [showPhone, setShowPhone] = useState(false);
+  const [demandOpen, setDemandOpen] = useState(false);
+  const [demandTerm, setDemandTerm] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const [{ data: prod }, { data: coup }] = await Promise.all([
+        supabase.from("products").select("*").eq("facility_id", facility.id).order("name"),
+        supabase.from("coupons").select("id, code, description, discount_percent").eq("facility_id", facility.id),
+      ]);
+      if (!active) return;
+      setProducts((prod ?? []) as ProductRow[]);
+      setCoupons((coup ?? []) as Coupon[]);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [facility.id]);
+
+  useEffect(() => {
+    if (!user) {
+      setFavorite(false);
+      return;
+    }
+    void supabase
+      .from("favorites")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("facility_id", facility.id)
+      .maybeSingle()
+      .then(({ data }) => setFavorite(Boolean(data)));
+  }, [user, facility.id]);
+
+  const statusTone = useMemo(() => {
+    if (facility.status === "certifie") return "bg-gold/20 text-foreground border-gold";
+    if (facility.status === "verifie") return "bg-forest/10 text-forest border-forest/40";
+    return "bg-muted text-muted-foreground";
+  }, [facility.status]);
+
+  async function toggleFavorite() {
+    if (!user) {
+      toast.info("Connectez-vous pour enregistrer vos favoris.");
+      return;
+    }
+    if (favorite) {
+      await supabase.from("favorites").delete().eq("user_id", user.id).eq("facility_id", facility.id);
+      setFavorite(false);
+    } else {
+      await supabase.from("favorites").insert({ user_id: user.id, facility_id: facility.id });
+      setFavorite(true);
+      toast.success("Ajouté à vos favoris");
+    }
+  }
+
+  async function submitDemand() {
+    if (!user) {
+      toast.info("Connectez-vous pour signaler un produit recherché.");
+      return;
+    }
+    const term = demandTerm.trim();
+    if (term.length < 2 || term.length > 120) {
+      toast.error("Indiquez le nom du produit (2 à 120 caractères).");
+      return;
+    }
+    const { error } = await supabase.from("wishlists").insert({
+      user_id: user.id,
+      search_term: term,
+      latitude: facility.latitude,
+      longitude: facility.longitude,
+    });
+    if (error) {
+      toast.error("Enregistrement impossible.");
+      return;
+    }
+    setDemandTerm("");
+    setDemandOpen(false);
+    toast.success("Demande enregistrée. Les vendeurs proches la verront.");
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-bold">{facility.name}</h2>
+          <p className="text-sm text-muted-foreground">
+            {categoryLabel(facility.category)}
+            {facility.address ? ` · ${facility.address}` : ""}
+            {distanceKm !== null ? ` · ${formatDistance(distanceKm)}` : ""}
+          </p>
+        </div>
+        <Button variant="ghost" size="icon" aria-label="Favori" onClick={() => void toggleFavorite()}>
+          <Heart className={`h-5 w-5 ${favorite ? "fill-primary text-primary" : ""}`} />
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Badge variant="outline" className={statusTone}>
+          {STATUS_LABEL[facility.status] ?? facility.status}
+        </Badge>
+        <Badge variant="secondary">{facility.type === "mobile" ? "Mobile" : "Fixe"}</Badge>
+        {facility.isPro && <Badge className="bg-gold text-foreground">Sponsorisé</Badge>}
+      </div>
+
+      {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
+
+      <div className="flex flex-wrap gap-2">
+        <Button onClick={onItinerary} disabled={routingBusy}>
+          <Navigation className="mr-1.5 h-4 w-4" />
+          {routingBusy ? "Calcul…" : "Itinéraire"}
+        </Button>
+        <Button variant="outline" onClick={() => setShowPhone((v) => !v)}>
+          <Phone className="mr-1.5 h-4 w-4" />
+          {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
+        </Button>
+        <Button variant="outline" onClick={() => setDemandOpen((v) => !v)}>
+          <Search className="mr-1.5 h-4 w-4" />
+          Je cherche ce produit
+        </Button>
+      </div>
+
+      {demandOpen && (
+        <div className="omni-card space-y-2 p-3">
+          <p className="text-sm font-medium">Quel produit cherchez-vous et ne trouvez pas ?</p>
+          <div className="flex gap-2">
+            <Input
+              value={demandTerm}
+              maxLength={120}
+              onChange={(e) => setDemandTerm(e.target.value)}
+              placeholder="Ex. Batterie externe solaire"
+            />
+            <Button onClick={() => void submitDemand()}>Envoyer</Button>
+          </div>
+        </div>
+      )}
+
+      {user && coupons.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">Coupons actifs</p>
+          {coupons.map((c) => (
+            <div key={c.id} className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm">
+              <Ticket className="h-4 w-4 text-primary" />
+              <span className="font-mono font-bold">{c.code}</span>
+              <span className="text-muted-foreground">
+                −{c.discount_percent}% {c.description ? `· ${c.description}` : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold">Produits ({products.length})</p>
+        {products.map((p) => {
+          const qty = quantities[p.id] ?? 1;
+          return (
+            <div key={p.id} className="omni-card flex items-center gap-3 p-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xl">
+                {p.photo_url ? (
+                  <img src={p.photo_url} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                ) : (
+                  "📦"
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{p.name}</p>
+                <p className="text-sm font-semibold text-primary">{formatFcfa(p.price)}</p>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  <Badge variant={p.in_stock ? "default" : "secondary"} className={p.in_stock ? "bg-forest text-forest-foreground" : ""}>
+                    {p.in_stock ? "Disponible" : "En rupture"}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={isFresh(p.last_confirmed_at) ? "border-forest text-forest" : "border-gold text-foreground"}
+                  >
+                    {freshnessLabel(p.last_confirmed_at)}
+                  </Badge>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-1.5">
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Diminuer"
+                    onClick={() => setQuantities((q) => ({ ...q, [p.id]: Math.max(1, qty - 1) }))}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-6 text-center text-sm font-semibold">{qty}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Augmenter"
+                    onClick={() => setQuantities((q) => ({ ...q, [p.id]: Math.min(99, qty + 1) }))}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={!p.in_stock}
+                  onClick={() => {
+                    cart.add(
+                      {
+                        productId: p.id,
+                        facilityId: facility.id,
+                        facilityName: facility.name,
+                        name: p.name,
+                        price: p.price,
+                      },
+                      qty,
+                    );
+                    toast.success(`${p.name} ajouté au panier`);
+                  }}
+                >
+                  Ajouter au panier
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+        {products.length === 0 && <p className="text-sm text-muted-foreground">Aucun produit publié.</p>}
+      </div>
+    </div>
+  );
+}
