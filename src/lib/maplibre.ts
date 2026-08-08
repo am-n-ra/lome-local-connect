@@ -8,8 +8,10 @@ type MapLibreGlobal = {
   Marker: new (options?: Record<string, unknown>) => MarkerInstance;
 };
 
+export type MapMouseEvent = { lngLat: { lat: number; lng: number } };
+
 export type MapInstance = {
-  on: (event: string, cb: () => void) => void;
+  on: (event: string, cb: (e: MapMouseEvent) => void) => void;
   remove: () => void;
   flyTo: (opts: Record<string, unknown>) => void;
   getSource: (id: string) => { setData: (data: unknown) => void } | undefined;

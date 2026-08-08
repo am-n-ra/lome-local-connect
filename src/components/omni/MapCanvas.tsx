@@ -13,6 +13,7 @@ type Props = {
   focus?: { lat: number; lng: number; zoom?: number } | null;
   interactive?: boolean;
   className?: string;
+  onMapClick?: (coords: { lat: number; lng: number }) => void;
 };
 
 function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
@@ -64,8 +65,11 @@ export function MapCanvas({
   focus,
   interactive = true,
   className,
+  onMapClick,
 }: Props) {
   const gl = useMapLibre();
+  const clickRef = useRef(onMapClick);
+  clickRef.current = onMapClick;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
@@ -96,6 +100,9 @@ export function MapCanvas({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
       });
+    });
+    map.on("click", (e) => {
+      clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
     return () => {
       map.remove();
