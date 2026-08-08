@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 
-const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js";
-const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css";
-
 type MapLibreGlobal = {
   Map: new (options: Record<string, unknown>) => MapInstance;
   Marker: new (options?: Record<string, unknown>) => MarkerInstance;
@@ -18,6 +15,7 @@ export type MapInstance = {
   addSource: (id: string, source: Record<string, unknown>) => void;
   addLayer: (layer: Record<string, unknown>) => void;
   isStyleLoaded: () => boolean;
+  resize: () => void;
 };
 
 export type MarkerInstance = {
@@ -26,36 +24,16 @@ export type MarkerInstance = {
   remove: () => void;
 };
 
-declare global {
-  interface Window {
-    maplibregl?: MapLibreGlobal;
-  }
-}
-
 let loader: Promise<MapLibreGlobal> | null = null;
 
 function loadMapLibre(): Promise<MapLibreGlobal> {
   if (typeof window === "undefined") return Promise.reject(new Error("no window"));
-  if (window.maplibregl) return Promise.resolve(window.maplibregl);
   if (loader) return loader;
-
-  loader = new Promise<MapLibreGlobal>((resolve, reject) => {
-    if (!document.querySelector(`link[href="${MAPLIBRE_CSS}"]`)) {
-      const link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = MAPLIBRE_CSS;
-      document.head.appendChild(link);
-    }
-    const script = document.createElement("script");
-    script.src = MAPLIBRE_JS;
-    script.async = true;
-    script.onload = () => {
-      if (window.maplibregl) resolve(window.maplibregl);
-      else reject(new Error("maplibre indisponible"));
-    };
-    script.onerror = () => reject(new Error("échec du chargement de la carte"));
-    document.head.appendChild(script);
-  });
+  loader = (async () => {
+    await import("maplibre-gl/dist/maplibre-gl.css");
+    const mod = await import("maplibre-gl");
+    return (mod.default ?? mod) as unknown as MapLibreGlobal;
+  })();
   return loader;
 }
 
