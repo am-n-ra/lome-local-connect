@@ -13,6 +13,7 @@ type Props = {
   focus?: { lat: number; lng: number; zoom?: number } | null;
   interactive?: boolean;
   className?: string;
+  onMapClick?: (coords: { lat: number; lng: number }) => void;
 };
 
 function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
