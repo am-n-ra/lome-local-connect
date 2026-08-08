@@ -101,6 +101,9 @@ export function MapCanvas({
         paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
       });
     });
+    map.on("click", (e) => {
+      clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+    });
     return () => {
       map.remove();
       mapRef.current = null;
