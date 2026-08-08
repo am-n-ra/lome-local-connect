@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TopNav } from "@/components/omni/TopNav";
 import {
   CATEGORIES,
-  formatFCFA,
+  formatFcfa,
   isProActive,
   LOME_CENTER,
   type FacilityRow,
@@ -46,7 +46,7 @@ function VendeurPage() {
 
   // onboarding form
   const [name, setName] = useState("");
-  const [category, setCategory] = useState(CATEGORIES[0]?.value ?? "");
+  const [category, setCategory] = useState<string>(CATEGORIES[0]?.value ?? "food");
   const [type, setType] = useState<"fixed" | "mobile">("fixed");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
@@ -264,7 +264,7 @@ function VendeurPage() {
             <div className="omni-card p-5">
               <p className="text-sm text-muted-foreground">Portefeuille</p>
               <p className="mt-1 font-display text-2xl font-extrabold text-primary">
-                {formatFCFA(sub?.wallet_balance ?? 0)}
+                {formatFcfa(sub?.wallet_balance ?? 0)}
               </p>
             </div>
             <div className="omni-card p-5">
@@ -296,7 +296,7 @@ function VendeurPage() {
                 <li key={p.id} className="flex items-center justify-between rounded-lg border border-border p-3">
                   <div>
                     <p className="font-medium">{p.name}</p>
-                    <p className="text-sm text-muted-foreground">{formatFCFA(p.price)}</p>
+                    <p className="text-sm text-muted-foreground">{formatFcfa(p.price)}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">{p.in_stock ? "Disponible" : "En rupture"}</span>
@@ -315,7 +315,7 @@ function VendeurPage() {
                 <Badge variant="secondary">Mode démo</Badge>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                Votre solde de {formatFCFA(sub?.wallet_balance ?? 0)} peut financer des campagnes ciblées par rayon
+                Votre solde de {formatFcfa(sub?.wallet_balance ?? 0)} peut financer des campagnes ciblées par rayon
                 (1 à 10 km ou tout Lomé). Le paiement est simulé pendant la démo.
               </p>
             </div>
