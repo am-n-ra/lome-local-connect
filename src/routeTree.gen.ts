@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CarteRouteImport } from './routes/carte'
+import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const CarteRoute = CarteRouteImport.update({
   path: '/carte',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendeurRoute = VendeurRouteImport.update({
+  id: '/vendeur',
+  path: '/vendeur',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FicheIdRoute = FicheIdRouteImport.update({
   id: '/fiche/$id',
   path: '/fiche/$id',
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/carte' | '/fiche/$id'
+  fullPaths: '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/carte' | '/fiche/$id'
-  id: '__root__' | '/' | '/auth' | '/carte' | '/fiche/$id'
+  to: '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
+  id: '__root__' | '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CarteRoute: typeof CarteRoute
+  VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
 }
 
@@ -92,6 +102,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CarteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendeur': {
+      id: '/vendeur'
+      path: '/vendeur'
+      fullPath: '/vendeur'
+      preLoaderRoute: typeof VendeurRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/fiche/$id': {
       id: '/fiche/$id'
       path: '/fiche/$id'
@@ -106,18 +123,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CarteRoute: CarteRoute,
+  VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
