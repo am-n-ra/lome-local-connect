@@ -1,4 +1,4 @@
-import { queryOne } from "./db.server";
+import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
 import {
   createFedapayCheckout,
