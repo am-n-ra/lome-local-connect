@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { deleteWishlist, listWishlists } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
@@ -20,18 +21,22 @@ export function WishlistPanel({
   const { user } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
 
+  const load = useServerFn(listWishlists);
+  const removeRemote = useServerFn(deleteWishlist);
+
   useEffect(() => {
     if (!open || !user) return;
-    void supabase
-      .from("wishlists")
-      .select("id, search_term, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setEntries((data ?? []) as Entry[]));
-  }, [open, user]);
+    void (async () => {
+      try {
+        setEntries(await load());
+      } catch {
+        setEntries([]);
+      }
+    })();
+  }, [open, user, load]);
 
   async function remove(id: string) {
-    await supabase.from("wishlists").delete().eq("id", id);
+    await removeRemote({ data: { id } });
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }
 

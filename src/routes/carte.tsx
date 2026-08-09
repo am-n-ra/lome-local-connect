@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Mic, Volume2, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { listFacilities, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
@@ -14,11 +15,7 @@ import {
   CATEGORIES,
   formatDistance,
   haversineKm,
-  isProActive,
   LOME_CENTER,
-  type FacilityRow,
-  type ProductRow,
-  type SubscriptionRow,
 } from "@/lib/omni";
 
 export const Route = createFileRoute("/carte")({
@@ -41,9 +38,7 @@ type RouteStep = { instruction: string; distance: number };
 
 function CartePage() {
   const navigate = useNavigate();
-  const [facilities, setFacilities] = useState<FacilityRow[]>([]);
-  const [subs, setSubs] = useState<Record<string, SubscriptionRow>>({});
-  const [products, setProducts] = useState<ProductRow[]>([]);
+  const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapFacility | null>(null);
@@ -56,22 +51,31 @@ function CartePage() {
   const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
+  const fetchFacilities = useServerFn(listFacilities);
+
   useEffect(() => {
-    void (async () => {
-      const [{ data: f }, { data: s }, { data: p }] = await Promise.all([
-        supabase.from("facilities").select("*").eq("is_online", true),
-        supabase.from("subscriptions").select("*"),
-        supabase.from("products").select("*"),
-      ]);
-      setFacilities((f ?? []) as FacilityRow[]);
-      setProducts((p ?? []) as ProductRow[]);
-      const map: Record<string, SubscriptionRow> = {};
-      ((s ?? []) as SubscriptionRow[]).forEach((row) => {
-        map[row.facility_id] = row;
-      });
-      setSubs(map);
-    })();
-  }, []);
+    let active = true;
+    const handle = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const rows = await fetchFacilities({
+            data: {
+              search: query.trim() || undefined,
+              category: category ?? undefined,
+              includeUnclaimed: true,
+            },
+          });
+          if (active) setFacilities(rows);
+        } catch {
+          if (active) setFacilities([]);
+        }
+      })();
+    }, query.trim() ? 300 : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(handle);
+    };
+  }, [fetchFacilities, query, category]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -96,25 +100,20 @@ function CartePage() {
 
   const origin = userPos ?? LOME_CENTER;
 
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const matchIds = new Set(
-      products.filter((p) => q && p.name.toLowerCase().includes(q)).map((p) => p.facility_id),
-    );
-    return facilities
-      .filter((f) => f.is_online)
-      .filter((f) => (category ? f.category === category : true))
-      .filter((f) => (q ? f.name.toLowerCase().includes(q) || matchIds.has(f.id) : true))
-      .map((f) => ({
-        ...f,
-        isPro: isProActive(subs[f.id]),
-        distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
-      }))
-      .sort((a, b) => {
-        if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
-        return a.distanceKm - b.distanceKm;
-      });
-  }, [facilities, products, subs, query, category, origin]);
+  const results = useMemo(
+    () =>
+      facilities
+        .map((f) => ({
+          ...f,
+          isPro: f.sponsored || f.tier === "pro",
+          distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
+        }))
+        .sort((a, b) => {
+          if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
+          return a.distanceKm - b.distanceKm;
+        }),
+    [facilities, origin],
+  );
 
   const voiceSearch = useCallback(() => {
     const SR =

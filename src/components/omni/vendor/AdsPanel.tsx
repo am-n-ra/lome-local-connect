@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,147 +14,97 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatDateFr, formatFcfa } from "@/lib/omni";
+import { campaignCostFor, RADIUS_OPTIONS } from "@/lib/vendor";
 import {
-  currentMonthKey,
-  formatDateFr,
-  formatFcfa,
-  type FacilityRow,
-  type ProductRow,
-  type SubscriptionRow,
-} from "@/lib/omni";
-import {
-  campaignActive,
-  campaignCostFor,
-  estimateReach,
-  extendedProUntil,
-  QUALIFYING_AMOUNT,
-  RADIUS_OPTIONS,
-  type AdCampaignRow,
-  type WishlistRow,
-} from "@/lib/vendor";
+  createCampaign,
+  estimateCampaignReach,
+  topUpWallet,
+  type VendorCampaign,
+  type VendorFacility,
+  type VendorProduct,
+  type VendorSubscription,
+} from "@/lib/vendor.functions";
 
 type Props = {
-  facility: FacilityRow;
-  products: ProductRow[];
-  sub: SubscriptionRow | null;
-  campaigns: AdCampaignRow[];
-  wishlists: WishlistRow[];
-  onSubChange: (sub: SubscriptionRow) => void;
-  onCampaignsChange: (campaigns: AdCampaignRow[]) => void;
+  facility: VendorFacility;
+  products: VendorProduct[];
+  subscription: VendorSubscription | null;
+  campaigns: VendorCampaign[];
+  onRefresh: () => void | Promise<void>;
 };
 
-export function AdsPanel({
-  facility,
-  products,
-  sub,
-  campaigns,
-  wishlists,
-  onSubChange,
-  onCampaignsChange,
-}: Props) {
-  const balance = sub?.wallet_balance ?? 0;
+function campaignActive(c: VendorCampaign): boolean {
+  return !!c.campaign_active_until && new Date(c.campaign_active_until).getTime() > Date.now();
+}
+
+export function AdsPanel({ facility, products, subscription, campaigns, onRefresh }: Props) {
+  const balance = subscription?.wallet_balance ?? 0;
   const [builderOpen, setBuilderOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState("5000");
   const [selected, setSelected] = useState<string[]>([]);
   const [radius, setRadius] = useState<number | "city">(3);
+  const [reach, setReach] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
   const cityWide = radius === "city";
   const radiusKm = cityWide ? null : (radius as number);
   const cost = campaignCostFor(radiusKm, cityWide);
-  const reach = useMemo(
-    () =>
-      estimateReach(
-        wishlists,
-        { lat: facility.latitude, lng: facility.longitude },
-        radiusKm,
-        cityWide,
-      ),
-    [wishlists, facility.latitude, facility.longitude, radiusKm, cityWide],
-  );
   const insufficient = cost > balance;
 
-  async function launch() {
-    if (!sub || insufficient || selected.length === 0) return;
-    setBusy(true);
-    const until = new Date();
-    until.setDate(until.getDate() + 7);
-    const { data, error } = await supabase
-      .from("ad_campaigns")
-      .insert({
-        facility_id: facility.id,
-        product_ids: selected,
-        radius_km: radiusKm,
-        is_city_wide: cityWide,
-        cost_fcfa: cost,
-        reach_estimate: reach,
-        campaign_active_until: until.toISOString(),
-      })
-      .select("*")
-      .single();
-    if (error || !data) {
-      setBusy(false);
-      toast.error("Lancement impossible.");
-      return;
-    }
-    const qualifying = cost >= QUALIFYING_AMOUNT;
-    const patch = {
-      wallet_balance: balance - cost,
-      ...(qualifying
-        ? {
-            tier: "pro",
-            pro_active_until: extendedProUntil(sub.pro_active_until),
-            last_qualifying_action_month: currentMonthKey(),
-          }
-        : {}),
+  const estimate = useServerFn(estimateCampaignReach);
+  const launchCampaign = useServerFn(createCampaign);
+  const deposit = useServerFn(topUpWallet);
+
+  useEffect(() => {
+    if (!builderOpen) return;
+    let active = true;
+    void (async () => {
+      try {
+        const result = await estimate({ data: { facilityId: facility.id, radiusKm, cityWide } });
+        if (active) setReach(result.reach);
+      } catch {
+        if (active) setReach(null);
+      }
+    })();
+    return () => {
+      active = false;
     };
-    const { data: s } = await supabase
-      .from("subscriptions")
-      .update(patch)
-      .eq("facility_id", facility.id)
-      .select("*")
-      .single();
-    if (s) onSubChange(s as SubscriptionRow);
-    onCampaignsChange([data as AdCampaignRow, ...campaigns]);
-    setBusy(false);
-    setBuilderOpen(false);
-    setSelected([]);
-    toast.success(
-      "Campagne lancée. Vos produits sélectionnés sont mis en avant dans les résultats de recherche pour les 7 prochains jours.",
-    );
+  }, [builderOpen, estimate, facility.id, radiusKm, cityWide]);
+
+  async function launch() {
+    if (insufficient || selected.length === 0) return;
+    setBusy(true);
+    try {
+      await launchCampaign({
+        data: { facilityId: facility.id, productIds: selected, radiusKm, cityWide, durationDays: 7 },
+      });
+      await onRefresh();
+      setBuilderOpen(false);
+      setSelected([]);
+      toast.success("Campagne lancée. Vos produits sont mis en avant pendant 7 jours.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Lancement impossible.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  async function deposit() {
-    if (!sub) return;
+  async function confirmDeposit() {
     const amount = Number(depositAmount);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Montant invalide.");
+    if (!Number.isFinite(amount) || amount < 500) {
+      toast.error("Montant invalide (500 FCFA minimum).");
       return;
     }
-    const qualifying = amount >= QUALIFYING_AMOUNT;
-    const { data: s } = await supabase
-      .from("subscriptions")
-      .update({
-        wallet_balance: balance + Math.round(amount),
-        ...(qualifying
-          ? {
-              tier: "pro",
-              pro_active_until: extendedProUntil(sub.pro_active_until),
-              last_qualifying_action_month: currentMonthKey(),
-            }
-          : {}),
-      })
-      .eq("facility_id", facility.id)
-      .select("*")
-      .single();
-    if (!s) {
-      toast.error("Dépôt impossible.");
-      return;
+    try {
+      await deposit({ data: { facilityId: facility.id, amount: Math.round(amount) } });
+      await onRefresh();
+      setDepositOpen(false);
+      toast.success(`${formatFcfa(amount)} ajoutés (mode démo).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Dépôt impossible.");
     }
-    onSubChange(s as SubscriptionRow);
-    setDepositOpen(false);
-    toast.success(`${formatFcfa(amount)} ajoutés (mode démo).`);
   }
 
   return (
@@ -173,9 +123,9 @@ export function AdsPanel({
       </div>
 
       <div className="rounded-lg border border-border bg-secondary p-4 text-sm">
-        Votre fiche apparaît en position boostée (badge <strong>Sponsorisé</strong>) dans les résultats
-        de recherche tant que votre palier est Pro. Une campagne est une mise en avant supplémentaire,
-        ciblée sur des produits précis.
+        Votre fiche apparaît en position boostée (badge <strong>Sponsorisé</strong>) dans les
+        résultats de recherche tant que votre palier est Pro. Une campagne est une mise en avant
+        supplémentaire, ciblée sur des produits précis.
       </div>
 
       <div className="omni-card p-5">
@@ -223,7 +173,9 @@ export function AdsPanel({
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Créer une campagne</DialogTitle>
-            <DialogDescription>Mettez vos produits en avant auprès des acheteurs proches.</DialogDescription>
+            <DialogDescription>
+              Mettez vos produits en avant auprès des acheteurs proches.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -258,7 +210,9 @@ export function AdsPanel({
                     type="button"
                     onClick={() => setRadius(r)}
                     className={`rounded-full border px-3 py-1.5 text-sm ${
-                      radius === r ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                      radius === r
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border"
                     }`}
                   >
                     {r} km
@@ -280,11 +234,15 @@ export function AdsPanel({
               <p>
                 Coût estimé : <strong>{formatFcfa(cost)}</strong>
               </p>
-              <p className="text-muted-foreground">Portée estimée : ~{reach} acheteurs à proximité</p>
+              <p className="text-muted-foreground">
+                Portée estimée : {reach === null ? "calcul…" : `~${reach} acheteurs à proximité`}
+              </p>
             </div>
 
             {insufficient && (
-              <p className="text-sm text-destructive">Solde insuffisant, déposez plus pour continuer.</p>
+              <p className="text-sm text-destructive">
+                Solde insuffisant, déposez plus pour continuer.
+              </p>
             )}
           </div>
 
@@ -315,7 +273,7 @@ export function AdsPanel({
             />
           </div>
           <DialogFooter>
-            <Button onClick={() => void deposit()}>Confirmer (mode démo)</Button>
+            <Button onClick={() => void confirmDeposit()}>Confirmer (mode démo)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

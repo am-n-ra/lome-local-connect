@@ -1,5 +1,6 @@
 export type FacilityRow = {
   id: string;
+  neighbourhood?: string | null;
   owner_id: string | null;
   name: string;
   category: string;
@@ -45,15 +46,17 @@ export function categoryLabel(value: string): string {
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-  non_verifie: "Non vérifié",
+  non_reclame: "Non réclamé",
+  non_confirme: "Non confirmé",
   verifie: "Vérifié",
-  certifie: "Certifié",
+  confirme: "Confirmé",
 };
 
 export const STATUS_COLOR: Record<string, string> = {
-  non_verifie: "#9a938c",
+  non_reclame: "#b8b0a8",
+  non_confirme: "#9a938c",
   verifie: "#2f6fb5",
-  certifie: "#d9a521",
+  confirme: "#d9a521",
 };
 
 export function formatFcfa(amount: number): string {

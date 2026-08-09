@@ -2,12 +2,13 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import { getFacility, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { MapCanvas } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { TopNav } from "@/components/omni/TopNav";
-import { haversineKm, isProActive, LOME_CENTER, type FacilityRow, type SubscriptionRow } from "@/lib/omni";
+import { haversineKm, LOME_CENTER } from "@/lib/omni";
 
 export const Route = createFileRoute("/fiche/$id")({
   head: () => ({
@@ -23,20 +24,23 @@ export const Route = createFileRoute("/fiche/$id")({
 
 function FichePage() {
   const { id } = Route.useParams();
-  const [facility, setFacility] = useState<FacilityRow | null>(null);
-  const [sub, setSub] = useState<SubscriptionRow | null>(null);
+  const [facility, setFacility] = useState<ApiFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const load = useServerFn(getFacility);
+
   useEffect(() => {
     void (async () => {
-      const { data } = await supabase.from("facilities").select("*").eq("id", id).maybeSingle();
-      setFacility((data ?? null) as FacilityRow | null);
-      const { data: s } = await supabase.from("subscriptions").select("*").eq("facility_id", id).maybeSingle();
-      setSub((s ?? null) as SubscriptionRow | null);
+      try {
+        const result = await load({ data: { id } });
+        setFacility(result?.facility ?? null);
+      } catch {
+        setFacility(null);
+      }
     })();
-  }, [id]);
+  }, [id, load]);
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -84,7 +88,7 @@ function FichePage() {
           <div className="grid gap-6 md:grid-cols-[1fr_360px]">
             <div className="omni-card p-5">
               <FacilityPanel
-                facility={{ ...facility, isPro: isProActive(sub) }}
+                facility={{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }}
                 distanceKm={haversineKm(userPos ?? LOME_CENTER, { lat: facility.latitude, lng: facility.longitude })}
                 routingBusy={busy}
                 onItinerary={() => void itinerary()}
@@ -92,7 +96,7 @@ function FichePage() {
             </div>
             <div className="h-[420px] overflow-hidden rounded-2xl border border-border md:sticky md:top-24">
               <MapCanvas
-                facilities={[{ ...facility, isPro: isProActive(sub) }]}
+                facilities={[{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }]}
                 routeCoords={routeCoords}
                 userPosition={userPos}
                 focus={{ lat: facility.latitude, lng: facility.longitude, zoom: 15 }}
