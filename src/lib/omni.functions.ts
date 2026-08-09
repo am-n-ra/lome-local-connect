@@ -246,6 +246,13 @@ export const submitCart = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "cart",
+      subject: context.userId,
+      limit: 10,
+      windowSeconds: 600,
+      message: "Trop de demandes envoyées. Réessayez dans quelques minutes.",
+    });
     const ids = data.items.map((i) => i.productId);
     const products = await query<{ id: string; price: number; facility_id: string }>(
       "SELECT id, price, facility_id FROM public.products WHERE id = ANY($1::uuid[])",
