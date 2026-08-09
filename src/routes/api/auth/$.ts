@@ -18,8 +18,9 @@ async function proxy(request: Request, splat: string): Promise<Response> {
   if (cookie) headers.set("cookie", cookie);
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", request.headers.get("accept") ?? "application/json");
-  headers.set("x-forwarded-host", incoming.host);
-  headers.set("origin", incoming.origin);
+  // Neon Auth validates the hostname/origin against its own domain, so the
+  // upstream URL's own origin is forwarded rather than this app's.
+  headers.set("origin", new URL(target).origin);
 
   const method = request.method.toUpperCase();
   const body =
