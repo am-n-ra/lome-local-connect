@@ -648,5 +648,3 @@ export const respondToRequest = createServerFn({ method: "POST" })
     }
     return { ok: true };
   });
-
-  });
