@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { optionalAuth, requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
+import { enforceRateLimit } from "./rate-limit.server";
 
 export type MapFacility = {
   id: string;
