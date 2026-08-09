@@ -18,6 +18,7 @@ import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
 import { Route as ApiPublicV1FacilitiesRouteImport } from './routes/api/public/v1/facilities'
+import { Route as ApiPublicV1StatsRouteImport } from './routes/api/public/v1/stats'
 import { Route as ApiPublicV1FacilitiesIdRouteImport } from './routes/api/public/v1/facilities.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -65,6 +66,11 @@ const ApiPublicV1FacilitiesRoute = ApiPublicV1FacilitiesRouteImport.update({
   path: '/api/public/v1/facilities',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1StatsRoute = ApiPublicV1StatsRouteImport.update({
+  id: '/api/public/v1/stats',
+  path: '/api/public/v1/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1FacilitiesIdRoute = ApiPublicV1FacilitiesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
   '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRoutesByTo {
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
   '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRoutesById {
@@ -106,6 +114,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
   '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRouteTypes {
@@ -120,6 +129,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
     | '/api/public/v1/facilities/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -132,6 +142,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
     | '/api/public/v1/facilities/$id'
   id:
     | '__root__'
@@ -144,6 +155,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
     | '/api/public/v1/facilities/$id'
   fileRoutesById: FileRoutesById
 }
@@ -157,6 +169,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
   ApiPublicV1FacilitiesRoute: typeof ApiPublicV1FacilitiesRouteWithChildren
+  ApiPublicV1StatsRoute: typeof ApiPublicV1StatsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -224,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1FacilitiesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/stats': {
+      id: '/api/public/v1/stats'
+      path: '/api/public/v1/stats'
+      fullPath: '/api/public/v1/stats'
+      preLoaderRoute: typeof ApiPublicV1StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/v1/facilities/$id': {
       id: '/api/public/v1/facilities/$id'
       path: '/$id'
@@ -257,6 +277,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
   ApiPublicV1FacilitiesRoute: ApiPublicV1FacilitiesRouteWithChildren,
+  ApiPublicV1StatsRoute: ApiPublicV1StatsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
