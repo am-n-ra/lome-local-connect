@@ -3,7 +3,7 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +33,7 @@ const credentials = z.object({
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = useSearch({ from: "/auth" });
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -47,36 +48,25 @@ function AuthPage() {
       return;
     }
     setBusy(true);
-    if (mode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: parsed.data.email,
-        password: parsed.data.password,
-      });
-      setBusy(false);
-      if (error) {
-        toast.error("Identifiants incorrects.");
-        return;
+    try {
+      if (mode === "signin") {
+        await signIn(parsed.data.email, parsed.data.password);
+      } else {
+        await signUp(
+          parsed.data.email,
+          parsed.data.password,
+          parsed.data.name || parsed.data.email.split("@")[0]!,
+        );
       }
       navigate({ to: target });
-    } else {
-      const { data, error } = await supabase.auth.signUp({
-        email: parsed.data.email,
-        password: parsed.data.password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: { name: parsed.data.name || parsed.data.email.split("@")[0] },
-        },
-      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error && error.message
+          ? error.message
+          : "Connexion impossible. Vérifiez vos identifiants.",
+      );
+    } finally {
       setBusy(false);
-      if (error) {
-        toast.error(error.message.includes("registered") ? "Cet e-mail est déjà utilisé." : "Inscription impossible.");
-        return;
-      }
-      if (!data.session) {
-        toast.info("Vérifiez votre e-mail pour confirmer votre compte.");
-        return;
-      }
-      navigate({ to: target });
     }
   }
 
@@ -106,7 +96,7 @@ function AuthPage() {
                 {busy ? "Connexion…" : "Se connecter"}
               </Button>
               <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-                Compte de démonstration : <strong>demo@omni.tg</strong> / <strong>OmniDemo2026</strong>
+                Compte de démonstration : <strong>demo@omni.tg</strong> / <strong>Demo1234!</strong>
               </p>
             </TabsContent>
 
