@@ -101,6 +101,22 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
     }
   }
 
+  async function claim() {
+    if (!user) {
+      toast.info("Connectez-vous pour réclamer ce commerce.");
+      return;
+    }
+    setClaiming(true);
+    try {
+      await claimFacilityRemote({ data: { facilityId: facility.id } });
+      toast.success("Demande envoyée : votre commerce passe en « non confirmé ».");
+    } catch {
+      toast.error("Réclamation impossible pour le moment.");
+    } finally {
+      setClaiming(false);
+    }
+  }
+
   async function submitDemand() {
     if (!user) {
       toast.info("Connectez-vous pour signaler un produit recherché.");
