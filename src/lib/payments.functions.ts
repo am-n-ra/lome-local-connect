@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireAuth } from "./auth-middleware";
 import { listDeposits, reconcileDeposit, startDeposit } from "./payments.server";
+import { enforceRateLimit } from "./rate-limit.server";
 
 export type WalletDeposit = {
   id: string;
