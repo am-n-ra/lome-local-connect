@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CarteRouteImport } from './routes/carte'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const FicheIdRoute = FicheIdRouteImport.update({
   path: '/fiche/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,22 @@ export interface FileRoutesById {
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
+  fullPaths:
+    '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
-  id: '__root__' | '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id'
+  to: '/' | '/auth' | '/carte' | '/vendeur' | '/fiche/$id' | '/api/auth/$'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/carte'
+    | '/vendeur'
+    | '/fiche/$id'
+    | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +94,7 @@ export interface RootRouteChildren {
   CarteRoute: typeof CarteRoute
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +134,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FicheIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,17 +150,8 @@ const rootRouteChildren: RootRouteChildren = {
   CarteRoute: CarteRoute,
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
