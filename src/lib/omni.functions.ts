@@ -180,6 +180,13 @@ export const recordWishlist = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "wishlist",
+      subject: context.userId,
+      limit: 20,
+      windowSeconds: 300,
+      message: "Trop de recherches enregistrées. Réessayez dans quelques minutes.",
+    });
     await query(
       `INSERT INTO public.wishlists (user_id, search_term, latitude, longitude)
        VALUES ($1, $2, $3, $4)`,
