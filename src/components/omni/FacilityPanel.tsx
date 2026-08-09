@@ -3,6 +3,7 @@ import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-re
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  claimFacility,
   getFacility,
   listFavorites,
   recordWishlist,
@@ -43,11 +44,13 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
   const [showPhone, setShowPhone] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
+  const [claiming, setClaiming] = useState(false);
 
   const loadFacility = useServerFn(getFacility);
   const loadFavorites = useServerFn(listFavorites);
   const toggleFavoriteRemote = useServerFn(toggleFavoriteFn);
   const sendWishlist = useServerFn(recordWishlist);
+  const claimFacilityRemote = useServerFn(claimFacility);
 
   useEffect(() => {
     let active = true;
