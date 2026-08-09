@@ -25,7 +25,12 @@ async function proxy(request: Request, splat: string): Promise<Response> {
   const body =
     method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
 
-  const upstream = await fetch(target, { method, headers, body, redirect: "manual" });
+  const upstream = await fetch(target, {
+    method,
+    headers,
+    body: body ?? null,
+    redirect: "manual",
+  });
 
   const out = new Headers();
   const type = upstream.headers.get("content-type");
