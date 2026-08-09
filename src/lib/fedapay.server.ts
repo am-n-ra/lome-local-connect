@@ -1,4 +1,6 @@
 import { query, queryOne } from "./db.server";
+import { extendedProUntil, QUALIFYING_AMOUNT } from "./vendor";
+import { currentMonthKey } from "./omni";
 
 /** FedaPay REST helpers. Server-only: never imported from client code. */
 
@@ -125,13 +127,24 @@ export async function creditDeposit(
   );
   if (!claimed) return false;
 
-  await query(
+  const current = await queryOne<{ pro_active_until: string | null }>(
     `INSERT INTO public.subscriptions (facility_id, wallet_balance)
      VALUES ($1, $2)
      ON CONFLICT (facility_id) DO UPDATE
-       SET wallet_balance = public.subscriptions.wallet_balance + EXCLUDED.wallet_balance`,
+       SET wallet_balance = public.subscriptions.wallet_balance + EXCLUDED.wallet_balance
+     RETURNING pro_active_until`,
     [claimed.facility_id, claimed.amount],
   );
+
+  // A qualifying deposit unlocks (or extends) the Pro tier for a month.
+  if (claimed.amount >= QUALIFYING_AMOUNT) {
+    await query(
+      `UPDATE public.subscriptions
+       SET tier = 'pro', pro_active_until = $1::date, last_qualifying_action_month = $2
+       WHERE facility_id = $3`,
+      [extendedProUntil(current?.pro_active_until ?? null), currentMonthKey(), claimed.facility_id],
+    );
+  }
   return true;
 }
 
