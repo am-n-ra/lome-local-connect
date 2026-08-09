@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { MapPin, Plus, Store } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,19 +30,26 @@ import {
   daysLeft,
   formatFcfa,
   freshnessLabel,
-  isProActive,
   LOME_CENTER,
   STATUS_LABEL,
-  type FacilityRow,
-  type ProductRow,
-  type SubscriptionRow,
 } from "@/lib/omni";
+import { FREE_PRODUCT_CAP } from "@/lib/vendor";
 import {
-  FREE_PRODUCT_CAP,
-  needsProDowngrade,
-  type AdCampaignRow,
-  type WishlistRow,
-} from "@/lib/vendor";
+  confirmStock,
+  createFacility as createFacilityFn,
+  deleteProduct,
+  getVendorDashboard,
+  updateFacility,
+  updateMobilePosition,
+  upsertProduct,
+  type VendorCampaign,
+  type VendorCoupon,
+  type VendorFacility,
+  type VendorProduct,
+  type VendorRequest,
+  type VendorSubscription,
+  type DemandSignal,
+} from "@/lib/vendor.functions";
 
 export const Route = createFileRoute("/vendeur")({
   head: () => ({
@@ -65,13 +72,20 @@ export const Route = createFileRoute("/vendeur")({
   component: VendeurPage,
 });
 
+type Dashboard = {
+  facilities: VendorFacility[];
+  subscription: VendorSubscription | null;
+  products: VendorProduct[];
+  campaigns: VendorCampaign[];
+  coupons: VendorCoupon[];
+  requests: VendorRequest[];
+  demand: DemandSignal[];
+  walletBalance: number;
+};
+
 function VendeurPage() {
   const { user, loading } = useAuth();
-  const [facility, setFacility] = useState<FacilityRow | null>(null);
-  const [sub, setSub] = useState<SubscriptionRow | null>(null);
-  const [products, setProducts] = useState<ProductRow[]>([]);
-  const [campaigns, setCampaigns] = useState<AdCampaignRow[]>([]);
-  const [wishlists, setWishlists] = useState<WishlistRow[]>([]);
+  const [data, setData] = useState<Dashboard | null>(null);
   const [ready, setReady] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
 
@@ -90,55 +104,195 @@ function VendeurPage() {
   const [pPrice, setPPrice] = useState("");
   const [pPhoto, setPPhoto] = useState("");
 
+  const loadDashboard = useServerFn(getVendorDashboard);
+  const createFacility = useServerFn(createFacilityFn);
+  const saveProduct = useServerFn(upsertProduct);
+  const removeProductFn = useServerFn(deleteProduct);
+  const confirmAll = useServerFn(confirmStock);
+  const patchFacility = useServerFn(updateFacility);
+  const moveMobile = useServerFn(updateMobilePosition);
+
+  const refresh = useCallback(async () => {
+    try {
+      setData((await loadDashboard()) as Dashboard);
+    } catch {
+      setData(null);
+    } finally {
+      setReady(true);
+    }
+  }, [loadDashboard]);
+
   useEffect(() => {
     if (!user) {
       setReady(true);
       return;
     }
-    void (async () => {
-      const { data: f } = await supabase
-        .from("facilities")
-        .select("*")
-        .eq("owner_id", user.id)
-        .maybeSingle();
-      const row = (f ?? null) as FacilityRow | null;
-      setFacility(row);
-      if (row) {
-        const [{ data: s }, { data: p }, { data: c }, { data: w }] = await Promise.all([
-          supabase.from("subscriptions").select("*").eq("facility_id", row.id).maybeSingle(),
-          supabase
-            .from("products")
-            .select("*")
-            .eq("facility_id", row.id)
-            .order("created_at", { ascending: false }),
-          supabase
-            .from("ad_campaigns")
-            .select("*")
-            .eq("facility_id", row.id)
-            .order("created_at", { ascending: false }),
-          supabase.from("wishlists").select("*").order("created_at", { ascending: false }).limit(200),
-        ]);
-        let subscription = (s ?? null) as SubscriptionRow | null;
-        if (needsProDowngrade(subscription) && subscription) {
-          const { data: down } = await supabase
-            .from("subscriptions")
-            .update({ tier: "free" })
-            .eq("facility_id", row.id)
-            .select("*")
-            .single();
-          subscription = (down ?? subscription) as SubscriptionRow;
-        }
-        setSub(subscription);
-        setProducts((p ?? []) as ProductRow[]);
-        setCampaigns((c ?? []) as AdCampaignRow[]);
-        setWishlists((w ?? []) as WishlistRow[]);
-      }
-      setReady(true);
-    })();
-  }, [user]);
+    void refresh();
+  }, [user, refresh]);
 
-  const pro = useMemo(() => isProActive(sub), [sub]);
+  const facility = data?.facilities[0] ?? null;
+  const subscription = data?.subscription ?? null;
+  const products = useMemo(() => data?.products ?? [], [data]);
+  const pro = useMemo(
+    () =>
+      !!subscription &&
+      subscription.tier === "pro" &&
+      !!subscription.pro_active_until &&
+      new Date(subscription.pro_active_until).getTime() >= Date.now(),
+    [subscription],
+  );
   const atProductCap = !pro && products.length >= FREE_PRODUCT_CAP;
+
+  async function submitOnboarding() {
+    if (name.trim().length < 2) {
+      toast.error("Indiquez le nom de votre commerce.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await createFacility({
+        data: {
+          name: name.trim().slice(0, 80),
+          category,
+          type,
+          phone: phone.trim().slice(0, 30) || undefined,
+          address: address.trim().slice(0, 140) || undefined,
+          description: description.trim().slice(0, 400) || undefined,
+          latitude: pos.lat,
+          longitude: pos.lng,
+        },
+      });
+      await refresh();
+      setBonusOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Création impossible.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function addProduct() {
+    if (!facility) return;
+    const price = Number(pPrice);
+    if (pName.trim().length < 2 || !Number.isFinite(price) || price < 0) {
+      toast.error("Nom et prix valides requis.");
+      return;
+    }
+    try {
+      await saveProduct({
+        data: {
+          facilityId: facility.id,
+          name: pName.trim().slice(0, 80),
+          price: Math.round(price),
+          inStock: true,
+          photoUrl: pPhoto.trim() || null,
+        },
+      });
+      await refresh();
+      setPName("");
+      setPPrice("");
+      setPPhoto("");
+      toast.success("Produit ajouté.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Ajout impossible.");
+    }
+  }
+
+  async function toggleStock(product: VendorProduct) {
+    if (!facility) return;
+    try {
+      await saveProduct({
+        data: {
+          facilityId: facility.id,
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          inStock: !product.in_stock,
+          discountPercent: product.discount_percent,
+          photoUrl: product.photo_url,
+        },
+      });
+      await refresh();
+    } catch {
+      toast.error("Mise à jour impossible.");
+    }
+  }
+
+  async function confirmProduct(product: VendorProduct) {
+    if (!facility) return;
+    try {
+      await saveProduct({
+        data: {
+          facilityId: facility.id,
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          inStock: product.in_stock,
+          discountPercent: product.discount_percent,
+          photoUrl: product.photo_url,
+        },
+      });
+      await refresh();
+      toast.success("Disponibilité confirmée.");
+    } catch {
+      toast.error("Confirmation impossible.");
+    }
+  }
+
+  async function removeProduct(product: VendorProduct) {
+    if (!facility) return;
+    try {
+      await removeProductFn({ data: { facilityId: facility.id, productId: product.id } });
+      await refresh();
+    } catch {
+      toast.error("Suppression impossible.");
+    }
+  }
+
+  async function confirmEverything() {
+    if (!facility) return;
+    try {
+      await confirmAll({ data: { facilityId: facility.id } });
+      await refresh();
+      toast.success("Tout le catalogue a été confirmé.");
+    } catch {
+      toast.error("Confirmation impossible.");
+    }
+  }
+
+  async function toggleOnline(next: boolean) {
+    if (!facility) return;
+    try {
+      await patchFacility({ data: { facilityId: facility.id, isOnline: next } });
+      await refresh();
+    } catch {
+      toast.error("Mise à jour impossible.");
+    }
+  }
+
+  async function updatePosition(coords: { lat: number; lng: number }) {
+    if (!facility) return;
+    try {
+      if (facility.type === "mobile") {
+        await moveMobile({
+          data: {
+            facilityId: facility.id,
+            latitude: coords.lat,
+            longitude: coords.lng,
+            active: facility.is_online,
+          },
+        });
+      } else {
+        await patchFacility({
+          data: { facilityId: facility.id, latitude: coords.lat, longitude: coords.lng },
+        });
+      }
+      await refresh();
+      toast.success("Position mise à jour.");
+    } catch {
+      toast.error("Position non enregistrée.");
+    }
+  }
 
   if (loading || !ready) {
     return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
@@ -164,158 +318,6 @@ function VendeurPage() {
     );
   }
 
-  async function createFacility() {
-    if (!user) return;
-    if (name.trim().length < 2) {
-      toast.error("Indiquez le nom de votre commerce.");
-      return;
-    }
-    setSaving(true);
-    const { data, error } = await supabase
-      .from("facilities")
-      .insert({
-        owner_id: user.id,
-        name: name.trim().slice(0, 80),
-        category,
-        type,
-        phone: phone.trim().slice(0, 30),
-        address: address.trim().slice(0, 140) || null,
-        description: description.trim().slice(0, 400) || null,
-        latitude: pos.lat,
-        longitude: pos.lng,
-        is_online: true,
-      })
-      .select("*")
-      .single();
-    if (error || !data) {
-      setSaving(false);
-      toast.error("Création impossible.");
-      return;
-    }
-    const created = data as FacilityRow;
-    const expires = new Date();
-    expires.setMonth(expires.getMonth() + 2);
-    const { data: s } = await supabase
-      .from("subscriptions")
-      .insert({
-        facility_id: created.id,
-        tier: "pro",
-        wallet_balance: 10000,
-        pro_active_until: expires.toISOString().slice(0, 10),
-      })
-      .select("*")
-      .single();
-    await supabase.from("profiles").update({ wallet_bonus_used: true }).eq("id", user.id);
-    setFacility(created);
-    setSub((s ?? null) as SubscriptionRow | null);
-    setSaving(false);
-    setBonusOpen(true);
-  }
-
-  async function addProduct() {
-    if (!facility) return;
-    if (atProductCap) {
-      toast.error(`Palier gratuit limité à ${FREE_PRODUCT_CAP} produits. Passez Pro pour en ajouter plus.`);
-      return;
-    }
-    const price = Number(pPrice);
-    if (pName.trim().length < 2 || !Number.isFinite(price) || price < 0) {
-      toast.error("Nom et prix valides requis.");
-      return;
-    }
-    const { data, error } = await supabase
-      .from("products")
-      .insert({
-        facility_id: facility.id,
-        name: pName.trim().slice(0, 80),
-        price: Math.round(price),
-        in_stock: true,
-        photo_url: pPhoto.trim() || null,
-        last_confirmed_at: new Date().toISOString(),
-      })
-      .select("*")
-      .single();
-    if (error || !data) {
-      toast.error("Ajout impossible.");
-      return;
-    }
-    setProducts((prev) => [data as ProductRow, ...prev]);
-    setPName("");
-    setPPrice("");
-    setPPhoto("");
-    toast.success("Produit ajouté.");
-  }
-
-  async function toggleStock(product: ProductRow) {
-    const next = !product.in_stock;
-    const stamp = new Date().toISOString();
-    const { error } = await supabase
-      .from("products")
-      .update({ in_stock: next, last_confirmed_at: stamp })
-      .eq("id", product.id);
-    if (error) {
-      toast.error("Mise à jour impossible.");
-      return;
-    }
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, in_stock: next, last_confirmed_at: stamp } : p)),
-    );
-  }
-
-  async function confirmProduct(product: ProductRow) {
-    const stamp = new Date().toISOString();
-    const { error } = await supabase
-      .from("products")
-      .update({ last_confirmed_at: stamp })
-      .eq("id", product.id);
-    if (error) {
-      toast.error("Confirmation impossible.");
-      return;
-    }
-    setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, last_confirmed_at: stamp } : p)));
-    toast.success("Disponibilité confirmée.");
-  }
-
-  async function removeProduct(product: ProductRow) {
-    const { error } = await supabase.from("products").delete().eq("id", product.id);
-    if (error) {
-      toast.error("Suppression impossible.");
-      return;
-    }
-    setProducts((prev) => prev.filter((p) => p.id !== product.id));
-  }
-
-  async function toggleOnline(next: boolean) {
-    if (!facility) return;
-    const { error } = await supabase
-      .from("facilities")
-      .update({ is_online: next, last_position_update: new Date().toISOString() })
-      .eq("id", facility.id);
-    if (error) {
-      toast.error("Mise à jour impossible.");
-      return;
-    }
-    setFacility({ ...facility, is_online: next });
-  }
-
-  async function updatePosition(coords: { lat: number; lng: number }) {
-    if (!facility) return;
-    const { error } = await supabase
-      .from("facilities")
-      .update({
-        latitude: coords.lat,
-        longitude: coords.lng,
-        last_position_update: new Date().toISOString(),
-      })
-      .eq("id", facility.id);
-    if (error) {
-      toast.error("Position non enregistrée.");
-      return;
-    }
-    setFacility({ ...facility, latitude: coords.lat, longitude: coords.lng });
-    toast.success("Position mise à jour.");
-  }
-
   if (!facility) {
     return (
       <div className="min-h-screen bg-background">
@@ -328,7 +330,12 @@ function VendeurPage() {
           <div className="omni-card mt-6 space-y-4 p-5">
             <div className="space-y-1.5">
               <Label htmlFor="fname">Nom du commerce</Label>
-              <Input id="fname" value={name} onChange={(e) => setName(e.target.value)} maxLength={80} />
+              <Input
+                id="fname"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={80}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fcat">Catégorie</Label>
@@ -362,15 +369,28 @@ function VendeurPage() {
                   Position mise à jour quand vous êtes en ligne
                 </p>
               </div>
-              <Switch checked={type === "mobile"} onCheckedChange={(v) => setType(v ? "mobile" : "fixe")} />
+              <Switch
+                checked={type === "mobile"}
+                onCheckedChange={(v) => setType(v ? "mobile" : "fixe")}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="faddr">Quartier / adresse</Label>
-              <Input id="faddr" value={address} onChange={(e) => setAddress(e.target.value)} maxLength={140} />
+              <Input
+                id="faddr"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                maxLength={140}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="fphone">Téléphone</Label>
-              <Input id="fphone" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={30} />
+              <Input
+                id="fphone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={30}
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Position sur la carte</Label>
@@ -390,7 +410,7 @@ function VendeurPage() {
                       latitude: pos.lat,
                       longitude: pos.lng,
                       phone: null,
-                      status: "non_verifie",
+                      status: "non_confirme",
                       is_online: true,
                       type,
                       last_position_update: null,
@@ -414,7 +434,7 @@ function VendeurPage() {
                 <MapPin className="mr-1.5 h-4 w-4" /> Utiliser ma position
               </Button>
             </div>
-            <Button className="w-full" disabled={saving} onClick={() => void createFacility()}>
+            <Button className="w-full" disabled={saving} onClick={() => void submitOnboarding()}>
               {saving ? "Création…" : "Créer ma fiche et recevoir 10 000 FCFA"}
             </Button>
           </div>
@@ -429,7 +449,7 @@ function VendeurPage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold">{facility.name}</h1>
-          <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? "Non vérifié"}</Badge>
+          <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? facility.status}</Badge>
           {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-muted-foreground">En ligne</span>
@@ -452,7 +472,7 @@ function VendeurPage() {
               <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Portefeuille</p>
                 <p className="mt-1 font-display text-2xl font-extrabold text-primary">
-                  {formatFcfa(sub?.wallet_balance ?? 0)}
+                  {formatFcfa(data?.walletBalance ?? 0)}
                 </p>
               </div>
               <div className="omni-card p-5">
@@ -461,16 +481,20 @@ function VendeurPage() {
               </div>
               <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Palier</p>
-                <p className="mt-1 font-display text-2xl font-extrabold">{pro ? "Pro" : "Gratuit"}</p>
+                <p className="mt-1 font-display text-2xl font-extrabold">
+                  {pro ? "Pro" : "Gratuit"}
+                </p>
                 {pro && (
                   <p className="text-xs text-muted-foreground">
-                    {daysLeft(sub?.pro_active_until ?? null)} jour(s) restants
+                    {daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants
                   </p>
                 )}
               </div>
               <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Campagnes</p>
-                <p className="mt-1 font-display text-2xl font-extrabold">{campaigns.length}</p>
+                <p className="mt-1 font-display text-2xl font-extrabold">
+                  {data?.campaigns.length ?? 0}
+                </p>
               </div>
             </div>
 
@@ -481,7 +505,7 @@ function VendeurPage() {
               </p>
               <div className="mt-3 h-64 overflow-hidden rounded-lg border border-border">
                 <MapCanvas
-                  facilities={[facility]}
+                  facilities={[{ ...facility, owner_id: user.id }]}
                   focus={{ lat: facility.latitude, lng: facility.longitude }}
                   onMapClick={(c) => void updatePosition(c)}
                 />
@@ -493,7 +517,8 @@ function VendeurPage() {
                   size="sm"
                   onClick={() =>
                     navigator.geolocation?.getCurrentPosition(
-                      (p) => void updatePosition({ lat: p.coords.latitude, lng: p.coords.longitude }),
+                      (p) =>
+                        void updatePosition({ lat: p.coords.latitude, lng: p.coords.longitude }),
                       () => toast.error("Position GPS indisponible."),
                     )
                   }
@@ -528,11 +553,14 @@ function VendeurPage() {
               <Button disabled={atProductCap} onClick={() => void addProduct()}>
                 <Plus className="mr-1.5 h-4 w-4" /> Ajouter
               </Button>
+              <Button variant="outline" onClick={() => void confirmEverything()}>
+                Tout confirmer
+              </Button>
             </div>
             {atProductCap && (
               <p className="mt-2 text-sm text-destructive">
-                Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille pour
-                repasser Pro.
+                Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille
+                pour repasser Pro.
               </p>
             )}
             <ul className="mt-4 space-y-2">
@@ -568,30 +596,33 @@ function VendeurPage() {
           </TabsContent>
 
           <TabsContent value="demandes" className="mt-5">
-            <RequestsPanel facilityId={facility.id} />
+            <RequestsPanel
+              facilityId={facility.id}
+              requests={data?.requests ?? []}
+              onRefresh={refresh}
+            />
           </TabsContent>
 
           <TabsContent value="pub" className="mt-5">
             <AdsPanel
               facility={facility}
               products={products}
-              sub={sub}
-              campaigns={campaigns}
-              wishlists={wishlists}
-              onSubChange={setSub}
-              onCampaignsChange={setCampaigns}
+              subscription={subscription}
+              campaigns={data?.campaigns ?? []}
+              onRefresh={refresh}
             />
           </TabsContent>
 
           <TabsContent value="coupons" className="mt-5">
-            <CouponsPanel facilityId={facility.id} />
+            <CouponsPanel
+              facilityId={facility.id}
+              coupons={data?.coupons ?? []}
+              onRefresh={refresh}
+            />
           </TabsContent>
 
           <TabsContent value="demande-locale" className="mt-5">
-            <DemandPanel
-              wishlists={wishlists}
-              origin={{ lat: facility.latitude, lng: facility.longitude }}
-            />
+            <DemandPanel demand={data?.demand ?? []} />
           </TabsContent>
         </Tabs>
       </main>
