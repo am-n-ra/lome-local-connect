@@ -1,6 +1,6 @@
 import { createMiddleware } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
-import { ensureProfile, verifyToken, type AuthUser } from "./neon-auth.server";
+import { ensureProfile, isStaff, verifyToken, type AuthUser } from "./neon-auth.server";
 
 function bearer(): string | null {
   const header = getRequestHeader("authorization");
@@ -27,5 +27,17 @@ export const optionalAuth = createMiddleware({ type: "function" }).server(
     const user: AuthUser | null = token ? await verifyToken(token) : null;
     if (user) await ensureProfile(user);
     return next({ context: { user, userId: user?.userId ?? null } });
+  },
+);
+
+/** Staff-only guard: admin, moderator or acquisition role required. */
+export const requireStaff = createMiddleware({ type: "function" }).server(
+  async ({ next }) => {
+    const token = bearer();
+    const user = token ? await verifyToken(token) : null;
+    if (!user) throw new Error("UNAUTHORIZED");
+    await ensureProfile(user);
+    if (!(await isStaff(user.userId))) throw new Error("FORBIDDEN");
+    return next({ context: { user, userId: user.userId } });
   },
 );

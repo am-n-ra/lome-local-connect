@@ -337,3 +337,38 @@ export const deleteWishlist = createServerFn({ method: "POST" })
     ]);
     return { ok: true };
   });
+
+/** "Est-ce votre commerce ?" — claims an unclaimed OSM listing. */
+export const claimFacility = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        facilityId: z.string().uuid(),
+        phone: z.string().max(40).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const facility = await queryOne<{ id: string; status: string; owner_id: string | null }>(
+      "SELECT id, status, owner_id FROM public.facilities WHERE id = $1",
+      [data.facilityId],
+    );
+    if (!facility) throw new Error("Commerce introuvable.");
+    if (facility.owner_id) throw new Error("Ce commerce a déjà un propriétaire.");
+    if (facility.status !== "non_reclame") throw new Error("Ce commerce n'est pas réclamable.");
+
+    await query(
+      `UPDATE public.facilities
+       SET owner_id = $2, status = 'non_confirme', claimed_at = now(),
+           phone = COALESCE($3, phone)
+       WHERE id = $1 AND owner_id IS NULL`,
+      [data.facilityId, context.userId, data.phone?.trim() || null],
+    );
+    await query(
+      `INSERT INTO public.subscriptions (facility_id) VALUES ($1)
+       ON CONFLICT (facility_id) DO NOTHING`,
+      [data.facilityId],
+    );
+    return { ok: true };
+  });

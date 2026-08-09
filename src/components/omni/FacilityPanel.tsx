@@ -3,6 +3,7 @@ import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-re
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  claimFacility,
   getFacility,
   listFavorites,
   recordWishlist,
@@ -43,11 +44,13 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
   const [showPhone, setShowPhone] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
+  const [claiming, setClaiming] = useState(false);
 
   const loadFacility = useServerFn(getFacility);
   const loadFavorites = useServerFn(listFavorites);
   const toggleFavoriteRemote = useServerFn(toggleFavoriteFn);
   const sendWishlist = useServerFn(recordWishlist);
+  const claimFacilityRemote = useServerFn(claimFacility);
 
   useEffect(() => {
     let active = true;
@@ -98,6 +101,22 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       if (result.favorite) toast.success("Ajouté à vos favoris");
     } catch {
       toast.error("Action impossible pour le moment.");
+    }
+  }
+
+  async function claim() {
+    if (!user) {
+      toast.info("Connectez-vous pour réclamer ce commerce.");
+      return;
+    }
+    setClaiming(true);
+    try {
+      await claimFacilityRemote({ data: { facilityId: facility.id } });
+      toast.success("Demande envoyée : votre commerce passe en « non confirmé ».");
+    } catch {
+      toast.error("Réclamation impossible pour le moment.");
+    } finally {
+      setClaiming(false);
     }
   }
 
@@ -153,6 +172,18 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       </div>
 
       {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
+
+      {facility.status === "non_reclame" && (
+        <div className="omni-card space-y-2 border-dashed p-3">
+          <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
+          <p className="text-xs text-muted-foreground">
+            Fiche importée d'OpenStreetMap. Les horaires, produits et prix ne sont pas confirmés.
+          </p>
+          <Button size="sm" disabled={claiming} onClick={() => void claim()}>
+            {claiming ? "Envoi…" : "Est-ce votre commerce ?"}
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={onItinerary} disabled={routingBusy}>
