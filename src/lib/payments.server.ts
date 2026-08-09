@@ -83,12 +83,12 @@ export async function reconcileDeposit(
   return { status: fresh!.status, amount: fresh!.amount };
 }
 
-export async function listDeposits(userId: string, facilityId: string) {
+export async function listDeposits(userId: string, facilityId: string): Promise<DepositRow[]> {
   await assertOwner(userId, facilityId);
-  const rows = await queryOne<DepositRow>(
-    "SELECT 1 AS ok WHERE false",
-    [],
+  return query<DepositRow>(
+    `SELECT id, facility_id, amount, status, provider_txn_id, checkout_url, created_at
+     FROM public.wallet_deposits WHERE facility_id = $1
+     ORDER BY created_at DESC LIMIT 20`,
+    [facilityId],
   );
-  void rows;
-  return [];
 }
