@@ -19,12 +19,12 @@ import { campaignCostFor, RADIUS_OPTIONS } from "@/lib/vendor";
 import {
   createCampaign,
   estimateCampaignReach,
-  topUpWallet,
   type VendorCampaign,
   type VendorFacility,
   type VendorProduct,
   type VendorSubscription,
 } from "@/lib/vendor.functions";
+import { createWalletDeposit } from "@/lib/payments.functions";
 
 type Props = {
   facility: VendorFacility;
@@ -55,7 +55,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
 
   const estimate = useServerFn(estimateCampaignReach);
   const launchCampaign = useServerFn(createCampaign);
-  const deposit = useServerFn(topUpWallet);
+  const deposit = useServerFn(createWalletDeposit);
 
   useEffect(() => {
     if (!builderOpen) return;
@@ -264,7 +264,9 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Déposer plus</DialogTitle>
-            <DialogDescription>Mode démo, aucune transaction réelle.</DialogDescription>
+            <DialogDescription>
+              Paiement sécurisé par FedaPay : carte bancaire, Flooz ou T-Money.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
             <Label htmlFor="dep">Montant (FCFA)</Label>
@@ -276,7 +278,9 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
             />
           </div>
           <DialogFooter>
-            <Button onClick={() => void confirmDeposit()}>Confirmer (mode démo)</Button>
+            <Button disabled={busy} onClick={() => void confirmDeposit()}>
+              {busy ? "Redirection…" : "Payer maintenant"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
