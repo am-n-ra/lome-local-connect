@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { submitCart } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
@@ -24,31 +24,20 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
       return;
     }
     setSending(facilityId);
-    const { data: cartRow, error } = await supabase
-      .from("carts")
-      .insert({ buyer_id: user.id, facility_id: facilityId, status: "pending" })
-      .select("id")
-      .single();
-    if (error || !cartRow) {
+    try {
+      await submitCart({
+        data: {
+          facilityId,
+          items: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
+        },
+      });
+      cart.clearFacility(facilityId);
+      toast.success("Demande envoyée au vendeur.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Envoi impossible pour le moment.");
+    } finally {
       setSending(null);
-      toast.error("Envoi impossible pour le moment.");
-      return;
     }
-    const { error: itemsError } = await supabase.from("cart_items").insert(
-      lines.map((l) => ({
-        cart_id: cartRow.id,
-        product_id: l.productId,
-        quantity: l.quantity,
-        price_at_time: l.price,
-      })),
-    );
-    setSending(null);
-    if (itemsError) {
-      toast.error("Envoi partiel, réessayez.");
-      return;
-    }
-    cart.clearFacility(facilityId);
-    toast.success("Demande envoyée au vendeur.");
   }
 
   return (
