@@ -5,7 +5,7 @@
 1. **A map does not give us business listings.** The map (MapLibre) renders OpenStreetMap tiles — it draws streets and buildings, it does not hand us "all businesses in Google Maps". Pre-listing shops requires importing a business dataset. Two real options:
    - **OpenStreetMap / Overpass** — free, openly licensed (ODbL), we may store and display names, categories, coordinates, phone, opening hours. Coverage in Lomé is decent for markets, pharmacies, fuel, hardware, but thinner than Google.
    - **Google Places API** — better coverage, but paid and licence-restricted: Google forbids storing most Place data long-term or displaying it outside a Google map, so it cannot legally back a permanent "unclaimed listing" database.
-   Recommendation: **OSM/Overpass import** as the acquisition seed, plus an admin screen so the team can add and edit listings by hand or by CSV.
+   Decision: **OpenStreetMap / Overpass import** (free) as the acquisition seed, plus an admin screen so the team can add and edit listings by hand or by CSV.
 2. **Credentials.** The Neon password was pasted in chat — rotate it in the Neon console once we are live; I will store the new one as a secret. The FedaPay application ID and secret key came through blank; I will request them through the secure secret form when we wire payments.
 
 Note: I attempted to inspect the existing Neon database, but the connection timed out from the build sandbox. Verifying connectivity and reading the current schema is step 1 below — nothing in this plan assumes what those legacy tables contain, beyond your instruction to leave the Neon Auth tables untouched.
