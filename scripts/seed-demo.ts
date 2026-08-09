@@ -28,7 +28,7 @@ async function ensureAccount(account: (typeof ACCOUNTS)[number]): Promise<string
 
   const response = await fetch(`${authBase}/sign-up/email`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", origin: "http://localhost:8080" },
     body: JSON.stringify(account),
   });
   if (!response.ok) {
@@ -41,7 +41,9 @@ async function ensureAccount(account: (typeof ACCOUNTS)[number]): Promise<string
   return rows[0].id;
 }
 
-const [vendorId, buyerAId, buyerBId] = await Promise.all(ACCOUNTS.map(ensureAccount));
+const vendorId = await ensureAccount(ACCOUNTS[0]!);
+const buyerAId = await ensureAccount(ACCOUNTS[1]!);
+const buyerBId = await ensureAccount(ACCOUNTS[2]!);
 console.log("accounts ready");
 
 for (const [index, id] of [vendorId, buyerAId, buyerBId].entries()) {
