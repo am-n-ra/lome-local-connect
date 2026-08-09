@@ -25,6 +25,59 @@ export type MapFacility = {
   tier: string;
 };
 
+
+export type ProductRow = {
+  id: string;
+  facility_id: string;
+  name: string;
+  price: number;
+  discount_percent: number;
+  in_stock: boolean;
+  photo_url: string | null;
+  last_confirmed_at: string | null;
+};
+
+export type OfferRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  discount_percent: number;
+  active_until: string | null;
+};
+
+export type PublicCouponRow = {
+  id: string;
+  code: string;
+  description: string | null;
+  discount_percent: number;
+};
+
+export type ProfileRow = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  market_code: string;
+  wallet_balance: number;
+  onboarding_done: boolean;
+};
+
+export type OwnedFacility = {
+  id: string;
+  name: string;
+  status: string;
+  type: string;
+};
+
+export type NotificationRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  link: string | null;
+  read_at: string | null;
+  created_at: string;
+};
+
 const FACILITY_SELECT = `
   SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
          f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
@@ -93,18 +146,18 @@ export const getFacility = createServerFn({ method: "GET" })
     if (!facility) return null;
 
     const [products, offers, coupons] = await Promise.all([
-      query(
+      query<ProductRow>(
         `SELECT id, facility_id, name, price, discount_percent, in_stock, photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY in_stock DESC, name ASC`,
         [data.id],
       ),
-      query(
+      query<OfferRow>(
         `SELECT id, title, description, discount_percent, active_until
          FROM public.offers
          WHERE facility_id = $1 AND (active_until IS NULL OR active_until > now())`,
         [data.id],
       ),
-      query(
+      query<PublicCouponRow>(
         `SELECT id, code, description, discount_percent FROM public.coupons WHERE facility_id = $1`,
         [data.id],
       ),
@@ -235,12 +288,12 @@ export const getMe = createServerFn({ method: "GET" })
   .middleware([optionalAuth])
   .handler(async ({ context }) => {
     if (!context.userId) return null;
-    const profile = await queryOne(
+    const profile = await queryOne<ProfileRow>(
       `SELECT id, name, email, phone, market_code, wallet_balance, onboarding_done
        FROM public.profiles WHERE id = $1`,
       [context.userId],
     );
-    const facilities = await query(
+    const facilities = await query<OwnedFacility>(
       "SELECT id, name, status, type FROM public.facilities WHERE owner_id = $1 ORDER BY created_at",
       [context.userId],
     );
@@ -254,7 +307,7 @@ export const getMe = createServerFn({ method: "GET" })
 export const listNotifications = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) =>
-    query(
+    query<NotificationRow>(
       `SELECT id, title, body, link, read_at, created_at
        FROM public.notifications WHERE user_id = $1
        ORDER BY created_at DESC LIMIT 30`,
