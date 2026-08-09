@@ -16,6 +16,7 @@ import { Route as CarteRouteImport } from './routes/carte'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -52,6 +53,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicFedapayWebhookRoute = ApiPublicFedapayWebhookRouteImport.update({
+  id: '/api/public/fedapay-webhook',
+  path: '/api/public/fedapay-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
+    | '/api/public/fedapay-webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
+    | '/api/public/fedapay-webhook'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
+    | '/api/public/fedapay-webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,6 +131,7 @@ export interface RootRouteChildren {
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/fedapay-webhook': {
+      id: '/api/public/fedapay-webhook'
+      path: '/api/public/fedapay-webhook'
+      fullPath: '/api/public/fedapay-webhook'
+      preLoaderRoute: typeof ApiPublicFedapayWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -183,17 +203,8 @@ const rootRouteChildren: RootRouteChildren = {
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
