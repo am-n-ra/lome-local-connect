@@ -11,12 +11,17 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CarteRouteImport } from './routes/carte'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
+import { Route as ApiPublicOpenapiDotjsonRouteImport } from './routes/api/public/openapi[.]json'
+import { Route as ApiPublicV1FacilitiesRouteImport } from './routes/api/public/v1/facilities'
+import { Route as ApiPublicV1StatsRouteImport } from './routes/api/public/v1/stats'
+import { Route as ApiPublicV1FacilitiesIdRouteImport } from './routes/api/public/v1/facilities.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -26,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiDocsRoute = ApiDocsRouteImport.update({
+  id: '/api-docs',
+  path: '/api-docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -58,80 +68,134 @@ const ApiPublicFedapayWebhookRoute = ApiPublicFedapayWebhookRouteImport.update({
   path: '/api/public/fedapay-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicOpenapiDotjsonRoute = ApiPublicOpenapiDotjsonRouteImport.update({
+  id: '/api/public/openapi.json',
+  path: '/api/public/openapi.json',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1FacilitiesRoute = ApiPublicV1FacilitiesRouteImport.update({
+  id: '/api/public/v1/facilities',
+  path: '/api/public/v1/facilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1StatsRoute = ApiPublicV1StatsRouteImport.update({
+  id: '/api/public/v1/stats',
+  path: '/api/public/v1/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicV1FacilitiesIdRoute = ApiPublicV1FacilitiesIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ApiPublicV1FacilitiesRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
+  '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
+  '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRouteWithChildren
+  '/api/public/v1/stats': typeof ApiPublicV1StatsRoute
+  '/api/public/v1/facilities/$id': typeof ApiPublicV1FacilitiesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/api-docs'
     | '/auth'
     | '/carte'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/openapi.json'
+    | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
+    | '/api/public/v1/facilities/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/api-docs'
     | '/auth'
     | '/carte'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/openapi.json'
+    | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
+    | '/api/public/v1/facilities/$id'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/api-docs'
     | '/auth'
     | '/carte'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/openapi.json'
+    | '/api/public/v1/facilities'
+    | '/api/public/v1/stats'
+    | '/api/public/v1/facilities/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ApiDocsRoute: typeof ApiDocsRoute
   AuthRoute: typeof AuthRoute
   CarteRoute: typeof CarteRoute
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
+  ApiPublicOpenapiDotjsonRoute: typeof ApiPublicOpenapiDotjsonRoute
+  ApiPublicV1FacilitiesRoute: typeof ApiPublicV1FacilitiesRouteWithChildren
+  ApiPublicV1StatsRoute: typeof ApiPublicV1StatsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -148,6 +212,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api-docs': {
+      id: '/api-docs'
+      path: '/api-docs'
+      fullPath: '/api-docs'
+      preLoaderRoute: typeof ApiDocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -192,29 +263,64 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFedapayWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/openapi.json': {
+      id: '/api/public/openapi.json'
+      path: '/api/public/openapi.json'
+      fullPath: '/api/public/openapi.json'
+      preLoaderRoute: typeof ApiPublicOpenapiDotjsonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/facilities': {
+      id: '/api/public/v1/facilities'
+      path: '/api/public/v1/facilities'
+      fullPath: '/api/public/v1/facilities'
+      preLoaderRoute: typeof ApiPublicV1FacilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/stats': {
+      id: '/api/public/v1/stats'
+      path: '/api/public/v1/stats'
+      fullPath: '/api/public/v1/stats'
+      preLoaderRoute: typeof ApiPublicV1StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/v1/facilities/$id': {
+      id: '/api/public/v1/facilities/$id'
+      path: '/$id'
+      fullPath: '/api/public/v1/facilities/$id'
+      preLoaderRoute: typeof ApiPublicV1FacilitiesIdRouteImport
+      parentRoute: typeof ApiPublicV1FacilitiesRoute
+    }
   }
 }
+
+interface ApiPublicV1FacilitiesRouteChildren {
+  ApiPublicV1FacilitiesIdRoute: typeof ApiPublicV1FacilitiesIdRoute
+}
+
+const ApiPublicV1FacilitiesRouteChildren: ApiPublicV1FacilitiesRouteChildren = {
+  ApiPublicV1FacilitiesIdRoute: ApiPublicV1FacilitiesIdRoute,
+}
+
+const ApiPublicV1FacilitiesRouteWithChildren =
+  ApiPublicV1FacilitiesRoute._addFileChildren(
+    ApiPublicV1FacilitiesRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ApiDocsRoute: ApiDocsRoute,
   AuthRoute: AuthRoute,
   CarteRoute: CarteRoute,
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
+  ApiPublicOpenapiDotjsonRoute: ApiPublicOpenapiDotjsonRoute,
+  ApiPublicV1FacilitiesRoute: ApiPublicV1FacilitiesRouteWithChildren,
+  ApiPublicV1StatsRoute: ApiPublicV1StatsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

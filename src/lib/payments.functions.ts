@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { requireAuth } from "./auth-middleware";
 import { listDeposits, reconcileDeposit, startDeposit } from "./payments.server";
+import { enforceRateLimit } from "./rate-limit.server";
 
 export type WalletDeposit = {
   id: string;
@@ -27,6 +28,13 @@ export const createWalletDeposit = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "deposit",
+      subject: context.userId,
+      limit: 8,
+      windowSeconds: 600,
+      message: "Trop de tentatives de recharge. Réessayez dans quelques minutes.",
+    });
     const origin = new URL(getRequestUrl()).origin;
     return startDeposit({
       userId: context.userId,

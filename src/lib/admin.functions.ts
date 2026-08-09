@@ -216,3 +216,87 @@ export const listAudit = createServerFn({ method: "GET" })
        FROM public.audit_log ORDER BY created_at DESC LIMIT 50`,
     ),
   );
+
+// ── Phase 4 — plateforme : paiements, portefeuilles, modération financière ──
+
+export type PlatformMetrics = {
+  deposits_total: number;
+  deposits_approved: number;
+  deposits_pending: number;
+  wallet_total: number;
+  payout_total: number;
+  pro_facilities: number;
+  carts_pending: number;
+  users: number;
+};
+
+export const getPlatformMetrics = createServerFn({ method: "GET" })
+  .middleware([requireStaff])
+  .handler(async () => {
+    const row = await queryOne<PlatformMetrics>(`
+      SELECT
+        (SELECT COALESCE(sum(amount), 0) FROM public.wallet_deposits WHERE status = 'approved')::int AS deposits_total,
+        (SELECT count(*) FROM public.wallet_deposits WHERE status = 'approved')::int AS deposits_approved,
+        (SELECT count(*) FROM public.wallet_deposits WHERE status = 'pending')::int AS deposits_pending,
+        (SELECT COALESCE(sum(wallet_balance), 0) FROM public.subscriptions)::int AS wallet_total,
+        (SELECT COALESCE(sum(payout_balance), 0) FROM public.subscriptions)::int AS payout_total,
+        (SELECT count(*) FROM public.subscriptions WHERE tier = 'pro')::int AS pro_facilities,
+        (SELECT count(*) FROM public.carts WHERE status = 'pending')::int AS carts_pending,
+        (SELECT count(*) FROM public.profiles)::int AS users
+    `);
+    return row!;
+  });
+
+export type AdminDepositRow = {
+  id: string;
+  facility_id: string;
+  facility_name: string;
+  amount: number;
+  status: string;
+  provider_txn_id: string | null;
+  created_at: string;
+  credited_at: string | null;
+};
+
+export const listAdminDeposits = createServerFn({ method: "GET" })
+  .middleware([requireStaff])
+  .handler(async () =>
+    query<AdminDepositRow>(
+      `SELECT d.id, d.facility_id, f.name AS facility_name, d.amount, d.status,
+              d.provider_txn_id, d.created_at, d.credited_at
+       FROM public.wallet_deposits d
+       JOIN public.facilities f ON f.id = d.facility_id
+       ORDER BY d.created_at DESC LIMIT 40`,
+    ),
+  );
+
+/** Manual wallet correction (refund, goodwill credit). Always audited. */
+export const adjustWallet = createServerFn({ method: "POST" })
+  .middleware([requireStaff])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        facilityId: z.string().uuid(),
+        amount: z.number().int().min(-1_000_000).max(1_000_000).refine((v) => v !== 0, {
+          message: "Montant requis",
+        }),
+        reason: z.string().min(3).max(300),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const updated = await queryOne<{ wallet_balance: number }>(
+      `INSERT INTO public.subscriptions (facility_id, wallet_balance)
+       VALUES ($1, GREATEST($2, 0))
+       ON CONFLICT (facility_id) DO UPDATE
+         SET wallet_balance = GREATEST(public.subscriptions.wallet_balance + $2, 0)
+       RETURNING wallet_balance`,
+      [data.facilityId, data.amount],
+    );
+    await writeAudit(context.userId, "wallet.adjust", "facility", data.facilityId, {
+      amount: data.amount,
+      reason: data.reason,
+      balance: updated?.wallet_balance ?? null,
+    });
+    return { balance: updated?.wallet_balance ?? 0 };
+  });

@@ -14,6 +14,7 @@ import {
   type AdminStats,
 } from "@/lib/admin.functions";
 import { TopNav } from "@/components/omni/TopNav";
+import { OpsPanel } from "@/components/omni/admin/OpsPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -413,6 +414,8 @@ function AdminPage() {
             </div>
           ))}
         </div>
+
+        <OpsPanel />
       </main>
     </div>
   );

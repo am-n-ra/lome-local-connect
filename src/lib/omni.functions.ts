@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { optionalAuth, requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
+import { enforceRateLimit } from "./rate-limit.server";
 
 export type MapFacility = {
   id: string;
@@ -179,6 +180,13 @@ export const recordWishlist = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "wishlist",
+      subject: context.userId,
+      limit: 20,
+      windowSeconds: 300,
+      message: "Trop de recherches enregistrées. Réessayez dans quelques minutes.",
+    });
     await query(
       `INSERT INTO public.wishlists (user_id, search_term, latitude, longitude)
        VALUES ($1, $2, $3, $4)`,
@@ -238,6 +246,13 @@ export const submitCart = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "cart",
+      subject: context.userId,
+      limit: 10,
+      windowSeconds: 600,
+      message: "Trop de demandes envoyées. Réessayez dans quelques minutes.",
+    });
     const ids = data.items.map((i) => i.productId);
     const products = await query<{ id: string; price: number; facility_id: string }>(
       "SELECT id, price, facility_id FROM public.products WHERE id = ANY($1::uuid[])",
@@ -350,6 +365,13 @@ export const claimFacility = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "claim",
+      subject: context.userId,
+      limit: 5,
+      windowSeconds: 3600,
+      message: "Trop de demandes de revendication. Réessayez plus tard.",
+    });
     const facility = await queryOne<{ id: string; status: string; owner_id: string | null }>(
       "SELECT id, status, owner_id FROM public.facilities WHERE id = $1",
       [data.facilityId],
