@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  getFacility,
+  listFavorites,
+  recordWishlist,
+  toggleFavorite as toggleFavoriteFn,
+} from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -38,35 +44,42 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
 
+  const loadFacility = useServerFn(getFacility);
+  const loadFavorites = useServerFn(listFavorites);
+  const toggleFavoriteRemote = useServerFn(toggleFavoriteFn);
+  const sendWishlist = useServerFn(recordWishlist);
+
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [{ data: prod }, { data: coup }] = await Promise.all([
-        supabase.from("products").select("*").eq("facility_id", facility.id).order("name"),
-        supabase.from("coupons").select("id, code, description, discount_percent").eq("facility_id", facility.id),
-      ]);
-      if (!active) return;
-      setProducts((prod ?? []) as ProductRow[]);
-      setCoupons((coup ?? []) as Coupon[]);
+      try {
+        const result = await loadFacility({ data: { id: facility.id } });
+        if (!active || !result) return;
+        setProducts(result.products as unknown as ProductRow[]);
+        setCoupons(result.coupons);
+      } catch {
+        /* la fiche reste affichée sans produits */
+      }
     })();
     return () => {
       active = false;
     };
-  }, [facility.id]);
+  }, [facility.id, loadFacility]);
 
   useEffect(() => {
     if (!user) {
       setFavorite(false);
       return;
     }
-    void supabase
-      .from("favorites")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("facility_id", facility.id)
-      .maybeSingle()
-      .then(({ data }) => setFavorite(Boolean(data)));
-  }, [user, facility.id]);
+    void (async () => {
+      try {
+        const rows = await loadFavorites();
+        setFavorite(rows.some((r) => r.facility_id === facility.id));
+      } catch {
+        setFavorite(false);
+      }
+    })();
+  }, [user, facility.id, loadFavorites]);
 
   const statusTone = useMemo(() => {
     if (facility.status === "certifie") return "bg-gold/20 text-foreground border-gold";
@@ -79,13 +92,12 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       toast.info("Connectez-vous pour enregistrer vos favoris.");
       return;
     }
-    if (favorite) {
-      await supabase.from("favorites").delete().eq("user_id", user.id).eq("facility_id", facility.id);
-      setFavorite(false);
-    } else {
-      await supabase.from("favorites").insert({ user_id: user.id, facility_id: facility.id });
-      setFavorite(true);
-      toast.success("Ajouté à vos favoris");
+    try {
+      const result = await toggleFavoriteRemote({ data: { facilityId: facility.id } });
+      setFavorite(result.favorite);
+      if (result.favorite) toast.success("Ajouté à vos favoris");
+    } catch {
+      toast.error("Action impossible pour le moment.");
     }
   }
 
@@ -99,13 +111,15 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       toast.error("Indiquez le nom du produit (2 à 120 caractères).");
       return;
     }
-    const { error } = await supabase.from("wishlists").insert({
-      user_id: user.id,
-      search_term: term,
-      latitude: facility.latitude,
-      longitude: facility.longitude,
-    });
-    if (error) {
+    try {
+      await sendWishlist({
+        data: {
+          searchTerm: term,
+          latitude: facility.latitude,
+          longitude: facility.longitude,
+        },
+      });
+    } catch {
       toast.error("Enregistrement impossible.");
       return;
     }
