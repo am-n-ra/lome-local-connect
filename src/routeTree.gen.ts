@@ -17,6 +17,7 @@ import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
+import { Route as ApiPublicV1FacilitiesRouteImport } from './routes/api/public/v1/facilities'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +59,11 @@ const ApiPublicFedapayWebhookRoute = ApiPublicFedapayWebhookRouteImport.update({
   path: '/api/public/fedapay-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1FacilitiesRoute = ApiPublicV1FacilitiesRouteImport.update({
+  id: '/api/public/v1/facilities',
+  path: '/api/public/v1/facilities',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
+  '/api/public/v1/facilities': typeof ApiPublicV1FacilitiesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/v1/facilities'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/v1/facilities'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/fiche/$id'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
+    | '/api/public/v1/facilities'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +144,7 @@ export interface RootRouteChildren {
   FicheIdRoute: typeof FicheIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
+  ApiPublicV1FacilitiesRoute: typeof ApiPublicV1FacilitiesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +205,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicFedapayWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/facilities': {
+      id: '/api/public/v1/facilities'
+      path: '/api/public/v1/facilities'
+      fullPath: '/api/public/v1/facilities'
+      preLoaderRoute: typeof ApiPublicV1FacilitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,17 +224,8 @@ const rootRouteChildren: RootRouteChildren = {
   FicheIdRoute: FicheIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
+  ApiPublicV1FacilitiesRoute: ApiPublicV1FacilitiesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
