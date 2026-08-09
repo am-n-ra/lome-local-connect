@@ -54,10 +54,11 @@ function categorise(tags: Record<string, string>): string {
   return "other";
 }
 
-const response = await fetch(OVERPASS, {
-  method: "POST",
-  headers: { "content-type": "application/x-www-form-urlencoded" },
-  body: `data=${encodeURIComponent(QUERY)}`,
+const response = await fetch(`${OVERPASS}?data=${encodeURIComponent(QUERY)}`, {
+  headers: {
+    "user-agent": "OmniView/1.0 (local business discovery, Lome TG)",
+    accept: "application/json",
+  },
 });
 if (!response.ok) {
   console.error(`Overpass failed: ${response.status} ${await response.text()}`);
