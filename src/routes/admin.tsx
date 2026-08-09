@@ -414,6 +414,8 @@ function AdminPage() {
             </div>
           ))}
         </div>
+
+        <OpsPanel />
       </main>
     </div>
   );
