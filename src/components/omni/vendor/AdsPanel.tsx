@@ -97,13 +97,16 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
       toast.error("Montant invalide (500 FCFA minimum).");
       return;
     }
+    setBusy(true);
     try {
-      await deposit({ data: { facilityId: facility.id, amount: Math.round(amount) } });
-      await onRefresh();
-      setDepositOpen(false);
-      toast.success(`${formatFcfa(amount)} ajoutés (mode démo).`);
+      const { url } = await deposit({
+        data: { facilityId: facility.id, amount: Math.round(amount) },
+      });
+      window.location.href = url;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Dépôt impossible.");
+    } finally {
+      setBusy(false);
     }
   }
 
