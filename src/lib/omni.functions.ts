@@ -358,6 +358,13 @@ export const claimFacility = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "claim",
+      subject: context.userId,
+      limit: 5,
+      windowSeconds: 3600,
+      message: "Trop de demandes de revendication. Réessayez plus tard.",
+    });
     const facility = await queryOne<{ id: string; status: string; owner_id: string | null }>(
       "SELECT id, status, owner_id FROM public.facilities WHERE id = $1",
       [data.facilityId],
