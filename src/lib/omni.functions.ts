@@ -314,3 +314,26 @@ export const listNotifications = createServerFn({ method: "GET" })
       [context.userId],
     ),
   );
+
+export type WishlistEntry = { id: string; search_term: string; created_at: string };
+
+export const listWishlists = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) =>
+    query<WishlistEntry>(
+      `SELECT id, search_term, created_at FROM public.wishlists
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 100`,
+      [context.userId],
+    ),
+  );
+
+export const deleteWishlist = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await query("DELETE FROM public.wishlists WHERE id = $1 AND user_id = $2", [
+      data.id,
+      context.userId,
+    ]);
+    return { ok: true };
+  });
