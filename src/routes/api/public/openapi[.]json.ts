@@ -96,7 +96,7 @@ const spec = {
   components: { schemas: { Facility: facilitySchema } },
 } as const;
 
-export const Route = createFileRoute("/api/public/openapi[.]json")({
+export const Route = createFileRoute("/api/public/openapi.json")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: CORS }),
