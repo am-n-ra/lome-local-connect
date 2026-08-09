@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
 import { MapPin, Plus, Store } from "lucide-react";
 import { toast } from "sonner";
@@ -50,8 +51,10 @@ import {
   type VendorSubscription,
   type DemandSignal,
 } from "@/lib/vendor.functions";
+import { confirmWalletDeposit } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/vendeur")({
+  validateSearch: z.object({ depot: z.string().uuid().optional() }),
   head: () => ({
     meta: [
       { title: "Espace vendeur — OmniView" },
@@ -85,6 +88,8 @@ type Dashboard = {
 
 function VendeurPage() {
   const { user, loading } = useAuth();
+  const { depot } = useSearch({ from: "/vendeur" });
+  const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
   const [ready, setReady] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
@@ -111,6 +116,7 @@ function VendeurPage() {
   const confirmAll = useServerFn(confirmStock);
   const patchFacility = useServerFn(updateFacility);
   const moveMobile = useServerFn(updateMobilePosition);
+  const confirmDeposit = useServerFn(confirmWalletDeposit);
 
   const refresh = useCallback(async () => {
     try {
@@ -129,6 +135,28 @@ function VendeurPage() {
     }
     void refresh();
   }, [user, refresh]);
+
+  // Back from the FedaPay checkout page: reconcile then clean the URL.
+  useEffect(() => {
+    if (!depot || !user) return;
+    void (async () => {
+      try {
+        const result = await confirmDeposit({ data: { depositId: depot } });
+        if (result.status === "approved") {
+          toast.success(`${formatFcfa(result.amount)} ajoutés à votre portefeuille.`);
+          await refresh();
+        } else if (result.status === "pending") {
+          toast.info("Paiement en cours de validation, votre solde sera crédité sous peu.");
+        } else {
+          toast.error("Le paiement n'a pas abouti.");
+        }
+      } catch {
+        toast.error("Impossible de vérifier le paiement.");
+      } finally {
+        void navigate({ to: "/vendeur", search: {}, replace: true });
+      }
+    })();
+  }, [depot, user, confirmDeposit, refresh, navigate]);
 
   const facility = data?.facilities[0] ?? null;
   const subscription = data?.subscription ?? null;
