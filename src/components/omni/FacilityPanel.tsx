@@ -154,6 +154,18 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
 
       {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
 
+      {facility.status === "non_reclame" && (
+        <div className="omni-card space-y-2 border-dashed p-3">
+          <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
+          <p className="text-xs text-muted-foreground">
+            Fiche importée d'OpenStreetMap. Les horaires, produits et prix ne sont pas confirmés.
+          </p>
+          <Button size="sm" disabled={claiming} onClick={() => void claim()}>
+            {claiming ? "Envoi…" : "Est-ce votre commerce ?"}
+          </Button>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         <Button onClick={onItinerary} disabled={routingBusy}>
           <Navigation className="mr-1.5 h-4 w-4" />
