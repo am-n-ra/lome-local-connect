@@ -61,12 +61,12 @@ export function TopNav({
         )}
 
 
-        <div className="ml-auto flex items-center gap-1.5">
-          <div className="flex rounded-full border border-border bg-secondary p-0.5 text-xs font-semibold">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
+          <div className="flex shrink-0 rounded-full border border-border bg-secondary p-0.5 text-xs font-semibold">
             <button
               type="button"
               onClick={() => navigate({ to: "/carte" })}
-              className={`rounded-full px-3 py-1.5 transition-colors ${
+              className={`rounded-full px-2.5 py-1.5 transition-colors md:px-3 ${
                 activeRole === "acheteur"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground"
@@ -77,7 +77,7 @@ export function TopNav({
             <button
               type="button"
               onClick={() => navigate({ to: "/vendeur" })}
-              className={`flex items-center gap-1 rounded-full px-3 py-1.5 transition-colors ${
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 transition-colors md:px-3 ${
                 activeRole === "vendeur"
                   ? "bg-primary text-primary-foreground"
                   : "text-secondary-foreground"
@@ -87,6 +87,7 @@ export function TopNav({
               Vendeur
             </button>
           </div>
+
 
           <Button
             variant="ghost"
