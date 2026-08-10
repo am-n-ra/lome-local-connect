@@ -66,6 +66,8 @@ export function MapCanvas({
   routeCoords,
   userPosition,
   focus,
+  initialCenter,
+  initialZoom,
   interactive = true,
   className,
   onMapClick,
@@ -73,6 +75,10 @@ export function MapCanvas({
   const gl = useMapLibre();
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const startRef = useRef({
+    center: initialCenter ?? LOME_CENTER,
+    zoom: initialZoom ?? 12.2,
+  });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
@@ -81,13 +87,15 @@ export function MapCanvas({
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
+    const start = startRef.current;
     const map = new gl.Map({
       container: containerRef.current,
       style: CARTO_LIGHT_STYLE,
-      center: [LOME_CENTER.lng, LOME_CENTER.lat],
-      zoom: 12.2,
+      center: [start.center.lng, start.center.lat],
+      zoom: start.zoom,
       interactive,
       attributionControl: true,
+      projection: start.zoom <= GLOBE_ZOOM ? { type: "globe" } : { type: "mercator" },
     });
     mapRef.current = map;
     map.on("load", () => {
@@ -103,6 +111,14 @@ export function MapCanvas({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
       });
+    });
+    // Flat city map when close in, 3D globe once the user zooms far out.
+    let globe = start.zoom <= GLOBE_ZOOM;
+    map.on("zoom", () => {
+      const wantsGlobe = map.getZoom() <= GLOBE_ZOOM;
+      if (wantsGlobe === globe) return;
+      globe = wantsGlobe;
+      map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
     });
     map.on("click", (e) => {
       clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
