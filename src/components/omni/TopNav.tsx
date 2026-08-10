@@ -42,16 +42,14 @@ export function TopNav({
             else navigate({ to: "/carte" });
           }}
         >
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query ?? ""}
-              onChange={(e) => onQueryChange?.(e.target.value)}
-              placeholder="Que cherchez-vous ?"
-              className="pl-9"
-              aria-label="Rechercher un produit"
-            />
-          </div>
+          <SmartSearchBar
+            value={query ?? ""}
+            onChange={(v) => onQueryChange?.(v)}
+            onSubmit={() => {
+              if (onSearchSubmit) onSearchSubmit();
+              else navigate({ to: "/carte" });
+            }}
+          />
         </form>
 
         <div className="ml-auto flex items-center gap-1.5">
