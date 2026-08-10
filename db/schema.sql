@@ -91,8 +91,8 @@ CREATE TABLE public.user_interests (
 -- 4. Facilities — four-state lifecycle
 --    unclaimed  : imported listing, unclaimed (created by the OSM import)
 --    unconfirmed : claimed by an owner, profile filled in
---    verifie      : admin/acquisition team checked identity or documents
---    confirme     : earned through QR-authorised transactions from distinct buyers
+--    certified      : admin/acquisition team checked identity or documents
+--    confirmed     : earned through QR-authorised transactions from distinct buyers
 CREATE TABLE public.facilities (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   market_code          text NOT NULL DEFAULT 'TG-LOME' REFERENCES public.markets(market_code),

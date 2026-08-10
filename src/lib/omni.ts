@@ -48,15 +48,15 @@ export function categoryLabel(value: string): string {
 export const STATUS_LABEL: Record<string, string> = {
   unclaimed: "Non réclamé",
   unconfirmed: "Non confirmé",
-  verifie: "Vérifié",
-  confirme: "Confirmé",
+  certified: "Vérifié",
+  confirmed: "Confirmé",
 };
 
 export const STATUS_COLOR: Record<string, string> = {
   unclaimed: "#b8b0a8",
   unconfirmed: "#9a938c",
-  verifie: "#2f6fb5",
-  confirme: "#d9a521",
+  certified: "#2f6fb5",
+  confirmed: "#d9a521",
 };
 
 export function formatFcfa(amount: number): string {

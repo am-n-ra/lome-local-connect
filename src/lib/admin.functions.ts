@@ -28,8 +28,8 @@ export type AdminStats = {
   total: number;
   unclaimed: number;
   unconfirmed: number;
-  verifie: number;
-  confirme: number;
+  certified: number;
+  confirmed: number;
   contacted: number;
   products: number;
   wishlists: number;
@@ -44,8 +44,8 @@ export const getAdminStats = createServerFn({ method: "GET" })
         (SELECT count(*) FROM public.facilities)::int AS total,
         (SELECT count(*) FROM public.facilities WHERE status = 'unclaimed')::int AS unclaimed,
         (SELECT count(*) FROM public.facilities WHERE status = 'unconfirmed')::int AS unconfirmed,
-        (SELECT count(*) FROM public.facilities WHERE status = 'certified')::int AS verifie,
-        (SELECT count(*) FROM public.facilities WHERE status = 'confirmed')::int AS confirme,
+        (SELECT count(*) FROM public.facilities WHERE status = 'certified')::int AS certified,
+        (SELECT count(*) FROM public.facilities WHERE status = 'confirmed')::int AS confirmed,
         (SELECT count(*) FROM public.facilities WHERE contacted_at IS NOT NULL)::int AS contacted,
         (SELECT count(*) FROM public.products)::int AS products,
         (SELECT count(*) FROM public.wishlists)::int AS wishlists,
@@ -142,7 +142,7 @@ export const markContacted = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Admin/moderator state change. `confirme` is earned, never set by hand. */
+/** Admin/moderator state change. `confirmed` is earned, never set by hand. */
 export const setFacilityStatus = createServerFn({ method: "POST" })
   .middleware([requireStaff])
   .inputValidator((input: unknown) =>
