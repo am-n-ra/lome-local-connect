@@ -192,38 +192,9 @@ function CartePage() {
         onOpenWishlist={() => setWishOpen(true)}
         onOpenOrders={() => setOrdersOpen(true)}
         activeRole="acheteur"
+        hideSearch
       />
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <button
-          type="button"
-          onClick={() => setCategory(null)}
-          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-            category === null
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border"
-          }`}
-        >
-          Tout
-        </button>
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            onClick={() => setCategory(c.value)}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-              category === c.value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-        <span className="ml-auto text-xs text-muted-foreground">
-          Tri : Sponsorisé puis distance · {results.length} résultat(s)
-        </span>
-      </div>
 
       {nearbyMobile && !bannerDismissed && (
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
