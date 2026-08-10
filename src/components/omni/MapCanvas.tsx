@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { CARTO_LIGHT_STYLE, useMapLibre, type MapInstance, type MarkerInstance } from "@/lib/maplibre";
+import {
+  CARTO_LIGHT_STYLE,
+  useMapLibre,
+  type MapInstance,
+  type MarkerInstance,
+} from "@/lib/maplibre";
 import { LOME_CENTER, STATUS_COLOR, type FacilityRow } from "@/lib/omni";
 
 export type MapFacility = FacilityRow & { isPro?: boolean };
@@ -11,10 +16,15 @@ type Props = {
   routeCoords?: [number, number][] | null;
   userPosition?: { lat: number; lng: number } | null;
   focus?: { lat: number; lng: number; zoom?: number } | null;
+  initialCenter?: { lat: number; lng: number } | null;
+  initialZoom?: number;
   interactive?: boolean;
   className?: string;
   onMapClick?: (coords: { lat: number; lng: number }) => void;
 };
+
+/** Zoom under which the map switches to a 3D globe. */
+const GLOBE_ZOOM = 5;
 
 function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
   // Outer element is positioned by MapLibre (it owns `transform`/`position`).
@@ -23,43 +33,34 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
 
   const inner = document.createElement("div");
   inner.style.position = "relative";
-  inner.style.transform = selected ? "scale(1.15)" : "scale(1)";
+  inner.style.transform = selected ? "scale(1.35)" : "scale(1)";
   inner.style.transition = "transform .15s ease";
   el.appendChild(inner);
 
+  const color = STATUS_COLOR[f.status] ?? "#9a938c";
   const pin = document.createElement("div");
-  pin.style.width = "34px";
-  pin.style.height = "34px";
+  pin.style.width = "14px";
+  pin.style.height = "14px";
   pin.style.borderRadius = "999px";
-  pin.style.display = "flex";
-  pin.style.alignItems = "center";
-  pin.style.justifyContent = "center";
-  pin.style.fontSize = "16px";
-  pin.style.background = "#ffffff";
-  pin.style.border = `3px solid ${STATUS_COLOR[f.status] ?? "#9a938c"}`;
-  pin.style.boxShadow = "0 6px 14px rgba(60,40,20,.28)";
-  pin.textContent = f.type === "mobile" ? "🛵" : "🏬";
+  pin.style.background = f.type === "mobile" ? "#ffffff" : color;
+  pin.style.border = `2.5px solid ${f.type === "mobile" ? color : "#ffffff"}`;
+  pin.style.boxShadow = "0 2px 6px rgba(60,40,20,.28)";
   inner.appendChild(pin);
 
   if (f.isPro) {
-    const ribbon = document.createElement("span");
-    ribbon.textContent = "Sponsorisé";
-    ribbon.style.position = "absolute";
-    ribbon.style.top = "-14px";
-    ribbon.style.left = "50%";
-    ribbon.style.transform = "translateX(-50%)";
-    ribbon.style.whiteSpace = "nowrap";
-    ribbon.style.fontSize = "9px";
-    ribbon.style.fontWeight = "700";
-    ribbon.style.padding = "1px 6px";
-    ribbon.style.borderRadius = "999px";
-    ribbon.style.background = "#e0a52a";
-    ribbon.style.color = "#3a2a10";
-    inner.appendChild(ribbon);
+    const dot = document.createElement("span");
+    dot.style.position = "absolute";
+    dot.style.top = "-3px";
+    dot.style.right = "-3px";
+    dot.style.width = "6px";
+    dot.style.height = "6px";
+    dot.style.borderRadius = "999px";
+    dot.style.background = "#e0a52a";
+    dot.style.border = "1.5px solid #ffffff";
+    inner.appendChild(dot);
   }
   return el;
 }
-
 
 export function MapCanvas({
   facilities,
@@ -68,6 +69,8 @@ export function MapCanvas({
   routeCoords,
   userPosition,
   focus,
+  initialCenter,
+  initialZoom,
   interactive = true,
   className,
   onMapClick,
@@ -75,6 +78,10 @@ export function MapCanvas({
   const gl = useMapLibre();
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const startRef = useRef({
+    center: initialCenter ?? LOME_CENTER,
+    zoom: initialZoom ?? 12.2,
+  });
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
@@ -83,13 +90,15 @@ export function MapCanvas({
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
+    const start = startRef.current;
     const map = new gl.Map({
       container: containerRef.current,
       style: CARTO_LIGHT_STYLE,
-      center: [LOME_CENTER.lng, LOME_CENTER.lat],
-      zoom: 12.2,
+      center: [start.center.lng, start.center.lat],
+      zoom: start.zoom,
       interactive,
       attributionControl: true,
+      projection: start.zoom <= GLOBE_ZOOM ? { type: "globe" } : { type: "mercator" },
     });
     mapRef.current = map;
     map.on("load", () => {
@@ -105,6 +114,14 @@ export function MapCanvas({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
       });
+    });
+    // Flat city map when close in, 3D globe once the user zooms far out.
+    let globe = start.zoom <= GLOBE_ZOOM;
+    map.on("zoom", () => {
+      const wantsGlobe = map.getZoom() <= GLOBE_ZOOM;
+      if (wantsGlobe === globe) return;
+      globe = wantsGlobe;
+      map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
     });
     map.on("click", (e) => {
       clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });

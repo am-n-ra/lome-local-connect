@@ -11,6 +11,9 @@ export type MapInstance = {
   on: (event: string, cb: (e: MapMouseEvent) => void) => void;
   remove: () => void;
   flyTo: (opts: Record<string, unknown>) => void;
+  jumpTo: (opts: Record<string, unknown>) => void;
+  getZoom: () => number;
+  setProjection: (projection: Record<string, unknown>) => void;
   getSource: (id: string) => { setData: (data: unknown) => void } | undefined;
   addSource: (id: string, source: Record<string, unknown>) => void;
   addLayer: (layer: Record<string, unknown>) => void;

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Mic, Volume2, X } from "lucide-react";
+import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { listFacilities, type MapFacility as ApiFacility } from "@/lib/omni.functions";
@@ -11,12 +11,7 @@ import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { TopNav } from "@/components/omni/TopNav";
-import {
-  CATEGORIES,
-  formatDistance,
-  haversineKm,
-  LOME_CENTER,
-} from "@/lib/omni";
+import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -43,6 +38,7 @@ function CartePage() {
   const [category, setCategory] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoReady, setGeoReady] = useState(false);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [routingBusy, setRoutingBusy] = useState(false);
@@ -55,22 +51,25 @@ function CartePage() {
 
   useEffect(() => {
     let active = true;
-    const handle = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const rows = await fetchFacilities({
-            data: {
-              search: query.trim() || undefined,
-              category: category ?? undefined,
-              includeUnclaimed: true,
-            },
-          });
-          if (active) setFacilities(rows);
-        } catch {
-          if (active) setFacilities([]);
-        }
-      })();
-    }, query.trim() ? 300 : 0);
+    const handle = window.setTimeout(
+      () => {
+        void (async () => {
+          try {
+            const rows = await fetchFacilities({
+              data: {
+                search: query.trim() || undefined,
+                category: category ?? undefined,
+                includeUnclaimed: true,
+              },
+            });
+            if (active) setFacilities(rows);
+          } catch {
+            if (active) setFacilities([]);
+          }
+        })();
+      },
+      query.trim() ? 300 : 0,
+    );
     return () => {
       active = false;
       window.clearTimeout(handle);
@@ -78,10 +77,19 @@ function CartePage() {
   }, [fetchFacilities, query, category]);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGeoReady(true);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setUserPos(null),
+      (pos) => {
+        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoReady(true);
+      },
+      () => {
+        setUserPos(null);
+        setGeoReady(true);
+      },
       { timeout: 8000 },
     );
   }, []);
@@ -115,26 +123,7 @@ function CartePage() {
     [facilities, origin],
   );
 
-  const voiceSearch = useCallback(() => {
-    const SR =
-      (window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never })
-        .SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: new () => never }).webkitSpeechRecognition;
-    if (!SR) {
-      toast.error("La recherche vocale n'est pas disponible sur ce navigateur.");
-      return;
-    }
-    const recognition = new SR() as unknown as {
-      lang: string;
-      start: () => void;
-      onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
-      onerror: () => void;
-    };
-    recognition.lang = "fr-FR";
-    recognition.onresult = (e) => setQuery(e.results[0][0].transcript);
-    recognition.onerror = () => toast.error("Je n'ai pas compris, réessayez.");
-    recognition.start();
-  }, []);
+  const initialCenter = useMemo(() => userPos, [userPos]);
 
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
@@ -145,7 +134,13 @@ function CartePage() {
       const json = (await res.json()) as {
         routes?: {
           geometry: { coordinates: [number, number][] };
-          legs: { steps: { maneuver: { type: string; modifier?: string }; name: string; distance: number }[] }[];
+          legs: {
+            steps: {
+              maneuver: { type: string; modifier?: string };
+              name: string;
+              distance: number;
+            }[];
+          }[];
         }[];
       };
       const route = json.routes?.[0];
@@ -178,14 +173,13 @@ function CartePage() {
       />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <Button variant="outline" size="sm" onClick={voiceSearch}>
-          <Mic className="mr-1.5 h-4 w-4" /> Recherche vocale
-        </Button>
         <button
           type="button"
           onClick={() => setCategory(null)}
           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-            category === null ? "border-primary bg-primary text-primary-foreground" : "border-border"
+            category === null
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border"
           }`}
         >
           Tout
@@ -196,7 +190,9 @@ function CartePage() {
             type="button"
             onClick={() => setCategory(c.value)}
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-              category === c.value ? "border-primary bg-primary text-primary-foreground" : "border-border"
+              category === c.value
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border"
             }`}
           >
             {c.label}
@@ -211,36 +207,56 @@ function CartePage() {
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
           <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
           <Badge variant="secondary">Mode démo</Badge>
-          <button type="button" className="ml-auto" onClick={() => setBannerDismissed(true)} aria-label="Fermer">
+          <button
+            type="button"
+            className="ml-auto"
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Fermer"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
       <div className="relative flex-1 overflow-hidden">
-        <MapCanvas
-          facilities={results}
-          selectedId={selected?.id ?? null}
-          onSelect={(f) => {
-            setSelected(f);
-            setRouteCoords(null);
-            setSteps([]);
-          }}
-          routeCoords={routeCoords}
-          userPosition={userPos}
-          focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
-          className="h-full w-full"
-        />
+        {geoReady ? (
+          <MapCanvas
+            facilities={results}
+            selectedId={selected?.id ?? null}
+            onSelect={(f) => {
+              setSelected(f);
+              setRouteCoords(null);
+              setSteps([]);
+            }}
+            routeCoords={routeCoords}
+            userPosition={userPos}
+            initialCenter={initialCenter}
+            initialZoom={userPos ? 15.5 : 12.2}
+            focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
+            className="h-full w-full"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
+            Localisation en cours…
+          </div>
+        )}
 
         {selected && (
-          <div
-            className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border"
-          >
+          <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">
             <div className="mb-2 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}
+              >
                 Page complète
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Fermer" onClick={() => setSelected(null)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Fermer"
+                onClick={() => setSelected(null)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -258,7 +274,12 @@ function CartePage() {
             <div className="mb-2 flex items-center justify-between">
               <p className="font-display font-bold">Guidage à pied</p>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" aria-label="Relire" onClick={() => speak(steps[0]?.instruction ?? "")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Relire"
+                  onClick={() => speak(steps[0]?.instruction ?? "")}
+                >
                   <Volume2 className="h-4 w-4" />
                 </Button>
                 <Button
@@ -280,7 +301,9 @@ function CartePage() {
                   <span className="font-semibold text-primary">{i + 1}.</span>
                   <span>
                     {s.instruction}{" "}
-                    <span className="text-muted-foreground">({formatDistance(s.distance / 1000)})</span>
+                    <span className="text-muted-foreground">
+                      ({formatDistance(s.distance / 1000)})
+                    </span>
                   </span>
                 </li>
               ))}
@@ -290,7 +313,11 @@ function CartePage() {
       </div>
 
       <CartPanel open={cartOpen} onOpenChange={setCartOpen} />
-      <WishlistPanel open={wishOpen} onOpenChange={setWishOpen} onRerun={(term) => setQuery(term)} />
+      <WishlistPanel
+        open={wishOpen}
+        onOpenChange={setWishOpen}
+        onRerun={(term) => setQuery(term)}
+      />
     </div>
   );
 }

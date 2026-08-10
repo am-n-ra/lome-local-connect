@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, LogIn, MapPin, Search, ShoppingCart, Store, User } from "lucide-react";
+import { Heart, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
@@ -42,16 +42,14 @@ export function TopNav({
             else navigate({ to: "/carte" });
           }}
         >
-          <div className="relative w-full">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query ?? ""}
-              onChange={(e) => onQueryChange?.(e.target.value)}
-              placeholder="Que cherchez-vous ?"
-              className="pl-9"
-              aria-label="Rechercher un produit"
-            />
-          </div>
+          <SmartSearchBar
+            value={query ?? ""}
+            onChange={(v) => onQueryChange?.(v)}
+            onSubmit={() => {
+              if (onSearchSubmit) onSearchSubmit();
+              else navigate({ to: "/carte" });
+            }}
+          />
         </form>
 
         <div className="ml-auto flex items-center gap-1.5">
@@ -81,11 +79,22 @@ export function TopNav({
             </button>
           </div>
 
-          <Button variant="ghost" size="icon" aria-label="Produits recherchés" onClick={onOpenWishlist}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Produits recherchés"
+            onClick={onOpenWishlist}
+          >
             <Heart className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" aria-label="Panier" className="relative" onClick={onOpenCart}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Panier"
+            className="relative"
+            onClick={onOpenCart}
+          >
             <ShoppingCart className="h-5 w-5" />
             {cart.count > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
