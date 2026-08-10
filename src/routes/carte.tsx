@@ -255,7 +255,9 @@ function CartePage() {
             initialCenter={initialCenter}
             initialZoom={userPos ? 15.5 : 12.2}
             focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
+            fitPoints={selected ? null : fitPoints}
             className="h-full w-full"
+
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
