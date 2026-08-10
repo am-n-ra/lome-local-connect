@@ -12,6 +12,8 @@ import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { OrdersPanel } from "@/components/omni/OrdersPanel";
 import { TopNav } from "@/components/omni/TopNav";
+import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
+
 import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
 export const Route = createFileRoute("/carte")({
@@ -127,6 +129,25 @@ function CartePage() {
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
+  // After each search, frame the user plus the five nearest matches.
+  const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
+  const searchKey = `${query.trim()}|${category ?? ""}`;
+  useEffect(() => {
+    if (!searchKey.replace("|", "")) {
+      setFitPoints(null);
+      return;
+    }
+    if (results.length === 0) return;
+    const nearest = [...results]
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5)
+      .map((f) => ({ lat: f.latitude, lng: f.longitude }));
+    setFitPoints(userPos ? [userPos, ...nearest] : nearest);
+    // Only re-frame when the search itself changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey, facilities]);
+
+
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
     setRoutingBusy(true);
@@ -173,38 +194,9 @@ function CartePage() {
         onOpenWishlist={() => setWishOpen(true)}
         onOpenOrders={() => setOrdersOpen(true)}
         activeRole="acheteur"
+        hideSearch
       />
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <button
-          type="button"
-          onClick={() => setCategory(null)}
-          className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-            category === null
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-border"
-          }`}
-        >
-          Tout
-        </button>
-        {CATEGORIES.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            onClick={() => setCategory(c.value)}
-            className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-              category === c.value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-        <span className="ml-auto text-xs text-muted-foreground">
-          Tri : Sponsorisé puis distance · {results.length} résultat(s)
-        </span>
-      </div>
 
       {nearbyMobile && !bannerDismissed && (
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
@@ -236,6 +228,7 @@ function CartePage() {
             initialCenter={initialCenter}
             initialZoom={userPos ? 15.5 : 12.2}
             focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
+            fitPoints={selected ? null : fitPoints}
             className="h-full w-full"
           />
         ) : (
@@ -243,6 +236,56 @@ function CartePage() {
             Localisation en cours…
           </div>
         )}
+
+        {!selected && steps.length === 0 && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
+            <div className="omni-glass pointer-events-auto w-full max-w-xl space-y-2 p-2.5">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                }}
+              >
+                <SmartSearchBar
+                  value={query}
+                  onChange={setQuery}
+                  placeholder="Que cherchez-vous à Lomé ?"
+                />
+              </form>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+                <button
+                  type="button"
+                  onClick={() => setCategory(null)}
+                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                    category === null
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card/70"
+                  }`}
+                >
+                  Tout
+                </button>
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    onClick={() => setCategory(c.value)}
+                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
+                      category === c.value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card/70"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+                <span className="ml-auto shrink-0 pl-2 text-[11px] text-muted-foreground">
+                  {results.length} résultat(s)
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+
 
         {selected && (
           <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">

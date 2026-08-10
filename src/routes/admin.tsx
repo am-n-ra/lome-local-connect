@@ -54,8 +54,9 @@ const OUTCOMES = [
 const STATUSES = ["all", "unclaimed", "unconfirmed", "certified", "confirmed"] as const;
 
 function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isStaff } = useAuth();
   const [denied, setDenied] = useState(false);
+
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [rows, setRows] = useState<AdminFacilityRow[]>([]);
   const [hoods, setHoods] = useState<{ neighbourhood: string; count: number }[]>([]);
@@ -98,13 +99,13 @@ function AdminPage() {
   }, [fetchStats, fetchRows, search, status, category, hood, contacted]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStaff) return;
     const t = window.setTimeout(() => void reload(), 250);
     return () => window.clearTimeout(t);
-  }, [user, reload]);
+  }, [user, isStaff, reload]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStaff) return;
     void (async () => {
       try {
         setHoods(await fetchHoods());
@@ -112,7 +113,8 @@ function AdminPage() {
         setHoods([]);
       }
     })();
-  }, [user, fetchHoods]);
+  }, [user, isStaff, fetchHoods]);
+
 
   const openRow = useMemo(() => rows.find((r) => r.id === openId) ?? null, [rows, openId]);
 
@@ -143,7 +145,7 @@ function AdminPage() {
     );
   }
 
-  if (denied) {
+  if (denied || !isStaff) {
     return (
       <div className="min-h-screen bg-background">
         <TopNav />
