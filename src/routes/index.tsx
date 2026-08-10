@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BrandMark } from "@/components/omni/BrandMark";
 import {
   ArrowRight,
   BadgeCheck,
