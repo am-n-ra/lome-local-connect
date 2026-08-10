@@ -61,7 +61,7 @@ export function TopNav({
         )}
 
 
-        <div className="ml-auto flex min-w-0 flex-wrap items-center justify-end gap-1">
+        <div className="ml-auto flex w-full min-w-0 items-center justify-between gap-1 md:w-auto md:justify-end">
           <div className="flex shrink-0 rounded-full border border-border bg-secondary p-0.5 text-xs font-semibold">
             <button
               type="button"
