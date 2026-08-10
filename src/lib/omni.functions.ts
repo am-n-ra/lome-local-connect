@@ -26,6 +26,15 @@ export type MapFacility = {
   tier: string;
   cover_url: string | null;
 };
+export type FacilityMediaRow = {
+  id: string;
+  kind: "image" | "video";
+  url: string;
+  thumb_url: string | null;
+  position: number;
+  duration_s: number | null;
+};
+
 
 
 
