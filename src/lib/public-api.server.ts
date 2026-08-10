@@ -45,8 +45,16 @@ export const PUBLIC_FACILITY_SELECT = `
   SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
          f.latitude, f.longitude, f.status, f.type, f.is_online,
          COALESCE(p.cnt, 0)::int AS product_count,
-         p.min_price::int AS min_price
+         p.min_price::int AS min_price,
+         m.url AS cover_url
   FROM public.facilities f
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(fm.thumb_url, fm.url) AS url
+    FROM public.facility_media fm
+    WHERE fm.facility_id = f.id AND fm.kind = 'image'
+    ORDER BY fm.position ASC, fm.created_at ASC
+    LIMIT 1
+  ) m ON true
   LEFT JOIN LATERAL (
     SELECT count(*) AS cnt, min(price) AS min_price
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
