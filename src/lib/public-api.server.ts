@@ -75,7 +75,9 @@ export type PublicFacility = {
   is_online: boolean;
   product_count: number;
   min_price: number | null;
+  cover_url: string | null;
 };
+
 
 export const listQuerySchema = z.object({
   search: z.string().max(120).optional(),
