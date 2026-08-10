@@ -194,6 +194,28 @@ export function MapCanvas({
     map.flyTo({ center: [focus.lng, focus.lat], zoom: focus.zoom ?? 15, speed: 1.3 });
   }, [focus]);
 
+  // Frames the user plus the nearest search results after each new search.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !fitPoints || fitPoints.length === 0) return;
+    if (fitPoints.length === 1) {
+      const p = fitPoints[0]!;
+      map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, speed: 1.3 });
+      return;
+    }
+    const lats = fitPoints.map((p) => p.lat);
+    const lngs = fitPoints.map((p) => p.lng);
+    map.fitBounds(
+      [
+        [Math.min(...lngs), Math.min(...lats)],
+        [Math.max(...lngs), Math.max(...lats)],
+      ],
+      { padding: { top: 80, bottom: 220, left: 40, right: 40 }, maxZoom: 16, duration: 900 },
+    );
+  }, [fitPoints]);
+
+
+
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>
       {!gl && (
