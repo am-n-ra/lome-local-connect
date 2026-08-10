@@ -177,4 +177,13 @@
   box-shadow: var(--shadow-soft);
 }
 
+@utility omni-glass {
+  border-radius: var(--radius-3xl);
+  border: 1px solid color-mix(in oklab, var(--color-card) 70%, transparent);
+  background-color: color-mix(in oklab, var(--color-card) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: var(--shadow-soft);
+}
+
 .maplibregl-ctrl-attrib { font-size: 10px; }
+
