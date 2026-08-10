@@ -72,8 +72,10 @@ export function MapCanvas({
   routeCoords,
   userPosition,
   focus,
+  fitPoints,
   initialCenter,
   initialZoom,
+
   interactive = true,
   className,
   onMapClick,
