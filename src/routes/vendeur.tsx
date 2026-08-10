@@ -26,6 +26,7 @@ import { AdsPanel } from "@/components/omni/vendor/AdsPanel";
 import { CouponsPanel } from "@/components/omni/vendor/CouponsPanel";
 import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
+import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
 import {
   CATEGORIES,
   daysLeft,
@@ -490,6 +491,7 @@ function VendeurPage() {
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
             <TabsTrigger value="produits">Produits</TabsTrigger>
             <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
+            <TabsTrigger value="encaisser">Encaisser</TabsTrigger>
             <TabsTrigger value="pub">Publicité</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
             <TabsTrigger value="demande-locale">Demande locale</TabsTrigger>
@@ -629,6 +631,10 @@ function VendeurPage() {
               requests={data?.requests ?? []}
               onRefresh={refresh}
             />
+          </TabsContent>
+
+          <TabsContent value="encaisser" className="mt-5">
+            <CheckoutPanel facilityId={facility.id} />
           </TabsContent>
 
           <TabsContent value="pub" className="mt-5">

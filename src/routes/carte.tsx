@@ -171,6 +171,7 @@ function CartePage() {
         onQueryChange={setQuery}
         onOpenCart={() => setCartOpen(true)}
         onOpenWishlist={() => setWishOpen(true)}
+        onOpenOrders={() => setOrdersOpen(true)}
         activeRole="acheteur"
       />
 
