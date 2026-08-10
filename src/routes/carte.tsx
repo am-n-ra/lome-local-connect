@@ -127,6 +127,25 @@ function CartePage() {
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
+  // After each search, frame the user plus the five nearest matches.
+  const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
+  const searchKey = `${query.trim()}|${category ?? ""}`;
+  useEffect(() => {
+    if (!searchKey.replace("|", "")) {
+      setFitPoints(null);
+      return;
+    }
+    if (results.length === 0) return;
+    const nearest = [...results]
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, 5)
+      .map((f) => ({ lat: f.latitude, lng: f.longitude }));
+    setFitPoints(userPos ? [userPos, ...nearest] : nearest);
+    // Only re-frame when the search itself changes, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey, facilities]);
+
+
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
     setRoutingBusy(true);
