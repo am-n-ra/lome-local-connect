@@ -14,6 +14,8 @@ type Props = {
   onOpenWishlist?: () => void;
   onOpenOrders?: () => void;
   activeRole?: "acheteur" | "vendeur";
+  /** Hides the inline search bar (used when a bottom search dock is shown). */
+  hideSearch?: boolean;
 };
 
 export function TopNav({
@@ -24,6 +26,7 @@ export function TopNav({
   onOpenWishlist,
   onOpenOrders,
   activeRole = "acheteur",
+  hideSearch = false,
 }: Props) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -37,23 +40,26 @@ export function TopNav({
           OmniView
         </Link>
 
-        <form
-          className="order-3 flex w-full items-center gap-2 md:order-none md:w-auto md:flex-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (onSearchSubmit) onSearchSubmit();
-            else navigate({ to: "/carte" });
-          }}
-        >
-          <SmartSearchBar
-            value={query ?? ""}
-            onChange={(v) => onQueryChange?.(v)}
-            onSubmit={() => {
+        {!hideSearch && (
+          <form
+            className="order-3 flex w-full items-center gap-2 md:order-none md:w-auto md:flex-1"
+            onSubmit={(e) => {
+              e.preventDefault();
               if (onSearchSubmit) onSearchSubmit();
               else navigate({ to: "/carte" });
             }}
-          />
-        </form>
+          >
+            <SmartSearchBar
+              value={query ?? ""}
+              onChange={(v) => onQueryChange?.(v)}
+              onSubmit={() => {
+                if (onSearchSubmit) onSearchSubmit();
+                else navigate({ to: "/carte" });
+              }}
+            />
+          </form>
+        )}
+
 
         <div className="ml-auto flex items-center gap-1.5">
           <div className="flex rounded-full border border-border bg-secondary p-0.5 text-xs font-semibold">
