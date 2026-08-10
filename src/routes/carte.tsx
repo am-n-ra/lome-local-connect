@@ -43,6 +43,7 @@ function CartePage() {
   const [category, setCategory] = useState<string | null>(null);
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoReady, setGeoReady] = useState(false);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [routingBusy, setRoutingBusy] = useState(false);
