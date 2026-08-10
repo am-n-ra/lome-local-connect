@@ -115,26 +115,8 @@ function CartePage() {
     [facilities, origin],
   );
 
-  const voiceSearch = useCallback(() => {
-    const SR =
-      (window as unknown as { SpeechRecognition?: new () => never; webkitSpeechRecognition?: new () => never })
-        .SpeechRecognition ??
-      (window as unknown as { webkitSpeechRecognition?: new () => never }).webkitSpeechRecognition;
-    if (!SR) {
-      toast.error("La recherche vocale n'est pas disponible sur ce navigateur.");
-      return;
-    }
-    const recognition = new SR() as unknown as {
-      lang: string;
-      start: () => void;
-      onresult: (e: { results: { 0: { 0: { transcript: string } } } }) => void;
-      onerror: () => void;
-    };
-    recognition.lang = "fr-FR";
-    recognition.onresult = (e) => setQuery(e.results[0][0].transcript);
-    recognition.onerror = () => toast.error("Je n'ai pas compris, réessayez.");
-    recognition.start();
-  }, []);
+  const initialCenter = useMemo(() => userPos, [userPos]);
+
 
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
