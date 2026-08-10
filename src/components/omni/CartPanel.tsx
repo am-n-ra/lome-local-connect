@@ -143,13 +143,24 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                   <span>Sous-total</span>
                   <span>{formatFcfa(subtotal)}</span>
                 </div>
-                <Button
-                  className="w-full"
-                  disabled={sending === facilityId}
-                  onClick={() => void sendRequest(facilityId, lines)}
-                >
-                  {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    className="omni-glass w-full"
+                    disabled={checking === facilityId}
+                    onClick={() => void verify(facilityId, lines)}
+                  >
+                    {checking === facilityId ? "Vérification…" : "Vérifier la disponibilité"}
+                  </Button>
+                  <Button
+                    className="w-full"
+                    disabled={sending === facilityId}
+                    onClick={() => void sendRequest(facilityId, lines)}
+                  >
+                    {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
+                  </Button>
+                </div>
+
               </div>
             );
           })}
