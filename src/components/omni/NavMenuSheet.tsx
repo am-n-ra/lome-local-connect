@@ -30,10 +30,10 @@ import { useCart } from "@/lib/cart";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activeRole?: "acheteur" | "vendeur";
-  onOpenCart?: () => void;
-  onOpenWishlist?: () => void;
-  onOpenOrders?: () => void;
+  activeRole?: "acheteur" | "vendeur" | undefined;
+  onOpenCart?: (() => void) | undefined;
+  onOpenWishlist?: (() => void) | undefined;
+  onOpenOrders?: (() => void) | undefined;
   notifications: NotificationRow[];
   onNotificationsRead: () => void;
 };
