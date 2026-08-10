@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { MapPin } from "lucide-react";
+import { BrandMark } from "@/components/omni/BrandMark";
 import { toast } from "sonner";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth";
@@ -74,7 +74,7 @@ function AuthPage() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
         <Link to="/" className="mb-6 flex items-center justify-center gap-1.5 font-display text-xl font-extrabold">
-          <MapPin className="h-5 w-5 text-primary" /> OmniView
+          <BrandMark className="h-8 w-8" /> OmniView
         </Link>
         <div className="omni-card p-6">
           <Tabs defaultValue="signin">

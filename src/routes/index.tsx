@@ -313,7 +313,7 @@ function Landing() {
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
           <span className="flex items-center gap-1.5 font-display font-bold text-foreground">
-            <MapPin className="h-4 w-4 text-primary" /> OmniView · Lomé, Togo
+            <BrandMark className="h-5 w-5" /> OmniView · Lomé, Togo
           </span>
           <nav className="flex flex-wrap gap-4">
             <Link to="/carte" className="hover:text-foreground">
