@@ -98,6 +98,8 @@ const FACILITY_SELECT = `
          COALESCE(p.cnt, 0)::int AS product_count,
 
          p.min_price::int        AS min_price,
+         COALESCE(p.max_discount, 0)::int AS max_discount_percent,
+
          COALESCE(s.tier, 'free') AS tier,
          EXISTS (
            SELECT 1 FROM public.ad_campaigns c
