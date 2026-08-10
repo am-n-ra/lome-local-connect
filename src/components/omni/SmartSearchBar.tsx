@@ -9,7 +9,7 @@ import { searchTermFromImage, transcribeSearchAudio } from "@/lib/search.functio
 type Props = {
   value: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  onSubmit?: (() => void) | undefined;
   placeholder?: string;
   /** "dock" renders the bottom-anchored frosted pill used on the map. */
   layout?: "input" | "dock";
