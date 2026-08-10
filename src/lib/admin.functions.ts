@@ -26,10 +26,10 @@ export type AdminFacilityRow = {
 
 export type AdminStats = {
   total: number;
-  non_reclame: number;
-  non_confirme: number;
-  verifie: number;
-  confirme: number;
+  unclaimed: number;
+  unconfirmed: number;
+  certified: number;
+  confirmed: number;
   contacted: number;
   products: number;
   wishlists: number;
@@ -42,10 +42,10 @@ export const getAdminStats = createServerFn({ method: "GET" })
     const row = await queryOne<AdminStats>(`
       SELECT
         (SELECT count(*) FROM public.facilities)::int AS total,
-        (SELECT count(*) FROM public.facilities WHERE status = 'non_reclame')::int AS non_reclame,
-        (SELECT count(*) FROM public.facilities WHERE status = 'non_confirme')::int AS non_confirme,
-        (SELECT count(*) FROM public.facilities WHERE status = 'verifie')::int AS verifie,
-        (SELECT count(*) FROM public.facilities WHERE status = 'confirme')::int AS confirme,
+        (SELECT count(*) FROM public.facilities WHERE status = 'unclaimed')::int AS unclaimed,
+        (SELECT count(*) FROM public.facilities WHERE status = 'unconfirmed')::int AS unconfirmed,
+        (SELECT count(*) FROM public.facilities WHERE status = 'certified')::int AS certified,
+        (SELECT count(*) FROM public.facilities WHERE status = 'confirmed')::int AS confirmed,
         (SELECT count(*) FROM public.facilities WHERE contacted_at IS NOT NULL)::int AS contacted,
         (SELECT count(*) FROM public.products)::int AS products,
         (SELECT count(*) FROM public.wishlists)::int AS wishlists,
@@ -142,14 +142,14 @@ export const markContacted = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Admin/moderator state change. `confirme` is earned, never set by hand. */
+/** Admin/moderator state change. `confirmed` is earned, never set by hand. */
 export const setFacilityStatus = createServerFn({ method: "POST" })
   .middleware([requireStaff])
   .inputValidator((input: unknown) =>
     z
       .object({
         facilityId: z.string().uuid(),
-        status: z.enum(["non_reclame", "non_confirme", "verifie"]),
+        status: z.enum(["unclaimed", "unconfirmed", "certified"]),
       })
       .parse(input),
   )
@@ -157,7 +157,7 @@ export const setFacilityStatus = createServerFn({ method: "POST" })
     await query(
       `UPDATE public.facilities
        SET status = $2,
-           verified_at = CASE WHEN $2 = 'verifie' THEN now() ELSE verified_at END
+           verified_at = CASE WHEN $2 = 'certified' THEN now() ELSE verified_at END
        WHERE id = $1`,
       [data.facilityId, data.status],
     );

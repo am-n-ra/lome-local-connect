@@ -89,10 +89,10 @@ CREATE TABLE public.user_interests (
 );
 
 -- 4. Facilities — four-state lifecycle
---    non_reclame  : imported listing, unclaimed (created by the OSM import)
---    non_confirme : claimed by an owner, profile filled in
---    verifie      : admin/acquisition team checked identity or documents
---    confirme     : earned through QR-authorised transactions from distinct buyers
+--    unclaimed  : imported listing, unclaimed (created by the OSM import)
+--    unconfirmed : claimed by an owner, profile filled in
+--    certified      : admin/acquisition team checked identity or documents
+--    confirmed     : earned through QR-authorised transactions from distinct buyers
 CREATE TABLE public.facilities (
   id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   market_code          text NOT NULL DEFAULT 'TG-LOME' REFERENCES public.markets(market_code),
@@ -105,8 +105,8 @@ CREATE TABLE public.facilities (
   latitude             double precision NOT NULL,
   longitude            double precision NOT NULL,
   phone                text,
-  status               text NOT NULL DEFAULT 'non_confirme'
-                       CHECK (status IN ('non_reclame','non_confirme','verifie','confirme')),
+  status               text NOT NULL DEFAULT 'unconfirmed'
+                       CHECK (status IN ('unclaimed','unconfirmed','certified','confirmed')),
   type                 text NOT NULL DEFAULT 'fixe' CHECK (type IN ('fixe','mobile')),
   is_online            boolean NOT NULL DEFAULT true,
   last_position_update timestamptz,
@@ -311,9 +311,9 @@ BEGIN
 
   SELECT status INTO current_status FROM public.facilities WHERE id = NEW.facility_id;
 
-  IF distinct_buyers >= 3 AND current_status IN ('non_confirme','verifie') THEN
+  IF distinct_buyers >= 3 AND current_status IN ('unconfirmed','certified') THEN
     UPDATE public.facilities
-      SET status = 'confirme', confirmed_at = now(), updated_at = now()
+      SET status = 'confirmed', confirmed_at = now(), updated_at = now()
       WHERE id = NEW.facility_id;
   END IF;
 

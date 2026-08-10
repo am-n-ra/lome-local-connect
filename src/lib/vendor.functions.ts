@@ -236,13 +236,13 @@ export const createFacility = createServerFn({ method: "POST" })
     let facility: VendorFacility | null;
 
     if (data.claimFacilityId) {
-      // Claiming an imported (non_reclame) listing.
+      // Claiming an imported (unclaimed) listing.
       facility = await queryOne<VendorFacility>(
         `UPDATE public.facilities
          SET owner_id = $1, name = $2, category = $3, description = $4, address = $5,
              neighbourhood = $6, phone = $7, type = $8, latitude = $9, longitude = $10,
-             status = 'non_confirme', claimed_at = now()
-         WHERE id = $11 AND owner_id IS NULL AND status = 'non_reclame'
+             status = 'unconfirmed', claimed_at = now()
+         WHERE id = $11 AND owner_id IS NULL AND status = 'unclaimed'
          RETURNING *`,
         [
           context.userId,
@@ -264,7 +264,7 @@ export const createFacility = createServerFn({ method: "POST" })
         `INSERT INTO public.facilities
            (owner_id, name, category, description, address, neighbourhood, phone, type,
             latitude, longitude, status, claimed_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'non_confirme', now())
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unconfirmed', now())
          RETURNING *`,
         [
           context.userId,

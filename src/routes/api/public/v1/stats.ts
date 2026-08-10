@@ -24,9 +24,9 @@ export const Route = createFileRoute("/api/public/v1/stats")({
         const row = await queryOne<PublicStats>(`
           SELECT
             (SELECT count(*) FROM public.facilities)::int AS facilities,
-            (SELECT count(*) FROM public.facilities WHERE status <> 'non_reclame')::int AS claimed,
-            (SELECT count(*) FROM public.facilities WHERE status = 'verifie')::int AS verified,
-            (SELECT count(*) FROM public.facilities WHERE status = 'confirme')::int AS confirmed,
+            (SELECT count(*) FROM public.facilities WHERE status <> 'unclaimed')::int AS claimed,
+            (SELECT count(*) FROM public.facilities WHERE status = 'certified')::int AS verified,
+            (SELECT count(*) FROM public.facilities WHERE status = 'confirmed')::int AS confirmed,
             (SELECT count(*) FROM public.products)::int AS products,
             (SELECT count(DISTINCT neighbourhood) FROM public.facilities
               WHERE neighbourhood IS NOT NULL AND neighbourhood <> '')::int AS neighbourhoods

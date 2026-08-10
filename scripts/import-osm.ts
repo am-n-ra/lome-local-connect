@@ -2,7 +2,7 @@ import { neon } from "@neondatabase/serverless";
 
 /**
  * Imports Lomé businesses from OpenStreetMap (Overpass API) as unclaimed
- * listings (status = 'non_reclame'). ODbL data, attribution required in the UI.
+ * listings (status = 'unclaimed'). ODbL data, attribution required in the UI.
  *
  *   DATABASE_URL=... bun scripts/import-osm.ts
  */
@@ -89,7 +89,7 @@ for (const element of payload.elements) {
     `INSERT INTO public.facilities
        (market_code, name, category, address, neighbourhood, latitude, longitude, phone,
         status, type, is_online, source, source_ref)
-     VALUES ('TG-LOME', $1, $2, $3, $4, $5, $6, $7, 'non_reclame', 'fixe', false, 'osm', $8)
+     VALUES ('TG-LOME', $1, $2, $3, $4, $5, $6, $7, 'unclaimed', 'fixe', false, 'osm', $8)
      ON CONFLICT (source, source_ref) WHERE source_ref IS NOT NULL
      DO UPDATE SET name = EXCLUDED.name, latitude = EXCLUDED.latitude,
                    longitude = EXCLUDED.longitude, updated_at = now()`,
