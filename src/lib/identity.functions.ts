@@ -28,12 +28,9 @@ export const getMyIdentity = createServerFn({ method: "GET" })
         isAdmin: false,
       };
     }
-    const { query } = await import("./db.server");
-    const rows = await query<{ role: string }>(
-      "SELECT role FROM public.user_roles WHERE user_id = $1",
-      [user.userId],
-    );
-    const roles = rows.map((r) => r.role);
+    const { rolesFor } = await import("./neon-auth.server");
+    const roles = await rolesFor(user);
+
     return {
       userId: user.userId,
       email: user.email,
