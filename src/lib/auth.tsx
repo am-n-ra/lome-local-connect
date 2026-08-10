@@ -20,6 +20,9 @@ export type SessionUser = {
 type AuthState = {
   user: SessionUser | null;
   loading: boolean;
+  roles: string[];
+  isStaff: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -29,11 +32,15 @@ type AuthState = {
 const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
+  roles: [],
+  isStaff: false,
+  isAdmin: false,
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
   refresh: async () => {},
 });
+
 
 async function authFetch(path: string, init?: RequestInit) {
   const response = await fetch(`${AUTH_BASE}${path}`, {
