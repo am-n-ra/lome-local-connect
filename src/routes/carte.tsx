@@ -78,10 +78,19 @@ function CartePage() {
   }, [fetchFacilities, query, category]);
 
   useEffect(() => {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setGeoReady(true);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
-      (pos) => setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setUserPos(null),
+      (pos) => {
+        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoReady(true);
+      },
+      () => {
+        setUserPos(null);
+        setGeoReady(true);
+      },
       { timeout: 8000 },
     );
   }, []);
