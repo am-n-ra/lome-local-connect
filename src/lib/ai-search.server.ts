@@ -35,7 +35,11 @@ function extFor(mime: string): string {
 async function groqTranscribe(key: string, bytes: Uint8Array, mime: string): Promise<string> {
   const form = new FormData();
   form.append("model", "whisper-large-v3-turbo");
-  form.append("file", new Blob([bytes as unknown as BlobPart], { type: mime }), `voice.${extFor(mime)}`);
+  form.append(
+    "file",
+    new Blob([bytes as unknown as BlobPart], { type: mime }),
+    `voice.${extFor(mime)}`,
+  );
   form.append("prompt", "Recherche de produit à Lomé, Togo. Français, éwé ou mina.");
   form.append("response_format", "json");
 
@@ -52,7 +56,11 @@ async function groqTranscribe(key: string, bytes: Uint8Array, mime: string): Pro
 async function lovableTranscribe(key: string, bytes: Uint8Array, mime: string): Promise<string> {
   const form = new FormData();
   form.append("model", "openai/gpt-4o-transcribe");
-  form.append("file", new Blob([bytes as unknown as BlobPart], { type: mime }), `voice.${extFor(mime)}`);
+  form.append(
+    "file",
+    new Blob([bytes as unknown as BlobPart], { type: mime }),
+    `voice.${extFor(mime)}`,
+  );
 
   const res = await fetch(`${LOVABLE_BASE}/audio/transcriptions`, {
     method: "POST",

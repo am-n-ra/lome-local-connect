@@ -88,7 +88,8 @@ export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props
     analyser.fftSize = 64;
     const processor = ctx.createScriptProcessor(4096, 1, 1);
     const chunks: Float32Array[] = [];
-    processor.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    processor.onaudioprocess = (e) =>
+      chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)));
     source.connect(analyser);
     source.connect(processor);
     processor.connect(ctx.destination);

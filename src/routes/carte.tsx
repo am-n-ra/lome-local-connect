@@ -11,12 +11,7 @@ import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { TopNav } from "@/components/omni/TopNav";
-import {
-  CATEGORIES,
-  formatDistance,
-  haversineKm,
-  LOME_CENTER,
-} from "@/lib/omni";
+import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -56,22 +51,25 @@ function CartePage() {
 
   useEffect(() => {
     let active = true;
-    const handle = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const rows = await fetchFacilities({
-            data: {
-              search: query.trim() || undefined,
-              category: category ?? undefined,
-              includeUnclaimed: true,
-            },
-          });
-          if (active) setFacilities(rows);
-        } catch {
-          if (active) setFacilities([]);
-        }
-      })();
-    }, query.trim() ? 300 : 0);
+    const handle = window.setTimeout(
+      () => {
+        void (async () => {
+          try {
+            const rows = await fetchFacilities({
+              data: {
+                search: query.trim() || undefined,
+                category: category ?? undefined,
+                includeUnclaimed: true,
+              },
+            });
+            if (active) setFacilities(rows);
+          } catch {
+            if (active) setFacilities([]);
+          }
+        })();
+      },
+      query.trim() ? 300 : 0,
+    );
     return () => {
       active = false;
       window.clearTimeout(handle);
@@ -127,7 +125,6 @@ function CartePage() {
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
-
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
     setRoutingBusy(true);
@@ -137,7 +134,13 @@ function CartePage() {
       const json = (await res.json()) as {
         routes?: {
           geometry: { coordinates: [number, number][] };
-          legs: { steps: { maneuver: { type: string; modifier?: string }; name: string; distance: number }[] }[];
+          legs: {
+            steps: {
+              maneuver: { type: string; modifier?: string };
+              name: string;
+              distance: number;
+            }[];
+          }[];
         }[];
       };
       const route = json.routes?.[0];
@@ -174,7 +177,9 @@ function CartePage() {
           type="button"
           onClick={() => setCategory(null)}
           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-            category === null ? "border-primary bg-primary text-primary-foreground" : "border-border"
+            category === null
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border"
           }`}
         >
           Tout
@@ -185,7 +190,9 @@ function CartePage() {
             type="button"
             onClick={() => setCategory(c.value)}
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-              category === c.value ? "border-primary bg-primary text-primary-foreground" : "border-border"
+              category === c.value
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border"
             }`}
           >
             {c.label}
@@ -200,7 +207,12 @@ function CartePage() {
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
           <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
           <Badge variant="secondary">Mode démo</Badge>
-          <button type="button" className="ml-auto" onClick={() => setBannerDismissed(true)} aria-label="Fermer">
+          <button
+            type="button"
+            className="ml-auto"
+            onClick={() => setBannerDismissed(true)}
+            aria-label="Fermer"
+          >
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -230,14 +242,21 @@ function CartePage() {
         )}
 
         {selected && (
-          <div
-            className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border"
-          >
+          <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">
             <div className="mb-2 flex justify-end gap-2">
-              <Button variant="ghost" size="sm" onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}
+              >
                 Page complète
               </Button>
-              <Button variant="ghost" size="icon" aria-label="Fermer" onClick={() => setSelected(null)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Fermer"
+                onClick={() => setSelected(null)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -255,7 +274,12 @@ function CartePage() {
             <div className="mb-2 flex items-center justify-between">
               <p className="font-display font-bold">Guidage à pied</p>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" aria-label="Relire" onClick={() => speak(steps[0]?.instruction ?? "")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Relire"
+                  onClick={() => speak(steps[0]?.instruction ?? "")}
+                >
                   <Volume2 className="h-4 w-4" />
                 </Button>
                 <Button
@@ -277,7 +301,9 @@ function CartePage() {
                   <span className="font-semibold text-primary">{i + 1}.</span>
                   <span>
                     {s.instruction}{" "}
-                    <span className="text-muted-foreground">({formatDistance(s.distance / 1000)})</span>
+                    <span className="text-muted-foreground">
+                      ({formatDistance(s.distance / 1000)})
+                    </span>
                   </span>
                 </li>
               ))}
@@ -287,7 +313,11 @@ function CartePage() {
       </div>
 
       <CartPanel open={cartOpen} onOpenChange={setCartOpen} />
-      <WishlistPanel open={wishOpen} onOpenChange={setWishOpen} onRerun={(term) => setQuery(term)} />
+      <WishlistPanel
+        open={wishOpen}
+        onOpenChange={setWishOpen}
+        onRerun={(term) => setQuery(term)}
+      />
     </div>
   );
 }

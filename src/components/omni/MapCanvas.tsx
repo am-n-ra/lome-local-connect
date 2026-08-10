@@ -1,5 +1,10 @@
 import { useEffect, useRef } from "react";
-import { CARTO_LIGHT_STYLE, useMapLibre, type MapInstance, type MarkerInstance } from "@/lib/maplibre";
+import {
+  CARTO_LIGHT_STYLE,
+  useMapLibre,
+  type MapInstance,
+  type MarkerInstance,
+} from "@/lib/maplibre";
 import { LOME_CENTER, STATUS_COLOR, type FacilityRow } from "@/lib/omni";
 
 export type MapFacility = FacilityRow & { isPro?: boolean };
@@ -56,8 +61,6 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
   }
   return el;
 }
-
-
 
 export function MapCanvas({
   facilities,

@@ -79,11 +79,22 @@ export function TopNav({
             </button>
           </div>
 
-          <Button variant="ghost" size="icon" aria-label="Produits recherchés" onClick={onOpenWishlist}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Produits recherchés"
+            onClick={onOpenWishlist}
+          >
             <Heart className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" aria-label="Panier" className="relative" onClick={onOpenCart}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Panier"
+            className="relative"
+            onClick={onOpenCart}
+          >
             <ShoppingCart className="h-5 w-5" />
             {cart.count > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
