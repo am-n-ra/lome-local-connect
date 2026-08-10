@@ -27,7 +27,7 @@ export const DEFAULT_FILTERS: MapFilters = {
   maxPrice: null,
   openOnly: false,
   discountOnly: false,
-  sort: "distance",
+  sort: "rank",
 };
 
 export function activeFilterCount(f: MapFilters): number {
@@ -36,7 +36,7 @@ export function activeFilterCount(f: MapFilters): number {
   if (f.maxPrice !== null) n++;
   if (f.openOnly) n++;
   if (f.discountOnly) n++;
-  if (f.sort !== "distance") n++;
+  if (f.sort !== DEFAULT_FILTERS.sort) n++;
   return n;
 }
 
@@ -210,9 +210,9 @@ export function SearchDock({
                 <div className="grid grid-cols-3 gap-1">
                   {(
                     [
+                      ["rank", "Pertinence"],
                       ["distance", "Proximité"],
                       ["price", "Prix"],
-                      ["rank", "Pertinence"],
                     ] as const
                   ).map(([value, label]) => (
                     <button
