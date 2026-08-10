@@ -174,9 +174,16 @@ export const getFacility = createServerFn({ method: "GET" })
         `SELECT id, code, description, discount_percent FROM public.coupons WHERE facility_id = $1`,
         [data.id],
       ),
+      query<FacilityMediaRow>(
+        `SELECT id, kind, url, thumb_url, position, duration_s
+         FROM public.facility_media WHERE facility_id = $1
+         ORDER BY position ASC, created_at ASC`,
+        [data.id],
+      ),
     ]);
 
-    return { facility, products, offers, coupons };
+    return { facility, products, offers, coupons, media };
+
   });
 
 /** Buyer demand signal: "Je cherche ce produit". */
