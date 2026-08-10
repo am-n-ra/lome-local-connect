@@ -149,8 +149,17 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      {facility.cover_url && (
+        <img
+          src={facility.cover_url}
+          alt={`Vitrine de ${facility.name}`}
+          loading="lazy"
+          className="aspect-[16/9] w-full rounded-2xl border border-border object-cover"
+        />
+      )}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
+
           <h2 className="font-display text-xl font-bold">{facility.name}</h2>
           <p className="text-sm text-muted-foreground">
             {categoryLabel(facility.category)}
