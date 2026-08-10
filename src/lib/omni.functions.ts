@@ -158,7 +158,7 @@ export const getFacility = createServerFn({ method: "GET" })
     );
     if (!facility) return null;
 
-    const [products, offers, coupons] = await Promise.all([
+    const [products, offers, coupons, media] = await Promise.all([
       query<ProductRow>(
         `SELECT id, facility_id, name, price, discount_percent, in_stock, photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY in_stock DESC, name ASC`,
