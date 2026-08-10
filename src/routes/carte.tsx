@@ -160,9 +160,6 @@ function CartePage() {
       />
 
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-card px-3 py-2">
-        <Button variant="outline" size="sm" onClick={voiceSearch}>
-          <Mic className="mr-1.5 h-4 w-4" /> Recherche vocale
-        </Button>
         <button
           type="button"
           onClick={() => setCategory(null)}
