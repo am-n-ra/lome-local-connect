@@ -117,7 +117,7 @@ const FACILITY_SELECT = `
   ) m ON true
 
   LEFT JOIN LATERAL (
-    SELECT count(*) AS cnt, min(price) AS min_price
+    SELECT count(*) AS cnt, min(price) AS min_price, max(discount_percent) AS max_discount
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
   ) p ON true
   LEFT JOIN public.subscriptions s ON s.facility_id = f.id
