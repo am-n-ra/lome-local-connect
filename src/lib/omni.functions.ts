@@ -258,7 +258,29 @@ export const listFavorites = createServerFn({ method: "GET" })
     );
   });
 
+/** One-tap availability check before sending a cart request. */
+export const checkAvailability = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ productIds: z.array(z.string().uuid()).min(1).max(40) }).parse(input),
+  )
+  .handler(async ({ data }) =>
+    query<{
+      id: string;
+      in_stock: boolean;
+      price: number;
+      last_confirmed_at: string | null;
+      facility_online: boolean;
+    }>(
+      `SELECT p.id, p.in_stock, p.price, p.last_confirmed_at, f.is_online AS facility_online
+       FROM public.products p
+       JOIN public.facilities f ON f.id = p.facility_id
+       WHERE p.id = ANY($1::uuid[])`,
+      [data.productIds],
+    ),
+  );
+
 /** Sends the buyer's basket to the vendor as a request. */
+
 export const submitCart = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) =>
