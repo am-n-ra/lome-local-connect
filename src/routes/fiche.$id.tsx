@@ -3,10 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { getFacility, type MapFacility as ApiFacility } from "@/lib/omni.functions";
+import {
+  getFacility,
+  type FacilityMediaRow,
+  type MapFacility as ApiFacility,
+} from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { MapCanvas } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
+import { MediaCarousel } from "@/components/omni/MediaCarousel";
 import { TopNav } from "@/components/omni/TopNav";
 import { haversineKm, LOME_CENTER } from "@/lib/omni";
 
@@ -25,6 +30,7 @@ export const Route = createFileRoute("/fiche/$id")({
 function FichePage() {
   const { id } = Route.useParams();
   const [facility, setFacility] = useState<ApiFacility | null>(null);
+  const [media, setMedia] = useState<FacilityMediaRow[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,8 +42,10 @@ function FichePage() {
       try {
         const result = await load({ data: { id } });
         setFacility(result?.facility ?? null);
+        setMedia(result?.media ?? []);
       } catch {
         setFacility(null);
+        setMedia([]);
       }
     })();
   }, [id, load]);
@@ -86,7 +94,8 @@ function FichePage() {
 
         {facility && (
           <div className="grid gap-6 md:grid-cols-[1fr_360px]">
-            <div className="omni-card p-5">
+            <div className="omni-card space-y-4 p-5">
+              <MediaCarousel media={media} />
               <FacilityPanel
                 facility={{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }}
                 distanceKm={haversineKm(userPos ?? LOME_CENTER, { lat: facility.latitude, lng: facility.longitude })}
