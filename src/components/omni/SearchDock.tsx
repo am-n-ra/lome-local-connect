@@ -43,7 +43,8 @@ export function activeFilterCount(f: MapFilters): number {
 type Props = {
   query: string;
   onQueryChange: (value: string) => void;
-  onSubmit?: () => void;
+  onSubmit?: (() => void) | undefined;
+
   category: string | null;
   onCategoryChange: (value: string | null) => void;
   filters: MapFilters;
