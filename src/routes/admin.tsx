@@ -99,13 +99,13 @@ function AdminPage() {
   }, [fetchStats, fetchRows, search, status, category, hood, contacted]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStaff) return;
     const t = window.setTimeout(() => void reload(), 250);
     return () => window.clearTimeout(t);
-  }, [user, reload]);
+  }, [user, isStaff, reload]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isStaff) return;
     void (async () => {
       try {
         setHoods(await fetchHoods());
@@ -113,7 +113,8 @@ function AdminPage() {
         setHoods([]);
       }
     })();
-  }, [user, fetchHoods]);
+  }, [user, isStaff, fetchHoods]);
+
 
   const openRow = useMemo(() => rows.find((r) => r.id === openId) ?? null, [rows, openId]);
 
