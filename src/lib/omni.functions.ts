@@ -22,6 +22,8 @@ export type MapFacility = {
   owner_id: string | null;
   product_count: number;
   min_price: number | null;
+  max_discount_percent: number;
+
   sponsored: boolean;
   tier: string;
   cover_url: string | null;
