@@ -27,6 +27,7 @@ import { CouponsPanel } from "@/components/omni/vendor/CouponsPanel";
 import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
 import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
+import { MediaManager } from "@/components/omni/MediaManager";
 import {
   CATEGORIES,
   daysLeft,
@@ -557,6 +558,8 @@ function VendeurPage() {
                 </Button>
               )}
             </div>
+
+            <MediaManager facilityId={facility.id} />
           </TabsContent>
 
           <TabsContent value="produits" className="mt-5">
