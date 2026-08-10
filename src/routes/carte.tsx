@@ -40,6 +40,8 @@ function CartePage() {
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
+
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoReady, setGeoReady] = useState(false);
