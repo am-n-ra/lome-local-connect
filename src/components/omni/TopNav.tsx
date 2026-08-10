@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, LogIn, MapPin, Search, ShoppingCart, Store, User } from "lucide-react";
+import { Heart, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
