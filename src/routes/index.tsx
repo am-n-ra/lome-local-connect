@@ -47,8 +47,8 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b border-border bg-background/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <span className="flex items-center gap-1.5 font-display text-lg font-extrabold">
-            <MapPin className="h-5 w-5 text-primary" /> OmniView
+          <span className="flex items-center gap-2 font-display text-lg font-extrabold">
+            <BrandMark className="h-7 w-7" /> OmniView
           </span>
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
