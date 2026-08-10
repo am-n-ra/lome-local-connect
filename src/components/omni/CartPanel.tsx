@@ -1,22 +1,52 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { Minus, Plus, Trash2 } from "lucide-react";
-import { submitCart } from "@/lib/omni.functions";
+import { BadgeCheck, Minus, Plus, ShieldQuestion, Trash2 } from "lucide-react";
+import { checkAvailability, submitCart } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useCart, type CartLine } from "@/lib/cart";
-import { formatFcfa } from "@/lib/omni";
+import { formatFcfa, freshnessLabel } from "@/lib/omni";
+
+type Availability = { inStock: boolean; label: string };
 
 export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const cart = useCart();
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
+  const [checking, setChecking] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<Record<string, Availability>>({});
 
   const groups = cart.lines.reduce<Record<string, CartLine[]>>((acc, line) => {
     (acc[line.facilityId] ??= []).push(line);
     return acc;
   }, {});
+
+  async function verify(facilityId: string, lines: CartLine[]) {
+    setChecking(facilityId);
+    try {
+      const rows = await checkAvailability({
+        data: { productIds: lines.map((l) => l.productId) },
+      });
+      const next: Record<string, Availability> = {};
+      for (const row of rows) {
+        next[row.id] = {
+          inStock: row.in_stock,
+          label: row.in_stock
+            ? freshnessLabel(row.last_confirmed_at)
+            : "Indisponible actuellement",
+        };
+      }
+      setAvailability((prev) => ({ ...prev, ...next }));
+      const missing = rows.filter((r) => !r.in_stock).length;
+      if (missing === 0) toast.success("Tous les articles sont disponibles.");
+      else toast.warning(`${missing} article(s) indisponible(s) chez ce vendeur.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Vérification impossible.");
+    } finally {
+      setChecking(null);
+    }
+  }
 
   async function sendRequest(facilityId: string, lines: CartLine[]) {
     if (!user) {
@@ -40,6 +70,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
     }
   }
 
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
@@ -60,7 +91,24 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.name}</p>
                       <p className="text-muted-foreground">{formatFcfa(l.price)}</p>
+                      {availability[l.productId] && (
+                        <p
+                          className={`flex items-center gap-1 text-xs ${
+                            availability[l.productId]!.inStock
+                              ? "text-primary"
+                              : "text-destructive"
+                          }`}
+                        >
+                          {availability[l.productId]!.inStock ? (
+                            <BadgeCheck className="h-3 w-3" />
+                          ) : (
+                            <ShieldQuestion className="h-3 w-3" />
+                          )}
+                          {availability[l.productId]!.label}
+                        </p>
+                      )}
                     </div>
+
                     <Button
                       variant="outline"
                       size="icon"
@@ -95,13 +143,24 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                   <span>Sous-total</span>
                   <span>{formatFcfa(subtotal)}</span>
                 </div>
-                <Button
-                  className="w-full"
-                  disabled={sending === facilityId}
-                  onClick={() => void sendRequest(facilityId, lines)}
-                >
-                  {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
-                </Button>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <Button
+                    variant="outline"
+                    className="omni-glass w-full"
+                    disabled={checking === facilityId}
+                    onClick={() => void verify(facilityId, lines)}
+                  >
+                    {checking === facilityId ? "Vérification…" : "Vérifier la disponibilité"}
+                  </Button>
+                  <Button
+                    className="w-full"
+                    disabled={sending === facilityId}
+                    onClick={() => void sendRequest(facilityId, lines)}
+                  >
+                    {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
+                  </Button>
+                </div>
+
               </div>
             );
           })}
