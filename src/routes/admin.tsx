@@ -145,7 +145,7 @@ function AdminPage() {
     );
   }
 
-  if (denied) {
+  if (denied || !isStaff) {
     return (
       <div className="min-h-screen bg-background">
         <TopNav />
