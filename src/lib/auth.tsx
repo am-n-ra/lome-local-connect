@@ -169,9 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         clearAccessToken();
         setUser(null);
+        setRoles([]);
       },
     }),
-    [user, loading, refresh],
+    [user, loading, roles, refresh],
+
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
