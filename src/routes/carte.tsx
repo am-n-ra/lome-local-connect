@@ -12,6 +12,8 @@ import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { OrdersPanel } from "@/components/omni/OrdersPanel";
 import { TopNav } from "@/components/omni/TopNav";
+import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
+
 import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
 export const Route = createFileRoute("/carte")({
