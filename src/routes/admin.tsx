@@ -54,8 +54,9 @@ const OUTCOMES = [
 const STATUSES = ["all", "unclaimed", "unconfirmed", "certified", "confirmed"] as const;
 
 function AdminPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, isStaff } = useAuth();
   const [denied, setDenied] = useState(false);
+
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [rows, setRows] = useState<AdminFacilityRow[]>([]);
   const [hoods, setHoods] = useState<{ neighbourhood: string; count: number }[]>([]);
