@@ -1,13 +1,19 @@
 import { useEffect, useRef } from "react";
 import {
-  CARTO_LIGHT_STYLE,
+  applyPastelPalette,
+  PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
   type MarkerInstance,
 } from "@/lib/maplibre";
 import { LOME_CENTER, STATUS_COLOR, type FacilityRow } from "@/lib/omni";
 
-export type MapFacility = FacilityRow & { isPro?: boolean };
+export type MapFacility = FacilityRow & {
+  isPro?: boolean;
+  /** True while the seller broadcasts a live mobile presence. */
+  mobile_presence?: boolean;
+};
+
 
 type Props = {
   facilities: MapFacility[];
@@ -50,6 +56,26 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
   pin.style.boxShadow = "0 2px 6px rgba(60,40,20,.28)";
   inner.appendChild(pin);
 
+  // Live mobile presence: a distinct halo ring, different from both the static
+  // pin and the mobile-merchant marker.
+  if (f.mobile_presence) {
+    pin.style.background = "#1f7a4d";
+    pin.style.border = "2.5px solid #ffffff";
+    const halo = document.createElement("span");
+    halo.style.position = "absolute";
+    halo.style.left = "50%";
+    halo.style.top = "50%";
+    halo.style.width = "30px";
+    halo.style.height = "30px";
+    halo.style.marginLeft = "-15px";
+    halo.style.marginTop = "-15px";
+    halo.style.borderRadius = "999px";
+    halo.style.border = "2px solid rgba(31,122,77,.55)";
+    halo.style.background = "rgba(31,122,77,.14)";
+    halo.style.pointerEvents = "none";
+    inner.insertBefore(halo, pin);
+  }
+
   if (f.isPro) {
     const dot = document.createElement("span");
     dot.style.position = "absolute";
@@ -64,6 +90,7 @@ function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
   }
   return el;
 }
+
 
 export function MapCanvas({
   facilities,
@@ -98,7 +125,7 @@ export function MapCanvas({
     const start = startRef.current;
     const map = new gl.Map({
       container: containerRef.current,
-      style: CARTO_LIGHT_STYLE,
+      style: PASTEL_STYLE_URL,
       center: [start.center.lng, start.center.lat],
       zoom: start.zoom,
       interactive,
@@ -108,10 +135,12 @@ export function MapCanvas({
     mapRef.current = map;
     map.on("load", () => {
       readyRef.current = true;
+      applyPastelPalette(map);
       map.addSource("omni-route", {
         type: "geojson",
         data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
       });
+
       map.addLayer({
         id: "omni-route-line",
         type: "line",

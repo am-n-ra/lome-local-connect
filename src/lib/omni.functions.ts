@@ -22,6 +22,8 @@ export type MapFacility = {
   owner_id: string | null;
   product_count: number;
   min_price: number | null;
+  max_discount_percent: number;
+
   sponsored: boolean;
   tier: string;
   cover_url: string | null;
@@ -98,6 +100,8 @@ const FACILITY_SELECT = `
          COALESCE(p.cnt, 0)::int AS product_count,
 
          p.min_price::int        AS min_price,
+         COALESCE(p.max_discount, 0)::int AS max_discount_percent,
+
          COALESCE(s.tier, 'free') AS tier,
          EXISTS (
            SELECT 1 FROM public.ad_campaigns c
@@ -115,7 +119,7 @@ const FACILITY_SELECT = `
   ) m ON true
 
   LEFT JOIN LATERAL (
-    SELECT count(*) AS cnt, min(price) AS min_price
+    SELECT count(*) AS cnt, min(price) AS min_price, max(discount_percent) AS max_discount
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
   ) p ON true
   LEFT JOIN public.subscriptions s ON s.facility_id = f.id

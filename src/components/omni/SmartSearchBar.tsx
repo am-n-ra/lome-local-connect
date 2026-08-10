@@ -9,11 +9,42 @@ import { searchTermFromImage, transcribeSearchAudio } from "@/lib/search.functio
 type Props = {
   value: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  onSubmit?: (() => void) | undefined;
   placeholder?: string;
+  /** "dock" renders the bottom-anchored frosted pill used on the map. */
+  layout?: "input" | "dock";
+  /** Rendered inside the dock pill, on the far right (locate / submit). */
+  trailing?: React.ReactNode;
 };
 
 const BAR_COUNT = 16;
+
+/** Short chime confirming the microphone started listening. */
+function playListenCue() {
+  try {
+    const Ctor =
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctor) return;
+    const ctx = new Ctor();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1320, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.22);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.24);
+    osc.onended = () => void ctx.close().catch(() => undefined);
+  } catch {
+    /* audio cue is a nicety, never a blocker */
+  }
+}
+
 
 function encodeWav(chunks: Float32Array[], sampleRate: number): Blob {
   const length = chunks.reduce((n, c) => n + c.length, 0);
@@ -60,7 +91,15 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /** Search field with in-field voice (fr / éwé / mina) and photo search. */
-export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props) {
+export function SmartSearchBar({
+  value,
+  onChange,
+  onSubmit,
+  placeholder,
+  layout = "input",
+  trailing,
+}: Props) {
+
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [levels, setLevels] = useState<number[]>(() => new Array(BAR_COUNT).fill(0.08));
@@ -109,6 +148,8 @@ export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props
     tick();
 
     setRecording(true);
+    playListenCue();
+
 
     stopRef.current = async () => {
       stopRef.current = null;
@@ -172,6 +213,89 @@ export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props
     }
   }
 
+  const photoInput = (
+    <input
+      ref={fileRef}
+      type="file"
+      accept="image/*"
+      capture="environment"
+      className="hidden"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        e.target.value = "";
+        if (file) void handlePhoto(file);
+      }}
+    />
+  );
+
+  const waveform = (
+    <div className="pointer-events-none flex items-center gap-[3px]">
+      {levels.map((level, i) => (
+        <span
+          key={i}
+          className="w-[3px] rounded-full bg-primary transition-[height] duration-75"
+          style={{ height: `${Math.round(level * 22 + 4)}px` }}
+        />
+      ))}
+    </div>
+  );
+
+  if (layout === "dock") {
+    return (
+      <div className="omni-glass flex w-full items-center gap-1 rounded-full py-1.5 pl-2 pr-1.5 shadow-lg">
+        {photoInput}
+        <button
+          type="button"
+          aria-label="Rechercher par image"
+          disabled={busy || recording}
+          onClick={() => fileRef.current?.click()}
+          className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground disabled:opacity-40"
+        >
+          <Camera className="h-[18px] w-[18px]" />
+        </button>
+        <button
+          type="button"
+          aria-label={recording ? "Arrêter la dictée" : "Recherche vocale"}
+          disabled={busy}
+          onClick={() => (recording ? void stopRef.current?.() : void startRecording())}
+          className={`shrink-0 rounded-full p-2 transition-colors disabled:opacity-40 ${
+            recording
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+          }`}
+        >
+          {busy ? (
+            <Loader2 className="h-[18px] w-[18px] animate-spin" />
+          ) : recording ? (
+            <Square className="h-[18px] w-[18px]" />
+          ) : (
+            <Mic className="h-[18px] w-[18px]" />
+          )}
+        </button>
+
+        {recording ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+            {waveform}
+            <span className="truncate text-xs font-medium text-muted-foreground">Parlez…</span>
+          </div>
+        ) : (
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSubmit?.();
+            }}
+            placeholder={placeholder ?? "Que cherchez-vous ?"}
+            aria-label="Rechercher un produit"
+            className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+          />
+        )}
+
+        {trailing}
+      </div>
+    );
+  }
+
   return (
     <div className="relative w-full">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -184,31 +308,14 @@ export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props
       />
 
       {recording && (
-        <div className="pointer-events-none absolute inset-y-0 left-9 right-20 flex items-center gap-[3px] bg-background/95 px-1">
-          {levels.map((level, i) => (
-            <span
-              key={i}
-              className="w-[3px] rounded-full bg-primary transition-[height] duration-75"
-              style={{ height: `${Math.round(level * 22 + 4)}px` }}
-            />
-          ))}
-          <span className="ml-2 text-xs font-medium text-muted-foreground">Parlez…</span>
+        <div className="pointer-events-none absolute inset-y-0 left-9 right-20 flex items-center gap-2 bg-background/95 px-1">
+          {waveform}
+          <span className="text-xs font-medium text-muted-foreground">Parlez…</span>
         </div>
       )}
 
       <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            e.target.value = "";
-            if (file) void handlePhoto(file);
-          }}
-        />
+        {photoInput}
         <button
           type="button"
           aria-label="Rechercher par image"
@@ -240,4 +347,5 @@ export function SmartSearchBar({ value, onChange, onSubmit, placeholder }: Props
       </div>
     </div>
   );
+
 }

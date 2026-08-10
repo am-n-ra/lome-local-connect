@@ -37,7 +37,7 @@ export const requireStaff = createMiddleware({ type: "function" }).server(
     const user = token ? await verifyToken(token) : null;
     if (!user) throw new Error("UNAUTHORIZED");
     await ensureProfile(user);
-    if (!(await isStaff(user.userId))) throw new Error("FORBIDDEN");
+    if (!(await isStaff(user))) throw new Error("FORBIDDEN");
     return next({ context: { user, userId: user.userId } });
   },
 );

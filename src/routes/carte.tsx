@@ -12,9 +12,10 @@ import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { OrdersPanel } from "@/components/omni/OrdersPanel";
 import { TopNav } from "@/components/omni/TopNav";
-import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
+import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
-import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
+import { formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
+
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -39,6 +40,8 @@ function CartePage() {
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
+
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [geoReady, setGeoReady] = useState(false);
@@ -112,20 +115,32 @@ function CartePage() {
 
   const origin = userPos ?? LOME_CENTER;
 
-  const results = useMemo(
-    () =>
-      facilities
-        .map((f) => ({
-          ...f,
-          isPro: f.sponsored || f.tier === "pro",
-          distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
-        }))
-        .sort((a, b) => {
-          if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
-          return a.distanceKm - b.distanceKm;
-        }),
-    [facilities, origin],
-  );
+  const results = useMemo(() => {
+    const rows = facilities
+      .map((f) => ({
+        ...f,
+        isPro: f.sponsored || f.tier === "pro",
+        mobile_presence: f.type === "mobile" && f.is_online,
+        distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
+
+      }))
+      .filter((f) => {
+        if (filters.radiusKm < 50 && f.distanceKm > filters.radiusKm) return false;
+        if (filters.openOnly && !f.is_online) return false;
+        if (filters.discountOnly && (f.max_discount_percent ?? 0) < 1) return false;
+        if (filters.maxPrice !== null && (f.min_price ?? Infinity) > filters.maxPrice) return false;
+        return true;
+      });
+
+    return rows.sort((a, b) => {
+      if (filters.sort === "price")
+        return (a.min_price ?? Infinity) - (b.min_price ?? Infinity);
+      if (filters.sort === "distance") return a.distanceKm - b.distanceKm;
+      if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [facilities, origin, filters]);
+
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
@@ -238,52 +253,21 @@ function CartePage() {
         )}
 
         {!selected && steps.length === 0 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
-            <div className="omni-glass pointer-events-auto w-full max-w-xl space-y-2 p-2.5">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                }}
-              >
-                <SmartSearchBar
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Que cherchez-vous à Lomé ?"
-                />
-              </form>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                <button
-                  type="button"
-                  onClick={() => setCategory(null)}
-                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    category === null
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card/70"
-                  }`}
-                >
-                  Tout
-                </button>
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                      category === c.value
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card/70"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-                <span className="ml-auto shrink-0 pl-2 text-[11px] text-muted-foreground">
-                  {results.length} résultat(s)
-                </span>
-              </div>
-            </div>
-          </div>
+          <SearchDock
+            query={query}
+            onQueryChange={setQuery}
+            category={category}
+            onCategoryChange={setCategory}
+            filters={filters}
+            onFiltersChange={setFilters}
+            resultCount={results.length}
+            onBrandClick={() => {
+              if (userPos) setFitPoints([userPos]);
+              else toast.info("Position indisponible.");
+            }}
+          />
         )}
+
 
 
 

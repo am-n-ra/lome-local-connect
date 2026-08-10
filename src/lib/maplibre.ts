@@ -7,6 +7,8 @@ type MapLibreGlobal = {
 
 export type MapMouseEvent = { lngLat: { lat: number; lng: number } };
 
+export type StyleLayer = { id: string; type: string };
+
 export type MapInstance = {
   on: (event: string, cb: (e: MapMouseEvent) => void) => void;
   remove: () => void;
@@ -21,9 +23,12 @@ export type MapInstance = {
   getSource: (id: string) => { setData: (data: unknown) => void } | undefined;
   addSource: (id: string, source: Record<string, unknown>) => void;
   addLayer: (layer: Record<string, unknown>) => void;
+  getStyle: () => { layers?: StyleLayer[] } | undefined;
+  setPaintProperty: (layerId: string, name: string, value: unknown) => void;
   isStyleLoaded: () => boolean;
   resize: () => void;
 };
+
 
 
 export type MarkerInstance = {
@@ -78,3 +83,45 @@ export const CARTO_LIGHT_STYLE = {
   },
   layers: [{ id: "carto", type: "raster", source: "carto" }],
 } as const;
+
+/**
+ * Free, key-less vector basemap (OpenFreeMap "positron"): near-white roads on a
+ * desaturated base. `applyPastelPalette` then repaints water, parks and
+ * buildings with the OmniView pastel palette.
+ */
+export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
+
+const PASTEL = {
+  water: "#dce9f2",
+  green: "#dfe9dc",
+  building: "#eee7de",
+  background: "#f7f8f8",
+};
+
+/** Repaints a loaded vector style into the soft pastel OmniView palette. */
+export function applyPastelPalette(map: MapInstance) {
+  const layers = map.getStyle()?.layers ?? [];
+  for (const layer of layers) {
+    const id = layer.id.toLowerCase();
+    try {
+      if (layer.type === "background") {
+        map.setPaintProperty(layer.id, "background-color", PASTEL.background);
+      } else if (layer.type === "fill" && /water|ocean|sea|river/.test(id)) {
+        map.setPaintProperty(layer.id, "fill-color", PASTEL.water);
+      } else if (layer.type === "line" && /water|river|stream/.test(id)) {
+        map.setPaintProperty(layer.id, "line-color", PASTEL.water);
+      } else if (
+        layer.type === "fill" &&
+        /park|wood|grass|forest|garden|pitch|golf|landcover|vegetation|cemetery/.test(id)
+      ) {
+        map.setPaintProperty(layer.id, "fill-color", PASTEL.green);
+      } else if (layer.type === "fill" && /building/.test(id)) {
+        map.setPaintProperty(layer.id, "fill-color", PASTEL.building);
+        map.setPaintProperty(layer.id, "fill-outline-color", PASTEL.building);
+      }
+    } catch {
+      /* a layer without that paint property is simply skipped */
+    }
+  }
+}
+
