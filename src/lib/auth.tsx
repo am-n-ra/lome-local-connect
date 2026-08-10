@@ -102,17 +102,35 @@ function readUser(payload: unknown): SessionUser | null {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roles, setRoles] = useState<string[]>([]);
+
+  const loadRoles = useCallback(async (signedIn: boolean) => {
+    if (!signedIn) {
+      setRoles([]);
+      return;
+    }
+    try {
+      const { getMyIdentity } = await import("./identity.functions");
+      const identity = await getMyIdentity();
+      setRoles(identity.roles);
+    } catch {
+      setRoles([]);
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
       const payload = await authFetch("/get-session");
-      setUser(readUser(payload));
+      const next = readUser(payload);
+      setUser(next);
+      await loadRoles(Boolean(next));
     } catch {
       setUser(null);
+      setRoles([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadRoles]);
 
   useEffect(() => {
     void refresh();
@@ -122,7 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       user,
       loading,
+      roles,
+      isStaff: roles.some((r) => ["admin", "moderator", "acquisition"].includes(r)),
+      isAdmin: roles.includes("admin"),
       refresh,
+
       signIn: async (email, password) => {
         await authFetch("/sign-in/email", {
           method: "POST",
