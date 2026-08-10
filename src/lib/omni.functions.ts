@@ -98,6 +98,14 @@ const FACILITY_SELECT = `
          ) AS sponsored
   FROM public.facilities f
   LEFT JOIN LATERAL (
+    SELECT COALESCE(fm.thumb_url, fm.url) AS url
+    FROM public.facility_media fm
+    WHERE fm.facility_id = f.id AND fm.kind = 'image'
+    ORDER BY fm.position ASC, fm.created_at ASC
+    LIMIT 1
+  ) m ON true
+
+  LEFT JOIN LATERAL (
     SELECT count(*) AS cnt, min(price) AS min_price
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
   ) p ON true
