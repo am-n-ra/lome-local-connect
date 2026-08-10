@@ -24,7 +24,9 @@ export type MapFacility = {
   min_price: number | null;
   sponsored: boolean;
   tier: string;
+  cover_url: string | null;
 };
+
 
 
 export type ProductRow = {
