@@ -197,19 +197,27 @@ function CartePage() {
       )}
 
       <div className="relative flex-1 overflow-hidden">
-        <MapCanvas
-          facilities={results}
-          selectedId={selected?.id ?? null}
-          onSelect={(f) => {
-            setSelected(f);
-            setRouteCoords(null);
-            setSteps([]);
-          }}
-          routeCoords={routeCoords}
-          userPosition={userPos}
-          focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
-          className="h-full w-full"
-        />
+        {geoReady ? (
+          <MapCanvas
+            facilities={results}
+            selectedId={selected?.id ?? null}
+            onSelect={(f) => {
+              setSelected(f);
+              setRouteCoords(null);
+              setSteps([]);
+            }}
+            routeCoords={routeCoords}
+            userPosition={userPos}
+            initialCenter={initialCenter}
+            initialZoom={userPos ? 15.5 : 12.2}
+            focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
+            className="h-full w-full"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
+            Localisation en cours…
+          </div>
+        )}
 
         {selected && (
           <div
