@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
+import { Heart, ListChecks, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
+import { NotificationsBell } from "@/components/omni/NotificationsBell";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 
@@ -11,6 +12,7 @@ type Props = {
   onSearchSubmit?: () => void;
   onOpenCart?: () => void;
   onOpenWishlist?: () => void;
+  onOpenOrders?: () => void;
   activeRole?: "acheteur" | "vendeur";
 };
 
@@ -20,6 +22,7 @@ export function TopNav({
   onSearchSubmit,
   onOpenCart,
   onOpenWishlist,
+  onOpenOrders,
   activeRole = "acheteur",
 }: Props) {
   const { user, signOut } = useAuth();
@@ -87,6 +90,19 @@ export function TopNav({
           >
             <Heart className="h-5 w-5" />
           </Button>
+
+          {onOpenOrders && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Mes demandes"
+              onClick={onOpenOrders}
+            >
+              <ListChecks className="h-5 w-5" />
+            </Button>
+          )}
+
+          <NotificationsBell />
 
           <Button
             variant="ghost"

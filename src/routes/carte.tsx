@@ -10,6 +10,7 @@ import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
+import { OrdersPanel } from "@/components/omni/OrdersPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { CATEGORIES, formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
@@ -44,6 +45,7 @@ function CartePage() {
   const [routingBusy, setRoutingBusy] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
   const [wishOpen, setWishOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
   const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -313,6 +315,7 @@ function CartePage() {
       </div>
 
       <CartPanel open={cartOpen} onOpenChange={setCartOpen} />
+      <OrdersPanel open={ordersOpen} onOpenChange={setOrdersOpen} />
       <WishlistPanel
         open={wishOpen}
         onOpenChange={setWishOpen}
