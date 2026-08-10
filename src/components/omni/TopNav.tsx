@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, ListChecks, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
+import { Heart, ListChecks, LogIn, ShoppingCart, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { NotificationsBell } from "@/components/omni/NotificationsBell";
 import { useAuth } from "@/lib/auth";
@@ -36,7 +37,7 @@ export function TopNav({
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 md:gap-3 md:px-5 md:py-3">
         <Link to="/" className="flex items-center gap-1.5 font-display text-lg font-extrabold">
-          <MapPin className="h-5 w-5 text-primary" />
+          <BrandMark className="h-7 w-7" />
           OmniView
         </Link>
 
