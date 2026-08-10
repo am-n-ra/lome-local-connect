@@ -1,10 +1,11 @@
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, ListChecks, LogIn, ShoppingCart, Store, User } from "lucide-react";
+import { Menu } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
-import { NotificationsBell } from "@/components/omni/NotificationsBell";
-import { useAuth } from "@/lib/auth";
+import { NavMenuSheet, useNotificationsFeed } from "@/components/omni/NavMenuSheet";
 import { useCart } from "@/lib/cart";
 
 type Props = {
@@ -29,117 +30,71 @@ export function TopNav({
   activeRole = "acheteur",
   hideSearch = false,
 }: Props) {
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const cart = useCart();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const feed = useNotificationsFeed();
+  const badge = cart.count + feed.unread;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-3 py-2 md:gap-3 md:px-5 md:py-3">
-        <Link to="/" className="flex items-center gap-1.5 font-display text-lg font-extrabold">
-          <BrandMark className="h-7 w-7" />
-          OmniView
-        </Link>
-
-        {!hideSearch && (
-          <form
-            className="order-3 flex w-full items-center gap-2 md:order-none md:w-auto md:flex-1"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (onSearchSubmit) onSearchSubmit();
-              else navigate({ to: "/carte" });
-            }}
+    <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 md:px-5 md:py-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            to="/"
+            className="flex shrink-0 items-center gap-1.5 font-display text-lg font-extrabold"
           >
-            <SmartSearchBar
-              value={query ?? ""}
-              onChange={(v) => onQueryChange?.(v)}
-              onSubmit={() => {
+            <BrandMark className="h-7 w-7" />
+            <span className="truncate">OmniView</span>
+          </Link>
+
+          {!hideSearch && (
+            <form
+              className="hidden min-w-0 flex-1 items-center md:flex"
+              onSubmit={(e) => {
+                e.preventDefault();
                 if (onSearchSubmit) onSearchSubmit();
                 else navigate({ to: "/carte" });
               }}
-            />
-          </form>
-        )}
-
-
-        <div className="ml-auto flex w-full min-w-0 items-center justify-between gap-1 md:w-auto md:justify-end">
-          <div className="flex shrink-0 rounded-full border border-border bg-secondary p-0.5 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/carte" })}
-              className={`rounded-full px-2.5 py-1.5 transition-colors md:px-3 ${
-                activeRole === "acheteur"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground"
-              }`}
             >
-              Acheteur
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/vendeur" })}
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 transition-colors md:px-3 ${
-                activeRole === "vendeur"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-secondary-foreground"
-              }`}
-            >
-              <Store className="h-3.5 w-3.5" />
-              Vendeur
-            </button>
-          </div>
-
-
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Produits recherchés"
-            onClick={onOpenWishlist}
-          >
-            <Heart className="h-5 w-5" />
-          </Button>
-
-          {onOpenOrders && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Mes demandes"
-              onClick={onOpenOrders}
-            >
-              <ListChecks className="h-5 w-5" />
-            </Button>
-          )}
-
-          <NotificationsBell />
-
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Panier"
-            className="relative"
-            onClick={onOpenCart}
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cart.count > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {cart.count}
-              </span>
-            )}
-          </Button>
-
-          {user ? (
-            <Button variant="outline" size="sm" onClick={() => void signOut()}>
-              <User className="mr-1 h-4 w-4" />
-              Déconnexion
-            </Button>
-          ) : (
-            <Button size="sm" onClick={() => navigate({ to: "/auth" })}>
-              <LogIn className="mr-1 h-4 w-4" />
-              Connexion
-            </Button>
+              <SmartSearchBar
+                value={query ?? ""}
+                onChange={(v) => onQueryChange?.(v)}
+                onSubmit={() => {
+                  if (onSearchSubmit) onSearchSubmit();
+                  else navigate({ to: "/carte" });
+                }}
+              />
+            </form>
           )}
         </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Ouvrir le menu"
+          className="omni-glass relative shrink-0"
+          onClick={() => setMenuOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+          {badge > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+              {badge}
+            </span>
+          )}
+        </Button>
       </div>
+
+      <NavMenuSheet
+        open={menuOpen}
+        onOpenChange={setMenuOpen}
+        activeRole={activeRole}
+        onOpenCart={onOpenCart}
+        onOpenWishlist={onOpenWishlist}
+        onOpenOrders={onOpenOrders}
+        notifications={feed.items}
+        onNotificationsRead={feed.markAllRead}
+      />
     </header>
   );
 }

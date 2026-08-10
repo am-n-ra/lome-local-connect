@@ -24,7 +24,18 @@ export type MapFacility = {
   min_price: number | null;
   sponsored: boolean;
   tier: string;
+  cover_url: string | null;
 };
+export type FacilityMediaRow = {
+  id: string;
+  kind: "image" | "video";
+  url: string;
+  thumb_url: string | null;
+  position: number;
+  duration_s: number | null;
+};
+
+
 
 
 export type ProductRow = {
@@ -83,7 +94,9 @@ const FACILITY_SELECT = `
   SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
          f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
          f.last_position_update, f.owner_id,
+         m.url AS cover_url,
          COALESCE(p.cnt, 0)::int AS product_count,
+
          p.min_price::int        AS min_price,
          COALESCE(s.tier, 'free') AS tier,
          EXISTS (
@@ -93,6 +106,14 @@ const FACILITY_SELECT = `
              AND c.campaign_active_until > now()
          ) AS sponsored
   FROM public.facilities f
+  LEFT JOIN LATERAL (
+    SELECT COALESCE(fm.thumb_url, fm.url) AS url
+    FROM public.facility_media fm
+    WHERE fm.facility_id = f.id AND fm.kind = 'image'
+    ORDER BY fm.position ASC, fm.created_at ASC
+    LIMIT 1
+  ) m ON true
+
   LEFT JOIN LATERAL (
     SELECT count(*) AS cnt, min(price) AS min_price
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
@@ -146,7 +167,7 @@ export const getFacility = createServerFn({ method: "GET" })
     );
     if (!facility) return null;
 
-    const [products, offers, coupons] = await Promise.all([
+    const [products, offers, coupons, media] = await Promise.all([
       query<ProductRow>(
         `SELECT id, facility_id, name, price, discount_percent, in_stock, photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY in_stock DESC, name ASC`,
@@ -162,9 +183,16 @@ export const getFacility = createServerFn({ method: "GET" })
         `SELECT id, code, description, discount_percent FROM public.coupons WHERE facility_id = $1`,
         [data.id],
       ),
+      query<FacilityMediaRow>(
+        `SELECT id, kind, url, thumb_url, position, duration_s
+         FROM public.facility_media WHERE facility_id = $1
+         ORDER BY position ASC, created_at ASC`,
+        [data.id],
+      ),
     ]);
 
-    return { facility, products, offers, coupons };
+    return { facility, products, offers, coupons, media };
+
   });
 
 /** Buyer demand signal: "Je cherche ce produit". */

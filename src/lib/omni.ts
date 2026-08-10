@@ -13,7 +13,10 @@ export type FacilityRow = {
   is_online: boolean;
   type: string;
   last_position_update: string | null;
+  /** First showcase image, when the vendor uploaded one. */
+  cover_url?: string | null;
 };
+
 
 export type ProductRow = {
   id: string;
