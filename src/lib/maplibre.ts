@@ -12,6 +12,10 @@ export type MapInstance = {
   remove: () => void;
   flyTo: (opts: Record<string, unknown>) => void;
   jumpTo: (opts: Record<string, unknown>) => void;
+  fitBounds: (
+    bounds: [[number, number], [number, number]],
+    opts?: Record<string, unknown>,
+  ) => void;
   getZoom: () => number;
   setProjection: (projection: Record<string, unknown>) => void;
   getSource: (id: string) => { setData: (data: unknown) => void } | undefined;
@@ -20,6 +24,7 @@ export type MapInstance = {
   isStyleLoaded: () => boolean;
   resize: () => void;
 };
+
 
 export type MarkerInstance = {
   setLngLat: (coords: [number, number]) => MarkerInstance;
