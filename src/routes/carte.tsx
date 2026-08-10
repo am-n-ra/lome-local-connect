@@ -115,20 +115,30 @@ function CartePage() {
 
   const origin = userPos ?? LOME_CENTER;
 
-  const results = useMemo(
-    () =>
-      facilities
-        .map((f) => ({
-          ...f,
-          isPro: f.sponsored || f.tier === "pro",
-          distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
-        }))
-        .sort((a, b) => {
-          if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
-          return a.distanceKm - b.distanceKm;
-        }),
-    [facilities, origin],
-  );
+  const results = useMemo(() => {
+    const rows = facilities
+      .map((f) => ({
+        ...f,
+        isPro: f.sponsored || f.tier === "pro",
+        distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
+      }))
+      .filter((f) => {
+        if (filters.radiusKm < 50 && f.distanceKm > filters.radiusKm) return false;
+        if (filters.openOnly && !f.is_online) return false;
+        if (filters.discountOnly && (f.max_discount_percent ?? 0) < 1) return false;
+        if (filters.maxPrice !== null && (f.min_price ?? Infinity) > filters.maxPrice) return false;
+        return true;
+      });
+
+    return rows.sort((a, b) => {
+      if (filters.sort === "price")
+        return (a.min_price ?? Infinity) - (b.min_price ?? Infinity);
+      if (filters.sort === "distance") return a.distanceKm - b.distanceKm;
+      if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
+      return a.distanceKm - b.distanceKm;
+    });
+  }, [facilities, origin, filters]);
+
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
