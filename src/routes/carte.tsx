@@ -238,52 +238,21 @@ function CartePage() {
         )}
 
         {!selected && steps.length === 0 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
-            <div className="omni-glass pointer-events-auto w-full max-w-xl space-y-2 p-2.5">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                }}
-              >
-                <SmartSearchBar
-                  value={query}
-                  onChange={setQuery}
-                  placeholder="Que cherchez-vous à Lomé ?"
-                />
-              </form>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                <button
-                  type="button"
-                  onClick={() => setCategory(null)}
-                  className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                    category === null
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card/70"
-                  }`}
-                >
-                  Tout
-                </button>
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
-                      category === c.value
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card/70"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-                <span className="ml-auto shrink-0 pl-2 text-[11px] text-muted-foreground">
-                  {results.length} résultat(s)
-                </span>
-              </div>
-            </div>
-          </div>
+          <SearchDock
+            query={query}
+            onQueryChange={setQuery}
+            category={category}
+            onCategoryChange={setCategory}
+            filters={filters}
+            onFiltersChange={setFilters}
+            resultCount={results.length}
+            onBrandClick={() => {
+              if (userPos) setFitPoints([userPos]);
+              else toast.info("Position indisponible.");
+            }}
+          />
         )}
+
 
 
 
