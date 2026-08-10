@@ -120,7 +120,9 @@ function CartePage() {
       .map((f) => ({
         ...f,
         isPro: f.sponsored || f.tier === "pro",
+        mobile_presence: f.type === "mobile" && f.is_online,
         distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
+
       }))
       .filter((f) => {
         if (filters.radiusKm < 50 && f.distanceKm > filters.radiusKm) return false;
