@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Heart, ListChecks, LogIn, MapPin, ShoppingCart, Store, User } from "lucide-react";
+import { Heart, ListChecks, LogIn, ShoppingCart, Store, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";

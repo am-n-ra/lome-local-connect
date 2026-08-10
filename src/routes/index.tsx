@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BadgeCheck,
   Clock,
-  MapPin,
   Navigation,
   Search,
   Sparkles,
