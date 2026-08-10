@@ -91,7 +91,24 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.name}</p>
                       <p className="text-muted-foreground">{formatFcfa(l.price)}</p>
+                      {availability[l.productId] && (
+                        <p
+                          className={`flex items-center gap-1 text-xs ${
+                            availability[l.productId]!.inStock
+                              ? "text-primary"
+                              : "text-destructive"
+                          }`}
+                        >
+                          {availability[l.productId]!.inStock ? (
+                            <BadgeCheck className="h-3 w-3" />
+                          ) : (
+                            <ShieldQuestion className="h-3 w-3" />
+                          )}
+                          {availability[l.productId]!.label}
+                        </p>
+                      )}
                     </div>
+
                     <Button
                       variant="outline"
                       size="icon"
