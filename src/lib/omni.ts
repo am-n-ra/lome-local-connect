@@ -46,15 +46,15 @@ export function categoryLabel(value: string): string {
 }
 
 export const STATUS_LABEL: Record<string, string> = {
-  non_reclame: "Non réclamé",
-  non_confirme: "Non confirmé",
+  unclaimed: "Non réclamé",
+  unconfirmed: "Non confirmé",
   verifie: "Vérifié",
   confirme: "Confirmé",
 };
 
 export const STATUS_COLOR: Record<string, string> = {
-  non_reclame: "#b8b0a8",
-  non_confirme: "#9a938c",
+  unclaimed: "#b8b0a8",
+  unconfirmed: "#9a938c",
   verifie: "#2f6fb5",
   confirme: "#d9a521",
 };

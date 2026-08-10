@@ -123,7 +123,7 @@ for (const shop of SHOPS) {
     `INSERT INTO public.facilities
        (market_code, owner_id, name, category, description, neighbourhood, latitude, longitude,
         phone, status, type, is_online, source, claimed_at)
-     VALUES ('TG-LOME', $1, $2, $3, $4, $5, $6, $7, '+228 90 12 34 56', 'non_confirme', $8, true, 'demo', now())
+     VALUES ('TG-LOME', $1, $2, $3, $4, $5, $6, $7, '+228 90 12 34 56', 'unconfirmed', $8, true, 'demo', now())
      RETURNING id`,
     [vendorId, shop.name, shop.category, shop.description, shop.neighbourhood, shop.lat, shop.lng, shop.type],
   )) as { id: string }[];

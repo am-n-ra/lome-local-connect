@@ -51,7 +51,7 @@ const OUTCOMES = [
   { value: "injoignable", label: "Injoignable" },
 ] as const;
 
-const STATUSES = ["all", "non_reclame", "non_confirme", "verifie", "confirme"] as const;
+const STATUSES = ["all", "unclaimed", "unconfirmed", "certified", "confirmed"] as const;
 
 function AdminPage() {
   const { user, loading } = useAuth();
@@ -60,7 +60,7 @@ function AdminPage() {
   const [rows, setRows] = useState<AdminFacilityRow[]>([]);
   const [hoods, setHoods] = useState<{ neighbourhood: string; count: number }[]>([]);
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<string>("non_reclame");
+  const [status, setStatus] = useState<string>("unclaimed");
   const [category, setCategory] = useState("all");
   const [hood, setHood] = useState("");
   const [contacted, setContacted] = useState<"any" | "yes" | "no">("any");
@@ -172,8 +172,8 @@ function AdminPage() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
               ["Total", stats.total],
-              ["Non réclamés", stats.non_reclame],
-              ["Non confirmés", stats.non_confirme],
+              ["Non réclamés", stats.unclaimed],
+              ["Non confirmés", stats.unconfirmed],
               ["Vérifiés", stats.verifie],
               ["Confirmés", stats.confirme],
               ["Contactés", stats.contacted],
@@ -373,11 +373,11 @@ function AdminPage() {
                   <div className="flex flex-wrap gap-2">
                     <Button
                       size="sm"
-                      disabled={busy || openRow.status === "verifie"}
+                      disabled={busy || openRow.status === "certified"}
                       onClick={() =>
                         void act(
                           () =>
-                            statusFn({ data: { facilityId: openRow.id, status: "verifie" } }),
+                            statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
                           "Commerce vérifié",
                         )
                       }
@@ -387,11 +387,11 @@ function AdminPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={busy || openRow.status === "non_confirme"}
+                      disabled={busy || openRow.status === "unconfirmed"}
                       onClick={() =>
                         void act(
                           () =>
-                            statusFn({ data: { facilityId: openRow.id, status: "non_confirme" } }),
+                            statusFn({ data: { facilityId: openRow.id, status: "unconfirmed" } }),
                           "Statut mis à jour",
                         )
                       }

@@ -72,7 +72,7 @@ export type PublicFacility = {
 export const listQuerySchema = z.object({
   search: z.string().max(120).optional(),
   category: z.string().max(40).optional(),
-  status: z.enum(["non_reclame", "non_confirme", "verifie", "confirme"]).optional(),
+  status: z.enum(["unclaimed", "unconfirmed", "certified", "confirmed"]).optional(),
   neighbourhood: z.string().max(80).optional(),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),

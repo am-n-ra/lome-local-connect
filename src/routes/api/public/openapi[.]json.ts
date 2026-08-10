@@ -12,7 +12,7 @@ const facilitySchema = {
     neighbourhood: { type: ["string", "null"] },
     latitude: { type: "number" },
     longitude: { type: "number" },
-    status: { type: "string", enum: ["non_reclame", "non_confirme", "verifie", "confirme"] },
+    status: { type: "string", enum: ["unclaimed", "unconfirmed", "certified", "confirmed"] },
     type: { type: "string", enum: ["fixe", "mobile"] },
     is_online: { type: "boolean" },
     product_count: { type: "integer" },
@@ -40,7 +40,7 @@ const spec = {
           {
             name: "status",
             in: "query",
-            schema: { type: "string", enum: ["non_reclame", "non_confirme", "verifie", "confirme"] },
+            schema: { type: "string", enum: ["unclaimed", "unconfirmed", "certified", "confirmed"] },
           },
           { name: "neighbourhood", in: "query", schema: { type: "string", maxLength: 80 } },
           { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } },

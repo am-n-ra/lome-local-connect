@@ -86,7 +86,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
 
   const statusTone = useMemo(() => {
     if (facility.status === "certifie") return "bg-gold/20 text-foreground border-gold";
-    if (facility.status === "verifie") return "bg-forest/10 text-forest border-forest/40";
+    if (facility.status === "certified") return "bg-forest/10 text-forest border-forest/40";
     return "bg-muted text-muted-foreground";
   }, [facility.status]);
 
@@ -173,7 +173,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
 
       {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
 
-      {facility.status === "non_reclame" && (
+      {facility.status === "unclaimed" && (
         <div className="omni-card space-y-2 border-dashed p-3">
           <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
           <p className="text-xs text-muted-foreground">

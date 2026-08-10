@@ -8,7 +8,7 @@ if (!shops.length) throw new Error("no demo shops");
 const main = shops[0]!;
 
 // Main shop becomes a verified Pro shop with a funded wallet.
-await sql`UPDATE public.facilities SET status='verifie', verified_at=now(), is_online=true WHERE id=${main.id}`;
+await sql`UPDATE public.facilities SET status='certified', verified_at=now(), is_online=true WHERE id=${main.id}`;
 await sql`INSERT INTO public.subscriptions (facility_id, tier, wallet_balance, payout_balance, pro_active_until, last_qualifying_action_month)
           VALUES (${main.id}, 'pro', 42000, 18500, (now() + interval '25 days')::date, to_char(now(),'YYYY-MM'))
           ON CONFLICT (facility_id) DO UPDATE SET tier='pro', wallet_balance=42000, payout_balance=18500,

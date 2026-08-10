@@ -128,7 +128,7 @@ export const listFacilities = createServerFn({ method: "GET" })
       )`);
     }
     if (data.includeUnclaimed === false) {
-      clauses.push("f.status <> 'non_reclame'");
+      clauses.push("f.status <> 'unclaimed'");
     }
 
     return query<MapFacility>(
@@ -378,11 +378,11 @@ export const claimFacility = createServerFn({ method: "POST" })
     );
     if (!facility) throw new Error("Commerce introuvable.");
     if (facility.owner_id) throw new Error("Ce commerce a déjà un propriétaire.");
-    if (facility.status !== "non_reclame") throw new Error("Ce commerce n'est pas réclamable.");
+    if (facility.status !== "unclaimed") throw new Error("Ce commerce n'est pas réclamable.");
 
     await query(
       `UPDATE public.facilities
-       SET owner_id = $2, status = 'non_confirme', claimed_at = now(),
+       SET owner_id = $2, status = 'unconfirmed', claimed_at = now(),
            phone = COALESCE($3, phone)
        WHERE id = $1 AND owner_id IS NULL`,
       [data.facilityId, context.userId, data.phone?.trim() || null],

@@ -438,7 +438,7 @@ function VendeurPage() {
                       latitude: pos.lat,
                       longitude: pos.lng,
                       phone: null,
-                      status: "non_confirme",
+                      status: "unconfirmed",
                       is_online: true,
                       type,
                       last_position_update: null,

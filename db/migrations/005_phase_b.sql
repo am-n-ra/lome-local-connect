@@ -7,10 +7,10 @@ ALTER TABLE public.facilities ALTER COLUMN status DROP DEFAULT;
 
 UPDATE public.facilities
 SET status = CASE status
-  WHEN 'non_reclame'  THEN 'unclaimed'
-  WHEN 'non_confirme' THEN 'unconfirmed'
-  WHEN 'verifie'      THEN 'certified'
-  WHEN 'confirme'     THEN 'confirmed'
+  WHEN 'unclaimed'  THEN 'unclaimed'
+  WHEN 'unconfirmed' THEN 'unconfirmed'
+  WHEN 'certified'      THEN 'certified'
+  WHEN 'confirmed'     THEN 'confirmed'
   ELSE status
 END;
 
