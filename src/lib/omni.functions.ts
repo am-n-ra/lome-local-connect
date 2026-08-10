@@ -85,7 +85,9 @@ const FACILITY_SELECT = `
   SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
          f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
          f.last_position_update, f.owner_id,
+         m.url AS cover_url,
          COALESCE(p.cnt, 0)::int AS product_count,
+
          p.min_price::int        AS min_price,
          COALESCE(s.tier, 'free') AS tier,
          EXISTS (
