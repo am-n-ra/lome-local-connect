@@ -16,6 +16,9 @@ type Props = {
   routeCoords?: [number, number][] | null;
   userPosition?: { lat: number; lng: number } | null;
   focus?: { lat: number; lng: number; zoom?: number } | null;
+  /** When set, the map fits these points (used to frame nearest search results). */
+  fitPoints?: { lat: number; lng: number }[] | null;
+
   initialCenter?: { lat: number; lng: number } | null;
   initialZoom?: number;
   interactive?: boolean;
