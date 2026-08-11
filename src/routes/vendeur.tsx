@@ -659,7 +659,7 @@ function VendeurPage() {
           </TabsContent>
 
           <TabsContent value="demande-locale" className="mt-5">
-            <DemandPanel demand={data?.demand ?? []} />
+            <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
           </TabsContent>
         </Tabs>
       </main>
