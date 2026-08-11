@@ -318,8 +318,8 @@ export const submitCart = createServerFn({ method: "POST" })
     }
 
     const cart = await queryOne<{ id: string }>(
-      `INSERT INTO public.carts (buyer_id, facility_id, status)
-       VALUES ($1, $2, 'pending') RETURNING id`,
+      `INSERT INTO public.carts (buyer_id, facility_id, status, submitted_at, expires_at)
+       VALUES ($1, $2, 'pending', now(), now() + interval '2 hours') RETURNING id`,
       [context.userId, data.facilityId],
     );
 
@@ -350,6 +350,98 @@ export const submitCart = createServerFn({ method: "POST" })
     }
 
     return { cartId: cart!.id };
+  });
+
+/** Fan-out: one action sends the whole basket to up to 5 sellers at once. */
+export const submitCarts = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        groups: z
+          .array(
+            z.object({
+              facilityId: z.string().uuid(),
+              items: z
+                .array(
+                  z.object({
+                    productId: z.string().uuid(),
+                    quantity: z.number().int().min(1).max(99),
+                  }),
+                )
+                .min(1)
+                .max(50),
+            }),
+          )
+          .min(1)
+          .max(5),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await enforceRateLimit({
+      bucket: "cart",
+      subject: context.userId,
+      limit: 10,
+      windowSeconds: 600,
+      message: "Trop de demandes envoyées. Réessayez dans quelques minutes.",
+    });
+
+    const sent: string[] = [];
+    const failed: { facilityId: string; error: string }[] = [];
+
+    for (const group of data.groups) {
+      try {
+        const ids = group.items.map((i) => i.productId);
+        const products = await query<{ id: string; price: number; facility_id: string }>(
+          "SELECT id, price, facility_id FROM public.products WHERE id = ANY($1::uuid[])",
+          [ids],
+        );
+        const valid = products.filter((p) => p.facility_id === group.facilityId);
+        if (valid.length !== group.items.length) {
+          throw new Error("Certains produits ne sont pas de ce commerce.");
+        }
+
+        const cart = await queryOne<{ id: string }>(
+          `INSERT INTO public.carts (buyer_id, facility_id, status, submitted_at, expires_at)
+           VALUES ($1, $2, 'pending', now(), now() + interval '2 hours') RETURNING id`,
+          [context.userId, group.facilityId],
+        );
+        for (const item of group.items) {
+          const price = valid.find((p) => p.id === item.productId)!.price;
+          await query(
+            `INSERT INTO public.cart_items (cart_id, product_id, quantity, price_at_time)
+             VALUES ($1, $2, $3, $4)`,
+            [cart!.id, item.productId, item.quantity, price],
+          );
+        }
+
+        const owner = await queryOne<{ owner_id: string | null }>(
+          "SELECT owner_id FROM public.facilities WHERE id = $1",
+          [group.facilityId],
+        );
+        if (owner?.owner_id) {
+          await query(
+            `INSERT INTO public.notifications (user_id, title, body, link)
+             VALUES ($1, $2, $3, $4)`,
+            [
+              owner.owner_id,
+              "Nouvelle demande client",
+              "Un acheteur vient d'envoyer une demande de panier (expire dans 2 h).",
+              "/vendeur",
+            ],
+          );
+        }
+        sent.push(group.facilityId);
+      } catch (error) {
+        failed.push({
+          facilityId: group.facilityId,
+          error: error instanceof Error ? error.message : "Envoi impossible.",
+        });
+      }
+    }
+
+    return { sent, failed };
   });
 
 /** Profile + owned facilities, used by the nav and the role switcher. */

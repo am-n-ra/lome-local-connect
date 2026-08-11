@@ -33,18 +33,22 @@ export function RequestsPanel({ facilityId, requests, onRefresh }: Props) {
             <span className="text-xs text-muted-foreground">{formatDateFr(c.created_at)}</span>
             <Badge
               variant={
-                c.status === "accepted"
+                c.status === "confirmed"
                   ? "default"
-                  : c.status === "refused"
+                  : c.status === "declined" || c.status === "expired"
                     ? "destructive"
                     : "secondary"
               }
             >
-              {c.status === "accepted"
+              {c.status === "confirmed"
                 ? "Acceptée"
-                : c.status === "refused"
+                : c.status === "declined"
                   ? "Refusée"
-                  : "En attente"}
+                  : c.status === "expired"
+                    ? "Expirée"
+                    : c.status === "completed"
+                      ? "Terminée"
+                      : "En attente"}
             </Badge>
             <span className="ml-auto font-display text-lg font-bold text-primary">
               {formatFcfa(c.total)}

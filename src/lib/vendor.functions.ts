@@ -628,9 +628,9 @@ export const respondToRequest = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwner(context.userId, data.facilityId);
     const cart = await queryOne<{ buyer_id: string }>(
-      `UPDATE public.carts SET status = $1
+      `UPDATE public.carts SET status = $1, responded_at = now()
        WHERE id = $2 AND facility_id = $3 RETURNING buyer_id`,
-      [data.accept ? "accepted" : "refused", data.cartId, data.facilityId],
+      [data.accept ? "confirmed" : "declined", data.cartId, data.facilityId],
     );
     if (cart?.buyer_id) {
       await query(

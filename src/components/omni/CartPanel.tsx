@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { BadgeCheck, Minus, Plus, ShieldQuestion, Trash2 } from "lucide-react";
-import { checkAvailability, submitCart } from "@/lib/omni.functions";
+import { BadgeCheck, Minus, Plus, Send, ShieldQuestion, Trash2 } from "lucide-react";
+import { checkAvailability, submitCart, submitCarts } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
@@ -14,6 +14,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
   const cart = useCart();
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Record<string, Availability>>({});
 
@@ -67,6 +68,46 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
       toast.error(error instanceof Error ? error.message : "Envoi impossible pour le moment.");
     } finally {
       setSending(null);
+    }
+  }
+
+  const facilityIds = Object.keys(groups);
+
+  async function sendAll() {
+    if (!user) {
+      toast.info("Connectez-vous pour envoyer vos demandes.");
+      return;
+    }
+    if (facilityIds.length > 5) {
+      toast.error("Vous pouvez contacter 5 vendeurs au maximum en une fois.");
+      return;
+    }
+    setSendingAll(true);
+    try {
+      const res = await submitCarts({
+        data: {
+          groups: facilityIds.map((facilityId) => ({
+            facilityId,
+            items: (groups[facilityId] ?? []).map((l) => ({
+              productId: l.productId,
+              quantity: l.quantity,
+            })),
+          })),
+        },
+      });
+      for (const id of res.sent) cart.clearFacility(id);
+      if (res.sent.length > 0) {
+        toast.success(
+          `${res.sent.length} demande(s) envoyée(s). Les vendeurs ont 2 h pour répondre.`,
+        );
+      }
+      if (res.failed.length > 0) {
+        toast.warning(`${res.failed.length} envoi(s) ont échoué.`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Envoi impossible pour le moment.");
+    } finally {
+      setSendingAll(false);
     }
   }
 
@@ -165,9 +206,27 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
             );
           })}
           {cart.lines.length > 0 && (
-            <div className="flex items-center justify-between text-base font-bold">
-              <span>Total</span>
-              <span>{formatFcfa(cart.total)}</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-base font-bold">
+                <span>Total</span>
+                <span>{formatFcfa(cart.total)}</span>
+              </div>
+              {facilityIds.length > 1 && (
+                <Button
+                  className="w-full"
+                  disabled={sendingAll || facilityIds.length > 5}
+                  onClick={() => void sendAll()}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {sendingAll
+                    ? "Envoi…"
+                    : `Envoyer aux ${facilityIds.length} vendeurs`}
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">
+                5 vendeurs maximum par envoi. Chaque demande expire automatiquement après 2 h sans
+                réponse.
+              </p>
             </div>
           )}
         </div>

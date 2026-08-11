@@ -1,0 +1,176 @@
+import { useCallback, useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Megaphone, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  closeDemandRequest,
+  createDemandRequest,
+  listMyDemandRequests,
+  type DemandRequestRow,
+  type DemandResponseRow,
+} from "@/lib/demand.functions";
+import { formatFcfa } from "@/lib/omni";
+import { useAuth } from "@/lib/auth";
+
+type Props = {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  userPos?: { lat: number; lng: number } | null;
+  initialTerm?: string | undefined;
+};
+
+/** Mode B — broadcast one need to every seller around the buyer. */
+export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }: Props) {
+  const { user } = useAuth();
+  const create = useServerFn(createDemandRequest);
+  const list = useServerFn(listMyDemandRequests);
+  const close = useServerFn(closeDemandRequest);
+
+  const [term, setTerm] = useState(initialTerm ?? "");
+  const [radius, setRadius] = useState(5);
+  const [busy, setBusy] = useState(false);
+  const [requests, setRequests] = useState<DemandRequestRow[]>([]);
+  const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
+
+  const refresh = useCallback(async () => {
+    if (!user) return;
+    try {
+      const res = await list({});
+      setRequests(res.requests);
+      setResponses(res.responses);
+    } catch {
+      setRequests([]);
+    }
+  }, [list, user]);
+
+  useEffect(() => {
+    if (open) void refresh();
+  }, [open, refresh]);
+
+  useEffect(() => {
+    if (initialTerm) setTerm(initialTerm);
+  }, [initialTerm]);
+
+  async function broadcast() {
+    if (term.trim().length < 2) return;
+    setBusy(true);
+    try {
+      const res = await create({
+        data: {
+          searchTerm: term.trim(),
+          quantity: 1,
+          latitude: userPos?.lat ?? null,
+          longitude: userPos?.lng ?? null,
+          radiusKm: radius,
+        },
+      });
+      toast.success(`Demande envoyée à ${res.notified} commerçant(s) autour de vous.`);
+      setTerm("");
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Envoi impossible.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Demande groupée</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-4 p-4">
+          <p className="text-sm text-muted-foreground">
+            Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux
+            qui l'ont vous répondent avec leur prix.
+          </p>
+
+          {!user && (
+            <p className="text-sm text-muted-foreground">Connectez-vous pour diffuser une demande.</p>
+          )}
+
+          {user && (
+            <div className="omni-card space-y-3 p-3">
+              <Input
+                value={term}
+                onChange={(e) => setTerm(e.target.value)}
+                placeholder="Ex. : ciment 50 kg, robe wax taille M…"
+              />
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Rayon</span>
+                <input
+                  type="range"
+                  min={1}
+                  max={20}
+                  value={radius}
+                  onChange={(e) => setRadius(Number(e.target.value))}
+                  className="flex-1 accent-[hsl(var(--primary))]"
+                />
+                <span className="w-12 text-right font-semibold">{radius} km</span>
+              </div>
+              <Button
+                className="w-full"
+                disabled={busy || term.trim().length < 2}
+                onClick={() => void broadcast()}
+              >
+                <Megaphone className="mr-2 h-4 w-4" />
+                {busy ? "Diffusion…" : "Diffuser ma demande"}
+              </Button>
+            </div>
+          )}
+
+          {requests.map((r) => {
+            const answers = responses.filter((a) => a.request_id === r.id);
+            return (
+              <div key={r.id} className="omni-card space-y-2 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-display font-bold">{r.search_term}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.response_count} réponse(s) · rayon {r.radius_km} km ·{" "}
+                      {r.status === "open" ? "en cours" : "clôturée"}
+                    </p>
+                  </div>
+                  {r.status === "open" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label="Clôturer"
+                      onClick={async () => {
+                        await close({ data: { id: r.id } });
+                        await refresh();
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {answers.map((a) => (
+                  <div
+                    key={a.id}
+                    className="rounded-lg border border-border p-2 text-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{a.facility_name}</span>
+                      <span className={a.available ? "text-forest" : "text-destructive"}>
+                        {a.available ? "Disponible" : "Indisponible"}
+                      </span>
+                    </div>
+                    {a.price !== null && (
+                      <p className="text-muted-foreground">{formatFcfa(a.price)}</p>
+                    )}
+                    {a.message && <p className="text-muted-foreground">{a.message}</p>}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
