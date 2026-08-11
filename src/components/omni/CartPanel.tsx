@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { BadgeCheck, Minus, Plus, ShieldQuestion, Trash2 } from "lucide-react";
-import { checkAvailability, submitCart } from "@/lib/omni.functions";
+import { BadgeCheck, Minus, Plus, Send, ShieldQuestion, Trash2 } from "lucide-react";
+import { checkAvailability, submitCart, submitCarts } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
