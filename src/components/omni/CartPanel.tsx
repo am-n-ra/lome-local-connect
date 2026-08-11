@@ -14,6 +14,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
   const cart = useCart();
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
+  const [sendingAll, setSendingAll] = useState(false);
   const [checking, setChecking] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Record<string, Availability>>({});
 
