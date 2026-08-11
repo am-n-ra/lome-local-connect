@@ -206,9 +206,27 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
             );
           })}
           {cart.lines.length > 0 && (
-            <div className="flex items-center justify-between text-base font-bold">
-              <span>Total</span>
-              <span>{formatFcfa(cart.total)}</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-base font-bold">
+                <span>Total</span>
+                <span>{formatFcfa(cart.total)}</span>
+              </div>
+              {facilityIds.length > 1 && (
+                <Button
+                  className="w-full"
+                  disabled={sendingAll || facilityIds.length > 5}
+                  onClick={() => void sendAll()}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {sendingAll
+                    ? "Envoi…"
+                    : `Envoyer aux ${facilityIds.length} vendeurs`}
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">
+                5 vendeurs maximum par envoi. Chaque demande expire automatiquement après 2 h sans
+                réponse.
+              </p>
             </div>
           )}
         </div>
