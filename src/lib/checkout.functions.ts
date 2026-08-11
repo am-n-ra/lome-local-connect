@@ -119,7 +119,7 @@ export const createCheckout = createServerFn({ method: "POST" })
       [data.cartId, context.userId],
     );
     if (!cart) throw new Error("Demande introuvable.");
-    if (cart.status !== "accepted") {
+    if (cart.status !== "confirmed" && cart.status !== "partially_confirmed") {
       throw new Error("Le commerçant doit d'abord accepter votre demande.");
     }
 
