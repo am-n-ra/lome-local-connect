@@ -71,6 +71,46 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
     }
   }
 
+  const facilityIds = Object.keys(groups);
+
+  async function sendAll() {
+    if (!user) {
+      toast.info("Connectez-vous pour envoyer vos demandes.");
+      return;
+    }
+    if (facilityIds.length > 5) {
+      toast.error("Vous pouvez contacter 5 vendeurs au maximum en une fois.");
+      return;
+    }
+    setSendingAll(true);
+    try {
+      const res = await submitCarts({
+        data: {
+          groups: facilityIds.map((facilityId) => ({
+            facilityId,
+            items: (groups[facilityId] ?? []).map((l) => ({
+              productId: l.productId,
+              quantity: l.quantity,
+            })),
+          })),
+        },
+      });
+      for (const id of res.sent) cart.clearFacility(id);
+      if (res.sent.length > 0) {
+        toast.success(
+          `${res.sent.length} demande(s) envoyée(s). Les vendeurs ont 2 h pour répondre.`,
+        );
+      }
+      if (res.failed.length > 0) {
+        toast.warning(`${res.failed.length} envoi(s) ont échoué.`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Envoi impossible pour le moment.");
+    } finally {
+      setSendingAll(false);
+    }
+  }
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
