@@ -1,18 +1,28 @@
 import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { QRCodeSVG } from "qrcode.react";
+import { Star } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { createCheckout, listMyOrders, type BuyerOrder } from "@/lib/checkout.functions";
+import {
+  confirmCompletion,
+  listPendingConfirmations,
+  submitReview,
+  type PendingConfirmation,
+} from "@/lib/reviews.functions";
 import { formatFcfa } from "@/lib/omni";
 import { useAuth } from "@/lib/auth";
 
 const STATUS_LABEL: Record<string, string> = {
+  draft: "Brouillon",
   pending: "En attente du vendeur",
-  accepted: "Acceptée — à retirer",
-  refused: "Refusée",
+  confirmed: "Acceptée — à retirer",
+  partially_confirmed: "Partiellement acceptée",
+  declined: "Refusée",
+  expired: "Expirée (sans réponse)",
   completed: "Terminée",
 };
 
