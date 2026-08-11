@@ -11,6 +11,8 @@ import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { OrdersPanel } from "@/components/omni/OrdersPanel";
+import { ChatPanel } from "@/components/omni/ChatPanel";
+import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
@@ -51,6 +53,8 @@ function CartePage() {
   const [cartOpen, setCartOpen] = useState(false);
   const [wishOpen, setWishOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [demandOpen, setDemandOpen] = useState(false);
   const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -208,6 +212,8 @@ function CartePage() {
         onOpenCart={() => setCartOpen(true)}
         onOpenWishlist={() => setWishOpen(true)}
         onOpenOrders={() => setOrdersOpen(true)}
+        onOpenChat={() => setChatOpen(true)}
+        onOpenDemand={() => setDemandOpen(true)}
         activeRole="acheteur"
         hideSearch
       />
@@ -344,6 +350,13 @@ function CartePage() {
 
       <CartPanel open={cartOpen} onOpenChange={setCartOpen} />
       <OrdersPanel open={ordersOpen} onOpenChange={setOrdersOpen} />
+      <ChatPanel open={chatOpen} onOpenChange={setChatOpen} />
+      <DemandRequestPanel
+        open={demandOpen}
+        onOpenChange={setDemandOpen}
+        userPos={userPos}
+        initialTerm={query}
+      />
       <WishlistPanel
         open={wishOpen}
         onOpenChange={setWishOpen}

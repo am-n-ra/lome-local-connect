@@ -15,6 +15,8 @@ type Props = {
   onOpenCart?: () => void;
   onOpenWishlist?: () => void;
   onOpenOrders?: () => void;
+  onOpenChat?: () => void;
+  onOpenDemand?: () => void;
   activeRole?: "acheteur" | "vendeur";
   /** Hides the inline search bar (used when a bottom search dock is shown). */
   hideSearch?: boolean;
@@ -27,6 +29,8 @@ export function TopNav({
   onOpenCart,
   onOpenWishlist,
   onOpenOrders,
+  onOpenChat,
+  onOpenDemand,
   activeRole = "acheteur",
   hideSearch = false,
 }: Props) {
@@ -92,6 +96,8 @@ export function TopNav({
         onOpenCart={onOpenCart}
         onOpenWishlist={onOpenWishlist}
         onOpenOrders={onOpenOrders}
+        onOpenChat={onOpenChat}
+        onOpenDemand={onOpenDemand}
         notifications={feed.items}
         onNotificationsRead={feed.markAllRead}
       />

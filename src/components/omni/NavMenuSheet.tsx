@@ -9,6 +9,8 @@ import {
   LogOut,
   Shield,
   ShoppingCart,
+  MessageCircle,
+  Megaphone,
   Store,
   User,
 } from "lucide-react";
@@ -34,6 +36,8 @@ type Props = {
   onOpenCart?: (() => void) | undefined;
   onOpenWishlist?: (() => void) | undefined;
   onOpenOrders?: (() => void) | undefined;
+  onOpenChat?: (() => void) | undefined;
+  onOpenDemand?: (() => void) | undefined;
   notifications: NotificationRow[];
   onNotificationsRead: () => void;
 };
@@ -46,6 +50,8 @@ export function NavMenuSheet({
   onOpenCart,
   onOpenWishlist,
   onOpenOrders,
+  onOpenChat,
+  onOpenDemand,
   notifications,
   onNotificationsRead,
 }: Props) {
@@ -123,6 +129,18 @@ export function NavMenuSheet({
             label="Mes demandes"
             onClick={() => go(onOpenOrders)}
             disabled={!onOpenOrders}
+          />
+          <MenuRow
+            icon={<MessageCircle className="h-4 w-4" />}
+            label="Messages"
+            onClick={() => go(onOpenChat)}
+            disabled={!onOpenChat}
+          />
+          <MenuRow
+            icon={<Megaphone className="h-4 w-4" />}
+            label="Demande groupée"
+            onClick={() => go(onOpenDemand)}
+            disabled={!onOpenDemand}
           />
           <MenuRow
             icon={<Heart className="h-4 w-4" />}
