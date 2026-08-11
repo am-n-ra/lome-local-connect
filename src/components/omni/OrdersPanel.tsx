@@ -36,17 +36,24 @@ export function OrdersPanel({
   const { user } = useAuth();
   const fetchOrders = useServerFn(listMyOrders);
   const startCheckout = useServerFn(createCheckout);
+  const fetchPending = useServerFn(listPendingConfirmations);
+  const confirm = useServerFn(confirmCompletion);
+  const rate = useServerFn(submitReview);
   const [orders, setOrders] = useState<BuyerOrder[]>([]);
+  const [pending, setPending] = useState<PendingConfirmation[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
     try {
-      setOrders(await fetchOrders({}));
+      const [o, p] = await Promise.all([fetchOrders({}), fetchPending({})]);
+      setOrders(o);
+      setPending(p);
     } catch {
       setOrders([]);
+      setPending([]);
     }
-  }, [fetchOrders, user]);
+  }, [fetchOrders, fetchPending, user]);
 
   useEffect(() => {
     if (open) void refresh();
@@ -64,6 +71,24 @@ export function OrdersPanel({
       setBusy(null);
     }
   }
+
+  async function confirmAndRate(txnId: string, rating: number) {
+    setBusy(txnId);
+    try {
+      const target = pending.find((p) => p.transaction_id === txnId);
+      if (target && !target.reviewed) {
+        await confirm({ data: { transactionId: txnId } }).catch(() => undefined);
+      }
+      await rate({ data: { transactionId: txnId, rating } });
+      await refresh();
+      toast.success("Merci pour votre avis !");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action impossible.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
