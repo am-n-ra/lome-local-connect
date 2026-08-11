@@ -102,10 +102,46 @@ export function OrdersPanel({
               Connectez-vous pour suivre vos demandes.
             </p>
           )}
+
+          {user && pending.filter((p) => !p.reviewed).length > 0 && (
+            <div className="omni-card space-y-3 p-3">
+              <p className="font-display font-bold">À confirmer</p>
+              {pending
+                .filter((p) => !p.reviewed)
+                .map((p) => (
+                  <div key={p.transaction_id} className="space-y-2 border-t border-border pt-2">
+                    <div className="flex items-center justify-between gap-2 text-sm">
+                      <span className="font-medium">{p.facility_name}</span>
+                      <span>{formatFcfa(p.amount)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Confirmez la transaction et notez le commerçant.
+                    </p>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          aria-label={`Noter ${n} sur 5`}
+                          disabled={busy === p.transaction_id}
+                          onClick={() => void confirmAndRate(p.transaction_id, n)}
+                          className="text-gold transition-transform hover:scale-110"
+                        >
+                          <Star className="h-6 w-6" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+
           {user && orders.length === 0 && (
             <p className="text-sm text-muted-foreground">Aucune demande pour le moment.</p>
           )}
           {orders.map((order) => {
+            const acceptedStatus =
+              order.status === "confirmed" || order.status === "partially_confirmed";
             const active =
               order.qr_token &&
               order.transaction_status === "pending" &&
@@ -128,7 +164,13 @@ export function OrdersPanel({
                   <span>{formatFcfa(order.total)}</span>
                 </div>
 
-                {order.status === "accepted" && !active && (
+                {order.status === "pending" && (
+                  <p className="text-xs text-muted-foreground">
+                    Le vendeur a 2 h pour répondre, sinon la demande expire.
+                  </p>
+                )}
+
+                {acceptedStatus && !active && (
                   <Button
                     className="w-full"
                     disabled={busy === order.id}
@@ -138,7 +180,7 @@ export function OrdersPanel({
                   </Button>
                 )}
 
-                {order.status === "accepted" && active && (
+                {acceptedStatus && active && (
                   <div className="flex flex-col items-center gap-2 rounded-xl bg-secondary p-3">
                     <QRCodeSVG value={order.qr_token!} size={140} level="M" includeMargin />
                     <p className="font-mono text-lg font-bold tracking-widest">{order.qr_token}</p>
@@ -150,9 +192,7 @@ export function OrdersPanel({
                 )}
 
                 {order.status === "completed" && (
-                  <p className="text-xs text-forest">
-                    Achat validé{order.platform_fee !== null ? "" : ""} — merci !
-                  </p>
+                  <p className="text-xs text-forest">Achat validé — merci !</p>
                 )}
               </div>
             );
