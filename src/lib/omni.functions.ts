@@ -318,8 +318,8 @@ export const submitCart = createServerFn({ method: "POST" })
     }
 
     const cart = await queryOne<{ id: string }>(
-      `INSERT INTO public.carts (buyer_id, facility_id, status)
-       VALUES ($1, $2, 'pending') RETURNING id`,
+      `INSERT INTO public.carts (buyer_id, facility_id, status, submitted_at, expires_at)
+       VALUES ($1, $2, 'pending', now(), now() + interval '2 hours') RETURNING id`,
       [context.userId, data.facilityId],
     );
 
