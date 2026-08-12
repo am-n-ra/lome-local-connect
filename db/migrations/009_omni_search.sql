@@ -141,6 +141,13 @@ CREATE INDEX IF NOT EXISTS search_documents_pos_idx
   ON public.search_documents (latitude, longitude);
 CREATE INDEX IF NOT EXISTS search_documents_type_idx ON public.search_documents (object_type);
 
+-- Lightweight accent folding without requiring the unaccent extension.
+CREATE OR REPLACE FUNCTION public.unaccent_safe(input text) RETURNS text AS $$
+  SELECT translate(lower(coalesce(input, '')),
+    'àáâãäåçèéêëìíîïñòóôõöùúûüýÿ',
+    'aaaaaaceeeeiiiinooooouuuuyy');
+$$ LANGUAGE sql IMMUTABLE;
+
 CREATE OR REPLACE FUNCTION public.search_documents_tsv() RETURNS trigger AS $$
 BEGIN
   NEW.tsv :=
@@ -151,13 +158,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Lightweight accent folding without requiring the unaccent extension.
-CREATE OR REPLACE FUNCTION public.unaccent_safe(input text) RETURNS text AS $$
-  SELECT translate(lower(coalesce(input, '')),
-    'àáâãäåçèéêëìíîïñòóôõöùúûüýÿ',
-    'aaaaaaceeeeiiiinooooouuuuyy');
-$$ LANGUAGE sql IMMUTABLE;
 
 DROP TRIGGER IF EXISTS search_documents_tsv_trg ON public.search_documents;
 CREATE TRIGGER search_documents_tsv_trg
