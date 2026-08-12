@@ -25,6 +25,9 @@ export type DemandRequestRow = {
   expires_at: string;
   created_at: string;
   response_count: number;
+  targeted_count: number;
+  ai_summary: string | null;
+  ai_recommended_facility_id: string | null;
 };
 
 export type VendorDemandRequest = {
@@ -48,7 +51,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         quantity: z.number().int().min(1).max(999).default(1),
         latitude: z.number().min(-90).max(90).nullable().optional(),
         longitude: z.number().min(-180).max(180).nullable().optional(),
-        radiusKm: z.number().min(0.5).max(50).default(5),
+        radiusKm: z.number().min(0.5).max(50).default(50),
+        budgetMax: z.number().int().min(0).max(100_000_000).nullable().optional(),
       })
       .parse(input),
   )
@@ -61,10 +65,56 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       message: "Trop de demandes groupées. Réessayez dans quelques minutes.",
     });
 
+    const plan = await queryOne<{
+      plan: string;
+      requests_used: number;
+      extra_credits: number;
+      period_month: string;
+    }>(
+      `INSERT INTO public.user_plans (user_id) VALUES ($1)
+       ON CONFLICT (user_id) DO UPDATE SET
+         period_month = CASE WHEN public.user_plans.period_month <> to_char(now(), 'YYYY-MM') THEN to_char(now(), 'YYYY-MM') ELSE public.user_plans.period_month END,
+         requests_used = CASE WHEN public.user_plans.period_month <> to_char(now(), 'YYYY-MM') THEN 0 ELSE public.user_plans.requests_used END
+       RETURNING plan, requests_used, extra_credits, period_month`,
+      [context.userId],
+    );
+    const included = plan?.plan === "pro" ? 30 : 3;
+    const remaining =
+      Math.max(0, included - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
+    if (remaining <= 0) {
+      throw new Error(
+        "Crédits de vérification épuisés : le plan gratuit inclut 3 demandes/mois. Passez Pro ou rechargez votre solde.",
+      );
+    }
+
+    // Bulk targets all matching/nearby facilities; pro sellers can answer by AI agent, free sellers answer manually.
+    const targets = await query<{
+      id: string;
+      owner_id: string | null;
+      name: string;
+      seller_plan: string;
+    }>(
+      `SELECT f.id, f.owner_id, f.name, COALESCE(s.tier, 'free') AS seller_plan
+       FROM public.facilities f
+       LEFT JOIN public.subscriptions s ON s.facility_id = f.id
+       WHERE ($1::float8 IS NULL OR (
+           6371 * acos(LEAST(1, GREATEST(-1,
+             cos(radians($1)) * cos(radians(f.latitude)) *
+             cos(radians(f.longitude) - radians($2)) +
+             sin(radians($1)) * sin(radians(f.latitude))
+           ))) <= $3
+         ))
+         AND (f.name ILIKE '%' || $4 || '%' OR f.category ILIKE '%' || $4 || '%' OR EXISTS (
+           SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $4 || '%'
+         ))
+       LIMIT 700`,
+      [data.latitude ?? null, data.longitude ?? null, data.radiusKm, data.searchTerm.trim()],
+    );
+
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
-         (buyer_id, search_term, quantity, latitude, longitude, radius_km)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
       [
         context.userId,
         data.searchTerm.trim(),
@@ -72,24 +122,36 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         data.latitude ?? null,
         data.longitude ?? null,
         data.radiusKm,
+        data.budgetMax ?? null,
+        targets.length,
       ],
     );
 
-    // Notify nearby claimed sellers so they can answer with availability.
-    const owners = await query<{ owner_id: string }>(
-      `SELECT DISTINCT f.owner_id
-       FROM public.facilities f
-       WHERE f.owner_id IS NOT NULL
-         AND ($1::float8 IS NULL OR (
-           6371 * acos(LEAST(1, GREATEST(-1,
-             cos(radians($1)) * cos(radians(f.latitude)) *
-             cos(radians(f.longitude) - radians($2)) +
-             sin(radians($1)) * sin(radians(f.latitude))
-           ))) <= $3
-         ))
-       LIMIT 60`,
-      [data.latitude ?? null, data.longitude ?? null, data.radiusKm],
+    await query(
+      `UPDATE public.user_plans SET
+         requests_used = requests_used + CASE WHEN requests_used < $2 THEN 1 ELSE 0 END,
+         extra_credits = GREATEST(0, extra_credits - CASE WHEN requests_used >= $2 THEN 1 ELSE 0 END),
+         updated_at = now()
+       WHERE user_id = $1`,
+      [context.userId, included],
     );
+
+    const proTargets = targets.filter((t) => t.seller_plan === "pro");
+    for (const t of proTargets.slice(0, 120)) {
+      await query(
+        `INSERT INTO public.demand_responses (request_id, facility_id, available, price, quantity, message, answered_by)
+         VALUES ($1,$2,true,NULL,$3,$4,'ai')
+         ON CONFLICT (request_id, facility_id) DO NOTHING`,
+        [
+          row!.id,
+          t.id,
+          data.quantity,
+          `Agent IA ${t.name} : disponibilité à confirmer, vendeur pro priorisé.`,
+        ],
+      );
+    }
+
+    const owners = targets.filter((t) => t.owner_id).map((t) => ({ owner_id: t.owner_id! }));
     for (const o of owners) {
       await query(
         `INSERT INTO public.notifications (user_id, title, body, link)
@@ -103,7 +165,12 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       );
     }
 
-    return { id: row!.id, notified: owners.length };
+    return {
+      id: row!.id,
+      notified: owners.length,
+      targeted: targets.length,
+      aiAnswered: proTargets.length,
+    };
   });
 
 export const listMyDemandRequests = createServerFn({ method: "GET" })
@@ -111,7 +178,7 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const requests = await query<DemandRequestRow>(
       `SELECT d.id, d.search_term, d.quantity, d.radius_km::float8 AS radius_km, d.status,
-              d.expires_at, d.created_at,
+              d.expires_at, d.created_at, d.targeted_count, d.ai_summary, d.ai_recommended_facility_id,
               (SELECT count(*)::int FROM public.demand_responses r WHERE r.request_id = d.id)
                 AS response_count
        FROM public.demand_requests d
@@ -119,7 +186,8 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
        ORDER BY d.created_at DESC LIMIT 30`,
       [context.userId],
     );
-    if (requests.length === 0) return { requests, responses: [] as (DemandResponseRow & { request_id: string })[] };
+    if (requests.length === 0)
+      return { requests, responses: [] as (DemandResponseRow & { request_id: string })[] };
 
     const responses = await query<DemandResponseRow & { request_id: string }>(
       `SELECT r.id, r.request_id, r.facility_id, f.name AS facility_name, r.available,
@@ -147,9 +215,7 @@ export const closeDemandRequest = createServerFn({ method: "POST" })
 /** Seller side: open requests near one of my facilities. */
 export const listDemandForFacility = createServerFn({ method: "GET" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const facility = await queryOne<{ latitude: number; longitude: number }>(
       "SELECT latitude, longitude FROM public.facilities WHERE id = $1 AND owner_id = $2",

@@ -18,7 +18,6 @@ import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/
 
 import { formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
 
-
 export const Route = createFileRoute("/carte")({
   head: () => ({
     meta: [
@@ -126,7 +125,6 @@ function CartePage() {
         isPro: f.sponsored || f.tier === "pro",
         mobile_presence: f.type === "mobile" && f.is_online,
         distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
-
       }))
       .filter((f) => {
         if (filters.radiusKm < 50 && f.distanceKm > filters.radiusKm) return false;
@@ -137,14 +135,12 @@ function CartePage() {
       });
 
     return rows.sort((a, b) => {
-      if (filters.sort === "price")
-        return (a.min_price ?? Infinity) - (b.min_price ?? Infinity);
+      if (filters.sort === "price") return (a.min_price ?? Infinity) - (b.min_price ?? Infinity);
       if (filters.sort === "distance") return a.distanceKm - b.distanceKm;
       if (a.isPro !== b.isPro) return a.isPro ? -1 : 1;
       return a.distanceKm - b.distanceKm;
     });
   }, [facilities, origin, filters]);
-
 
   const initialCenter = useMemo(() => userPos, [userPos]);
 
@@ -165,7 +161,6 @@ function CartePage() {
     // Only re-frame when the search itself changes, not on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchKey, facilities]);
-
 
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? LOME_CENTER;
@@ -216,8 +211,8 @@ function CartePage() {
         onOpenDemand={() => setDemandOpen(true)}
         activeRole="acheteur"
         hideSearch
+        minimalMapChrome
       />
-
 
       {nearbyMobile && !bannerDismissed && (
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
@@ -267,6 +262,7 @@ function CartePage() {
             filters={filters}
             onFiltersChange={setFilters}
             resultCount={results.length}
+            onVerifyAvailability={() => setDemandOpen(true)}
             onBrandClick={() => {
               if (userPos) setFitPoints([userPos]);
               else toast.info("Position indisponible.");
@@ -274,8 +270,18 @@ function CartePage() {
           />
         )}
 
-
-
+        {!selected && query.trim() && results.length === 0 && (
+          <div className="absolute inset-x-4 bottom-28 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur">
+            <p className="font-display font-bold">Dites-nous ce que vous cherchez</p>
+            <p className="mt-1 text-muted-foreground">
+              Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
+              pertinents.
+            </p>
+            <Button className="mt-3 w-full" onClick={() => setDemandOpen(true)}>
+              Créer une demande
+            </Button>
+          </div>
+        )}
 
         {selected && (
           <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">

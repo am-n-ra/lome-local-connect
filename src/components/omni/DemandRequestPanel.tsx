@@ -30,7 +30,9 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
   const close = useServerFn(closeDemandRequest);
 
   const [term, setTerm] = useState(initialTerm ?? "");
-  const [radius, setRadius] = useState(5);
+  const [radius, setRadius] = useState(50);
+  const [quantity, setQuantity] = useState(1);
+  const [budgetMax, setBudgetMax] = useState("");
   const [busy, setBusy] = useState(false);
   const [requests, setRequests] = useState<DemandRequestRow[]>([]);
   const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
@@ -61,14 +63,19 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
       const res = await create({
         data: {
           searchTerm: term.trim(),
-          quantity: 1,
+          quantity,
           latitude: userPos?.lat ?? null,
           longitude: userPos?.lng ?? null,
           radiusKm: radius,
+          budgetMax: budgetMax ? Number(budgetMax) : null,
         },
       });
-      toast.success(`Demande envoyée à ${res.notified} commerçant(s) autour de vous.`);
+      toast.success(
+        `Vérification bulk lancée sur ${res.targeted} commerce(s), dont ${res.aiAnswered} réponse(s) IA.`,
+      );
       setTerm("");
+      setQuantity(1);
+      setBudgetMax("");
       await refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Envoi impossible.");
@@ -90,7 +97,9 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
           </p>
 
           {!user && (
-            <p className="text-sm text-muted-foreground">Connectez-vous pour diffuser une demande.</p>
+            <p className="text-sm text-muted-foreground">
+              Connectez-vous pour diffuser une demande.
+            </p>
           )}
 
           {user && (
@@ -100,12 +109,28 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                 onChange={(e) => setTerm(e.target.value)}
                 placeholder="Ex. : ciment 50 kg, robe wax taille M…"
               />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))}
+                  placeholder="Quantité"
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  value={budgetMax}
+                  onChange={(e) => setBudgetMax(e.target.value)}
+                  placeholder="Budget max"
+                />
+              </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">Rayon</span>
                 <input
                   type="range"
                   min={1}
-                  max={20}
+                  max={50}
                   value={radius}
                   onChange={(e) => setRadius(Number(e.target.value))}
                   className="flex-1 accent-[hsl(var(--primary))]"
@@ -118,7 +143,7 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                 onClick={() => void broadcast()}
               >
                 <Megaphone className="mr-2 h-4 w-4" />
-                {busy ? "Diffusion…" : "Diffuser ma demande"}
+                {busy ? "Vérification…" : "Vérifier disponibilité en bulk"}
               </Button>
             </div>
           )}
@@ -131,8 +156,8 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                   <div>
                     <p className="font-display font-bold">{r.search_term}</p>
                     <p className="text-xs text-muted-foreground">
-                      {r.response_count} réponse(s) · rayon {r.radius_km} km ·{" "}
-                      {r.status === "open" ? "en cours" : "clôturée"}
+                      {r.response_count} réponse(s) sur {r.targeted_count} cible(s) · rayon{" "}
+                      {r.radius_km} km · {r.status === "open" ? "en cours" : "clôturée"}
                     </p>
                   </div>
                   {r.status === "open" && (
@@ -149,11 +174,13 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                     </Button>
                   )}
                 </div>
+                {r.ai_summary && (
+                  <div className="rounded-lg bg-primary/10 p-2 text-sm text-primary">
+                    {r.ai_summary}
+                  </div>
+                )}
                 {answers.map((a) => (
-                  <div
-                    key={a.id}
-                    className="rounded-lg border border-border p-2 text-sm"
-                  >
+                  <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{a.facility_name}</span>
                       <span className={a.available ? "text-forest" : "text-destructive"}>
