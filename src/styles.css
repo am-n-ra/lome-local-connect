@@ -109,7 +109,6 @@
   --shadow-sheet: 0 -12px 40px -20px oklch(0.3 0.05 45 / 0.45);
 }
 
-
 .dark {
   --background: oklch(0.129 0.042 264.695);
   --foreground: oklch(0.984 0.003 247.858);
@@ -157,7 +156,10 @@
 }
 
 @layer base {
-  h1, h2, h3, h4 {
+  h1,
+  h2,
+  h3,
+  h4 {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
@@ -185,5 +187,164 @@
   box-shadow: var(--shadow-soft);
 }
 
-.maplibregl-ctrl-attrib { font-size: 10px; }
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
 
+@layer theme {
+  :root {
+    --omni-cream: oklch(0.985 0.018 83);
+    --omni-cream-strong: oklch(0.955 0.038 78);
+    --omni-glass: oklch(1 0 0 / 72%);
+    --omni-glass-strong: oklch(1 0 0 / 88%);
+    --omni-glass-border: oklch(1 0 0 / 62%);
+    --omni-orange-glow:
+      0 0 0 1px oklch(0.78 0.15 55 / 22%), 0 16px 48px -20px oklch(0.68 0.19 42 / 72%);
+    --omni-blur-sm: 10px;
+    --omni-blur-md: 18px;
+    --omni-blur-lg: 28px;
+    --omni-shadow-soft: 0 16px 48px -28px oklch(0.36 0.06 48 / 46%);
+    --omni-shadow-glass: 0 24px 70px -36px oklch(0.36 0.06 48 / 56%);
+    --omni-shadow-panel: 0 30px 90px -44px oklch(0.28 0.05 48 / 58%);
+    --omni-radius-card: 1.35rem;
+    --omni-radius-panel: 1.75rem;
+    --omni-radius-sheet: 2rem;
+    --omni-radius-pill: 999px;
+  }
+}
+
+@utility omni-surface {
+  background:
+    radial-gradient(circle at 15% 10%, oklch(0.82 0.15 68 / 30%), transparent 28rem),
+    radial-gradient(circle at 86% 12%, oklch(0.69 0.11 155 / 16%), transparent 24rem),
+    linear-gradient(180deg, var(--omni-cream), var(--color-background));
+}
+
+@utility omni-panel {
+  border-radius: var(--omni-radius-panel);
+  border: 1px solid var(--omni-glass-border);
+  background: var(--omni-glass);
+  box-shadow: var(--omni-shadow-panel);
+  backdrop-filter: blur(var(--omni-blur-md)) saturate(150%);
+}
+
+@utility omni-button-glow {
+  background-image: linear-gradient(135deg, var(--color-primary), oklch(0.72 0.17 55));
+  box-shadow: var(--omni-orange-glow);
+}
+
+.omni-bottom-sheet {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 20;
+  max-height: min(76vh, 42rem);
+  overflow-y: auto;
+  border-radius: var(--omni-radius-sheet) var(--omni-radius-sheet) 0 0;
+  border: 1px solid var(--omni-glass-border);
+  border-bottom: 0;
+  background: var(--omni-glass-strong);
+  box-shadow: var(--omni-shadow-panel);
+  padding: 1rem;
+  backdrop-filter: blur(var(--omni-blur-lg)) saturate(160%);
+}
+
+@media (min-width: 768px) {
+  .omni-bottom-sheet {
+    inset: 1rem 1rem auto auto;
+    width: min(28rem, calc(100vw - 2rem));
+    max-height: calc(100vh - 2rem);
+    border-bottom: 1px solid var(--omni-glass-border);
+    border-radius: var(--omni-radius-panel);
+    padding: 1.25rem;
+  }
+}
+
+@media (min-width: 1180px) {
+  .omni-map-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 28rem;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .omni-map-layout > .maplibregl-map,
+  .omni-map-frame {
+    border-radius: var(--omni-radius-panel);
+    overflow: hidden;
+    box-shadow: var(--omni-shadow-soft);
+  }
+}
+
+.omni-map-marker {
+  --marker-color: var(--color-primary);
+  position: relative;
+  display: grid;
+  height: 24px;
+  width: 24px;
+  cursor: pointer;
+  place-items: center;
+  transform: translateZ(0);
+  transition:
+    transform 160ms ease,
+    filter 160ms ease;
+}
+.omni-map-marker__pin {
+  height: 16px;
+  width: 16px;
+  border-radius: var(--omni-radius-pill);
+  border: 3px solid white;
+  background: var(--marker-color);
+  box-shadow: 0 5px 14px oklch(0.28 0.05 45 / 32%);
+}
+.omni-map-marker.is-mobile .omni-map-marker__pin {
+  background: white;
+  border-color: var(--marker-color);
+}
+.omni-map-marker.is-selected {
+  z-index: 5;
+  transform: scale(1.35);
+  filter: drop-shadow(0 10px 18px oklch(0.35 0.08 48 / 36%));
+}
+.omni-map-marker.is-active .omni-map-marker__pin {
+  background: var(--color-forest);
+  border-color: white;
+}
+.omni-map-marker__halo {
+  position: absolute;
+  inset: -7px;
+  border-radius: var(--omni-radius-pill);
+  border: 2px solid oklch(0.58 0.12 155 / 58%);
+  background: oklch(0.58 0.12 155 / 14%);
+  animation: omni-marker-pulse 1.8s ease-out infinite;
+}
+.omni-map-marker.is-confirmed .omni-map-marker__pin {
+  outline: 2px solid oklch(0.79 0.145 82 / 76%);
+  outline-offset: 2px;
+}
+.omni-map-marker__sponsor,
+.omni-map-marker__availability {
+  position: absolute;
+  border: 1.5px solid white;
+  border-radius: var(--omni-radius-pill);
+}
+.omni-map-marker__sponsor {
+  right: 0;
+  top: 0;
+  height: 8px;
+  width: 8px;
+  background: var(--color-gold);
+  box-shadow: var(--omni-orange-glow);
+}
+.omni-map-marker__availability {
+  bottom: 0;
+  left: 0;
+  height: 7px;
+  width: 7px;
+  background: var(--color-forest);
+}
+@keyframes omni-marker-pulse {
+  to {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+}

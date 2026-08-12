@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { listFacilities, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
+import { GlassCard, LiveStatus, MapBottomSheet, OmniButton } from "@/components/omni/visual";
 import { Badge } from "@/components/ui/badge";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
@@ -200,7 +201,7 @@ function CartePage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-screen flex-col omni-surface">
       <TopNav
         query={query}
         onQueryChange={setQuery}
@@ -215,7 +216,7 @@ function CartePage() {
       />
 
       {nearbyMobile && !bannerDismissed && (
-        <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
+        <GlassCard className="mx-3 mt-3 flex items-center gap-2 px-4 py-2 text-sm">
           <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
           <Badge variant="secondary">Mode démo</Badge>
           <button
@@ -226,10 +227,10 @@ function CartePage() {
           >
             <X className="h-4 w-4" />
           </button>
-        </div>
+        </GlassCard>
       )}
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="omni-map-layout relative flex-1 overflow-hidden">
         {geoReady ? (
           <MapCanvas
             facilities={results}
@@ -245,7 +246,7 @@ function CartePage() {
             initialZoom={userPos ? 15.5 : 12.2}
             focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
             fitPoints={selected ? null : fitPoints}
-            className="h-full w-full"
+            className="omni-map-frame h-full w-full"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
@@ -271,7 +272,7 @@ function CartePage() {
         )}
 
         {!selected && query.trim() && results.length === 0 && (
-          <div className="absolute inset-x-4 bottom-28 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur">
+          <GlassCard className="absolute inset-x-4 bottom-28 z-10 mx-auto max-w-md text-sm">
             <p className="font-display font-bold">Dites-nous ce que vous cherchez</p>
             <p className="mt-1 text-muted-foreground">
               Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
@@ -280,27 +281,23 @@ function CartePage() {
             <Button className="mt-3 w-full" onClick={() => setDemandOpen(true)}>
               Créer une demande
             </Button>
-          </div>
+          </GlassCard>
         )}
 
         {selected && (
-          <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">
-            <div className="mb-2 flex justify-end gap-2">
-              <Button
-                variant="ghost"
+          <MapBottomSheet title={selected.name} onClose={() => setSelected(null)}>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <LiveStatus
+                online={selected.is_online || selected.mobile_presence}
+                detail={selected.type === "mobile" ? "mobile" : "boutique"}
+              />
+              <OmniButton
+                variant="glass"
                 size="sm"
                 onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}
               >
                 Page complète
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Fermer"
-                onClick={() => setSelected(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              </OmniButton>
             </div>
             <FacilityPanel
               facility={selected}
@@ -308,11 +305,11 @@ function CartePage() {
               routingBusy={routingBusy}
               onItinerary={() => void buildItinerary(selected)}
             />
-          </div>
+          </MapBottomSheet>
         )}
 
         {steps.length > 0 && (
-          <div className="absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
+          <GlassCard className="absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto p-3 md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
             <div className="mb-2 flex items-center justify-between">
               <p className="font-display font-bold">Guidage à pied</p>
               <div className="flex gap-1">
@@ -350,7 +347,7 @@ function CartePage() {
                 </li>
               ))}
             </ol>
-          </div>
+          </GlassCard>
         )}
       </div>
 
