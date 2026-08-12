@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { ChevronLeft, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,7 @@ type Props = {
   onFiltersChange: (value: MapFilters) => void;
   resultCount: number;
   onBrandClick?: () => void;
+  onVerifyAvailability?: () => void;
 };
 
 const CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES.map((c) => ({ ...c }))] as {
@@ -72,9 +73,11 @@ export function SearchDock({
   onFiltersChange,
   resultCount,
   onBrandClick,
+  onVerifyAvailability,
 }: Props) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const activeCount = activeFilterCount(filters);
+  const [categoriesOpen, setCategoriesOpen] = useState(false);
 
   function slide(direction: 1 | -1) {
     const rail = railRef.current;
@@ -89,163 +92,189 @@ export function SearchDock({
   return (
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
       <div className="pointer-events-auto w-full max-w-xl space-y-2">
-        {/* Category carousel: three chips visible, arrows on desktop, swipe on mobile. */}
-        <div className="omni-glass grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-full p-1">
+        <div className="flex justify-center">
           <button
             type="button"
-            aria-label="Catégories précédentes"
-            onClick={() => slide(-1)}
-            className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
+            aria-label={categoriesOpen ? "Masquer les catégories" : "Afficher les catégories"}
+            aria-expanded={categoriesOpen}
+            onClick={() => setCategoriesOpen((open) => !open)}
+            className="omni-glass rounded-full p-1.5 text-muted-foreground transition-colors hover:text-foreground"
           >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-
-          <div
-            ref={railRef}
-            className="flex min-w-0 snap-x snap-mandatory items-center gap-1.5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            {CHIPS.map((c) => {
-              const active = category === c.value;
-              return (
-                <button
-                  key={c.label}
-                  type="button"
-                  onClick={() => onCategoryChange(c.value)}
-                  className={`w-[calc((100%-0.75rem)/3)] shrink-0 snap-start truncate rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                    active
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background/60 text-foreground hover:bg-background/80"
-                  }`}
-                >
-                  {c.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            aria-label="Catégories suivantes"
-            onClick={() => slide(1)}
-            className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
-          >
-            <ChevronRight className="h-4 w-4" />
+            {categoriesOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
           </button>
         </div>
 
-        {/* Filters + result count */}
-        <div className="flex items-center gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
+        {categoriesOpen && (
+          <div className="omni-glass grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-1 rounded-full p-1">
+            <button
+              type="button"
+              aria-label="Catégories précédentes"
+              onClick={() => slide(-1)}
+              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            <div
+              ref={railRef}
+              className="flex min-w-0 snap-x snap-mandatory items-center gap-1.5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {CHIPS.map((c) => {
+                const active = category === c.value;
+                return (
+                  <button
+                    key={c.label}
+                    type="button"
+                    onClick={() => onCategoryChange(c.value)}
+                    className={`w-[calc((100%-0.75rem)/3)] shrink-0 snap-start truncate rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background/60 text-foreground hover:bg-background/80"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              aria-label="Catégories suivantes"
+              onClick={() => slide(1)}
+              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="omni-glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {activeCount > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
+                      {activeCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" side="top" className="w-72 space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Proximité</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {filters.radiusKm >= 50 ? "Sans limite" : `${filters.radiusKm} km`}
+                    </span>
+                  </div>
+                  <Slider
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={[filters.radiusKm]}
+                    onValueChange={([v]) => patch({ radiusKm: v ?? 10 })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs">Prix maximum</Label>
+                    <span className="text-xs text-muted-foreground">
+                      {filters.maxPrice === null ? "Tous" : formatFcfa(filters.maxPrice)}
+                    </span>
+                  </div>
+                  <Slider
+                    min={0}
+                    max={100000}
+                    step={1000}
+                    value={[filters.maxPrice ?? 0]}
+                    onValueChange={([v]) => patch({ maxPrice: !v ? null : v })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="filter-open" className="text-xs">
+                    Ouverts maintenant
+                  </Label>
+                  <Switch
+                    id="filter-open"
+                    checked={filters.openOnly}
+                    onCheckedChange={(v) => patch({ openOnly: v })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="filter-discount" className="text-xs">
+                    Avec réduction
+                  </Label>
+                  <Switch
+                    id="filter-discount"
+                    checked={filters.discountOnly}
+                    onCheckedChange={(v) => patch({ discountOnly: v })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Trier par</Label>
+                  <div className="grid grid-cols-3 gap-1">
+                    {(
+                      [
+                        ["rank", "Pertinence"],
+                        ["distance", "Proximité"],
+                        ["price", "Prix"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => patch({ sort: value })}
+                        className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                          filters.sort === value
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary text-foreground"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => onFiltersChange(DEFAULT_FILTERS)}
+                >
+                  Réinitialiser
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+
+        {query.trim() && (
+          <div className="flex justify-center gap-2">
+            <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+              {resultCount} résultat{resultCount > 1 ? "s" : ""}
+            </span>
+            {resultCount > 0 && onVerifyAvailability && (
               <button
                 type="button"
-                className="omni-glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                onClick={onVerifyAvailability}
+                className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filtres
-                {activeCount > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
-                    {activeCount}
-                  </span>
-                )}
+                Vérifier dispo bulk
               </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" side="top" className="w-72 space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Proximité</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {filters.radiusKm >= 50 ? "Sans limite" : `${filters.radiusKm} km`}
-                  </span>
-                </div>
-                <Slider
-                  min={1}
-                  max={50}
-                  step={1}
-                  value={[filters.radiusKm]}
-                  onValueChange={([v]) => patch({ radiusKm: v ?? 10 })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs">Prix maximum</Label>
-                  <span className="text-xs text-muted-foreground">
-                    {filters.maxPrice === null ? "Tous" : formatFcfa(filters.maxPrice)}
-                  </span>
-                </div>
-                <Slider
-                  min={0}
-                  max={100000}
-                  step={1000}
-                  value={[filters.maxPrice ?? 0]}
-                  onValueChange={([v]) => patch({ maxPrice: !v ? null : v })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="filter-open" className="text-xs">
-                  Ouverts maintenant
-                </Label>
-                <Switch
-                  id="filter-open"
-                  checked={filters.openOnly}
-                  onCheckedChange={(v) => patch({ openOnly: v })}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <Label htmlFor="filter-discount" className="text-xs">
-                  Avec réduction
-                </Label>
-                <Switch
-                  id="filter-discount"
-                  checked={filters.discountOnly}
-                  onCheckedChange={(v) => patch({ discountOnly: v })}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs">Trier par</Label>
-                <div className="grid grid-cols-3 gap-1">
-                  {(
-                    [
-                      ["rank", "Pertinence"],
-                      ["distance", "Proximité"],
-                      ["price", "Prix"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => patch({ sort: value })}
-                      className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                        filters.sort === value
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => onFiltersChange(DEFAULT_FILTERS)}
-              >
-                Réinitialiser
-              </Button>
-            </PopoverContent>
-          </Popover>
-
-          <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-            {resultCount} résultat(s)
-          </span>
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Search pill */}
         <SmartSearchBar

@@ -45,7 +45,6 @@ function playListenCue() {
   }
 }
 
-
 function encodeWav(chunks: Float32Array[], sampleRate: number): Blob {
   const length = chunks.reduce((n, c) => n + c.length, 0);
   const merged = new Float32Array(length);
@@ -99,7 +98,6 @@ export function SmartSearchBar({
   layout = "input",
   trailing,
 }: Props) {
-
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
   const [levels, setLevels] = useState<number[]>(() => new Array(BAR_COUNT).fill(0.08));
@@ -149,7 +147,6 @@ export function SmartSearchBar({
 
     setRecording(true);
     playListenCue();
-
 
     stopRef.current = async () => {
       stopRef.current = null;
@@ -253,6 +250,24 @@ export function SmartSearchBar({
         >
           <Camera className="h-[18px] w-[18px]" />
         </button>
+        {recording ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+            {waveform}
+            <span className="truncate text-xs font-medium text-muted-foreground">Parlez…</span>
+          </div>
+        ) : (
+          <input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") onSubmit?.();
+            }}
+            placeholder={placeholder ?? "Que cherchez-vous ?"}
+            aria-label="Rechercher un produit"
+            className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+          />
+        )}
+
         <button
           type="button"
           aria-label={recording ? "Arrêter la dictée" : "Recherche vocale"}
@@ -272,24 +287,6 @@ export function SmartSearchBar({
             <Mic className="h-[18px] w-[18px]" />
           )}
         </button>
-
-        {recording ? (
-          <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-            {waveform}
-            <span className="truncate text-xs font-medium text-muted-foreground">Parlez…</span>
-          </div>
-        ) : (
-          <input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") onSubmit?.();
-            }}
-            placeholder={placeholder ?? "Que cherchez-vous ?"}
-            aria-label="Rechercher un produit"
-            className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
-          />
-        )}
 
         {trailing}
       </div>
@@ -347,5 +344,4 @@ export function SmartSearchBar({
       </div>
     </div>
   );
-
 }

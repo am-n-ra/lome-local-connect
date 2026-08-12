@@ -20,6 +20,8 @@ type Props = {
   activeRole?: "acheteur" | "vendeur";
   /** Hides the inline search bar (used when a bottom search dock is shown). */
   hideSearch?: boolean;
+  /** Map home chrome: only the hamburger floats top-right, no brand/navigation bar. */
+  minimalMapChrome?: boolean;
 };
 
 export function TopNav({
@@ -33,6 +35,7 @@ export function TopNav({
   onOpenDemand,
   activeRole = "acheteur",
   hideSearch = false,
+  minimalMapChrome = false,
 }: Props) {
   const navigate = useNavigate();
   const cart = useCart();
@@ -41,43 +44,57 @@ export function TopNav({
   const badge = cart.count + feed.unread;
 
   return (
-    <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur">
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 md:px-5 md:py-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link
-            to="/"
-            className="flex shrink-0 items-center gap-1.5 font-display text-lg font-extrabold"
-          >
-            <BrandMark className="h-7 w-7" />
-            <span className="truncate">OmniView</span>
-          </Link>
-
-          {!hideSearch && (
-            <form
-              className="hidden min-w-0 flex-1 items-center md:flex"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (onSearchSubmit) onSearchSubmit();
-                else navigate({ to: "/carte" });
-              }}
+    <header
+      className={
+        minimalMapChrome
+          ? "pointer-events-none absolute inset-x-0 top-0 z-30 bg-transparent"
+          : "sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur"
+      }
+    >
+      <div
+        className={
+          minimalMapChrome
+            ? "flex justify-end px-3 py-3 md:px-5"
+            : "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 md:px-5 md:py-3"
+        }
+      >
+        {!minimalMapChrome && (
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              to="/"
+              className="flex shrink-0 items-center gap-1.5 font-display text-lg font-extrabold"
             >
-              <SmartSearchBar
-                value={query ?? ""}
-                onChange={(v) => onQueryChange?.(v)}
-                onSubmit={() => {
+              <BrandMark className="h-7 w-7" />
+              <span className="truncate">OmniView</span>
+            </Link>
+
+            {!hideSearch && (
+              <form
+                className="hidden min-w-0 flex-1 items-center md:flex"
+                onSubmit={(e) => {
+                  e.preventDefault();
                   if (onSearchSubmit) onSearchSubmit();
                   else navigate({ to: "/carte" });
                 }}
-              />
-            </form>
-          )}
-        </div>
+              >
+                <SmartSearchBar
+                  value={query ?? ""}
+                  onChange={(v) => onQueryChange?.(v)}
+                  onSubmit={() => {
+                    if (onSearchSubmit) onSearchSubmit();
+                    else navigate({ to: "/carte" });
+                  }}
+                />
+              </form>
+            )}
+          </div>
+        )}
 
         <Button
           variant="outline"
           size="icon"
           aria-label="Ouvrir le menu"
-          className="omni-glass relative shrink-0"
+          className="omni-glass pointer-events-auto relative shrink-0"
           onClick={() => setMenuOpen(true)}
         >
           <Menu className="h-5 w-5" />
