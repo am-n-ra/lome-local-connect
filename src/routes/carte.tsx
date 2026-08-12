@@ -362,6 +362,7 @@ function CartePage() {
         onOpenChange={setDemandOpen}
         userPos={userPos}
         initialTerm={query}
+        targetFacilityIds={results.map((f) => f.id)}
       />
       <WishlistPanel
         open={wishOpen}
