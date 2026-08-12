@@ -20,7 +20,7 @@ export type DemandRequestRow = {
   id: string;
   search_term: string;
   quantity: number;
-  radius_km: number;
+  radius_km: number | null;
   status: string;
   expires_at: string;
   created_at: string;
@@ -28,6 +28,8 @@ export type DemandRequestRow = {
   targeted_count: number;
   ai_summary: string | null;
   ai_recommended_facility_id: string | null;
+  ai_recommended_facility_name: string | null;
+  credit_cost: number;
 };
 
 export type VendorDemandRequest = {
@@ -51,8 +53,9 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         quantity: z.number().int().min(1).max(999).default(1),
         latitude: z.number().min(-90).max(90).nullable().optional(),
         longitude: z.number().min(-180).max(180).nullable().optional(),
-        radiusKm: z.number().min(0.5).max(50).default(50),
+        radiusKm: z.number().min(0.5).max(50).nullable().optional(),
         budgetMax: z.number().int().min(0).max(100_000_000).nullable().optional(),
+        targetFacilityIds: z.array(z.string().uuid()).max(700).default([]),
       })
       .parse(input),
   )
@@ -78,16 +81,9 @@ export const createDemandRequest = createServerFn({ method: "POST" })
        RETURNING plan, requests_used, extra_credits, period_month`,
       [context.userId],
     );
-    const included = plan?.plan === "pro" ? 30 : 3;
-    const remaining =
-      Math.max(0, included - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
-    if (remaining <= 0) {
-      throw new Error(
-        "Crédits de vérification épuisés : le plan gratuit inclut 3 demandes/mois. Passez Pro ou rechargez votre solde.",
-      );
-    }
+    const includedCredits = plan?.plan === "pro" ? 30 : 3;
 
-    // Bulk targets all matching/nearby facilities; pro sellers can answer by AI agent, free sellers answer manually.
+    // Bulk targets the map's active result IDs when present. Geographic limits are owned by search filters.
     const targets = await query<{
       id: string;
       owner_id: string | null;
@@ -97,46 +93,75 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       `SELECT f.id, f.owner_id, f.name, COALESCE(s.tier, 'free') AS seller_plan
        FROM public.facilities f
        LEFT JOIN public.subscriptions s ON s.facility_id = f.id
-       WHERE ($1::float8 IS NULL OR (
-           6371 * acos(LEAST(1, GREATEST(-1,
-             cos(radians($1)) * cos(radians(f.latitude)) *
-             cos(radians(f.longitude) - radians($2)) +
-             sin(radians($1)) * sin(radians(f.latitude))
-           ))) <= $3
-         ))
-         AND (f.name ILIKE '%' || $4 || '%' OR f.category ILIKE '%' || $4 || '%' OR EXISTS (
-           SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $4 || '%'
-         ))
+       WHERE (
+           cardinality($1::uuid[]) > 0 AND f.id = ANY($1::uuid[])
+         ) OR (
+           cardinality($1::uuid[]) = 0
+           AND ($2::float8 IS NULL OR $3::float8 IS NULL OR $4::float8 IS NULL OR (
+             6371 * acos(LEAST(1, GREATEST(-1,
+               cos(radians($2)) * cos(radians(f.latitude)) *
+               cos(radians(f.longitude) - radians($3)) +
+               sin(radians($2)) * sin(radians(f.latitude))
+             ))) <= $4
+           ))
+           AND (f.name ILIKE '%' || $5 || '%' OR f.category ILIKE '%' || $5 || '%' OR EXISTS (
+             SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $5 || '%'
+           ))
+         )
        LIMIT 700`,
-      [data.latitude ?? null, data.longitude ?? null, data.radiusKm, data.searchTerm.trim()],
+      [
+        data.targetFacilityIds,
+        data.latitude ?? null,
+        data.longitude ?? null,
+        data.radiusKm ?? null,
+        data.searchTerm.trim(),
+      ],
     );
+
+    const creditCost = Math.max(1, targets.length);
+    const remainingCredits =
+      Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
+    if (remainingCredits < creditCost) {
+      throw new Error(
+        `Crédits de vérification insuffisants : ${creditCost} crédit(s) requis, ${remainingCredits} disponible(s). Le plan gratuit inclut 3 crédits/mois, soit 3 vérifications normales.`,
+      );
+    }
+
+    const proTargets = targets.filter((t) => t.seller_plan === "pro");
+    const recommendedFacilityId = proTargets[0]?.id ?? targets[0]?.id ?? null;
+    const aiSummary =
+      targets.length > 0
+        ? `${targets.length} commerce(s) ciblé(s), ${proTargets.length} réponse(s) IA priorisée(s).`
+        : "Aucun commerce ciblé par les filtres actuels.";
 
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
-         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, ai_summary, ai_recommended_facility_id, ai_summary_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now()) RETURNING id`,
       [
         context.userId,
         data.searchTerm.trim(),
         data.quantity,
         data.latitude ?? null,
         data.longitude ?? null,
-        data.radiusKm,
+        data.radiusKm ?? null,
         data.budgetMax ?? null,
         targets.length,
+        creditCost,
+        aiSummary,
+        recommendedFacilityId,
       ],
     );
 
     await query(
       `UPDATE public.user_plans SET
-         requests_used = requests_used + CASE WHEN requests_used < $2 THEN 1 ELSE 0 END,
-         extra_credits = GREATEST(0, extra_credits - CASE WHEN requests_used >= $2 THEN 1 ELSE 0 END),
+         requests_used = requests_used + LEAST($3, GREATEST(0, $2 - requests_used)),
+         extra_credits = GREATEST(0, extra_credits - GREATEST(0, $3 - GREATEST(0, $2 - requests_used))),
          updated_at = now()
        WHERE user_id = $1`,
-      [context.userId, included],
+      [context.userId, includedCredits, creditCost],
     );
 
-    const proTargets = targets.filter((t) => t.seller_plan === "pro");
     for (const t of proTargets.slice(0, 120)) {
       await query(
         `INSERT INTO public.demand_responses (request_id, facility_id, available, price, quantity, message, answered_by)
@@ -170,6 +195,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       notified: owners.length,
       targeted: targets.length,
       aiAnswered: proTargets.length,
+      creditCost,
     };
   });
 
@@ -179,9 +205,11 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
     const requests = await query<DemandRequestRow>(
       `SELECT d.id, d.search_term, d.quantity, d.radius_km::float8 AS radius_km, d.status,
               d.expires_at, d.created_at, d.targeted_count, d.ai_summary, d.ai_recommended_facility_id,
+              rf.name AS ai_recommended_facility_name, COALESCE(d.credit_cost, d.targeted_count, 1)::int AS credit_cost,
               (SELECT count(*)::int FROM public.demand_responses r WHERE r.request_id = d.id)
                 AS response_count
        FROM public.demand_requests d
+       LEFT JOIN public.facilities rf ON rf.id = d.ai_recommended_facility_id
        WHERE d.buyer_id = $1
        ORDER BY d.created_at DESC LIMIT 30`,
       [context.userId],

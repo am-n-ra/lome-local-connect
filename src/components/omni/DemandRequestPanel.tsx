@@ -20,17 +20,23 @@ type Props = {
   onOpenChange: (v: boolean) => void;
   userPos?: { lat: number; lng: number } | null;
   initialTerm?: string | undefined;
+  targetFacilityIds?: string[];
 };
 
-/** Mode B — broadcast one need to every seller around the buyer. */
-export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }: Props) {
+/** Mode B — broadcast one need to the active filtered result set. */
+export function DemandRequestPanel({
+  open,
+  onOpenChange,
+  userPos,
+  initialTerm,
+  targetFacilityIds = [],
+}: Props) {
   const { user } = useAuth();
   const create = useServerFn(createDemandRequest);
   const list = useServerFn(listMyDemandRequests);
   const close = useServerFn(closeDemandRequest);
 
   const [term, setTerm] = useState(initialTerm ?? "");
-  const [radius, setRadius] = useState(50);
   const [quantity, setQuantity] = useState(1);
   const [budgetMax, setBudgetMax] = useState("");
   const [busy, setBusy] = useState(false);
@@ -66,12 +72,12 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
           quantity,
           latitude: userPos?.lat ?? null,
           longitude: userPos?.lng ?? null,
-          radiusKm: radius,
           budgetMax: budgetMax ? Number(budgetMax) : null,
+          targetFacilityIds,
         },
       });
       toast.success(
-        `Vérification bulk lancée sur ${res.targeted} commerce(s), dont ${res.aiAnswered} réponse(s) IA.`,
+        `Vérification lancée sur ${res.targeted} commerce(s) pour ${res.creditCost} crédit(s), dont ${res.aiAnswered} réponse(s) IA.`,
       );
       setTerm("");
       setQuantity(1);
@@ -125,25 +131,21 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                   placeholder="Budget max"
                 />
               </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-muted-foreground">Rayon</span>
-                <input
-                  type="range"
-                  min={1}
-                  max={50}
-                  value={radius}
-                  onChange={(e) => setRadius(Number(e.target.value))}
-                  className="flex-1 accent-[hsl(var(--primary))]"
-                />
-                <span className="w-12 text-right font-semibold">{radius} km</span>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                La disponibilité sera vérifiée auprès des {targetFacilityIds.length} résultat(s)
+                actuellement visibles. Ajustez la zone avec les filtres de recherche. Coût estimé :{" "}
+                <span className="font-semibold text-foreground">
+                  {Math.max(1, targetFacilityIds.length)} crédit(s)
+                </span>
+                .
+              </p>
               <Button
                 className="w-full"
                 disabled={busy || term.trim().length < 2}
                 onClick={() => void broadcast()}
               >
                 <Megaphone className="mr-2 h-4 w-4" />
-                {busy ? "Vérification…" : "Vérifier disponibilité en bulk"}
+                {busy ? "Vérification…" : "Vérifier la disponibilité de tous"}
               </Button>
             </div>
           )}
@@ -156,8 +158,8 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                   <div>
                     <p className="font-display font-bold">{r.search_term}</p>
                     <p className="text-xs text-muted-foreground">
-                      {r.response_count} réponse(s) sur {r.targeted_count} cible(s) · rayon{" "}
-                      {r.radius_km} km · {r.status === "open" ? "en cours" : "clôturée"}
+                      {r.response_count} réponse(s) · {r.targeted_count} cible(s) · {r.credit_cost}
+                      crédit(s) · {r.status === "open" ? "en cours" : "clôturée"}
                     </p>
                   </div>
                   {r.status === "open" && (
@@ -174,11 +176,24 @@ export function DemandRequestPanel({ open, onOpenChange, userPos, initialTerm }:
                     </Button>
                   )}
                 </div>
-                {r.ai_summary && (
-                  <div className="rounded-lg bg-primary/10 p-2 text-sm text-primary">
-                    {r.ai_summary}
-                  </div>
-                )}
+                <div className="grid gap-1 rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">
+                  <p>
+                    <span className="font-semibold text-foreground">Coût crédits :</span>{" "}
+                    {r.credit_cost}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Cibles :</span>{" "}
+                    {r.targeted_count} commerce(s)
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Résumé IA :</span>{" "}
+                    {r.ai_summary ?? "En attente de réponses suffisantes."}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Recommandation :</span>{" "}
+                    {r.ai_recommended_facility_name ?? "Aucune recommandation pour le moment."}
+                  </p>
+                </div>
                 {answers.map((a) => (
                   <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
