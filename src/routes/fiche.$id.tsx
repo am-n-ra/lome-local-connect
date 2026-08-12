@@ -19,9 +19,16 @@ export const Route = createFileRoute("/fiche/$id")({
   head: () => ({
     meta: [
       { title: "Fiche commerce — OmniView" },
-      { name: "description", content: "Produits disponibles, disponibilité en temps réel et itinéraire vers ce commerce de Lomé." },
+      {
+        name: "description",
+        content:
+          "Produits disponibles, disponibilité en temps réel et itinéraire vers ce commerce de Lomé.",
+      },
       { property: "og:title", content: "Fiche commerce — OmniView" },
-      { property: "og:description", content: "Voir les produits, la disponibilité et l'itinéraire." },
+      {
+        property: "og:description",
+        content: "Voir les produits, la disponibilité et l'itinéraire.",
+      },
     ],
   }),
   component: FichePage,
@@ -67,7 +74,9 @@ function FichePage() {
       const res = await fetch(
         `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${facility.longitude},${facility.latitude}?overview=full&geometries=geojson`,
       );
-      const json = (await res.json()) as { routes?: { geometry: { coordinates: [number, number][] } }[] };
+      const json = (await res.json()) as {
+        routes?: { geometry: { coordinates: [number, number][] } }[];
+      };
       if (!json.routes?.[0]) {
         toast.error("Itinéraire indisponible.");
         return;
@@ -81,7 +90,7 @@ function FichePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen omni-surface">
       <TopNav activeRole="acheteur" />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Button asChild variant="ghost" size="sm" className="mb-4">
@@ -94,11 +103,14 @@ function FichePage() {
 
         {facility && (
           <div className="grid gap-6 md:grid-cols-[1fr_360px]">
-            <div className="omni-card space-y-4 p-5">
+            <div className="omni-panel space-y-4 p-5">
               <MediaCarousel media={media} />
               <FacilityPanel
                 facility={{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }}
-                distanceKm={haversineKm(userPos ?? LOME_CENTER, { lat: facility.latitude, lng: facility.longitude })}
+                distanceKm={haversineKm(userPos ?? LOME_CENTER, {
+                  lat: facility.latitude,
+                  lng: facility.longitude,
+                })}
                 routingBusy={busy}
                 onItinerary={() => void itinerary()}
               />

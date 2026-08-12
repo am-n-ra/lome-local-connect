@@ -115,7 +115,6 @@ function AdminPage() {
     })();
   }, [user, isStaff, fetchHoods]);
 
-
   const openRow = useMemo(() => rows.find((r) => r.id === openId) ?? null, [rows, openId]);
 
   async function act(fn: () => Promise<unknown>, message: string) {
@@ -135,7 +134,7 @@ function AdminPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen omni-surface">
         <TopNav />
         <main className="mx-auto max-w-2xl p-6">
           <h1 className="font-display text-2xl font-bold">Console interne</h1>
@@ -147,7 +146,7 @@ function AdminPage() {
 
   if (denied || !isStaff) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen omni-surface">
         <TopNav />
         <main className="mx-auto max-w-2xl p-6">
           <h1 className="font-display text-2xl font-bold">Accès réservé</h1>
@@ -160,7 +159,7 @@ function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen omni-surface">
       <TopNav />
       <main className="mx-auto max-w-6xl space-y-6 p-4 pb-24">
         <header>
@@ -182,7 +181,7 @@ function AdminPage() {
               ["Produits", stats.products],
               ["Campagnes actives", stats.campaigns_active],
             ].map(([label, value]) => (
-              <div key={String(label)} className="omni-card p-3">
+              <div key={String(label)} className="omni-panel p-3">
                 <p className="text-xs text-muted-foreground">{label}</p>
                 <p className="font-display text-xl font-bold">{value}</p>
               </div>
@@ -190,7 +189,7 @@ function AdminPage() {
           </div>
         )}
 
-        <div className="omni-card grid gap-3 p-3 md:grid-cols-5">
+        <div className="omni-panel grid gap-3 p-3 md:grid-cols-5">
           <Input
             placeholder="Nom, adresse, téléphone"
             value={search}
@@ -247,7 +246,7 @@ function AdminPage() {
             <p className="text-sm text-muted-foreground">Aucun commerce pour ces filtres.</p>
           )}
           {rows.map((row) => (
-            <div key={row.id} className="omni-card p-3">
+            <div key={row.id} className="omni-panel p-3">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold">{row.name}</p>
@@ -378,8 +377,7 @@ function AdminPage() {
                       disabled={busy || openRow.status === "certified"}
                       onClick={() =>
                         void act(
-                          () =>
-                            statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
+                          () => statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
                           "Commerce vérifié",
                         )
                       }
