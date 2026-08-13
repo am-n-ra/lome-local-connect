@@ -91,9 +91,9 @@ C'est la pièce qui différencie Omni d'un annuaire.
 - Onboarding : rechercher une fiche existante ou en créer une → revendication → passage obligatoire par le canal communautaire du marché → soumission de certification (identité, documents, preuve d'adresse) → validation admin.
 - Tableau de bord vendeur (jamais un tableau SaaS générique) : état de la fiche et prochaine étape, demandes de disponibilité entrantes, commandes, catalogue, médias et présence en ligne, statistiques, demande locale, abonnement et crédits.
 - Catalogue : produits et services, remise obligatoire à la création, `omni_stock_quantity` — la part du stock allouée à Omni, distincte du stock réel du commerce, Omni n'étant pas une caisse.
-- Free : 5 produits maximum, réponses manuelles. Pro : catalogue étendu, agent IA, statistiques avancées, publicité.
-- Agent IA vendeur à trois niveaux : assistance (propose une réponse), disponibilité automatique, commande automatique — chaque niveau explicitement activé et consommant des crédits.
-- Import de catalogue en masse assisté par IA, présence mobile en self-service pour les vendeurs de service (avant-plan uniquement).
+- Free : 5 produits maximum, réponses manuelles. Pro : catalogue illimité, import en masse au-delà de 5, agent Omni, statistiques avancées, publicité, multi-facilités.
+- Import de catalogue en masse (CSV, Excel, photos de stock, liste collée) normalisé par l'IA : détection des noms, prix, catégories, variantes, doublons, puis revue et validation en un écran avant publication.
+- Présence mobile en self-service pour les vendeurs de service (avant-plan uniquement).
 
 ---
 
