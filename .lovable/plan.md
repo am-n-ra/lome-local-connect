@@ -68,7 +68,7 @@ Règle intangible : une place OSM n'est pas un vendeur. `unclaimed` signifie `ow
 - Pipeline : requête → intention → filtre géographique → correspondance produit/service/catégorie → pertinence de disponibilité → classement prix/distance/pertinence/confiance → résultats sponsorisés clairement marqués → résultats.
 - Modes de résultats : Tout · Produits · Services · Offres · Commerces · Images · Vidéos · Articles, la carte restant l'ancre géographique partout.
 - Recherche « problème → solution » par expansion sémantique quand rien ne correspond directement ; voix (français, éwé, mina) et image derrière une abstraction de fournisseur IA.
-- Mur de compte : un visiteur voit la carte et une recherche légère, mais le pipeline coûteux et les actions exigent un compte ; la recherche d'origine est mémorisée et reprend automatiquement après inscription et onboarding.
+- Mur de compte : aucune recherche sans compte — un visiteur voit la carte, mais toute recherche exige une connexion pour ne pas laisser fuir les données ; la recherche d'origine est mémorisée et reprend automatiquement après inscription et onboarding.
 - Zéro résultat → capture de demande, jamais un écran vide.
 
 ---
