@@ -181,3 +181,37 @@ export async function describeSearchImage(dataUrl: string): Promise<string> {
   );
   return text.replace(/^["'\s]+|["'.\s]+$/g, "").slice(0, 80);
 }
+
+export type ProblemExpansion = { keywords: string[] };
+
+/**
+ * "Problem → solution" expansion: turns a natural-language need
+ * ("mon robinet fuit") into product/shop keywords ("plombier, joint, robinet").
+ * Returns an empty list when no AI provider is configured.
+ */
+export async function expandProblemQuery(q: string): Promise<ProblemExpansion> {
+  const term = q.trim().slice(0, 200);
+  if (!term) return { keywords: [] };
+
+  const text = await chat(
+    [
+      {
+        role: "system",
+        content:
+          "Tu convertis un besoin ou un problème en mots-clés de recherche de produits, services " +
+          "ou commerces à Lomé. Réponds uniquement par 3 à 6 mots-clés en français, séparés par " +
+          "des virgules, sans phrase ni ponctuation supplémentaire.",
+      },
+      { role: "user", content: `Besoin : "${term}". Que dois-je chercher ?` },
+    ],
+    48,
+  ).catch(() => "");
+
+  const keywords = text
+    .split(/[,\n;]/)
+    .map((k) => k.replace(/^[-*\d.\s"']+|["'.\s]+$/g, "").trim())
+    .filter((k) => k.length > 1 && k.length < 40)
+    .slice(0, 6);
+
+  return { keywords };
+}
