@@ -82,7 +82,7 @@ C'est la pièce qui différencie Omni d'un annuaire.
 - Onglets de la fiche : Vitrine · Catalogue · Contenus (posts sociaux intégrés) · Articles/blog · Avis · Infos pratiques.
 - Médias propres à Omni (photos et vidéos téléversées) : compression côté client, vignettes, stockage R2, réordonnancement — distincts des contenus agrégés.
 - Rafraîchissement périodique des métadonnées des liens, gestion des liens morts, ordre d'affichage contrôlé par le vendeur.
-- Une fiche `unclaimed` affiche seulement les données publiques OSM et une invitation « C'est votre commerce ? Revendiquez-le ».
+- **Fiche `unclaimed` vivante** : elle n'est pas un pin mort. Elle affiche les contenus publics rattachés à ce lieu (mentions, articles, vidéos, images publiques, liens sociaux détectés ou signalés), reste indexée et trouvable par la recherche, mais n'expose ni contact privé, ni catalogue achetable, ni bouton d'achat. Seules actions possibles : « Revendiquer », « Signaler une info », « Prévenez-moi quand ce commerce arrive ». Un utilisateur peut inviter le commerce à rejoindre Omni, et cette invitation est traçée comme signal d'acquisition pour l'équipe terrain.
 
 ---
 
@@ -91,9 +91,9 @@ C'est la pièce qui différencie Omni d'un annuaire.
 - Onboarding : rechercher une fiche existante ou en créer une → revendication → passage obligatoire par le canal communautaire du marché → soumission de certification (identité, documents, preuve d'adresse) → validation admin.
 - Tableau de bord vendeur (jamais un tableau SaaS générique) : état de la fiche et prochaine étape, demandes de disponibilité entrantes, commandes, catalogue, médias et présence en ligne, statistiques, demande locale, abonnement et crédits.
 - Catalogue : produits et services, remise obligatoire à la création, `omni_stock_quantity` — la part du stock allouée à Omni, distincte du stock réel du commerce, Omni n'étant pas une caisse.
-- Free : 5 produits maximum, réponses manuelles. Pro : catalogue étendu, agent IA, statistiques avancées, publicité.
-- Agent IA vendeur à trois niveaux : assistance (propose une réponse), disponibilité automatique, commande automatique — chaque niveau explicitement activé et consommant des crédits.
-- Import de catalogue en masse assisté par IA, présence mobile en self-service pour les vendeurs de service (avant-plan uniquement).
+- Free : 5 produits maximum, réponses manuelles. Pro : catalogue illimité, import en masse au-delà de 5, agent Omni, statistiques avancées, publicité, multi-facilités.
+- Import de catalogue en masse (CSV, Excel, photos de stock, liste collée) normalisé par l'IA : détection des noms, prix, catégories, variantes, doublons, puis revue et validation en un écran avant publication.
+- Présence mobile en self-service pour les vendeurs de service (avant-plan uniquement).
 
 ---
 
@@ -123,7 +123,48 @@ C'est la pièce qui différencie Omni d'un annuaire.
 
 ---
 
-## Lot 8 — Menu, pages secondaires, notifications, admin
+## Lot 9 — Omni Agent (acheteur et vendeur)
+
+L'agent n'est pas un chatbot posé à côté du produit : c'est un second mode de pilotage de la même application. La carte reste l'écran principal ; l'agent travaille dessus, visiblement.
+
+**Mode Agent**
+- Bascule « Manuel / Agent » dans le dock. En mode Agent, l'utilisateur écrit une intention au lieu d'un mot-clé : « trouve-moi 20 sacs de ciment à moins de 4 500 la pièce à moins de 3 km », « j'ai vendu 12 unités de ce produit, mets à jour mon stock », « écris un article sur ce produit ».
+- La carte reste au centre et devient la scène du travail de l'agent : les pins interrogés s'allument un par un, les réponses arrivent en direct, les candidats retenus se détachent, le recommandé pulse. Un fil d'étapes compact (« 47 commerces interrogés · 12 réponses · 3 correspondent à ton budget ») accompagne l'animation.
+- Côté vendeur, même écran mais centré sur sa facilité : demandes entrantes, stock, contenus, campagnes — l'agent agit et l'on voit ce qu'il fait.
+- Trois niveaux d'autonomie, choisis par l'utilisateur et modifiables à tout moment : **Manuel** (l'agent propose, l'humain fait), **Semi-auto** (l'agent exécute, points de contrôle explicites aux étapes engageantes), **Auto** (l'agent va jusqu'au bout, seul le paiement reste confirmable — délégable aussi en Pro).
+
+**Agent acheteur**
+- Comprend l'intention complète : produit, quantité, budget, délai, zone, variantes acceptables.
+- Lance la recherche, puis la vérification de disponibilité en masse, sans que l'utilisateur ait à enchaîner les écrans.
+- Synthétise les réponses : qui a quoi, en quelle quantité, à quel prix, à quelle distance, avec quelle fiabilité — puis une recommandation argumentée en une phrase.
+- Négocie la quantité et le prix dans le chat vendeur avec des messages préréglés (les messages libres restent possibles), déclenche l'intention d'achat, génère le QR, suit la transaction jusqu'à la confirmation de réception.
+- Peut surveiller une demande dans le temps : « préviens-moi quand quelqu'un a ça à ce prix ».
+
+**Agent vendeur**
+- Répond aux demandes de disponibilité à partir du stock Omni, avec proposition d'alternative ou de quantité partielle.
+- Gère le stock par langage naturel (« j'ai vendu 12 unités », « rupture sur ce modèle », « baisse de 10 % cette semaine »).
+- Rédige et publie du contenu : fiches produit, descriptions, articles et billets de blog qui enrichissent le contexte de la fiche et nourrissent l'index de recherche — chaque contenu généré est rattaché à la facilité, marqué comme rédigé avec l'agent, et validé par le vendeur avant publication.
+- Traite l'import de catalogue en masse, propose des remises cohérentes, signale les fiches incomplètes.
+- Recommande des actions commerciales : quoi mettre en avant, quelle campagne lancer, quelle demande locale est non servie.
+
+**Publicité par l'agent**
+- L'agent peut inclure une recommandation sponsorisée dans ses réponses, toujours visiblement marquée comme telle, jamais si elle ne répond pas à l'intention réelle, et jamais à la place du meilleur choix objectif — le classement honnête reste affiché à côté.
+- Ciblage par zone, par intention en cours et par historique d'intention, facturé au vendeur sur ses crédits publicitaires.
+
+**Cadre technique**
+- Chaque action de l'agent passe par un outil serveur typé (rechercher, vérifier la disponibilité, créer un panier, générer un QR, mettre à jour le stock, publier un contenu, lancer une campagne) — jamais par du SQL libre.
+- Les actions engageantes exigent une approbation selon le niveau d'autonomie ; tout est journalisé et rejouable, avec un historique lisible « ce que l'agent a fait pour vous ».
+- Consommation de crédits par action, budget maximum par session, garde-fous de coût et de débit.
+- Flux préréglés et reproductibles : les messages types couvrent le parcours standard, le message libre reste l'exception.
+
+## Périmètre V1 vs V2
+
+L'agent est construit dans cette architecture, mais activé progressivement : la **V1** livre la recherche, la carte mondiale, le catalogue, la vérification vendeur, la disponibilité en masse, le résumé et la recommandation, les crédits, la publicité ciblée, l'admin et le système terrain — l'agent y est présent en mode assistance et résumé. Les modes **semi-auto** et **auto** de bout en bout, ainsi que le paiement délégué, s'ouvrent en **V2**, une fois les données d'usage réelles collectées. Le code est écrit une seule fois ; ce sont des drapeaux de plan et de marché qui décident de ce qui est ouvert.
+
+---
+
+## Lot 10 — Menu, pages secondaires, notifications, admin
+
 
 - Menu unique en feuille frostée depuis le bouton en haut à droite : profil, mes demandes, panier, commandes, listes de souhaits, messages, crédits et abonnement, espace vendeur, aide et FAQ self-service, langue, à propos, déconnexion.
 - Onboarding acheteur : compte → centres d'intérêt → explication du modèle → canal communautaire optionnel → reprise de la recherche initiale.
