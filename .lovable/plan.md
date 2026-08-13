@@ -82,7 +82,7 @@ C'est la pièce qui différencie Omni d'un annuaire.
 - Onglets de la fiche : Vitrine · Catalogue · Contenus (posts sociaux intégrés) · Articles/blog · Avis · Infos pratiques.
 - Médias propres à Omni (photos et vidéos téléversées) : compression côté client, vignettes, stockage R2, réordonnancement — distincts des contenus agrégés.
 - Rafraîchissement périodique des métadonnées des liens, gestion des liens morts, ordre d'affichage contrôlé par le vendeur.
-- Une fiche `unclaimed` affiche seulement les données publiques OSM et une invitation « C'est votre commerce ? Revendiquez-le ».
+- **Fiche `unclaimed` vivante** : elle n'est pas un pin mort. Elle affiche les contenus publics rattachés à ce lieu (mentions, articles, vidéos, images publiques, liens sociaux détectés ou signalés), reste indexée et trouvable par la recherche, mais n'expose ni contact privé, ni catalogue achetable, ni bouton d'achat. Seules actions possibles : « Revendiquer », « Signaler une info », « Prévenez-moi quand ce commerce arrive ». Un utilisateur peut inviter le commerce à rejoindre Omni, et cette invitation est traçée comme signal d'acquisition pour l'équipe terrain.
 
 ---
 
