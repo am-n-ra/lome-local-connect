@@ -3,13 +3,13 @@ import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-r
 import { BrandMark } from "@/components/omni/BrandMark";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useAuth } from "@/lib/auth";
+import { readPendingAuthRedirect, useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-const searchSchema = z.object({ next: z.string().optional() });
+const searchSchema = z.object({ next: z.string().optional(), redirectTo: z.string().optional() });
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -32,14 +32,18 @@ const credentials = z.object({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { next } = useSearch({ from: "/auth" });
+  const { next, redirectTo } = useSearch({ from: "/auth" });
   const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const target = next === "/vendeur" ? "/vendeur" : "/carte";
+  const target = redirectTo?.startsWith("/")
+    ? redirectTo
+    : next === "/vendeur"
+      ? "/vendeur"
+      : readPendingAuthRedirect("/carte");
 
   async function submit(mode: "signin" | "signup") {
     const parsed = credentials.safeParse({ email, password, name });

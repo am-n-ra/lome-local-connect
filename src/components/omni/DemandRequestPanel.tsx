@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Megaphone, X } from "lucide-react";
 import { toast } from "sonner";
@@ -13,7 +14,7 @@ import {
   type DemandResponseRow,
 } from "@/lib/demand.functions";
 import { useMarket } from "@/lib/market";
-import { useAuth } from "@/lib/auth";
+import { savePendingAvailabilitySearch, useAuth } from "@/lib/auth";
 
 type Props = {
   open: boolean;
@@ -31,6 +32,7 @@ export function DemandRequestPanel({
   initialTerm,
   targetFacilityIds = [],
 }: Props) {
+  const navigate = useNavigate();
   const { formatMoney } = useMarket();
   const { user } = useAuth();
   const create = useServerFn(createDemandRequest);
@@ -63,7 +65,23 @@ export function DemandRequestPanel({
     if (initialTerm) setTerm(initialTerm);
   }, [initialTerm]);
 
+  function redirectToAuth() {
+    savePendingAvailabilitySearch({
+      term,
+      category: null,
+      filters: null,
+      targetFacilityIds,
+      location: userPos ?? null,
+      demandOpen: true,
+    });
+    navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
+  }
+
   async function broadcast() {
+    if (!user) {
+      redirectToAuth();
+      return;
+    }
     if (term.trim().length < 2) return;
     setBusy(true);
     try {
@@ -104,9 +122,15 @@ export function DemandRequestPanel({
           </p>
 
           {!user && (
-            <p className="text-sm text-muted-foreground">
-              Connectez-vous pour diffuser une demande.
-            </p>
+            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
+              <p className="text-sm text-muted-foreground">
+                La carte reste consultable sans compte. Connectez-vous pour lancer la vérification
+                de disponibilité auprès des commerces.
+              </p>
+              <Button className="w-full" onClick={redirectToAuth}>
+                Se connecter et continuer
+              </Button>
+            </div>
           )}
 
           {user && (

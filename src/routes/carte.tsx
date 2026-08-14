@@ -18,6 +18,11 @@ import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/
 
 import { formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
+import {
+  restorePendingAvailabilitySearch,
+  savePendingAvailabilitySearch,
+  useAuth,
+} from "@/lib/auth";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -40,6 +45,7 @@ type RouteStep = { instruction: string; distance: number };
 export function CartePage() {
   const navigate = useNavigate();
   const { market } = useMarket();
+  const { user, loading: authLoading } = useAuth();
   const fallbackCenter = market?.default_lat != null
     ? { lat: market.default_lat, lng: market.default_lng }
     : DEFAULT_CENTER;
@@ -59,6 +65,8 @@ export function CartePage() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
+  const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
+  const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
 
@@ -165,6 +173,51 @@ export function CartePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchKey, facilities]);
 
+  const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
+  const demandUserPos = pendingUserPos ?? userPos;
+
+  function handOffAvailabilitySearch() {
+    const payload = {
+      term: query,
+      category,
+      filters,
+      targetFacilityIds: results.map((f) => f.id),
+      location: userPos,
+      demandOpen: true,
+    };
+    savePendingAvailabilitySearch(payload);
+    const redirectTo = `/carte?pendingSearch=1`;
+    navigate({
+      to: "/auth",
+      search: { redirectTo },
+    });
+  }
+
+  function openDemandRequest() {
+    if (authLoading) return;
+    if (!user) {
+      handOffAvailabilitySearch();
+      return;
+    }
+    setPendingTargetFacilityIds(null);
+    setPendingUserPos(null);
+    setDemandOpen(true);
+  }
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    const pending = restorePendingAvailabilitySearch();
+    if (!pending) return;
+    setQuery(pending.term);
+    setCategory(pending.category);
+    setFilters(pending.filters as MapFilters);
+    setPendingTargetFacilityIds(pending.targetFacilityIds);
+    setPendingUserPos(pending.location);
+    setDemandOpen(pending.demandOpen);
+    toast.success("Recherche restaurée. Vous pouvez lancer la vérification.");
+    window.history.replaceState(null, "", "/carte");
+  }, [authLoading, user]);
+
   async function buildItinerary(f: MapFacility) {
     const from = userPos ?? fallbackCenter;
     setRoutingBusy(true);
@@ -259,7 +312,7 @@ export function CartePage() {
             filters={filters}
             onFiltersChange={setFilters}
             resultCount={results.length}
-            onVerifyAvailability={() => setDemandOpen(true)}
+            onVerifyAvailability={openDemandRequest}
             onBrandClick={() => {
               if (userPos) setFitPoints([userPos]);
               else toast.info("Position indisponible.");
@@ -274,7 +327,7 @@ export function CartePage() {
               Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
               pertinents.
             </p>
-            <Button className="mt-3 w-full" onClick={() => setDemandOpen(true)}>
+            <Button className="mt-3 w-full" onClick={openDemandRequest}>
               Créer une demande
             </Button>
           </div>
@@ -357,9 +410,9 @@ export function CartePage() {
       <DemandRequestPanel
         open={demandOpen}
         onOpenChange={setDemandOpen}
-        userPos={userPos}
+        userPos={demandUserPos}
         initialTerm={query}
-        targetFacilityIds={results.map((f) => f.id)}
+        targetFacilityIds={demandTargetFacilityIds}
       />
       <WishlistPanel
         open={wishOpen}
