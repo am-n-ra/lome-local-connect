@@ -436,8 +436,26 @@ export function CartePage() {
             onSubmit={handleSearchSubmit}
             category={category}
             onCategoryChange={(value) => {
+              if (!value) {
+                setCategory(null);
+                return;
+              }
+              if (authLoading) return;
+              if (!user) {
+                savePendingAvailabilitySearch({
+                  term: "",
+                  category: value,
+                  filters,
+                  targetFacilityIds: [],
+                  location: userPos,
+                  demandOpen: false,
+                  mode: "search",
+                });
+                navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
+                return;
+              }
               setCategory(value);
-              if (value) setSearchRunKey(`${Date.now()}:category:${value}`);
+              setSearchRunKey(`${Date.now()}:category:${value}`);
             }}
             filters={filters}
             onFiltersChange={setFilters}

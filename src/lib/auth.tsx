@@ -91,9 +91,18 @@ async function authFetch(path: string, init?: RequestInit) {
     ...init,
   });
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as unknown) : null;
+  const contentType = response.headers.get("content-type") ?? "";
+  let payload: unknown = null;
+  if (text) {
+    try {
+      payload = contentType.includes("json") ? JSON.parse(text) : { message: text.trim() };
+    } catch {
+      payload = { message: text.trim() };
+    }
+  }
   if (!response.ok) {
-    const message = (payload as { message?: string } | null)?.message ?? "Une erreur est survenue.";
+    const message =
+      (payload as { message?: string } | null)?.message?.trim() || "Une erreur est survenue.";
     throw new Error(message);
   }
   return payload;

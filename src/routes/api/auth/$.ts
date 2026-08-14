@@ -7,7 +7,15 @@ import { createFileRoute } from "@tanstack/react-router";
  */
 async function proxy(request: Request, splat: string): Promise<Response> {
   const base = process.env["NEON_AUTH_BASE_URL"];
-  if (!base) return new Response("Auth is not configured", { status: 500 });
+  if (!base) {
+    return new Response(
+      JSON.stringify({ message: "Auth is not configured: NEON_AUTH_BASE_URL is missing." }),
+      {
+        status: 500,
+        headers: { "content-type": "application/json; charset=utf-8" },
+      },
+    );
+  }
 
   const incoming = new URL(request.url);
   const target = `${base.replace(/\/$/, "")}/${splat}${incoming.search}`;
@@ -23,8 +31,7 @@ async function proxy(request: Request, splat: string): Promise<Response> {
   headers.set("origin", new URL(target).origin);
 
   const method = request.method.toUpperCase();
-  const body =
-    method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
+  const body = method === "GET" || method === "HEAD" ? undefined : await request.arrayBuffer();
 
   const upstream = await fetch(target, {
     method,
@@ -41,8 +48,8 @@ async function proxy(request: Request, splat: string): Promise<Response> {
 
   // Strip the upstream Domain so cookies stick to this origin.
   const setCookies =
-    typeof (upstream.headers as unknown as { getSetCookie?: () => string[] })
-      .getSetCookie === "function"
+    typeof (upstream.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie ===
+    "function"
       ? (upstream.headers as unknown as { getSetCookie: () => string[] }).getSetCookie()
       : upstream.headers.get("set-cookie")
         ? [upstream.headers.get("set-cookie")!]
