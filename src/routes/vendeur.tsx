@@ -28,13 +28,7 @@ import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
 import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
 import { MediaManager } from "@/components/omni/MediaManager";
-import {
-  CATEGORIES,
-  daysLeft,
-  freshnessLabel,
-  DEFAULT_CENTER,
-  STATUS_LABEL,
-} from "@/lib/omni";
+import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
 import {
@@ -91,9 +85,10 @@ type Dashboard = {
 function VendeurPage() {
   const { user, loading } = useAuth();
   const { formatMoney, market } = useMarket();
-  const fallbackCenter = market?.default_lat != null
-    ? { lat: market.default_lat, lng: market.default_lng }
-    : DEFAULT_CENTER;
+  const fallbackCenter =
+    market?.default_lat != null
+      ? { lat: market.default_lat, lng: market.default_lng }
+      : DEFAULT_CENTER;
   const { depot } = useSearch({ from: "/vendeur" });
   const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
@@ -324,13 +319,18 @@ function VendeurPage() {
   async function toggleOnline(next: boolean) {
     if (!facility) return;
     try {
-      await patchFacility({ data: { facilityId: facility.id, isOnline: next, emergencyShutdown: next ? false : undefined } });
+      await patchFacility({
+        data: {
+          facilityId: facility.id,
+          isOnline: next,
+          emergencyShutdown: next ? false : undefined,
+        },
+      });
       await refresh();
     } catch {
       toast.error("Mise à jour impossible.");
     }
   }
-
 
   async function saveOperatingHours() {
     if (!facility) return;
@@ -550,6 +550,10 @@ function VendeurPage() {
         <Tabs defaultValue="apercu" className="mt-6">
           <TabsList className="flex flex-wrap">
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
+            <TabsTrigger value="agent">Agent IA</TabsTrigger>
+            <TabsTrigger value="solde">Solde</TabsTrigger>
+            <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
+            <TabsTrigger value="parametres">Paramètres</TabsTrigger>
             <TabsTrigger value="produits">Produits</TabsTrigger>
             <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
             <TabsTrigger value="encaisser">Encaisser</TabsTrigger>
@@ -557,6 +561,90 @@ function VendeurPage() {
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
             <TabsTrigger value="demande-locale">Demande locale</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="agent" className="mt-5 space-y-4">
+            <div className="omni-card space-y-3 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Agent Omni
+              </p>
+              <h2 className="font-display text-2xl font-bold">Votre copilote vendeur</h2>
+              <p className="text-sm text-muted-foreground">
+                L'Agent priorise les demandes locales, prépare les réponses de disponibilité et met
+                en avant les actions qui renforcent la confiance.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs text-muted-foreground">Demandes locales</p>
+                  <p className="mt-1 text-2xl font-bold">{data?.demand.length ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs text-muted-foreground">Demandes reçues</p>
+                  <p className="mt-1 text-2xl font-bold">{data?.requests.length ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-border p-3">
+                  <p className="text-xs text-muted-foreground">Statut</p>
+                  <p className="mt-1 text-2xl font-bold">
+                    {facility.is_online ? "Actif" : "En pause"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="solde" className="mt-5 space-y-4">
+            <div className="omni-card space-y-3 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Portefeuille vendeur
+              </p>
+              <h2 className="font-display text-3xl font-bold text-primary">
+                {formatMoney(data?.walletBalance ?? 0)}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Le solde finance les campagnes de visibilité et les services vendeur. Les opérations
+                de dépôt et de réconciliation restent accessibles depuis le parcours de paiement
+                sécurisé.
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="abonnement" className="mt-5 space-y-4">
+            <div className="omni-card space-y-3 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Plan Omni
+              </p>
+              <h2 className="font-display text-2xl font-bold">
+                {pro ? "Pro actif" : "Plan gratuit"}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {pro
+                  ? `${daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants sur votre accès Pro.`
+                  : `Le plan gratuit autorise jusqu'à ${FREE_PRODUCT_CAP} produits publiés. Utilisez le solde pour développer votre visibilité.`}
+              </p>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="parametres" className="mt-5 space-y-4">
+            <div className="omni-card space-y-3 p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                Paramètres
+              </p>
+              <h2 className="font-display text-2xl font-bold">Configuration du commerce</h2>
+              <p className="text-sm text-muted-foreground">
+                Les horaires, la position, le statut en ligne et l'arrêt d'urgence se gèrent dans
+                l'onglet Aperçu. Les réglages de profil avancés seront ajoutés à ce point d'entrée.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  toast.info(
+                    "Les réglages avancés seront disponibles dans une prochaine mise à jour.",
+                  )
+                }
+              >
+                Réglages avancés
+              </Button>
+            </div>
+          </TabsContent>
 
           <TabsContent value="apercu" className="mt-5 space-y-4">
             <div className="omni-card overflow-hidden p-0">
@@ -572,18 +660,37 @@ function VendeurPage() {
                 </div>
                 <div className="space-y-4 p-5">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Tableau de bord carte</p>
-                    <h2 className="mt-1 font-display text-2xl font-bold">Vos facilities en exploitation</h2>
-                    <p className="mt-2 text-sm text-muted-foreground">La carte vendeur montre uniquement vos facilities et reprend le rendu opérationnel vu par les acheteurs.</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                      Tableau de bord carte
+                    </p>
+                    <h2 className="mt-1 font-display text-2xl font-bold">
+                      Vos facilities en exploitation
+                    </h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      La carte vendeur montre uniquement vos facilities et reprend le rendu
+                      opérationnel vu par les acheteurs.
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-border p-4">
                     <p className="font-semibold">Aperçu acheteur</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{facility.name} · {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}</p>
-                    <p className="mt-2 text-sm">{facility.description ?? "Ajoutez une description pour améliorer la confiance."}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {facility.name} ·{" "}
+                      {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}
+                    </p>
+                    <p className="mt-2 text-sm">
+                      {facility.description ??
+                        "Ajoutez une description pour améliorer la confiance."}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={facility.is_online ? "default" : "secondary"}>{facility.is_online ? "En ligne" : "Hors ligne"}</Badge>
-                      {facility.emergency_shutdown && <Badge variant="destructive">Arrêt urgence</Badge>}
-                      <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? facility.status}</Badge>
+                      <Badge variant={facility.is_online ? "default" : "secondary"}>
+                        {facility.is_online ? "En ligne" : "Hors ligne"}
+                      </Badge>
+                      {facility.emergency_shutdown && (
+                        <Badge variant="destructive">Arrêt urgence</Badge>
+                      )}
+                      <Badge variant="secondary">
+                        {STATUS_LABEL[facility.status] ?? facility.status}
+                      </Badge>
                     </div>
                   </div>
                 </div>
@@ -622,13 +729,23 @@ function VendeurPage() {
             <div className="omni-card p-5">
               <p className="font-display text-lg font-bold">Opérations</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour corriger l'emplacement affiché aux acheteurs.
+                Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour
+                corriger l'emplacement affiché aux acheteurs.
               </p>
               <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
-                <Input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Horaires (ex. Lun-Sam 8h-19h)" />
-                <Button variant="outline" onClick={() => void saveOperatingHours()}>Enregistrer horaires</Button>
+                <Input
+                  value={hours}
+                  onChange={(e) => setHours(e.target.value)}
+                  placeholder="Horaires (ex. Lun-Sam 8h-19h)"
+                />
+                <Button variant="outline" onClick={() => void saveOperatingHours()}>
+                  Enregistrer horaires
+                </Button>
                 <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                  <Switch checked={facility.emergency_shutdown} onCheckedChange={(v) => void toggleEmergencyShutdown(v)} />
+                  <Switch
+                    checked={facility.emergency_shutdown}
+                    onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
+                  />
                   Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
                 </label>
               </div>
@@ -728,7 +845,8 @@ function VendeurPage() {
                     <p className="font-medium">{p.name}</p>
                     <p className="text-sm text-muted-foreground">
                       {formatMoney(p.price)} · Stock {p.quantity_available} · Omni{" "}
-                      {p.omni_allocation_percent}% · {p.status} · {freshnessLabel(p.last_confirmed_at)}
+                      {p.omni_allocation_percent}% · {p.status} ·{" "}
+                      {freshnessLabel(p.last_confirmed_at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

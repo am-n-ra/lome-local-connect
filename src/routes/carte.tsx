@@ -16,7 +16,7 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
-import { formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
+import { categoryLabel, formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import {
   restorePendingAvailabilitySearch,
@@ -365,7 +365,7 @@ export function CartePage() {
 
         {!revealRunning &&
           !selected &&
-          query.trim() &&
+          (query.trim() || category) &&
           results.length > 0 &&
           steps.length === 0 && (
             <div className="pointer-events-none absolute inset-x-3 bottom-28 z-10 mx-auto max-w-6xl md:bottom-32">
@@ -397,7 +397,9 @@ export function CartePage() {
                       </Badge>
                     </div>
                     <div className="mt-3 rounded-xl bg-background/65 p-2">
-                      <p className="truncate text-sm font-semibold">{query.trim()}</p>
+                      <p className="truncate text-sm font-semibold">
+                        {query.trim() || (category ? categoryLabel(category) : "Recherche")}
+                      </p>
                       <p className="text-[11px] text-muted-foreground">
                         Requested product / service
                       </p>
@@ -470,7 +472,7 @@ export function CartePage() {
           />
         )}
 
-        {!revealRunning && !selected && query.trim() && results.length === 0 && (
+        {!revealRunning && !selected && (query.trim() || category) && results.length === 0 && (
           <div className="absolute inset-x-4 bottom-28 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur">
             <p className="font-display font-bold">Dites-nous ce que vous cherchez</p>
             <p className="mt-1 text-muted-foreground">

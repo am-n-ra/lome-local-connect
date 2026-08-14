@@ -37,9 +37,6 @@ export type FacilityMediaRow = {
   duration_s: number | null;
 };
 
-
-
-
 export type ProductRow = {
   id: string;
   facility_id: string;
@@ -146,7 +143,7 @@ export const listFacilities = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const clauses: string[] = [
       "f.market_code = $1",
-      "f.is_online = true",
+      "(f.is_online = true OR f.status = 'unclaimed')",
       "COALESCE(f.emergency_shutdown, false) = false",
     ];
     const params: unknown[] = [data.market_code];
@@ -176,13 +173,10 @@ export const listFacilities = createServerFn({ method: "GET" })
 export const getFacility = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
-    const facility = await queryOne<MapFacility>(
-      `${FACILITY_SELECT} WHERE f.id = $1`,
-      [data.id],
-    );
+    const facility = await queryOne<MapFacility>(`${FACILITY_SELECT} WHERE f.id = $1`, [data.id]);
     if (!facility) return null;
 
-    const [products, offers, coupons, media] = await Promise.all([
+    const [productsResult, offersResult, couponsResult, mediaResult] = await Promise.allSettled([
       query<ProductRow>(
         `SELECT id, facility_id, name, price, discount_percent, in_stock,
                 COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
@@ -210,8 +204,13 @@ export const getFacility = createServerFn({ method: "GET" })
       ),
     ]);
 
-    return { facility, products, offers, coupons, media };
-
+    return {
+      facility,
+      products: productsResult.status === "fulfilled" ? productsResult.value : [],
+      offers: offersResult.status === "fulfilled" ? offersResult.value : [],
+      coupons: couponsResult.status === "fulfilled" ? couponsResult.value : [],
+      media: mediaResult.status === "fulfilled" ? mediaResult.value : [],
+    };
   });
 
 /** Buyer demand signal: "Je cherche ce produit". */
@@ -244,9 +243,7 @@ export const recordWishlist = createServerFn({ method: "POST" })
 
 export const toggleFavorite = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const existing = await queryOne<{ id: string }>(
       "SELECT id FROM public.favorites WHERE user_id = $1 AND facility_id = $2",
@@ -256,10 +253,10 @@ export const toggleFavorite = createServerFn({ method: "POST" })
       await query("DELETE FROM public.favorites WHERE id = $1", [existing.id]);
       return { favorite: false };
     }
-    await query(
-      "INSERT INTO public.favorites (user_id, facility_id) VALUES ($1, $2)",
-      [context.userId, data.facilityId],
-    );
+    await query("INSERT INTO public.favorites (user_id, facility_id) VALUES ($1, $2)", [
+      context.userId,
+      data.facilityId,
+    ]);
     return { favorite: true };
   });
 
