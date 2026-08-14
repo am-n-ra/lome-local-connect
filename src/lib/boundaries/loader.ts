@@ -127,11 +127,11 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
 }
 
 const BOUNDARY_PATHS: Record<string, string> = {
-  africa: new URL("./boundaries/africa.geojson", import.meta.url).href,
-  togo: new URL("./boundaries/togo.geojson", import.meta.url).href,
-  "togo-regions": new URL("./boundaries/togo-regions.geojson", import.meta.url).href,
-  "togo-communes": new URL("./boundaries/togo-communes.geojson", import.meta.url).href,
-  "lome-quartiers": new URL("./boundaries/lome-quartiers.geojson", import.meta.url).href,
+  africa: "/boundaries/africa.geojson",
+  togo: "/boundaries/togo.geojson",
+  "togo-regions": "/boundaries/togo-regions.geojson",
+  "togo-communes": "/boundaries/togo-communes.geojson",
+  "lome-quartiers": "/boundaries/lome-quartiers.geojson",
 };
 
 let loadedLevels = new Set<string>();
