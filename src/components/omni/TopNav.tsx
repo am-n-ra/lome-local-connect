@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Menu } from "lucide-react";
+import { Bell, Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/omni/BrandMark";
@@ -20,7 +20,7 @@ type Props = {
   activeRole?: "acheteur" | "vendeur";
   /** Hides the inline search bar (used when a bottom search dock is shown). */
   hideSearch?: boolean;
-  /** Map home chrome: only the hamburger floats top-right, no brand/navigation bar. */
+  /** Map home chrome: only notifications and the hamburger float top-right. */
   minimalMapChrome?: boolean;
 };
 
@@ -41,7 +41,7 @@ export function TopNav({
   const cart = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
   const feed = useNotificationsFeed();
-  const badge = cart.count + feed.unread;
+  const menuBadge = cart.count;
 
   return (
     <header
@@ -90,20 +90,40 @@ export function TopNav({
           </div>
         )}
 
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Ouvrir le menu"
-          className="omni-glass pointer-events-auto relative shrink-0"
-          onClick={() => setMenuOpen(true)}
-        >
-          <Menu className="h-5 w-5" />
-          {badge > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-              {badge}
-            </span>
-          )}
-        </Button>
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Ouvrir les notifications"
+            className="omni-glass pointer-events-auto relative shrink-0"
+            onClick={() => {
+              feed.markAllRead();
+              setMenuOpen(true);
+            }}
+          >
+            <Bell className="h-5 w-5" />
+            {feed.unread > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {feed.unread}
+              </span>
+            )}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Ouvrir le menu"
+            className="omni-glass pointer-events-auto relative shrink-0"
+            onClick={() => setMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+            {menuBadge > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                {menuBadge}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
 
       <NavMenuSheet

@@ -44,7 +44,7 @@ type RouteStep = { instruction: string; distance: number };
 
 export function CartePage() {
   const navigate = useNavigate();
-  const { market } = useMarket();
+  const { market, formatMoney } = useMarket();
   const { user, loading: authLoading } = useAuth();
   const fallbackCenter = market?.default_lat != null
     ? { lat: market.default_lat, lng: market.default_lng }
@@ -302,6 +302,66 @@ export function CartePage() {
           fitPoints={selected ? null : fitPoints}
           className="h-full w-full"
         />
+
+        {!selected && query.trim() && results.length > 0 && steps.length === 0 && (
+          <div className="pointer-events-none absolute inset-x-3 bottom-28 z-10 mx-auto max-w-6xl md:bottom-32">
+            <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
+              {results.slice(0, 6).map((facility) => (
+                <button
+                  key={facility.id}
+                  type="button"
+                  onClick={() => {
+                    setSelected(facility);
+                    setRouteCoords(null);
+                    setSteps([]);
+                  }}
+                  className="omni-glass w-72 shrink-0 rounded-2xl p-3 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">{facility.name}</p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        {facility.status === "unclaimed"
+                          ? "Facility à réclamer"
+                          : "Facility certifiable Omni"}
+                      </p>
+                    </div>
+                    <Badge variant={facility.status === "confirmed" ? "default" : "secondary"}>
+                      {facility.status === "confirmed" || facility.status === "certified"
+                        ? "✓"
+                        : "•"}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 rounded-xl bg-background/65 p-2">
+                    <p className="truncate text-sm font-semibold">{query.trim()}</p>
+                    <p className="text-[11px] text-muted-foreground">Requested product / service</p>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <span className="rounded-full bg-background/65 px-2 py-1 font-semibold">
+                      {facility.min_price != null
+                        ? `From ${formatMoney(facility.min_price)}`
+                        : "Price to confirm"}
+                    </span>
+                    <span className="rounded-full bg-background/65 px-2 py-1 text-right font-semibold">
+                      {formatDistance(facility.distanceKm)}
+                    </span>
+                    <span className="rounded-full bg-background/65 px-2 py-1 text-muted-foreground">
+                      {facility.product_count} offer{facility.product_count > 1 ? "s" : ""}
+                    </span>
+                    <span className="rounded-full bg-background/65 px-2 py-1 text-right text-primary">
+                      {facility.max_discount_percent > 0
+                        ? `${facility.max_discount_percent}% off`
+                        : "Availability first"}
+                    </span>
+                  </div>
+                  <div className="mt-3 rounded-full bg-primary px-3 py-1.5 text-center text-xs font-semibold text-primary-foreground">
+                    Check availability
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {!selected && steps.length === 0 && (
           <SearchDock

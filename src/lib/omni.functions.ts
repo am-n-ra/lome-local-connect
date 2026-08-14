@@ -138,7 +138,7 @@ export const listFacilities = createServerFn({ method: "GET" })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const clauses: string[] = ["f.market_code = $1"];
+    const clauses: string[] = ["f.market_code = $1", "f.is_online = true"];
     const params: unknown[] = [data.market_code];
 
     if (data.category && data.category !== "all") {

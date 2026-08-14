@@ -1,5 +1,13 @@
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, SlidersHorizontal } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Minus,
+  Plus,
+  SlidersHorizontal,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -61,7 +69,7 @@ const CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES.map((c) => ({ ...c 
 }[];
 
 /**
- * Bottom-anchored frosted dock: search pill (photo + voice + brand action),
+ * Bottom-anchored frosted dock: search pill, manual parameters,
  * a horizontally sliding category carousel and the result filters.
  */
 export function SearchDock({
@@ -80,6 +88,7 @@ export function SearchDock({
   const railRef = useRef<HTMLDivElement | null>(null);
   const activeCount = activeFilterCount(filters);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   function slide(direction: 1 | -1) {
     const rail = railRef.current;
@@ -262,6 +271,39 @@ export function SearchDock({
         )}
 
         {query.trim() && (
+          <div className="omni-glass mx-auto grid max-w-md grid-cols-2 gap-2 rounded-2xl p-2 text-xs">
+            <div className="rounded-xl bg-background/60 p-2">
+              <span className="text-muted-foreground">Quantité</span>
+              <div className="mt-1 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  aria-label="Diminuer la quantité"
+                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                  className="rounded-full bg-secondary p-1 text-foreground"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <strong>{quantity}</strong>
+                <button
+                  type="button"
+                  aria-label="Augmenter la quantité"
+                  onClick={() => setQuantity((value) => value + 1)}
+                  className="rounded-full bg-secondary p-1 text-foreground"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="rounded-xl bg-background/60 p-2">
+              <span className="text-muted-foreground">Budget max</span>
+              <div className="mt-1 font-semibold">
+                {filters.maxPrice === null ? "Non défini" : formatMoney(filters.maxPrice)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {query.trim() && (
           <div className="flex justify-center gap-2">
             <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
               {resultCount} résultat{resultCount > 1 ? "s" : ""}
@@ -284,7 +326,8 @@ export function SearchDock({
           value={query}
           onChange={onQueryChange}
           onSubmit={onSubmit}
-          placeholder="Que cherchez-vous ?"
+          placeholder="Search for a product or service"
+          enablePhotoSearch={false}
           trailing={
             <button
               type="button"

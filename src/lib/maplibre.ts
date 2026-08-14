@@ -13,6 +13,7 @@ export type MapInstance = {
   on: (event: string, layerOrCb: string | ((e: MapMouseEvent) => void), cb?: (e: MapMouseEvent) => void) => void;
   remove: () => void;
   flyTo: (opts: Record<string, unknown>) => void;
+  easeTo: (opts: Record<string, unknown>) => void;
   jumpTo: (opts: Record<string, unknown>) => void;
   fitBounds: (
     bounds: [[number, number], [number, number]],

@@ -284,8 +284,53 @@ export function MapCanvas({
     );
   }, [fitPoints]);
 
+  function zoomBy(delta: number) {
+    const map = mapRef.current;
+    if (!map) return;
+    map.easeTo({ zoom: map.getZoom() + delta, duration: 250 });
+  }
+
+  function recenterUser() {
+    const map = mapRef.current;
+    if (!map) return;
+    const target = userPosition ?? marketCenter;
+    if (!target) return;
+    map.flyTo({
+      center: [target.lng, target.lat],
+      zoom: userPosition ? 15.5 : marketZoom,
+      speed: 1.3,
+    });
+  }
+
   return (
-    <div ref={containerRef} className={className ?? "h-full w-full"}>
+    <div ref={containerRef} className={`${className ?? "h-full w-full"} relative`}>
+      <div className="pointer-events-auto absolute left-3 top-1/2 z-10 -translate-y-1/2 overflow-hidden rounded-2xl border border-border/70 bg-card/85 shadow-[var(--shadow-soft)] backdrop-blur">
+        <button
+          type="button"
+          aria-label="Zoom avant"
+          onClick={() => zoomBy(1)}
+          className="grid h-10 w-10 place-items-center text-lg font-bold transition-colors hover:bg-background/70"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          aria-label="Zoom arrière"
+          onClick={() => zoomBy(-1)}
+          className="grid h-10 w-10 place-items-center border-y border-border/70 text-lg font-bold transition-colors hover:bg-background/70"
+        >
+          −
+        </button>
+        <button
+          type="button"
+          aria-label="Recentrer sur ma position"
+          onClick={recenterUser}
+          className="grid h-10 w-10 place-items-center text-lg font-bold transition-colors hover:bg-background/70"
+        >
+          ◎
+        </button>
+      </div>
+
       {!gl && (
         <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
           Chargement de la carte…
