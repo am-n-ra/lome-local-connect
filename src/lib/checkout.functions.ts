@@ -52,6 +52,26 @@ async function feePercentFor(facilityId: string): Promise<number> {
   return Number.isFinite(pct) ? pct : 2;
 }
 
+async function formatMoneyServer(
+  facilityId: string,
+  amount: number,
+): Promise<string> {
+  const row = await queryOne<{ currency_symbol: string; currency_decimals: number | null }>(
+    `SELECT m.currency_symbol, m.currency_decimals
+     FROM public.facilities f
+     JOIN public.markets m ON m.market_code = f.market_code
+     WHERE f.id = $1`,
+    [facilityId],
+  );
+  const symbol = row?.currency_symbol ?? "FCFA";
+  const decimals = row?.currency_decimals ?? 0;
+  const formatted = new Intl.NumberFormat("fr", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(Math.round(amount));
+  return `${formatted} ${symbol}`;
+}
+
 /** Buyer orders (carts) with their live QR checkout, if any. */
 export const listMyOrders = createServerFn({ method: "GET" })
   .middleware([requireAuth])
@@ -244,7 +264,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
       [
         context.userId,
         "Vente encaissée",
-        `Transaction validée. Commission plateforme : ${txn.platform_fee} FCFA.`,
+        `Transaction validée. Commission plateforme : ${await formatMoneyServer(data.facilityId, txn.platform_fee)}.`,
         "/vendeur",
       ],
     );

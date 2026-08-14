@@ -129,4 +129,4 @@ export function campaignCost(radiusKm: number | null, cityWide: boolean): number
   return 500 * (radiusKm ?? 0);
 }
 
-export const LOME_CENTER = { lat: 6.1725, lng: 1.2314 };
+export const DEFAULT_CENTER = { lat: 6.1725, lng: 1.2314 };

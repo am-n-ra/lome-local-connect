@@ -2,7 +2,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { formatDateFr, formatFcfa } from "@/lib/omni";
+import { formatDateFr } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import { respondToRequest, type VendorRequest } from "@/lib/vendor.functions";
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function RequestsPanel({ facilityId, requests, onRefresh }: Props) {
+  const { formatMoney } = useMarket();
   const respond = useServerFn(respondToRequest);
 
   async function setStatus(cartId: string, accept: boolean) {
@@ -51,13 +53,13 @@ export function RequestsPanel({ facilityId, requests, onRefresh }: Props) {
                       : "En attente"}
             </Badge>
             <span className="ml-auto font-display text-lg font-bold text-primary">
-              {formatFcfa(c.total)}
+              {formatMoney(c.total)}
             </span>
           </div>
           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
             {c.items.map((i, index) => (
               <li key={`${c.id}-${index}`}>
-                {i.quantity} × {i.name} — {formatFcfa(i.price_at_time * i.quantity)}
+                {i.quantity} × {i.name} — {formatMoney(i.price_at_time * i.quantity)}
               </li>
             ))}
           </ul>

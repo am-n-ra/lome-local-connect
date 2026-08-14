@@ -16,7 +16,8 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
-import { formatDistance, haversineKm, LOME_CENTER } from "@/lib/omni";
+import { formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 export const Route = createFileRoute("/carte")({
   head: () => ({
@@ -38,6 +39,10 @@ type RouteStep = { instruction: string; distance: number };
 
 function CartePage() {
   const navigate = useNavigate();
+  const { market } = useMarket();
+  const fallbackCenter = market?.default_lat != null
+    ? { lat: market.default_lat, lng: market.default_lng }
+    : DEFAULT_CENTER;
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -116,7 +121,7 @@ function CartePage() {
     setNearbyMobile(near ? near.name : null);
   }, [userPos, facilities]);
 
-  const origin = userPos ?? LOME_CENTER;
+  const origin = userPos ?? fallbackCenter;
 
   const results = useMemo(() => {
     const rows = facilities
@@ -142,8 +147,6 @@ function CartePage() {
     });
   }, [facilities, origin, filters]);
 
-  const initialCenter = useMemo(() => userPos, [userPos]);
-
   // After each search, frame the user plus the five nearest matches.
   const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
   const searchKey = `${query.trim()}|${category ?? ""}`;
@@ -163,7 +166,7 @@ function CartePage() {
   }, [searchKey, facilities]);
 
   async function buildItinerary(f: MapFacility) {
-    const from = userPos ?? LOME_CENTER;
+    const from = userPos ?? fallbackCenter;
     setRoutingBusy(true);
     try {
       const url = `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${f.longitude},${f.latitude}?overview=full&geometries=geojson&steps=true`;
@@ -230,28 +233,22 @@ function CartePage() {
       )}
 
       <div className="relative flex-1 overflow-hidden">
-        {geoReady ? (
-          <MapCanvas
-            facilities={results}
-            selectedId={selected?.id ?? null}
-            onSelect={(f) => {
-              setSelected(f);
-              setRouteCoords(null);
-              setSteps([]);
-            }}
-            routeCoords={routeCoords}
-            userPosition={userPos}
-            initialCenter={initialCenter}
-            initialZoom={userPos ? 15.5 : 12.2}
-            focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
-            fitPoints={selected ? null : fitPoints}
-            className="h-full w-full"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
-            Localisation en cours…
-          </div>
-        )}
+        <MapCanvas
+          facilities={results}
+          selectedId={selected?.id ?? null}
+          onSelect={(f) => {
+            setSelected(f);
+            setRouteCoords(null);
+            setSteps([]);
+          }}
+          routeCoords={routeCoords}
+          userPosition={userPos}
+          marketCenter={fallbackCenter}
+          marketZoom={market?.default_zoom ?? 12.2}
+          focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
+          fitPoints={selected ? null : fitPoints}
+          className="h-full w-full"
+        />
 
         {!selected && steps.length === 0 && (
           <SearchDock

@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatDateFr } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import type { DemandSignal } from "@/lib/vendor.functions";
 import {
   listDemandForFacility,
@@ -18,6 +19,7 @@ export function DemandPanel({
   demand: DemandSignal[];
   facilityId: string;
 }) {
+  const { market } = useMarket();
   const list = useServerFn(listDemandForFacility);
   const respond = useServerFn(respondToDemand);
   const [live, setLive] = useState<VendorDemandRequest[]>([]);
@@ -83,7 +85,7 @@ export function DemandPanel({
                   <Input
                     type="number"
                     inputMode="numeric"
-                    placeholder="Prix FCFA"
+                    placeholder={`Prix ${market?.currency_symbol ?? "FCFA"}`}
                     className="h-9 w-32"
                     value={prices[r.id] ?? ""}
                     onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}

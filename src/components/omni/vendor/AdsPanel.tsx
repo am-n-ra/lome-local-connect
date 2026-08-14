@@ -14,7 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatDateFr, formatFcfa } from "@/lib/omni";
+import { formatDateFr } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import { campaignCostFor, RADIUS_OPTIONS } from "@/lib/vendor";
 import {
   createCampaign,
@@ -39,6 +40,7 @@ function campaignActive(c: VendorCampaign): boolean {
 }
 
 export function AdsPanel({ facility, products, subscription, campaigns, onRefresh }: Props) {
+  const { formatMoney, market } = useMarket();
   const balance = subscription?.wallet_balance ?? 0;
   const [builderOpen, setBuilderOpen] = useState(false);
   const [depositOpen, setDepositOpen] = useState(false);
@@ -94,7 +96,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
   async function confirmDeposit() {
     const amount = Number(depositAmount);
     if (!Number.isFinite(amount) || amount < 500) {
-      toast.error("Montant invalide (500 FCFA minimum).");
+      toast.error(`Montant invalide (${formatMoney(500)} minimum).`);
       return;
     }
     setBusy(true);
@@ -115,7 +117,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
       <div className="omni-card flex flex-wrap items-center gap-3 p-5">
         <div>
           <p className="text-sm text-muted-foreground">Budget publicitaire disponible</p>
-          <p className="font-display text-3xl font-extrabold text-primary">{formatFcfa(balance)}</p>
+          <p className="font-display text-3xl font-extrabold text-primary">{formatMoney(balance)}</p>
         </div>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={() => setDepositOpen(true)}>
@@ -151,7 +153,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
                   <td className="py-2">{formatDateFr(c.created_at)}</td>
                   <td>{c.is_city_wide ? "Tout Lomé" : `${c.radius_km} km`}</td>
                   <td>{c.product_ids.length}</td>
-                  <td>{formatFcfa(c.cost_fcfa)}</td>
+                  <td>{formatMoney(c.cost_fcfa)}</td>
                   <td>~{c.reach_estimate}</td>
                   <td>
                     <Badge variant={campaignActive(c) ? "default" : "secondary"}>
@@ -195,7 +197,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
                         )
                       }
                     />
-                    {p.name} — {formatFcfa(p.price)}
+                    {p.name} — {formatMoney(p.price)}
                   </label>
                 ))}
                 {products.length === 0 && (
@@ -235,7 +237,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
 
             <div className="rounded-lg bg-secondary p-3 text-sm">
               <p>
-                Coût estimé : <strong>{formatFcfa(cost)}</strong>
+                Coût estimé : <strong>{formatMoney(cost)}</strong>
               </p>
               <p className="text-muted-foreground">
                 Portée estimée : {reach === null ? "calcul…" : `~${reach} acheteurs à proximité`}
@@ -269,7 +271,7 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-1.5">
-            <Label htmlFor="dep">Montant (FCFA)</Label>
+            <Label htmlFor="dep">{`Montant (${market?.currency_symbol ?? "FCFA"})`}</Label>
             <Input
               id="dep"
               inputMode="numeric"

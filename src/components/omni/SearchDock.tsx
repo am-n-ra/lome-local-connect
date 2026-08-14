@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
-import { CATEGORIES, formatFcfa } from "@/lib/omni";
+import { CATEGORIES } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 export type MapFilters = {
   /** Max distance from the user, in km. */
@@ -75,6 +76,7 @@ export function SearchDock({
   onBrandClick,
   onVerifyAvailability,
 }: Props) {
+  const { formatMoney } = useMarket();
   const railRef = useRef<HTMLDivElement | null>(null);
   const activeCount = activeFilterCount(filters);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
@@ -186,7 +188,7 @@ export function SearchDock({
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Prix maximum</Label>
                     <span className="text-xs text-muted-foreground">
-                      {filters.maxPrice === null ? "Tous" : formatFcfa(filters.maxPrice)}
+                      {filters.maxPrice === null ? "Tous" : formatMoney(filters.maxPrice)}
                     </span>
                   </div>
                   <Slider

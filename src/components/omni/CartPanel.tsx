@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useCart, type CartLine } from "@/lib/cart";
-import { formatFcfa, freshnessLabel } from "@/lib/omni";
+import { freshnessLabel } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 type Availability = { inStock: boolean; label: string };
 
 export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+  const { formatMoney } = useMarket();
   const cart = useCart();
   const { user } = useAuth();
   const [sending, setSending] = useState<string | null>(null);
@@ -131,7 +133,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                   <div key={l.productId} className="flex items-center gap-2 text-sm">
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{l.name}</p>
-                      <p className="text-muted-foreground">{formatFcfa(l.price)}</p>
+                      <p className="text-muted-foreground">{formatMoney(l.price)}</p>
                       {availability[l.productId] && (
                         <p
                           className={`flex items-center gap-1 text-xs ${
@@ -182,7 +184,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                 ))}
                 <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
                   <span>Sous-total</span>
-                  <span>{formatFcfa(subtotal)}</span>
+                  <span>{formatMoney(subtotal)}</span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   <Button
@@ -209,7 +211,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
             <div className="space-y-3">
               <div className="flex items-center justify-between text-base font-bold">
                 <span>Total</span>
-                <span>{formatFcfa(cart.total)}</span>
+                <span>{formatMoney(cart.total)}</span>
               </div>
               {facilityIds.length > 1 && (
                 <Button

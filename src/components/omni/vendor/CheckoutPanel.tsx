@@ -12,9 +12,11 @@ import {
   redeemCheckout,
   type VendorTransaction,
 } from "@/lib/checkout.functions";
-import { formatFcfa, STATUS_LABEL } from "@/lib/omni";
+import { STATUS_LABEL } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 export function CheckoutPanel({ facilityId }: { facilityId: string }) {
+  const { formatMoney } = useMarket();
   const redeem = useServerFn(redeemCheckout);
   const fetchTransactions = useServerFn(listVendorTransactions);
   const fetchProgress = useServerFn(getConfirmationProgress);
@@ -50,9 +52,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     try {
       const result = await redeem({ data: { facilityId, code: code.trim() } });
       toast.success(
-        `Vente validée : ${formatFcfa(result.amount)} — commission ${formatFcfa(
+        `Vente validée : ${formatMoney(result.amount)} — commission ${formatMoney(
           result.platformFee,
-        )}, à reverser ${formatFcfa(result.payout)}.`,
+        )}, à reverser ${formatMoney(result.payout)}.`,
       );
       setCode("");
       await refresh();
@@ -119,11 +121,11 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
                 <p className="truncate font-medium">{t.buyer_name ?? "Client"}</p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(t.created_at).toLocaleString("fr-FR")} · commission{" "}
-                  {formatFcfa(t.platform_fee)}
+                  {formatMoney(t.platform_fee)}
                 </p>
               </div>
               <div className="text-right">
-                <p className="font-semibold">{formatFcfa(t.amount)}</p>
+                <p className="font-semibold">{formatMoney(t.amount)}</p>
                 <Badge variant={t.status === "completed" ? "default" : "outline"}>
                   {t.status === "completed" ? "Encaissée" : "En attente"}
                 </Badge>

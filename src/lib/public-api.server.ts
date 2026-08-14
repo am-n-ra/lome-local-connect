@@ -84,6 +84,7 @@ export const listQuerySchema = z.object({
   category: z.string().max(40).optional(),
   status: z.enum(["unclaimed", "unconfirmed", "certified", "confirmed"]).optional(),
   neighbourhood: z.string().max(80).optional(),
+  market_code: z.string().max(20).default("TG-LOME"),
   limit: z.coerce.number().int().min(1).max(200).default(50),
   offset: z.coerce.number().int().min(0).max(100_000).default(0),
 });
@@ -91,8 +92,8 @@ export const listQuerySchema = z.object({
 export async function listPublicFacilities(
   params: z.infer<typeof listQuerySchema>,
 ): Promise<PublicFacility[]> {
-  const clauses: string[] = ["f.market_code = 'TG-LOME'"];
-  const values: unknown[] = [];
+  const clauses: string[] = ["f.market_code = $1"];
+  const values: unknown[] = [params.market_code];
 
   if (params.category) {
     values.push(params.category);

@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
+import { MarketProvider } from "@/lib/market";
 import { Toaster } from "@/components/ui/sonner";
 
 
@@ -81,11 +82,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "OmniView — Trouvez ce que vous cherchez à Lomé" },
+      { title: "OmniView — Trouvez ce que vous cherchez près de vous" },
       {
         name: "description",
         content:
-          "OmniView montre en temps réel qui vend ce que vous cherchez près de vous à Lomé, avec disponibilité et itinéraire.",
+          "OmniView montre en temps réel qui vend ce que vous cherchez près de vous, avec disponibilité et itinéraire.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -127,11 +128,13 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
-          <Toaster position="top-center" richColors />
-        </CartProvider>
+        <MarketProvider>
+          <CartProvider>
+            {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+            <Outlet />
+            <Toaster position="top-center" richColors />
+          </CartProvider>
+        </MarketProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

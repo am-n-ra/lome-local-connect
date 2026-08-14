@@ -5,12 +5,12 @@ type MapLibreGlobal = {
   Marker: new (options?: Record<string, unknown>) => MarkerInstance;
 };
 
-export type MapMouseEvent = { lngLat: { lat: number; lng: number } };
+export type MapMouseEvent = { lngLat: { lat: number; lng: number }; features?: { id?: string | number; properties?: Record<string, unknown> }[] };
 
 export type StyleLayer = { id: string; type: string };
 
 export type MapInstance = {
-  on: (event: string, cb: (e: MapMouseEvent) => void) => void;
+  on: (event: string, layerOrCb: string | ((e: MapMouseEvent) => void), cb?: (e: MapMouseEvent) => void) => void;
   remove: () => void;
   flyTo: (opts: Record<string, unknown>) => void;
   jumpTo: (opts: Record<string, unknown>) => void;
@@ -19,14 +19,19 @@ export type MapInstance = {
     opts?: Record<string, unknown>,
   ) => void;
   getZoom: () => number;
+  getCenter: () => { lng: number; lat: number };
+  project: (lngLat: [number, number]) => { x: number; y: number };
+  queryRenderedFeatures: (point: { x: number; y: number }, opts?: { layers?: string[] }) => { id?: string | number; properties?: Record<string, unknown> }[];
+  setFeatureState: (source: { source: string; id?: string | number }, state: Record<string, unknown>) => void;
   setProjection: (projection: Record<string, unknown>) => void;
-  getSource: (id: string) => { setData: (data: unknown) => void } | undefined;
+  getSource: (id: string) => { setData: (data: unknown) => void; getClusterExpansionZoom?: (id: number, cb: (err: Error | null, zoom: number) => void) => void } | undefined;
   addSource: (id: string, source: Record<string, unknown>) => void;
   addLayer: (layer: Record<string, unknown>) => void;
   getStyle: () => { layers?: StyleLayer[] } | undefined;
   setPaintProperty: (layerId: string, name: string, value: unknown) => void;
   isStyleLoaded: () => boolean;
   resize: () => void;
+  getCanvas: () => HTMLCanvasElement;
 };
 
 

@@ -13,7 +13,7 @@ import {
   submitReview,
   type PendingConfirmation,
 } from "@/lib/reviews.functions";
-import { formatFcfa } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import { useAuth } from "@/lib/auth";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -33,6 +33,7 @@ export function OrdersPanel({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { formatMoney } = useMarket();
   const { user } = useAuth();
   const fetchOrders = useServerFn(listMyOrders);
   const startCheckout = useServerFn(createCheckout);
@@ -112,7 +113,7 @@ export function OrdersPanel({
                   <div key={p.transaction_id} className="space-y-2 border-t border-border pt-2">
                     <div className="flex items-center justify-between gap-2 text-sm">
                       <span className="font-medium">{p.facility_name}</span>
-                      <span>{formatFcfa(p.amount)}</span>
+                      <span>{formatMoney(p.amount)}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Confirmez la transaction et notez le commerçant.
@@ -155,13 +156,13 @@ export function OrdersPanel({
                 <ul className="space-y-0.5 text-sm text-muted-foreground">
                   {order.items.map((i, index) => (
                     <li key={`${order.id}-${index}`}>
-                      {i.quantity} × {i.name} — {formatFcfa(i.price_at_time * i.quantity)}
+                      {i.quantity} × {i.name} — {formatMoney(i.price_at_time * i.quantity)}
                     </li>
                   ))}
                 </ul>
                 <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
                   <span>Total</span>
-                  <span>{formatFcfa(order.total)}</span>
+                  <span>{formatMoney(order.total)}</span>
                 </div>
 
                 {order.status === "pending" && (

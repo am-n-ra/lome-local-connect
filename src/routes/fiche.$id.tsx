@@ -13,7 +13,8 @@ import { MapCanvas } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { MediaCarousel } from "@/components/omni/MediaCarousel";
 import { TopNav } from "@/components/omni/TopNav";
-import { haversineKm, LOME_CENTER } from "@/lib/omni";
+import { haversineKm, DEFAULT_CENTER } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 export const Route = createFileRoute("/fiche/$id")({
   head: () => ({
@@ -29,6 +30,10 @@ export const Route = createFileRoute("/fiche/$id")({
 
 function FichePage() {
   const { id } = Route.useParams();
+  const { market } = useMarket();
+  const fallbackCenter = market?.default_lat != null
+    ? { lat: market.default_lat, lng: market.default_lng }
+    : DEFAULT_CENTER;
   const [facility, setFacility] = useState<ApiFacility | null>(null);
   const [media, setMedia] = useState<FacilityMediaRow[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -61,7 +66,7 @@ function FichePage() {
 
   async function itinerary() {
     if (!facility) return;
-    const from = userPos ?? LOME_CENTER;
+    const from = userPos ?? fallbackCenter;
     setBusy(true);
     try {
       const res = await fetch(
@@ -98,7 +103,7 @@ function FichePage() {
               <MediaCarousel media={media} />
               <FacilityPanel
                 facility={{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }}
-                distanceKm={haversineKm(userPos ?? LOME_CENTER, { lat: facility.latitude, lng: facility.longitude })}
+                distanceKm={haversineKm(userPos ?? fallbackCenter, { lat: facility.latitude, lng: facility.longitude })}
                 routingBusy={busy}
                 onItinerary={() => void itinerary()}
               />

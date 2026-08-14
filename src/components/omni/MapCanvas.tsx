@@ -4,16 +4,18 @@ import {
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
-  type MarkerInstance,
 } from "@/lib/maplibre";
-import { LOME_CENTER, STATUS_COLOR, type FacilityRow } from "@/lib/omni";
+import { STATUS_COLOR, type FacilityRow } from "@/lib/omni";
+import {
+  loadBoundariesForZoom,
+  highlightBoundaryAtCenter,
+  resetBoundaryState,
+} from "@/lib/boundaries/loader";
 
 export type MapFacility = FacilityRow & {
   isPro?: boolean;
-  /** True while the seller broadcasts a live mobile presence. */
   mobile_presence?: boolean;
 };
-
 
 type Props = {
   facilities: MapFacility[];
@@ -22,75 +24,35 @@ type Props = {
   routeCoords?: [number, number][] | null;
   userPosition?: { lat: number; lng: number } | null;
   focus?: { lat: number; lng: number; zoom?: number } | null;
-  /** When set, the map fits these points (used to frame nearest search results). */
   fitPoints?: { lat: number; lng: number }[] | null;
-
-  initialCenter?: { lat: number; lng: number } | null;
-  initialZoom?: number;
+  marketCenter?: { lat: number; lng: number } | null;
+  marketZoom?: number;
   interactive?: boolean;
   className?: string;
   onMapClick?: (coords: { lat: number; lng: number }) => void;
 };
 
-/** Zoom under which the map switches to a 3D globe. */
 const GLOBE_ZOOM = 5;
+const GLOBE_START_ZOOM = 1.5;
+const FLY_IN_DURATION = 2500;
 
-function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
-  // Outer element is positioned by MapLibre (it owns `transform`/`position`).
-  const el = document.createElement("div");
-  el.style.cursor = "pointer";
-
-  const inner = document.createElement("div");
-  inner.style.position = "relative";
-  inner.style.transform = selected ? "scale(1.35)" : "scale(1)";
-  inner.style.transition = "transform .15s ease";
-  el.appendChild(inner);
-
-  const color = STATUS_COLOR[f.status] ?? "#9a938c";
-  const pin = document.createElement("div");
-  pin.style.width = "14px";
-  pin.style.height = "14px";
-  pin.style.borderRadius = "999px";
-  pin.style.background = f.type === "mobile" ? "#ffffff" : color;
-  pin.style.border = `2.5px solid ${f.type === "mobile" ? color : "#ffffff"}`;
-  pin.style.boxShadow = "0 2px 6px rgba(60,40,20,.28)";
-  inner.appendChild(pin);
-
-  // Live mobile presence: a distinct halo ring, different from both the static
-  // pin and the mobile-merchant marker.
-  if (f.mobile_presence) {
-    pin.style.background = "#1f7a4d";
-    pin.style.border = "2.5px solid #ffffff";
-    const halo = document.createElement("span");
-    halo.style.position = "absolute";
-    halo.style.left = "50%";
-    halo.style.top = "50%";
-    halo.style.width = "30px";
-    halo.style.height = "30px";
-    halo.style.marginLeft = "-15px";
-    halo.style.marginTop = "-15px";
-    halo.style.borderRadius = "999px";
-    halo.style.border = "2px solid rgba(31,122,77,.55)";
-    halo.style.background = "rgba(31,122,77,.14)";
-    halo.style.pointerEvents = "none";
-    inner.insertBefore(halo, pin);
-  }
-
-  if (f.isPro) {
-    const dot = document.createElement("span");
-    dot.style.position = "absolute";
-    dot.style.top = "-3px";
-    dot.style.right = "-3px";
-    dot.style.width = "6px";
-    dot.style.height = "6px";
-    dot.style.borderRadius = "999px";
-    dot.style.background = "#e0a52a";
-    dot.style.border = "1.5px solid #ffffff";
-    inner.appendChild(dot);
-  }
-  return el;
+function facilitiesToGeoJSON(facilities: MapFacility[]) {
+  return {
+    type: "FeatureCollection" as const,
+    features: facilities.map((f) => ({
+      type: "Feature" as const,
+      geometry: { type: "Point" as const, coordinates: [f.longitude, f.latitude] },
+      properties: {
+        id: f.id,
+        name: f.name,
+        status: f.status,
+        type: f.type,
+        isPro: f.isPro ?? false,
+        mobile_presence: f.mobile_presence ?? false,
+      },
+    })),
+  };
 }
-
 
 export function MapCanvas({
   facilities,
@@ -100,9 +62,8 @@ export function MapCanvas({
   userPosition,
   focus,
   fitPoints,
-  initialCenter,
-  initialZoom,
-
+  marketCenter,
+  marketZoom = 12.2,
   interactive = true,
   className,
   onMapClick,
@@ -110,37 +71,114 @@ export function MapCanvas({
   const gl = useMapLibre();
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
-  const startRef = useRef({
-    center: initialCenter ?? LOME_CENTER,
-    zoom: initialZoom ?? 12.2,
-  });
+  const selectRef = useRef(onSelect);
+  selectRef.current = onSelect;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
-  const markersRef = useRef<MarkerInstance[]>([]);
-  const userMarkerRef = useRef<MarkerInstance | null>(null);
+  const flownRef = useRef(false);
+  const userMarkerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
-    const start = startRef.current;
+    const target = marketCenter ?? { lat: 6.1725, lng: 1.2314 };
+
     const map = new gl.Map({
       container: containerRef.current,
       style: PASTEL_STYLE_URL,
-      center: [start.center.lng, start.center.lat],
-      zoom: start.zoom,
+      center: [target.lng, target.lat],
+      zoom: GLOBE_START_ZOOM,
       interactive,
       attributionControl: true,
-      projection: start.zoom <= GLOBE_ZOOM ? { type: "globe" } : { type: "mercator" },
+      projection: { type: "globe" },
     });
     mapRef.current = map;
+
     map.on("load", () => {
       readyRef.current = true;
       applyPastelPalette(map);
+
+      map.addSource("omni-facilities", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterRadius: 50,
+        clusterMaxZoom: 14,
+      });
+
+      map.addLayer({
+        id: "omni-clusters",
+        type: "circle",
+        source: "omni-facilities",
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": [
+            "step", ["get", "point_count"],
+            "#1f7a4d", 10,
+            "#165e3b", 50,
+            "#0f462c",
+          ],
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            16, 10,
+            24, 50,
+            36,
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.85,
+        },
+      });
+
+      map.addLayer({
+        id: "omni-cluster-count",
+        type: "symbol",
+        source: "omni-facilities",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-size": 12,
+          "text-font": ["Open Sans Bold", "Noto Sans Bold"],
+        },
+        paint: {
+          "text-color": "#ffffff",
+        },
+      });
+
+      map.addLayer({
+        id: "omni-points",
+        type: "circle",
+        source: "omni-facilities",
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": [
+            "match", ["get", "status"],
+            "confirmed", "#d9a521",
+            "certified", "#2f6fb5",
+            "unconfirmed", "#9a938c",
+            "unclaimed", "#b8b0a8",
+            "#9a938c",
+          ],
+          "circle-radius": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            10,
+            7,
+          ],
+          "circle-stroke-width": [
+            "case",
+            ["boolean", ["feature-state", "selected"], false],
+            3,
+            2,
+          ],
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
       map.addSource("omni-route", {
         type: "geojson",
         data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
       });
-
       map.addLayer({
         id: "omni-route-line",
         type: "line",
@@ -148,45 +186,98 @@ export function MapCanvas({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
       });
+
+      loadBoundariesForZoom(map, GLOBE_START_ZOOM);
     });
-    // Flat city map when close in, 3D globe once the user zooms far out.
-    let globe = start.zoom <= GLOBE_ZOOM;
+
+    let globe = true;
     map.on("zoom", () => {
-      const wantsGlobe = map.getZoom() <= GLOBE_ZOOM;
-      if (wantsGlobe === globe) return;
-      globe = wantsGlobe;
-      map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
+      const z = map.getZoom();
+      const wantsGlobe = z <= GLOBE_ZOOM;
+      if (wantsGlobe !== globe) {
+        globe = wantsGlobe;
+        map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
+      }
+      loadBoundariesForZoom(map, z);
+      highlightBoundaryAtCenter(map, z);
     });
+
     map.on("click", (e) => {
       clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
+
+    map.on("click", "omni-points", (e) => {
+      const feat = e.features?.[0];
+      if (!feat) return;
+      const id = feat.properties?.["id"] as string;
+      const f = facilities.find((x) => x.id === id);
+      if (f) selectRef.current?.(f);
+    });
+
+    map.on("click", "omni-clusters", (e) => {
+      const feat = e.features?.[0];
+      const clusterId = feat?.properties?.["cluster_id"] as number | undefined;
+      if (clusterId == null) return;
+      const source = map.getSource("omni-facilities");
+      source?.getClusterExpansionZoom?.(clusterId, (err, zoom) => {
+        if (err) return;
+        map.flyTo({ center: e.lngLat, zoom: Math.min(zoom, 18), speed: 1.2 });
+      });
+    });
+
+    map.on("mouseenter", "omni-points", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "omni-points", () => {
+      map.getCanvas().style.cursor = "";
+    });
+    map.on("mouseenter", "omni-clusters", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "omni-clusters", () => {
+      map.getCanvas().style.cursor = "";
+    });
+
     return () => {
+      resetBoundaryState();
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
+      flownRef.current = false;
     };
-  }, [gl, interactive]);
+  }, [gl, interactive, marketCenter?.lat, marketCenter?.lng, marketZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!gl || !map) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = facilities.map((f) => {
-      const el = markerElement(f, f.id === selectedId);
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onSelect?.(f);
+    if (!map || !marketCenter || flownRef.current) return;
+    flownRef.current = true;
+    setTimeout(() => {
+      map.flyTo({
+        center: [marketCenter.lng, marketCenter.lat],
+        zoom: marketZoom,
+        duration: FLY_IN_DURATION,
+        speed: 0.8,
       });
-      return new gl.Marker({ element: el }).setLngLat([f.longitude, f.latitude]).addTo(map);
-    });
-  }, [gl, facilities, selectedId, onSelect]);
+    }, 800);
+  }, [marketCenter, marketZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!gl || !map) return;
-    userMarkerRef.current?.remove();
-    userMarkerRef.current = null;
+    if (!gl || !map || !readyRef.current) return;
+    const source = map.getSource("omni-facilities") as { setData: (data: unknown) => void } | undefined;
+    source?.setData(facilitiesToGeoJSON(facilities));
+  }, [gl, facilities]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!gl || !map || !readyRef.current) return;
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove();
+      userMarkerRef.current = null;
+    }
     if (!userPosition) return;
+
     const el = document.createElement("div");
     el.style.width = "16px";
     el.style.height = "16px";
@@ -194,9 +285,10 @@ export function MapCanvas({
     el.style.background = "#2f6fb5";
     el.style.border = "3px solid #fff";
     el.style.boxShadow = "0 0 0 6px rgba(47,111,181,.22)";
-    userMarkerRef.current = new gl.Marker({ element: el })
-      .setLngLat([userPosition.lng, userPosition.lat])
-      .addTo(map);
+    const { Marker } = gl as unknown as { Marker: new (opts: { element: HTMLDivElement }) => { setLngLat: (c: [number, number]) => { addTo: (m: MapInstance) => unknown } } };
+    const marker = new Marker({ element: el });
+    marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
+    userMarkerRef.current = el;
   }, [gl, userPosition]);
 
   useEffect(() => {
@@ -223,7 +315,6 @@ export function MapCanvas({
     map.flyTo({ center: [focus.lng, focus.lat], zoom: focus.zoom ?? 15, speed: 1.3 });
   }, [focus]);
 
-  // Frames the user plus the nearest search results after each new search.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !fitPoints || fitPoints.length === 0) return;
@@ -242,8 +333,6 @@ export function MapCanvas({
       { padding: { top: 80, bottom: 220, left: 40, right: 40 }, maxZoom: 16, duration: 900 },
     );
   }, [fitPoints]);
-
-
 
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>

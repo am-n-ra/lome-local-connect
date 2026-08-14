@@ -133,12 +133,13 @@ export const listFacilities = createServerFn({ method: "GET" })
         search: z.string().max(120).optional(),
         category: z.string().max(40).optional(),
         includeUnclaimed: z.boolean().optional(),
+        market_code: z.string().max(20).default("TG-LOME"),
       })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const clauses: string[] = ["f.market_code = 'TG-LOME'"];
-    const params: unknown[] = [];
+    const clauses: string[] = ["f.market_code = $1"];
+    const params: unknown[] = [data.market_code];
 
     if (data.category && data.category !== "all") {
       params.push(data.category);

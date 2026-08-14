@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { formatFcfa, formatDateFr } from "@/lib/omni";
+import { formatDateFr } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 const DEPOSIT_LABEL: Record<string, string> = {
   pending: "En attente",
@@ -25,6 +26,7 @@ const DEPOSIT_LABEL: Record<string, string> = {
 
 /** Phase 4 — suivi des paiements, corrections de portefeuille et journal d'audit. */
 export function OpsPanel() {
+  const { formatMoney } = useMarket();
   const [metrics, setMetrics] = useState<PlatformMetrics | null>(null);
   const [deposits, setDeposits] = useState<AdminDepositRow[]>([]);
   const [audit, setAudit] = useState<AuditRow[]>([]);
@@ -64,7 +66,7 @@ export function OpsPanel() {
       const res = await adjustFn({
         data: { facilityId: target.trim(), amount: Math.trunc(value), reason: reason.trim() },
       });
-      toast.success(`Nouveau solde : ${formatFcfa(res.balance)}`);
+      toast.success(`Nouveau solde : ${formatMoney(res.balance)}`);
       setAmount("");
       setReason("");
       await reload();
@@ -87,11 +89,11 @@ export function OpsPanel() {
       {metrics && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {[
-            ["Recharges créditées", formatFcfa(metrics.deposits_total)],
+            ["Recharges créditées", formatMoney(metrics.deposits_total)],
             ["Recharges réussies", metrics.deposits_approved],
             ["Recharges en attente", metrics.deposits_pending],
-            ["Portefeuilles", formatFcfa(metrics.wallet_total)],
-            ["À reverser", formatFcfa(metrics.payout_total)],
+            ["Portefeuilles", formatMoney(metrics.wallet_total)],
+            ["À reverser", formatMoney(metrics.payout_total)],
             ["Commerces Pro", metrics.pro_facilities],
             ["Demandes en attente", metrics.carts_pending],
             ["Comptes", metrics.users],
@@ -151,7 +153,7 @@ export function OpsPanel() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-semibold">{formatFcfa(d.amount)}</span>
+                <span className="font-semibold">{formatMoney(d.amount)}</span>
                 <Badge variant={d.status === "approved" ? "default" : "outline"}>
                   {DEPOSIT_LABEL[d.status] ?? d.status}
                 </Badge>

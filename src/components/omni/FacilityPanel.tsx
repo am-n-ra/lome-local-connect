@@ -17,13 +17,13 @@ import { useCart } from "@/lib/cart";
 import {
   categoryLabel,
   formatDistance,
-  formatFcfa,
   freshnessLabel,
   isFresh,
   STATUS_LABEL,
   type FacilityRow,
   type ProductRow,
 } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 
 type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
 
@@ -35,6 +35,7 @@ type Props = {
 };
 
 export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }: Props) {
+  const { formatMoney } = useMarket();
   const { user } = useAuth();
   const cart = useCart();
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -254,7 +255,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{p.name}</p>
-                <p className="text-sm font-semibold text-primary">{formatFcfa(p.price)}</p>
+                <p className="text-sm font-semibold text-primary">{formatMoney(p.price)}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
                   <Badge variant={p.in_stock ? "default" : "secondary"} className={p.in_stock ? "bg-forest text-forest-foreground" : ""}>
                     {p.in_stock ? "Disponible" : "En rupture"}

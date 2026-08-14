@@ -12,7 +12,7 @@ import {
   type DemandRequestRow,
   type DemandResponseRow,
 } from "@/lib/demand.functions";
-import { formatFcfa } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import { useAuth } from "@/lib/auth";
 
 type Props = {
@@ -31,6 +31,7 @@ export function DemandRequestPanel({
   initialTerm,
   targetFacilityIds = [],
 }: Props) {
+  const { formatMoney } = useMarket();
   const { user } = useAuth();
   const create = useServerFn(createDemandRequest);
   const list = useServerFn(listMyDemandRequests);
@@ -203,7 +204,7 @@ export function DemandRequestPanel({
                       </span>
                     </div>
                     {a.price !== null && (
-                      <p className="text-muted-foreground">{formatFcfa(a.price)}</p>
+                      <p className="text-muted-foreground">{formatMoney(a.price)}</p>
                     )}
                     {a.message && <p className="text-muted-foreground">{a.message}</p>}
                   </div>

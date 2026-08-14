@@ -31,11 +31,11 @@ import { MediaManager } from "@/components/omni/MediaManager";
 import {
   CATEGORIES,
   daysLeft,
-  formatFcfa,
   freshnessLabel,
-  LOME_CENTER,
+  DEFAULT_CENTER,
   STATUS_LABEL,
 } from "@/lib/omni";
+import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
 import {
   confirmStock,
@@ -90,6 +90,10 @@ type Dashboard = {
 
 function VendeurPage() {
   const { user, loading } = useAuth();
+  const { formatMoney, market } = useMarket();
+  const fallbackCenter = market?.default_lat != null
+    ? { lat: market.default_lat, lng: market.default_lng }
+    : DEFAULT_CENTER;
   const { depot } = useSearch({ from: "/vendeur" });
   const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
@@ -103,7 +107,7 @@ function VendeurPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [description, setDescription] = useState("");
-  const [pos, setPos] = useState(LOME_CENTER);
+  const [pos, setPos] = useState(fallbackCenter);
   const [saving, setSaving] = useState(false);
 
   // product form
@@ -145,7 +149,7 @@ function VendeurPage() {
       try {
         const result = await confirmDeposit({ data: { depositId: depot } });
         if (result.status === "approved") {
-          toast.success(`${formatFcfa(result.amount)} ajoutés à votre portefeuille.`);
+          toast.success(`${formatMoney(result.amount)} ajoutés à votre portefeuille.`);
           await refresh();
         } else if (result.status === "pending") {
           toast.info("Paiement en cours de validation, votre solde sera crédité sous peu.");
@@ -503,7 +507,7 @@ function VendeurPage() {
               <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Portefeuille</p>
                 <p className="mt-1 font-display text-2xl font-extrabold text-primary">
-                  {formatFcfa(data?.walletBalance ?? 0)}
+                  {formatMoney(data?.walletBalance ?? 0)}
                 </p>
               </div>
               <div className="omni-card p-5">
@@ -605,7 +609,7 @@ function VendeurPage() {
                   <div>
                     <p className="font-medium">{p.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatFcfa(p.price)} · {freshnessLabel(p.last_confirmed_at)}
+                      {formatMoney(p.price)} · {freshnessLabel(p.last_confirmed_at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
