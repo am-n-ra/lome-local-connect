@@ -6,7 +6,7 @@ Base de code : `a645ec7`, Neon Auth + Neon PostgreSQL conservés, migrations et 
 
 ---
 
-## Lot 0 — Débloquer le build
+## Lot 0 — Débloquer le build(the next commit should focus on fixing this and returning to the specified code base)
 
 Quatre erreurs bloquent actuellement la compilation. Elles passent avant tout le reste.
 
