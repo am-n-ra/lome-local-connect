@@ -1,8 +1,15 @@
 import type { MapInstance } from "../maplibre";
 
+type GeoJSONFeature = {
+  type: "Feature";
+  id?: string | number;
+  geometry: unknown;
+  properties: Record<string, unknown>;
+};
+
 type GeoJSON = {
   type: "FeatureCollection";
-  features: { type: "Feature"; geometry: unknown; properties: Record<string, unknown> }[];
+  features: GeoJSONFeature[];
 };
 
 type BoundaryLevel = {
@@ -31,6 +38,23 @@ async function fetchGeoJSON(path: string): Promise<GeoJSON> {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`Failed to load boundary: ${path}`);
   const data = (await res.json()) as GeoJSON;
+  data.features = data.features.map((feature, index) => ({
+    ...feature,
+    id:
+      feature.id ??
+      (typeof feature.properties.id === "string" || typeof feature.properties.id === "number"
+        ? feature.properties.id
+        : `${path}-${index}`),
+    properties: {
+      ...feature.properties,
+      name:
+        feature.properties.name ??
+        feature.properties.shapeName ??
+        feature.properties.NAME ??
+        feature.properties.admin ??
+        "",
+    },
+  }));
   cache.set(path, data);
   return data;
 }
@@ -44,6 +68,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     maxzoom: 14,
     tolerance: 3,
     buffer: 64,
+    promoteId: "id",
   });
 
   map.addLayer({
@@ -55,12 +80,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     layout: { visibility: "visible" },
     paint: {
       "fill-color": BOUNDARY_COLOR,
-      "fill-opacity": [
-        "case",
-        ["boolean", ["feature-state", "active"], false],
-        0.30,
-        0.06,
-      ],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.3, 0.06],
     },
   });
 
@@ -73,18 +93,8 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     layout: { visibility: "visible" },
     paint: {
       "line-color": BOUNDARY_COLOR,
-      "line-width": [
-        "case",
-        ["boolean", ["feature-state", "active"], false],
-        3,
-        1,
-      ],
-      "line-opacity": [
-        "case",
-        ["boolean", ["feature-state", "active"], false],
-        1,
-        0.5,
-      ],
+      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 3, 1],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.5],
     },
   });
 
@@ -94,12 +104,11 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     source: level.source,
     minzoom: level.minzoom,
     maxzoom: level.maxzoom,
-    filter: ["boolean", ["feature-state", "active"], false],
     layout: { visibility: "visible" },
     paint: {
       "line-color": "#7ab8ff",
-      "line-width": 8,
-      "line-opacity": 0.4,
+      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 8, 0],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.4, 0],
     },
   });
 
@@ -116,12 +125,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     },
     paint: {
       "text-color": "#3d3d3d",
-      "text-opacity": [
-        "case",
-        ["boolean", ["feature-state", "active"], false],
-        1,
-        0.6,
-      ],
+      "text-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.6],
     },
   });
 }
@@ -167,7 +171,8 @@ export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
     const feature = features[0];
 
     if (feature && feature.id != null) {
-      if (activeFeature && activeFeature.source === level.source && activeFeature.id === feature.id) return;
+      if (activeFeature && activeFeature.source === level.source && activeFeature.id === feature.id)
+        return;
 
       if (activeFeature) {
         map.setFeatureState(
@@ -175,10 +180,7 @@ export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
           { active: false },
         );
       }
-      map.setFeatureState(
-        { source: level.source, id: feature.id },
-        { active: true },
-      );
+      map.setFeatureState({ source: level.source, id: feature.id }, { active: true });
       activeFeature = { source: level.source, id: feature.id };
       return;
     }
@@ -187,10 +189,7 @@ export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
 
 export function clearHighlight(map: MapInstance) {
   if (activeFeature) {
-    map.setFeatureState(
-      { source: activeFeature.source, id: activeFeature.id },
-      { active: false },
-    );
+    map.setFeatureState({ source: activeFeature.source, id: activeFeature.id }, { active: false });
     activeFeature = null;
   }
 }

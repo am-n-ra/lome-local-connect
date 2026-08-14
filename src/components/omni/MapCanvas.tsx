@@ -42,6 +42,7 @@ function facilitiesToGeoJSON(facilities: MapFacility[]) {
     features: facilities.map((f) => ({
       type: "Feature" as const,
       geometry: { type: "Point" as const, coordinates: [f.longitude, f.latitude] },
+      id: f.id,
       properties: {
         id: f.id,
         name: f.name,
@@ -77,7 +78,7 @@ export function MapCanvas({
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
   const flownRef = useRef(false);
-  const userMarkerRef = useRef<HTMLDivElement | null>(null);
+  const userMarkerRef = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
@@ -112,18 +113,8 @@ export function MapCanvas({
         source: "omni-facilities",
         filter: ["has", "point_count"],
         paint: {
-          "circle-color": [
-            "step", ["get", "point_count"],
-            "#1f7a4d", 10,
-            "#165e3b", 50,
-            "#0f462c",
-          ],
-          "circle-radius": [
-            "step", ["get", "point_count"],
-            16, 10,
-            24, 50,
-            36,
-          ],
+          "circle-color": ["step", ["get", "point_count"], "#1f7a4d", 10, "#165e3b", 50, "#0f462c"],
+          "circle-radius": ["step", ["get", "point_count"], 16, 10, 24, 50, 36],
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
           "circle-opacity": 0.85,
@@ -152,32 +143,27 @@ export function MapCanvas({
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
-            "match", ["get", "status"],
-            "confirmed", "#d9a521",
-            "certified", "#2f6fb5",
-            "unconfirmed", "#9a938c",
-            "unclaimed", "#b8b0a8",
+            "match",
+            ["get", "status"],
+            "confirmed",
+            "#d9a521",
+            "certified",
+            "#2f6fb5",
+            "unconfirmed",
+            "#9a938c",
+            "unclaimed",
+            "#b8b0a8",
             "#9a938c",
           ],
-          "circle-radius": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            10,
-            7,
-          ],
-          "circle-stroke-width": [
-            "case",
-            ["boolean", ["feature-state", "selected"], false],
-            3,
-            2,
-          ],
+          "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 10, 7],
+          "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
           "circle-stroke-color": "#ffffff",
         },
       });
 
       map.addSource("omni-route", {
         type: "geojson",
-        data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } },
+        data: { type: "FeatureCollection", features: [] },
       });
       map.addLayer({
         id: "omni-route-line",
@@ -264,7 +250,8 @@ export function MapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!gl || !map || !readyRef.current) return;
-    const source = map.getSource("omni-facilities") as { setData: (data: unknown) => void } | undefined;
+    const source = map.getSource("omni-facilities") as
+      { setData: (data: unknown) => void } | undefined;
     source?.setData(facilitiesToGeoJSON(facilities));
   }, [gl, facilities]);
 
@@ -285,10 +272,14 @@ export function MapCanvas({
     el.style.background = "#2f6fb5";
     el.style.border = "3px solid #fff";
     el.style.boxShadow = "0 0 0 6px rgba(47,111,181,.22)";
-    const { Marker } = gl as unknown as { Marker: new (opts: { element: HTMLDivElement }) => { setLngLat: (c: [number, number]) => { addTo: (m: MapInstance) => unknown } } };
+    const { Marker } = gl as unknown as {
+      Marker: new (opts: { element: HTMLDivElement }) => {
+        setLngLat: (c: [number, number]) => { addTo: (m: MapInstance) => unknown };
+      };
+    };
     const marker = new Marker({ element: el });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
-    userMarkerRef.current = el;
+    userMarkerRef.current = marker;
   }, [gl, userPosition]);
 
   useEffect(() => {
@@ -301,10 +292,15 @@ export function MapCanvas({
         if (tries++ < 40) window.setTimeout(apply, 150);
         return;
       }
-      source.setData({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: routeCoords ?? [] },
-      });
+      source.setData(
+        routeCoords && routeCoords.length >= 2
+          ? {
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: routeCoords },
+              properties: {},
+            }
+          : { type: "FeatureCollection", features: [] },
+      );
     };
     apply();
   }, [routeCoords]);
