@@ -15,6 +15,8 @@ type Props = {
   layout?: "input" | "dock";
   /** Rendered inside the dock pill, on the far right (locate / submit). */
   trailing?: React.ReactNode;
+  /** Enables media search UI; disabled on the current map-first V1 dock. */
+  enablePhotoSearch?: boolean;
 };
 
 const BAR_COUNT = 16;
@@ -97,6 +99,7 @@ export function SmartSearchBar({
   placeholder,
   layout = "input",
   trailing,
+  enablePhotoSearch = true,
 }: Props) {
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -240,16 +243,18 @@ export function SmartSearchBar({
   if (layout === "dock") {
     return (
       <div className="omni-glass flex w-full items-center gap-1 rounded-full py-1.5 pl-2 pr-1.5 shadow-lg">
-        {photoInput}
-        <button
-          type="button"
-          aria-label="Rechercher par image"
-          disabled={busy || recording}
-          onClick={() => fileRef.current?.click()}
-          className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground disabled:opacity-40"
-        >
-          <Camera className="h-[18px] w-[18px]" />
-        </button>
+        {enablePhotoSearch && photoInput}
+        {enablePhotoSearch && (
+          <button
+            type="button"
+            aria-label="Rechercher par image"
+            disabled={busy || recording}
+            onClick={() => fileRef.current?.click()}
+            className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground disabled:opacity-40"
+          >
+            <Camera className="h-[18px] w-[18px]" />
+          </button>
+        )}
         {recording ? (
           <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
             {waveform}
@@ -312,16 +317,18 @@ export function SmartSearchBar({
       )}
 
       <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
-        {photoInput}
-        <button
-          type="button"
-          aria-label="Rechercher par image"
-          disabled={busy || recording}
-          onClick={() => fileRef.current?.click()}
-          className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
-        >
-          <Camera className="h-4 w-4" />
-        </button>
+        {enablePhotoSearch && photoInput}
+        {enablePhotoSearch && (
+          <button
+            type="button"
+            aria-label="Rechercher par image"
+            disabled={busy || recording}
+            onClick={() => fileRef.current?.click()}
+            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+          >
+            <Camera className="h-4 w-4" />
+          </button>
+        )}
         <button
           type="button"
           aria-label={recording ? "Arrêter la dictée" : "Recherche vocale"}

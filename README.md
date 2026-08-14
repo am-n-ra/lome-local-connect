@@ -1,5 +1,15 @@
 # OmniView Lomé
 
+
+## Spécification produit et plan de build actuels
+
+La source de vérité V1/V2-ready ajoutée après le prompt de build est documentée ici :
+
+- [OMNI — Product & Interface Specification](docs/omni-product-interface-spec.md)
+- [Omni — Build Plan after the Build Prompt](docs/omni-build-plan-after-build-prompt.md)
+
+Ces documents remplacent l'ancienne logique de landing app-first par une règle structurante : **Omni doit être construit comme une interface map-first stateful, pas comme une suite de pages séparées.**
+
 # OMNIVIEW — PROMPT DE BUILD COMPLET
 
 ## Ce qui change dans cette version
