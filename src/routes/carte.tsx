@@ -288,7 +288,7 @@ function CartePage() {
           <MapBottomSheet title={selected.name} onClose={() => setSelected(null)}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <LiveStatus
-                online={selected.is_online || selected.mobile_presence}
+                online={Boolean(selected.is_online || selected.mobile_presence)}
                 detail={selected.type === "mobile" ? "mobile" : "boutique"}
               />
               <OmniButton
