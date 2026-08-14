@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   applyPastelPalette,
   PASTEL_STYLE_URL,
@@ -10,6 +10,7 @@ import {
   loadBoundariesForZoom,
   highlightBoundaryAtCenter,
   resetBoundaryState,
+  boundaryLevelForZoom,
 } from "@/lib/boundaries/loader";
 
 export type MapFacility = FacilityRow & {
@@ -33,7 +34,8 @@ type Props = {
 };
 
 const GLOBE_ZOOM = 5;
-const GLOBE_START_ZOOM = 1.5;
+const GLOBE_START_ZOOM = 1.25;
+const GLOBE_START_CENTER: [number, number] = [8, 7];
 const FLY_IN_DURATION = 2500;
 
 function facilitiesToGeoJSON(facilities: MapFacility[]) {
@@ -83,6 +85,7 @@ export function MapCanvas({
   const readyRef = useRef(false);
   const flownRef = useRef(false);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
+  const [activeBoundaryLevel, setActiveBoundaryLevel] = useState("Continent");
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
@@ -91,7 +94,7 @@ export function MapCanvas({
     const map = new gl.Map({
       container: containerRef.current,
       style: PASTEL_STYLE_URL,
-      center: [target.lng, target.lat],
+      center: GLOBE_START_CENTER,
       zoom: GLOBE_START_ZOOM,
       interactive,
       attributionControl: true,
@@ -113,15 +116,21 @@ export function MapCanvas({
 
       map.addLayer({
         id: "omni-clusters",
-        type: "circle",
+        type: "symbol",
         source: "omni-facilities",
         filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["concat", ["get", "point_count_abbreviated"], " lieux"],
+          "text-size": ["step", ["get", "point_count"], 13, 10, 15, 50, 18],
+          "text-font": ["Noto Sans Bold"],
+          "text-allow-overlap": false,
+          "text-padding": 8,
+        },
         paint: {
-          "circle-color": ["step", ["get", "point_count"], "#1f7a4d", 10, "#165e3b", 50, "#0f462c"],
-          "circle-radius": ["step", ["get", "point_count"], 16, 10, 24, 50, 36],
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.85,
+          "text-color": "#0f462c",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
+          "text-opacity": 0.94,
         },
       });
 
@@ -163,19 +172,23 @@ export function MapCanvas({
       });
 
       loadBoundariesForZoom(map, GLOBE_START_ZOOM);
+      highlightBoundaryAtCenter(map, GLOBE_START_ZOOM);
     });
 
     let globe = true;
-    map.on("zoom", () => {
+    const refreshLivingBoundary = () => {
       const z = map.getZoom();
       const wantsGlobe = z <= GLOBE_ZOOM;
       if (wantsGlobe !== globe) {
         globe = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
-      loadBoundariesForZoom(map, z);
-      highlightBoundaryAtCenter(map, z);
-    });
+      setActiveBoundaryLevel(boundaryLevelForZoom(z)?.name ?? "Quartier");
+      void loadBoundariesForZoom(map, z).then(() => highlightBoundaryAtCenter(map, z));
+    };
+
+    map.on("zoom", refreshLivingBoundary);
+    map.on("moveend", refreshLivingBoundary);
 
     map.on("click", (e) => {
       clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
@@ -240,7 +253,8 @@ export function MapCanvas({
     const map = mapRef.current;
     if (!gl || !map || !readyRef.current) return;
     const source = map.getSource("omni-facilities") as
-      { setData: (data: unknown) => void } | undefined;
+      | { setData: (data: unknown) => void }
+      | undefined;
     source?.setData(facilitiesToGeoJSON(facilities));
   }, [gl, facilities]);
 
@@ -321,6 +335,12 @@ export function MapCanvas({
 
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 md:flex">
+        <div className="h-7 w-7 rounded-full border-2 border-primary/80 bg-primary/10 shadow-[0_0_0_8px_rgba(31,122,77,0.12)]" />
+        <div className="rounded-full border border-primary/20 bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur">
+          Focus {activeBoundaryLevel.toLowerCase()}
+        </div>
+      </div>
       {!gl && (
         <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
           Chargement de la carte…
