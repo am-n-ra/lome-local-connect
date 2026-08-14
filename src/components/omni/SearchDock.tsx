@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
-import { CATEGORIES } from "@/lib/omni";
+import { categoryLabel, CATEGORIES } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 
 export type MapFilters = {
@@ -274,7 +274,7 @@ export function SearchDock({
           </div>
         )}
 
-        {query.trim() && (
+        {(query.trim() || category) && (
           <div className="omni-glass mx-auto grid max-w-md grid-cols-2 gap-2 rounded-2xl p-2 text-xs">
             <div className="rounded-xl bg-background/60 p-2">
               <span className="text-muted-foreground">Quantité</span>
@@ -321,7 +321,7 @@ export function SearchDock({
           </span>
         </div>
 
-        {query.trim() && (
+        {(query.trim() || category) && (
           <div className="flex justify-center gap-2">
             <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
               {resultCount} résultat{resultCount > 1 ? "s" : ""}

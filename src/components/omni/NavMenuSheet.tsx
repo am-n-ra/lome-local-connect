@@ -3,16 +3,21 @@ import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   Bell,
+  CreditCard,
   Heart,
   ListChecks,
   LogIn,
   LogOut,
+  Receipt,
+  SearchCheck,
+  Settings,
   Shield,
   ShoppingCart,
   MessageCircle,
   Megaphone,
   Store,
   User,
+  Wallet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -28,6 +33,7 @@ import { listNotifications, type NotificationRow } from "@/lib/omni.functions";
 import { markNotificationsRead } from "@/lib/checkout.functions";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
+import { toast } from "sonner";
 
 type Props = {
   open: boolean;
@@ -76,6 +82,10 @@ export function NavMenuSheet({
   function go(action?: () => void) {
     onOpenChange(false);
     action?.();
+  }
+
+  function comingSoon(section: string) {
+    go(() => toast.info(`${section} sera disponible dans une prochaine mise à jour.`));
   }
 
   return (
@@ -156,6 +166,53 @@ export function NavMenuSheet({
             />
           )}
         </nav>
+
+        {user && (
+          <section className="mt-6">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+              <User className="h-4 w-4 shrink-0" /> Mon compte
+            </h3>
+            <div className="grid gap-1.5">
+              <MenuRow
+                icon={<User className="h-4 w-4" />}
+                label="Profil"
+                onClick={() => comingSoon("Le profil")}
+              />
+              <MenuRow
+                icon={<CreditCard className="h-4 w-4" />}
+                label="Plan et crédits"
+                onClick={() => comingSoon("Le plan et les crédits")}
+              />
+              <MenuRow
+                icon={<Wallet className="h-4 w-4" />}
+                label="Solde"
+                onClick={() => comingSoon("Le solde")}
+              />
+              <MenuRow
+                icon={<SearchCheck className="h-4 w-4" />}
+                label="Recherches"
+                onClick={() => go(onOpenWishlist)}
+                disabled={!onOpenWishlist}
+              />
+              <MenuRow
+                icon={<Megaphone className="h-4 w-4" />}
+                label="Disponibilités"
+                onClick={() => go(onOpenDemand)}
+                disabled={!onOpenDemand}
+              />
+              <MenuRow
+                icon={<Receipt className="h-4 w-4" />}
+                label="Transactions"
+                onClick={() => comingSoon("Les transactions")}
+              />
+              <MenuRow
+                icon={<Settings className="h-4 w-4" />}
+                label="Paramètres"
+                onClick={() => comingSoon("Les paramètres")}
+              />
+            </div>
+          </section>
+        )}
 
         {user && (
           <section className="mt-6">
@@ -264,7 +321,9 @@ export function useNotificationsFeed() {
   }, [refresh, user]);
 
   const markAllRead = useCallback(() => {
-    setItems((prev) => prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })));
+    setItems((prev) =>
+      prev.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() })),
+    );
   }, []);
 
   return { items, unread: items.filter((n) => !n.read_at).length, markAllRead, refresh };
