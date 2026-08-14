@@ -73,16 +73,16 @@ async function fetchGeoJSON(path: string): Promise<GeoJSON> {
     ...feature,
     id:
       feature.id ??
-      (typeof feature.properties.id === "string" || typeof feature.properties.id === "number"
-        ? feature.properties.id
+      (typeof feature.properties["id"] === "string" || typeof feature.properties["id"] === "number"
+        ? feature.properties["id"]
         : `${path}-${index}`),
     properties: {
       ...feature.properties,
       name:
-        feature.properties.name ??
-        feature.properties.shapeName ??
-        feature.properties.NAME ??
-        feature.properties.admin ??
+        feature.properties["name"] ??
+        feature.properties["shapeName"] ??
+        feature.properties["NAME"] ??
+        feature.properties["admin"] ??
         "",
     },
   }));

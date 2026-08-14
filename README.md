@@ -1,18 +1,20 @@
 # OmniView Lomé
 
-
 ## Spécification produit et plan de build actuels
 
-La source de vérité V1/V2-ready ajoutée après le prompt de build est documentée ici :
+La source canonique de vérité V1/V2-ready, fusionnée avec la spécification d'interface, le plan de complétion et le contrat de globe rotatif, est documentée ici :
 
-- [OMNI — Product & Interface Specification](docs/omni-product-interface-spec.md)
+- [OMNI — Master Specification](docs/OMNI_MASTER.md)
+- [Omni — Product & Interface Specification](docs/omni-product-interface-spec.md)
+- [Omni — Master Update, Stateful Globe & Completion Plan](docs/omni-master-update-stateful-globe-plan.md)
 - [Omni — Build Plan after the Build Prompt](docs/omni-build-plan-after-build-prompt.md)
 
-Ces documents remplacent l'ancienne logique de landing app-first par une règle structurante : **Omni doit être construit comme une interface map-first stateful, pas comme une suite de pages séparées.**
+`OMNI_MASTER.md` is the repository product source of truth. The key interaction contract is that Omni opens directly into a clean, slowly rotating globe; each search resets to the world and stages a continent → country → region → town/area → exact-position reveal before showing the user position and finding pins. These documents replace the old landing-first logic with one map-first stateful interface rather than a suite of disconnected pages.
 
 # OMNIVIEW — PROMPT DE BUILD COMPLET
 
 ## Ce qui change dans cette version
+
 - La landing page parle aux utilisateurs (acheteurs et vendeurs) et à leurs problèmes réels, pas aux investisseurs. Marché/ask/équipe/roadmap, c'est le pitch deck, pas le produit.
 - Le parcours vendeur est maintenant spécifié en entier : création de fiche → déblocage du bonus → utilisation comme budget pub → écrans de ciblage publicitaire.
 
