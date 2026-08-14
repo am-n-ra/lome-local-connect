@@ -12,23 +12,54 @@ type GeoJSON = {
   features: GeoJSONFeature[];
 };
 
-type BoundaryLevel = {
+export type BoundaryLevel = {
   id: string;
   source: string;
   minzoom: number;
   maxzoom: number;
   labelMinzoom: number;
+  name: string;
 };
 
 export const BOUNDARY_LEVELS: BoundaryLevel[] = [
-  { id: "africa", source: "africa", minzoom: 0, maxzoom: 6, labelMinzoom: 2 },
-  { id: "togo", source: "togo", minzoom: 3, maxzoom: 9, labelMinzoom: 4 },
-  { id: "togo-regions", source: "togo-regions", minzoom: 6, maxzoom: 12, labelMinzoom: 7 },
-  { id: "togo-communes", source: "togo-communes", minzoom: 9, maxzoom: 15, labelMinzoom: 10 },
-  { id: "lome-quartiers", source: "lome-quartiers", minzoom: 12, maxzoom: 22, labelMinzoom: 13 },
+  {
+    id: "africa",
+    source: "africa",
+    minzoom: 0,
+    maxzoom: 5.5,
+    labelMinzoom: 1.5,
+    name: "Continent",
+  },
+  { id: "togo", source: "togo", minzoom: 3.5, maxzoom: 8.5, labelMinzoom: 4, name: "Pays" },
+  {
+    id: "togo-regions",
+    source: "togo-regions",
+    minzoom: 6.5,
+    maxzoom: 11.5,
+    labelMinzoom: 7,
+    name: "Région",
+  },
+  {
+    id: "togo-communes",
+    source: "togo-communes",
+    minzoom: 9,
+    maxzoom: 14,
+    labelMinzoom: 10,
+    name: "Ville / commune",
+  },
+  {
+    id: "lome-quartiers",
+    source: "lome-quartiers",
+    minzoom: 12,
+    maxzoom: 22,
+    labelMinzoom: 13,
+    name: "Quartier",
+  },
 ];
 
 const BOUNDARY_COLOR = "#1f7a4d";
+const ACTIVE_BOUNDARY_COLOR = "#0f5f3b";
+const BOUNDARY_GLOW_COLOR = "#8fd2ff";
 
 const cache = new Map<string, GeoJSON>();
 
@@ -79,8 +110,13 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     maxzoom: level.maxzoom,
     layout: { visibility: "visible" },
     paint: {
-      "fill-color": BOUNDARY_COLOR,
-      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.3, 0.06],
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "active"], false],
+        ACTIVE_BOUNDARY_COLOR,
+        BOUNDARY_COLOR,
+      ],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.34, 0.045],
     },
   });
 
@@ -92,9 +128,14 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     maxzoom: level.maxzoom,
     layout: { visibility: "visible" },
     paint: {
-      "line-color": BOUNDARY_COLOR,
-      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 3, 1],
-      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.5],
+      "line-color": [
+        "case",
+        ["boolean", ["feature-state", "active"], false],
+        ACTIVE_BOUNDARY_COLOR,
+        BOUNDARY_COLOR,
+      ],
+      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 3.5, 1],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.48],
     },
   });
 
@@ -106,12 +147,36 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     maxzoom: level.maxzoom,
     layout: { visibility: "visible" },
     paint: {
-      "line-color": "#7ab8ff",
+      "line-color": BOUNDARY_GLOW_COLOR,
       "line-width": ["case", ["boolean", ["feature-state", "active"], false], 8, 0],
       "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.4, 0],
     },
   });
 
+  map.addLayer({
+    id: `${level.id}-labels`,
+    type: "symbol",
+    source: level.source,
+    minzoom: level.labelMinzoom,
+    maxzoom: level.maxzoom,
+    layout: {
+      "text-field": ["coalesce", ["get", "name"], ["get", "shapeName"], ""],
+      "text-font": ["Noto Sans Regular"],
+      "text-size": ["interpolate", ["linear"], ["zoom"], level.labelMinzoom, 11, level.maxzoom, 15],
+      "text-allow-overlap": false,
+    },
+    paint: {
+      "text-color": [
+        "case",
+        ["boolean", ["feature-state", "active"], false],
+        ACTIVE_BOUNDARY_COLOR,
+        "#315f4b",
+      ],
+      "text-halo-color": "#ffffff",
+      "text-halo-width": 1.5,
+      "text-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.72],
+    },
+  });
 }
 
 const BOUNDARY_PATHS: Record<string, string> = {
@@ -143,8 +208,14 @@ export async function loadBoundariesForZoom(map: MapInstance, zoom: number) {
 
 let activeFeature: { source: string; id: string | number } | null = null;
 
+export function boundaryLevelForZoom(zoom: number) {
+  return [...BOUNDARY_LEVELS]
+    .reverse()
+    .find((level) => zoom >= level.minzoom && zoom <= level.maxzoom);
+}
+
 export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
-  for (const level of BOUNDARY_LEVELS) {
+  for (const level of [...BOUNDARY_LEVELS].reverse()) {
     if (!loadedLevels.has(level.source)) continue;
     if (zoom < level.minzoom || zoom > level.maxzoom) continue;
 
@@ -169,6 +240,8 @@ export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
       return;
     }
   }
+
+  clearHighlight(map);
 }
 
 export function clearHighlight(map: MapInstance) {
