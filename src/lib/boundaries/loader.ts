@@ -112,22 +112,6 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     },
   });
 
-  map.addLayer({
-    id: `${level.id}-labels`,
-    type: "symbol",
-    source: level.source,
-    minzoom: level.labelMinzoom,
-    maxzoom: level.maxzoom,
-    layout: {
-      "text-field": ["get", "name"],
-      "text-size": 11,
-      "text-font": ["Open Sans Regular", "Noto Sans Regular"],
-    },
-    paint: {
-      "text-color": "#3d3d3d",
-      "text-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.6],
-    },
-  });
 }
 
 const BOUNDARY_PATHS: Record<string, string> = {
