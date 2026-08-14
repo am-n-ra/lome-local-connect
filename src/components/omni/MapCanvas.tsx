@@ -37,9 +37,13 @@ const GLOBE_START_ZOOM = 1.5;
 const FLY_IN_DURATION = 2500;
 
 function facilitiesToGeoJSON(facilities: MapFacility[]) {
+  const mappableFacilities = facilities.filter(
+    (f) => Number.isFinite(f.longitude) && Number.isFinite(f.latitude),
+  );
+
   return {
     type: "FeatureCollection" as const,
-    features: facilities.map((f) => ({
+    features: mappableFacilities.map((f) => ({
       type: "Feature" as const,
       geometry: { type: "Point" as const, coordinates: [f.longitude, f.latitude] },
       id: f.id,
@@ -118,21 +122,6 @@ export function MapCanvas({
           "circle-stroke-width": 2,
           "circle-stroke-color": "#ffffff",
           "circle-opacity": 0.85,
-        },
-      });
-
-      map.addLayer({
-        id: "omni-cluster-count",
-        type: "symbol",
-        source: "omni-facilities",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": "{point_count_abbreviated}",
-          "text-size": 12,
-          "text-font": ["Open Sans Bold", "Noto Sans Bold"],
-        },
-        paint: {
-          "text-color": "#ffffff",
         },
       });
 

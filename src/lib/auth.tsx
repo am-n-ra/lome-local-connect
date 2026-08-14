@@ -77,7 +77,8 @@ export async function getAccessToken(): Promise<string | null> {
       credentials: "same-origin",
     });
     if (!response.ok) {
-      clearAccessToken();
+      cachedToken = null;
+      cachedAt = Date.now();
       return null;
     }
     const data = (await response.json()) as { token?: string };
@@ -85,6 +86,8 @@ export async function getAccessToken(): Promise<string | null> {
     cachedAt = Date.now();
     return cachedToken;
   } catch {
+    cachedToken = null;
+    cachedAt = Date.now();
     return null;
   }
 }
