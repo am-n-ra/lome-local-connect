@@ -8,6 +8,48 @@ import {
   type ReactNode,
 } from "react";
 
+export const PENDING_SEARCH_STORAGE_KEY = "omni.pendingAvailabilitySearch";
+
+export type PendingAvailabilitySearch = {
+  term: string;
+  category: string | null;
+  filters: unknown;
+  targetFacilityIds: string[];
+  location: { lat: number; lng: number } | null;
+  demandOpen: boolean;
+};
+
+export function savePendingAvailabilitySearch(payload: PendingAvailabilitySearch) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(PENDING_SEARCH_STORAGE_KEY, JSON.stringify(payload));
+}
+
+export function restorePendingAvailabilitySearch(): PendingAvailabilitySearch | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.sessionStorage.getItem(PENDING_SEARCH_STORAGE_KEY);
+  if (!raw) return null;
+  window.sessionStorage.removeItem(PENDING_SEARCH_STORAGE_KEY);
+  try {
+    const parsed = JSON.parse(raw) as PendingAvailabilitySearch;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+export function readPendingAuthRedirect(defaultPath = "/carte") {
+  if (typeof window === "undefined") return defaultPath;
+  const params = new URLSearchParams(window.location.search);
+  const redirectTo = params.get("redirectTo");
+  if (redirectTo?.startsWith("/")) return redirectTo;
+  return defaultPath;
+}
+
+function notifyPendingSearchReady() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("omni:pending-availability-ready"));
+}
+
 /** Neon Auth is reached through the same-origin proxy at /api/auth. */
 const AUTH_BASE = "/api/auth";
 
@@ -155,6 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         clearAccessToken();
         await refresh();
+        notifyPendingSearchReady();
       },
       signUp: async (email, password, name) => {
         await authFetch("/sign-up/email", {
@@ -163,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         clearAccessToken();
         await refresh();
+        notifyPendingSearchReady();
       },
       signOut: async () => {
         try {
