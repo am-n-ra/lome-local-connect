@@ -5,7 +5,7 @@ import {
   useMapLibre,
   type MapInstance,
 } from "@/lib/maplibre";
-import { STATUS_COLOR, type FacilityRow } from "@/lib/omni";
+import { type FacilityRow } from "@/lib/omni";
 import {
   loadBoundariesForZoom,
   highlightBoundaryAtCenter,
@@ -138,7 +138,6 @@ export function MapCanvas({
         id: "omni-points",
         type: "circle",
         source: "omni-facilities",
-        filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
             "match",
@@ -168,7 +167,7 @@ export function MapCanvas({
         type: "line",
         source: "omni-route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
+        paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
       });
 
       loadBoundariesForZoom(map, GLOBE_START_ZOOM);
@@ -202,27 +201,10 @@ export function MapCanvas({
       if (f) selectRef.current?.(f);
     });
 
-    map.on("click", "omni-clusters", (e) => {
-      const feat = e.features?.[0];
-      const clusterId = feat?.properties?.["cluster_id"] as number | undefined;
-      if (clusterId == null) return;
-      const source = map.getSource("omni-facilities");
-      source?.getClusterExpansionZoom?.(clusterId, (err, zoom) => {
-        if (err) return;
-        map.flyTo({ center: e.lngLat, zoom: Math.min(zoom, 18), speed: 1.2 });
-      });
-    });
-
     map.on("mouseenter", "omni-points", () => {
       map.getCanvas().style.cursor = "pointer";
     });
     map.on("mouseleave", "omni-points", () => {
-      map.getCanvas().style.cursor = "";
-    });
-    map.on("mouseenter", "omni-clusters", () => {
-      map.getCanvas().style.cursor = "pointer";
-    });
-    map.on("mouseleave", "omni-clusters", () => {
       map.getCanvas().style.cursor = "";
     });
 
