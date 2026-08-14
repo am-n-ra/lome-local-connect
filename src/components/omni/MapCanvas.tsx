@@ -1,15 +1,16 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   applyPastelPalette,
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
 } from "@/lib/maplibre";
-import { STATUS_COLOR, type FacilityRow } from "@/lib/omni";
+import { type FacilityRow } from "@/lib/omni";
 import {
   loadBoundariesForZoom,
   highlightBoundaryAtCenter,
   resetBoundaryState,
+  boundaryLevelForZoom,
 } from "@/lib/boundaries/loader";
 
 export type MapFacility = FacilityRow & {
@@ -33,7 +34,8 @@ type Props = {
 };
 
 const GLOBE_ZOOM = 5;
-const GLOBE_START_ZOOM = 1.5;
+const GLOBE_START_ZOOM = 1.25;
+const GLOBE_START_CENTER: [number, number] = [8, 7];
 const FLY_IN_DURATION = 2500;
 
 function facilitiesToGeoJSON(facilities: MapFacility[]) {
@@ -83,6 +85,7 @@ export function MapCanvas({
   const readyRef = useRef(false);
   const flownRef = useRef(false);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
+  const [activeBoundaryLevel, setActiveBoundaryLevel] = useState("Continent");
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
@@ -91,7 +94,7 @@ export function MapCanvas({
     const map = new gl.Map({
       container: containerRef.current,
       style: PASTEL_STYLE_URL,
-      center: [target.lng, target.lat],
+      center: GLOBE_START_CENTER,
       zoom: GLOBE_START_ZOOM,
       interactive,
       attributionControl: true,
@@ -106,30 +109,12 @@ export function MapCanvas({
       map.addSource("omni-facilities", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
-        cluster: true,
-        clusterRadius: 50,
-        clusterMaxZoom: 14,
-      });
-
-      map.addLayer({
-        id: "omni-clusters",
-        type: "circle",
-        source: "omni-facilities",
-        filter: ["has", "point_count"],
-        paint: {
-          "circle-color": ["step", ["get", "point_count"], "#1f7a4d", 10, "#165e3b", 50, "#0f462c"],
-          "circle-radius": ["step", ["get", "point_count"], 16, 10, 24, 50, 36],
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-          "circle-opacity": 0.85,
-        },
       });
 
       map.addLayer({
         id: "omni-points",
         type: "circle",
         source: "omni-facilities",
-        filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": [
             "match",
@@ -159,23 +144,27 @@ export function MapCanvas({
         type: "line",
         source: "omni-route",
         layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#1f7a4d", "line-width": 5, "line-opacity": 0.9 },
+        paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
       });
 
       loadBoundariesForZoom(map, GLOBE_START_ZOOM);
+      highlightBoundaryAtCenter(map, GLOBE_START_ZOOM);
     });
 
     let globe = true;
-    map.on("zoom", () => {
+    const refreshLivingBoundary = () => {
       const z = map.getZoom();
       const wantsGlobe = z <= GLOBE_ZOOM;
       if (wantsGlobe !== globe) {
         globe = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
-      loadBoundariesForZoom(map, z);
-      highlightBoundaryAtCenter(map, z);
-    });
+      setActiveBoundaryLevel(boundaryLevelForZoom(z)?.name ?? "Quartier");
+      void loadBoundariesForZoom(map, z).then(() => highlightBoundaryAtCenter(map, z));
+    };
+
+    map.on("zoom", refreshLivingBoundary);
+    map.on("moveend", refreshLivingBoundary);
 
     map.on("click", (e) => {
       clickRef.current?.({ lat: e.lngLat.lat, lng: e.lngLat.lng });
@@ -189,27 +178,10 @@ export function MapCanvas({
       if (f) selectRef.current?.(f);
     });
 
-    map.on("click", "omni-clusters", (e) => {
-      const feat = e.features?.[0];
-      const clusterId = feat?.properties?.["cluster_id"] as number | undefined;
-      if (clusterId == null) return;
-      const source = map.getSource("omni-facilities");
-      source?.getClusterExpansionZoom?.(clusterId, (err, zoom) => {
-        if (err) return;
-        map.flyTo({ center: e.lngLat, zoom: Math.min(zoom, 18), speed: 1.2 });
-      });
-    });
-
     map.on("mouseenter", "omni-points", () => {
       map.getCanvas().style.cursor = "pointer";
     });
     map.on("mouseleave", "omni-points", () => {
-      map.getCanvas().style.cursor = "";
-    });
-    map.on("mouseenter", "omni-clusters", () => {
-      map.getCanvas().style.cursor = "pointer";
-    });
-    map.on("mouseleave", "omni-clusters", () => {
       map.getCanvas().style.cursor = "";
     });
 
@@ -240,7 +212,8 @@ export function MapCanvas({
     const map = mapRef.current;
     if (!gl || !map || !readyRef.current) return;
     const source = map.getSource("omni-facilities") as
-      { setData: (data: unknown) => void } | undefined;
+      | { setData: (data: unknown) => void }
+      | undefined;
     source?.setData(facilitiesToGeoJSON(facilities));
   }, [gl, facilities]);
 
@@ -321,6 +294,12 @@ export function MapCanvas({
 
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>
+      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 md:flex">
+        <div className="h-7 w-7 rounded-full border-2 border-primary/80 bg-primary/10 shadow-[0_0_0_8px_rgba(31,122,77,0.12)]" />
+        <div className="rounded-full border border-primary/20 bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur">
+          Focus {activeBoundaryLevel.toLowerCase()}
+        </div>
+      </div>
       {!gl && (
         <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
           Chargement de la carte…
