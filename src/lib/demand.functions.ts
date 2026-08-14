@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
+import { OMNI_CONFIG } from "./omni.config";
 import { enforceRateLimit } from "./rate-limit.server";
 
 export type DemandResponseRow = {
@@ -10,6 +11,7 @@ export type DemandResponseRow = {
   facility_id: string;
   facility_name: string;
   available: boolean;
+  kind: "available" | "partial" | "unavailable" | string;
   price: number | null;
   quantity: number | null;
   message: string | null;
@@ -81,7 +83,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
        RETURNING plan, requests_used, extra_credits, period_month`,
       [context.userId],
     );
-    const includedCredits = plan?.plan === "pro" ? 30 : 3;
+    const includedCredits = plan?.plan === "pro" ? 30 : OMNI_CONFIG.freeBuyerBulkLimit;
 
     // Bulk targets the map's active result IDs when present. Geographic limits are owned by search filters.
     const targets = await query<{
@@ -218,7 +220,7 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
       return { requests, responses: [] as (DemandResponseRow & { request_id: string })[] };
 
     const responses = await query<DemandResponseRow & { request_id: string }>(
-      `SELECT r.id, r.request_id, r.facility_id, f.name AS facility_name, r.available,
+      `SELECT r.id, r.request_id, r.facility_id, f.name AS facility_name, r.available, r.kind,
               r.price, r.quantity, r.message, r.created_at
        FROM public.demand_responses r
        JOIN public.facilities f ON f.id = r.facility_id
@@ -281,7 +283,7 @@ export const respondToDemand = createServerFn({ method: "POST" })
       .object({
         facilityId: z.string().uuid(),
         requestId: z.string().uuid(),
-        available: z.boolean(),
+        kind: z.enum(["available", "partial", "unavailable"]).default("available"),
         price: z.number().int().min(0).max(100_000_000).nullable().optional(),
         quantity: z.number().int().min(0).max(999).nullable().optional(),
         message: z.string().max(400).optional(),
@@ -297,15 +299,16 @@ export const respondToDemand = createServerFn({ method: "POST" })
 
     await query(
       `INSERT INTO public.demand_responses
-         (request_id, facility_id, available, price, quantity, message)
-       VALUES ($1,$2,$3,$4,$5,$6)
+         (request_id, facility_id, available, kind, price, quantity, message)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
        ON CONFLICT (request_id, facility_id) DO UPDATE
-         SET available = EXCLUDED.available, price = EXCLUDED.price,
+         SET available = EXCLUDED.available, kind = EXCLUDED.kind, price = EXCLUDED.price,
              quantity = EXCLUDED.quantity, message = EXCLUDED.message`,
       [
         data.requestId,
         data.facilityId,
-        data.available,
+        data.kind !== "unavailable",
+        data.kind,
         data.price ?? null,
         data.quantity ?? null,
         data.message?.trim() || null,
@@ -322,8 +325,8 @@ export const respondToDemand = createServerFn({ method: "POST" })
          VALUES ($1,$2,$3,$4)`,
         [
           buyer.buyer_id,
-          data.available ? "Un vendeur a votre produit" : "Réponse à votre demande",
-          `${owned.name} a répondu à « ${buyer.search_term} ».`,
+          data.kind === "unavailable" ? "Réponse à votre demande" : "Un vendeur a répondu",
+          `${owned.name} a répondu (${data.kind === "partial" ? "partiel" : data.kind === "available" ? "disponible" : "indisponible"}) à « ${buyer.search_term} ».`,
           "/carte",
         ],
       );

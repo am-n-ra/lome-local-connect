@@ -145,7 +145,7 @@ export const createCheckout = createServerFn({ method: "POST" })
 
     const existing = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `SELECT id, qr_token, qr_expires_at FROM public.transactions
-       WHERE cart_id = $1 AND status = 'pending' AND qr_expires_at > now()
+       WHERE cart_id = $1 AND status IN ('pending','qr_generated') AND qr_expires_at > now()
        ORDER BY created_at DESC LIMIT 1`,
       [cart.id],
     );
@@ -166,8 +166,9 @@ export const createCheckout = createServerFn({ method: "POST" })
     const txn = await queryOne<{ qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
-          fee_percent, payment_mode, status, qr_token, qr_expires_at)
-       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,'cash','pending',$8, now() + interval '2 hours')
+          fee_percent, payment_mode, status, qr_token, qr_expires_at, intent_created_at, intent_metadata)
+       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,'cash','qr_generated',$8, now() + interval '2 hours', now(),
+               jsonb_build_object('buyer_id', $2, 'facility_id', $1, 'cart_id', $3, 'amount', $4, 'platform_fee', $5, 'payout_amount', $6, 'payment_mode', 'cash'))
        RETURNING qr_token, qr_expires_at`,
       [
         cart.facility_id,

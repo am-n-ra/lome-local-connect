@@ -26,12 +26,15 @@ type Props = {
   interactive?: boolean;
   className?: string;
   onMapClick?: (coords: { lat: number; lng: number }) => void;
+  introFlight?: boolean;
+  introFlightReady?: boolean;
 };
 
 const GLOBE_ZOOM = 5;
-const GLOBE_START_ZOOM = 1.25;
+const GLOBE_START_ZOOM = 0.8;
 const GLOBE_START_CENTER: [number, number] = [8, 7];
-const FLY_IN_DURATION = 2500;
+const INTRO_STEP_DURATION = 1350;
+const FOCUS_DURATION = 1200;
 
 function facilitiesToGeoJSON(facilities: MapFacility[]) {
   const mappableFacilities = facilities.filter(
@@ -69,22 +72,25 @@ export function MapCanvas({
   interactive = true,
   className,
   onMapClick,
+  introFlight = false,
+  introFlightReady = true,
 }: Props) {
   const gl = useMapLibre();
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
+  const facilitiesRef = useRef(facilities);
+  facilitiesRef.current = facilities;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
   const flownRef = useRef(false);
+  const introTimerRef = useRef<number[]>([]);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
-    const target = marketCenter ?? { lat: 6.1725, lng: 1.2314 };
-
     const map = new gl.Map({
       container: containerRef.current,
       style: PASTEL_STYLE_URL,
@@ -166,7 +172,7 @@ export function MapCanvas({
       const feat = e.features?.[0];
       if (!feat) return;
       const id = feat.properties?.["id"] as string;
-      const f = facilities.find((x) => x.id === id);
+      const f = facilitiesRef.current.find((x) => x.id === id);
       if (f) selectRef.current?.(f);
     });
 
@@ -182,23 +188,60 @@ export function MapCanvas({
       map.remove();
       mapRef.current = null;
       readyRef.current = false;
+      introTimerRef.current.forEach((id) => window.clearTimeout(id));
+      introTimerRef.current = [];
       flownRef.current = false;
     };
   }, [gl, interactive, marketCenter?.lat, marketCenter?.lng, marketZoom]);
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !marketCenter || flownRef.current) return;
+    if (!map || !marketCenter || flownRef.current || (introFlight && !introFlightReady)) return;
     flownRef.current = true;
-    setTimeout(() => {
-      map.flyTo({
-        center: [marketCenter.lng, marketCenter.lat],
-        zoom: marketZoom,
-        duration: FLY_IN_DURATION,
-        speed: 0.8,
-      });
-    }, 800);
-  }, [marketCenter, marketZoom]);
+
+    const finalTarget = userPosition ?? marketCenter;
+    const waypoints = introFlight
+      ? [
+          { center: [20, 3] as [number, number], zoom: 2.15, label: "continent" },
+          { center: [0.9, 8.6] as [number, number], zoom: 5.35, label: "country" },
+          {
+            center: [marketCenter.lng, marketCenter.lat] as [number, number],
+            zoom: 8.25,
+            label: "region",
+          },
+          {
+            center: [marketCenter.lng, marketCenter.lat] as [number, number],
+            zoom: marketZoom,
+            label: "town",
+          },
+          {
+            center: [finalTarget.lng, finalTarget.lat] as [number, number],
+            zoom: userPosition ? 14.2 : marketZoom,
+            label: "area",
+          },
+        ]
+      : [
+          {
+            center: [marketCenter.lng, marketCenter.lat] as [number, number],
+            zoom: marketZoom,
+            label: "market",
+          },
+        ];
+
+    introTimerRef.current.forEach((id) => window.clearTimeout(id));
+    introTimerRef.current = waypoints.map((step, index) =>
+      window.setTimeout(() => {
+        map.flyTo({
+          center: step.center,
+          zoom: step.zoom,
+          duration: INTRO_STEP_DURATION,
+          speed: 0.55,
+          curve: 1.15,
+          essential: true,
+        });
+      }, 700 + index * (INTRO_STEP_DURATION + 120)),
+    );
+  }, [introFlight, introFlightReady, marketCenter, marketZoom, userPosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -208,6 +251,17 @@ export function MapCanvas({
       | undefined;
     source?.setData(facilitiesToGeoJSON(facilities));
   }, [gl, facilities]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current) return;
+    for (const facility of facilities) {
+      map.setFeatureState(
+        { source: "omni-facilities", id: facility.id },
+        { selected: facility.id === selectedId },
+      );
+    }
+  }, [facilities, selectedId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -262,7 +316,14 @@ export function MapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focus) return;
-    map.flyTo({ center: [focus.lng, focus.lat], zoom: focus.zoom ?? 15, speed: 1.3 });
+    map.flyTo({
+      center: [focus.lng, focus.lat],
+      zoom: focus.zoom ?? 15,
+      duration: FOCUS_DURATION,
+      speed: 0.8,
+      curve: 1.1,
+      essential: true,
+    });
   }, [focus]);
 
   useEffect(() => {
@@ -270,7 +331,13 @@ export function MapCanvas({
     if (!map || !fitPoints || fitPoints.length === 0) return;
     if (fitPoints.length === 1) {
       const p = fitPoints[0]!;
-      map.flyTo({ center: [p.lng, p.lat], zoom: 15.5, speed: 1.3 });
+      map.flyTo({
+        center: [p.lng, p.lat],
+        zoom: 15.5,
+        duration: FOCUS_DURATION,
+        speed: 0.8,
+        essential: true,
+      });
       return;
     }
     const lats = fitPoints.map((p) => p.lat);
@@ -280,7 +347,7 @@ export function MapCanvas({
         [Math.min(...lngs), Math.min(...lats)],
         [Math.max(...lngs), Math.max(...lats)],
       ],
-      { padding: { top: 80, bottom: 220, left: 40, right: 40 }, maxZoom: 16, duration: 900 },
+      { padding: { top: 80, bottom: 220, left: 40, right: 40 }, maxZoom: 16, duration: FOCUS_DURATION },
     );
   }, [fitPoints]);
 
@@ -298,7 +365,8 @@ export function MapCanvas({
     map.flyTo({
       center: [target.lng, target.lat],
       zoom: userPosition ? 15.5 : marketZoom,
-      speed: 1.3,
+      duration: FOCUS_DURATION,
+      speed: 0.8,
     });
   }
 

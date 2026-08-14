@@ -47,6 +47,9 @@ export type ProductRow = {
   price: number;
   discount_percent: number;
   in_stock: boolean;
+  status: string;
+  quantity_available: number;
+  omni_allocation_percent: number;
   photo_url: string | null;
   last_confirmed_at: string | null;
 };
@@ -121,6 +124,9 @@ const FACILITY_SELECT = `
   LEFT JOIN LATERAL (
     SELECT count(*) AS cnt, min(price) AS min_price, max(discount_percent) AS max_discount
     FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock
+      AND COALESCE(pr.status, 'active') = 'active'
+      AND COALESCE(pr.quantity_available, 1) > 0
+      AND COALESCE(pr.omni_allocation_percent, 100) > 0
   ) p ON true
   LEFT JOIN public.subscriptions s ON s.facility_id = f.id
 `;
@@ -138,7 +144,11 @@ export const listFacilities = createServerFn({ method: "GET" })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
-    const clauses: string[] = ["f.market_code = $1", "f.is_online = true"];
+    const clauses: string[] = [
+      "f.market_code = $1",
+      "f.is_online = true",
+      "COALESCE(f.emergency_shutdown, false) = false",
+    ];
     const params: unknown[] = [data.market_code];
 
     if (data.category && data.category !== "all") {
@@ -150,7 +160,7 @@ export const listFacilities = createServerFn({ method: "GET" })
       const i = params.length;
       clauses.push(`(
         f.name ILIKE $${i} OR f.description ILIKE $${i} OR f.neighbourhood ILIKE $${i}
-        OR EXISTS (SELECT 1 FROM public.products pr WHERE pr.facility_id = f.id AND pr.name ILIKE $${i})
+        OR EXISTS (SELECT 1 FROM public.products pr WHERE pr.facility_id = f.id AND pr.in_stock AND COALESCE(pr.status, 'active') = 'active' AND COALESCE(pr.quantity_available, 1) > 0 AND COALESCE(pr.omni_allocation_percent, 100) > 0 AND pr.name ILIKE $${i})
       )`);
     }
     if (data.includeUnclaimed === false) {
@@ -174,7 +184,11 @@ export const getFacility = createServerFn({ method: "GET" })
 
     const [products, offers, coupons, media] = await Promise.all([
       query<ProductRow>(
-        `SELECT id, facility_id, name, price, discount_percent, in_stock, photo_url, last_confirmed_at
+        `SELECT id, facility_id, name, price, discount_percent, in_stock,
+                COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
+                COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
+                COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
+                photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY in_stock DESC, name ASC`,
         [data.id],
       ),

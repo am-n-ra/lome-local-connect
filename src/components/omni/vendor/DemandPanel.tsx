@@ -24,6 +24,7 @@ export function DemandPanel({
   const respond = useServerFn(respondToDemand);
   const [live, setLive] = useState<VendorDemandRequest[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
+  const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -38,17 +39,28 @@ export function DemandPanel({
     void refresh();
   }, [refresh]);
 
-  async function answer(requestId: string, available: boolean) {
+  async function answer(requestId: string, kind: "available" | "partial" | "unavailable") {
     setBusy(requestId);
     try {
       const raw = prices[requestId];
       const price = raw && raw.trim() ? Number(raw) : null;
+      const rawQuantity = quantities[requestId];
+      const availableQuantity = rawQuantity && rawQuantity.trim() ? Number(rawQuantity) : null;
       await respond({
         data: {
           facilityId,
           requestId,
-          available,
-          price: available && price !== null && Number.isFinite(price) ? Math.round(price) : null,
+          kind,
+          price:
+            kind !== "unavailable" && price !== null && Number.isFinite(price)
+              ? Math.round(price)
+              : null,
+          quantity:
+            kind !== "unavailable" &&
+            availableQuantity !== null &&
+            Number.isFinite(availableQuantity)
+              ? Math.max(0, Math.round(availableQuantity))
+              : null,
         },
       });
       toast.success("Réponse envoyée à l'acheteur.");
@@ -65,8 +77,8 @@ export function DemandPanel({
       <div className="space-y-3">
         <h3 className="font-display text-lg font-bold">Demandes en direct</h3>
         <p className="text-sm text-muted-foreground">
-          Des acheteurs proches diffusent leur besoin. Répondez « je l'ai » avec votre prix pour
-          capter la vente.
+          Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou
+          indisponible avec votre prix et la quantité exacte disponible.
         </p>
         <ul className="space-y-2">
           {live.map((r) => (
@@ -79,7 +91,7 @@ export function DemandPanel({
                 </span>
               </div>
               {r.answered ? (
-                <p className="mt-2 text-sm text-forest">Vous avez déjà répondu.</p>
+                <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
               ) : (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Input
@@ -90,18 +102,35 @@ export function DemandPanel({
                     value={prices[r.id] ?? ""}
                     onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}
                   />
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    placeholder="Qté dispo"
+                    className="h-9 w-28"
+                    value={quantities[r.id] ?? ""}
+                    onChange={(e) => setQuantities((q) => ({ ...q, [r.id]: e.target.value }))}
+                  />
                   <Button
                     size="sm"
                     disabled={busy === r.id}
-                    onClick={() => void answer(r.id, true)}
+                    onClick={() => void answer(r.id, "available")}
                   >
-                    Je l'ai
+                    Disponible
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy === r.id}
+                    onClick={() => void answer(r.id, "partial")}
+                  >
+                    Partiel
                   </Button>
                   <Button
                     size="sm"
                     variant="outline"
                     disabled={busy === r.id}
-                    onClick={() => void answer(r.id, false)}
+                    onClick={() => void answer(r.id, "unavailable")}
                   >
                     Indisponible
                   </Button>

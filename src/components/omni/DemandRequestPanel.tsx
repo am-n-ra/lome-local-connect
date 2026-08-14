@@ -223,12 +223,15 @@ export function DemandRequestPanel({
                   <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{a.facility_name}</span>
-                      <span className={a.available ? "text-forest" : "text-destructive"}>
-                        {a.available ? "Disponible" : "Indisponible"}
+                      <span className={a.kind === "partial" ? "text-primary" : a.available ? "text-primary" : "text-destructive"}>
+                        {a.kind === "partial" ? "Partiel" : a.available ? "Disponible" : "Indisponible"}
                       </span>
                     </div>
-                    {a.price !== null && (
-                      <p className="text-muted-foreground">{formatMoney(a.price)}</p>
+                    {(a.price !== null || a.quantity !== null) && (
+                      <p className="text-muted-foreground">
+                        {a.price !== null ? formatMoney(a.price) : "Prix à confirmer"}
+                        {a.quantity !== null ? ` · ${a.quantity} unité(s) disponible(s)` : ""}
+                      </p>
                     )}
                     {a.message && <p className="text-muted-foreground">{a.message}</p>}
                   </div>

@@ -6,6 +6,7 @@ This plan translates the V1/V2-ready specification into build phases. The goal i
 ## Implementation status
 - **Phase 1 — Map-first landing state:** implemented in the current app shell: `/` renders the map experience, the buyer map chrome is reduced to notifications + menu, the persistent bottom search is retained, and search camera framing is preserved.
 - **Phase 2 — Search and discovery core:** implemented for the current discovery surface: product/service search, category shortcuts, budget/radius filters, online-only facilities, map pins and contextual search-result cards.
+- **Phase 6 — Catalogue, allocation, promotions and wallet:** product catalogue rows now carry status, exact stock quantity and Omni allocation percentage, with seller controls for those fields; existing promotions/coupons, ad campaigns, wallet deposits and Pro renewal/downgrade logic remain the commercial layer.
 
 ## Phase 0 — Product source of truth and configuration
 - Add explicit product configuration flags: `aiAutomationEnabled`, `buyerAgentEnabled`, `sellerAgentEnabled`, `mediaUiEnabled`, `freeBuyerBulkLimit`, `sellerFreeFacilityLimit`.
@@ -74,3 +75,44 @@ This plan translates the V1/V2-ready specification into build phases. The goal i
 - Agent features never bypass manual capabilities.
 - Purchase/payment critical decisions require explicit user confirmation.
 - Every transaction is traceable end-to-end.
+
+## Implemented state machines and configuration (Phases 0, 3, 4, 5)
+
+### Product configuration
+- Runtime product flags live in `src/lib/omni.config.ts`: AI automation, buyer agent, seller agent, media UI, free buyer bulk limit and seller free facility limit.
+- Manual search, availability, purchase intent and seller operations are explicitly independent from the AI flags.
+
+### Facility state machine
+- `unclaimed`: imported facility with no owner.
+- `uncertified`: claimed or created seller listing awaiting verification.
+- `certified`: admin/trust certified and eligible for full publication.
+- `unconfirmed`: published but not yet trust-confirmed by QR transactions.
+- `confirmed`: earned automatically after enough distinct QR-authorised buyer transactions.
+
+### Availability state machine
+- `open`: buyer demand is live and can receive seller answers.
+- Seller answer kinds: `available`, `partial`, `unavailable`.
+- `closed`: buyer closes the demand, or the request expires.
+
+### Purchase Intent state machine
+- `pending`: seller accepted the buyer request and the buyer can generate a QR intent.
+- `qr_generated`: QR has been created for the intent and chat/timeline can reference it.
+- `completed`: seller redeems the QR and payout/commission metadata is recorded.
+- `expired`, `cancelled`, `failed` and `disputed`: terminal exception states.
+
+### Catalogue and allocation state machine
+- `draft`: seller is preparing a product/service before it appears in Omni allocation.
+- `active`: item can appear in search when stock quantity and Omni allocation are both positive.
+- `paused`: seller temporarily removes the item from Omni discovery without deleting it.
+- `sold_out`: item has no available stock and is excluded from available-result ranking.
+- `omni_allocation_percent`: seller-controlled share of stock exposed to Omni flows.
+
+### Subscription state machine
+- `free`: default buyer/seller plan with configured limits.
+- `pro`: active until the stored expiry date and re-earned by qualifying actions.
+- `downgraded`: represented by returning to `free` when Pro expiry/qualification lapses.
+
+### Agent state machine
+- `off`: automation flags disabled; manual flows still function.
+- `assisted`: AI may summarize/rank but cannot bypass user confirmation.
+- `auto`: reserved for future seller automation behind `aiAutomationEnabled`.

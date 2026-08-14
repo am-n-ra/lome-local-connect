@@ -6,6 +6,7 @@ import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
 import { campaignCostFor, extendedProUntil, FREE_PRODUCT_CAP, QUALIFYING_AMOUNT } from "./vendor";
 import { currentMonthKey, haversineKm } from "./omni";
+import { OMNI_CONFIG } from "./omni.config";
 
 export type VendorFacility = {
   id: string;
@@ -21,6 +22,8 @@ export type VendorFacility = {
   type: string;
   is_online: boolean;
   last_position_update: string | null;
+  operating_hours: string | null;
+  emergency_shutdown: boolean;
   created_at: string;
 };
 
@@ -31,6 +34,9 @@ export type VendorProduct = {
   price: number;
   discount_percent: number;
   in_stock: boolean;
+  status: string;
+  quantity_available: number;
+  omni_allocation_percent: number;
   photo_url: string | null;
   last_confirmed_at: string | null;
 };
@@ -103,8 +109,8 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const facilities = await query<VendorFacility>(
       `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
-              phone, status, type, is_online, last_position_update, created_at
-       FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC`,
+              phone, status, type, is_online, last_position_update, operating_hours, emergency_shutdown, created_at
+       FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );
     if (facilities.length === 0) {
@@ -142,7 +148,11 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
 
     const [products, campaigns, coupons, requestRows, demand] = await Promise.all([
       query<VendorProduct>(
-        `SELECT id, facility_id, name, price, discount_percent, in_stock, photo_url, last_confirmed_at
+        `SELECT id, facility_id, name, price, discount_percent, in_stock,
+                COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
+                COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
+                COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
+                photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY created_at DESC`,
         [facility.id],
       ),
@@ -303,6 +313,8 @@ export const updateFacility = createServerFn({ method: "POST" })
         phone: z.string().max(40).nullable().optional(),
         category: z.string().max(40).optional(),
         isOnline: z.boolean().optional(),
+        operatingHours: z.string().max(200).nullable().optional(),
+        emergencyShutdown: z.boolean().optional(),
         latitude: z.number().min(-90).max(90).optional(),
         longitude: z.number().min(-180).max(180).optional(),
       })
@@ -323,6 +335,11 @@ export const updateFacility = createServerFn({ method: "POST" })
     if (data.phone !== undefined) push("phone", data.phone);
     if (data.category !== undefined) push("category", data.category);
     if (data.isOnline !== undefined) push("is_online", data.isOnline);
+    if (data.operatingHours !== undefined) push("operating_hours", data.operatingHours);
+    if (data.emergencyShutdown !== undefined) {
+      push("emergency_shutdown", data.emergencyShutdown);
+      if (data.emergencyShutdown) push("is_online", false);
+    }
     if (data.latitude !== undefined) push("latitude", data.latitude);
     if (data.longitude !== undefined) {
       push("longitude", data.longitude);
@@ -348,6 +365,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
         name: z.string().min(1).max(120),
         price: z.number().int().min(0).max(100_000_000),
         inStock: z.boolean(),
+        status: z.enum(["draft", "active", "paused", "sold_out"]).optional(),
+        quantityAvailable: z.number().int().min(0).max(1_000_000).optional(),
+        omniAllocationPercent: z.number().int().min(0).max(100).optional(),
         discountPercent: z.number().int().min(0).max(90).optional(),
         photoUrl: z.string().url().max(500).nullable().optional(),
       })
@@ -360,7 +380,8 @@ export const upsertProduct = createServerFn({ method: "POST" })
       await query(
         `UPDATE public.products
          SET name = $1, price = $2, in_stock = $3, discount_percent = $4,
-             photo_url = $5, last_confirmed_at = now()
+             photo_url = $5, last_confirmed_at = now(), status = $8,
+             quantity_available = $9, omni_allocation_percent = $10
          WHERE id = $6 AND facility_id = $7`,
         [
           data.name,
@@ -370,6 +391,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
           data.photoUrl ?? null,
           data.productId,
           data.facilityId,
+          data.status ?? (data.inStock ? "active" : "sold_out"),
+          data.quantityAvailable ?? (data.inStock ? 1 : 0),
+          data.omniAllocationPercent ?? 100,
         ],
       );
       return { ok: true };
@@ -394,8 +418,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
 
     await query(
       `INSERT INTO public.products
-         (facility_id, name, price, in_stock, discount_percent, photo_url, last_confirmed_at)
-       VALUES ($1,$2,$3,$4,$5,$6, now())`,
+         (facility_id, name, price, in_stock, discount_percent, photo_url, last_confirmed_at,
+          status, quantity_available, omni_allocation_percent)
+       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9)`,
       [
         data.facilityId,
         data.name,
@@ -403,6 +428,9 @@ export const upsertProduct = createServerFn({ method: "POST" })
         data.inStock,
         data.discountPercent ?? 0,
         data.photoUrl ?? null,
+        data.status ?? (data.inStock ? "active" : "sold_out"),
+        data.quantityAvailable ?? (data.inStock ? 1 : 0),
+        data.omniAllocationPercent ?? 100,
       ],
     );
     return { ok: true };
