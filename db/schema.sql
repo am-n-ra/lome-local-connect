@@ -135,6 +135,9 @@ CREATE TABLE public.products (
   price             integer NOT NULL DEFAULT 0,
   discount_percent  integer NOT NULL DEFAULT 0 CHECK (discount_percent BETWEEN 0 AND 90),
   in_stock          boolean NOT NULL DEFAULT true,
+  status            text NOT NULL DEFAULT 'active' CHECK (status IN ('draft','active','paused','sold_out')),
+  quantity_available integer NOT NULL DEFAULT 0 CHECK (quantity_available >= 0),
+  omni_allocation_percent integer NOT NULL DEFAULT 100 CHECK (omni_allocation_percent BETWEEN 0 AND 100),
   photo_url         text,
   last_confirmed_at timestamptz,
   created_at        timestamptz NOT NULL DEFAULT now()

@@ -99,6 +99,7 @@ function VendeurPage() {
   const [data, setData] = useState<Dashboard | null>(null);
   const [ready, setReady] = useState(false);
   const [bonusOpen, setBonusOpen] = useState(false);
+  const [hours, setHours] = useState("");
 
   // onboarding form
   const [name, setName] = useState("");
@@ -114,6 +115,9 @@ function VendeurPage() {
   const [pName, setPName] = useState("");
   const [pPrice, setPPrice] = useState("");
   const [pPhoto, setPPhoto] = useState("");
+  const [pQuantity, setPQuantity] = useState("1");
+  const [pAllocation, setPAllocation] = useState("100");
+  const [pStatus, setPStatus] = useState<"draft" | "active" | "paused" | "sold_out">("active");
 
   const loadDashboard = useServerFn(getVendorDashboard);
   const createFacility = useServerFn(createFacilityFn);
@@ -208,7 +212,18 @@ function VendeurPage() {
   async function addProduct() {
     if (!facility) return;
     const price = Number(pPrice);
-    if (pName.trim().length < 2 || !Number.isFinite(price) || price < 0) {
+    const quantityAvailable = Number(pQuantity);
+    const omniAllocationPercent = Number(pAllocation);
+    if (
+      pName.trim().length < 2 ||
+      !Number.isFinite(price) ||
+      price < 0 ||
+      !Number.isFinite(quantityAvailable) ||
+      quantityAvailable < 0 ||
+      !Number.isFinite(omniAllocationPercent) ||
+      omniAllocationPercent < 0 ||
+      omniAllocationPercent > 100
+    ) {
       toast.error("Nom et prix valides requis.");
       return;
     }
@@ -218,7 +233,10 @@ function VendeurPage() {
           facilityId: facility.id,
           name: pName.trim().slice(0, 80),
           price: Math.round(price),
-          inStock: true,
+          inStock: pStatus === "active" && quantityAvailable > 0,
+          status: pStatus,
+          quantityAvailable: Math.round(quantityAvailable),
+          omniAllocationPercent: Math.round(omniAllocationPercent),
           photoUrl: pPhoto.trim() || null,
         },
       });
@@ -226,6 +244,9 @@ function VendeurPage() {
       setPName("");
       setPPrice("");
       setPPhoto("");
+      setPQuantity("1");
+      setPAllocation("100");
+      setPStatus("active");
       toast.success("Produit ajouté.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Ajout impossible.");
@@ -242,6 +263,9 @@ function VendeurPage() {
           name: product.name,
           price: product.price,
           inStock: !product.in_stock,
+          status: !product.in_stock ? "active" : "sold_out",
+          quantityAvailable: !product.in_stock ? Math.max(1, product.quantity_available) : 0,
+          omniAllocationPercent: product.omni_allocation_percent,
           discountPercent: product.discount_percent,
           photoUrl: product.photo_url,
         },
@@ -262,6 +286,9 @@ function VendeurPage() {
           name: product.name,
           price: product.price,
           inStock: product.in_stock,
+          status: product.status as "draft" | "active" | "paused" | "sold_out",
+          quantityAvailable: product.quantity_available,
+          omniAllocationPercent: product.omni_allocation_percent,
           discountPercent: product.discount_percent,
           photoUrl: product.photo_url,
         },
@@ -297,10 +324,35 @@ function VendeurPage() {
   async function toggleOnline(next: boolean) {
     if (!facility) return;
     try {
-      await patchFacility({ data: { facilityId: facility.id, isOnline: next } });
+      await patchFacility({ data: { facilityId: facility.id, isOnline: next, emergencyShutdown: next ? false : undefined } });
       await refresh();
     } catch {
       toast.error("Mise à jour impossible.");
+    }
+  }
+
+
+  async function saveOperatingHours() {
+    if (!facility) return;
+    try {
+      await patchFacility({
+        data: { facilityId: facility.id, operatingHours: hours.trim() || null },
+      });
+      await refresh();
+      toast.success("Horaires enregistrés.");
+    } catch {
+      toast.error("Horaires non enregistrés.");
+    }
+  }
+
+  async function toggleEmergencyShutdown(next: boolean) {
+    if (!facility) return;
+    try {
+      await patchFacility({ data: { facilityId: facility.id, emergencyShutdown: next } });
+      await refresh();
+      toast.success(next ? "Arrêt d'urgence activé." : "Arrêt d'urgence levé.");
+    } catch {
+      toast.error("Arrêt d'urgence non enregistré.");
     }
   }
 
@@ -327,6 +379,10 @@ function VendeurPage() {
       toast.error("Position non enregistrée.");
     }
   }
+
+  useEffect(() => {
+    setHours(facility?.operating_hours ?? "");
+  }, [facility?.id, facility?.operating_hours]);
 
   if (loading || !ready) {
     return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
@@ -480,7 +536,7 @@ function VendeurPage() {
   return (
     <div className="min-h-screen bg-background">
       <TopNav activeRole="vendeur" />
-      <main className="mx-auto max-w-5xl px-4 py-6">
+      <main className="mx-auto max-w-6xl px-4 py-6">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-display text-3xl font-bold">{facility.name}</h1>
           <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? facility.status}</Badge>
@@ -503,6 +559,36 @@ function VendeurPage() {
           </TabsList>
 
           <TabsContent value="apercu" className="mt-5 space-y-4">
+            <div className="omni-card overflow-hidden p-0">
+              <div className="grid gap-0 lg:grid-cols-[1.4fr_0.9fr]">
+                <div className="h-80 min-h-80 lg:h-[460px]">
+                  <MapCanvas
+                    facilities={data?.facilities.map((f) => ({ ...f, owner_id: user.id })) ?? []}
+                    selectedId={facility.id}
+                    focus={{ lat: facility.latitude, lng: facility.longitude }}
+                    onMapClick={(c) => void updatePosition(c)}
+                    className="h-full w-full"
+                  />
+                </div>
+                <div className="space-y-4 p-5">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">Tableau de bord carte</p>
+                    <h2 className="mt-1 font-display text-2xl font-bold">Vos facilities en exploitation</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">La carte vendeur montre uniquement vos facilities et reprend le rendu opérationnel vu par les acheteurs.</p>
+                  </div>
+                  <div className="rounded-2xl border border-border p-4">
+                    <p className="font-semibold">Aperçu acheteur</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{facility.name} · {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}</p>
+                    <p className="mt-2 text-sm">{facility.description ?? "Ajoutez une description pour améliorer la confiance."}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge variant={facility.is_online ? "default" : "secondary"}>{facility.is_online ? "En ligne" : "Hors ligne"}</Badge>
+                      {facility.emergency_shutdown && <Badge variant="destructive">Arrêt urgence</Badge>}
+                      <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? facility.status}</Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Portefeuille</p>
@@ -534,10 +620,18 @@ function VendeurPage() {
             </div>
 
             <div className="omni-card p-5">
-              <p className="font-display text-lg font-bold">Ma position</p>
+              <p className="font-display text-lg font-bold">Opérations</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Touchez la carte pour corriger l'emplacement affiché aux acheteurs.
+                Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour corriger l'emplacement affiché aux acheteurs.
               </p>
+              <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
+                <Input value={hours} onChange={(e) => setHours(e.target.value)} placeholder="Horaires (ex. Lun-Sam 8h-19h)" />
+                <Button variant="outline" onClick={() => void saveOperatingHours()}>Enregistrer horaires</Button>
+                <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <Switch checked={facility.emergency_shutdown} onCheckedChange={(v) => void toggleEmergencyShutdown(v)} />
+                  Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
+                </label>
+              </div>
               <div className="mt-3 h-64 overflow-hidden rounded-lg border border-border">
                 <MapCanvas
                   facilities={[{ ...facility, owner_id: user.id }]}
@@ -582,6 +676,30 @@ function VendeurPage() {
                 className="w-36"
               />
               <Input
+                placeholder="Qté stock"
+                inputMode="numeric"
+                value={pQuantity}
+                onChange={(e) => setPQuantity(e.target.value)}
+                className="w-28"
+              />
+              <Input
+                placeholder="Allocation Omni %"
+                inputMode="numeric"
+                value={pAllocation}
+                onChange={(e) => setPAllocation(e.target.value)}
+                className="w-36"
+              />
+              <select
+                value={pStatus}
+                onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="active">Actif</option>
+                <option value="draft">Brouillon</option>
+                <option value="paused">En pause</option>
+                <option value="sold_out">Épuisé</option>
+              </select>
+              <Input
                 placeholder="URL photo (optionnel)"
                 value={pPhoto}
                 onChange={(e) => setPPhoto(e.target.value)}
@@ -609,7 +727,8 @@ function VendeurPage() {
                   <div>
                     <p className="font-medium">{p.name}</p>
                     <p className="text-sm text-muted-foreground">
-                      {formatMoney(p.price)} · {freshnessLabel(p.last_confirmed_at)}
+                      {formatMoney(p.price)} · Stock {p.quantity_available} · Omni{" "}
+                      {p.omni_allocation_percent}% · {p.status} · {freshnessLabel(p.last_confirmed_at)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

@@ -61,6 +61,8 @@ type Props = {
   resultCount: number;
   onBrandClick?: () => void;
   onVerifyAvailability?: () => void;
+  locationReady?: boolean;
+  locationDetected?: boolean;
 };
 
 const CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES.map((c) => ({ ...c }))] as {
@@ -83,6 +85,8 @@ export function SearchDock({
   resultCount,
   onBrandClick,
   onVerifyAvailability,
+  locationReady = true,
+  locationDetected = false,
 }: Props) {
   const { formatMoney } = useMarket();
   const railRef = useRef<HTMLDivElement | null>(null);
@@ -302,6 +306,20 @@ export function SearchDock({
             </div>
           </div>
         )}
+
+        <div className="flex justify-center">
+          <span
+            className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium ${
+              locationDetected ? "text-primary" : "text-muted-foreground"
+            }`}
+          >
+            {locationDetected
+              ? "Localisation détectée — carte centrée sur vous"
+              : locationReady
+                ? "Localisation non détectée — centre marché utilisé"
+                : "Détection de votre localisation…"}
+          </span>
+        </div>
 
         {query.trim() && (
           <div className="flex justify-center gap-2">

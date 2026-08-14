@@ -113,7 +113,7 @@ export function CartePage() {
         setUserPos(null);
         setGeoReady(true);
       },
-      { timeout: 8000 },
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 12000 },
     );
   }, []);
 
@@ -155,23 +155,45 @@ export function CartePage() {
     });
   }, [facilities, origin, filters]);
 
-  // After each search, frame the user plus the five nearest matches.
+  // After each search or filter change, frame the user plus the nearest visible matches.
   const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
-  const searchKey = `${query.trim()}|${category ?? ""}`;
+  const hasActiveSearch =
+    Boolean(query.trim()) ||
+    Boolean(category) ||
+    filters.radiusKm !== DEFAULT_FILTERS.radiusKm ||
+    filters.maxPrice !== DEFAULT_FILTERS.maxPrice ||
+    filters.openOnly !== DEFAULT_FILTERS.openOnly ||
+    filters.discountOnly !== DEFAULT_FILTERS.discountOnly ||
+    filters.sort !== DEFAULT_FILTERS.sort;
+  const searchKey = `${query.trim()}|${category ?? ""}|${filters.radiusKm}|${filters.maxPrice ?? ""}|${filters.openOnly}|${filters.discountOnly}|${filters.sort}`;
+  const resultPointKey = results
+    .slice(0, 12)
+    .map((f) => `${f.id}:${f.latitude.toFixed(5)}:${f.longitude.toFixed(5)}`)
+    .join("|");
   useEffect(() => {
-    if (!searchKey.replace("|", "")) {
-      setFitPoints(null);
+    if (!hasActiveSearch) {
+      setFitPoints(userPos ? [userPos] : null);
       return;
     }
-    if (results.length === 0) return;
+    if (results.length === 0) {
+      setFitPoints(userPos ? [userPos] : [origin]);
+      return;
+    }
     const nearest = [...results]
       .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 5)
+      .slice(0, 6)
       .map((f) => ({ lat: f.latitude, lng: f.longitude }));
     setFitPoints(userPos ? [userPos, ...nearest] : nearest);
-    // Only re-frame when the search itself changes, not on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchKey, facilities]);
+  }, [
+    hasActiveSearch,
+    searchKey,
+    resultPointKey,
+    results.length,
+    userPos?.lat,
+    userPos?.lng,
+    origin.lat,
+    origin.lng,
+  ]);
 
   const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
   const demandUserPos = pendingUserPos ?? userPos;
@@ -298,6 +320,8 @@ export function CartePage() {
           userPosition={userPos}
           marketCenter={fallbackCenter}
           marketZoom={market?.default_zoom ?? 12.2}
+          introFlight
+          introFlightReady={geoReady}
           focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
           fitPoints={selected ? null : fitPoints}
           className="h-full w-full"
@@ -373,7 +397,9 @@ export function CartePage() {
             onFiltersChange={setFilters}
             resultCount={results.length}
             onVerifyAvailability={openDemandRequest}
-            onBrandClick={() => {
+            locationReady={geoReady}
+          locationDetected={Boolean(userPos)}
+          onBrandClick={() => {
               if (userPos) setFitPoints([userPos]);
               else toast.info("Position indisponible.");
             }}

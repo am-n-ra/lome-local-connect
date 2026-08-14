@@ -145,7 +145,7 @@ export function OrdersPanel({
               order.status === "confirmed" || order.status === "partially_confirmed";
             const active =
               order.qr_token &&
-              order.transaction_status === "pending" &&
+              (order.transaction_status === "pending" || order.transaction_status === "qr_generated") &&
               (!order.qr_expires_at || new Date(order.qr_expires_at).getTime() > Date.now());
             return (
               <div key={order.id} className="omni-card space-y-3 p-3">
