@@ -12,6 +12,10 @@ export type MapFacility = FacilityRow & {
   isPro?: boolean;
   /** True while the seller broadcasts a live mobile presence. */
   mobile_presence?: boolean;
+  /** Cheapest catalogue price, when the facility exposes one. */
+  min_price?: number | null;
+  /** Best discount available in the catalogue. */
+  max_discount_percent?: number | null;
 };
 
 type Props = {
