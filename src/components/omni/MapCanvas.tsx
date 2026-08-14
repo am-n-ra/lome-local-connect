@@ -12,11 +12,8 @@ export type MapFacility = FacilityRow & {
   isPro?: boolean;
   /** True while the seller broadcasts a live mobile presence. */
   mobile_presence?: boolean;
-  /** Cheapest catalogue price, when the facility exposes one. */
-  min_price?: number | null;
-  /** Best discount available in the catalogue. */
-  max_discount_percent?: number | null;
 };
+
 
 type Props = {
   facilities: MapFacility[];
@@ -39,49 +36,61 @@ type Props = {
 const GLOBE_ZOOM = 5;
 
 function markerElement(f: MapFacility, selected: boolean): HTMLDivElement {
+  // Outer element is positioned by MapLibre (it owns `transform`/`position`).
   const el = document.createElement("div");
+  el.style.cursor = "pointer";
+
+  const inner = document.createElement("div");
+  inner.style.position = "relative";
+  inner.style.transform = selected ? "scale(1.35)" : "scale(1)";
+  inner.style.transition = "transform .15s ease";
+  el.appendChild(inner);
+
   const color = STATUS_COLOR[f.status] ?? "#9a938c";
-  const hasAvailability = (f.min_price ?? 0) > 0 || (f.max_discount_percent ?? 0) > 0;
-  el.className = [
-    "omni-map-marker",
-    selected ? "is-selected" : "",
-    f.is_online || f.mobile_presence ? "is-active" : "",
-    f.status === "confirmed" || f.status === "certified" || f.status === "certifie"
-      ? "is-confirmed"
-      : "",
-    f.isPro ? "is-sponsored" : "",
-    hasAvailability ? "has-availability" : "",
-    f.type === "mobile" ? "is-mobile" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-  el.style.setProperty("--marker-color", color);
-  el.setAttribute("aria-label", `${f.name} · ${f.status}`);
+  const pin = document.createElement("div");
+  pin.style.width = "14px";
+  pin.style.height = "14px";
+  pin.style.borderRadius = "999px";
+  pin.style.background = f.type === "mobile" ? "#ffffff" : color;
+  pin.style.border = `2.5px solid ${f.type === "mobile" ? color : "#ffffff"}`;
+  pin.style.boxShadow = "0 2px 6px rgba(60,40,20,.28)";
+  inner.appendChild(pin);
 
-  const pin = document.createElement("span");
-  pin.className = "omni-map-marker__pin";
-  el.appendChild(pin);
-
+  // Live mobile presence: a distinct halo ring, different from both the static
+  // pin and the mobile-merchant marker.
   if (f.mobile_presence) {
+    pin.style.background = "#1f7a4d";
+    pin.style.border = "2.5px solid #ffffff";
     const halo = document.createElement("span");
-    halo.className = "omni-map-marker__halo";
-    el.insertBefore(halo, pin);
+    halo.style.position = "absolute";
+    halo.style.left = "50%";
+    halo.style.top = "50%";
+    halo.style.width = "30px";
+    halo.style.height = "30px";
+    halo.style.marginLeft = "-15px";
+    halo.style.marginTop = "-15px";
+    halo.style.borderRadius = "999px";
+    halo.style.border = "2px solid rgba(31,122,77,.55)";
+    halo.style.background = "rgba(31,122,77,.14)";
+    halo.style.pointerEvents = "none";
+    inner.insertBefore(halo, pin);
   }
 
   if (f.isPro) {
-    const sponsor = document.createElement("span");
-    sponsor.className = "omni-map-marker__sponsor";
-    el.appendChild(sponsor);
+    const dot = document.createElement("span");
+    dot.style.position = "absolute";
+    dot.style.top = "-3px";
+    dot.style.right = "-3px";
+    dot.style.width = "6px";
+    dot.style.height = "6px";
+    dot.style.borderRadius = "999px";
+    dot.style.background = "#e0a52a";
+    dot.style.border = "1.5px solid #ffffff";
+    inner.appendChild(dot);
   }
-
-  if (hasAvailability) {
-    const availability = document.createElement("span");
-    availability.className = "omni-map-marker__availability";
-    el.appendChild(availability);
-  }
-
   return el;
 }
+
 
 export function MapCanvas({
   facilities,
@@ -233,6 +242,8 @@ export function MapCanvas({
       { padding: { top: 80, bottom: 220, left: 40, right: 40 }, maxZoom: 16, duration: 900 },
     );
   }, [fitPoints]);
+
+
 
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>

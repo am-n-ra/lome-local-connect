@@ -10,7 +10,6 @@ import {
   toggleFavorite as toggleFavoriteFn,
 } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
-import { GlassCard, LiveStatus, OmniButton } from "@/components/omni/visual";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
@@ -150,10 +149,6 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
 
   return (
     <div className="space-y-4">
-      <LiveStatus
-        online={facility.is_online}
-        detail={facility.type === "mobile" ? "mobile" : "boutique"}
-      />
       {facility.cover_url && (
         <img
           src={facility.cover_url}
@@ -164,6 +159,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       )}
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
+
           <h2 className="font-display text-xl font-bold">{facility.name}</h2>
           <p className="text-sm text-muted-foreground">
             {categoryLabel(facility.category)}
@@ -171,12 +167,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
             {distanceKm !== null ? ` · ${formatDistance(distanceKm)}` : ""}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Favori"
-          onClick={() => void toggleFavorite()}
-        >
+        <Button variant="ghost" size="icon" aria-label="Favori" onClick={() => void toggleFavorite()}>
           <Heart className={`h-5 w-5 ${favorite ? "fill-primary text-primary" : ""}`} />
         </Button>
       </div>
@@ -189,12 +180,10 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
         {facility.isPro && <Badge className="bg-gold text-foreground">Sponsorisé</Badge>}
       </div>
 
-      {facility.description && (
-        <p className="text-sm text-muted-foreground">{facility.description}</p>
-      )}
+      {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
 
       {facility.status === "unclaimed" && (
-        <GlassCard className="space-y-2 border-dashed p-3">
+        <div className="omni-card space-y-2 border-dashed p-3">
           <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
           <p className="text-xs text-muted-foreground">
             Les horaires, produits et prix ne sont pas confirmés.
@@ -202,14 +191,14 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
           <Button size="sm" disabled={claiming} onClick={() => void claim()}>
             {claiming ? "Envoi…" : "Est-ce votre commerce ?"}
           </Button>
-        </GlassCard>
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2">
-        <OmniButton onClick={onItinerary} disabled={routingBusy}>
+        <Button onClick={onItinerary} disabled={routingBusy}>
           <Navigation className="mr-1.5 h-4 w-4" />
           {routingBusy ? "Calcul…" : "Itinéraire"}
-        </OmniButton>
+        </Button>
         <Button variant="outline" onClick={() => setShowPhone((v) => !v)}>
           <Phone className="mr-1.5 h-4 w-4" />
           {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
@@ -221,7 +210,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
       </div>
 
       {demandOpen && (
-        <GlassCard className="space-y-2 p-3">
+        <div className="omni-card space-y-2 p-3">
           <p className="text-sm font-medium">Quel produit cherchez-vous et ne trouvez pas ?</p>
           <div className="flex gap-2">
             <Input
@@ -232,17 +221,14 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
             />
             <Button onClick={() => void submitDemand()}>Envoyer</Button>
           </div>
-        </GlassCard>
+        </div>
       )}
 
       {user && coupons.length > 0 && (
         <div className="space-y-2">
           <p className="text-sm font-semibold">Coupons actifs</p>
           {coupons.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm"
-            >
+            <div key={c.id} className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm">
               <Ticket className="h-4 w-4 text-primary" />
               <span className="font-mono font-bold">{c.code}</span>
               <span className="text-muted-foreground">
@@ -258,15 +244,10 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
         {products.map((p) => {
           const qty = quantities[p.id] ?? 1;
           return (
-            <GlassCard key={p.id} className="flex items-center gap-3 p-3">
+            <div key={p.id} className="omni-card flex items-center gap-3 p-3">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xl">
                 {p.photo_url ? (
-                  <img
-                    src={p.photo_url}
-                    alt={p.name}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
+                  <img src={p.photo_url} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
                 ) : (
                   "📦"
                 )}
@@ -275,19 +256,12 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
                 <p className="truncate font-medium">{p.name}</p>
                 <p className="text-sm font-semibold text-primary">{formatFcfa(p.price)}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <Badge
-                    variant={p.in_stock ? "default" : "secondary"}
-                    className={p.in_stock ? "bg-forest text-forest-foreground" : ""}
-                  >
+                  <Badge variant={p.in_stock ? "default" : "secondary"} className={p.in_stock ? "bg-forest text-forest-foreground" : ""}>
                     {p.in_stock ? "Disponible" : "En rupture"}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={
-                      isFresh(p.last_confirmed_at)
-                        ? "border-forest text-forest"
-                        : "border-gold text-foreground"
-                    }
+                    className={isFresh(p.last_confirmed_at) ? "border-forest text-forest" : "border-gold text-foreground"}
                   >
                     {freshnessLabel(p.last_confirmed_at)}
                   </Badge>
@@ -335,12 +309,10 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
                   Ajouter au panier
                 </Button>
               </div>
-            </GlassCard>
+            </div>
           );
         })}
-        {products.length === 0 && (
-          <p className="text-sm text-muted-foreground">Aucun produit publié.</p>
-        )}
+        {products.length === 0 && <p className="text-sm text-muted-foreground">Aucun produit publié.</p>}
       </div>
     </div>
   );

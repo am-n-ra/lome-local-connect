@@ -330,7 +330,7 @@ function VendeurPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen omni-surface">
+      <div className="min-h-screen bg-background">
         <TopNav activeRole="vendeur" />
         <div className="mx-auto max-w-md px-4 py-20 text-center">
           <Store className="mx-auto h-10 w-10 text-primary" />
@@ -350,14 +350,14 @@ function VendeurPage() {
 
   if (!facility) {
     return (
-      <div className="min-h-screen omni-surface">
+      <div className="min-h-screen bg-background">
         <TopNav activeRole="vendeur" />
         <div className="mx-auto max-w-lg px-4 py-10">
           <h1 className="font-display text-3xl font-bold">Créez votre fiche</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             2 minutes suffisent. 10 000 FCFA offerts à la création.
           </p>
-          <div className="omni-panel mt-6 space-y-4 p-5">
+          <div className="omni-card mt-6 space-y-4 p-5">
             <div className="space-y-1.5">
               <Label htmlFor="fname">Nom du commerce</Label>
               <Input
@@ -474,7 +474,7 @@ function VendeurPage() {
   }
 
   return (
-    <div className="min-h-screen omni-surface">
+    <div className="min-h-screen bg-background">
       <TopNav activeRole="vendeur" />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -500,17 +500,17 @@ function VendeurPage() {
 
           <TabsContent value="apercu" className="mt-5 space-y-4">
             <div className="grid gap-4 sm:grid-cols-4">
-              <div className="omni-panel p-5">
+              <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Portefeuille</p>
                 <p className="mt-1 font-display text-2xl font-extrabold text-primary">
                   {formatFcfa(data?.walletBalance ?? 0)}
                 </p>
               </div>
-              <div className="omni-panel p-5">
+              <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Produits</p>
                 <p className="mt-1 font-display text-2xl font-extrabold">{products.length}</p>
               </div>
-              <div className="omni-panel p-5">
+              <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Palier</p>
                 <p className="mt-1 font-display text-2xl font-extrabold">
                   {pro ? "Pro" : "Gratuit"}
@@ -521,7 +521,7 @@ function VendeurPage() {
                   </p>
                 )}
               </div>
-              <div className="omni-panel p-5">
+              <div className="omni-card p-5">
                 <p className="text-sm text-muted-foreground">Campagnes</p>
                 <p className="mt-1 font-display text-2xl font-extrabold">
                   {data?.campaigns.length ?? 0}
@@ -529,7 +529,7 @@ function VendeurPage() {
               </div>
             </div>
 
-            <div className="omni-panel p-5">
+            <div className="omni-card p-5">
               <p className="font-display text-lg font-bold">Ma position</p>
               <p className="mt-1 text-sm text-muted-foreground">
                 Touchez la carte pour corriger l'emplacement affiché aux acheteurs.
@@ -563,7 +563,7 @@ function VendeurPage() {
           </TabsContent>
 
           <TabsContent value="produits" className="mt-5">
-            <div className="omni-panel flex flex-wrap gap-2 p-4">
+            <div className="omni-card flex flex-wrap gap-2 p-4">
               <Input
                 placeholder="Nom du produit"
                 value={pName}
