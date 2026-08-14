@@ -8,6 +8,7 @@ import {
 } from "@/lib/maplibre";
 import { type FacilityRow } from "@/lib/omni";
 import {
+  clearHighlight,
   highlightBoundaryAtCenter,
   loadBoundariesForZoom,
   resetBoundaryState,
@@ -45,10 +46,9 @@ const GLOBE_START_ZOOM = 0.8;
 const GLOBE_START_CENTER: [number, number] = [8, 7];
 const RESET_DURATION = 900;
 const REVEAL_FLIGHT_DURATION = 1250;
-const REVEAL_PAUSE_DURATION = 560;
-const ROTATION_STEP_DEGREES = 2;
-const ROTATION_STEP_DURATION = 1600;
-const IDLE_RESUME_DELAY = 2400;
+const REVEAL_PAUSE_DURATION = 1400;
+const ROTATION_DEGREES_PER_SECOND = 2.8;
+const IDLE_RESUME_DELAY = 1800;
 
 const REVEAL_STEPS = [
   { label: "Continent", zoom: 2.15, pause: REVEAL_PAUSE_DURATION },
@@ -89,10 +89,12 @@ function getTargetPoint(
 }
 
 function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
-  try {
-    map.setLayoutProperty("omni-points", "visibility", visible ? "visible" : "none");
-  } catch {
-    // The map may not have loaded its style layer yet.
+  for (const layerId of ["omni-point-halo", "omni-points", "omni-point-labels"]) {
+    try {
+      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    } catch {
+      // The map may not have loaded its style layer yet.
+    }
   }
 }
 
@@ -105,6 +107,21 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
     map.addSource("omni-facilities", {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
+      promoteId: "id",
+    });
+  }
+  if (!hasLayer(map, "omni-point-halo")) {
+    map.addLayer({
+      id: "omni-point-halo",
+      type: "circle",
+      source: "omni-facilities",
+      layout: { visibility: showFacilities ? "visible" : "none" },
+      paint: {
+        "circle-color": "#ffffff",
+        "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 16, 13],
+        "circle-opacity": 0.9,
+        "circle-stroke-width": 0,
+      },
     });
   }
   if (!hasLayer(map, "omni-points")) {
@@ -127,9 +144,30 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
           "#b8b0a8",
           "#9a938c",
         ],
-        "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 10, 7],
+        "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 12, 9],
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
         "circle-stroke-color": "#ffffff",
+        "circle-opacity": 0.98,
+      },
+    });
+  }
+  if (!hasLayer(map, "omni-point-labels")) {
+    map.addLayer({
+      id: "omni-point-labels",
+      type: "symbol",
+      source: "omni-facilities",
+      layout: {
+        visibility: showFacilities ? "visible" : "none",
+        "text-field": ["get", "name"],
+        "text-size": 11,
+        "text-offset": [0, 1.45],
+        "text-anchor": "top",
+        "text-allow-overlap": false,
+      },
+      paint: {
+        "text-color": "#2d2520",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 1.4,
       },
     });
   }
@@ -149,6 +187,24 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
     });
   }
+}
+
+function waitForMapIdle(map: MapInstance, timeout = 2600): Promise<void> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+    const timeoutId = window.setTimeout(finish, timeout);
+    map.once("idle", finish);
+  });
+}
+
+function waitForDuration(duration: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, duration));
 }
 
 function fitMapToPoints(
@@ -225,7 +281,7 @@ export function MapCanvas({
   const revealTokenRef = useRef(0);
   const lastRevealKeyRef = useRef<string | null>(null);
   const revealRunningRef = useRef(false);
-  const rotationIntervalRef = useRef<number | null>(null);
+  const rotationFrameRef = useRef<number | null>(null);
   const rotationResumeRef = useRef<number | null>(null);
   const revealTimerRef = useRef<number | null>(null);
   const revealPauseTimerRef = useRef<number | null>(null);
@@ -263,9 +319,9 @@ export function MapCanvas({
     mapRef.current = map;
 
     const stopRotation = () => {
-      if (rotationIntervalRef.current != null) {
-        window.clearInterval(rotationIntervalRef.current);
-        rotationIntervalRef.current = null;
+      if (rotationFrameRef.current != null) {
+        window.cancelAnimationFrame(rotationFrameRef.current);
+        rotationFrameRef.current = null;
       }
     };
 
@@ -278,19 +334,18 @@ export function MapCanvas({
         rotationResumeRef.current = null;
         if (reducedMotionRef.current || revealRunningRef.current || map.getZoom() > GLOBE_ZOOM)
           return;
-        rotationIntervalRef.current = window.setInterval(() => {
+        let previousTime = performance.now();
+        const rotate = (time: number) => {
           if (reducedMotionRef.current || revealRunningRef.current || map.getZoom() > GLOBE_ZOOM) {
             stopRotation();
             return;
           }
-          const currentBearing = map.getBearing();
-          map.easeTo({
-            bearing: currentBearing + ROTATION_STEP_DEGREES,
-            duration: ROTATION_STEP_DURATION,
-            easing: (value: number) => value,
-            essential: false,
-          });
-        }, ROTATION_STEP_DURATION);
+          const elapsedSeconds = Math.min(0.1, Math.max(0, time - previousTime) / 1000);
+          previousTime = time;
+          map.jumpTo({ bearing: map.getBearing() + ROTATION_DEGREES_PER_SECOND * elapsedSeconds });
+          rotationFrameRef.current = window.requestAnimationFrame(rotate);
+        };
+        rotationFrameRef.current = window.requestAnimationFrame(rotate);
       }, delay);
     };
 
@@ -408,7 +463,7 @@ export function MapCanvas({
     });
 
     return () => {
-      if (rotationIntervalRef.current != null) window.clearInterval(rotationIntervalRef.current);
+      if (rotationFrameRef.current != null) window.cancelAnimationFrame(rotationFrameRef.current);
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
       if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
@@ -529,22 +584,10 @@ export function MapCanvas({
     setRevealLabel("Recherche mondiale");
     setFacilitiesVisibility(map, false);
 
-    if (rotationIntervalRef.current != null) window.clearInterval(rotationIntervalRef.current);
+    if (rotationFrameRef.current != null) window.cancelAnimationFrame(rotationFrameRef.current);
     if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
     if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
     if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
-
-    map.stop();
-    map.setProjection({ type: "globe" });
-    map.flyTo({
-      center: GLOBE_START_CENTER,
-      zoom: GLOBE_START_ZOOM,
-      bearing: map.getBearing() + 8,
-      duration: RESET_DURATION,
-      speed: 0.55,
-      curve: 1.15,
-      essential: true,
-    });
 
     const target = getTargetPoint(userPosition, marketCenter);
     const waypoints = REVEAL_STEPS.map((step) => ({
@@ -554,21 +597,25 @@ export function MapCanvas({
     }));
 
     const cancelIfStale = () => token !== revealTokenRef.current;
-    const finish = () => {
+    const finish = async () => {
       if (cancelIfStale()) return;
+      const source = map.getSource("omni-facilities");
+      source?.setData(facilitiesToGeoJSON(facilitiesRef.current));
+      fitMapToPoints(map, fitPointsRef.current);
+      await waitForMapIdle(map, 3000);
+      if (cancelIfStale()) return;
+      setFacilitiesVisibility(map, showFacilities);
       revealRunningRef.current = false;
       setRevealRunning(false);
       onRevealStateChange?.(false);
       setRevealLabel(null);
-      setFacilitiesVisibility(map, showFacilities);
-      fitMapToPoints(map, fitPointsRef.current);
     };
 
-    const runStep = (index: number) => {
+    const runStep = async (index: number) => {
       if (cancelIfStale()) return;
       const step = waypoints[index];
       if (!step) {
-        finish();
+        await finish();
         return;
       }
 
@@ -581,18 +628,39 @@ export function MapCanvas({
         curve: 1.15,
         essential: true,
       });
-      revealTimerRef.current = window.setTimeout(() => {
-        if (cancelIfStale()) return;
-        highlightBoundaryAtCenter(map, step.zoom);
-        if (index === waypoints.length - 1) {
-          finish();
-          return;
-        }
-        revealPauseTimerRef.current = window.setTimeout(() => runStep(index + 1), step.pause);
-      }, REVEAL_FLIGHT_DURATION);
+      await waitForMapIdle(map, REVEAL_FLIGHT_DURATION + 2200);
+      if (cancelIfStale()) return;
+      await loadBoundariesForZoom(map, step.zoom);
+      await waitForMapIdle(map, 900);
+      if (cancelIfStale()) return;
+      highlightBoundaryAtCenter(map, step.zoom);
+      await waitForDuration(step.pause);
+      if (cancelIfStale()) return;
+      if (index === waypoints.length - 1) {
+        await finish();
+        return;
+      }
+      await runStep(index + 1);
     };
 
-    revealTimerRef.current = window.setTimeout(() => runStep(0), RESET_DURATION + 350);
+    void (async () => {
+      map.stop();
+      clearHighlight(map);
+      map.setProjection({ type: "globe" });
+      map.flyTo({
+        center: GLOBE_START_CENTER,
+        zoom: GLOBE_START_ZOOM,
+        bearing: map.getBearing() + 8,
+        duration: RESET_DURATION,
+        speed: 0.55,
+        curve: 1.15,
+        essential: true,
+      });
+      await waitForMapIdle(map, RESET_DURATION + 2200);
+      if (cancelIfStale()) return;
+      await waitForDuration(350);
+      await runStep(0);
+    })();
 
     return () => {
       revealTokenRef.current += 1;
@@ -604,7 +672,7 @@ export function MapCanvas({
       onRevealStateChange?.(false);
       setRevealLabel(null);
     };
-  }, [marketCenter, marketZoom, onRevealStateChange, revealKey, showFacilities, userPosition]);
+  }, [revealKey]);
 
   function zoomBy(delta: number) {
     const map = mapRef.current;

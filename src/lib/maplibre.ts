@@ -18,6 +18,7 @@ export type MapInstance = {
     layerOrCb: string | ((e: MapMouseEvent) => void),
     cb?: (e: MapMouseEvent) => void,
   ) => void;
+  once: (event: string, cb: (e: MapMouseEvent) => void) => void;
   remove: () => void;
   setStyle: (style: string | object) => void;
   flyTo: (opts: Record<string, unknown>) => void;
