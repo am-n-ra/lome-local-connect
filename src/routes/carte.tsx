@@ -37,7 +37,7 @@ export const Route = createFileRoute("/carte")({
 
 type RouteStep = { instruction: string; distance: number };
 
-function CartePage() {
+export function CartePage() {
   const navigate = useNavigate();
   const { market } = useMarket();
   const fallbackCenter = market?.default_lat != null
