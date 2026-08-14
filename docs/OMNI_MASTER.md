@@ -4512,3 +4512,13 @@ SHOW USER POSITION + FINDING PINS + RESULT UI
 The geography sequence follows the search destination when the query targets another location. When user context is relevant, the final framing still includes the user's actual position. Global/world views may use scale-appropriate clustering to avoid rendering millions of facilities, while local search-result mode shows individual relevant result pins without clusters. Optional supply/demand information may briefly fly outward during an active search as one to three restrained signal arcs or small contextual callouts. These elements must be transient, sparse, and subordinate to the globe and result pins; they must never become a permanent data cloud.
 
 This globe behavior is a product requirement and must be covered by automated state tests and browser verification for initial idle, interaction pause, delayed resume, reduced motion, search reset, continent/country/region/town highlights, final user/result framing, and second-search cancellation.
+
+---
+
+# 151. MAPLIBRE GLOBE PROJECTION CORRECTION
+
+The Omni globe is the **MapLibre globe projection** rendered by the same geographic map instance that powers local search. It must not be replaced or visually masked by a decorative SVG, CSS sphere, image, Canvas 2D drawing, or other substitute. The resting experience uses MapLibre’s global projection with real geographic basemap data, sparse geographic styling, and slow camera rotation. Search transitions reuse this MapLibre instance as it moves from the globe through continent, country, region, town/area, and final-location scales.
+
+The active map container must have an explicit full-viewport size. When the vector style is ready, MapLibre must render visible land, water, labels, and boundaries. If the vector style fails before readiness, the same MapLibre instance may switch to the keyless CARTO raster style and reapply Omni’s sources and layers. If all map providers fail, the UI may show a retry/status surface over the MapLibre canvas, but it must never present a decorative globe as a replacement for map data.
+
+Acceptance requires that the idle DOM contain no decorative globe surface, that the MapLibre canvas fills the map viewport, that the active projection is `globe` at global scale, that zooming transitions to detailed geographic rendering, and that result pins, user location, boundary highlights, and contextual cards remain MapLibre-backed overlays.

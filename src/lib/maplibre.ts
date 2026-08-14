@@ -19,6 +19,7 @@ export type MapInstance = {
     cb?: (e: MapMouseEvent) => void,
   ) => void;
   remove: () => void;
+  setStyle: (style: string | object) => void;
   flyTo: (opts: Record<string, unknown>) => void;
   easeTo: (opts: Record<string, unknown>) => void;
   jumpTo: (opts: Record<string, unknown>) => void;

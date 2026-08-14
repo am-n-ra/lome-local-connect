@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   applyPastelPalette,
+  CARTO_LIGHT_STYLE,
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
@@ -92,6 +93,61 @@ function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
     map.setLayoutProperty("omni-points", "visibility", visible ? "visible" : "none");
   } catch {
     // The map may not have loaded its style layer yet.
+  }
+}
+
+function hasLayer(map: MapInstance, id: string) {
+  return Boolean(map.getStyle()?.layers?.some((layer) => layer.id === id));
+}
+
+function addOmniLayers(map: MapInstance, showFacilities: boolean) {
+  if (!map.getSource("omni-facilities")) {
+    map.addSource("omni-facilities", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!hasLayer(map, "omni-points")) {
+    map.addLayer({
+      id: "omni-points",
+      type: "circle",
+      source: "omni-facilities",
+      layout: { visibility: showFacilities ? "visible" : "none" },
+      paint: {
+        "circle-color": [
+          "match",
+          ["get", "status"],
+          "confirmed",
+          "#d9a521",
+          "certified",
+          "#2f6fb5",
+          "unconfirmed",
+          "#9a938c",
+          "unclaimed",
+          "#b8b0a8",
+          "#9a938c",
+        ],
+        "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 10, 7],
+        "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
+        "circle-stroke-color": "#ffffff",
+      },
+    });
+  }
+
+  if (!map.getSource("omni-route")) {
+    map.addSource("omni-route", {
+      type: "geojson",
+      data: { type: "FeatureCollection", features: [] },
+    });
+  }
+  if (!hasLayer(map, "omni-route-line")) {
+    map.addLayer({
+      id: "omni-route-line",
+      type: "line",
+      source: "omni-route",
+      layout: { "line-cap": "round", "line-join": "round" },
+      paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
+    });
   }
 }
 
@@ -229,6 +285,7 @@ export function MapCanvas({
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [revealRunning, setRevealRunning] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "fallback" | "error">("loading");
 
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
@@ -238,6 +295,10 @@ export function MapCanvas({
   facilitiesRef.current = facilities;
   const fitPointsRef = useRef(fitPoints);
   fitPointsRef.current = fitPoints;
+  const routeCoordsRef = useRef(routeCoords);
+  routeCoordsRef.current = routeCoords;
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapInstance | null>(null);
   const readyRef = useRef(false);
@@ -251,6 +312,9 @@ export function MapCanvas({
   const reducedMotionRef = useRef(false);
   const showFacilitiesRef = useRef(showFacilities);
   showFacilitiesRef.current = showFacilities;
+  const styleReadyRef = useRef(false);
+  const fallbackAttemptedRef = useRef(false);
+  const styleRecoveryTimerRef = useRef<number | null>(null);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
 
   useEffect(() => {
@@ -316,55 +380,70 @@ export function MapCanvas({
       rotationResumeRef.current = null;
     };
 
-    map.on("load", () => {
+    const reapplyOmniState = () => {
+      addOmniLayers(map, showFacilitiesRef.current);
+      const facilitiesSource = map.getSource("omni-facilities");
+      facilitiesSource?.setData(facilitiesToGeoJSON(facilitiesRef.current));
+      const routeSource = map.getSource("omni-route");
+      routeSource?.setData(
+        routeCoordsRef.current && routeCoordsRef.current.length >= 2
+          ? {
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: routeCoordsRef.current },
+              properties: {},
+            }
+          : { type: "FeatureCollection", features: [] },
+      );
+      for (const facility of facilitiesRef.current) {
+        map.setFeatureState(
+          { source: "omni-facilities", id: facility.id },
+          { selected: facility.id === selectedIdRef.current },
+        );
+      }
+      setFacilitiesVisibility(map, showFacilitiesRef.current && !revealRunningRef.current);
+    };
+
+    const applyLoadedStyle = () => {
+      if (!map.isStyleLoaded()) return;
+      if (styleRecoveryTimerRef.current != null) {
+        window.clearTimeout(styleRecoveryTimerRef.current);
+        styleRecoveryTimerRef.current = null;
+      }
+      styleReadyRef.current = true;
       readyRef.current = true;
+      if (map.getZoom() <= GLOBE_ZOOM) map.setProjection({ type: "globe" });
+      containerRef.current?.setAttribute(
+        "data-omni-projection",
+        map.getZoom() <= GLOBE_ZOOM ? "globe" : "mercator",
+      );
+      map.resize();
       applyPastelPalette(map);
-
-      map.addSource("omni-facilities", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-
-      map.addLayer({
-        id: "omni-points",
-        type: "circle",
-        source: "omni-facilities",
-        layout: { visibility: showFacilitiesRef.current ? "visible" : "none" },
-        paint: {
-          "circle-color": [
-            "match",
-            ["get", "status"],
-            "confirmed",
-            "#d9a521",
-            "certified",
-            "#2f6fb5",
-            "unconfirmed",
-            "#9a938c",
-            "unclaimed",
-            "#b8b0a8",
-            "#9a938c",
-          ],
-          "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 10, 7],
-          "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
-          "circle-stroke-color": "#ffffff",
-        },
-      });
-
-      map.addSource("omni-route", {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      map.addLayer({
-        id: "omni-route-line",
-        type: "line",
-        source: "omni-route",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
-      });
-
-      void loadBoundariesForZoom(map, GLOBE_START_ZOOM);
+      reapplyOmniState();
+      void loadBoundariesForZoom(map, map.getZoom());
+      setMapStatus(fallbackAttemptedRef.current ? "fallback" : "ready");
       scheduleIdleRotation(600);
+    };
+
+    const tryFallbackStyle = () => {
+      if (fallbackAttemptedRef.current) {
+        setMapStatus("error");
+        return;
+      }
+      fallbackAttemptedRef.current = true;
+      styleReadyRef.current = false;
+      setMapStatus("fallback");
+      map.stop();
+      map.setStyle(CARTO_LIGHT_STYLE);
+    };
+
+    map.on("load", applyLoadedStyle);
+    map.on("style.load", applyLoadedStyle);
+    map.on("error", () => {
+      if (!styleReadyRef.current) tryFallbackStyle();
     });
+    styleRecoveryTimerRef.current = window.setTimeout(() => {
+      if (!styleReadyRef.current) tryFallbackStyle();
+    }, 8000);
 
     let globe = true;
     const refreshLivingBoundary = () => {
@@ -374,6 +453,7 @@ export function MapCanvas({
         globe = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
+      containerRef.current?.setAttribute("data-omni-projection", wantsGlobe ? "globe" : "mercator");
       void loadBoundariesForZoom(map, zoom);
     };
 
@@ -412,6 +492,7 @@ export function MapCanvas({
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
       if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
+      if (styleRecoveryTimerRef.current != null) window.clearTimeout(styleRecoveryTimerRef.current);
       resetBoundaryState();
       map.remove();
       mapRef.current = null;
@@ -627,8 +708,7 @@ export function MapCanvas({
 
   return (
     <div className={`${className ?? "h-full w-full"} relative overflow-hidden`}>
-      <CleanGlobeBackdrop reducedMotion={reducedMotion} revealing={revealRunning} />
-      <div ref={containerRef} className="absolute inset-0 z-[1]" />
+      <div ref={containerRef} className="h-full w-full" />
       <div className="pointer-events-auto absolute left-3 top-1/2 z-10 -translate-y-1/2 overflow-hidden rounded-2xl border border-border/70 bg-card/85 shadow-[var(--shadow-soft)] backdrop-blur">
         <button
           type="button"
@@ -668,6 +748,40 @@ export function MapCanvas({
         <span className="sr-only">
           Les animations de globe sont réduites selon vos préférences.
         </span>
+      )}
+
+      {gl && mapStatus === "loading" && (
+        <div className="pointer-events-none absolute left-1/2 top-20 z-10 -translate-x-1/2">
+          <div className="omni-glass rounded-full px-4 py-2 text-xs text-muted-foreground">
+            Chargement du globe MapLibre…
+          </div>
+        </div>
+      )}
+
+      {gl && mapStatus === "fallback" && (
+        <div className="pointer-events-none absolute left-1/2 top-20 z-10 -translate-x-1/2">
+          <div className="omni-glass rounded-full px-4 py-2 text-xs text-muted-foreground">
+            Fond de carte de secours actif
+          </div>
+        </div>
+      )}
+
+      {gl && mapStatus === "error" && (
+        <div className="absolute left-1/2 top-20 z-10 w-[min(92vw,24rem)] -translate-x-1/2">
+          <div className="omni-glass rounded-2xl px-4 py-3 text-center text-sm text-foreground">
+            <p className="font-semibold">Données cartographiques indisponibles</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Le globe MapLibre reste utilisable. Réessayez pour recharger le fond géographique.
+            </p>
+            <button
+              type="button"
+              className="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+              onClick={() => window.location.reload()}
+            >
+              Réessayer
+            </button>
+          </div>
+        </div>
       )}
 
       {!gl && (

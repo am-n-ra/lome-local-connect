@@ -178,3 +178,7 @@ The result is one responsive, accessible, reduced-motion-aware spatial interface
 ## Open risks to resolve during the audit
 
 The repository’s current branch and implementation may differ from the supplied status document. The audit must resolve the actual map library, available globe projection support, auth/backend state, asset-upload path, payment boundary, and phase-6 completeness before choosing exact files. If MapLibre globe support or an existing proxy is unavailable, use the smallest compatible implementation and document the limitation in the master rather than silently weakening the required behavior. Any missing service integration will remain an explicit adapter boundary with deterministic demo states.
+
+## MapLibre projection clarification
+
+The rotating globe is the actual MapLibre globe projection, not a visual substitute. Remove decorative SVG/CSS globe surfaces from the active map route. The MapLibre canvas must fill the viewport, render real geographic basemap data, rotate slowly at global scale, pause on interaction, and transition through the staged search reveal on the same map instance. If a style fails, use a MapLibre-rendered style fallback or a transparent retry/error state; never mask a missing map with artwork.
