@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   applyPastelPalette,
   PASTEL_STYLE_URL,
@@ -6,12 +6,7 @@ import {
   type MapInstance,
 } from "@/lib/maplibre";
 import { type FacilityRow } from "@/lib/omni";
-import {
-  loadBoundariesForZoom,
-  highlightBoundaryAtCenter,
-  resetBoundaryState,
-  boundaryLevelForZoom,
-} from "@/lib/boundaries/loader";
+import { loadBoundariesForZoom, resetBoundaryState } from "@/lib/boundaries/loader";
 
 export type MapFacility = FacilityRow & {
   isPro?: boolean;
@@ -85,7 +80,6 @@ export function MapCanvas({
   const readyRef = useRef(false);
   const flownRef = useRef(false);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
-  const [activeBoundaryLevel, setActiveBoundaryLevel] = useState("Continent");
 
   useEffect(() => {
     if (!gl || !containerRef.current || mapRef.current) return;
@@ -109,29 +103,6 @@ export function MapCanvas({
       map.addSource("omni-facilities", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
-        cluster: true,
-        clusterRadius: 50,
-        clusterMaxZoom: 14,
-      });
-
-      map.addLayer({
-        id: "omni-clusters",
-        type: "symbol",
-        source: "omni-facilities",
-        filter: ["has", "point_count"],
-        layout: {
-          "text-field": ["concat", ["get", "point_count_abbreviated"], " lieux"],
-          "text-size": ["step", ["get", "point_count"], 13, 10, 15, 50, 18],
-          "text-font": ["Noto Sans Bold"],
-          "text-allow-overlap": false,
-          "text-padding": 8,
-        },
-        paint: {
-          "text-color": "#0f462c",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 2,
-          "text-opacity": 0.94,
-        },
       });
 
       map.addLayer({
@@ -170,8 +141,7 @@ export function MapCanvas({
         paint: { "line-color": "#a45f2d", "line-width": 4, "line-opacity": 0.82 },
       });
 
-      loadBoundariesForZoom(map, GLOBE_START_ZOOM);
-      highlightBoundaryAtCenter(map, GLOBE_START_ZOOM);
+      void loadBoundariesForZoom(map, GLOBE_START_ZOOM);
     });
 
     let globe = true;
@@ -182,8 +152,7 @@ export function MapCanvas({
         globe = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
-      setActiveBoundaryLevel(boundaryLevelForZoom(z)?.name ?? "Quartier");
-      void loadBoundariesForZoom(map, z).then(() => highlightBoundaryAtCenter(map, z));
+      void loadBoundariesForZoom(map, z);
     };
 
     map.on("zoom", refreshLivingBoundary);
@@ -317,12 +286,6 @@ export function MapCanvas({
 
   return (
     <div ref={containerRef} className={className ?? "h-full w-full"}>
-      <div className="pointer-events-none absolute left-1/2 top-1/2 z-10 hidden -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 md:flex">
-        <div className="h-7 w-7 rounded-full border-2 border-primary/80 bg-primary/10 shadow-[0_0_0_8px_rgba(31,122,77,0.12)]" />
-        <div className="rounded-full border border-primary/20 bg-white/90 px-3 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur">
-          Focus {activeBoundaryLevel.toLowerCase()}
-        </div>
-      </div>
       {!gl && (
         <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
           Chargement de la carte…
