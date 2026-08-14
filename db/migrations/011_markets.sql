@@ -1,36 +1,23 @@
--- Lot 1 — Market entity: every hard-coded "Togo / Lomé / FCFA" becomes a row.
-CREATE TABLE IF NOT EXISTS public.markets (
-  code text PRIMARY KEY,
-  name text NOT NULL,
-  country_code text NOT NULL,
-  currency_code text NOT NULL,
-  currency_symbol text NOT NULL,
-  currency_decimals integer NOT NULL DEFAULT 0,
-  payment_rail text NOT NULL DEFAULT 'fedapay',
-  languages text[] NOT NULL DEFAULT ARRAY['fr', 'en'],
-  community_channel_url text,
-  community_channel_label text,
-  default_lat double precision NOT NULL,
-  default_lng double precision NOT NULL,
-  default_zoom real NOT NULL DEFAULT 12.2,
-  informal_certification boolean NOT NULL DEFAULT true,
-  is_active boolean NOT NULL DEFAULT true,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+-- Lot 1 — Market entity completed: currency display, languages, map defaults.
+-- The base table was created in 007; this migration only extends it.
+ALTER TABLE public.markets
+  ADD COLUMN IF NOT EXISTS name text,
+  ADD COLUMN IF NOT EXISTS currency_symbol text NOT NULL DEFAULT 'FCFA',
+  ADD COLUMN IF NOT EXISTS currency_decimals integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS languages text[] NOT NULL DEFAULT ARRAY['fr', 'en'],
+  ADD COLUMN IF NOT EXISTS default_lat double precision NOT NULL DEFAULT 6.1725,
+  ADD COLUMN IF NOT EXISTS default_lng double precision NOT NULL DEFAULT 1.2314,
+  ADD COLUMN IF NOT EXISTS default_zoom real NOT NULL DEFAULT 12.2;
 
-INSERT INTO public.markets (
-  code, name, country_code, currency_code, currency_symbol, currency_decimals,
-  payment_rail, languages, community_channel_url, community_channel_label,
-  default_lat, default_lng, default_zoom, informal_certification, is_active
-) VALUES (
-  'TG-LOME', 'Grand Lomé', 'TG', 'XOF', 'FCFA', 0,
-  'fedapay', ARRAY['fr', 'en', 'ee'], 'https://chat.whatsapp.com/omniview-lome', 'Canal communautaire Lomé',
-  6.1725, 1.2314, 12.2, true, true
-)
-ON CONFLICT (code) DO NOTHING;
-
-ALTER TABLE public.facilities
-  ADD COLUMN IF NOT EXISTS market_code text NOT NULL DEFAULT 'TG-LOME';
+UPDATE public.markets
+SET name = COALESCE(name, 'Grand Lomé'),
+    currency_symbol = 'FCFA',
+    currency_decimals = 0,
+    languages = ARRAY['fr', 'en', 'ee'],
+    default_lat = 6.1725,
+    default_lng = 1.2314,
+    default_zoom = 12.2
+WHERE market_code = 'TG-LOME';
 
 CREATE INDEX IF NOT EXISTS facilities_market_idx ON public.facilities (market_code);
 CREATE INDEX IF NOT EXISTS facilities_geo_idx ON public.facilities (latitude, longitude);
