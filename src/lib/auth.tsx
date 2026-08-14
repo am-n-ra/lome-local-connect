@@ -17,6 +17,7 @@ export type PendingAvailabilitySearch = {
   targetFacilityIds: string[];
   location: { lat: number; lng: number } | null;
   demandOpen: boolean;
+  mode?: "search" | "availability";
 };
 
 export function savePendingAvailabilitySearch(payload: PendingAvailabilitySearch) {
@@ -83,7 +84,6 @@ const AuthContext = createContext<AuthState>({
   refresh: async () => {},
 });
 
-
 async function authFetch(path: string, init?: RequestInit) {
   const response = await fetch(`${AUTH_BASE}${path}`, {
     credentials: "same-origin",
@@ -93,9 +93,7 @@ async function authFetch(path: string, init?: RequestInit) {
   const text = await response.text();
   const payload = text ? (JSON.parse(text) as unknown) : null;
   if (!response.ok) {
-    const message =
-      (payload as { message?: string } | null)?.message ??
-      "Une erreur est survenue.";
+    const message = (payload as { message?: string } | null)?.message ?? "Une erreur est survenue.";
     throw new Error(message);
   }
   return payload;
@@ -220,7 +218,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     }),
     [user, loading, roles, refresh],
-
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
