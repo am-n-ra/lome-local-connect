@@ -27,7 +27,7 @@ export const BOUNDARY_LEVELS: BoundaryLevel[] = [
     source: "africa",
     minzoom: 0,
     maxzoom: 5.5,
-    labelMinzoom: 1.25,
+    labelMinzoom: 1.5,
     name: "Continent",
   },
   { id: "togo", source: "togo", minzoom: 3.5, maxzoom: 8.5, labelMinzoom: 4, name: "Pays" },
@@ -35,7 +35,7 @@ export const BOUNDARY_LEVELS: BoundaryLevel[] = [
     id: "togo-regions",
     source: "togo-regions",
     minzoom: 6.5,
-    maxzoom: 11.25,
+    maxzoom: 11.5,
     labelMinzoom: 7,
     name: "Région",
   },
@@ -45,7 +45,7 @@ export const BOUNDARY_LEVELS: BoundaryLevel[] = [
     minzoom: 9,
     maxzoom: 14,
     labelMinzoom: 10,
-    name: "Ville",
+    name: "Ville / commune",
   },
   {
     id: "lome-quartiers",
@@ -57,9 +57,9 @@ export const BOUNDARY_LEVELS: BoundaryLevel[] = [
   },
 ];
 
-const BOUNDARY_COLOR = "#a45f2d";
-const ACTIVE_BOUNDARY_COLOR = "#7a3e1d";
-const BOUNDARY_GLOW_COLOR = "#f4c38a";
+const BOUNDARY_COLOR = "#1f7a4d";
+const ACTIVE_BOUNDARY_COLOR = "#0f5f3b";
+const BOUNDARY_GLOW_COLOR = "#8fd2ff";
 
 const cache = new Map<string, GeoJSON>();
 
@@ -116,7 +116,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         ACTIVE_BOUNDARY_COLOR,
         BOUNDARY_COLOR,
       ],
-      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.16, 0.025],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.34, 0.045],
     },
   });
 
@@ -134,8 +134,8 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         ACTIVE_BOUNDARY_COLOR,
         BOUNDARY_COLOR,
       ],
-      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 2.75, 0.75],
-      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.76, 0.28],
+      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 3.5, 1],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.48],
     },
   });
 
@@ -148,8 +148,8 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     layout: { visibility: "visible" },
     paint: {
       "line-color": BOUNDARY_GLOW_COLOR,
-      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 6, 0],
-      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.26, 0],
+      "line-width": ["case", ["boolean", ["feature-state", "active"], false], 8, 0],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.4, 0],
     },
   });
 
@@ -170,11 +170,11 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         "case",
         ["boolean", ["feature-state", "active"], false],
         ACTIVE_BOUNDARY_COLOR,
-        "#6f4c38",
+        "#315f4b",
       ],
       "text-halo-color": "#ffffff",
-      "text-halo-width": 1.25,
-      "text-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.9, 0.58],
+      "text-halo-width": 1.5,
+      "text-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0.72],
     },
   });
 }

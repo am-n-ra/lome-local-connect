@@ -109,6 +109,29 @@ export function MapCanvas({
       map.addSource("omni-facilities", {
         type: "geojson",
         data: { type: "FeatureCollection", features: [] },
+        cluster: true,
+        clusterRadius: 50,
+        clusterMaxZoom: 14,
+      });
+
+      map.addLayer({
+        id: "omni-clusters",
+        type: "symbol",
+        source: "omni-facilities",
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["concat", ["get", "point_count_abbreviated"], " lieux"],
+          "text-size": ["step", ["get", "point_count"], 13, 10, 15, 50, 18],
+          "text-font": ["Noto Sans Bold"],
+          "text-allow-overlap": false,
+          "text-padding": 8,
+        },
+        paint: {
+          "text-color": "#0f462c",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 2,
+          "text-opacity": 0.94,
+        },
       });
 
       map.addLayer({
