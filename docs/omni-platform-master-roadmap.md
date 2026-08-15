@@ -60,7 +60,7 @@ The product/UI workstream defines how the user experiences each state. The backe
 
 **Objective:** Correct the first-arrival experience and deliver trustworthy, populated global discovery before expanding seller operations.
 
-**Immediate correction gate:** Explicit non-blocking location permission, truthful market fallback, real user marker only after browser success, human-like horizontal center/longitude rotation, sparse real facility discovery at rest, no default country/city label wall, search-only staged reveal, black/near-black active boundaries, and a stable quantity/budget search-dock layout.
+**Immediate correction gate:** Explicit non-blocking location permission, truthful market fallback, an unmistakable exact user pin only after browser success, human-like horizontal center/longitude rotation, sparse real facility discovery at rest, no default country/city label wall, search-only staged reveal, black/near-black active boundaries, a light cream/white field surrounding the preserved grey/black-water and white-land globe, and a stable named-row dock layout with mutually exclusive request/result surfaces and measured responsive clearance.
 
 **Product/UI work:** Real MapLibre globe, horizontal resting rotation, location states, resting discovery points, manual navigation, search-only geographic reveal with pauses/highlights, user location, search framing, bottom dock, result cards, native pins, OSM provenance, unclaimed status, claim CTA, claimed/certified detail states, buyer preview.
 
@@ -68,7 +68,7 @@ The product/UI workstream defines how the user experiences each state. The backe
 
 **Dependencies:** Phase 1 auth/config/test foundations; live Neon read-only schema inventory before new import/provenance migrations.
 
-**Exit criteria:** The arrival globe is spinning horizontally and is not a naked map; location permission/fallback is truthful; manual navigation does not trigger reveal; explicit search triggers black-highlight staged reveal; real unclaimed/claimed facilities are discoverable and source-attributed; unclaimed facilities cannot be purchased; search results are framed after staged reveal; exact-query auth restoration is verified.
+**Exit criteria:** The arrival globe is spinning horizontally in a coherent grey/black-water and white-land MapLibre style against a light field and is not a naked map; a granted browser position produces a visible exact user pin while denied/fallback states produce none; location permission/fallback is truthful; manual navigation does not trigger reveal; explicit search triggers black-highlight staged reveal; the first-page dock’s primary, discovery, structured, context, and action/request rows never overlap; no-results request replaces the action row; result/card overlays clear the measured dock; real unclaimed/claimed facilities are discoverable and source-attributed; unclaimed facilities cannot be purchased; search results are framed after staged reveal; exact-query auth restoration is verified across responsive widths.
 
 ### Phase 3 — Manual commerce loop
 

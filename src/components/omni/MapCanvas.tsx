@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   applyPastelPalette,
   setGlobeLabelVisibility,
-  CARTO_LIGHT_STYLE,
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
@@ -20,6 +19,9 @@ export type MapFacility = FacilityRow & {
   isPro?: boolean;
   mobile_presence?: boolean;
 };
+
+type CameraMode =
+  "resting_globe" | "manual_navigation" | "search_reveal" | "result_framing" | "selected_facility";
 
 type Props = {
   facilities: MapFacility[];
@@ -49,9 +51,10 @@ const GLOBE_START_CENTER: [number, number] = [8, 7];
 const RESET_DURATION = 900;
 const REVEAL_FLIGHT_DURATION = 1250;
 const REVEAL_PAUSE_DURATION = 1400;
-// Negative longitude motion makes the visible earth travel left-to-right around
-// the stable vertical axis from a standing viewer’s perspective.
-const RESTING_LONGITUDE_DIRECTION = -1;
+// Positive longitude motion makes the visible earth travel left-to-right around
+// the stable vertical axis from a standing viewer’s perspective. Calibrated in the
+// browser against the requested Africa/Europe → Asia → Americas → Africa sequence.
+const RESTING_LONGITUDE_DIRECTION = 1;
 const ROTATION_DEGREES_PER_SECOND = 2.8;
 const IDLE_RESUME_DELAY = 1800;
 
@@ -318,6 +321,15 @@ function renderedFacilityCount(map: MapInstance) {
   return ids.size;
 }
 
+function debugMapEvent(map: MapInstance, event: string, details: Record<string, unknown> = {}) {
+  if (!import.meta.env.DEV) return;
+  console.debug("[OmniMap]", event, {
+    zoom: Number(map.getZoom().toFixed(3)),
+    center: map.getCenter(),
+    ...details,
+  });
+}
+
 function fitMapToPoints(
   map: MapInstance,
   points: { lat: number; lng: number }[] | null | undefined,
@@ -372,7 +384,7 @@ export function MapCanvas({
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [revealRunning, setRevealRunning] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "fallback" | "error">("loading");
+  const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "error">("loading");
   const [mapReadyVersion, setMapReadyVersion] = useState(0);
 
   const clickRef = useRef(onMapClick);
@@ -401,12 +413,12 @@ export function MapCanvas({
   const showFacilitiesRef = useRef(showFacilities);
   showFacilitiesRef.current = showFacilities;
   const styleReadyRef = useRef(false);
-  const fallbackAttemptedRef = useRef(false);
   const styleRecoveryTimerRef = useRef<number | null>(null);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
   const userPositionRef = useRef(userPosition);
   userPositionRef.current = userPosition;
   const facilityMarkerRefs = useRef<Map<string, MarkerInstance>>(new Map());
+  const cameraModeRef = useRef<CameraMode>("resting_globe");
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -443,15 +455,30 @@ export function MapCanvas({
     const scheduleIdleRotation = (delay = IDLE_RESUME_DELAY) => {
       stopRotation();
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
-      if (reducedMotionRef.current || revealRunningRef.current || map.getZoom() > GLOBE_ZOOM)
+      if (
+        reducedMotionRef.current ||
+        revealRunningRef.current ||
+        cameraModeRef.current !== "resting_globe" ||
+        map.getZoom() > GLOBE_ZOOM
+      )
         return;
       rotationResumeRef.current = window.setTimeout(() => {
         rotationResumeRef.current = null;
-        if (reducedMotionRef.current || revealRunningRef.current || map.getZoom() > GLOBE_ZOOM)
+        if (
+          reducedMotionRef.current ||
+          revealRunningRef.current ||
+          cameraModeRef.current !== "resting_globe" ||
+          map.getZoom() > GLOBE_ZOOM
+        )
           return;
         let previousTime = performance.now();
         const rotate = (time: number) => {
-          if (reducedMotionRef.current || revealRunningRef.current || map.getZoom() > GLOBE_ZOOM) {
+          if (
+            reducedMotionRef.current ||
+            revealRunningRef.current ||
+            cameraModeRef.current !== "resting_globe" ||
+            map.getZoom() > GLOBE_ZOOM
+          ) {
             stopRotation();
             return;
           }
@@ -477,6 +504,9 @@ export function MapCanvas({
       stopRotation();
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
       rotationResumeRef.current = null;
+      if (cameraModeRef.current !== "search_reveal" && cameraModeRef.current !== "result_framing") {
+        cameraModeRef.current = "manual_navigation";
+      }
     };
 
     const reapplyOmniState = () => {
@@ -510,6 +540,7 @@ export function MapCanvas({
       }
       styleReadyRef.current = true;
       readyRef.current = true;
+      debugMapEvent(map, "style-ready", { mapStatus: "ready", cameraMode: cameraModeRef.current });
       setMapReadyVersion((version) => version + 1);
       if (map.getZoom() <= GLOBE_ZOOM) map.setProjection({ type: "globe" });
       containerRef.current?.setAttribute(
@@ -525,38 +556,35 @@ export function MapCanvas({
           highlightBoundaryAtTarget(map, map.getZoom(), userPositionRef.current);
         }
       });
-      setMapStatus(fallbackAttemptedRef.current ? "fallback" : "ready");
+      cameraModeRef.current = "resting_globe";
+      setMapStatus("ready");
       scheduleIdleRotation(600);
-    };
-
-    const tryFallbackStyle = () => {
-      if (fallbackAttemptedRef.current) {
-        setMapStatus("error");
-        return;
-      }
-      fallbackAttemptedRef.current = true;
-      styleReadyRef.current = false;
-      setMapStatus("fallback");
-      map.stop();
-      map.setStyle(CARTO_LIGHT_STYLE);
     };
 
     map.on("load", applyLoadedStyle);
     map.on("style.load", applyLoadedStyle);
     map.on("error", () => {
-      if (!styleReadyRef.current) tryFallbackStyle();
+      debugMapEvent(map, "style-error", { styleReady: styleReadyRef.current });
+      if (!styleReadyRef.current) setMapStatus("error");
     });
     styleRecoveryTimerRef.current = window.setTimeout(() => {
-      if (!styleReadyRef.current) tryFallbackStyle();
+      if (!styleReadyRef.current) setMapStatus("error");
     }, 8000);
 
     let globe = true;
     const refreshLivingBoundary = () => {
       const zoom = map.getZoom();
       const wantsGlobe = zoom <= GLOBE_ZOOM;
+      debugMapEvent(map, "projection-check", {
+        wantsGlobe,
+        cameraMode: cameraModeRef.current,
+      });
       if (wantsGlobe !== globe) {
         globe = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
+        if (wantsGlobe && cameraModeRef.current === "manual_navigation") {
+          cameraModeRef.current = "resting_globe";
+        }
       }
       containerRef.current?.setAttribute("data-omni-projection", wantsGlobe ? "globe" : "mercator");
       setGlobeLabelVisibility(map, !wantsGlobe);
@@ -622,10 +650,18 @@ export function MapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!gl || !map || !readyRef.current) return;
+    addOmniLayers(map, showFacilities);
     const source = map.getSource("omni-facilities") as
       { setData: (data: unknown) => void } | undefined;
-    source?.setData(facilitiesToGeoJSON(facilities));
-  }, [gl, facilities]);
+    const geojson = facilitiesToGeoJSON(facilities);
+    source?.setData(geojson);
+    setFacilitiesVisibility(map, showFacilities && !revealRunning);
+    debugMapEvent(map, "facilities-rendered", {
+      facilityCount: facilities.length,
+      mappableCount: geojson.features.length,
+      visible: showFacilities && !revealRunning,
+    });
+  }, [gl, facilities, mapReadyVersion, revealRunning, showFacilities]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -649,14 +685,20 @@ export function MapCanvas({
     if (!showUserLocation || !userPosition) return;
 
     const element = document.createElement("div");
-    element.setAttribute("aria-label", "Votre position");
-    element.style.width = "16px";
-    element.style.height = "16px";
-    element.style.borderRadius = "999px";
-    element.style.background = "#2f6fb5";
-    element.style.border = "3px solid #fff";
-    element.style.boxShadow = "0 0 0 6px rgba(47,111,181,.22)";
-    const marker = new gl.Marker({ element });
+    element.setAttribute("aria-label", "Votre position exacte");
+    element.title = "Votre position exacte";
+    element.dataset["omniUserMarker"] = "exact";
+    element.style.position = "relative";
+    element.style.width = "30px";
+    element.style.height = "38px";
+    element.style.pointerEvents = "none";
+    element.style.zIndex = "20";
+    element.innerHTML = `
+      <span style="position:absolute;inset:0 2px 6px 2px;display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
+        <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #2f6fb5;"></span>
+      </span>
+    `;
+    const marker = new gl.Marker({ element, anchor: "bottom" });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
     userMarkerRef.current = marker;
   }, [gl, mapReadyVersion, showUserLocation, userPosition]);
@@ -681,6 +723,8 @@ export function MapCanvas({
       element.style.border = "0";
       element.style.background = "transparent";
       element.style.cursor = "pointer";
+      element.style.zIndex = facility.status === "unclaimed" ? "3" : "4";
+      element.style.visibility = "visible";
       // Leave the root position to MapLibre’s absolute marker CSS.
       element.style.pointerEvents = "auto";
 
@@ -752,6 +796,7 @@ export function MapCanvas({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !focus || revealRunningRef.current) return;
+    cameraModeRef.current = "selected_facility";
     map.flyTo({
       center: [focus.lng, focus.lat],
       zoom: focus.zoom ?? 15,
@@ -764,18 +809,14 @@ export function MapCanvas({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || revealRunningRef.current) return;
-    fitMapToPoints(map, fitPoints);
-  }, [fitPoints]);
-
-  useEffect(() => {
-    const map = mapRef.current;
     if (!map || !readyRef.current || !revealKey || revealKey === lastRevealKeyRef.current) return;
 
     lastRevealKeyRef.current = revealKey;
     revealTokenRef.current += 1;
     const token = revealTokenRef.current;
     revealRunningRef.current = true;
+    cameraModeRef.current = "search_reveal";
+    debugMapEvent(map, "search-reveal-start", { revealKey });
     setRevealRunning(true);
     onRevealStateChange?.(true);
     setRevealLabel("Recherche mondiale");
@@ -798,6 +839,7 @@ export function MapCanvas({
       if (cancelIfStale()) return;
       const source = map.getSource("omni-facilities");
       source?.setData(facilitiesToGeoJSON(facilitiesRef.current));
+      cameraModeRef.current = "result_framing";
       fitMapToPoints(map, fitPointsRef.current);
       await waitForMapSettle(map, 3000);
       if (cancelIfStale()) return;
@@ -813,6 +855,8 @@ export function MapCanvas({
         await waitForRenderFrames(2);
       }
       revealRunningRef.current = false;
+      cameraModeRef.current = map.getZoom() <= GLOBE_ZOOM ? "resting_globe" : "manual_navigation";
+      setFacilitiesVisibility(map, showFacilitiesRef.current);
       setRevealRunning(false);
       onRevealStateChange?.(false);
       setRevealLabel(null);
@@ -876,6 +920,8 @@ export function MapCanvas({
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
       map.stop();
       revealRunningRef.current = false;
+      cameraModeRef.current = map.getZoom() <= GLOBE_ZOOM ? "resting_globe" : "manual_navigation";
+      setFacilitiesVisibility(map, showFacilitiesRef.current);
       setRevealRunning(false);
       onRevealStateChange?.(false);
       setRevealLabel(null);
@@ -903,8 +949,15 @@ export function MapCanvas({
   }
 
   return (
-    <div className={`${className ?? "h-full w-full"} relative overflow-hidden`}>
-      <div ref={containerRef} className="h-full w-full" />
+    <div
+      className={`${className ?? "h-full w-full"} relative overflow-hidden`}
+      style={{ backgroundColor: "#fbfaf7" }}
+    >
+      <div
+        ref={containerRef}
+        className="h-full w-full transition-opacity duration-200"
+        style={{ opacity: mapStatus === "ready" ? 1 : 0 }}
+      />
       <div className="pointer-events-auto absolute left-3 top-1/2 z-10 -translate-y-1/2 overflow-hidden rounded-2xl border border-border/70 bg-card/85 shadow-[var(--shadow-soft)] backdrop-blur">
         <button
           type="button"
@@ -947,17 +1000,9 @@ export function MapCanvas({
       )}
 
       {gl && mapStatus === "loading" && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-10 -translate-x-1/2">
-          <div className="omni-glass rounded-full px-4 py-2 text-xs text-muted-foreground">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#fbfaf7] text-foreground">
+          <div className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-xs tracking-wide text-foreground/70 shadow-sm backdrop-blur">
             Chargement du globe MapLibre…
-          </div>
-        </div>
-      )}
-
-      {gl && mapStatus === "fallback" && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-10 -translate-x-1/2">
-          <div className="omni-glass rounded-full px-4 py-2 text-xs text-muted-foreground">
-            Fond de carte de secours actif
           </div>
         </div>
       )}

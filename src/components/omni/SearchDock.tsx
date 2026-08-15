@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
@@ -95,9 +95,28 @@ export function SearchDock({
   onUseMarketFallback,
 }: Props) {
   const { formatMoney } = useMarket();
-  const railRef = useRef<HTMLDivElement | null>(null);
+  const railRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLDivElement>(null);
   const activeCount = activeFilterCount(filters);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+
+  useEffect(() => {
+    const dock = dockRef.current;
+    if (!dock) return;
+    const updateClearance = () => {
+      document.documentElement.style.setProperty(
+        "--omni-dock-clearance",
+        `${Math.ceil(dock.getBoundingClientRect().height + 20)}px`,
+      );
+    };
+    updateClearance();
+    const observer = new ResizeObserver(updateClearance);
+    observer.observe(dock);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--omni-dock-clearance");
+    };
+  }, []);
 
   function slide(direction: 1 | -1) {
     const rail = railRef.current;
@@ -110,9 +129,16 @@ export function SearchDock({
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
+    <div
+      ref={dockRef}
+      data-omni-dock="true"
+      data-omni-dock-mode={
+        query.trim() || category ? (resultCount > 0 ? "results" : "request") : "idle"
+      }
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+    >
       <div className="pointer-events-auto w-full max-w-xl space-y-2">
-        <div className="flex justify-center">
+        <div data-omni-dock-row="discovery" className="flex justify-center">
           <button
             type="button"
             aria-label={categoriesOpen ? "Masquer les catégories" : "Afficher les catégories"}
@@ -129,7 +155,10 @@ export function SearchDock({
         </div>
 
         {categoriesOpen && (
-          <div className="omni-glass grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-1 rounded-full p-1">
+          <div
+            data-omni-dock-row="discovery"
+            className="omni-glass grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-1 rounded-full p-1"
+          >
             <button
               type="button"
               aria-label="Catégories précédentes"
@@ -280,7 +309,10 @@ export function SearchDock({
         )}
 
         {(query.trim() || category) && (
-          <div className="omni-glass mx-auto grid max-w-xl grid-cols-2 gap-2 rounded-2xl p-2 text-xs sm:grid-cols-4">
+          <div
+            data-omni-dock-row="structured"
+            className="omni-glass mx-auto grid max-w-xl grid-cols-2 gap-2 rounded-2xl p-2 text-xs sm:grid-cols-4"
+          >
             <div className="rounded-xl bg-background/60 p-2">
               <span className="text-muted-foreground">Quantité</span>
               <div className="mt-1 flex items-center justify-between gap-2">
@@ -312,30 +344,33 @@ export function SearchDock({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-center gap-2">
+        <div
+          data-omni-dock-row="context"
+          className="flex flex-wrap items-center justify-center gap-2"
+        >
           <span
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium ${
               locationStatus === "granted" ? "text-primary" : "text-muted-foreground"
             }`}
           >
             {locationStatus === "granted"
-              ? "Localisation détectée — carte centrée sur vous"
+              ? "Position actuelle active"
               : locationStatus === "pending"
-                ? "Choisissez votre zone pour une découverte plus précise"
+                ? "Autorisation de localisation en cours…"
                 : locationStatus === "unavailable"
-                  ? "Géolocalisation indisponible — vue marché approximative"
-                  : "Vue marché approximative — activez la localisation pour le proche de vous"}
+                  ? "Localisation indisponible — réessayez ou utilisez le marché"
+                  : "Marché approximatif — aucune position partagée"}
           </span>
-          {locationStatus === "pending" && onRequestLocation && (
+          {locationStatus === "unavailable" && onRequestLocation && (
             <button
               type="button"
               onClick={onRequestLocation}
               className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
             >
-              Utiliser ma position
+              Réessayer
             </button>
           )}
-          {locationStatus !== "granted" && onUseMarketFallback && (
+          {locationStatus !== "granted" && locationStatus !== "pending" && onUseMarketFallback && (
             <button
               type="button"
               onClick={onUseMarketFallback}
@@ -347,41 +382,65 @@ export function SearchDock({
         </div>
 
         {(query.trim() || category) && (
-          <div className="flex justify-center gap-2">
-            <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
-              {resultCount} résultat{resultCount > 1 ? "s" : ""}
-            </span>
-            {resultCount > 0 && onVerifyAvailability && (
-              <button
-                type="button"
-                onClick={onVerifyAvailability}
-                className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
-              >
-                Vérifier la disponibilité de tous
-              </button>
+          <div data-omni-dock-row="action" className="space-y-2">
+            {resultCount > 0 ? (
+              <div className="flex justify-center gap-2">
+                <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+                  {resultCount} résultat{resultCount > 1 ? "s" : ""}
+                </span>
+                {onVerifyAvailability && (
+                  <button
+                    type="button"
+                    onClick={onVerifyAvailability}
+                    className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
+                  >
+                    Vérifier la disponibilité de tous
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="omni-glass grid gap-2 rounded-2xl border border-primary/20 bg-card/90 p-3 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                <div className="min-w-0 text-left">
+                  <p className="text-sm font-bold">Dites-nous ce que vous cherchez</p>
+                  <p className="truncate text-[11px] text-muted-foreground">
+                    {query.trim() || (category ? categoryLabel(category) : "Votre demande")}
+                  </p>
+                </div>
+                {onVerifyAvailability && (
+                  <button
+                    type="button"
+                    onClick={onVerifyAvailability}
+                    className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+                  >
+                    Créer une demande
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
 
         {/* Search pill */}
-        <SmartSearchBar
-          layout="dock"
-          value={query}
-          onChange={onQueryChange}
-          onSubmit={onSubmit}
-          placeholder="Search for a product or service"
-          enablePhotoSearch={false}
-          trailing={
-            <button
-              type="button"
-              aria-label="Recentrer sur ma position"
-              onClick={onBrandClick}
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
-            >
-              <BrandMark className="h-7 w-7" />
-            </button>
-          }
-        />
+        <div data-omni-dock-row="primary">
+          <SmartSearchBar
+            layout="dock"
+            value={query}
+            onChange={onQueryChange}
+            onSubmit={onSubmit}
+            placeholder="Search for a product or service"
+            enablePhotoSearch={false}
+            trailing={
+              <button
+                type="button"
+                aria-label="Recentrer sur ma position"
+                onClick={onBrandClick}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
+              >
+                <BrandMark className="h-7 w-7" />
+              </button>
+            }
+          />
+        </div>
       </div>
     </div>
   );
