@@ -481,7 +481,7 @@ export function CartePage() {
               Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
               pertinents.
             </p>
-            <Button className="mt-3 w-full" onClick={openDemandRequest}>
+            <Button className="mt-3 w-full" onClick={() => openDemandRequest()}>
               Créer une demande
             </Button>
           </div>
