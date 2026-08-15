@@ -319,7 +319,7 @@ export function CartePage() {
       return;
     }
     if (results.length === 0) {
-      setFitPoints(userPos ? [userPos] : [origin]);
+      setFitPoints(userPos ? [userPos] : null);
       return;
     }
     const nearest = [...results]
@@ -449,7 +449,13 @@ export function CartePage() {
   }
 
   async function buildItinerary(f: MapFacility) {
-    const from = userPos ?? fallbackCenter;
+    if (!userPos) {
+      toast.info(
+        "Position exacte indisponible. Autorisez la localisation pour obtenir un itinéraire.",
+      );
+      return;
+    }
+    const from = userPos;
     setRoutingBusy(true);
     try {
       const url = `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${f.longitude},${f.latitude}?overview=full&geometries=geojson&steps=true`;
