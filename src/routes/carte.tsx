@@ -211,7 +211,8 @@ export function CartePage() {
         setUserPos(null);
         setLocationStatus("unavailable");
       },
-      { enableHighAccuracy: true, maximumAge: 60000, timeout: 12000 },
+      // Do not accept a cached network/IP coordinate: request a fresh device position.
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
     );
   }, [fallbackCenter]);
 
