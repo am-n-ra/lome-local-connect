@@ -93,7 +93,7 @@ function getTargetPoint(
   userPosition: { lat: number; lng: number } | null | undefined,
   marketCenter: { lat: number; lng: number } | null | undefined,
 ) {
-  return userPosition ?? marketCenter ?? { lat: 6.13, lng: 1.22 };
+  return userPosition ?? marketCenter ?? null;
 }
 
 function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
@@ -828,9 +828,14 @@ export function MapCanvas({
     if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
 
     const target = getTargetPoint(userPosition, marketCenter);
+    const approximateTarget = target ?? {
+      lat: GLOBE_START_CENTER[1],
+      lng: GLOBE_START_CENTER[0],
+    };
     const waypoints = REVEAL_STEPS.map((step) => ({
       ...step,
-      center: [target.lng, target.lat] as [number, number],
+      label: step.label === "Votre position" && !userPosition ? "Marché approximatif" : step.label,
+      center: [approximateTarget.lng, approximateTarget.lat] as [number, number],
       zoom: step.label === "Votre position" ? (userPosition ? 14.2 : marketZoom) : step.zoom,
     }));
 
@@ -884,7 +889,7 @@ export function MapCanvas({
       await loadBoundariesForZoom(map, step.zoom);
       await waitForRenderFrames(3);
       if (cancelIfStale()) return;
-      highlightBoundaryAtTarget(map, step.zoom, target);
+      highlightBoundaryAtTarget(map, step.zoom, approximateTarget);
       await waitForDuration(step.pause);
       if (cancelIfStale()) return;
       if (index === waypoints.length - 1) {
@@ -935,10 +940,11 @@ export function MapCanvas({
     map.easeTo({ zoom: map.getZoom() + delta, duration: 250 });
   }
 
-  function recenterUser() {
+  function recenterMap() {
     const map = mapRef.current;
     if (!map) return;
     const target = getTargetPoint(userPosition, marketCenter);
+    if (!target) return;
     map.stop();
     map.flyTo({
       center: [target.lng, target.lat],
@@ -977,8 +983,13 @@ export function MapCanvas({
         </button>
         <button
           type="button"
-          aria-label="Recentrer sur ma position"
-          onClick={recenterUser}
+          aria-label={
+            userPosition ? "Recentrer sur ma position exacte" : "Explorer le marché approximatif"
+          }
+          title={
+            userPosition ? "Recentrer sur ma position exacte" : "Explorer le marché approximatif"
+          }
+          onClick={recenterMap}
           className="grid h-10 w-10 place-items-center text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
         >
           ◎
