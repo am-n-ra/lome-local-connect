@@ -53,3 +53,19 @@
 | SEC-01 | Neon Auth/JWKS only | Master §100; Technical PRD §2 | Verified with runtime correction | Protected functions verify live JWKS JSON and synchronize profile | Technical | Auth middleware | Expired/invalid token returns authorization error |
 | SEC-02 | Audit and idempotency | Master §§29,103–106; Technical PRD §8 | Partial | Money, inventory, claims, transactions, imports, and Agent actions are auditable/idempotent | Technical | Audit/ledger tables | Replay mutations and inspect one logical outcome |
 | PERF-01 | Map/search performance | Master §§18–19; Technical PRD §4.7 | Partial | Bounded viewport payload, indexed retrieval, no millions of browser markers | Technical | Spatial/query indexes | High-volume fixture remains within payload/render budget |
+
+
+## Correction-pass requirements
+
+| ID | Requirement | Source | Current status | Target behavior | Workstream | Dependency | Acceptance test |
+|---|---|---|---|---|---|---|---|
+| LOC-01 | Explicit non-blocking location permission on arrival | Revised Product PRD §5.2 | Partial | Ask through a clear location surface while the globe remains visible and spinning | Product/UI | Geolocation state model | Fresh visitor sees prompt and can continue without blocking |
+| LOC-02 | Truthful location fallback | Revised Product PRD §5.2 | Partial | Denied/timeout/unsupported becomes market fallback with no false user marker | Product/UI + Technical | Separate user position/discovery center | Deny permission and verify copy, center, and marker behavior |
+| LOC-03 | Retry location permission | Revised Product PRD §§5.2–5.3 | Missing | Recenter/location control offers a retry path after denial | Product/UI | Permission state | Deny, choose retry, and verify native permission request path |
+| MAP-07 | Human-like horizontal globe motion | User correction; revised build prompt | Partial/contradictory | Move globe center/longitude around stable camera axis; never roll like a clock through bearing | Product/UI | MapLibre camera helper | Compare sequential frames and verify horizontal movement |
+| MAP-08 | Resting discovery is populated | User correction; revised Product PRD §5.1 | Partial | Sparse real claimed/unclaimed source-backed facility points appear before search | Product/UI + Technical | Public discovery feed, OSM population | Open fresh map and select a real resting facility point |
+| MAP-09 | Search is the only staged reveal trigger | User correction; revised Product PRD §5.2 | Partial | Passive arrival and manual navigation never trigger reveal; explicit/restored search does | Product/UI | Shared surface/location state | Zoom/pan before search, then submit search and observe reveal |
+| MAP-10 | Suppress country/city labels by default | User correction; revised Product PRD §5.1 | Partial | Default globe has clean geography without a wall of country names | Product/UI | Map style layer policy | Inspect default globe and search reveal separately |
+| MAP-11 | Black geographic highlights | User correction; revised Product PRD §5.2 | Partial | Active search boundary uses restrained black/near-black emphasis; orange remains action accent | Product/UI | Boundary loader | Observe each reveal stage on light and dark map areas |
+| SEARCH-06 | Quantity/budget hierarchy | User correction; revised Product PRD §5.4 | Partial | Quantity and maximum budget occupy stable secondary dock row/grid and never collide with CTA/result count | Product/UI | SearchDock responsive layout | Verify desktop, narrow mobile, auth restore, and availability opening |
+| OSM-01 | Global/multi-region unclaimed population | User correction; revised roadmap Phase 2 | Partial | OSM/import API can populate multiple regions in batches with source-backed unclaimed records | Technical + Admin | Import jobs, provenance, dedupe, viewport retrieval | Preview representative multi-region batch and verify unclaimed markers |

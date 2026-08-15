@@ -42,6 +42,23 @@ export const Route = createFileRoute("/carte")({
 });
 
 type RouteStep = { instruction: string; distance: number };
+type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
+type PublicDiscoveryRow = {
+  id: string;
+  name: string;
+  category: string;
+  description: string | null;
+  address: string | null;
+  neighbourhood: string | null;
+  latitude: number;
+  longitude: number;
+  status: string;
+  type: string;
+  is_online: boolean;
+  product_count: number;
+  min_price: number | null;
+  cover_url: string | null;
+};
 
 export function CartePage() {
   const navigate = useNavigate();
@@ -52,6 +69,7 @@ export function CartePage() {
       ? { lat: market.default_lat, lng: market.default_lng }
       : DEFAULT_CENTER;
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
+  const [discoveryFacilities, setDiscoveryFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
@@ -60,7 +78,9 @@ export function CartePage() {
 
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [geoReady, setGeoReady] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
+  const [locationPromptVisible, setLocationPromptVisible] = useState(true);
+  const [quantity, setQuantity] = useState(1);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
   const [routingBusy, setRoutingBusy] = useState(false);
@@ -82,7 +102,7 @@ export function CartePage() {
     let active = true;
     const handle = window.setTimeout(
       () => {
-        if (authLoading || !user) {
+        if (authLoading || !user || (!query.trim() && !category)) {
           setFacilities([]);
           return;
         }
@@ -110,22 +130,62 @@ export function CartePage() {
   }, [authLoading, category, fetchFacilities, query, user]);
 
   useEffect(() => {
+    let active = true;
+    const marketCode = market?.market_code ?? "TG-LOME";
+    void fetch(`/api/public/v1/facilities?market_code=${encodeURIComponent(marketCode)}&limit=32`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("discovery unavailable");
+        return (await response.json()) as { data?: PublicDiscoveryRow[] };
+      })
+      .then((payload) => {
+        if (!active) return;
+        setDiscoveryFacilities(
+          (payload.data ?? []).map((row) => ({
+            ...row,
+            phone: null,
+            last_position_update: null,
+            owner_id: null,
+            max_discount_percent: 0,
+            sponsored: false,
+            tier: "free",
+          })),
+        );
+      })
+      .catch(() => {
+        if (active) setDiscoveryFacilities([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [market?.market_code]);
+
+  function requestLocation() {
     if (!navigator.geolocation) {
-      setGeoReady(true);
+      setLocationStatus("unavailable");
+      setLocationPromptVisible(true);
       return;
     }
+    setLocationStatus("pending");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGeoReady(true);
+        setLocationStatus("granted");
+        setLocationPromptVisible(false);
       },
       () => {
         setUserPos(null);
-        setGeoReady(true);
+        setLocationStatus("unavailable");
+        setLocationPromptVisible(true);
       },
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 12000 },
     );
-  }, []);
+  }
+
+  function useMarketFallback() {
+    setUserPos(null);
+    setLocationStatus("fallback");
+    setLocationPromptVisible(false);
+  }
 
   // Proximity banner (mode démo) — computed on load, no background tracking
   useEffect(() => {
@@ -180,9 +240,22 @@ export function CartePage() {
     .slice(0, 12)
     .map((f) => `${f.id}:${f.latitude.toFixed(5)}:${f.longitude.toFixed(5)}`)
     .join("|");
+  const discoveryResults = useMemo(
+    () =>
+      discoveryFacilities
+        .map((f) => ({
+          ...f,
+          isPro: false,
+          mobile_presence: f.type === "mobile" && f.is_online,
+          distanceKm: haversineKm(origin, { lat: f.latitude, lng: f.longitude }),
+        }))
+        .slice(0, 32),
+    [discoveryFacilities, origin],
+  );
+
   useEffect(() => {
     if (!hasActiveSearch) {
-      setFitPoints(userPos ? [userPos] : null);
+      setFitPoints(null);
       return;
     }
     if (results.length === 0) {
@@ -225,6 +298,9 @@ export function CartePage() {
       filters,
       targetFacilityIds: facility ? [facility.id] : results.map((f) => f.id),
       location: userPos,
+      locationSource:
+        locationStatus === "granted" ? ("browser" as const) : ("market_fallback" as const),
+      quantity,
       demandOpen: true,
       mode: "availability" as const,
       demandMode: mode,
@@ -274,6 +350,7 @@ export function CartePage() {
     setFilters(pending.filters as MapFilters);
     setPendingTargetFacilityIds(pending.targetFacilityIds);
     setPendingUserPos(pending.location);
+    setQuantity(pending.quantity ?? 1);
     setDemandMode(pending.demandMode ?? "bulk");
     setDemandFacilityName(pending.demandFacilityName ?? null);
     setDemandOpen(pending.demandOpen);
@@ -295,12 +372,17 @@ export function CartePage() {
         filters,
         targetFacilityIds: [],
         location: userPos,
+        locationSource:
+          locationStatus === "granted" ? ("browser" as const) : ("market_fallback" as const),
+        quantity,
         demandOpen: false,
         mode: "search",
       });
       navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
       return;
     }
+    setLocationPromptVisible(false);
+    if (locationStatus === "pending") setLocationStatus("fallback");
     setSelected(null);
     setRouteCoords(null);
     setSteps([]);
@@ -363,6 +445,24 @@ export function CartePage() {
         minimalMapChrome
       />
 
+      {locationPromptVisible && locationStatus === "pending" && (
+        <div className="pointer-events-auto absolute left-1/2 top-20 z-20 w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl border border-border bg-card/90 p-4 shadow-[var(--shadow-sheet)] backdrop-blur">
+          <p className="font-display text-base font-bold">Découvrez ce qui est près de vous</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Autorisez votre position pour obtenir une vue locale plus précise. Vous pouvez aussi
+            explorer le marché approximatif sans partager votre position.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" onClick={requestLocation}>
+              Utiliser ma position
+            </Button>
+            <Button size="sm" variant="outline" onClick={useMarketFallback}>
+              Explorer le marché
+            </Button>
+          </div>
+        </div>
+      )}
+
       {nearbyMobile && !bannerDismissed && (
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
           <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
@@ -380,7 +480,7 @@ export function CartePage() {
 
       <div className="relative flex-1 overflow-hidden">
         <MapCanvas
-          facilities={results}
+          facilities={hasActiveSearch ? results : discoveryResults}
           selectedId={selected?.id ?? null}
           onSelect={(f) => {
             setSelected(f);
@@ -392,8 +492,8 @@ export function CartePage() {
           marketCenter={fallbackCenter}
           marketZoom={market?.default_zoom ?? 12.2}
           revealKey={searchRunKey}
-          showFacilities={Boolean(searchRunKey)}
-          showUserLocation={geoReady}
+          showFacilities={true}
+          showUserLocation={locationStatus === "granted"}
           onRevealStateChange={setRevealRunning}
           focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
           fitPoints={selected ? null : fitPoints}
@@ -487,6 +587,11 @@ export function CartePage() {
                   filters,
                   targetFacilityIds: [],
                   location: userPos,
+                  locationSource:
+                    locationStatus === "granted"
+                      ? ("browser" as const)
+                      : ("market_fallback" as const),
+                  quantity,
                   demandOpen: false,
                   mode: "search",
                 });
@@ -500,8 +605,11 @@ export function CartePage() {
             onFiltersChange={setFilters}
             resultCount={results.length}
             onVerifyAvailability={openDemandRequest}
-            locationReady={geoReady}
-            locationDetected={Boolean(userPos)}
+            quantity={quantity}
+            onQuantityChange={setQuantity}
+            locationStatus={locationStatus}
+            onRequestLocation={requestLocation}
+            onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
               if (userPos) setFitPoints([userPos]);
               else toast.info("Position indisponible.");
@@ -605,6 +713,7 @@ export function CartePage() {
         targetFacilityIds={demandTargetFacilityIds}
         mode={demandMode}
         facilityName={demandFacilityName}
+        initialQuantity={quantity}
       />
       <WishlistPanel
         open={wishOpen}

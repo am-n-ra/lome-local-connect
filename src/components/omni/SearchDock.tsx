@@ -61,8 +61,11 @@ type Props = {
   resultCount: number;
   onBrandClick?: () => void;
   onVerifyAvailability?: () => void;
-  locationReady?: boolean;
-  locationDetected?: boolean;
+  quantity?: number;
+  onQuantityChange?: (value: number) => void;
+  locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
+  onRequestLocation?: () => void;
+  onUseMarketFallback?: () => void;
 };
 
 const CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES.map((c) => ({ ...c }))] as {
@@ -85,14 +88,16 @@ export function SearchDock({
   resultCount,
   onBrandClick,
   onVerifyAvailability,
-  locationReady = true,
-  locationDetected = false,
+  quantity = 1,
+  onQuantityChange,
+  locationStatus = "fallback",
+  onRequestLocation,
+  onUseMarketFallback,
 }: Props) {
   const { formatMoney } = useMarket();
   const railRef = useRef<HTMLDivElement | null>(null);
   const activeCount = activeFilterCount(filters);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
-  const [quantity, setQuantity] = useState(1);
 
   function slide(direction: 1 | -1) {
     const rail = railRef.current;
@@ -275,23 +280,23 @@ export function SearchDock({
         )}
 
         {(query.trim() || category) && (
-          <div className="omni-glass mx-auto grid max-w-md grid-cols-2 gap-2 rounded-2xl p-2 text-xs">
+          <div className="omni-glass mx-auto grid max-w-xl grid-cols-2 gap-2 rounded-2xl p-2 text-xs sm:grid-cols-4">
             <div className="rounded-xl bg-background/60 p-2">
               <span className="text-muted-foreground">Quantité</span>
               <div className="mt-1 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   aria-label="Diminuer la quantité"
-                  onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
                   className="rounded-full bg-secondary p-1 text-foreground"
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </button>
-                <strong>{quantity}</strong>
+                <strong aria-live="polite">{quantity}</strong>
                 <button
                   type="button"
                   aria-label="Augmenter la quantité"
-                  onClick={() => setQuantity((value) => value + 1)}
+                  onClick={() => onQuantityChange?.(quantity + 1)}
                   className="rounded-full bg-secondary p-1 text-foreground"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -300,25 +305,45 @@ export function SearchDock({
             </div>
             <div className="rounded-xl bg-background/60 p-2">
               <span className="text-muted-foreground">Budget max</span>
-              <div className="mt-1 font-semibold">
+              <div className="mt-1 truncate font-semibold">
                 {filters.maxPrice === null ? "Non défini" : formatMoney(filters.maxPrice)}
               </div>
             </div>
           </div>
         )}
 
-        <div className="flex justify-center">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <span
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium ${
-              locationDetected ? "text-primary" : "text-muted-foreground"
+              locationStatus === "granted" ? "text-primary" : "text-muted-foreground"
             }`}
           >
-            {locationDetected
+            {locationStatus === "granted"
               ? "Localisation détectée — carte centrée sur vous"
-              : locationReady
-                ? "Localisation non détectée — centre marché utilisé"
-                : "Détection de votre localisation…"}
+              : locationStatus === "pending"
+                ? "Choisissez votre zone pour une découverte plus précise"
+                : locationStatus === "unavailable"
+                  ? "Géolocalisation indisponible — vue marché approximative"
+                  : "Vue marché approximative — activez la localisation pour le proche de vous"}
           </span>
+          {locationStatus === "pending" && onRequestLocation && (
+            <button
+              type="button"
+              onClick={onRequestLocation}
+              className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
+            >
+              Utiliser ma position
+            </button>
+          )}
+          {locationStatus !== "granted" && onUseMarketFallback && (
+            <button
+              type="button"
+              onClick={onUseMarketFallback}
+              className="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground underline underline-offset-2"
+            >
+              Utiliser le marché approximatif
+            </button>
+          )}
         </div>
 
         {(query.trim() || category) && (

@@ -77,9 +77,9 @@ export const BOUNDARY_LEVELS: BoundaryLevel[] = [
 ];
 
 const INACTIVE_BORDER_COLOR = "#a8a09a";
-const ACTIVE_FILL_COLOR = "#fffaf5";
-const ACTIVE_BORDER_COLOR = "#ffffff";
-const ACTIVE_GLOW_COLOR = "#eadfd5";
+const ACTIVE_FILL_COLOR = "#11100f";
+const ACTIVE_BORDER_COLOR = "#11100f";
+const ACTIVE_GLOW_COLOR = "#000000";
 
 const cache = new Map<string, GeoJSON>();
 
@@ -136,7 +136,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         ACTIVE_FILL_COLOR,
         "#ffffff",
       ],
-      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.1, 0],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.12, 0],
     },
   });
 
@@ -155,7 +155,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         INACTIVE_BORDER_COLOR,
       ],
       "line-width": ["case", ["boolean", ["feature-state", "active"], false], 2.5, 0],
-      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 1, 0],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.92, 0],
     },
   });
 
@@ -169,7 +169,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     paint: {
       "line-color": ACTIVE_GLOW_COLOR,
       "line-width": ["case", ["boolean", ["feature-state", "active"], false], 7, 0],
-      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.42, 0],
+      "line-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.24, 0],
       "line-blur": 1.2,
     },
   });
@@ -181,6 +181,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     minzoom: level.labelMinzoom,
     maxzoom: level.maxzoom,
     layout: {
+      visibility: "none",
       "text-field": ["coalesce", ["get", "name"], ["get", "shapeName"], ""],
       "text-font": ["Noto Sans Regular"],
       "text-size": ["interpolate", ["linear"], ["zoom"], level.labelMinzoom, 12, level.maxzoom, 16],

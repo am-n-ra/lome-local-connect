@@ -56,17 +56,19 @@ The product/UI workstream defines how the user experiences each state. The backe
 
 **Exit criteria:** Protected calls no longer mask authorization errors; map and panels remain mounted coherently; feature flags can disable AI/media without disabling manual operations.
 
-### Phase 2 — Globe, location, discovery, and facilities
+### Phase 2 — Map, location, discovery, and facilities
 
-**Objective:** Deliver the intended global discovery experience and trustworthy facility lifecycle.
+**Objective:** Correct the first-arrival experience and deliver trustworthy, populated global discovery before expanding seller operations.
 
-**Product/UI work:** Real MapLibre globe, horizontal resting rotation, staged geographic reveal with pauses/highlights, user location, search framing, bottom dock, result cards, native pins, OSM provenance, unclaimed status, claim CTA, claimed/certified detail states, buyer preview.
+**Immediate correction gate:** Explicit non-blocking location permission, truthful market fallback, real user marker only after browser success, human-like horizontal center/longitude rotation, sparse real facility discovery at rest, no default country/city label wall, search-only staged reveal, black/near-black active boundaries, and a stable quantity/budget search-dock layout.
 
-**Technical work:** Boundary/stage metadata, viewport candidate retrieval, facility/source/claim/certification model, OSM import jobs, normalization, deduplication, provenance, search-index publication, and unclaimed purchase-intent rejection.
+**Product/UI work:** Real MapLibre globe, horizontal resting rotation, location states, resting discovery points, manual navigation, search-only geographic reveal with pauses/highlights, user location, search framing, bottom dock, result cards, native pins, OSM provenance, unclaimed status, claim CTA, claimed/certified detail states, buyer preview.
 
-**Dependencies:** Phase 1 auth/config/test foundations.
+**Technical work:** Boundary/stage metadata, explicit location source in search context, viewport candidate retrieval, public resting discovery feed, facility/source/claim/certification model, OSM import jobs, normalization, deduplication, provenance, search-index publication, and unclaimed purchase-intent rejection. OSM population must support bounded multi-region/global batches rather than only a fixed Lomé box.
 
-**Exit criteria:** OSM facilities are discoverable and source-attributed; unclaimed facilities cannot be purchased; search results are framed after staged reveal; exact-query auth restoration is verified.
+**Dependencies:** Phase 1 auth/config/test foundations; live Neon read-only schema inventory before new import/provenance migrations.
+
+**Exit criteria:** The arrival globe is spinning horizontally and is not a naked map; location permission/fallback is truthful; manual navigation does not trigger reveal; explicit search triggers black-highlight staged reveal; real unclaimed/claimed facilities are discoverable and source-attributed; unclaimed facilities cannot be purchased; search results are framed after staged reveal; exact-query auth restoration is verified.
 
 ### Phase 3 — Manual commerce loop
 
@@ -161,12 +163,12 @@ Open decisions requiring later product review include exact Pro pricing, renewal
 
 | Capability | Product/UI gate | Technical gate |
 |---|---|---|
-| Globe/resting rotation | Real globe, approved direction, no substitute, reduced-motion path | Map state receives valid geometry/stage/framing metadata and does not overload viewport |
-| Staged reveal | Visible pauses/highlights through exact position | Boundary data is deterministic and result framing is reproducible |
-| First search/auth | Exact query restored after auth | Backend retrieval is blocked pre-auth and protected function recognizes session |
-| OSM/unclaimed | Discoverable, attributed, claimable, not purchasable | Source/provenance/claim state and final purchase-intent rejection |
-| Catalogue/inventory | Clear product, allocation, low-stock, movement states | Membership, plan, concurrency, allocation, and audit enforcement |
-| Availability | Manual/bulk, quota, ranking, response states | Quota, seller ownership, state, notification, and idempotency enforcement |
+| Globe/resting rotation | Real globe, approved horizontal center/longitude direction, no clock-like roll, reduced-motion path | Map state receives valid geometry/stage/framing metadata and does not overload viewport |
+| Location/resting discovery | Explicit permission, truthful fallback, real marker only after success, sparse source-backed facility points, no label wall | Location source, discovery center, viewport feed, and facility eligibility are authoritative |
+| Manual navigation/reveal | Zoom/pan/recenter before search never triggers choreography; explicit/restored search does | Reveal trigger is explicit and boundary metadata is deterministic |
+| Staged reveal/highlight | Visible pauses/highlights through exact position using black/near-black emphasis without unnecessary country labels | Boundary data is deterministic and result framing is reproducible |
+| Search dock | Quantity/budget hierarchy is clear on desktop/mobile and does not overlap result count or availability action | Structured values persist through auth/search/availability transitions |
+| OSM/unclaimed | Discoverable, attributed, claimable, not purchasable, populated by bounded multi-region imports | Source/provenance/claim state and final purchase-intent rejection |
 | Transaction | QR/timeline/payment/receipt sequence | Server transition invariants and buyer confirmation control |
 | Wallet/subscription | Available/pending/ledger/renewal/downgrade clarity | Atomic idempotent ledger, no negative balance, deterministic renewal |
 | Agent/flags | Hidden/off/confirmation/action states | Tool permissions, plan/flag checks, kill switch, audit |

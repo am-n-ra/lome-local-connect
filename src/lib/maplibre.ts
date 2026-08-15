@@ -126,6 +126,22 @@ const PASTEL = {
 };
 
 /** Repaints a loaded vector style into the soft pastel OmniView palette. */
+const GLOBE_LABEL_PATTERN = /label|place|country|state|city|settlement|locality/;
+
+export function setGlobeLabelVisibility(map: MapInstance, visible: boolean) {
+  const layers = map.getStyle()?.layers ?? [];
+  for (const layer of layers) {
+    const id = layer.id.toLowerCase();
+    if (layer.type !== "symbol" || id.startsWith("omni-") || !GLOBE_LABEL_PATTERN.test(id))
+      continue;
+    try {
+      map.setLayoutProperty(layer.id, "visibility", visible ? "visible" : "none");
+    } catch {
+      /* A style layer may not expose layout visibility in a fallback style. */
+    }
+  }
+}
+
 export function applyPastelPalette(map: MapInstance) {
   const layers = map.getStyle()?.layers ?? [];
   for (const layer of layers) {

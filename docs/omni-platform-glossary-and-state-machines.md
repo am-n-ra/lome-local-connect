@@ -181,3 +181,33 @@ Low-risk drafts may skip confirmation only when policy permits. Price changes, p
 8. Stronger source authority cannot be silently overwritten by weaker data.
 9. Plan limits are enforced server-side and represented in user-readable UI.
 10. The MapLibre globe and staged reveal remain real spatial behavior, not decorative substitutes.
+
+
+## 4. Map and location states
+
+| State | Meaning |
+|---|---|
+| `location_pending` | The browser location request is being offered or awaited while the map remains usable. |
+| `location_granted` | The browser returned a real user position that may be shown and used for local framing. |
+| `location_denied` | The user denied permission or the browser refused the request; no user marker is shown. |
+| `location_unavailable` | The browser lacks geolocation or the request timed out; no user marker is shown. |
+| `market_fallback` | The configured market centre is used as approximate discovery context, never as the user’s claimed position. |
+| `resting_discovery` | The arrival state: real MapLibre globe is spinning horizontally and shows sparse source-backed facility discovery points without search choreography. |
+| `manual_navigation` | The user is zooming, panning, recentering, or inspecting a panel; the map remains under direct user control and does not start staged reveal. |
+| `search_reveal` | An explicit or restored search has stopped resting rotation and is running the semantic geographic reveal before final result pins/cards. |
+
+### 4.1 Map state sequence
+
+```text
+location_pending → location_granted
+location_pending → location_denied/location_unavailable
+location_denied/location_unavailable → market_fallback
+market_fallback/location_granted → resting_discovery
+resting_discovery → manual_navigation
+resting_discovery → search_reveal   (explicit or restored search only)
+manual_navigation → resting_discovery   (idle at globe scale)
+manual_navigation → search_reveal        (only after explicit search)
+search_reveal → search_results
+```
+
+A passive page load, location resolution, panel open, zoom, pan, or recenter must never transition into `search_reveal`. Active geographic emphasis during `search_reveal` is black/near-black with restrained opacity; orange is reserved for Omni actions and pins.
