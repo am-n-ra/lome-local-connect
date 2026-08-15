@@ -787,6 +787,9 @@ export function MapCanvas({
     element.setAttribute("aria-label", markerLabel);
     element.title = markerLabel;
     element.dataset["omniUserMarker"] = isApproximate ? "approximate-network" : "exact";
+    element.dataset["omniUserLat"] = String(userPosition.lat);
+    element.dataset["omniUserLng"] = String(userPosition.lng);
+    element.dataset["omniUserAccuracy"] = String(userPosition.accuracy ?? "");
     element.style.position = "relative";
     element.style.width = "30px";
     element.style.height = "38px";
