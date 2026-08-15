@@ -95,37 +95,21 @@ export function useMapLibre() {
   return gl;
 }
 
-export const CARTO_LIGHT_STYLE = {
-  version: 8,
-  sources: {
-    carto: {
-      type: "raster",
-      tiles: [
-        "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-        "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png",
-      ],
-      tileSize: 256,
-      attribution: "© OpenStreetMap, © CARTO",
-    },
-  },
-  layers: [{ id: "carto", type: "raster", source: "carto" }],
-} as const;
-
 /**
  * Free, key-less vector basemap (OpenFreeMap "positron"): near-white roads on a
- * desaturated base. `applyPastelPalette` then repaints water, parks and
- * buildings with the OmniView pastel palette.
+ * desaturated base. `applyPastelPalette` then repaints water, land and
+ * buildings with the OmniView landing palette.
  */
 export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 const PASTEL = {
-  water: "#dce9f2",
-  green: "#dfe9dc",
-  building: "#eee7de",
-  background: "#f7f8f8",
+  water: "#15191b",
+  green: "#ffffff",
+  building: "#ffffff",
+  background: "#f4f4f1",
 };
 
-/** Repaints a loaded vector style into the soft pastel OmniView palette. */
+/** Repaints a loaded vector style into the high-contrast Omni landing palette. */
 const GLOBE_LABEL_PATTERN = /label|place|country|state|city|settlement|locality/;
 
 export function setGlobeLabelVisibility(map: MapInstance, visible: boolean) {

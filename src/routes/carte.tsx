@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -79,7 +79,7 @@ export function CartePage() {
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
-  const [locationPromptVisible, setLocationPromptVisible] = useState(true);
+  const locationRequestStartedRef = useRef(false);
   const [quantity, setQuantity] = useState(1);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
@@ -159,10 +159,9 @@ export function CartePage() {
     };
   }, [market?.market_code]);
 
-  function requestLocation() {
+  const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setLocationStatus("unavailable");
-      setLocationPromptVisible(true);
       return;
     }
     setLocationStatus("pending");
@@ -170,21 +169,33 @@ export function CartePage() {
       (pos) => {
         setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocationStatus("granted");
-        setLocationPromptVisible(false);
       },
       () => {
         setUserPos(null);
         setLocationStatus("unavailable");
-        setLocationPromptVisible(true);
       },
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 12000 },
     );
-  }
+  }, []);
+
+  useEffect(() => {
+    if (locationRequestStartedRef.current) return;
+    locationRequestStartedRef.current = true;
+    try {
+      if (window.sessionStorage.getItem("omni:location-requested") === "1") {
+        setLocationStatus("unavailable");
+        return;
+      }
+      window.sessionStorage.setItem("omni:location-requested", "1");
+    } catch {
+      // Storage can be unavailable in privacy-restricted browser contexts.
+    }
+    requestLocation();
+  }, [requestLocation]);
 
   function useMarketFallback() {
     setUserPos(null);
     setLocationStatus("fallback");
-    setLocationPromptVisible(false);
   }
 
   // Proximity banner (mode démo) — computed on load, no background tracking
@@ -381,7 +392,6 @@ export function CartePage() {
       navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
       return;
     }
-    setLocationPromptVisible(false);
     if (locationStatus === "pending") setLocationStatus("fallback");
     setSelected(null);
     setRouteCoords(null);
@@ -445,24 +455,6 @@ export function CartePage() {
         minimalMapChrome
       />
 
-      {locationPromptVisible && locationStatus === "pending" && (
-        <div className="pointer-events-auto absolute left-1/2 top-20 z-20 w-[min(92vw,28rem)] -translate-x-1/2 rounded-2xl border border-border bg-card/90 p-4 shadow-[var(--shadow-sheet)] backdrop-blur">
-          <p className="font-display text-base font-bold">Découvrez ce qui est près de vous</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Autorisez votre position pour obtenir une vue locale plus précise. Vous pouvez aussi
-            explorer le marché approximatif sans partager votre position.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" onClick={requestLocation}>
-              Utiliser ma position
-            </Button>
-            <Button size="sm" variant="outline" onClick={useMarketFallback}>
-              Explorer le marché
-            </Button>
-          </div>
-        </div>
-      )}
-
       {nearbyMobile && !bannerDismissed && (
         <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
           <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
@@ -505,7 +497,7 @@ export function CartePage() {
           (query.trim() || category) &&
           results.length > 0 &&
           steps.length === 0 && (
-            <div className="pointer-events-none absolute inset-x-3 bottom-28 z-10 mx-auto max-w-6xl md:bottom-32">
+            <div className="pointer-events-none absolute inset-x-3 bottom-44 z-10 mx-auto max-w-6xl sm:bottom-48 md:bottom-40">
               <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
                 {results.slice(0, 6).map((facility) => (
                   <button
@@ -618,7 +610,7 @@ export function CartePage() {
         )}
 
         {!revealRunning && !selected && (query.trim() || category) && results.length === 0 && (
-          <div className="absolute inset-x-4 bottom-28 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur">
+          <div className="absolute inset-x-4 bottom-44 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur sm:bottom-48 md:bottom-40">
             <p className="font-display font-bold">Dites-nous ce que vous cherchez</p>
             <p className="mt-1 text-muted-foreground">
               Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces

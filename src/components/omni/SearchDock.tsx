@@ -110,7 +110,7 @@ export function SearchDock({
   }
 
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-4">
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
       <div className="pointer-events-auto w-full max-w-xl space-y-2">
         <div className="flex justify-center">
           <button
@@ -319,23 +319,23 @@ export function SearchDock({
             }`}
           >
             {locationStatus === "granted"
-              ? "Localisation détectée — carte centrée sur vous"
+              ? "Position actuelle active"
               : locationStatus === "pending"
-                ? "Choisissez votre zone pour une découverte plus précise"
+                ? "Autorisation de localisation en cours…"
                 : locationStatus === "unavailable"
-                  ? "Géolocalisation indisponible — vue marché approximative"
-                  : "Vue marché approximative — activez la localisation pour le proche de vous"}
+                  ? "Localisation indisponible — réessayez ou utilisez le marché"
+                  : "Marché approximatif — aucune position partagée"}
           </span>
-          {locationStatus === "pending" && onRequestLocation && (
+          {locationStatus === "unavailable" && onRequestLocation && (
             <button
               type="button"
               onClick={onRequestLocation}
               className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
             >
-              Utiliser ma position
+              Réessayer
             </button>
           )}
-          {locationStatus !== "granted" && onUseMarketFallback && (
+          {locationStatus !== "granted" && locationStatus !== "pending" && onUseMarketFallback && (
             <button
               type="button"
               onClick={onUseMarketFallback}
