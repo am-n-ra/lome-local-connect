@@ -48,8 +48,8 @@ const GLOBE_START_CENTER: [number, number] = [8, 7];
 const RESET_DURATION = 900;
 const REVEAL_FLIGHT_DURATION = 1250;
 const REVEAL_PAUSE_DURATION = 1400;
-// Negative bearing produces the intended west-to-east horizontal world motion.
-const ROTATION_DEGREES_PER_SECOND = -2.8;
+// Positive bearing produces the intended opposite horizontal world motion.
+const ROTATION_DEGREES_PER_SECOND = 2.8;
 const IDLE_RESUME_DELAY = 1800;
 
 const REVEAL_STEPS = [
