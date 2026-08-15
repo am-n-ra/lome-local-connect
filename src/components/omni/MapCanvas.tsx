@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   applyPastelPalette,
+  setGlobeLabelVisibility,
   CARTO_LIGHT_STYLE,
   PASTEL_STYLE_URL,
   useMapLibre,
@@ -48,7 +49,9 @@ const GLOBE_START_CENTER: [number, number] = [8, 7];
 const RESET_DURATION = 900;
 const REVEAL_FLIGHT_DURATION = 1250;
 const REVEAL_PAUSE_DURATION = 1400;
-// Positive bearing produces the intended opposite horizontal world motion.
+// Negative longitude motion makes the visible earth travel left-to-right around
+// the stable vertical axis from a standing viewer’s perspective.
+const RESTING_LONGITUDE_DIRECTION = -1;
 const ROTATION_DEGREES_PER_SECOND = 2.8;
 const IDLE_RESUME_DELAY = 1800;
 
@@ -93,7 +96,13 @@ function getTargetPoint(
 function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
   for (const layerId of ["omni-point-halo", "omni-points", "omni-pin-icons", "omni-point-labels"]) {
     try {
-      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      const labelLayer = layerId === "omni-point-labels";
+      const labelsVisible = map.getZoom() > GLOBE_ZOOM;
+      map.setLayoutProperty(
+        layerId,
+        "visibility",
+        visible && (!labelLayer || labelsVisible) ? "visible" : "none",
+      );
     } catch {
       // The map may not have loaded its style layer yet.
     }
@@ -448,7 +457,16 @@ export function MapCanvas({
           }
           const elapsedSeconds = Math.min(0.1, Math.max(0, time - previousTime) / 1000);
           previousTime = time;
-          map.jumpTo({ bearing: map.getBearing() + ROTATION_DEGREES_PER_SECOND * elapsedSeconds });
+          const center = map.getCenter();
+          map.jumpTo({
+            center: [
+              center.lng +
+                RESTING_LONGITUDE_DIRECTION * ROTATION_DEGREES_PER_SECOND * elapsedSeconds,
+              center.lat,
+            ],
+            bearing: 0,
+            pitch: 0,
+          });
           rotationFrameRef.current = window.requestAnimationFrame(rotate);
         };
         rotationFrameRef.current = window.requestAnimationFrame(rotate);
@@ -500,6 +518,7 @@ export function MapCanvas({
       );
       map.resize();
       applyPastelPalette(map);
+      setGlobeLabelVisibility(map, map.getZoom() > GLOBE_ZOOM);
       reapplyOmniState();
       void loadBoundariesForZoom(map, map.getZoom()).then(() => {
         if (map.getZoom() <= GLOBE_ZOOM && userPositionRef.current) {
@@ -540,6 +559,7 @@ export function MapCanvas({
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
       containerRef.current?.setAttribute("data-omni-projection", wantsGlobe ? "globe" : "mercator");
+      setGlobeLabelVisibility(map, !wantsGlobe);
       void loadBoundariesForZoom(map, zoom).then(() => {
         if (wantsGlobe && userPositionRef.current) {
           highlightBoundaryAtTarget(map, zoom, userPositionRef.current);
@@ -837,7 +857,8 @@ export function MapCanvas({
       map.flyTo({
         center: GLOBE_START_CENTER,
         zoom: GLOBE_START_ZOOM,
-        bearing: map.getBearing() + 8,
+        bearing: 0,
+        pitch: 0,
         duration: RESET_DURATION,
         speed: 0.55,
         curve: 1.15,

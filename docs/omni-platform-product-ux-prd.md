@@ -66,27 +66,31 @@ Admin surfaces are not part of the buyer map. They provide facility certificatio
 
 ### 5.1 Opening state
 
-On opening Omni, the user sees the real MapLibre globe or a sufficiently zoomed-out MapLibre map with a quiet warm visual treatment. The globe rests in a slow horizontal rotation. The rotation must use the approved axis convention: the visible earth turns horizontally as if rotating around the vertical axis from earth toward sky, with positive bearing mapped to the user-approved direction. No SVG globe, CSS globe, canvas illustration, or decorative replacement is acceptable.
+On opening Omni, the user sees the real MapLibre globe or a sufficiently zoomed-out MapLibre map with a quiet warm visual treatment and a sparse layer of real, source-backed facility discovery points. The globe is already in a slow horizontal rotation. The rotation must move the visible earth left-to-right or right-to-left around its vertical axis, as a standing person would perceive a physical globe spinning; it must not roll or turn like a clock through camera bearing. No SVG globe, CSS globe, canvas illustration, or decorative replacement is acceptable.
 
-The map remains visually quieter(just like shopify globe map that when zoomed out is clean no huge text just america africa europe.. on eash continent and the actual user continent slightly highlighted..) than the UI. It prioritizes geography, the user position(must be visible on the map or globe), facilities, search results, and availability state. The Omni orange eye-in-location-pin logo may appear in onboarding or controlled brand moments, but no permanent top-left brand mark appears in the minimal buyer map chrome.
+The map remains visually quieter than the UI while still communicating that Omni represents living global supply. At rest it shows geography plus a sparse, performance-bounded set of real claimed and unclaimed facility discovery points; it must not be a naked map and must not use fake markers. Country and city names are suppressed at default globe scale unless they are needed for a deliberate search reveal. The user position is visible only when the browser provides a real position; a market fallback must never be presented as the user’s location. The map prioritizes geography, facilities, search results, and availability state. The Omni orange eye-in-location-pin logo may appear in onboarding or controlled brand moments, but no permanent top-left brand mark appears in the minimal buyer map chrome.
 
 ### 5.2 Location onboarding and staged reveal
 
-When location is unavailable, Omni asks for permission without blocking the product. On refusal, it uses the active market’s configured centre and tells the user that local precision can be enabled later.
+On first arrival, Omni asks for location permission through a clear, non-blocking location surface while the globe remains visible and spinning. The user can choose `Use my location`, `Use approximate market`, or continue without location. If permission is granted, the map shows the real user position and uses it for local framing. If permission is denied, times out, or is unavailable, Omni uses the active market’s configured centre only as an approximate discovery context and explicitly says that nearby precision is unavailable; it must not display a user marker at the market centre. The user can retry permission later.
 
-After location is granted, the reveal proceeds as a deliberate sequence:
+A deliberate geographic reveal occurs only after a real search is submitted or an authenticated search is restored. Manual zooming, panning, recentering, or opening a panel must never trigger the reveal. After location is granted, the reveal proceeds as a deliberate sequence:
 
 `Globe → Continent → Country → Region → City/district/local area → Exact position.`
 
-Each stage has a visible pause and highlight. The camera does not jump directly from globe to a pin. The active geographic boundary is highlighted with the approved orange accent or map grey highlight white.., the current level is legible, and the user pin appears at the final location. Reduced-motion mode collapses the timing while retaining the semantic stage changes.
+Each stage has a visible pause and highlight. The camera does not jump directly from globe to a pin. The active geographic boundary uses black or near-black emphasis with a restrained dark halo and low-opacity neutral fill; orange remains reserved for Omni actions, pins, and primary emphasis. Country and city names are not required as labels because the geography is visually legible, and the user pin appears at the final location only when a real position exists. Reduced-motion mode collapses the timing while retaining the semantic stage changes.
 
-After a subsequent search, the map briefly returns to a global/resting orientation when appropriate, then frames the user position and relevant facilities. The search result state must show the result pins and cards after the staged reveal completes.
+After a real search, the map briefly returns to the global/resting orientation when appropriate, then frames the user position only when a real position exists and the relevant facilities. The search result state must show the result pins and cards after the staged reveal completes.
 
 ### 5.3 Map controls
 
-The main map exposes only the necessary controls: zoom in, zoom out, and recenter. They are positioned on the left, vertically centred. No extra decorative control cluster should compete with the search dock. The user can still pan and zoom naturally through MapLibre interactions.
+The main map exposes only the necessary controls: zoom in, zoom out, recenter, and a clearly labeled location-permission retry when location is pending or denied. They are positioned on the left, vertically centred. No extra decorative control cluster should compete with the search dock. The user can still pan and zoom naturally through MapLibre interactions. Manual map navigation remains independent from the search reveal choreography.
 
 The backend may apply viewport limiting and server-side clustering or deduplication for performance. The accepted V1 visual presentation does not require cluster bubbles; individual result pins remain the visual target when the result set is within the rendering budget.
+
+### 5.4 Search dock structure
+
+The bottom search dock has a primary search row and a deliberate structured-parameters row. Quantity and maximum budget are first-class controls with clear labels and stable alignment; they must not compete visually with result count or the bulk availability CTA. On desktop, quantity, budget, location state, filters, result count, and availability action use a predictable secondary grid. On mobile, optional filters may move into a `Refine` sheet, while quantity and budget remain visible and editable without overlap or safe-area clipping. Entered values persist through authentication restoration, search execution, availability mode changes, and facility selection.
 
 ## 6. Buyer onboarding and search
 
@@ -190,8 +194,8 @@ Every notification can deep-link to the responsible map state or seller panel. U
 
 | Surface | Required states |
 | --- | --- |
-| Map/globe | Resting rotation, loading, location request, staged reveal, search framing, results, empty, error, reduced motion |
-| Search dock | Idle, focused, categories open, structured parameters, manual/Agent switch, auth pending, executing, restored query |
+| Map/globe | Resting rotation, location pending, location granted, location denied, market fallback, resting discovery, loading, search-only staged reveal, search framing, results, empty, error, reduced motion |
+| Search dock | Idle, focused, categories open, quantity/budget row, structured parameters, manual/Agent switch, auth pending, executing, restored query, narrow mobile layout |
 | Facility card | Claimed/unclaimed, certified/confirmed, online/offline, available/partial/unavailable, low stock, sponsored, selected |
 | Facility sheet | Identity, source/trust, product/service context, availability CTA, claim CTA, purchase-intent CTA only when valid |
 | Availability panel | Manual/bulk mode, quota, request progress, response ranking, best option, no response, retry |
@@ -203,7 +207,7 @@ Every notification can deep-link to the responsible map state or seller panel. U
 
 ## 14. Accessibility, responsiveness, and visual requirements
 
-Omni uses a warm cream background, frosted glass surfaces, soft shadows, rounded geometry, premium typography, subtle gradients, and restrained orange accents. The map remains quiet. Sheets and panels preserve visible focus rings, keyboard reachability, sufficient contrast, readable status text, and clear disabled states.
+Omni uses a warm cream background, frosted glass surfaces, soft shadows, rounded geometry, premium typography, subtle gradients, and restrained orange accents. The map remains quiet but populated with real discovery data. Active geographic highlights use black or near-black emphasis with restrained opacity; orange is reserved for Omni actions and pins. Sheets and panels preserve visible focus rings, keyboard reachability, sufficient contrast, readable status text, and clear disabled states.
 
 Desktop uses side sheets or split map/context layouts. Mobile uses bottom sheets and a seller daily-operations home. Motion is short and physically legible; globe/reveal motion respects `prefers-reduced-motion`. No core action depends on hover, precise map gestures, color alone, or a hidden control.
 
@@ -215,9 +219,11 @@ Track state transitions, not sensitive free-form content: search started/complet
 
 The product/UX release is accepted only if:
 
-1. Omni opens directly into the real MapLibre globe/map with top-right notifications/menu and persistent bottom search.
+1. Omni opens directly into the real MapLibre globe/map with top-right notifications/menu, persistent bottom search, and a sparse layer of real source-backed facility discovery points.
 
-1. The globe rests in the approved horizontal rotation direction and search triggers the staged continent-to-exact-location reveal with visible pauses/highlights.
+1. The browser receives an explicit non-blocking location prompt; granted location produces a true user marker, while denied or unavailable location produces truthful market-fallback copy without a false user marker.
+
+1. The globe rests in an unmistakably horizontal left-to-right or right-to-left vertical-axis rotation, not a clock-like bearing roll, and only a real search triggers the staged continent-to-exact-location reveal with visible black boundary emphasis and pauses.
 
 1. An unauthenticated first search preserves and restores the exact query after authentication.
 
@@ -236,6 +242,8 @@ The product/UX release is accepted only if:
 1. Wallet balances, pending deposits, debits, renewals, and downgrades are legible and never imply seller withdrawals.
 
 1. AI and media surfaces are correctly gated, and disabling AI leaves all manual flows available.
+
+1. Quantity and budget are clearly positioned in the search dock on desktop and mobile, survive auth restoration, and never overlap result count or availability actions.
 
 1. Loading, empty, error, reduced-motion, keyboard, and mobile states are intentionally designed rather than accidental.
 

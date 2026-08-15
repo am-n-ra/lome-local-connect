@@ -101,3 +101,19 @@ The static schema and migration map are sufficient for planning the foundation P
 ## 7. Phase 0 outcome
 
 The repository baseline, current UI/API surface inventory, revised-PRD contradictions, static schema shape, migration numbering, OSM limitations, and first foundation PR file list are documented. The only outstanding Phase 0 item is live Neon introspection, which is an infrastructure/network blocker rather than a product ambiguity. No product behavior was changed during this audit.
+
+
+## 8. User correction pass — map and discovery contract
+
+The latest product correction adds these mandatory behaviors:
+
+- The arrival experience must explicitly ask for location permission without blocking map exploration.
+- A denied/unavailable location must produce a truthful market-fallback state and must not place a user marker at the fallback centre.
+- Resting globe motion must move the visible earth horizontally around a stable vertical axis, not roll like a clock through camera bearing.
+- The arrival map must be populated with sparse real source-backed claimed/unclaimed facility discovery points; a naked map or fake marker layer is not acceptable.
+- Country/city label density must be suppressed at default globe scale.
+- Passive arrival, zoom, pan, recenter, and panel opening must not trigger the staged reveal; only a real or restored search may trigger it.
+- Search highlights must be black/near-black and restrained; orange remains for Omni actions and pins.
+- Quantity and budget must be moved into a deliberate, responsive search-dock hierarchy that does not collide with result count or availability actions.
+
+The correction-pass plan is recorded in `omni-map-discovery-correction-plan.md`. Before any new import/provenance migration, the blocked live Neon read-only inventory must succeed.
