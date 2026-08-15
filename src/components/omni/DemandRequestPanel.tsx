@@ -161,8 +161,10 @@ export function DemandRequestPanel({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                La disponibilité sera vérifiée auprès des {targetFacilityIds.length} résultat(s)
-                actuellement visibles. Ajustez la zone avec les filtres de recherche. Coût estimé :{" "}
+                {manual
+                  ? "La demande part vers ce commerce uniquement."
+                  : `La disponibilité sera vérifiée auprès des ${targetFacilityIds.length} résultat(s) actuellement visibles. Ajustez la zone avec les filtres de recherche.`}{" "}
+                Coût estimé :{" "}
                 <span className="font-semibold text-foreground">
                   {Math.max(1, targetFacilityIds.length)} crédit(s)
                 </span>
@@ -174,8 +176,13 @@ export function DemandRequestPanel({
                 onClick={() => void broadcast()}
               >
                 <Megaphone className="mr-2 h-4 w-4" />
-                {busy ? "Vérification…" : "Vérifier la disponibilité de tous"}
+                {busy
+                  ? "Vérification…"
+                  : manual
+                    ? "Vérifier la disponibilité"
+                    : "Vérifier la disponibilité de tous"}
               </Button>
+
             </div>
           )}
 
