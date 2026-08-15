@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
+import { CheckCircle2, Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -32,9 +32,18 @@ type Props = {
   distanceKm: number | null;
   onItinerary?: () => void;
   routingBusy?: boolean;
+  /** Opens the availability request flow targeted at this single facility. */
+  onCheckAvailability?: () => void;
 };
 
-export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }: Props) {
+export function FacilityPanel({
+  facility,
+  distanceKm,
+  onItinerary,
+  routingBusy,
+  onCheckAvailability,
+}: Props) {
+
   const { formatMoney } = useMarket();
   const { user } = useAuth();
   const cart = useCart();
@@ -195,8 +204,15 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
         </div>
       )}
 
+      {onCheckAvailability && (
+        <Button className="w-full" onClick={onCheckAvailability}>
+          <CheckCircle2 className="mr-1.5 h-4 w-4" />
+          Vérifier la disponibilité
+        </Button>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        <Button onClick={onItinerary} disabled={routingBusy}>
+        <Button variant="outline" onClick={onItinerary} disabled={routingBusy}>
           <Navigation className="mr-1.5 h-4 w-4" />
           {routingBusy ? "Calcul…" : "Itinéraire"}
         </Button>
@@ -209,6 +225,7 @@ export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }
           Je cherche ce produit
         </Button>
       </div>
+
 
       {demandOpen && (
         <div className="omni-card space-y-2 p-3">

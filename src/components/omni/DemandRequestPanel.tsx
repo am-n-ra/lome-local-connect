@@ -109,17 +109,21 @@ export function DemandRequestPanel({
     }
   }
 
+  const manual = targetFacilityIds.length === 1;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Demande groupée</SheetTitle>
+          <SheetTitle>{manual ? "Vérifier la disponibilité" : "Demande groupée"}</SheetTitle>
         </SheetHeader>
         <div className="space-y-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux
-            qui l'ont vous répondent avec leur prix.
+            {manual
+              ? "Demandez à ce commerce s'il a bien ce que vous cherchez, en quelle quantité et à quel prix."
+              : "Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux qui l'ont vous répondent avec leur prix."}
           </p>
+
 
           {!user && (
             <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
@@ -157,8 +161,10 @@ export function DemandRequestPanel({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                La disponibilité sera vérifiée auprès des {targetFacilityIds.length} résultat(s)
-                actuellement visibles. Ajustez la zone avec les filtres de recherche. Coût estimé :{" "}
+                {manual
+                  ? "La demande part vers ce commerce uniquement."
+                  : `La disponibilité sera vérifiée auprès des ${targetFacilityIds.length} résultat(s) actuellement visibles. Ajustez la zone avec les filtres de recherche.`}{" "}
+                Coût estimé :{" "}
                 <span className="font-semibold text-foreground">
                   {Math.max(1, targetFacilityIds.length)} crédit(s)
                 </span>
@@ -170,13 +176,24 @@ export function DemandRequestPanel({
                 onClick={() => void broadcast()}
               >
                 <Megaphone className="mr-2 h-4 w-4" />
-                {busy ? "Vérification…" : "Vérifier la disponibilité de tous"}
+                {busy
+                  ? "Vérification…"
+                  : manual
+                    ? "Vérifier la disponibilité"
+                    : "Vérifier la disponibilité de tous"}
               </Button>
+
             </div>
           )}
 
           {requests.map((r) => {
-            const answers = responses.filter((a) => a.request_id === r.id);
+            // Comparison: full availability first, then partial, then price ascending.
+            const answers = responses
+              .filter((a) => a.request_id === r.id)
+              .slice()
+              .sort((x, y) => rankAnswer(x) - rankAnswer(y) || (x.price ?? 1e12) - (y.price ?? 1e12));
+            const bestId = answers.find((a) => a.available)?.id ?? null;
+
             return (
               <div key={r.id} className="omni-card space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -220,10 +237,20 @@ export function DemandRequestPanel({
                   </p>
                 </div>
                 {answers.map((a) => (
-                  <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
+                  <div
+                    key={a.id}
+                    className={`rounded-lg border p-2 text-sm ${a.id === bestId ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.facility_name}</span>
-                      <span className={a.kind === "partial" ? "text-primary" : a.available ? "text-primary" : "text-destructive"}>
+                      <span className="font-medium">
+                        {a.facility_name}
+                        {a.id === bestId && (
+                          <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            Meilleure option
+                          </span>
+                        )}
+                      </span>
+                      <span className={a.kind === "partial" ? "text-gold" : a.available ? "text-primary" : "text-destructive"}>
                         {a.kind === "partial" ? "Partiel" : a.available ? "Disponible" : "Indisponible"}
                       </span>
                     </div>
@@ -232,6 +259,7 @@ export function DemandRequestPanel({
                         {a.price !== null ? formatMoney(a.price) : "Prix à confirmer"}
                         {a.quantity !== null ? ` · ${a.quantity} unité(s) disponible(s)` : ""}
                       </p>
+
                     )}
                     {a.message && <p className="text-muted-foreground">{a.message}</p>}
                   </div>
