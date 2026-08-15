@@ -109,17 +109,21 @@ export function DemandRequestPanel({
     }
   }
 
+  const manual = targetFacilityIds.length === 1;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Demande groupée</SheetTitle>
+          <SheetTitle>{manual ? "Vérifier la disponibilité" : "Demande groupée"}</SheetTitle>
         </SheetHeader>
         <div className="space-y-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux
-            qui l'ont vous répondent avec leur prix.
+            {manual
+              ? "Demandez à ce commerce s'il a bien ce que vous cherchez, en quelle quantité et à quel prix."
+              : "Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux qui l'ont vous répondent avec leur prix."}
           </p>
+
 
           {!user && (
             <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
