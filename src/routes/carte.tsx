@@ -43,6 +43,7 @@ export const Route = createFileRoute("/carte")({
 
 type RouteStep = { instruction: string; distance: number };
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
+type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
 type PublicDiscoveryRow = {
   id: string;
   name: string;
@@ -79,6 +80,7 @@ export function CartePage() {
   const [selected, setSelected] = useState<MapFacility | null>(null);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
+  const [browserPermission, setBrowserPermission] = useState<BrowserPermissionStatus>("unknown");
   const locationRequestStartedRef = useRef(false);
   const [quantity, setQuantity] = useState(1);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
@@ -161,16 +163,19 @@ export function CartePage() {
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
+      setBrowserPermission("unsupported");
       setLocationStatus("unavailable");
       return;
     }
     setLocationStatus("pending");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        setBrowserPermission("granted");
         setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setLocationStatus("granted");
       },
-      () => {
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) setBrowserPermission("denied");
         setUserPos(null);
         setLocationStatus("unavailable");
       },
@@ -181,16 +186,60 @@ export function CartePage() {
   useEffect(() => {
     if (locationRequestStartedRef.current) return;
     locationRequestStartedRef.current = true;
-    try {
-      if (window.sessionStorage.getItem("omni:location-requested") === "1") {
+    let active = true;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const markPermission = (value: BrowserPermissionStatus) => {
+      if (active) setBrowserPermission(value);
+    };
+
+    const run = async () => {
+      if (!navigator.geolocation) {
+        markPermission("unsupported");
         setLocationStatus("unavailable");
         return;
       }
-      window.sessionStorage.setItem("omni:location-requested", "1");
-    } catch {
-      // Storage can be unavailable in privacy-restricted browser contexts.
-    }
-    requestLocation();
+
+      if (!navigator.permissions?.query) {
+        try {
+          if (window.sessionStorage.getItem("omni:location-auto-attempted") === "1") {
+            setLocationStatus("unavailable");
+            return;
+          }
+          window.sessionStorage.setItem("omni:location-auto-attempted", "1");
+        } catch {
+          // Storage can be unavailable in privacy-restricted browser contexts.
+        }
+        requestLocation();
+        return;
+      }
+
+      try {
+        permissionStatus = await navigator.permissions.query({ name: "geolocation" });
+        if (!active) return;
+        const syncPermission = () => {
+          if (!permissionStatus || !active) return;
+          markPermission(permissionStatus.state as BrowserPermissionStatus);
+        };
+        syncPermission();
+        permissionStatus.onchange = syncPermission;
+
+        if (permissionStatus.state === "denied") {
+          setLocationStatus("unavailable");
+          return;
+        }
+        requestLocation();
+      } catch {
+        markPermission("unknown");
+        requestLocation();
+      }
+    };
+
+    void run();
+    return () => {
+      active = false;
+      if (permissionStatus) permissionStatus.onchange = null;
+    };
   }, [requestLocation]);
 
   function useMarketFallback() {
@@ -603,6 +652,7 @@ export function CartePage() {
             quantity={quantity}
             onQuantityChange={setQuantity}
             locationStatus={locationStatus}
+            browserPermission={browserPermission}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
