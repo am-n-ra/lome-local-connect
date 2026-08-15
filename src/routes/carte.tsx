@@ -223,16 +223,18 @@ export function CartePage() {
     });
   }
 
-  function openDemandRequest() {
+  /** Bulk when called without argument, manual (single facility) with an id. */
+  function openDemandRequest(facilityId?: string) {
     if (authLoading) return;
     if (!user) {
       handOffAvailabilitySearch();
       return;
     }
-    setPendingTargetFacilityIds(null);
+    setPendingTargetFacilityIds(facilityId ? [facilityId] : null);
     setPendingUserPos(null);
     setDemandOpen(true);
   }
+
 
   useEffect(() => {
     if (authLoading || !user) return;
