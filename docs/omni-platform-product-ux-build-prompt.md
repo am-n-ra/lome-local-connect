@@ -9,8 +9,11 @@ This prompt governs product and frontend implementation. Backend/database work m
 ## Non-negotiable constraints
 
 - Use the real MapLibre GL globe projection. Never replace it with SVG, CSS, a decorative canvas, a screenshot, or a simulated globe.
-- Preserve the approved horizontal resting rotation direction and the user-requested vertical-axis interpretation.
-- Preserve the staged geographic reveal with continent, country, region, local area, and exact-position pauses/highlights.
+- Preserve the approved horizontal resting rotation direction and the user-requested vertical-axis interpretation. Rotate the globe’s longitude/center around a stable camera bearing; do not create a clock-like roll with bearing animation.
+- On first arrival, show a non-blocking location-permission surface while the globe keeps spinning. Keep a truthful distinction between browser location, market fallback, and unknown location.
+- Preserve the staged geographic reveal with continent, country, region, local area, and exact-position pauses/highlights, but trigger it only after an explicit search or restored search—not on passive arrival or manual map navigation.
+- Keep the resting map populated with sparse, real, source-backed facility discovery points. Do not use a naked map or fake markers. Suppress country/city labels at default globe scale unless needed for the search reveal.
+- Use black or near-black boundary emphasis with restrained opacity for active reveal highlights; reserve orange for Omni actions, pins, and primary emphasis.
 - Keep the buyer map chrome top-right-only: notifications and menu. Keep the persistent bottom search dock.
 - Do not add a traditional in-app marketing landing page.
 - Keep first-search authentication behavior exact-query-safe: do not execute the first backend retrieval while unauthenticated; restore the exact query after login.
@@ -44,13 +47,13 @@ Ensure every sheet/panel can close or return to the map, every loading/error/emp
 
 ### Slice 2 — Globe and location experience
 
-Verify and refine `MapCanvas` using MapLibre’s actual globe projection. Implement the resting horizontal rotation with the approved bearing convention, pause rotation during gestures and active reveal, and resume it only in the resting state. Implement the staged reveal as a stateful sequence with real boundary highlights, semantic stage labels, user position, and facility pins. Do not shorten the sequence to a single rapid zoom.
+Verify and refine `MapCanvas` using MapLibre’s actual globe projection. Implement resting rotation by moving the globe center/longitude around a stable camera axis so the earth moves horizontally like a physical globe; do not use camera bearing as the primary idle-rotation mechanism. Pause rotation during gestures, panels, recentering, and active reveal, and resume it only in the resting state.
 
-Add location permission, fallback-market handling, reduced-motion behavior, camera framing, and result reveal callbacks. Verify that a new search returns to the appropriate globe/resting state before framing the result set and user location.
+Add an explicit non-blocking location-permission surface. Trigger browser permission from the user’s location action, keep the globe visible while pending, show a real user marker only after success, and label denied/timeout/unsupported cases as approximate market fallback without misplacing the user marker. Implement the staged reveal only after a real or restored search, with black/near-black highlights, suppressed country/city labels, semantic pauses, reduced-motion behavior, camera framing, and result reveal callbacks. Verify that manual zoom and pan never start the reveal.
 
-### Slice 3 — Buyer search and auth restoration
+### Slice 3 — Buyer search, structured controls, and auth restoration
 
-Refine the bottom search dock, category shortcuts, manual structured parameters, optional Manual/Agent switch, and result cards. Preserve exact input and structured fields in the pending auth handoff. Ensure unauthenticated first search stops before the backend search and resumes automatically after login/onboarding.
+Refine the bottom search dock, category shortcuts, manual structured parameters, optional Manual/Agent switch, and result cards. Put quantity and maximum budget in a deliberate secondary row/grid with stable desktop alignment and a mobile-safe refine layout. Keep result count and bulk availability visible without overlap. Preserve quantity, budget, location source, and all structured fields through auth restoration and availability opening. Preserve exact input and structured fields in the pending auth handoff. Ensure unauthenticated first search stops before the backend search and resumes automatically after login/onboarding.
 
 Keep result cards contextual to the searched product/service. Show status, certification, OSM provenance, distance, price, promotion, and valid next actions. Add clear no-results, partial-results, request-failed, and retry states.
 
@@ -102,16 +105,18 @@ Never infer ownership from client state. Never compute spendable wallet balance 
 
 ## Visual and motion rules
 
-Use Omni’s warm cream, frosted glass, soft shadows, rounded geometry, premium typography, restrained orange accent, and quiet map treatment. Keep entering/exiting panel motion short and use transform/opacity rather than layout animation. Avoid generic dark SaaS dashboards, neon/cyberpunk styling, heavy 3D, and permanent top-left branding on the buyer map.
+Use Omni’s warm cream, frosted glass, soft shadows, rounded geometry, premium typography, restrained orange accent, and quiet-but-populated map treatment. Resting discovery uses sparse real facility points without fake markers or a wall of country/city text. Active geographic highlights use black or near-black emphasis with restrained opacity; orange is reserved for Omni actions and pins. Keep entering/exiting panel motion short and use transform/opacity rather than layout animation. Avoid generic dark SaaS dashboards, neon/cyberpunk styling, heavy 3D, and permanent top-left branding on the buyer map.
 
-The globe reveal is the principal exception to short UI motion: it may take longer because it communicates geography, but it must be interruptible, pausable, and reduced-motion aware.
+The globe reveal is the principal exception to short UI motion: it may take longer because it communicates geography, but it must be triggered only by a real/restored search, interruptible, pausable, and reduced-motion aware. Manual zoom/pan remains user-controlled.
 
 ## Acceptance test matrix
 
 | Area | Required browser scenario |
 |---|---|
-| Globe | Open `/carte`; confirm real globe projection, horizontal resting rotation, pause/resume, and no decorative substitute. |
-| Reveal | Search from a clean state; observe continent, country, region/local-area, and exact-position pauses/highlights before final pins/cards. |
+| Globe/location | Open `/carte`; confirm explicit non-blocking location prompt, real marker only after permission, truthful fallback after denial, real globe projection, horizontal center/longitude rotation, pause/resume, and no decorative substitute. |
+| Resting discovery | Open `/carte`; verify sparse real source-backed claimed/unclaimed facility points, no fake markers, no naked map, and suppressed country/city labels at globe scale. |
+| Manual navigation | Zoom, pan, recenter, and open a panel before searching; verify no staged reveal or forced camera reset. |
+| Reveal | Submit a real search from a clean state; observe continent, country, region/local-area, and exact-position pauses with black/near-black boundary emphasis before final pins/cards. |
 | Auth | Log out; submit a query; verify no full search occurs before auth; log in; verify exact query and parameters restore. |
 | OSM | Open an unclaimed OSM facility; verify source/status/claim CTA and absence of purchase intent. |
 | Claimed | Open a claimed/certified facility; verify product context, availability CTA, and eligible purchase intent. |
@@ -123,6 +128,7 @@ The globe reveal is the principal exception to short UI motion: it may take long
 | Wallet | Start deposit, inspect pending/approved state, view ledger, spend on a campaign, and confirm pending funds are not spendable. |
 | Subscription | Toggle auto-renew, inspect renewal preview, simulate insufficient balance, and verify Free downgrade messaging. |
 | Agent | Confirm Agent is hidden when disabled; enable safe fixture; verify recommendation/action confirmation; kill switch restores manual-only UI. |
+| Search controls | Verify quantity and budget are aligned in the desktop dock, remain visible/editable on mobile, survive auth restoration, and do not overlap result count or availability actions. |
 | Responsive | Repeat key buyer/seller flows on mobile viewport with accessible focus and no clipped sheets. |
 
 ## Completion gate

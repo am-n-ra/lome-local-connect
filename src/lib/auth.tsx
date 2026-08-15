@@ -16,10 +16,12 @@ export type PendingAvailabilitySearch = {
   filters: unknown;
   targetFacilityIds: string[];
   location: { lat: number; lng: number } | null;
+  locationSource?: "browser" | "market_fallback" | "unknown";
   demandOpen: boolean;
   mode?: "search" | "availability";
   demandMode?: "bulk" | "manual";
   demandFacilityName?: string | null;
+  quantity?: number;
 };
 
 export function savePendingAvailabilitySearch(payload: PendingAvailabilitySearch) {

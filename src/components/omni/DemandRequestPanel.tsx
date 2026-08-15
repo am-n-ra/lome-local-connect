@@ -25,6 +25,7 @@ type Props = {
   targetFacilityIds?: string[];
   mode?: "bulk" | "manual";
   facilityName?: string | null;
+  initialQuantity?: number;
 };
 
 /** Mode B — broadcast one need to the active filtered result set. */
@@ -36,6 +37,7 @@ export function DemandRequestPanel({
   targetFacilityIds = [],
   mode = "bulk",
   facilityName,
+  initialQuantity = 1,
 }: Props) {
   const navigate = useNavigate();
   const { formatMoney } = useMarket();
@@ -46,7 +48,7 @@ export function DemandRequestPanel({
   const createIntent = useServerFn(createPurchaseIntent);
 
   const [term, setTerm] = useState(initialTerm ?? "");
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(initialQuantity);
   const [budgetMax, setBudgetMax] = useState("");
   const [busy, setBusy] = useState(false);
   const [requests, setRequests] = useState<DemandRequestRow[]>([]);
@@ -72,6 +74,10 @@ export function DemandRequestPanel({
     if (initialTerm) setTerm(initialTerm);
   }, [initialTerm]);
 
+  useEffect(() => {
+    setQuantity(initialQuantity);
+  }, [initialQuantity]);
+
   function redirectToAuth() {
     savePendingAvailabilitySearch({
       term,
@@ -79,6 +85,8 @@ export function DemandRequestPanel({
       filters: null,
       targetFacilityIds,
       location: userPos ?? null,
+      locationSource: userPos ? "browser" : "market_fallback",
+      quantity,
       demandOpen: true,
       demandMode: mode,
     });
