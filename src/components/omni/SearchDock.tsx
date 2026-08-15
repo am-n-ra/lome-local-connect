@@ -64,6 +64,7 @@ type Props = {
   quantity?: number;
   onQuantityChange?: (value: number) => void;
   locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
+  browserPermission?: "unknown" | "prompt" | "granted" | "denied" | "unsupported";
   onRequestLocation?: () => void;
   onUseMarketFallback?: () => void;
 };
@@ -91,6 +92,7 @@ export function SearchDock({
   quantity = 1,
   onQuantityChange,
   locationStatus = "fallback",
+  browserPermission = "unknown",
   onRequestLocation,
   onUseMarketFallback,
 }: Props) {
@@ -357,9 +359,11 @@ export function SearchDock({
               ? "Position actuelle active"
               : locationStatus === "pending"
                 ? "Autorisation de localisation en cours…"
-                : locationStatus === "unavailable"
-                  ? "Localisation indisponible — réessayez ou utilisez le marché"
-                  : "Marché approximatif — aucune position partagée"}
+                : browserPermission === "denied"
+                  ? "Localisation bloquée par le navigateur — autorisez-la puis réessayez"
+                  : locationStatus === "unavailable"
+                    ? "Localisation indisponible — réessayez ou utilisez le marché"
+                    : "Marché approximatif — aucune position partagée"}
           </span>
           {locationStatus === "unavailable" && onRequestLocation && (
             <button
