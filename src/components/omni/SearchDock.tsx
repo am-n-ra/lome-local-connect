@@ -11,22 +11,18 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { categoryLabel, CATEGORIES, LOCATION_APPROXIMATE_ACCURACY_METERS } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 
 export type MapFilters = {
-  /** Max distance from the user, in km. */
   radiusKm: number;
-  /** Max product price in the local currency, or null for no cap. */
   maxPrice: number | null;
-  /** Only facilities currently open. */
   openOnly: boolean;
-  /** Only facilities running a discount. */
   discountOnly: boolean;
   sort: "distance" | "price" | "rank";
 };
@@ -39,21 +35,20 @@ export const DEFAULT_FILTERS: MapFilters = {
   sort: "rank",
 };
 
-export function activeFilterCount(f: MapFilters): number {
-  let n = 0;
-  if (f.radiusKm !== DEFAULT_FILTERS.radiusKm) n++;
-  if (f.maxPrice !== null) n++;
-  if (f.openOnly) n++;
-  if (f.discountOnly) n++;
-  if (f.sort !== DEFAULT_FILTERS.sort) n++;
-  return n;
+export function activeFilterCount(filters: MapFilters): number {
+  return [
+    filters.radiusKm !== DEFAULT_FILTERS.radiusKm,
+    filters.maxPrice !== null,
+    filters.openOnly,
+    filters.discountOnly,
+    filters.sort !== DEFAULT_FILTERS.sort,
+  ].filter(Boolean).length;
 }
 
 type Props = {
   query: string;
   onQueryChange: (value: string) => void;
   onSubmit?: (() => void) | undefined;
-
   category: string | null;
   onCategoryChange: (value: string | null) => void;
   filters: MapFilters;
@@ -72,15 +67,14 @@ type Props = {
   onUseMarketFallback?: () => void;
 };
 
-const CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES.map((c) => ({ ...c }))] as {
+const CHIPS = [
+  { value: null, label: "Tout" },
+  ...CATEGORIES.map((category) => ({ ...category })),
+] as {
   value: string | null;
   label: string;
 }[];
 
-/**
- * Bottom-anchored frosted dock: search pill, manual parameters,
- * a horizontally sliding category carousel and the result filters.
- */
 export function SearchDock({
   query,
   onQueryChange,
@@ -103,10 +97,20 @@ export function SearchDock({
   onUseMarketFallback,
 }: Props) {
   const { formatMoney } = useMarket();
-  const railRef = useRef<HTMLDivElement>(null);
   const dockRef = useRef<HTMLDivElement>(null);
-  const activeCount = activeFilterCount(filters);
+  const railRef = useRef<HTMLDivElement>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const activeCount = activeFilterCount(filters);
+  const hasIntent = Boolean(query.trim() || category);
+  const isPrecise =
+    locationStatus === "granted" &&
+    locationAccuracy != null &&
+    locationAccuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS;
+  const isApproximate =
+    locationStatus === "granted" &&
+    locationAccuracy != null &&
+    locationAccuracy > LOCATION_APPROXIMATE_ACCURACY_METERS;
+  const accuracyText = locationAccuracy != null ? `±${Math.round(locationAccuracy)} m` : "";
 
   useEffect(() => {
     const dock = dockRef.current;
@@ -114,7 +118,7 @@ export function SearchDock({
     const updateClearance = () => {
       document.documentElement.style.setProperty(
         "--omni-dock-clearance",
-        `${Math.ceil(dock.getBoundingClientRect().height + 20)}px`,
+        `${Math.ceil(dock.getBoundingClientRect().height + 24)}px`,
       );
     };
     updateClearance();
@@ -126,125 +130,111 @@ export function SearchDock({
     };
   }, []);
 
-  function slide(direction: 1 | -1) {
-    const rail = railRef.current;
-    if (!rail) return;
-    rail.scrollBy({ left: direction * Math.max(160, rail.clientWidth * 0.75), behavior: "smooth" });
-  }
-
-  function patch(next: Partial<MapFilters>) {
+  function patchFilters(next: Partial<MapFilters>) {
     onFiltersChange({ ...filters, ...next });
   }
 
-  const accuracyText =
-    locationAccuracy != null ? ` · précision ±${Math.round(locationAccuracy)} m` : "";
+  function slide(direction: 1 | -1) {
+    railRef.current?.scrollBy({
+      left: direction * Math.max(180, railRef.current.clientWidth * 0.75),
+      behavior: "smooth",
+    });
+  }
+
   const locationLabel =
-    locationStatus === "granted"
-      ? locationAccuracy != null && locationAccuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
-        ? `Position approximative (réseau)${accuracyText}`
-        : locationAccuracy != null
-          ? `Position GPS active${accuracyText}`
-          : "Position actuelle active"
-      : locationStatus === "pending"
-        ? "Autorisation de localisation en cours…"
-        : browserPermission === "denied"
-          ? "Localisation bloquée par le navigateur — autorisez-la puis réessayez"
-          : locationStatus === "unavailable"
-            ? "Localisation indisponible — réessayez ou utilisez le marché"
-            : "Marché approximatif — aucune position partagée";
+    locationStatus === "pending"
+      ? "Autorisation de localisation en cours…"
+      : isPrecise
+        ? `Position GPS précise · ${accuracyText}`
+        : isApproximate
+          ? `Zone réseau approximative · ${accuracyText}`
+          : browserPermission === "denied"
+            ? "Localisation bloquée — autorisez-la puis réessayez"
+            : locationStatus === "unavailable"
+              ? "Localisation indisponible — réessayez"
+              : "Marché approximatif — aucune position exacte";
 
   return (
     <div
       ref={dockRef}
       data-omni-dock="true"
-      data-omni-dock-mode={
-        query.trim() || category ? (resultCount > 0 ? "results" : "request") : "idle"
-      }
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]"
+      data-omni-dock-mode={hasIntent ? (resultCount > 0 ? "results" : "request") : "idle"}
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-5"
     >
-      <div className="pointer-events-auto w-full max-w-xl space-y-2">
-        <div data-omni-dock-row="discovery" className="flex justify-center">
-          <button
-            type="button"
-            aria-label={categoriesOpen ? "Masquer les catégories" : "Afficher les catégories"}
-            aria-expanded={categoriesOpen}
-            onClick={() => setCategoriesOpen((open) => !open)}
-            className="omni-glass rounded-full p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {categoriesOpen ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
-            )}
-          </button>
+      <div className="pointer-events-auto w-full max-w-4xl space-y-2.5">
+        <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/55">
+          <span>Omni · le monde est recherchable</span>
+          {hasIntent && (
+            <span>
+              {resultCount} résultat{resultCount === 1 ? "" : "s"}
+            </span>
+          )}
         </div>
 
-        {categoriesOpen && (
+        {hasIntent && (
           <div
-            data-omni-dock-row="discovery"
-            className="omni-glass grid grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-1 rounded-full p-1"
+            data-omni-dock-row="structured"
+            className="omni-glass grid grid-cols-2 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr_auto]"
           >
-            <button
-              type="button"
-              aria-label="Catégories précédentes"
-              onClick={() => slide(-1)}
-              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <div
-              ref={railRef}
-              className="flex min-w-0 snap-x snap-mandatory items-center gap-1.5 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {CHIPS.map((c) => {
-                const active = category === c.value;
-                return (
-                  <button
-                    key={c.label}
-                    type="button"
-                    onClick={() => onCategoryChange(c.value)}
-                    className={`w-[calc((100%-0.75rem)/3)] shrink-0 snap-start truncate rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background/60 text-foreground hover:bg-background/80"
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                );
-              })}
+            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                  Quantité
+                </span>
+                <span className="text-[10px] text-muted-foreground">unités</span>
+              </div>
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  aria-label="Diminuer la quantité"
+                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
+                  className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <strong className="text-base" aria-live="polite">
+                  {quantity}
+                </strong>
+                <button
+                  type="button"
+                  aria-label="Augmenter la quantité"
+                  onClick={() => onQuantityChange?.(quantity + 1)}
+                  className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-
-            <button
-              type="button"
-              aria-label="Catégories suivantes"
-              onClick={() => slide(1)}
-              className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
+            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                Budget maximum
+              </div>
+              <div className="mt-2 truncate text-sm font-bold">
+                {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
+              </div>
+            </div>
             <Popover>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="omni-glass flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold"
+                  aria-label="Ouvrir les filtres"
+                  className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-background/72 px-3 text-xs font-bold text-foreground transition-colors hover:bg-background"
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden sm:inline">Affiner</span>
                   {activeCount > 0 && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
+                    <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
                       {activeCount}
                     </span>
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" side="top" className="w-72 space-y-4">
+              <PopoverContent align="end" side="top" className="w-80 space-y-4 rounded-2xl">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs">Proximité</Label>
+                    <Label className="text-xs">Rayon</Label>
                     <span className="text-xs text-muted-foreground">
-                      {filters.radiusKm >= 50 ? "Sans limite" : `${filters.radiusKm} km`}
+                      {filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}
                     </span>
                   </div>
                   <Slider
@@ -252,15 +242,14 @@ export function SearchDock({
                     max={50}
                     step={1}
                     value={[filters.radiusKm]}
-                    onValueChange={([v]) => patch({ radiusKm: v ?? 10 })}
+                    onValueChange={([value]) => patchFilters({ radiusKm: value ?? 10 })}
                   />
                 </div>
-
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs">Prix maximum</Label>
+                    <Label className="text-xs">Budget maximum</Label>
                     <span className="text-xs text-muted-foreground">
-                      {filters.maxPrice === null ? "Tous" : formatMoney(filters.maxPrice)}
+                      {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
                     </span>
                   </div>
                   <Slider
@@ -268,33 +257,30 @@ export function SearchDock({
                     max={100000}
                     step={1000}
                     value={[filters.maxPrice ?? 0]}
-                    onValueChange={([v]) => patch({ maxPrice: !v ? null : v })}
+                    onValueChange={([value]) => patchFilters({ maxPrice: value ? value : null })}
                   />
                 </div>
-
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="filter-open" className="text-xs">
+                  <Label htmlFor="omni-open-only" className="text-xs">
                     Ouverts maintenant
                   </Label>
                   <Switch
-                    id="filter-open"
+                    id="omni-open-only"
                     checked={filters.openOnly}
-                    onCheckedChange={(v) => patch({ openOnly: v })}
+                    onCheckedChange={(value) => patchFilters({ openOnly: value })}
                   />
                 </div>
-
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="filter-discount" className="text-xs">
+                  <Label htmlFor="omni-discount-only" className="text-xs">
                     Avec réduction
                   </Label>
                   <Switch
-                    id="filter-discount"
+                    id="omni-discount-only"
                     checked={filters.discountOnly}
-                    onCheckedChange={(v) => patch({ discountOnly: v })}
+                    onCheckedChange={(value) => patchFilters({ discountOnly: value })}
                   />
                 </div>
-
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-xs">Trier par</Label>
                   <div className="grid grid-cols-3 gap-1">
                     {(
@@ -307,8 +293,8 @@ export function SearchDock({
                       <button
                         key={value}
                         type="button"
-                        onClick={() => patch({ sort: value })}
-                        className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
+                        onClick={() => patchFilters({ sort: value })}
+                        className={`rounded-full px-2 py-1.5 text-[11px] font-bold ${
                           filters.sort === value
                             ? "bg-primary text-primary-foreground"
                             : "bg-secondary text-foreground"
@@ -319,7 +305,6 @@ export function SearchDock({
                     ))}
                   </div>
                 </div>
-
                 <Button
                   variant="ghost"
                   size="sm"
@@ -333,49 +318,72 @@ export function SearchDock({
           </div>
         )}
 
-        {(query.trim() || category) && (
-          <div
-            data-omni-dock-row="structured"
-            className="omni-glass mx-auto grid max-w-xl grid-cols-2 gap-2 rounded-2xl p-2 text-xs sm:grid-cols-4"
+        <div data-omni-dock-row="discovery" className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={categoriesOpen ? "Masquer les catégories" : "Afficher les catégories"}
+            aria-expanded={categoriesOpen}
+            onClick={() => setCategoriesOpen((open) => !open)}
+            className="omni-glass grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
           >
-            <div className="rounded-xl bg-background/60 p-2">
-              <span className="text-muted-foreground">Quantité</span>
-              <div className="mt-1 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  aria-label="Diminuer la quantité"
-                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
-                  className="rounded-full bg-secondary p-1 text-foreground"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <strong aria-live="polite">{quantity}</strong>
-                <button
-                  type="button"
-                  aria-label="Augmenter la quantité"
-                  onClick={() => onQuantityChange?.(quantity + 1)}
-                  className="rounded-full bg-secondary p-1 text-foreground"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
+            {categoriesOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronUp className="h-4 w-4" />
+            )}
+          </button>
+          {categoriesOpen && (
+            <div className="omni-glass flex min-w-0 flex-1 items-center gap-1 rounded-full p-1">
+              <button
+                type="button"
+                aria-label="Catégories précédentes"
+                onClick={() => slide(-1)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div
+                ref={railRef}
+                className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                {CHIPS.map((chip) => (
+                  <button
+                    key={chip.label}
+                    type="button"
+                    onClick={() => onCategoryChange(chip.value)}
+                    className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors ${
+                      category === chip.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background/65 text-foreground hover:bg-background"
+                    }`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
               </div>
+              <button
+                type="button"
+                aria-label="Catégories suivantes"
+                onClick={() => slide(1)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-            <div className="rounded-xl bg-background/60 p-2">
-              <span className="text-muted-foreground">Budget max</span>
-              <div className="mt-1 truncate font-semibold">
-                {filters.maxPrice === null ? "Non défini" : formatMoney(filters.maxPrice)}
-              </div>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div
           data-omni-dock-row="context"
           className="flex flex-wrap items-center justify-center gap-2"
         >
           <span
-            className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium ${
-              locationStatus === "granted" ? "text-primary" : "text-muted-foreground"
+            className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold ${
+              isPrecise
+                ? "text-primary"
+                : isApproximate
+                  ? "text-amber-800"
+                  : "text-muted-foreground"
             }`}
             data-omni-location-status={locationStatus}
             data-omni-location-lat={locationCoordinates?.lat ?? ""}
@@ -386,54 +394,63 @@ export function SearchDock({
           </span>
           {locationStatus === "granted" && locationCoordinates && (
             <details className="omni-glass rounded-full px-3 py-1.5 text-[11px] text-muted-foreground">
-              <summary className="cursor-pointer list-none font-semibold">Détails</summary>
+              <summary className="cursor-pointer list-none font-bold">Détails</summary>
               <span className="ml-2 whitespace-nowrap font-mono text-[10px]">
                 lat {locationCoordinates.lat.toFixed(6)}, lng {locationCoordinates.lng.toFixed(6)}
                 {locationRequestId != null ? ` · requête ${locationRequestId}` : ""}
               </span>
             </details>
           )}
+          {isApproximate && onRequestLocation && (
+            <button
+              type="button"
+              onClick={onRequestLocation}
+              className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-bold text-primary"
+            >
+              Réessayer en GPS précis
+            </button>
+          )}
           {locationStatus === "unavailable" && onRequestLocation && (
             <button
               type="button"
               onClick={onRequestLocation}
-              className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
+              className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-bold text-primary"
             >
               Réessayer
             </button>
           )}
-          {locationStatus !== "granted" && locationStatus !== "pending" && onUseMarketFallback && (
+          {locationStatus !== "pending" && !isPrecise && onUseMarketFallback && (
             <button
               type="button"
               onClick={onUseMarketFallback}
-              className="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground underline underline-offset-2"
+              className="rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground underline underline-offset-2"
             >
-              Utiliser le marché approximatif
+              Explorer le marché approximatif
             </button>
           )}
         </div>
 
-        {(query.trim() || category) && (
-          <div data-omni-dock-row="action" className="space-y-2">
+        {hasIntent && (
+          <div data-omni-dock-row="action" className="flex justify-center gap-2">
             {resultCount > 0 ? (
-              <div className="flex justify-center gap-2">
-                <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground">
+              <>
+                <span className="omni-glass rounded-full px-3 py-2 text-[11px] font-semibold text-muted-foreground">
                   {resultCount} résultat{resultCount > 1 ? "s" : ""}
                 </span>
                 {onVerifyAvailability && (
                   <button
                     type="button"
                     onClick={onVerifyAvailability}
-                    className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-primary"
+                    className="rounded-full bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
                   >
-                    Vérifier la disponibilité de tous
+                    Vérifier la disponibilité
                   </button>
                 )}
-              </div>
+              </>
             ) : (
-              <div className="omni-glass grid gap-2 rounded-2xl border border-primary/20 bg-card/90 p-3 shadow-[var(--shadow-soft)] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
-                <div className="min-w-0 text-left">
-                  <p className="text-sm font-bold">Dites-nous ce que vous cherchez</p>
+              <div className="omni-glass flex w-full items-center justify-between gap-3 rounded-2xl border border-primary/15 bg-card/90 p-3 shadow-[var(--shadow-soft)]">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold">Dites-nous ce que vous cherchez</p>
                   <p className="truncate text-[11px] text-muted-foreground">
                     {query.trim() || (category ? categoryLabel(category) : "Votre demande")}
                   </p>
@@ -442,7 +459,7 @@ export function SearchDock({
                   <button
                     type="button"
                     onClick={onVerifyAvailability}
-                    className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground transition-transform active:scale-[0.98]"
+                    className="shrink-0 rounded-full bg-primary px-3 py-2 text-[11px] font-bold text-primary-foreground"
                   >
                     Créer une demande
                   </button>
@@ -452,21 +469,23 @@ export function SearchDock({
           </div>
         )}
 
-        {/* Search pill */}
-        <div data-omni-dock-row="primary">
+        <div
+          data-omni-dock-row="primary"
+          className="omni-glass rounded-[1.6rem] p-1.5 shadow-[var(--shadow-soft)]"
+        >
           <SmartSearchBar
             layout="dock"
             value={query}
             onChange={onQueryChange}
             onSubmit={onSubmit}
-            placeholder="Search for a product or service"
+            placeholder="Que cherchez-vous dans le monde ?"
             enablePhotoSearch={false}
             trailing={
               <button
                 type="button"
                 aria-label="Omni"
                 onClick={onBrandClick}
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
               >
                 <BrandMark className="h-7 w-7" />
               </button>

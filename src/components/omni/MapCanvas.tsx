@@ -29,6 +29,8 @@ type Props = {
   onSelect?: (facility: MapFacility) => void;
   routeCoords?: [number, number][] | null;
   userPosition?: { lat: number; lng: number; accuracy?: number | null } | null;
+  /** Raw browser estimate shown only as neutral uncertainty context when accuracy is poor. */
+  approximatePosition?: { lat: number; lng: number; accuracy?: number | null } | null;
   focus?: { lat: number; lng: number; zoom?: number } | null;
   fitPoints?: { lat: number; lng: number }[] | null;
   marketCenter?: { lat: number; lng: number } | null;
@@ -455,6 +457,7 @@ export function MapCanvas({
   onSelect,
   routeCoords,
   userPosition,
+  approximatePosition,
   focus,
   fitPoints,
   marketCenter,
@@ -502,6 +505,7 @@ export function MapCanvas({
   const styleReadyRef = useRef(false);
   const styleRecoveryTimerRef = useRef<number | null>(null);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
+  const approximateMarkerRef = useRef<{ remove: () => void } | null>(null);
   const userPositionRef = useRef(userPosition);
   userPositionRef.current = userPosition;
   const facilityMarkerRefs = useRef<Map<string, MarkerInstance>>(new Map());
@@ -720,6 +724,10 @@ export function MapCanvas({
       if (styleRecoveryTimerRef.current != null) window.clearTimeout(styleRecoveryTimerRef.current);
       for (const marker of facilityMarkerRefs.current.values()) marker.remove();
       facilityMarkerRefs.current.clear();
+      approximateMarkerRef.current?.remove();
+      approximateMarkerRef.current = null;
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
       resetBoundaryState();
       map.remove();
       mapRef.current = null;
@@ -769,15 +777,27 @@ export function MapCanvas({
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
     }
-    setAccuracyCircle(
-      map,
-      showUserLocation && userPosition ? userPosition : null,
-      showUserLocation &&
-        userPosition?.accuracy != null &&
-        userPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
-        ? userPosition.accuracy
-        : null,
-    );
+    if (approximateMarkerRef.current) {
+      approximateMarkerRef.current.remove();
+      approximateMarkerRef.current = null;
+    }
+    setAccuracyCircle(map, approximatePosition ?? null, approximatePosition?.accuracy ?? null);
+    if (approximatePosition) {
+      const estimateElement = document.createElement("div");
+      estimateElement.setAttribute("aria-label", "Centre réseau approximatif");
+      estimateElement.dataset["omniApproximateMarker"] = "network";
+      estimateElement.style.position = "relative";
+      estimateElement.style.width = "28px";
+      estimateElement.style.height = "28px";
+      estimateElement.style.pointerEvents = "none";
+      estimateElement.style.zIndex = "10";
+      estimateElement.innerHTML = `
+        <span style="position:absolute;left:50%;top:50%;width:14px;height:14px;transform:translate(-50%,-50%);border-radius:999px;background:#747b7d;border:3px solid #fff;box-shadow:0 0 0 5px rgba(116,123,125,.18),0 2px 8px rgba(15,23,42,.22);"></span>
+      `;
+      approximateMarkerRef.current = new gl.Marker({ element: estimateElement, anchor: "center" })
+        .setLngLat([approximatePosition.lng, approximatePosition.lat])
+        .addTo(map);
+    }
     if (!showUserLocation || !userPosition) return;
 
     const isApproximate =
@@ -806,7 +826,7 @@ export function MapCanvas({
     const marker = new gl.Marker({ element, anchor: "bottom" });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
     userMarkerRef.current = marker;
-  }, [gl, mapReadyVersion, showUserLocation, userPosition]);
+  }, [approximatePosition, gl, mapReadyVersion, showUserLocation, userPosition]);
 
   useEffect(() => {
     const map = mapRef.current;
