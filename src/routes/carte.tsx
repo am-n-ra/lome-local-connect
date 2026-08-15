@@ -511,7 +511,9 @@ export function CartePage() {
               distanceKm={haversineKm(origin, { lat: selected.latitude, lng: selected.longitude })}
               routingBusy={routingBusy}
               onItinerary={() => void buildItinerary(selected)}
+              onCheckAvailability={() => openDemandRequest(selected.id)}
             />
+
           </div>
         )}
 
