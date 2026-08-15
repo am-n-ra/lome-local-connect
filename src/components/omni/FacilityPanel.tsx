@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
+import { CheckCircle2, Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -40,8 +40,8 @@ export function FacilityPanel({
   facility,
   distanceKm,
   onItinerary,
-  onCheckAvailability,
   routingBusy,
+  onCheckAvailability,
 }: Props) {
   const { formatMoney } = useMarket();
   const { user } = useAuth();
@@ -235,18 +235,15 @@ export function FacilityPanel({
         </div>
       )}
 
+      {onCheckAvailability && (
+        <Button className="w-full" onClick={onCheckAvailability}>
+          <CheckCircle2 className="mr-1.5 h-4 w-4" />
+          Vérifier la disponibilité
+        </Button>
+      )}
+
       <div className="flex flex-wrap gap-2">
-        {onCheckAvailability && (
-          <Button onClick={onCheckAvailability}>
-            <Search className="mr-1.5 h-4 w-4" />
-            Vérifier la disponibilité
-          </Button>
-        )}
-        <Button
-          variant={onCheckAvailability ? "outline" : "default"}
-          onClick={onItinerary}
-          disabled={routingBusy}
-        >
+        <Button variant="outline" onClick={onItinerary} disabled={routingBusy}>
           <Navigation className="mr-1.5 h-4 w-4" />
           {routingBusy ? "Calcul…" : "Itinéraire"}
         </Button>

@@ -145,6 +145,8 @@ export function DemandRequestPanel({
     }
   }
 
+  const manual = targetFacilityIds.length === 1;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
@@ -218,15 +220,16 @@ export function DemandRequestPanel({
           {requests.map((r) => {
             const answers = responses
               .filter((a) => a.request_id === r.id)
-              .sort((a, b) => {
-                const rank = rankAnswer(a) - rankAnswer(b);
-                if (rank !== 0) return rank;
-                return (
-                  (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY)
-                );
-              });
-            const bestAnswer =
-              answers.find((a) => a.available || a.kind === "partial") ?? answers[0];
+              .slice()
+              .sort(
+                (a, b) =>
+                  rankAnswer(a) - rankAnswer(b) ||
+                  (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY),
+              );
+            const bestId =
+              answers.find((a) => a.available || a.kind === "partial")?.id ??
+              answers[0]?.id ??
+              null;
             return (
               <div key={r.id} className="omni-card space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -270,18 +273,23 @@ export function DemandRequestPanel({
                   </p>
                 </div>
                 {answers.map((a) => (
-                  <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
+                  <div
+                    key={a.id}
+                    className={`rounded-lg border p-2 text-sm ${a.id === bestId ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.facility_name}</span>
-                      {bestAnswer?.id === a.id && (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                          Meilleure option
-                        </span>
-                      )}
+                      <span className="font-medium">
+                        {a.facility_name}
+                        {a.id === bestId && (
+                          <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            Meilleure option
+                          </span>
+                        )}
+                      </span>
                       <span
                         className={
                           a.kind === "partial"
-                            ? "text-primary"
+                            ? "text-gold"
                             : a.available
                               ? "text-primary"
                               : "text-destructive"

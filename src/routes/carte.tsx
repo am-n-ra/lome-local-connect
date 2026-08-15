@@ -230,7 +230,8 @@ export function CartePage() {
     });
   }
 
-  function openDemandRequest() {
+  /** Bulk when called without argument, manual (single facility) with an id. */
+  function openDemandRequest(facilityId?: string) {
     if (authLoading) return;
     if (!user) {
       handOffAvailabilitySearch("bulk");
@@ -503,7 +504,7 @@ export function CartePage() {
               Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
               pertinents.
             </p>
-            <Button className="mt-3 w-full" onClick={openDemandRequest}>
+            <Button className="mt-3 w-full" onClick={() => openDemandRequest()}>
               Créer une demande
             </Button>
           </div>
