@@ -103,10 +103,10 @@ export function useMapLibre() {
 export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 const PASTEL = {
-  water: "#15191b",
-  green: "#ffffff",
-  building: "#ffffff",
-  background: "#f4f4f1",
+  water: "#c8d7dd",
+  green: "#eef1ec",
+  building: "#fffdf8",
+  background: "#fbfaf7",
 };
 
 /** Repaints a loaded vector style into the high-contrast Omni landing palette. */

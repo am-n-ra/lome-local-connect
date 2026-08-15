@@ -945,7 +945,7 @@ export function MapCanvas({
   return (
     <div
       className={`${className ?? "h-full w-full"} relative overflow-hidden`}
-      style={{ backgroundColor: "#15191b" }}
+      style={{ backgroundColor: "#fbfaf7" }}
     >
       <div
         ref={containerRef}
@@ -994,8 +994,8 @@ export function MapCanvas({
       )}
 
       {gl && mapStatus === "loading" && (
-        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#15191b] text-white">
-          <div className="rounded-full border border-white/15 bg-black/20 px-4 py-2 text-xs tracking-wide text-white/75 backdrop-blur">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#fbfaf7] text-foreground">
+          <div className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-xs tracking-wide text-foreground/70 shadow-sm backdrop-blur">
             Chargement du globe MapLibre…
           </div>
         </div>

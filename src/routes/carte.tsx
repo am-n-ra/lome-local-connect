@@ -497,7 +497,10 @@ export function CartePage() {
           (query.trim() || category) &&
           results.length > 0 &&
           steps.length === 0 && (
-            <div className="pointer-events-none absolute inset-x-3 bottom-44 z-10 mx-auto max-w-6xl sm:bottom-48 md:bottom-40">
+            <div
+              className="pointer-events-none absolute inset-x-3 z-10 mx-auto max-w-6xl"
+              style={{ bottom: "var(--omni-dock-clearance, 12rem)" }}
+            >
               <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
                 {results.slice(0, 6).map((facility) => (
                   <button
@@ -607,19 +610,6 @@ export function CartePage() {
               else toast.info("Position indisponible.");
             }}
           />
-        )}
-
-        {!revealRunning && !selected && (query.trim() || category) && results.length === 0 && (
-          <div className="absolute inset-x-4 bottom-44 z-10 mx-auto max-w-md rounded-2xl border border-border bg-card/95 p-4 text-sm shadow-[var(--shadow-sheet)] backdrop-blur sm:bottom-48 md:bottom-40">
-            <p className="font-display font-bold">Dites-nous ce que vous cherchez</p>
-            <p className="mt-1 text-muted-foreground">
-              Aucun résultat direct. Lancez une demande de disponibilité bulk auprès des commerces
-              pertinents.
-            </p>
-            <Button className="mt-3 w-full" onClick={() => openDemandRequest()}>
-              Créer une demande
-            </Button>
-          </div>
         )}
 
         {selected && (
