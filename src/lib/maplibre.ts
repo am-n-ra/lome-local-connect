@@ -103,9 +103,9 @@ export function useMapLibre() {
 export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 const PASTEL = {
-  water: "#c8d7dd",
-  green: "#eef1ec",
-  building: "#fffdf8",
+  water: "#2d3335",
+  green: "#ffffff",
+  building: "#fffefb",
   background: "#fbfaf7",
 };
 
