@@ -66,6 +66,8 @@ type Props = {
   locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
   browserPermission?: "unknown" | "prompt" | "granted" | "denied" | "unsupported";
   locationAccuracy?: number | null;
+  locationCoordinates?: { lat: number; lng: number } | null;
+  locationRequestId?: number | null;
   onRequestLocation?: () => void;
   onUseMarketFallback?: () => void;
 };
@@ -95,6 +97,8 @@ export function SearchDock({
   locationStatus = "fallback",
   browserPermission = "unknown",
   locationAccuracy = null,
+  locationCoordinates = null,
+  locationRequestId = null,
   onRequestLocation,
   onUseMarketFallback,
 }: Props) {
@@ -373,9 +377,22 @@ export function SearchDock({
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-medium ${
               locationStatus === "granted" ? "text-primary" : "text-muted-foreground"
             }`}
+            data-omni-location-status={locationStatus}
+            data-omni-location-lat={locationCoordinates?.lat ?? ""}
+            data-omni-location-lng={locationCoordinates?.lng ?? ""}
+            data-omni-location-accuracy={locationAccuracy ?? ""}
           >
             {locationLabel}
           </span>
+          {locationStatus === "granted" && locationCoordinates && (
+            <details className="omni-glass rounded-full px-3 py-1.5 text-[11px] text-muted-foreground">
+              <summary className="cursor-pointer list-none font-semibold">Détails</summary>
+              <span className="ml-2 whitespace-nowrap font-mono text-[10px]">
+                lat {locationCoordinates.lat.toFixed(6)}, lng {locationCoordinates.lng.toFixed(6)}
+                {locationRequestId != null ? ` · requête ${locationRequestId}` : ""}
+              </span>
+            </details>
+          )}
           {locationStatus === "unavailable" && onRequestLocation && (
             <button
               type="button"
