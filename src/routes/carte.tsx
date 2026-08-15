@@ -50,6 +50,13 @@ export const Route = createFileRoute("/carte")({
 type RouteStep = { instruction: string; distance: number };
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+type LocationSnapshot = {
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  timestamp: number;
+  requestId: number;
+};
 type PublicDiscoveryRow = {
   id: string;
   name: string;
@@ -94,7 +101,9 @@ export function CartePage() {
   } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
   const [browserPermission, setBrowserPermission] = useState<BrowserPermissionStatus>("unknown");
+  const [locationSnapshot, setLocationSnapshot] = useState<LocationSnapshot | null>(null);
   const locationRequestStartedRef = useRef(false);
+  const locationRequestIdRef = useRef(0);
   const [quantity, setQuantity] = useState(1);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
@@ -181,6 +190,7 @@ export function CartePage() {
       return;
     }
     setLocationStatus("pending");
+    const requestId = ++locationRequestIdRef.current;
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const nextPosition = {
@@ -188,9 +198,15 @@ export function CartePage() {
           lng: pos.coords.longitude,
           accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
         };
+        const snapshot = {
+          ...nextPosition,
+          timestamp: Date.now(),
+          requestId,
+        };
+        setLocationSnapshot(snapshot);
         if (import.meta.env.DEV) {
           console.info("[Omni location callback]", {
-            ...nextPosition,
+            ...snapshot,
             accuracyBand:
               nextPosition.accuracy != null &&
               nextPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
@@ -209,6 +225,7 @@ export function CartePage() {
       (error) => {
         if (error.code === error.PERMISSION_DENIED) setBrowserPermission("denied");
         setUserPos(null);
+        setLocationSnapshot(null);
         setLocationStatus("unavailable");
       },
       // Do not accept a cached network/IP coordinate: request a fresh device position.
@@ -693,6 +710,8 @@ export function CartePage() {
             locationStatus={locationStatus}
             browserPermission={browserPermission}
             locationAccuracy={userPos?.accuracy ?? null}
+            locationCoordinates={userPos}
+            locationRequestId={locationSnapshot?.requestId ?? null}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
