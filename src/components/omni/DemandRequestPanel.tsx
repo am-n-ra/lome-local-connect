@@ -237,10 +237,20 @@ export function DemandRequestPanel({
                   </p>
                 </div>
                 {answers.map((a) => (
-                  <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
+                  <div
+                    key={a.id}
+                    className={`rounded-lg border p-2 text-sm ${a.id === bestId ? "border-primary bg-primary/5" : "border-border"}`}
+                  >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{a.facility_name}</span>
-                      <span className={a.kind === "partial" ? "text-primary" : a.available ? "text-primary" : "text-destructive"}>
+                      <span className="font-medium">
+                        {a.facility_name}
+                        {a.id === bestId && (
+                          <span className="ml-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                            Meilleure option
+                          </span>
+                        )}
+                      </span>
+                      <span className={a.kind === "partial" ? "text-gold" : a.available ? "text-primary" : "text-destructive"}>
                         {a.kind === "partial" ? "Partiel" : a.available ? "Disponible" : "Indisponible"}
                       </span>
                     </div>
@@ -249,6 +259,7 @@ export function DemandRequestPanel({
                         {a.price !== null ? formatMoney(a.price) : "Prix à confirmer"}
                         {a.quantity !== null ? ` · ${a.quantity} unité(s) disponible(s)` : ""}
                       </p>
+
                     )}
                     {a.message && <p className="text-muted-foreground">{a.message}</p>}
                   </div>
