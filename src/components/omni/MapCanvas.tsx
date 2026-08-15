@@ -783,6 +783,7 @@ export function MapCanvas({
     const isApproximate =
       userPosition.accuracy != null && userPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS;
     const markerLabel = isApproximate ? "Position approximative (réseau)" : "Position GPS précise";
+    const markerChip = isApproximate ? "Position ≈" : "Votre position";
     const element = document.createElement("div");
     element.setAttribute("aria-label", markerLabel);
     element.title = markerLabel;
@@ -796,6 +797,7 @@ export function MapCanvas({
     element.style.pointerEvents = "none";
     element.style.zIndex = "20";
     element.innerHTML = `
+      <span style="position:absolute;left:50%;top:-22px;transform:translateX(-50%);display:block;white-space:nowrap;border-radius:999px;background:#2f6fb5;color:#fff;border:2px solid #fff;padding:3px 6px;font:700 10px/1 system-ui,sans-serif;box-shadow:0 2px 8px rgba(15,23,42,.22);">${markerChip}</span>
       <span style="position:absolute;inset:${isApproximate ? "-8px -8px 0 -8px" : "0 2px 6px 2px"};display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
         <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #2f6fb5;"></span>
       </span>
