@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
+import { CheckCircle2, Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import {
