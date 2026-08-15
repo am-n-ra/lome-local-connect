@@ -16,7 +16,13 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
-import { categoryLabel, formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
+import {
+  categoryLabel,
+  formatDistance,
+  haversineKm,
+  DEFAULT_CENTER,
+  LOCATION_APPROXIMATE_ACCURACY_METERS,
+} from "@/lib/omni";
 import { deriveOmniSurfaceState } from "@/lib/omni-state";
 import { useMarket } from "@/lib/market";
 import {
@@ -65,10 +71,13 @@ export function CartePage() {
   const navigate = useNavigate();
   const { market, formatMoney } = useMarket();
   const { user, loading: authLoading } = useAuth();
-  const fallbackCenter =
-    market?.default_lat != null
-      ? { lat: market.default_lat, lng: market.default_lng }
-      : DEFAULT_CENTER;
+  const fallbackCenter = useMemo(
+    () =>
+      market?.default_lat != null
+        ? { lat: market.default_lat, lng: market.default_lng }
+        : DEFAULT_CENTER,
+    [market?.default_lat, market?.default_lng],
+  );
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [discoveryFacilities, setDiscoveryFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
@@ -78,7 +87,11 @@ export function CartePage() {
   const [revealRunning, setRevealRunning] = useState(false);
 
   const [selected, setSelected] = useState<MapFacility | null>(null);
-  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [userPos, setUserPos] = useState<{
+    lat: number;
+    lng: number;
+    accuracy: number | null;
+  } | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
   const [browserPermission, setBrowserPermission] = useState<BrowserPermissionStatus>("unknown");
   const locationRequestStartedRef = useRef(false);
@@ -170,8 +183,27 @@ export function CartePage() {
     setLocationStatus("pending");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
+        const nextPosition = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
+        };
+        if (import.meta.env.DEV) {
+          console.info("[Omni location callback]", {
+            ...nextPosition,
+            accuracyBand:
+              nextPosition.accuracy != null &&
+              nextPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
+                ? "approximate-network"
+                : "precise",
+            marketCenter: fallbackCenter,
+            sameAsMarketCenter:
+              Math.abs(nextPosition.lat - fallbackCenter.lat) < 0.0001 &&
+              Math.abs(nextPosition.lng - fallbackCenter.lng) < 0.0001,
+          });
+        }
         setBrowserPermission("granted");
-        setUserPos({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setUserPos(nextPosition);
         setLocationStatus("granted");
       },
       (error) => {
@@ -181,7 +213,7 @@ export function CartePage() {
       },
       { enableHighAccuracy: true, maximumAge: 60000, timeout: 12000 },
     );
-  }, []);
+  }, [fallbackCenter]);
 
   useEffect(() => {
     if (locationRequestStartedRef.current) return;
@@ -659,6 +691,7 @@ export function CartePage() {
             onQuantityChange={setQuantity}
             locationStatus={locationStatus}
             browserPermission={browserPermission}
+            locationAccuracy={userPos?.accuracy ?? null}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
