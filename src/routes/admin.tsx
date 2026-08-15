@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { CATEGORIES, categoryLabel, STATUS_LABEL } from "@/lib/omni";
+import { OMNI_CONFIG } from "@/lib/omni.config";
 
 export const Route = createFileRoute("/admin")({
   component: AdminPage,
@@ -54,7 +55,7 @@ const OUTCOMES = [
 const STATUSES = ["all", "unclaimed", "unconfirmed", "certified", "confirmed"] as const;
 
 function AdminPage() {
-  const { user, loading, isStaff } = useAuth();
+  const { user, loading, isStaff, isAdmin } = useAuth();
   const [denied, setDenied] = useState(false);
 
   const [stats, setStats] = useState<AdminStats | null>(null);
@@ -115,7 +116,6 @@ function AdminPage() {
     })();
   }, [user, isStaff, fetchHoods]);
 
-
   const openRow = useMemo(() => rows.find((r) => r.id === openId) ?? null, [rows, openId]);
 
   async function act(fn: () => Promise<unknown>, message: string) {
@@ -169,6 +169,36 @@ function AdminPage() {
             Commerces pré-listés depuis OpenStreetMap, à contacter puis onboarder.
           </p>
         </header>
+
+        {isAdmin && (
+          <section className="omni-card space-y-3 p-4">
+            <div>
+              <h2 className="font-display text-lg font-bold">Feature flags globales</h2>
+              <p className="text-xs text-muted-foreground">
+                Visibles uniquement aux administrateurs Neon Auth. Les changements de production
+                passent par la configuration contrôlée et restent désactivés par défaut.
+              </p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                ["Automatisation IA", OMNI_CONFIG.aiAutomationEnabled],
+                ["Agent acheteur", OMNI_CONFIG.buyerAgentEnabled],
+                ["Agent vendeur", OMNI_CONFIG.sellerAgentEnabled],
+                ["Interface média", OMNI_CONFIG.mediaUiEnabled],
+              ].map(([label, enabled]) => (
+                <div
+                  key={String(label)}
+                  className="flex items-center justify-between rounded-xl border border-border bg-background/70 px-3 py-2"
+                >
+                  <span className="text-sm font-medium">{String(label)}</span>
+                  <Badge variant={enabled ? "default" : "secondary"}>
+                    {enabled ? "Activé" : "Désactivé"}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {stats && (
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -378,8 +408,7 @@ function AdminPage() {
                       disabled={busy || openRow.status === "certified"}
                       onClick={() =>
                         void act(
-                          () =>
-                            statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
+                          () => statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
                           "Commerce vérifié",
                         )
                       }

@@ -395,6 +395,8 @@ export function MapCanvas({
   const fallbackAttemptedRef = useRef(false);
   const styleRecoveryTimerRef = useRef<number | null>(null);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
+  const userPositionRef = useRef(userPosition);
+  userPositionRef.current = userPosition;
   const facilityMarkerRefs = useRef<Map<string, MarkerInstance>>(new Map());
 
   useEffect(() => {
@@ -499,7 +501,11 @@ export function MapCanvas({
       map.resize();
       applyPastelPalette(map);
       reapplyOmniState();
-      void loadBoundariesForZoom(map, map.getZoom());
+      void loadBoundariesForZoom(map, map.getZoom()).then(() => {
+        if (map.getZoom() <= GLOBE_ZOOM && userPositionRef.current) {
+          highlightBoundaryAtTarget(map, map.getZoom(), userPositionRef.current);
+        }
+      });
       setMapStatus(fallbackAttemptedRef.current ? "fallback" : "ready");
       scheduleIdleRotation(600);
     };
@@ -534,7 +540,11 @@ export function MapCanvas({
         map.setProjection({ type: wantsGlobe ? "globe" : "mercator" });
       }
       containerRef.current?.setAttribute("data-omni-projection", wantsGlobe ? "globe" : "mercator");
-      void loadBoundariesForZoom(map, zoom);
+      void loadBoundariesForZoom(map, zoom).then(() => {
+        if (wantsGlobe && userPositionRef.current) {
+          highlightBoundaryAtTarget(map, zoom, userPositionRef.current);
+        }
+      });
     };
 
     map.on("zoom", refreshLivingBoundary);
