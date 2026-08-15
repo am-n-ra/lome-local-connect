@@ -436,7 +436,7 @@ export function SearchDock({
             trailing={
               <button
                 type="button"
-                aria-label="Recentrer sur ma position"
+                aria-label="Omni"
                 onClick={onBrandClick}
                 className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
               >
