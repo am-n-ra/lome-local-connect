@@ -68,6 +68,8 @@ export function CartePage() {
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
+  const [demandMode, setDemandMode] = useState<"bulk" | "manual">("bulk");
+  const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
   const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
@@ -205,15 +207,20 @@ export function CartePage() {
   const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
   const demandUserPos = pendingUserPos ?? userPos;
 
-  function handOffAvailabilitySearch() {
+  function handOffAvailabilitySearch(
+    mode: "bulk" | "manual" = "bulk",
+    facility?: MapFacility | null,
+  ) {
     const payload = {
       term: query,
       category,
       filters,
-      targetFacilityIds: results.map((f) => f.id),
+      targetFacilityIds: facility ? [facility.id] : results.map((f) => f.id),
       location: userPos,
       demandOpen: true,
       mode: "availability" as const,
+      demandMode: mode,
+      demandFacilityName: facility?.name ?? null,
     };
     savePendingAvailabilitySearch(payload);
     const redirectTo = `/carte?pendingSearch=1`;
@@ -226,11 +233,26 @@ export function CartePage() {
   function openDemandRequest() {
     if (authLoading) return;
     if (!user) {
-      handOffAvailabilitySearch();
+      handOffAvailabilitySearch("bulk");
       return;
     }
+    setDemandMode("bulk");
+    setDemandFacilityName(null);
     setPendingTargetFacilityIds(null);
     setPendingUserPos(null);
+    setDemandOpen(true);
+  }
+
+  function openManualAvailability(facility: MapFacility) {
+    if (authLoading) return;
+    if (!user) {
+      handOffAvailabilitySearch("manual", facility);
+      return;
+    }
+    setDemandMode("manual");
+    setDemandFacilityName(facility.name);
+    setPendingTargetFacilityIds([facility.id]);
+    setPendingUserPos(userPos);
     setDemandOpen(true);
   }
 
@@ -243,6 +265,8 @@ export function CartePage() {
     setFilters(pending.filters as MapFilters);
     setPendingTargetFacilityIds(pending.targetFacilityIds);
     setPendingUserPos(pending.location);
+    setDemandMode(pending.demandMode ?? "bulk");
+    setDemandFacilityName(pending.demandFacilityName ?? null);
     setDemandOpen(pending.demandOpen);
     setSearchRunKey(`restored:${Date.now()}:${pending.term}`);
     toast.success("Recherche restaurée. Vous pouvez lancer la vérification.");
@@ -509,6 +533,7 @@ export function CartePage() {
               distanceKm={haversineKm(origin, { lat: selected.latitude, lng: selected.longitude })}
               routingBusy={routingBusy}
               onItinerary={() => void buildItinerary(selected)}
+              onCheckAvailability={() => openManualAvailability(selected)}
             />
           </div>
         )}
@@ -565,6 +590,8 @@ export function CartePage() {
         userPos={demandUserPos}
         initialTerm={query}
         targetFacilityIds={demandTargetFacilityIds}
+        mode={demandMode}
+        facilityName={demandFacilityName}
       />
       <WishlistPanel
         open={wishOpen}

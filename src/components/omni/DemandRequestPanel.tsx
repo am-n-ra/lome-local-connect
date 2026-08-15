@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Megaphone, X } from "lucide-react";
+import { HandCoins, Megaphone, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
 } from "@/lib/demand.functions";
 import { useMarket } from "@/lib/market";
 import { savePendingAvailabilitySearch, useAuth } from "@/lib/auth";
+import { createPurchaseIntent } from "@/lib/checkout.functions";
 
 type Props = {
   open: boolean;
@@ -22,6 +23,8 @@ type Props = {
   userPos?: { lat: number; lng: number } | null;
   initialTerm?: string | undefined;
   targetFacilityIds?: string[];
+  mode?: "bulk" | "manual";
+  facilityName?: string | null;
 };
 
 /** Mode B — broadcast one need to the active filtered result set. */
@@ -31,6 +34,8 @@ export function DemandRequestPanel({
   userPos,
   initialTerm,
   targetFacilityIds = [],
+  mode = "bulk",
+  facilityName,
 }: Props) {
   const navigate = useNavigate();
   const { formatMoney } = useMarket();
@@ -38,6 +43,7 @@ export function DemandRequestPanel({
   const create = useServerFn(createDemandRequest);
   const list = useServerFn(listMyDemandRequests);
   const close = useServerFn(closeDemandRequest);
+  const createIntent = useServerFn(createPurchaseIntent);
 
   const [term, setTerm] = useState(initialTerm ?? "");
   const [quantity, setQuantity] = useState(1);
@@ -45,6 +51,7 @@ export function DemandRequestPanel({
   const [busy, setBusy] = useState(false);
   const [requests, setRequests] = useState<DemandRequestRow[]>([]);
   const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
+  const [intentBusy, setIntentBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) return;
@@ -73,8 +80,36 @@ export function DemandRequestPanel({
       targetFacilityIds,
       location: userPos ?? null,
       demandOpen: true,
+      demandMode: mode,
     });
     navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
+  }
+
+  async function startPurchaseIntent(
+    request: DemandRequestRow,
+    answer: DemandResponseRow & { request_id: string },
+  ) {
+    if (!user) {
+      redirectToAuth();
+      return;
+    }
+    setIntentBusy(answer.id);
+    try {
+      const result = await createIntent({
+        data: {
+          demandResponseId: answer.id,
+          quantity: answer.quantity ?? request.quantity,
+          amount: answer.price ?? undefined,
+          paymentMode: "cash",
+        },
+      });
+      toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Intention impossible.");
+    } finally {
+      setIntentBusy(null);
+    }
   }
 
   async function broadcast() {
@@ -93,6 +128,7 @@ export function DemandRequestPanel({
           longitude: userPos?.lng ?? null,
           budgetMax: budgetMax ? Number(budgetMax) : null,
           targetFacilityIds,
+          mode,
         },
       });
       toast.success(
@@ -113,12 +149,15 @@ export function DemandRequestPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Demande groupée</SheetTitle>
+          <SheetTitle>
+            {mode === "manual" ? "Vérifier la disponibilité" : "Demande groupée"}
+          </SheetTitle>
         </SheetHeader>
         <div className="space-y-4 p-4">
           <p className="text-sm text-muted-foreground">
-            Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux
-            qui l'ont vous répondent avec leur prix.
+            {mode === "manual"
+              ? `Vérifiez la disponibilité directement auprès de ${facilityName ?? "ce commerce"}.`
+              : "Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux qui l'ont vous répondent avec leur prix."}
           </p>
 
           {!user && (
@@ -157,12 +196,9 @@ export function DemandRequestPanel({
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                La disponibilité sera vérifiée auprès des {targetFacilityIds.length} résultat(s)
-                actuellement visibles. Ajustez la zone avec les filtres de recherche. Coût estimé :{" "}
-                <span className="font-semibold text-foreground">
-                  {Math.max(1, targetFacilityIds.length)} crédit(s)
-                </span>
-                .
+                {mode === "manual"
+                  ? `La demande sera envoyée uniquement à ${facilityName ?? "ce commerce"}. Les demandes manuelles ne consomment pas le quota bulk.`
+                  : `La disponibilité sera vérifiée auprès des ${targetFacilityIds.length} résultat(s) actuellement visibles. Ajustez la zone avec les filtres de recherche. Coût estimé : ${Math.max(1, targetFacilityIds.length)} crédit(s).`}
               </p>
               <Button
                 className="w-full"
@@ -170,13 +206,27 @@ export function DemandRequestPanel({
                 onClick={() => void broadcast()}
               >
                 <Megaphone className="mr-2 h-4 w-4" />
-                {busy ? "Vérification…" : "Vérifier la disponibilité de tous"}
+                {busy
+                  ? "Vérification…"
+                  : mode === "manual"
+                    ? "Vérifier auprès de ce commerce"
+                    : "Vérifier la disponibilité de tous"}
               </Button>
             </div>
           )}
 
           {requests.map((r) => {
-            const answers = responses.filter((a) => a.request_id === r.id);
+            const answers = responses
+              .filter((a) => a.request_id === r.id)
+              .sort((a, b) => {
+                const rank = rankAnswer(a) - rankAnswer(b);
+                if (rank !== 0) return rank;
+                return (
+                  (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY)
+                );
+              });
+            const bestAnswer =
+              answers.find((a) => a.available || a.kind === "partial") ?? answers[0];
             return (
               <div key={r.id} className="omni-card space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
@@ -223,8 +273,25 @@ export function DemandRequestPanel({
                   <div key={a.id} className="rounded-lg border border-border p-2 text-sm">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium">{a.facility_name}</span>
-                      <span className={a.kind === "partial" ? "text-primary" : a.available ? "text-primary" : "text-destructive"}>
-                        {a.kind === "partial" ? "Partiel" : a.available ? "Disponible" : "Indisponible"}
+                      {bestAnswer?.id === a.id && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                          Meilleure option
+                        </span>
+                      )}
+                      <span
+                        className={
+                          a.kind === "partial"
+                            ? "text-primary"
+                            : a.available
+                              ? "text-primary"
+                              : "text-destructive"
+                        }
+                      >
+                        {a.kind === "partial"
+                          ? "Partiel"
+                          : a.available
+                            ? "Disponible"
+                            : "Indisponible"}
                       </span>
                     </div>
                     {(a.price !== null || a.quantity !== null) && (
@@ -234,6 +301,17 @@ export function DemandRequestPanel({
                       </p>
                     )}
                     {a.message && <p className="text-muted-foreground">{a.message}</p>}
+                    {(a.available || a.kind === "partial") && (
+                      <Button
+                        size="sm"
+                        className="mt-2 w-full"
+                        disabled={intentBusy === a.id}
+                        onClick={() => void startPurchaseIntent(r, a)}
+                      >
+                        <HandCoins className="mr-1.5 h-4 w-4" />
+                        {intentBusy === a.id ? "Création…" : "Je veux acheter"}
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -243,4 +321,9 @@ export function DemandRequestPanel({
       </SheetContent>
     </Sheet>
   );
+}
+
+function rankAnswer(a: { available: boolean; kind: string }): number {
+  if (a.kind === "partial") return 1;
+  return a.available ? 0 : 2;
 }
