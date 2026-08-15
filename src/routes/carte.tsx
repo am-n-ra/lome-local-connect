@@ -4,8 +4,8 @@ import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { listFacilities, type MapFacility as ApiFacility } from "@/lib/omni.functions";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { CartPanel } from "@/components/omni/CartPanel";
@@ -117,8 +117,6 @@ export function CartePage() {
   const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
   const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [nearbyMobile, setNearbyMobile] = useState<string | null>(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const fetchFacilities = useServerFn(listFacilities);
 
@@ -297,19 +295,13 @@ export function CartePage() {
     setLocationStatus("fallback");
   }
 
-  // Proximity banner (mode démo) — computed on load, no background tracking
-  useEffect(() => {
-    if (!userPos || facilities.length === 0) return;
-    const near = facilities.find(
-      (f) =>
-        f.type === "mobile" &&
-        f.is_online &&
-        haversineKm(userPos, { lat: f.latitude, lng: f.longitude }) <= 2,
-    );
-    setNearbyMobile(near ? near.name : null);
-  }, [userPos, facilities]);
-
-  const origin = userPos ?? fallbackCenter;
+  const hasPreciseUserPosition = Boolean(
+    userPos && userPos.accuracy != null && userPos.accuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS,
+  );
+  const preciseUserPos = hasPreciseUserPosition ? userPos : null;
+  const approximateUserPos =
+    userPos && !hasPreciseUserPosition && userPos.accuracy != null ? userPos : null;
+  const origin = preciseUserPos ?? fallbackCenter;
 
   const results = useMemo(() => {
     const rows = facilities
@@ -369,27 +361,18 @@ export function CartePage() {
       return;
     }
     if (results.length === 0) {
-      setFitPoints(userPos ? [userPos] : null);
+      setFitPoints(preciseUserPos ? [preciseUserPos] : null);
       return;
     }
     const nearest = [...results]
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 6)
       .map((f) => ({ lat: f.latitude, lng: f.longitude }));
-    setFitPoints(userPos ? [userPos, ...nearest] : nearest);
-  }, [
-    hasActiveSearch,
-    searchKey,
-    resultPointKey,
-    results.length,
-    userPos?.lat,
-    userPos?.lng,
-    origin.lat,
-    origin.lng,
-  ]);
+    setFitPoints(preciseUserPos ? [preciseUserPos, ...nearest] : nearest);
+  }, [hasActiveSearch, searchKey, resultPointKey, results, preciseUserPos, origin.lat, origin.lng]);
 
   const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
-  const demandUserPos = pendingUserPos ?? userPos;
+  const demandUserPos = pendingUserPos ?? preciseUserPos;
   const surfaceState = deriveOmniSurfaceState({
     hasSearch: hasActiveSearch,
     hasResults: results.length > 0,
@@ -407,9 +390,8 @@ export function CartePage() {
       category,
       filters,
       targetFacilityIds: facility ? [facility.id] : results.map((f) => f.id),
-      location: userPos,
-      locationSource:
-        locationStatus === "granted" ? ("browser" as const) : ("market_fallback" as const),
+      location: preciseUserPos,
+      locationSource: hasPreciseUserPosition ? ("browser" as const) : ("market_fallback" as const),
       quantity,
       demandOpen: true,
       mode: "availability" as const,
@@ -447,7 +429,7 @@ export function CartePage() {
     setDemandMode("manual");
     setDemandFacilityName(facility.name);
     setPendingTargetFacilityIds([facility.id]);
-    setPendingUserPos(userPos);
+    setPendingUserPos(preciseUserPos);
     setDemandOpen(true);
   }
 
@@ -481,9 +463,10 @@ export function CartePage() {
         category,
         filters,
         targetFacilityIds: [],
-        location: userPos,
-        locationSource:
-          locationStatus === "granted" ? ("browser" as const) : ("market_fallback" as const),
+        location: preciseUserPos,
+        locationSource: hasPreciseUserPosition
+          ? ("browser" as const)
+          : ("market_fallback" as const),
         quantity,
         demandOpen: false,
         mode: "search",
@@ -499,13 +482,13 @@ export function CartePage() {
   }
 
   async function buildItinerary(f: MapFacility) {
-    if (!userPos) {
+    if (!preciseUserPos) {
       toast.info(
-        "Position exacte indisponible. Autorisez la localisation pour obtenir un itinéraire.",
+        "Position GPS précise indisponible. Autorisez la localisation pour obtenir un itinéraire.",
       );
       return;
     }
-    const from = userPos;
+    const from = preciseUserPos;
     setRoutingBusy(true);
     try {
       const url = `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${f.longitude},${f.latitude}?overview=full&geometries=geojson&steps=true`;
@@ -560,21 +543,6 @@ export function CartePage() {
         minimalMapChrome
       />
 
-      {nearbyMobile && !bannerDismissed && (
-        <div className="flex items-center gap-2 bg-accent px-4 py-2 text-sm text-accent-foreground">
-          <span className="font-medium">{nearbyMobile} est à proximité de vous</span>
-          <Badge variant="secondary">Mode démo</Badge>
-          <button
-            type="button"
-            className="ml-auto"
-            onClick={() => setBannerDismissed(true)}
-            aria-label="Fermer"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
       <div className="relative flex-1 overflow-hidden">
         <MapCanvas
           facilities={hasActiveSearch ? results : discoveryResults}
@@ -585,12 +553,13 @@ export function CartePage() {
             setSteps([]);
           }}
           routeCoords={routeCoords}
-          userPosition={userPos}
+          userPosition={preciseUserPos}
+          approximatePosition={approximateUserPos}
           marketCenter={fallbackCenter}
           marketZoom={market?.default_zoom ?? 12.2}
           revealKey={searchRunKey}
           showFacilities={true}
-          showUserLocation={locationStatus === "granted"}
+          showUserLocation={hasPreciseUserPosition}
           onRevealStateChange={setRevealRunning}
           focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
           fitPoints={selected ? null : fitPoints}
@@ -607,63 +576,80 @@ export function CartePage() {
               style={{ bottom: "var(--omni-dock-clearance, 12rem)" }}
             >
               <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
-                {results.slice(0, 6).map((facility) => (
-                  <button
-                    key={facility.id}
-                    type="button"
-                    onClick={() => {
-                      setSelected(facility);
-                      setRouteCoords(null);
-                      setSteps([]);
-                    }}
-                    className="omni-glass w-72 shrink-0 rounded-2xl p-3 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold">{facility.name}</p>
-                        <p className="truncate text-[11px] text-muted-foreground">
-                          {facility.status === "unclaimed"
-                            ? "Facility à réclamer"
-                            : "Facility certifiable Omni"}
+                {results.slice(0, 6).map((facility, index) => {
+                  const isUnclaimed = facility.status === "unclaimed";
+                  const isTrusted =
+                    facility.status === "confirmed" || facility.status === "certified";
+                  return (
+                    <button
+                      key={facility.id}
+                      type="button"
+                      onClick={() => {
+                        setSelected(facility);
+                        setRouteCoords(null);
+                        setSteps([]);
+                      }}
+                      className="omni-glass group w-[19rem] shrink-0 rounded-[1.5rem] p-3.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 active:scale-[0.99]"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-2.5">
+                          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold">{facility.name}</p>
+                            <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
+                              {isUnclaimed
+                                ? "Découverte OSM · non réclamée"
+                                : "Présence Omni vérifiée"}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={isTrusted ? "default" : "secondary"}
+                          className="shrink-0 text-[10px]"
+                        >
+                          {isTrusted ? "Vérifiée" : "À confirmer"}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 rounded-2xl bg-background/72 px-3 py-2.5">
+                        <p className="truncate text-sm font-semibold">
+                          {query.trim() || (category ? categoryLabel(category) : "Recherche Omni")}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {isUnclaimed
+                            ? "Informations publiques · achat non disponible"
+                            : "Produits et services liés"}
                         </p>
                       </div>
-                      <Badge variant={facility.status === "confirmed" ? "default" : "secondary"}>
-                        {facility.status === "confirmed" || facility.status === "certified"
-                          ? "✓"
-                          : "•"}
-                      </Badge>
-                    </div>
-                    <div className="mt-3 rounded-xl bg-background/65 p-2">
-                      <p className="truncate text-sm font-semibold">
-                        {query.trim() || (category ? categoryLabel(category) : "Recherche")}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Requested product / service
-                      </p>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                      <span className="rounded-full bg-background/65 px-2 py-1 font-semibold">
-                        {facility.min_price != null
-                          ? `From ${formatMoney(facility.min_price)}`
-                          : "Price to confirm"}
-                      </span>
-                      <span className="rounded-full bg-background/65 px-2 py-1 text-right font-semibold">
-                        {formatDistance(facility.distanceKm)}
-                      </span>
-                      <span className="rounded-full bg-background/65 px-2 py-1 text-muted-foreground">
-                        {facility.product_count} offer{facility.product_count > 1 ? "s" : ""}
-                      </span>
-                      <span className="rounded-full bg-background/65 px-2 py-1 text-right text-primary">
-                        {facility.max_discount_percent > 0
-                          ? `${facility.max_discount_percent}% off`
-                          : "Availability first"}
-                      </span>
-                    </div>
-                    <div className="mt-3 rounded-full bg-primary px-3 py-1.5 text-center text-xs font-semibold text-primary-foreground">
-                      Check availability
-                    </div>
-                  </button>
-                ))}
+                      <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px]">
+                        <span className="rounded-full bg-background/72 px-2.5 py-1.5 font-semibold">
+                          {facility.min_price != null
+                            ? `Dès ${formatMoney(facility.min_price)}`
+                            : "Prix à confirmer"}
+                        </span>
+                        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-right font-semibold">
+                          {formatDistance(facility.distanceKm)}
+                        </span>
+                        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-muted-foreground">
+                          {facility.product_count} offre{facility.product_count > 1 ? "s" : ""}
+                        </span>
+                        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-right text-primary">
+                          {facility.max_discount_percent > 0
+                            ? `${facility.max_discount_percent}% de réduction`
+                            : "Disponibilité à vérifier"}
+                        </span>
+                      </div>
+                      <div
+                        className={`mt-3 rounded-full px-3 py-2 text-center text-[11px] font-bold ${isUnclaimed ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
+                      >
+                        {isUnclaimed
+                          ? "Voir la fiche et réclamer"
+                          : "Voir et vérifier la disponibilité"}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -686,11 +672,10 @@ export function CartePage() {
                   category: value,
                   filters,
                   targetFacilityIds: [],
-                  location: userPos,
-                  locationSource:
-                    locationStatus === "granted"
-                      ? ("browser" as const)
-                      : ("market_fallback" as const),
+                  location: preciseUserPos,
+                  locationSource: hasPreciseUserPosition
+                    ? ("browser" as const)
+                    : ("market_fallback" as const),
                   quantity,
                   demandOpen: false,
                   mode: "search",
@@ -715,8 +700,8 @@ export function CartePage() {
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
-              if (userPos) setFitPoints([userPos]);
-              else toast.info("Position indisponible.");
+              if (preciseUserPos) setFitPoints([preciseUserPos]);
+              else toast.info("Position GPS précise indisponible.");
             }}
           />
         )}
