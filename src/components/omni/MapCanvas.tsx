@@ -5,11 +5,12 @@ import {
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
+  type MarkerInstance,
 } from "@/lib/maplibre";
 import { type FacilityRow } from "@/lib/omni";
 import {
   clearHighlight,
-  highlightBoundaryAtCenter,
+  highlightBoundaryAtTarget,
   loadBoundariesForZoom,
   resetBoundaryState,
 } from "@/lib/boundaries/loader";
@@ -47,7 +48,8 @@ const GLOBE_START_CENTER: [number, number] = [8, 7];
 const RESET_DURATION = 900;
 const REVEAL_FLIGHT_DURATION = 1250;
 const REVEAL_PAUSE_DURATION = 1400;
-const ROTATION_DEGREES_PER_SECOND = 2.8;
+// Negative bearing produces the intended west-to-east horizontal world motion.
+const ROTATION_DEGREES_PER_SECOND = -2.8;
 const IDLE_RESUME_DELAY = 1800;
 
 const REVEAL_STEPS = [
@@ -89,7 +91,7 @@ function getTargetPoint(
 }
 
 function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
-  for (const layerId of ["omni-point-halo", "omni-points", "omni-point-labels"]) {
+  for (const layerId of ["omni-point-halo", "omni-points", "omni-pin-icons", "omni-point-labels"]) {
     try {
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     } catch {
@@ -98,11 +100,45 @@ function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
   }
 }
 
+const PIN_IMAGE_ID = "omni-pin-icon";
+
+function ensurePinImage(map: MapInstance) {
+  const imageMap = map as MapInstance & {
+    hasImage?: (id: string) => boolean;
+    addImage?: (id: string, image: unknown, options?: Record<string, unknown>) => void;
+  };
+  if (!imageMap.hasImage || !imageMap.addImage || imageMap.hasImage(PIN_IMAGE_ID)) return;
+
+  const size = 64;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.clearRect(0, 0, size, size);
+  context.beginPath();
+  context.arc(size / 2, 24, 14, 0, Math.PI * 2);
+  context.lineTo(size / 2, 57);
+  context.lineTo(size / 2 - 9, 39);
+  context.closePath();
+  context.fillStyle = "#e46f34";
+  context.fill();
+  context.lineWidth = 4;
+  context.strokeStyle = "#ffffff";
+  context.stroke();
+  context.beginPath();
+  context.arc(size / 2, 24, 4, 0, Math.PI * 2);
+  context.fillStyle = "#ffffff";
+  context.fill();
+  imageMap.addImage(PIN_IMAGE_ID, context.getImageData(0, 0, size, size), { pixelRatio: 2 });
+}
+
 function hasLayer(map: MapInstance, id: string) {
   return Boolean(map.getStyle()?.layers?.some((layer) => layer.id === id));
 }
 
 function addOmniLayers(map: MapInstance, showFacilities: boolean) {
+  ensurePinImage(map);
   if (!map.getSource("omni-facilities")) {
     map.addSource("omni-facilities", {
       type: "geojson",
@@ -141,13 +177,46 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
           "unconfirmed",
           "#9a938c",
           "unclaimed",
-          "#b8b0a8",
-          "#9a938c",
+          "#e46f34",
+          "#d97724",
         ],
         "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 12, 9],
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
         "circle-stroke-color": "#ffffff",
         "circle-opacity": 0.98,
+      },
+    });
+  }
+  if (!hasLayer(map, "omni-pin-icons")) {
+    map.addLayer({
+      id: "omni-pin-icons",
+      type: "symbol",
+      source: "omni-facilities",
+      layout: {
+        visibility: showFacilities ? "visible" : "none",
+        "icon-image": PIN_IMAGE_ID,
+        "icon-size": ["case", ["boolean", ["feature-state", "selected"], false], 1.18, 0.92],
+        "icon-anchor": "bottom",
+        "icon-offset": [0, -5],
+        "icon-allow-overlap": true,
+        "icon-ignore-placement": true,
+      },
+      paint: {
+        "icon-color": [
+          "match",
+          ["get", "status"],
+          "certified",
+          "#2f6fb5",
+          "confirmed",
+          "#d9a521",
+          "unclaimed",
+          "#e46f34",
+          "#d97724",
+        ],
+        "icon-opacity": 1,
+        "icon-halo-color": "#ffffff",
+        "icon-halo-width": 1.5,
+        "icon-halo-blur": 0.15,
       },
     });
   }
@@ -189,22 +258,55 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
   }
 }
 
-function waitForMapIdle(map: MapInstance, timeout = 2600): Promise<void> {
+function waitForRenderFrames(frameCount = 2): Promise<void> {
+  return new Promise((resolve) => {
+    let remaining = frameCount;
+    const nextFrame = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      window.requestAnimationFrame(nextFrame);
+    };
+    window.requestAnimationFrame(nextFrame);
+  });
+}
+
+function waitForMapSettle(map: MapInstance, timeout = 2600): Promise<void> {
   return new Promise((resolve) => {
     let settled = false;
     const finish = () => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeoutId);
-      resolve();
+      void waitForRenderFrames(2).then(resolve);
     };
     const timeoutId = window.setTimeout(finish, timeout);
-    map.once("idle", finish);
+    map.once("moveend", finish);
   });
 }
 
 function waitForDuration(duration: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, duration));
+}
+
+function renderedFacilityCount(map: MapInstance) {
+  const canvas = map.getCanvas();
+  const points = [
+    { x: canvas.width / 2, y: canvas.height / 2 },
+    { x: canvas.width * 0.25, y: canvas.height * 0.35 },
+    { x: canvas.width * 0.75, y: canvas.height * 0.35 },
+    { x: canvas.width * 0.25, y: canvas.height * 0.65 },
+    { x: canvas.width * 0.75, y: canvas.height * 0.65 },
+  ];
+  const ids = new Set<string | number>();
+  for (const point of points) {
+    for (const feature of map.queryRenderedFeatures(point, { layers: ["omni-points"] })) {
+      if (feature.id != null) ids.add(feature.id);
+    }
+  }
+  return ids.size;
 }
 
 function fitMapToPoints(
@@ -262,6 +364,7 @@ export function MapCanvas({
   const [revealRunning, setRevealRunning] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [mapStatus, setMapStatus] = useState<"loading" | "ready" | "fallback" | "error">("loading");
+  const [mapReadyVersion, setMapReadyVersion] = useState(0);
 
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
@@ -292,6 +395,7 @@ export function MapCanvas({
   const fallbackAttemptedRef = useRef(false);
   const styleRecoveryTimerRef = useRef<number | null>(null);
   const userMarkerRef = useRef<{ remove: () => void } | null>(null);
+  const facilityMarkerRefs = useRef<Map<string, MarkerInstance>>(new Map());
 
   useEffect(() => {
     const query = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -386,6 +490,7 @@ export function MapCanvas({
       }
       styleReadyRef.current = true;
       readyRef.current = true;
+      setMapReadyVersion((version) => version + 1);
       if (map.getZoom() <= GLOBE_ZOOM) map.setProjection({ type: "globe" });
       containerRef.current?.setAttribute(
         "data-omni-projection",
@@ -468,6 +573,8 @@ export function MapCanvas({
       if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
       if (styleRecoveryTimerRef.current != null) window.clearTimeout(styleRecoveryTimerRef.current);
+      for (const marker of facilityMarkerRefs.current.values()) marker.remove();
+      facilityMarkerRefs.current.clear();
       resetBoundaryState();
       map.remove();
       mapRef.current = null;
@@ -519,15 +626,75 @@ export function MapCanvas({
     element.style.background = "#2f6fb5";
     element.style.border = "3px solid #fff";
     element.style.boxShadow = "0 0 0 6px rgba(47,111,181,.22)";
-    const { Marker } = gl as unknown as {
-      Marker: new (opts: { element: HTMLDivElement }) => {
-        setLngLat: (coords: [number, number]) => { addTo: (map: MapInstance) => unknown };
-      };
-    };
-    const marker = new Marker({ element });
+    const marker = new gl.Marker({ element });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
-    userMarkerRef.current = marker as unknown as { remove: () => void };
-  }, [gl, showUserLocation, userPosition]);
+    userMarkerRef.current = marker;
+  }, [gl, mapReadyVersion, showUserLocation, userPosition]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!gl || !map || !readyRef.current) return;
+
+    for (const marker of facilityMarkerRefs.current.values()) marker.remove();
+    facilityMarkerRefs.current.clear();
+    if (!showFacilities || revealRunning) return;
+
+    for (const facility of facilities) {
+      if (!Number.isFinite(facility.longitude) || !Number.isFinite(facility.latitude)) continue;
+      const element = document.createElement("button");
+      element.type = "button";
+      element.setAttribute("aria-label", facility.name);
+      element.title = facility.name;
+      element.style.width = "32px";
+      element.style.height = "40px";
+      element.style.padding = "0";
+      element.style.border = "0";
+      element.style.background = "transparent";
+      element.style.cursor = "pointer";
+      // Leave the root position to MapLibre’s absolute marker CSS.
+      element.style.pointerEvents = "auto";
+
+      const pin = document.createElement("span");
+      pin.style.position = "absolute";
+      pin.style.left = "4px";
+      pin.style.bottom = "5px";
+      pin.style.width = "24px";
+      pin.style.height = "24px";
+      pin.style.borderRadius = "50% 50% 50% 0";
+      pin.style.transform = "rotate(-45deg)";
+      pin.style.background = facility.status === "certified" ? "#2f6fb5" : "#e46f34";
+      pin.style.border = "3px solid #ffffff";
+      pin.style.boxShadow = "0 2px 8px rgba(74,48,29,.28)";
+
+      const dot = document.createElement("span");
+      dot.style.position = "absolute";
+      dot.style.left = "5px";
+      dot.style.top = "5px";
+      dot.style.width = "8px";
+      dot.style.height = "8px";
+      dot.style.borderRadius = "999px";
+      dot.style.background = "#ffffff";
+      pin.appendChild(dot);
+      element.appendChild(pin);
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        map.stop();
+        selectRef.current?.(facility);
+      });
+      element.addEventListener("mousedown", (event) => event.stopPropagation());
+      element.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
+
+      const marker = new gl.Marker({ element })
+        .setLngLat([facility.longitude, facility.latitude])
+        .addTo(map);
+      facilityMarkerRefs.current.set(facility.id, marker);
+    }
+
+    return () => {
+      for (const marker of facilityMarkerRefs.current.values()) marker.remove();
+      facilityMarkerRefs.current.clear();
+    };
+  }, [facilities, gl, mapReadyVersion, revealRunning, showFacilities]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -602,9 +769,19 @@ export function MapCanvas({
       const source = map.getSource("omni-facilities");
       source?.setData(facilitiesToGeoJSON(facilitiesRef.current));
       fitMapToPoints(map, fitPointsRef.current);
-      await waitForMapIdle(map, 3000);
+      await waitForMapSettle(map, 3000);
       if (cancelIfStale()) return;
       setFacilitiesVisibility(map, showFacilities);
+      const repaintableMap = map as MapInstance & { triggerRepaint?: () => void };
+      repaintableMap.triggerRepaint?.();
+      await waitForRenderFrames(2);
+      if (showFacilities && facilitiesRef.current.length > 0 && renderedFacilityCount(map) === 0) {
+        fitMapToPoints(map, fitPointsRef.current);
+        await waitForMapSettle(map, 1800);
+        setFacilitiesVisibility(map, true);
+        repaintableMap.triggerRepaint?.();
+        await waitForRenderFrames(2);
+      }
       revealRunningRef.current = false;
       setRevealRunning(false);
       onRevealStateChange?.(false);
@@ -628,12 +805,12 @@ export function MapCanvas({
         curve: 1.15,
         essential: true,
       });
-      await waitForMapIdle(map, REVEAL_FLIGHT_DURATION + 2200);
+      await waitForMapSettle(map, REVEAL_FLIGHT_DURATION + 2200);
       if (cancelIfStale()) return;
       await loadBoundariesForZoom(map, step.zoom);
-      await waitForMapIdle(map, 900);
+      await waitForRenderFrames(3);
       if (cancelIfStale()) return;
-      highlightBoundaryAtCenter(map, step.zoom);
+      highlightBoundaryAtTarget(map, step.zoom, target);
       await waitForDuration(step.pause);
       if (cancelIfStale()) return;
       if (index === waypoints.length - 1) {
@@ -656,7 +833,7 @@ export function MapCanvas({
         curve: 1.15,
         essential: true,
       });
-      await waitForMapIdle(map, RESET_DURATION + 2200);
+      await waitForMapSettle(map, RESET_DURATION + 2200);
       if (cancelIfStale()) return;
       await waitForDuration(350);
       await runStep(0);
