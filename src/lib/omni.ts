@@ -17,7 +17,6 @@ export type FacilityRow = {
   cover_url?: string | null;
 };
 
-
 export type ProductRow = {
   id: string;
   facility_id: string;
@@ -35,6 +34,9 @@ export type SubscriptionRow = {
   pro_active_until: string | null;
   last_qualifying_action_month: string | null;
 };
+
+/** Browser coordinates less precise than this are shown as approximate network location. */
+export const LOCATION_APPROXIMATE_ACCURACY_METERS = 500;
 
 export const CATEGORIES = [
   { value: "food", label: "Alimentation" },
@@ -81,8 +83,7 @@ export function haversineKm(
   const dLng = ((b.lng - a.lng) * Math.PI) / 180;
   const la1 = (a.lat * Math.PI) / 180;
   const la2 = (b.lat * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(la1) * Math.cos(la2);
+  const h = Math.sin(dLat / 2) ** 2 + Math.sin(dLng / 2) ** 2 * Math.cos(la1) * Math.cos(la2);
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
@@ -114,10 +115,7 @@ export function isProActive(sub: SubscriptionRow | null | undefined): boolean {
 
 export function daysLeft(until: string | null): number {
   if (!until) return 0;
-  return Math.max(
-    0,
-    Math.ceil((new Date(until).getTime() - Date.now()) / 86400000),
-  );
+  return Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 86400000));
 }
 
 export function currentMonthKey(d: Date = new Date()): string {

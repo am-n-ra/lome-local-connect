@@ -7,7 +7,7 @@ import {
   type MapInstance,
   type MarkerInstance,
 } from "@/lib/maplibre";
-import { type FacilityRow } from "@/lib/omni";
+import { LOCATION_APPROXIMATE_ACCURACY_METERS, type FacilityRow } from "@/lib/omni";
 import {
   clearHighlight,
   highlightBoundaryAtTarget,
@@ -28,7 +28,7 @@ type Props = {
   selectedId?: string | null;
   onSelect?: (facility: MapFacility) => void;
   routeCoords?: [number, number][] | null;
-  userPosition?: { lat: number; lng: number } | null;
+  userPosition?: { lat: number; lng: number; accuracy?: number | null } | null;
   focus?: { lat: number; lng: number; zoom?: number } | null;
   fitPoints?: { lat: number; lng: number }[] | null;
   marketCenter?: { lat: number; lng: number } | null;
@@ -113,6 +113,63 @@ function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
 }
 
 const PIN_IMAGE_ID = "omni-pin-icon";
+const USER_ACCURACY_SOURCE_ID = "omni-user-accuracy";
+const USER_ACCURACY_FILL_LAYER_ID = "omni-user-accuracy-fill";
+const USER_ACCURACY_OUTLINE_LAYER_ID = "omni-user-accuracy-outline";
+
+function emptyGeoJSON() {
+  return { type: "FeatureCollection" as const, features: [] };
+}
+
+function accuracyCircleToGeoJSON(
+  position: { lat: number; lng: number },
+  accuracy: number | null | undefined,
+) {
+  if (!Number.isFinite(accuracy) || !accuracy || accuracy <= 0) return emptyGeoJSON();
+  const earthRadiusMeters = 6_378_137;
+  const angularDistance = accuracy / earthRadiusMeters;
+  const latitude = (position.lat * Math.PI) / 180;
+  const longitude = (position.lng * Math.PI) / 180;
+  const coordinates: [number, number][] = [];
+
+  for (let index = 0; index <= 64; index += 1) {
+    const bearing = (index / 64) * Math.PI * 2;
+    const circleLatitude = Math.asin(
+      Math.sin(latitude) * Math.cos(angularDistance) +
+        Math.cos(latitude) * Math.sin(angularDistance) * Math.cos(bearing),
+    );
+    const circleLongitude =
+      longitude +
+      Math.atan2(
+        Math.sin(bearing) * Math.sin(angularDistance) * Math.cos(latitude),
+        Math.cos(angularDistance) - Math.sin(latitude) * Math.sin(circleLatitude),
+      );
+    coordinates.push([
+      (((circleLongitude * 180) / Math.PI + 540) % 360) - 180,
+      (circleLatitude * 180) / Math.PI,
+    ]);
+  }
+
+  return {
+    type: "FeatureCollection" as const,
+    features: [
+      {
+        type: "Feature" as const,
+        geometry: { type: "Polygon" as const, coordinates: [coordinates] },
+        properties: { accuracy },
+      },
+    ],
+  };
+}
+
+function setAccuracyCircle(
+  map: MapInstance,
+  position: { lat: number; lng: number } | null | undefined,
+  accuracy: number | null | undefined,
+) {
+  const source = map.getSource(USER_ACCURACY_SOURCE_ID);
+  source?.setData(position ? accuracyCircleToGeoJSON(position, accuracy) : emptyGeoJSON());
+}
 
 function ensurePinImage(map: MapInstance) {
   const imageMap = map as MapInstance & {
@@ -151,6 +208,36 @@ function hasLayer(map: MapInstance, id: string) {
 
 function addOmniLayers(map: MapInstance, showFacilities: boolean) {
   ensurePinImage(map);
+  if (!map.getSource(USER_ACCURACY_SOURCE_ID)) {
+    map.addSource(USER_ACCURACY_SOURCE_ID, {
+      type: "geojson",
+      data: emptyGeoJSON(),
+    });
+  }
+  if (!hasLayer(map, USER_ACCURACY_FILL_LAYER_ID)) {
+    map.addLayer({
+      id: USER_ACCURACY_FILL_LAYER_ID,
+      type: "fill",
+      source: USER_ACCURACY_SOURCE_ID,
+      paint: {
+        "fill-color": "#2f6fb5",
+        "fill-opacity": 0.1,
+      },
+    });
+  }
+  if (!hasLayer(map, USER_ACCURACY_OUTLINE_LAYER_ID)) {
+    map.addLayer({
+      id: USER_ACCURACY_OUTLINE_LAYER_ID,
+      type: "line",
+      source: USER_ACCURACY_SOURCE_ID,
+      paint: {
+        "line-color": "#2f6fb5",
+        "line-width": 1.5,
+        "line-opacity": 0.45,
+        "line-dasharray": [2, 2],
+      },
+    });
+  }
   if (!map.getSource("omni-facilities")) {
     map.addSource("omni-facilities", {
       type: "geojson",
@@ -682,21 +769,34 @@ export function MapCanvas({
       userMarkerRef.current.remove();
       userMarkerRef.current = null;
     }
+    setAccuracyCircle(
+      map,
+      showUserLocation && userPosition ? userPosition : null,
+      showUserLocation &&
+        userPosition?.accuracy != null &&
+        userPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
+        ? userPosition.accuracy
+        : null,
+    );
     if (!showUserLocation || !userPosition) return;
 
+    const isApproximate =
+      userPosition.accuracy != null && userPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS;
+    const markerLabel = isApproximate ? "Position approximative (réseau)" : "Position GPS précise";
     const element = document.createElement("div");
-    element.setAttribute("aria-label", "Votre position exacte");
-    element.title = "Votre position exacte";
-    element.dataset["omniUserMarker"] = "exact";
+    element.setAttribute("aria-label", markerLabel);
+    element.title = markerLabel;
+    element.dataset["omniUserMarker"] = isApproximate ? "approximate-network" : "exact";
     element.style.position = "relative";
     element.style.width = "30px";
     element.style.height = "38px";
     element.style.pointerEvents = "none";
     element.style.zIndex = "20";
     element.innerHTML = `
-      <span style="position:absolute;inset:0 2px 6px 2px;display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
+      <span style="position:absolute;inset:${isApproximate ? "-8px -8px 0 -8px" : "0 2px 6px 2px"};display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
         <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #2f6fb5;"></span>
       </span>
+      ${isApproximate ? '<span style="position:absolute;right:-18px;top:-10px;display:block;border-radius:999px;background:#fff;color:#2f6fb5;border:1px solid #2f6fb5;padding:1px 4px;font:600 10px/1 system-ui,sans-serif;">≈</span>' : ""}
     `;
     const marker = new gl.Marker({ element, anchor: "bottom" });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);

@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
-import { categoryLabel, CATEGORIES } from "@/lib/omni";
+import { categoryLabel, CATEGORIES, LOCATION_APPROXIMATE_ACCURACY_METERS } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 
 export type MapFilters = {
@@ -65,6 +65,7 @@ type Props = {
   onQuantityChange?: (value: number) => void;
   locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
   browserPermission?: "unknown" | "prompt" | "granted" | "denied" | "unsupported";
+  locationAccuracy?: number | null;
   onRequestLocation?: () => void;
   onUseMarketFallback?: () => void;
 };
@@ -93,6 +94,7 @@ export function SearchDock({
   onQuantityChange,
   locationStatus = "fallback",
   browserPermission = "unknown",
+  locationAccuracy = null,
   onRequestLocation,
   onUseMarketFallback,
 }: Props) {
@@ -129,6 +131,23 @@ export function SearchDock({
   function patch(next: Partial<MapFilters>) {
     onFiltersChange({ ...filters, ...next });
   }
+
+  const accuracyText =
+    locationAccuracy != null ? ` · précision ±${Math.round(locationAccuracy)} m` : "";
+  const locationLabel =
+    locationStatus === "granted"
+      ? locationAccuracy != null && locationAccuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
+        ? `Position approximative (réseau)${accuracyText}`
+        : locationAccuracy != null
+          ? `Position GPS active${accuracyText}`
+          : "Position actuelle active"
+      : locationStatus === "pending"
+        ? "Autorisation de localisation en cours…"
+        : browserPermission === "denied"
+          ? "Localisation bloquée par le navigateur — autorisez-la puis réessayez"
+          : locationStatus === "unavailable"
+            ? "Localisation indisponible — réessayez ou utilisez le marché"
+            : "Marché approximatif — aucune position partagée";
 
   return (
     <div
@@ -355,15 +374,7 @@ export function SearchDock({
               locationStatus === "granted" ? "text-primary" : "text-muted-foreground"
             }`}
           >
-            {locationStatus === "granted"
-              ? "Position actuelle active"
-              : locationStatus === "pending"
-                ? "Autorisation de localisation en cours…"
-                : browserPermission === "denied"
-                  ? "Localisation bloquée par le navigateur — autorisez-la puis réessayez"
-                  : locationStatus === "unavailable"
-                    ? "Localisation indisponible — réessayez ou utilisez le marché"
-                    : "Marché approximatif — aucune position partagée"}
+            {locationLabel}
           </span>
           {locationStatus === "unavailable" && onRequestLocation && (
             <button
