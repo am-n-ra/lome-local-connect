@@ -685,14 +685,20 @@ export function MapCanvas({
     if (!showUserLocation || !userPosition) return;
 
     const element = document.createElement("div");
-    element.setAttribute("aria-label", "Votre position");
-    element.style.width = "16px";
-    element.style.height = "16px";
-    element.style.borderRadius = "999px";
-    element.style.background = "#2f6fb5";
-    element.style.border = "3px solid #fff";
-    element.style.boxShadow = "0 0 0 6px rgba(47,111,181,.22)";
-    const marker = new gl.Marker({ element });
+    element.setAttribute("aria-label", "Votre position exacte");
+    element.title = "Votre position exacte";
+    element.dataset["omniUserMarker"] = "exact";
+    element.style.position = "relative";
+    element.style.width = "30px";
+    element.style.height = "38px";
+    element.style.pointerEvents = "none";
+    element.style.zIndex = "20";
+    element.innerHTML = `
+      <span style="position:absolute;inset:0 2px 6px 2px;display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
+        <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #2f6fb5;"></span>
+      </span>
+    `;
+    const marker = new gl.Marker({ element, anchor: "bottom" });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
     userMarkerRef.current = marker;
   }, [gl, mapReadyVersion, showUserLocation, userPosition]);
@@ -945,7 +951,7 @@ export function MapCanvas({
   return (
     <div
       className={`${className ?? "h-full w-full"} relative overflow-hidden`}
-      style={{ backgroundColor: "#15191b" }}
+      style={{ backgroundColor: "#fbfaf7" }}
     >
       <div
         ref={containerRef}
@@ -994,8 +1000,8 @@ export function MapCanvas({
       )}
 
       {gl && mapStatus === "loading" && (
-        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#15191b] text-white">
-          <div className="rounded-full border border-white/15 bg-black/20 px-4 py-2 text-xs tracking-wide text-white/75 backdrop-blur">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#fbfaf7] text-foreground">
+          <div className="rounded-full border border-black/10 bg-white/70 px-4 py-2 text-xs tracking-wide text-foreground/70 shadow-sm backdrop-blur">
             Chargement du globe MapLibre…
           </div>
         </div>
