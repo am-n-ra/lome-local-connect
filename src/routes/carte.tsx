@@ -17,6 +17,7 @@ import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 
 import { categoryLabel, formatDistance, haversineKm, DEFAULT_CENTER } from "@/lib/omni";
+import { deriveOmniSurfaceState } from "@/lib/omni-state";
 import { useMarket } from "@/lib/market";
 import {
   restorePendingAvailabilitySearch,
@@ -206,6 +207,13 @@ export function CartePage() {
 
   const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
   const demandUserPos = pendingUserPos ?? userPos;
+  const surfaceState = deriveOmniSurfaceState({
+    hasSearch: hasActiveSearch,
+    hasResults: results.length > 0,
+    selectedFacility: Boolean(selected),
+    availabilityOpen: demandOpen,
+    revealRunning,
+  });
 
   function handOffAvailabilitySearch(
     mode: "bulk" | "manual" = "bulk",
@@ -337,7 +345,11 @@ export function CartePage() {
   }
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div
+      className="flex h-screen flex-col bg-background"
+      data-omni-surface={surfaceState}
+      data-omni-map-first="true"
+    >
       <TopNav
         query={query}
         onQueryChange={setQuery}
@@ -381,7 +393,7 @@ export function CartePage() {
           marketZoom={market?.default_zoom ?? 12.2}
           revealKey={searchRunKey}
           showFacilities={Boolean(searchRunKey)}
-          showUserLocation={Boolean(searchRunKey)}
+          showUserLocation={geoReady}
           onRevealStateChange={setRevealRunning}
           focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
           fitPoints={selected ? null : fitPoints}

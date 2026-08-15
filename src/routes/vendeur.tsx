@@ -31,6 +31,7 @@ import { MediaManager } from "@/components/omni/MediaManager";
 import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
+import { OMNI_CONFIG } from "@/lib/omni.config";
 import {
   confirmStock,
   createFacility as createFacilityFn,
@@ -550,7 +551,9 @@ function VendeurPage() {
         <Tabs defaultValue="apercu" className="mt-6">
           <TabsList className="flex flex-wrap">
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
-            <TabsTrigger value="agent">Agent IA</TabsTrigger>
+            {pro && OMNI_CONFIG.sellerAgentEnabled && (
+              <TabsTrigger value="agent">Agent IA</TabsTrigger>
+            )}
             <TabsTrigger value="solde">Solde</TabsTrigger>
             <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
             <TabsTrigger value="parametres">Paramètres</TabsTrigger>
@@ -562,34 +565,36 @@ function VendeurPage() {
             <TabsTrigger value="demande-locale">Demande locale</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="agent" className="mt-5 space-y-4">
-            <div className="omni-card space-y-3 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Agent Omni
-              </p>
-              <h2 className="font-display text-2xl font-bold">Votre copilote vendeur</h2>
-              <p className="text-sm text-muted-foreground">
-                L'Agent priorise les demandes locales, prépare les réponses de disponibilité et met
-                en avant les actions qui renforcent la confiance.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-xl border border-border p-3">
-                  <p className="text-xs text-muted-foreground">Demandes locales</p>
-                  <p className="mt-1 text-2xl font-bold">{data?.demand.length ?? 0}</p>
-                </div>
-                <div className="rounded-xl border border-border p-3">
-                  <p className="text-xs text-muted-foreground">Demandes reçues</p>
-                  <p className="mt-1 text-2xl font-bold">{data?.requests.length ?? 0}</p>
-                </div>
-                <div className="rounded-xl border border-border p-3">
-                  <p className="text-xs text-muted-foreground">Statut</p>
-                  <p className="mt-1 text-2xl font-bold">
-                    {facility.is_online ? "Actif" : "En pause"}
-                  </p>
+          {pro && OMNI_CONFIG.sellerAgentEnabled && (
+            <TabsContent value="agent" className="mt-5 space-y-4">
+              <div className="omni-card space-y-3 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Agent Omni
+                </p>
+                <h2 className="font-display text-2xl font-bold">Votre copilote vendeur</h2>
+                <p className="text-sm text-muted-foreground">
+                  L'Agent priorise les demandes locales, prépare les réponses de disponibilité et
+                  met en avant les actions qui renforcent la confiance.
+                </p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Demandes locales</p>
+                    <p className="mt-1 text-2xl font-bold">{data?.demand.length ?? 0}</p>
+                  </div>
+                  <div className="rounded-xl border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Demandes reçues</p>
+                    <p className="mt-1 text-2xl font-bold">{data?.requests.length ?? 0}</p>
+                  </div>
+                  <div className="rounded-xl border border-border p-3">
+                    <p className="text-xs text-muted-foreground">Statut</p>
+                    <p className="mt-1 text-2xl font-bold">
+                      {facility.is_online ? "Actif" : "En pause"}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
           <TabsContent value="solde" className="mt-5 space-y-4">
             <div className="omni-card space-y-3 p-5">
@@ -774,7 +779,7 @@ function VendeurPage() {
               )}
             </div>
 
-            <MediaManager facilityId={facility.id} />
+            {OMNI_CONFIG.mediaUiEnabled && <MediaManager facilityId={facility.id} />}
           </TabsContent>
 
           <TabsContent value="produits" className="mt-5">
