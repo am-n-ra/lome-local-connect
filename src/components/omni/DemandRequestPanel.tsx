@@ -187,7 +187,13 @@ export function DemandRequestPanel({
           )}
 
           {requests.map((r) => {
-            const answers = responses.filter((a) => a.request_id === r.id);
+            // Comparison: full availability first, then partial, then price ascending.
+            const answers = responses
+              .filter((a) => a.request_id === r.id)
+              .slice()
+              .sort((x, y) => rankAnswer(x) - rankAnswer(y) || (x.price ?? 1e12) - (y.price ?? 1e12));
+            const bestId = answers.find((a) => a.available)?.id ?? null;
+
             return (
               <div key={r.id} className="omni-card space-y-2 p-3">
                 <div className="flex items-start justify-between gap-2">
