@@ -18,6 +18,8 @@ export type PendingAvailabilitySearch = {
   location: { lat: number; lng: number } | null;
   demandOpen: boolean;
   mode?: "search" | "availability";
+  demandMode?: "bulk" | "manual";
+  demandFacilityName?: string | null;
 };
 
 export function savePendingAvailabilitySearch(payload: PendingAvailabilitySearch) {
@@ -187,6 +189,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const originalFetch = window.fetch.bind(window);
+    const withAuth = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const requestUrl =
+        typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+      if (!requestUrl.includes("/_serverFn/")) return originalFetch(input, init);
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined),
+      );
+      if (!headers.has("authorization")) {
+        const token = await getAccessToken();
+        if (token) {
+          headers.set("authorization", `Bearer ${token}`);
+          headers.set("x-omni-auth-token", token);
+        }
+      }
+      return originalFetch(input, { ...init, headers });
+    };
+    window.fetch = withAuth as typeof window.fetch;
+    return () => {
+      if (window.fetch === (withAuth as typeof window.fetch)) window.fetch = originalFetch;
+    };
+  }, [user?.id]);
 
   const value = useMemo<AuthState>(
     () => ({

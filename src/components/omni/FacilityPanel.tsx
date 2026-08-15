@@ -24,6 +24,7 @@ import {
   type ProductRow,
 } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
+import { createPurchaseIntent } from "@/lib/checkout.functions";
 
 type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
 
@@ -31,9 +32,8 @@ type Props = {
   facility: FacilityRow & { isPro?: boolean };
   distanceKm: number | null;
   onItinerary?: () => void;
-  routingBusy?: boolean;
-  /** Opens the availability request flow targeted at this single facility. */
   onCheckAvailability?: () => void;
+  routingBusy?: boolean;
 };
 
 export function FacilityPanel({
@@ -43,7 +43,6 @@ export function FacilityPanel({
   routingBusy,
   onCheckAvailability,
 }: Props) {
-
   const { formatMoney } = useMarket();
   const { user } = useAuth();
   const cart = useCart();
@@ -55,12 +54,14 @@ export function FacilityPanel({
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
   const [claiming, setClaiming] = useState(false);
+  const [intentBusy, setIntentBusy] = useState<string | null>(null);
 
   const loadFacility = useServerFn(getFacility);
   const loadFavorites = useServerFn(listFavorites);
   const toggleFavoriteRemote = useServerFn(toggleFavoriteFn);
   const sendWishlist = useServerFn(recordWishlist);
   const claimFacilityRemote = useServerFn(claimFacility);
+  const createIntent = useServerFn(createPurchaseIntent);
 
   useEffect(() => {
     let active = true;
@@ -130,6 +131,30 @@ export function FacilityPanel({
     }
   }
 
+  async function startProductIntent(product: ProductRow, quantity: number) {
+    if (!user) {
+      toast.info("Connectez-vous pour commencer un achat.");
+      return;
+    }
+    setIntentBusy(product.id);
+    try {
+      const result = await createIntent({
+        data: {
+          productId: product.id,
+          facilityId: facility.id,
+          quantity,
+          amount: product.price * quantity,
+          paymentMode: "cash",
+        },
+      });
+      toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Intention impossible.");
+    } finally {
+      setIntentBusy(null);
+    }
+  }
+
   async function submitDemand() {
     if (!user) {
       toast.info("Connectez-vous pour signaler un produit recherché.");
@@ -169,7 +194,6 @@ export function FacilityPanel({
       )}
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
-
           <h2 className="font-display text-xl font-bold">{facility.name}</h2>
           <p className="text-sm text-muted-foreground">
             {categoryLabel(facility.category)}
@@ -177,7 +201,12 @@ export function FacilityPanel({
             {distanceKm !== null ? ` · ${formatDistance(distanceKm)}` : ""}
           </p>
         </div>
-        <Button variant="ghost" size="icon" aria-label="Favori" onClick={() => void toggleFavorite()}>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Favori"
+          onClick={() => void toggleFavorite()}
+        >
           <Heart className={`h-5 w-5 ${favorite ? "fill-primary text-primary" : ""}`} />
         </Button>
       </div>
@@ -190,7 +219,9 @@ export function FacilityPanel({
         {facility.isPro && <Badge className="bg-gold text-foreground">Sponsorisé</Badge>}
       </div>
 
-      {facility.description && <p className="text-sm text-muted-foreground">{facility.description}</p>}
+      {facility.description && (
+        <p className="text-sm text-muted-foreground">{facility.description}</p>
+      )}
 
       {facility.status === "unclaimed" && (
         <div className="omni-card space-y-2 border-dashed p-3">
@@ -226,7 +257,6 @@ export function FacilityPanel({
         </Button>
       </div>
 
-
       {demandOpen && (
         <div className="omni-card space-y-2 p-3">
           <p className="text-sm font-medium">Quel produit cherchez-vous et ne trouvez pas ?</p>
@@ -246,7 +276,10 @@ export function FacilityPanel({
         <div className="space-y-2">
           <p className="text-sm font-semibold">Coupons actifs</p>
           {coupons.map((c) => (
-            <div key={c.id} className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm">
+            <div
+              key={c.id}
+              className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm"
+            >
               <Ticket className="h-4 w-4 text-primary" />
               <span className="font-mono font-bold">{c.code}</span>
               <span className="text-muted-foreground">
@@ -265,7 +298,12 @@ export function FacilityPanel({
             <div key={p.id} className="omni-card flex items-center gap-3 p-3">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xl">
                 {p.photo_url ? (
-                  <img src={p.photo_url} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                  <img
+                    src={p.photo_url}
+                    alt={p.name}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
                 ) : (
                   "📦"
                 )}
@@ -274,12 +312,19 @@ export function FacilityPanel({
                 <p className="truncate font-medium">{p.name}</p>
                 <p className="text-sm font-semibold text-primary">{formatMoney(p.price)}</p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <Badge variant={p.in_stock ? "default" : "secondary"} className={p.in_stock ? "bg-forest text-forest-foreground" : ""}>
+                  <Badge
+                    variant={p.in_stock ? "default" : "secondary"}
+                    className={p.in_stock ? "bg-forest text-forest-foreground" : ""}
+                  >
                     {p.in_stock ? "Disponible" : "En rupture"}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={isFresh(p.last_confirmed_at) ? "border-forest text-forest" : "border-gold text-foreground"}
+                    className={
+                      isFresh(p.last_confirmed_at)
+                        ? "border-forest text-forest"
+                        : "border-gold text-foreground"
+                    }
                   >
                     {freshnessLabel(p.last_confirmed_at)}
                   </Badge>
@@ -309,6 +354,14 @@ export function FacilityPanel({
                 </div>
                 <Button
                   size="sm"
+                  variant="outline"
+                  disabled={facility.status === "unclaimed" || !p.in_stock || intentBusy === p.id}
+                  onClick={() => void startProductIntent(p, qty)}
+                >
+                  {intentBusy === p.id ? "Création…" : "Je veux acheter"}
+                </Button>
+                <Button
+                  size="sm"
                   disabled={!p.in_stock}
                   onClick={() => {
                     cart.add(
@@ -330,7 +383,9 @@ export function FacilityPanel({
             </div>
           );
         })}
-        {products.length === 0 && <p className="text-sm text-muted-foreground">Aucun produit publié.</p>}
+        {products.length === 0 && (
+          <p className="text-sm text-muted-foreground">Aucun produit publié.</p>
+        )}
       </div>
     </div>
   );

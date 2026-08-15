@@ -32,6 +32,7 @@ export type DemandRequestRow = {
   ai_recommended_facility_id: string | null;
   ai_recommended_facility_name: string | null;
   credit_cost: number;
+  mode: "bulk" | "manual" | string;
 };
 
 export type VendorDemandRequest = {
@@ -58,6 +59,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         radiusKm: z.number().min(0.5).max(50).nullable().optional(),
         budgetMax: z.number().int().min(0).max(100_000_000).nullable().optional(),
         targetFacilityIds: z.array(z.string().uuid()).max(700).default([]),
+        mode: z.enum(["bulk", "manual"]).default("bulk"),
       })
       .parse(input),
   )
@@ -123,7 +125,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     const creditCost = Math.max(1, targets.length);
     const remainingCredits =
       Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
-    if (remainingCredits < creditCost) {
+    if (data.mode === "bulk" && remainingCredits < creditCost) {
       throw new Error(
         `Crédits de vérification insuffisants : ${creditCost} crédit(s) requis, ${remainingCredits} disponible(s). Le plan gratuit inclut 3 crédits/mois, soit 3 vérifications normales.`,
       );
@@ -138,8 +140,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
 
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
-         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, ai_summary, ai_recommended_facility_id, ai_summary_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now()) RETURNING id`,
+         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, mode, ai_summary, ai_recommended_facility_id, ai_summary_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING id`,
       [
         context.userId,
         data.searchTerm.trim(),
@@ -150,19 +152,22 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         data.budgetMax ?? null,
         targets.length,
         creditCost,
+        data.mode,
         aiSummary,
         recommendedFacilityId,
       ],
     );
 
-    await query(
-      `UPDATE public.user_plans SET
-         requests_used = requests_used + LEAST($3, GREATEST(0, $2 - requests_used)),
-         extra_credits = GREATEST(0, extra_credits - GREATEST(0, $3 - GREATEST(0, $2 - requests_used))),
-         updated_at = now()
-       WHERE user_id = $1`,
-      [context.userId, includedCredits, creditCost],
-    );
+    if (data.mode === "bulk") {
+      await query(
+        `UPDATE public.user_plans SET
+           requests_used = requests_used + LEAST($3, GREATEST(0, $2 - requests_used)),
+           extra_credits = GREATEST(0, extra_credits - GREATEST(0, $3 - GREATEST(0, $2 - requests_used))),
+           updated_at = now()
+         WHERE user_id = $1`,
+        [context.userId, includedCredits, creditCost],
+      );
+    }
 
     for (const t of proTargets.slice(0, 120)) {
       await query(
@@ -206,7 +211,7 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const requests = await query<DemandRequestRow>(
       `SELECT d.id, d.search_term, d.quantity, d.radius_km::float8 AS radius_km, d.status,
-              d.expires_at, d.created_at, d.targeted_count, d.ai_summary, d.ai_recommended_facility_id,
+              d.expires_at, d.created_at, d.targeted_count, d.mode, d.ai_summary, d.ai_recommended_facility_id,
               rf.name AS ai_recommended_facility_name, COALESCE(d.credit_cost, d.targeted_count, 1)::int AS credit_cost,
               (SELECT count(*)::int FROM public.demand_responses r WHERE r.request_id = d.id)
                 AS response_count
@@ -225,7 +230,8 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
        FROM public.demand_responses r
        JOIN public.facilities f ON f.id = r.facility_id
        WHERE r.request_id = ANY($1::uuid[])
-       ORDER BY r.available DESC, r.price ASC NULLS LAST`,
+       ORDER BY CASE WHEN r.kind = 'partial' THEN 1 WHEN r.available THEN 0 ELSE 2 END,
+                r.price ASC NULLS LAST`,
       [requests.map((r) => r.id)],
     );
     return { requests, responses };
