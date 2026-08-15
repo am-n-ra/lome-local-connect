@@ -32,9 +32,18 @@ type Props = {
   distanceKm: number | null;
   onItinerary?: () => void;
   routingBusy?: boolean;
+  /** Opens the availability request flow targeted at this single facility. */
+  onCheckAvailability?: () => void;
 };
 
-export function FacilityPanel({ facility, distanceKm, onItinerary, routingBusy }: Props) {
+export function FacilityPanel({
+  facility,
+  distanceKm,
+  onItinerary,
+  routingBusy,
+  onCheckAvailability,
+}: Props) {
+
   const { formatMoney } = useMarket();
   const { user } = useAuth();
   const cart = useCart();
