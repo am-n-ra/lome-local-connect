@@ -10,7 +10,7 @@ This prompt governs product and frontend implementation. Backend/database work m
 
 - Use the real MapLibre GL globe projection. Never replace it with SVG, CSS, a decorative canvas, a screenshot, or a simulated globe.
 - Preserve the approved horizontal resting rotation direction and the user-requested vertical-axis interpretation. Rotate the globe’s longitude/center around a stable camera bearing; do not create a clock-like roll with bearing animation.
-- On first arrival, show a non-blocking location-permission surface while the globe keeps spinning. Keep a truthful distinction between browser location, market fallback, and unknown location.
+- On first arrival, invoke the browser’s native geolocation permission request through a non-blocking page effect while the globe keeps spinning. Do not show a large explanatory location card; keep a truthful distinction between browser location, market fallback, and unknown location with compact dock recovery actions.
 - Preserve the staged geographic reveal with continent, country, region, local area, and exact-position pauses/highlights, but trigger it only after an explicit search or restored search—not on passive arrival or manual map navigation.
 - Keep the resting map populated with sparse, real, source-backed facility discovery points. Do not use a naked map or fake markers. Suppress country/city labels at default globe scale unless needed for the search reveal.
 - Use black or near-black boundary emphasis with restrained opacity for active reveal highlights; reserve orange for Omni actions, pins, and primary emphasis.
@@ -49,7 +49,7 @@ Ensure every sheet/panel can close or return to the map, every loading/error/emp
 
 Verify and refine `MapCanvas` using MapLibre’s actual globe projection. Implement resting rotation by moving the globe center/longitude around a stable camera axis so the earth moves horizontally like a physical globe; do not use camera bearing as the primary idle-rotation mechanism. Pause rotation during gestures, panels, recentering, and active reveal, and resume it only in the resting state.
 
-Add an explicit non-blocking location-permission surface. Trigger browser permission from the user’s location action, keep the globe visible while pending, show a real user marker only after success, and label denied/timeout/unsupported cases as approximate market fallback without misplacing the user marker. Implement the staged reveal only after a real or restored search, with black/near-black highlights, suppressed country/city labels, semantic pauses, reduced-motion behavior, camera framing, and result reveal callbacks. Verify that manual zoom and pan never start the reveal.
+Invoke the browser’s native location permission on landing arrival through an idempotent non-blocking effect, keep the globe visible while pending, show a real user marker only after success without moving the resting camera, and label denied/timeout/unsupported cases as approximate market fallback without misplacing the user marker. Use only compact dock retry/recovery treatment after denial; do not add a large arrival card. Implement the staged reveal only after a real or restored search, with black/near-black highlights, suppressed country/city labels, semantic pauses, reduced-motion behavior, camera framing, and result reveal callbacks. Verify that manual zoom and pan never start the reveal.
 
 ### Slice 3 — Buyer search, structured controls, and auth restoration
 
@@ -113,7 +113,7 @@ The globe reveal is the principal exception to short UI motion: it may take long
 
 | Area | Required browser scenario |
 |---|---|
-| Globe/location | Open `/carte`; confirm explicit non-blocking location prompt, real marker only after permission, truthful fallback after denial, real globe projection, horizontal center/longitude rotation, pause/resume, and no decorative substitute. |
+| Globe/location | Open `/carte`; confirm native permission is requested on arrival without a blocking card, real marker only after permission, truthful fallback after denial, grey/black-ocean white-land globe projection, horizontal center/longitude rotation, pause/resume, and no decorative substitute. |
 | Resting discovery | Open `/carte`; verify sparse real source-backed claimed/unclaimed facility points, no fake markers, no naked map, and suppressed country/city labels at globe scale. |
 | Manual navigation | Zoom, pan, recenter, and open a panel before searching; verify no staged reveal or forced camera reset. |
 | Reveal | Submit a real search from a clean state; observe continent, country, region/local-area, and exact-position pauses with black/near-black boundary emphasis before final pins/cards. |

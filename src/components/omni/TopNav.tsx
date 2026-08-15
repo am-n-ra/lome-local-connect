@@ -54,12 +54,10 @@ export function TopNav({
       <div
         className={
           minimalMapChrome
-            ? "flex items-center justify-between px-3 py-3 md:px-5"
+            ? "flex items-center justify-end px-3 py-3 md:px-5"
             : "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 md:px-5 md:py-3"
         }
       >
-        {minimalMapChrome && <div aria-hidden="true" className="size-11 md:size-14" />}
-
         {!minimalMapChrome && (
           <div className="flex min-w-0 items-center gap-3">
             <Link

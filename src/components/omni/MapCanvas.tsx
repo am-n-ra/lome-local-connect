@@ -943,8 +943,15 @@ export function MapCanvas({
   }
 
   return (
-    <div className={`${className ?? "h-full w-full"} relative overflow-hidden`}>
-      <div ref={containerRef} className="h-full w-full" />
+    <div
+      className={`${className ?? "h-full w-full"} relative overflow-hidden`}
+      style={{ backgroundColor: "#15191b" }}
+    >
+      <div
+        ref={containerRef}
+        className="h-full w-full transition-opacity duration-200"
+        style={{ opacity: mapStatus === "ready" ? 1 : 0 }}
+      />
       <div className="pointer-events-auto absolute left-3 top-1/2 z-10 -translate-y-1/2 overflow-hidden rounded-2xl border border-border/70 bg-card/85 shadow-[var(--shadow-soft)] backdrop-blur">
         <button
           type="button"
@@ -987,8 +994,8 @@ export function MapCanvas({
       )}
 
       {gl && mapStatus === "loading" && (
-        <div className="pointer-events-none absolute left-1/2 top-20 z-10 -translate-x-1/2">
-          <div className="omni-glass rounded-full px-4 py-2 text-xs text-muted-foreground">
+        <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-[#15191b] text-white">
+          <div className="rounded-full border border-white/15 bg-black/20 px-4 py-2 text-xs tracking-wide text-white/75 backdrop-blur">
             Chargement du globe MapLibre…
           </div>
         </div>

@@ -97,19 +97,19 @@ export function useMapLibre() {
 
 /**
  * Free, key-less vector basemap (OpenFreeMap "positron"): near-white roads on a
- * desaturated base. `applyPastelPalette` then repaints water, parks and
- * buildings with the OmniView pastel palette.
+ * desaturated base. `applyPastelPalette` then repaints water, land and
+ * buildings with the OmniView landing palette.
  */
 export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 const PASTEL = {
-  water: "#dce9f2",
-  green: "#dfe9dc",
-  building: "#eee7de",
-  background: "#f7f8f8",
+  water: "#15191b",
+  green: "#ffffff",
+  building: "#ffffff",
+  background: "#f4f4f1",
 };
 
-/** Repaints a loaded vector style into the soft pastel OmniView palette. */
+/** Repaints a loaded vector style into the high-contrast Omni landing palette. */
 const GLOBE_LABEL_PATTERN = /label|place|country|state|city|settlement|locality/;
 
 export function setGlobeLabelVisibility(map: MapInstance, visible: boolean) {
