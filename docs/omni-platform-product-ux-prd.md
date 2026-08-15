@@ -38,15 +38,15 @@ AI Agent features are not required for the first manual-flow release. They are P
 
 ## 3. Personas and permissions
 
-| Persona | Primary needs | Can do | Cannot do |
-| --- | --- | --- | --- |
-| Unauthenticated visitor | Understand the world is searchable; explore map; formulate a query | Open globe, rotate/zoom map, enter a query, begin onboarding | Execute first backend search or access protected transaction data before authentication |
-| Buyer Free | Discover nearby/global supply and complete limited operational flows | Search, view facilities, use manual availability, perform up to 3 bulk availability operations per month, create purchase intent, QR, transaction confirmation | Use Agent mode or Pro-only automation/recommendation |
-| Buyer Pro | Research and execute complex purchases | Everything in Free plus expanded availability, Agent mode, recommendation, saved monitoring, higher credits according to configuration | Override seller permissions or confirm seller-side payment on the seller’s behalf |
-| Seller Free | Establish one trusted facility and basic catalogue | One owned facility, up to five products, manual availability responses, basic promotions, wallet deposits, basic transaction operations | Create a second facility, exceed five products, bulk-import, or use gated automation |
-| Seller Pro | Operate multiple facilities and a larger business catalogue | Company catalogue, facility overrides, expanded products, bulk import, analytics, advanced promotions, ad credit, Agent when enabled | Withdraw seller funds in the initial release; bypass ownership, plan, or allocation rules |
-| Facility claimant | Take control of an OSM or public facility | Submit a claim, provide verification information, edit only after ownership state permits | Purchase through an unclaimed facility or overwrite verified data without authorization |
-| Platform admin | Trust, safety, configuration, and operations | Review claims, certify facilities, configure plans/flags, moderate imports, inspect audit trails, enable/disable AI | Mutate business data without an audit record |
+| Persona                 | Primary needs                                                        | Can do                                                                                                                                                         | Cannot do                                                                                 |
+| ----------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Unauthenticated visitor | Understand the world is searchable; explore map; formulate a query   | Open globe, rotate/zoom map, enter a query, begin onboarding                                                                                                   | Execute first backend search or access protected transaction data before authentication   |
+| Buyer Free              | Discover nearby/global supply and complete limited operational flows | Search, view facilities, use manual availability, perform up to 3 bulk availability operations per month, create purchase intent, QR, transaction confirmation | Use Agent mode or Pro-only automation/recommendation                                      |
+| Buyer Pro               | Research and execute complex purchases                               | Everything in Free plus expanded availability, Agent mode, recommendation, saved monitoring, higher credits according to configuration                         | Override seller permissions or confirm seller-side payment on the seller’s behalf         |
+| Seller Free             | Establish one trusted facility and basic catalogue                   | One owned facility, up to five products, manual availability responses, basic promotions, wallet deposits, basic transaction operations                        | Create a second facility, exceed five products, bulk-import, or use gated automation      |
+| Seller Pro              | Operate multiple facilities and a larger business catalogue          | Company catalogue, facility overrides, expanded products, bulk import, analytics, advanced promotions, ad credit, Agent when enabled                           | Withdraw seller funds in the initial release; bypass ownership, plan, or allocation rules |
+| Facility claimant       | Take control of an OSM or public facility                            | Submit a claim, provide verification information, edit only after ownership state permits                                                                      | Purchase through an unclaimed facility or overwrite verified data without authorization   |
+| Platform admin          | Trust, safety, configuration, and operations                         | Review claims, certify facilities, configure plans/flags, moderate imports, inspect audit trails, enable/disable AI                                            | Mutate business data without an audit record                                              |
 
 ## 4. Global information architecture
 
@@ -78,13 +78,13 @@ A deliberate geographic reveal occurs only after a real search is submitted or a
 
 `Globe → Continent → Country → Region → City/district/local area → Exact position.`
 
-Each stage has a visible pause and highlight. The camera does not jump directly from globe to a pin. The active geographic boundary uses black or near-black emphasis with a restrained dark halo and low-opacity neutral fill; orange remains reserved for Omni actions, pins, and primary emphasis. Country and city names are not required as labels because the geography is visually legible, and the user pin appears at the final location only when a real position exists. Reduced-motion mode collapses the timing while retaining the semantic stage changes.
+Each stage has a visible pause and highlight. The camera does not jump directly from globe to a pin. The active geographic boundary uses black or near-black emphasis with a restrained dark halo and low-opacity neutral fill; orange remains reserved for Omni actions, pins, and primary emphasis. Country and city names are not required as labels because the geography is visually legible, and the exact user pin appears at the final location only when a real browser position exists. If browser location is absent, the final stage is explicitly approximate market context and must never be labeled or styled as the user’s location. Reduced-motion mode collapses the timing while retaining the semantic stage changes.
 
 After a real search, the map briefly returns to the global/resting orientation when appropriate, then frames the user position only when a real position exists and the relevant facilities. The search result state must show the result pins and cards after the staged reveal completes.
 
 ### 5.3 Map controls
 
-The main map exposes only the necessary controls: zoom in, zoom out, recenter, and a clearly labeled location-permission retry when location is pending or denied. They are positioned on the left, vertically centred. No extra decorative control cluster should compete with the search dock. The user can still pan and zoom naturally through MapLibre interactions. Manual map navigation remains independent from the search reveal choreography.
+The main map exposes only the necessary controls: zoom in, zoom out, recenter on the exact browser position when granted, and a clearly labeled location-permission retry when location is pending or denied. When no exact position exists, the recenter control must be labeled as approximate market exploration rather than personal recentering. They are positioned on the left, vertically centred. No extra decorative control cluster should compete with the search dock. The user can still pan and zoom naturally through MapLibre interactions. Manual map navigation remains independent from the search reveal choreography.
 
 The backend may apply viewport limiting and server-side clustering or deduplication for performance. The accepted V1 visual presentation does not require cluster bubbles; individual result pins remain the visual target when the result set is within the rendering budget.
 
@@ -192,18 +192,18 @@ Every notification can deep-link to the responsible map state or seller panel. U
 
 ## 13. UI state and component inventory
 
-| Surface | Required states |
-| --- | --- |
-| Map/globe | Resting rotation, location pending, location granted, location denied, market fallback, resting discovery, loading, search-only staged reveal, search framing, results, empty, error, reduced motion |
-| Search dock | Idle, focused, categories open, quantity/budget row, structured parameters, manual/Agent switch, auth pending, executing, restored query, narrow mobile layout |
-| Facility card | Claimed/unclaimed, certified/confirmed, online/offline, available/partial/unavailable, low stock, sponsored, selected |
-| Facility sheet | Identity, source/trust, product/service context, availability CTA, claim CTA, purchase-intent CTA only when valid |
-| Availability panel | Manual/bulk mode, quota, request progress, response ranking, best option, no response, retry |
-| Transaction sheet | Timeline, QR, payment confirmation, fulfilment, receipt confirmation, cancellation/error |
-| Seller map | Active facility, facility switcher, demand, requests, orders, inventory alerts, buyer preview |
-| Catalogue/inventory | Loading, empty, draft, active, paused, sold out, low stock, allocation warning, limit reached, error |
-| Wallet/subscription | Available, pending deposit, failed deposit, debit confirmation, ledger empty, renewal due, downgrade, Pro upgrade |
-| Agent | Hidden/off, unavailable plan, recommendation, confirmation, tool progress, result, rejected action, kill switch |
+| Surface             | Required states                                                                                                                                                                                      |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Map/globe           | Resting rotation, location pending, location granted, location denied, market fallback, resting discovery, loading, search-only staged reveal, search framing, results, empty, error, reduced motion |
+| Search dock         | Idle, focused, categories open, quantity/budget row, structured parameters, manual/Agent switch, auth pending, executing, restored query, narrow mobile layout                                       |
+| Facility card       | Claimed/unclaimed, certified/confirmed, online/offline, available/partial/unavailable, low stock, sponsored, selected                                                                                |
+| Facility sheet      | Identity, source/trust, product/service context, availability CTA, claim CTA, purchase-intent CTA only when valid                                                                                    |
+| Availability panel  | Manual/bulk mode, quota, request progress, response ranking, best option, no response, retry                                                                                                         |
+| Transaction sheet   | Timeline, QR, payment confirmation, fulfilment, receipt confirmation, cancellation/error                                                                                                             |
+| Seller map          | Active facility, facility switcher, demand, requests, orders, inventory alerts, buyer preview                                                                                                        |
+| Catalogue/inventory | Loading, empty, draft, active, paused, sold out, low stock, allocation warning, limit reached, error                                                                                                 |
+| Wallet/subscription | Available, pending deposit, failed deposit, debit confirmation, ledger empty, renewal due, downgrade, Pro upgrade                                                                                    |
+| Agent               | Hidden/off, unavailable plan, recommendation, confirmation, tool progress, result, rejected action, kill switch                                                                                      |
 
 ## 14. Accessibility, responsiveness, and visual requirements
 
@@ -250,12 +250,7 @@ The product/UX release is accepted only if:
 ## 17. Source references
 
 [1]: # "docs/OMNI_MASTER.md, especially sections 1–5, 16–27, 37–48, 61–65, 75–106, 127–133."
-
 [2]: # "docs/omni-product-interface-spec.md, sections 1–24."
-
 [3]: # "docs/omni-build-plan-after-build-prompt.md, phases 0–9 and implemented state machines."
-
 [4]: # ".lovable/plan/omni-interface-produit-map-first-mise-en-conformité-2026-08-15.md, Lots A–H."
-
 [5]: # "Current implementation evidence: src/routes/carte.tsx, src/components/omni/MapCanvas.tsx, src/components/omni/TopNav.tsx, src/components/omni/FacilityPanel.tsx, src/components/omni/DemandRequestPanel.tsx, src/components/omni/OrdersPanel.tsx, src/routes/vendeur.tsx, src/lib/vendor.functions.ts, src/lib/demand.functions.ts, src/lib/checkout.functions.ts, src/lib/auth.tsx, src/lib/omni.config.ts, and db/schema.sql."
-
