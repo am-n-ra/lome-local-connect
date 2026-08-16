@@ -75,18 +75,22 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
           <h3 className="font-display text-lg font-bold">Encaisser une vente</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Demandez au client son code de retrait (QR ou 8 caractères) et validez-le ici. Le
-          paiement se fait sur place ; le paiement en ligne est en mode démo.
+          Demandez au client son code de retrait (QR ou 8 caractères) et validez-le ici. Le paiement
+          se fait sur place ; le paiement en ligne est en mode démo.
         </p>
-        <div className="flex gap-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Ex. K7QM2PDX"
-            className="font-mono tracking-widest"
+            className="min-w-0 flex-1 font-mono tracking-widest"
             maxLength={24}
           />
-          <Button disabled={busy} onClick={() => void validate()}>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            disabled={busy}
+            onClick={() => void validate()}
+          >
             {busy ? "Validation…" : "Valider"}
           </Button>
         </div>

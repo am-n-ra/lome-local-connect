@@ -161,7 +161,7 @@ export function DemandPanel({
                       type="number"
                       inputMode="numeric"
                       placeholder={`Prix ${market?.currency_symbol ?? "FCFA"}`}
-                      className="h-9 w-32"
+                      className="h-9 w-full sm:w-32"
                       value={prices[r.id] ?? ""}
                       onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}
                     />
@@ -170,7 +170,7 @@ export function DemandPanel({
                       inputMode="numeric"
                       min={0}
                       placeholder="Qté dispo"
-                      className="h-9 w-28"
+                      className="h-9 w-full sm:w-28"
                       value={quantities[r.id] ?? ""}
                       onChange={(e) => setQuantities((q) => ({ ...q, [r.id]: e.target.value }))}
                     />
