@@ -7,9 +7,8 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
-  // Pin the deployment target so Vercel and local production builds generate the
-  // same SSR runtime instead of relying on platform auto-detection.
-  nitro: { preset: "cloudflare-module" },
+  // Pin Vercel's SSR target so deployment uses the platform function adapter.
+  nitro: { preset: "vercel" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
