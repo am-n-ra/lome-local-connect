@@ -537,19 +537,38 @@ function VendeurPage() {
   return (
     <div className="min-h-screen bg-background">
       <TopNav activeRole="vendeur" />
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl font-bold">{facility.name}</h1>
-          <Badge variant="secondary">{STATUS_LABEL[facility.status] ?? facility.status}</Badge>
-          {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">En ligne</span>
-            <Switch checked={facility.is_online} onCheckedChange={(v) => void toggleOnline(v)} />
+      <main className="mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
+        <section className="omni-glass rounded-[1.6rem] p-4 shadow-[var(--shadow-soft)] sm:p-5">
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
+                Espace opérationnel vendeur
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">
+                  {facility.name}
+                </h1>
+                <Badge variant="secondary">
+                  {STATUS_LABEL[facility.status] ?? facility.status}
+                </Badge>
+                {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
+              </div>
+              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                Votre facility est le point d’ancrage de la carte, des demandes, du catalogue et des
+                opérations quotidiennes.
+              </p>
+            </div>
+            <label className="flex shrink-0 items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
+              <span className={facility.is_online ? "text-forest" : "text-muted-foreground"}>
+                {facility.is_online ? "En ligne" : "En pause"}
+              </span>
+              <Switch checked={facility.is_online} onCheckedChange={(v) => void toggleOnline(v)} />
+            </label>
           </div>
-        </div>
+        </section>
 
-        <Tabs defaultValue="apercu" className="mt-6">
-          <TabsList className="flex flex-wrap">
+        <Tabs defaultValue="apercu" className="mt-5">
+          <TabsList className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
             {pro && OMNI_CONFIG.sellerAgentEnabled && (
               <TabsTrigger value="agent">Agent IA</TabsTrigger>

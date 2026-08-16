@@ -55,6 +55,8 @@ export function FacilityPanel({
   const [demandTerm, setDemandTerm] = useState("");
   const [claiming, setClaiming] = useState(false);
   const [intentBusy, setIntentBusy] = useState<string | null>(null);
+  const [purchaseIntentCreated, setPurchaseIntentCreated] = useState(false);
+  const isUnclaimed = facility.status === "unclaimed";
 
   const loadFacility = useServerFn(getFacility);
   const loadFavorites = useServerFn(listFavorites);
@@ -147,6 +149,7 @@ export function FacilityPanel({
           paymentMode: "cash",
         },
       });
+      setPurchaseIntentCreated(true);
       toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Intention impossible.");
@@ -235,40 +238,53 @@ export function FacilityPanel({
         </div>
       )}
 
-      {onCheckAvailability && (
+      {!isUnclaimed && onCheckAvailability && (
         <Button className="min-h-10 w-full" onClick={onCheckAvailability}>
           <CheckCircle2 className="mr-1.5 h-4 w-4" />
           Vérifier la disponibilité
         </Button>
       )}
 
-      <div className="grid gap-2 sm:flex sm:flex-wrap">
-        <Button
-          className="min-h-10 min-w-0 flex-1"
-          variant="outline"
-          onClick={onItinerary}
-          disabled={routingBusy}
-        >
-          <Navigation className="mr-1.5 h-4 w-4" />
-          {routingBusy ? "Calcul…" : "Itinéraire"}
-        </Button>
-        <Button
-          className="min-h-10 min-w-0 flex-1"
-          variant="outline"
-          onClick={() => setShowPhone((v) => !v)}
-        >
-          <Phone className="mr-1.5 h-4 w-4" />
-          {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
-        </Button>
-        <Button
-          className="min-h-10 min-w-0 flex-1"
-          variant="outline"
-          onClick={() => setDemandOpen((v) => !v)}
-        >
-          <Search className="mr-1.5 h-4 w-4" />
-          Je cherche ce produit
-        </Button>
-      </div>
+      {isUnclaimed && (
+        <div className="omni-glass rounded-2xl border border-dashed border-primary/25 p-3 text-xs text-muted-foreground">
+          Cette fiche est issue d'une source publique. Les achats, itinéraires et contacts Omni
+          seront disponibles après réclamation et vérification du commerce.
+        </div>
+      )}
+
+      {purchaseIntentCreated ? (
+        <div className="grid gap-2 sm:flex sm:flex-wrap">
+          <Button
+            className="min-h-10 min-w-0 flex-1"
+            variant="outline"
+            onClick={onItinerary}
+            disabled={routingBusy}
+          >
+            <Navigation className="mr-1.5 h-4 w-4" />
+            {routingBusy ? "Calcul…" : "Itinéraire"}
+          </Button>
+          <Button
+            className="min-h-10 min-w-0 flex-1"
+            variant="outline"
+            onClick={() => setShowPhone((v) => !v)}
+          >
+            <Phone className="mr-1.5 h-4 w-4" />
+            {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
+          </Button>
+          <Button
+            className="min-h-10 min-w-0 flex-1"
+            variant="outline"
+            onClick={() => setDemandOpen((v) => !v)}
+          >
+            <Search className="mr-1.5 h-4 w-4" />
+            Je cherche ce produit
+          </Button>
+        </div>
+      ) : (
+        <p className="rounded-xl bg-secondary/55 px-3 py-2 text-center text-[11px] text-muted-foreground">
+          Créez une intention d'achat pour débloquer l'itinéraire et le contact.
+        </p>
+      )}
 
       {demandOpen && (
         <div className="omni-glass space-y-2 rounded-2xl p-3">
@@ -373,14 +389,14 @@ export function FacilityPanel({
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={facility.status === "unclaimed" || !p.in_stock || intentBusy === p.id}
+                  disabled={isUnclaimed || !p.in_stock || intentBusy === p.id}
                   onClick={() => void startProductIntent(p, qty)}
                 >
                   {intentBusy === p.id ? "Création…" : "Je veux acheter"}
                 </Button>
                 <Button
                   size="sm"
-                  disabled={!p.in_stock}
+                  disabled={isUnclaimed || !p.in_stock}
                   onClick={() => {
                     cart.add(
                       {

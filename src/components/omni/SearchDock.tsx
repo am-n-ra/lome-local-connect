@@ -11,7 +11,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { BrandMark } from "@/components/omni/BrandMark";
@@ -125,10 +124,6 @@ export function SearchDock({
     };
   }, []);
 
-  function patchFilters(next: Partial<MapFilters>) {
-    onFiltersChange({ ...filters, ...next });
-  }
-
   function slide(direction: 1 | -1) {
     railRef.current?.scrollBy({
       left: direction * Math.max(180, railRef.current.clientWidth * 0.75),
@@ -208,114 +203,6 @@ export function SearchDock({
                 {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
               </div>
             </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Ouvrir les filtres"
-                  className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-background/72 px-3 text-xs font-bold text-foreground transition-colors hover:bg-background"
-                >
-                  <ChevronDown className="h-4 w-4" />
-                  <span>Affiner</span>
-                  {activeCount > 0 && (
-                    <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
-                      {activeCount}
-                    </span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                align="end"
-                side="top"
-                sideOffset={10}
-                collisionPadding={12}
-                className="w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(34rem,calc(100dvh-var(--omni-dock-clearance,12rem)-1rem))] space-y-4 overflow-y-auto overscroll-contain rounded-2xl"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Rayon</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}
-                    </span>
-                  </div>
-                  <Slider
-                    min={1}
-                    max={50}
-                    step={1}
-                    value={[filters.radiusKm]}
-                    onValueChange={([value]) => patchFilters({ radiusKm: value ?? 10 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Budget maximum</Label>
-                    <span className="text-xs text-muted-foreground">
-                      {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
-                    </span>
-                  </div>
-                  <Slider
-                    min={0}
-                    max={100000}
-                    step={1000}
-                    value={[filters.maxPrice ?? 0]}
-                    onValueChange={([value]) => patchFilters({ maxPrice: value ? value : null })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="omni-open-only" className="text-xs">
-                    Ouverts maintenant
-                  </Label>
-                  <Switch
-                    id="omni-open-only"
-                    checked={filters.openOnly}
-                    onCheckedChange={(value) => patchFilters({ openOnly: value })}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="omni-discount-only" className="text-xs">
-                    Avec réduction
-                  </Label>
-                  <Switch
-                    id="omni-discount-only"
-                    checked={filters.discountOnly}
-                    onCheckedChange={(value) => patchFilters({ discountOnly: value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Trier par</Label>
-                  <div className="grid grid-cols-3 gap-1">
-                    {(
-                      [
-                        ["rank", "Pertinence"],
-                        ["distance", "Proximité"],
-                        ["price", "Prix"],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => patchFilters({ sort: value })}
-                        className={`rounded-full px-2 py-1.5 text-[11px] font-bold ${
-                          filters.sort === value
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-secondary text-foreground"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => onFiltersChange(DEFAULT_FILTERS)}
-                >
-                  Réinitialiser
-                </Button>
-              </PopoverContent>
-            </Popover>
           </div>
         )}
 
@@ -334,42 +221,50 @@ export function SearchDock({
             )}
           </button>
           {categoriesOpen && (
-            <div className="omni-glass flex min-w-0 flex-1 items-center gap-1 rounded-full p-1">
-              <button
-                type="button"
-                aria-label="Catégories précédentes"
-                onClick={() => slide(-1)}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <div
-                ref={railRef}
-                className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                {CHIPS.map((chip) => (
-                  <button
-                    key={chip.label}
-                    type="button"
-                    onClick={() => onCategoryChange(chip.value)}
-                    className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors ${
-                      category === chip.value
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background/65 text-foreground hover:bg-background"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
+            <div className="omni-glass min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
+              <div className="flex min-w-0 items-center gap-1 rounded-full bg-background/35 p-1">
+                <button
+                  type="button"
+                  aria-label="Catégories précédentes"
+                  onClick={() => slide(-1)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div
+                  ref={railRef}
+                  className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {CHIPS.map((chip) => (
+                    <button
+                      key={chip.label}
+                      type="button"
+                      onClick={() => onCategoryChange(chip.value)}
+                      className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors ${
+                        category === chip.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-background/65 text-foreground hover:bg-background"
+                      }`}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  aria-label="Catégories suivantes"
+                  onClick={() => slide(1)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="Catégories suivantes"
-                onClick={() => slide(1)}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
+              <RefinementPanel
+                filters={filters}
+                activeCount={activeCount}
+                formatMoney={formatMoney}
+                onFiltersChange={onFiltersChange}
+              />
             </div>
           )}
         </div>
@@ -488,6 +383,138 @@ export function SearchDock({
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+type RefinementPanelProps = {
+  filters: MapFilters;
+  activeCount: number;
+  formatMoney: (amount: number) => string;
+  onFiltersChange: (value: MapFilters) => void;
+};
+
+function RefinementPanel({
+  filters,
+  activeCount,
+  formatMoney,
+  onFiltersChange,
+}: RefinementPanelProps) {
+  function patchFilters(next: Partial<MapFilters>) {
+    onFiltersChange({ ...filters, ...next });
+  }
+
+  return (
+    <div
+      data-omni-refinement="true"
+      className="space-y-3 rounded-2xl bg-background/55 p-3"
+      aria-label="Options d'affinage"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold">Affiner la recherche</p>
+          <p className="text-[11px] text-muted-foreground">
+            Ajustez la zone, le budget et les priorités.
+          </p>
+        </div>
+        {activeCount > 0 && (
+          <span className="shrink-0 rounded-full bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground">
+            {activeCount} actif{activeCount > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Rayon</Label>
+            <span className="text-xs text-muted-foreground">
+              {filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}
+            </span>
+          </div>
+          <Slider
+            min={1}
+            max={50}
+            step={1}
+            value={[filters.radiusKm]}
+            onValueChange={([value]) => patchFilters({ radiusKm: value ?? 10 })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs">Budget maximum</Label>
+            <span className="text-xs text-muted-foreground">
+              {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
+            </span>
+          </div>
+          <Slider
+            min={0}
+            max={100000}
+            step={1000}
+            value={[filters.maxPrice ?? 0]}
+            onValueChange={([value]) => patchFilters({ maxPrice: value ? value : null })}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center justify-between rounded-xl bg-background/55 px-3 py-2">
+          <Label htmlFor="omni-open-only" className="text-xs">
+            Ouverts maintenant
+          </Label>
+          <Switch
+            id="omni-open-only"
+            checked={filters.openOnly}
+            onCheckedChange={(value) => patchFilters({ openOnly: value })}
+          />
+        </div>
+        <div className="flex items-center justify-between rounded-xl bg-background/55 px-3 py-2">
+          <Label htmlFor="omni-discount-only" className="text-xs">
+            Avec réduction
+          </Label>
+          <Switch
+            id="omni-discount-only"
+            checked={filters.discountOnly}
+            onCheckedChange={(value) => patchFilters({ discountOnly: value })}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs">Trier par</Label>
+        <div className="grid grid-cols-3 gap-1">
+          {(
+            [
+              ["rank", "Pertinence"],
+              ["distance", "Proximité"],
+              ["price", "Prix"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => patchFilters({ sort: value })}
+              className={`rounded-full px-2 py-1.5 text-[11px] font-bold ${
+                filters.sort === value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full"
+        onClick={() => onFiltersChange(DEFAULT_FILTERS)}
+      >
+        Réinitialiser
+      </Button>
     </div>
   );
 }
