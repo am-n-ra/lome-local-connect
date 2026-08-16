@@ -1,4 +1,8 @@
-import { createStart, createCsrfMiddleware, createMiddleware } from "@tanstack/react-start";
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from "@tanstack/start-client-core";
 
 import { renderErrorPage } from "./lib/error-page";
 import { getAccessToken } from "./lib/auth";
