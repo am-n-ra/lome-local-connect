@@ -170,30 +170,27 @@ export const listFacilities = createServerFn({ method: "GET" })
     );
   });
 
-/**
- * Viewport-driven discovery: every facility inside the visible rectangle, all
- * markets included. Areas never imported are back-filled from OpenStreetMap.
- */
+const coverageInput = z.object({
+  west: z.number().min(-180).max(180),
+  south: z.number().min(-85).max(85),
+  east: z.number().min(-180).max(180),
+  north: z.number().min(-85).max(85),
+  zoom: z.number().min(0).max(24),
+  search: z.string().max(120).optional(),
+  category: z.string().max(40).optional(),
+  includeUnclaimed: z.boolean().optional().default(true),
+  limit: z.number().int().min(1).max(400).default(240),
+});
+
+/** Viewport-driven discovery across every market, with best-effort OSM back-fill. */
 export const listFacilitiesInBounds = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z
-      .object({
-        minLat: z.number().min(-90).max(90),
-        maxLat: z.number().min(-90).max(90),
-        minLng: z.number().min(-180).max(180),
-        maxLng: z.number().min(-180).max(180),
-        zoom: z.number().min(0).max(24),
-        category: z.string().max(40).optional(),
-        limit: z.number().int().min(1).max(400).default(240),
-      })
-      .parse(input),
-  )
+  .inputValidator((input: unknown) => coverageInput.parse(input))
   .handler(async ({ data }) => {
     const bounds = {
-      minLat: Math.min(data.minLat, data.maxLat),
-      maxLat: Math.max(data.minLat, data.maxLat),
-      minLng: Math.min(data.minLng, data.maxLng),
-      maxLng: Math.max(data.minLng, data.maxLng),
+      minLat: Math.min(data.south, data.north),
+      maxLat: Math.max(data.south, data.north),
+      minLng: Math.min(data.west, data.east),
+      maxLng: Math.max(data.west, data.east),
     };
 
     const runQuery = async () => {
@@ -202,11 +199,29 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
         "f.latitude BETWEEN $1 AND $2",
         "f.longitude BETWEEN $3 AND $4",
         "COALESCE(f.emergency_shutdown, false) = false",
+        "(f.is_online = true OR f.status = 'unclaimed')",
       ];
       if (data.category && data.category !== "all") {
         params.push(data.category);
         clauses.push(`f.category = $${params.length}`);
       }
+      if (data.search?.trim()) {
+        params.push(`%${data.search.trim()}%`);
+        const index = params.length;
+        clauses.push(`(
+          f.name ILIKE $${index} OR f.description ILIKE $${index} OR f.address ILIKE $${index}
+          OR f.neighbourhood ILIKE $${index}
+          OR EXISTS (
+            SELECT 1 FROM public.products pr
+            WHERE pr.facility_id = f.id AND pr.in_stock
+              AND COALESCE(pr.status, 'active') = 'active'
+              AND COALESCE(pr.quantity_available, 1) > 0
+              AND COALESCE(pr.omni_allocation_percent, 100) > 0
+              AND pr.name ILIKE $${index}
+          )
+        )`);
+      }
+      if (data.includeUnclaimed === false) clauses.push("f.status <> 'unclaimed'");
       params.push(data.limit);
       return query<MapFacility>(
         `${FACILITY_SELECT} WHERE ${clauses.join(" AND ")}
@@ -217,7 +232,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
     };
 
     let rows = await runQuery();
-    if (rows.length < 12) {
+    if (rows.length < 12 && data.zoom >= 9) {
       const { ensureCoverage } = await import("@/lib/osm-coverage.server");
       try {
         const imported = await ensureCoverage(bounds, data.zoom);
@@ -228,8 +243,6 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
     }
     return rows;
   });
-
-
 
 export const getFacility = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))

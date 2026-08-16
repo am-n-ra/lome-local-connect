@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Bell, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
-import { NavMenuSheet, useNotificationsFeed } from "@/components/omni/NavMenuSheet";
+import { NavMenuSheet } from "@/components/omni/NavMenuSheet";
+import { NotificationsBell } from "@/components/omni/NotificationsBell";
 import { useCart } from "@/lib/cart";
 
 type Props = {
@@ -40,7 +41,6 @@ export function TopNav({
   const navigate = useNavigate();
   const cart = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
-  const feed = useNotificationsFeed();
   const menuBadge = cart.count;
 
   return (
@@ -91,23 +91,32 @@ export function TopNav({
         )}
 
         <div className="flex items-center justify-end gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            aria-label="Ouvrir les notifications"
-            className="omni-glass pointer-events-auto relative shrink-0"
-            onClick={() => {
-              feed.markAllRead();
-              setMenuOpen(true);
-            }}
-          >
-            <Bell className="h-5 w-5" />
-            {feed.unread > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
-                {feed.unread}
-              </span>
-            )}
-          </Button>
+          <div className="pointer-events-auto hidden items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur md:flex">
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/carte" })}
+              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                activeRole === "acheteur"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-background/70"
+              }`}
+            >
+              Acheteur
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/vendeur" })}
+              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
+                activeRole === "vendeur"
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-background/70"
+              }`}
+            >
+              Vendeur
+            </button>
+          </div>
+
+          <NotificationsBell />
 
           <Button
             variant="outline"
@@ -135,8 +144,6 @@ export function TopNav({
         onOpenOrders={onOpenOrders}
         onOpenChat={onOpenChat}
         onOpenDemand={onOpenDemand}
-        notifications={feed.items}
-        onNotificationsRead={feed.markAllRead}
       />
     </header>
   );

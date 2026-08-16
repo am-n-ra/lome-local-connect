@@ -5,7 +5,6 @@ import {
   PASTEL_STYLE_URL,
   useMapLibre,
   type MapInstance,
-  type MarkerInstance,
 } from "@/lib/maplibre";
 import { LOCATION_APPROXIMATE_ACCURACY_METERS, type FacilityRow } from "@/lib/omni";
 import {
@@ -45,6 +44,13 @@ type Props = {
   /** Shows the user marker only in an active search/final framing state. */
   showUserLocation?: boolean;
   onRevealStateChange?: (running: boolean) => void;
+  onViewportChange?: (viewport: {
+    west: number;
+    south: number;
+    east: number;
+    north: number;
+    zoom: number;
+  }) => void;
 };
 
 const GLOBE_ZOOM = 5;
@@ -99,7 +105,14 @@ function getTargetPoint(
 }
 
 function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
-  for (const layerId of ["omni-point-halo", "omni-points", "omni-pin-icons", "omni-point-labels"]) {
+  for (const layerId of [
+    "omni-clusters",
+    "omni-cluster-count",
+    "omni-point-halo",
+    "omni-points",
+    "omni-pin-icons",
+    "omni-point-labels",
+  ]) {
     try {
       const labelLayer = layerId === "omni-point-labels";
       const labelsVisible = map.getZoom() > GLOBE_ZOOM;
@@ -245,6 +258,40 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       type: "geojson",
       data: { type: "FeatureCollection", features: [] },
       promoteId: "id",
+      cluster: true,
+      clusterMaxZoom: 8,
+      clusterRadius: 48,
+    });
+  }
+  if (!hasLayer(map, "omni-clusters")) {
+    map.addLayer({
+      id: "omni-clusters",
+      type: "circle",
+      source: "omni-facilities",
+      filter: ["has", "point_count"],
+      layout: { visibility: showFacilities ? "visible" : "none" },
+      paint: {
+        "circle-color": "#2d3335",
+        "circle-radius": ["step", ["get", "point_count"], 18, 20, 23, 100, 29],
+        "circle-stroke-color": "#ffffff",
+        "circle-stroke-width": 3,
+        "circle-opacity": 0.93,
+      },
+    });
+  }
+  if (!hasLayer(map, "omni-cluster-count")) {
+    map.addLayer({
+      id: "omni-cluster-count",
+      type: "symbol",
+      source: "omni-facilities",
+      filter: ["has", "point_count"],
+      layout: {
+        visibility: showFacilities ? "visible" : "none",
+        "text-field": ["get", "point_count_abbreviated"],
+        "text-size": 11,
+        "text-font": ["Open Sans Bold"],
+      },
+      paint: { "text-color": "#ffffff" },
     });
   }
   if (!hasLayer(map, "omni-point-halo")) {
@@ -252,6 +299,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       id: "omni-point-halo",
       type: "circle",
       source: "omni-facilities",
+      filter: ["!", ["has", "point_count"]],
       layout: { visibility: showFacilities ? "visible" : "none" },
       paint: {
         "circle-color": "#ffffff",
@@ -266,6 +314,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       id: "omni-points",
       type: "circle",
       source: "omni-facilities",
+      filter: ["!", ["has", "point_count"]],
       layout: { visibility: showFacilities ? "visible" : "none" },
       paint: {
         "circle-color": [
@@ -293,6 +342,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       id: "omni-pin-icons",
       type: "symbol",
       source: "omni-facilities",
+      filter: ["!", ["has", "point_count"]],
       layout: {
         visibility: showFacilities ? "visible" : "none",
         "icon-image": PIN_IMAGE_ID,
@@ -326,6 +376,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       id: "omni-point-labels",
       type: "symbol",
       source: "omni-facilities",
+      filter: ["!", ["has", "point_count"]],
       layout: {
         visibility: showFacilities ? "visible" : "none",
         "text-field": ["get", "name"],
@@ -469,6 +520,7 @@ export function MapCanvas({
   showFacilities = true,
   showUserLocation = true,
   onRevealStateChange,
+  onViewportChange,
 }: Props) {
   const gl = useMapLibre();
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
@@ -479,6 +531,8 @@ export function MapCanvas({
 
   const clickRef = useRef(onMapClick);
   clickRef.current = onMapClick;
+  const viewportChangeRef = useRef(onViewportChange);
+  viewportChangeRef.current = onViewportChange;
   const selectRef = useRef(onSelect);
   selectRef.current = onSelect;
   const facilitiesRef = useRef(facilities);
@@ -508,7 +562,6 @@ export function MapCanvas({
   const approximateMarkerRef = useRef<{ remove: () => void } | null>(null);
   const userPositionRef = useRef(userPosition);
   userPositionRef.current = userPosition;
-  const facilityMarkerRefs = useRef<Map<string, MarkerInstance>>(new Map());
   const cameraModeRef = useRef<CameraMode>("resting_globe");
 
   useEffect(() => {
@@ -591,6 +644,30 @@ export function MapCanvas({
       }, delay);
     };
 
+    let viewportTimer: number | null = null;
+    const emitViewport = () => {
+      if (viewportTimer != null) window.clearTimeout(viewportTimer);
+      viewportTimer = window.setTimeout(() => {
+        const mapWithBounds = map as MapInstance & {
+          getBounds?: () => {
+            getWest: () => number;
+            getSouth: () => number;
+            getEast: () => number;
+            getNorth: () => number;
+          };
+        };
+        const bounds = mapWithBounds.getBounds?.();
+        if (!bounds) return;
+        viewportChangeRef.current?.({
+          west: bounds.getWest(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          north: bounds.getNorth(),
+          zoom: map.getZoom(),
+        });
+      }, 180);
+    };
+
     const pauseForInteraction = () => {
       stopRotation();
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
@@ -650,6 +727,7 @@ export function MapCanvas({
       cameraModeRef.current = "resting_globe";
       setMapStatus("ready");
       scheduleIdleRotation(600);
+      emitViewport();
     };
 
     map.on("load", applyLoadedStyle);
@@ -688,6 +766,7 @@ export function MapCanvas({
 
     map.on("zoom", refreshLivingBoundary);
     map.on("moveend", refreshLivingBoundary);
+    map.on("moveend", emitViewport);
     map.on("dragstart", pauseForInteraction);
     map.on("zoomstart", pauseForInteraction);
     map.on("rotatestart", pauseForInteraction);
@@ -700,6 +779,26 @@ export function MapCanvas({
       clickRef.current?.({ lat: event.lngLat.lat, lng: event.lngLat.lng });
     });
 
+    map.on("click", "omni-clusters", (event) => {
+      pauseForInteraction();
+      const feature = event.features?.[0];
+      const clusterId = feature?.properties?.["cluster_id"];
+      const source = map.getSource("omni-facilities") as
+        | {
+            getClusterExpansionZoom?: (
+              id: number,
+              callback: (error: unknown, zoom: number) => void,
+            ) => void;
+          }
+        | undefined;
+      if (clusterId == null || !source?.getClusterExpansionZoom) return;
+      source.getClusterExpansionZoom(Number(clusterId), (error, zoom) => {
+        if (error) return;
+        const coordinates: [number, number] = [event.lngLat.lng, event.lngLat.lat];
+        map.easeTo({ center: coordinates, zoom, duration: 420 });
+      });
+    });
+
     map.on("click", "omni-points", (event) => {
       pauseForInteraction();
       const feature = event.features?.[0];
@@ -707,6 +806,13 @@ export function MapCanvas({
       const id = feature.properties?.["id"] as string;
       const facility = facilitiesRef.current.find((item) => item.id === id);
       if (facility) selectRef.current?.(facility);
+    });
+
+    map.on("mouseenter", "omni-clusters", () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", "omni-clusters", () => {
+      map.getCanvas().style.cursor = "";
     });
 
     map.on("mouseenter", "omni-points", () => {
@@ -722,8 +828,11 @@ export function MapCanvas({
       if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
       if (styleRecoveryTimerRef.current != null) window.clearTimeout(styleRecoveryTimerRef.current);
-      for (const marker of facilityMarkerRefs.current.values()) marker.remove();
-      facilityMarkerRefs.current.clear();
+      if (viewportTimer != null) window.clearTimeout(viewportTimer);
+      const mapWithOff = map as MapInstance & {
+        off?: (event: string, listener: () => void) => void;
+      };
+      mapWithOff.off?.("moveend", emitViewport);
       approximateMarkerRef.current?.remove();
       approximateMarkerRef.current = null;
       userMarkerRef.current?.remove();
@@ -827,73 +936,6 @@ export function MapCanvas({
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);
     userMarkerRef.current = marker;
   }, [approximatePosition, gl, mapReadyVersion, showUserLocation, userPosition]);
-
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!gl || !map || !readyRef.current) return;
-
-    for (const marker of facilityMarkerRefs.current.values()) marker.remove();
-    facilityMarkerRefs.current.clear();
-    if (!showFacilities || revealRunning) return;
-
-    for (const facility of facilities) {
-      if (!Number.isFinite(facility.longitude) || !Number.isFinite(facility.latitude)) continue;
-      const element = document.createElement("button");
-      element.type = "button";
-      element.setAttribute("aria-label", facility.name);
-      element.title = facility.name;
-      element.style.width = "32px";
-      element.style.height = "40px";
-      element.style.padding = "0";
-      element.style.border = "0";
-      element.style.background = "transparent";
-      element.style.cursor = "pointer";
-      element.style.zIndex = facility.status === "unclaimed" ? "3" : "4";
-      element.style.visibility = "visible";
-      // Leave the root position to MapLibre’s absolute marker CSS.
-      element.style.pointerEvents = "auto";
-
-      const pin = document.createElement("span");
-      pin.style.position = "absolute";
-      pin.style.left = "4px";
-      pin.style.bottom = "5px";
-      pin.style.width = "24px";
-      pin.style.height = "24px";
-      pin.style.borderRadius = "50% 50% 50% 0";
-      pin.style.transform = "rotate(-45deg)";
-      pin.style.background = facility.status === "certified" ? "#2f6fb5" : "#e46f34";
-      pin.style.border = "3px solid #ffffff";
-      pin.style.boxShadow = "0 2px 8px rgba(74,48,29,.28)";
-
-      const dot = document.createElement("span");
-      dot.style.position = "absolute";
-      dot.style.left = "5px";
-      dot.style.top = "5px";
-      dot.style.width = "8px";
-      dot.style.height = "8px";
-      dot.style.borderRadius = "999px";
-      dot.style.background = "#ffffff";
-      pin.appendChild(dot);
-      element.appendChild(pin);
-      element.addEventListener("click", (event) => {
-        event.stopPropagation();
-        map.stop();
-        selectRef.current?.(facility);
-      });
-      element.addEventListener("mousedown", (event) => event.stopPropagation());
-      element.addEventListener("touchstart", (event) => event.stopPropagation(), { passive: true });
-
-      const marker = new gl.Marker({ element })
-        .setLngLat([facility.longitude, facility.latitude])
-        .addTo(map);
-      facilityMarkerRefs.current.set(facility.id, marker);
-    }
-
-    return () => {
-      for (const marker of facilityMarkerRefs.current.values()) marker.remove();
-      facilityMarkerRefs.current.clear();
-    };
-  }, [facilities, gl, mapReadyVersion, revealRunning, showFacilities]);
 
   useEffect(() => {
     const map = mapRef.current;

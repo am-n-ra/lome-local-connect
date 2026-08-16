@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
-import { listFacilities, type MapFacility as ApiFacility } from "@/lib/omni.functions";
+import { listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
@@ -57,22 +57,7 @@ type LocationSnapshot = {
   timestamp: number;
   requestId: number;
 };
-type PublicDiscoveryRow = {
-  id: string;
-  name: string;
-  category: string;
-  description: string | null;
-  address: string | null;
-  neighbourhood: string | null;
-  latitude: number;
-  longitude: number;
-  status: string;
-  type: string;
-  is_online: boolean;
-  product_count: number;
-  min_price: number | null;
-  cover_url: string | null;
-};
+type ViewportBounds = { west: number; south: number; east: number; north: number; zoom: number };
 
 export function CartePage() {
   const navigate = useNavigate();
@@ -99,11 +84,19 @@ export function CartePage() {
     lng: number;
     accuracy: number | null;
   } | null>(null);
+  const [sessionLocation, setSessionLocation] = useState<LocationSnapshot | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
   const [browserPermission, setBrowserPermission] = useState<BrowserPermissionStatus>("unknown");
   const [locationSnapshot, setLocationSnapshot] = useState<LocationSnapshot | null>(null);
   const locationRequestStartedRef = useRef(false);
   const locationRequestIdRef = useRef(0);
+  const locationWatchIdRef = useRef<number | null>(null);
+  const locationWatchTimeoutRef = useRef<number | null>(null);
+  const bestPositionRef = useRef<{
+    lat: number;
+    lng: number;
+    accuracy: number | null;
+  } | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [routeCoords, setRouteCoords] = useState<[number, number][] | null>(null);
   const [steps, setSteps] = useState<RouteStep[]>([]);
@@ -117,69 +110,53 @@ export function CartePage() {
   const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
   const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
-
-  const fetchFacilities = useServerFn(listFacilities);
+  const [visibleViewport, setVisibleViewport] = useState<ViewportBounds | null>(null);
+  const viewportRequestKeyRef = useRef<string | null>(null);
+  const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
+  const hasCoverageSearch = Boolean(query.trim() || category);
 
   useEffect(() => {
+    if (!visibleViewport) return;
+    const key = [
+      Math.round(visibleViewport.west * 1000),
+      Math.round(visibleViewport.south * 1000),
+      Math.round(visibleViewport.east * 1000),
+      Math.round(visibleViewport.north * 1000),
+      Math.floor(visibleViewport.zoom),
+      query.trim(),
+      category ?? "",
+    ].join(":");
+    if (viewportRequestKeyRef.current === key) return;
+    viewportRequestKeyRef.current = key;
     let active = true;
     const handle = window.setTimeout(
       () => {
-        if (authLoading || !user || (!query.trim() && !category)) {
-          setFacilities([]);
-          return;
-        }
-        void (async () => {
-          try {
-            const rows = await fetchFacilities({
-              data: {
-                search: query.trim() || undefined,
-                category: category ?? undefined,
-                includeUnclaimed: true,
-              },
-            });
-            if (active) setFacilities(rows);
-          } catch {
-            if (active) setFacilities([]);
-          }
-        })();
+        void fetchFacilitiesInBounds({
+          data: {
+            ...visibleViewport,
+            search: hasCoverageSearch ? query.trim() || undefined : undefined,
+            category: hasCoverageSearch ? (category ?? undefined) : undefined,
+            includeUnclaimed: true,
+            limit: hasCoverageSearch ? 240 : 120,
+          },
+        })
+          .then((rows) => {
+            if (!active) return;
+            if (hasCoverageSearch) setFacilities(rows);
+            else setDiscoveryFacilities(rows);
+          })
+          .catch(() => {
+            if (!active) return;
+            toast.error("La découverte de cette zone est momentanément indisponible.");
+          });
       },
-      query.trim() ? 300 : 0,
+      hasCoverageSearch ? 260 : 120,
     );
     return () => {
       active = false;
       window.clearTimeout(handle);
     };
-  }, [authLoading, category, fetchFacilities, query, user]);
-
-  useEffect(() => {
-    let active = true;
-    const marketCode = market?.market_code ?? "TG-LOME";
-    void fetch(`/api/public/v1/facilities?market_code=${encodeURIComponent(marketCode)}&limit=32`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("discovery unavailable");
-        return (await response.json()) as { data?: PublicDiscoveryRow[] };
-      })
-      .then((payload) => {
-        if (!active) return;
-        setDiscoveryFacilities(
-          (payload.data ?? []).map((row) => ({
-            ...row,
-            phone: null,
-            last_position_update: null,
-            owner_id: null,
-            max_discount_percent: 0,
-            sponsored: false,
-            tier: "free",
-          })),
-        );
-      })
-      .catch(() => {
-        if (active) setDiscoveryFacilities([]);
-      });
-    return () => {
-      active = false;
-    };
-  }, [market?.market_code]);
+  }, [category, fetchFacilitiesInBounds, hasCoverageSearch, query, visibleViewport]);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -187,49 +164,150 @@ export function CartePage() {
       setLocationStatus("unavailable");
       return;
     }
+
+    if (locationWatchIdRef.current != null) {
+      navigator.geolocation.clearWatch(locationWatchIdRef.current);
+      locationWatchIdRef.current = null;
+    }
+    if (locationWatchTimeoutRef.current != null) {
+      window.clearTimeout(locationWatchTimeoutRef.current);
+      locationWatchTimeoutRef.current = null;
+    }
+
     setLocationStatus("pending");
     const requestId = ++locationRequestIdRef.current;
+
+    const acceptPosition = (pos: GeolocationPosition) => {
+      const nextPosition = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
+      };
+      const previous = bestPositionRef.current;
+      const isBetter =
+        !previous ||
+        (nextPosition.accuracy == null && previous.accuracy == null) ||
+        (nextPosition.accuracy != null &&
+          (previous.accuracy == null || nextPosition.accuracy < previous.accuracy));
+      if (!isBetter) return false;
+
+      const snapshot = { ...nextPosition, timestamp: Date.now(), requestId };
+      bestPositionRef.current = nextPosition;
+      setLocationSnapshot(snapshot);
+      setSessionLocation(snapshot);
+      setUserPos(nextPosition);
+      setBrowserPermission("granted");
+      setLocationStatus("granted");
+      try {
+        window.sessionStorage.setItem("omni:last-location", JSON.stringify(snapshot));
+      } catch {
+        // Session storage can be unavailable in privacy-restricted contexts.
+      }
+      if (import.meta.env.DEV) {
+        console.info("[Omni location callback]", {
+          ...snapshot,
+          accuracyBand:
+            nextPosition.accuracy != null &&
+            nextPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
+              ? "approximate-network"
+              : "precise",
+          marketCenter: fallbackCenter,
+          sameAsMarketCenter:
+            Math.abs(nextPosition.lat - fallbackCenter.lat) < 0.0001 &&
+            Math.abs(nextPosition.lng - fallbackCenter.lng) < 0.0001,
+        });
+      }
+      return true;
+    };
+
+    const startWatch = () => {
+      if (locationWatchIdRef.current != null) return;
+      locationWatchIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          acceptPosition(pos);
+          if (
+            Number.isFinite(pos.coords.accuracy) &&
+            pos.coords.accuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS
+          ) {
+            if (locationWatchIdRef.current != null) {
+              navigator.geolocation.clearWatch(locationWatchIdRef.current);
+              locationWatchIdRef.current = null;
+            }
+            if (locationWatchTimeoutRef.current != null) {
+              window.clearTimeout(locationWatchTimeoutRef.current);
+              locationWatchTimeoutRef.current = null;
+            }
+          }
+        },
+        (error) => {
+          if (error.code === error.PERMISSION_DENIED) setBrowserPermission("denied");
+          setLocationStatus(bestPositionRef.current ? "granted" : "unavailable");
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+      );
+      locationWatchTimeoutRef.current = window.setTimeout(() => {
+        if (locationWatchIdRef.current != null) {
+          navigator.geolocation.clearWatch(locationWatchIdRef.current);
+          locationWatchIdRef.current = null;
+        }
+        locationWatchTimeoutRef.current = null;
+        setLocationStatus(bestPositionRef.current ? "granted" : "unavailable");
+      }, 12000);
+    };
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const nextPosition = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
-        };
-        const snapshot = {
-          ...nextPosition,
-          timestamp: Date.now(),
-          requestId,
-        };
-        setLocationSnapshot(snapshot);
-        if (import.meta.env.DEV) {
-          console.info("[Omni location callback]", {
-            ...snapshot,
-            accuracyBand:
-              nextPosition.accuracy != null &&
-              nextPosition.accuracy > LOCATION_APPROXIMATE_ACCURACY_METERS
-                ? "approximate-network"
-                : "precise",
-            marketCenter: fallbackCenter,
-            sameAsMarketCenter:
-              Math.abs(nextPosition.lat - fallbackCenter.lat) < 0.0001 &&
-              Math.abs(nextPosition.lng - fallbackCenter.lng) < 0.0001,
-          });
-        }
-        setBrowserPermission("granted");
-        setUserPos(nextPosition);
-        setLocationStatus("granted");
+        acceptPosition(pos);
+        startWatch();
       },
       (error) => {
-        if (error.code === error.PERMISSION_DENIED) setBrowserPermission("denied");
-        setUserPos(null);
-        setLocationSnapshot(null);
-        setLocationStatus("unavailable");
+        if (error.code === error.PERMISSION_DENIED) {
+          setBrowserPermission("denied");
+          setLocationStatus("unavailable");
+          return;
+        }
+        startWatch();
+        setLocationStatus(bestPositionRef.current ? "granted" : "pending");
       },
-      // Do not accept a cached network/IP coordinate: request a fresh device position.
-      { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 },
+      { enableHighAccuracy: false, maximumAge: 30000, timeout: 5000 },
     );
   }, [fallbackCenter]);
+
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem("omni:last-location");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as LocationSnapshot;
+      if (
+        !Number.isFinite(parsed.lat) ||
+        !Number.isFinite(parsed.lng) ||
+        !Number.isFinite(parsed.timestamp) ||
+        Date.now() - parsed.timestamp > 1000 * 60 * 60 * 12
+      ) {
+        window.sessionStorage.removeItem("omni:last-location");
+        return;
+      }
+      setSessionLocation(parsed);
+      setUserPos({ lat: parsed.lat, lng: parsed.lng, accuracy: parsed.accuracy });
+      setLocationSnapshot(parsed);
+      bestPositionRef.current = { lat: parsed.lat, lng: parsed.lng, accuracy: parsed.accuracy };
+      setBrowserPermission("granted");
+      setLocationStatus("granted");
+    } catch {
+      // Ignore malformed or unavailable session storage.
+    }
+
+    return () => {
+      if (locationWatchIdRef.current != null) {
+        navigator.geolocation?.clearWatch(locationWatchIdRef.current);
+        locationWatchIdRef.current = null;
+      }
+      if (locationWatchTimeoutRef.current != null) {
+        window.clearTimeout(locationWatchTimeoutRef.current);
+        locationWatchTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (locationRequestStartedRef.current) return;
@@ -273,7 +351,7 @@ export function CartePage() {
         permissionStatus.onchange = syncPermission;
 
         if (permissionStatus.state === "denied") {
-          setLocationStatus("unavailable");
+          if (!bestPositionRef.current) setLocationStatus("unavailable");
           return;
         }
         requestLocation();
@@ -292,16 +370,28 @@ export function CartePage() {
 
   function useMarketFallback() {
     setUserPos(null);
+    setSessionLocation(null);
+    setLocationSnapshot(null);
+    bestPositionRef.current = null;
     setLocationStatus("fallback");
+    try {
+      window.sessionStorage.removeItem("omni:last-location");
+    } catch {
+      // Storage can be unavailable in privacy-restricted contexts.
+    }
   }
 
+  const rawOrigin = userPos ?? sessionLocation;
   const hasPreciseUserPosition = Boolean(
-    userPos && userPos.accuracy != null && userPos.accuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS,
+    rawOrigin &&
+    rawOrigin.accuracy != null &&
+    rawOrigin.accuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS,
   );
-  const preciseUserPos = hasPreciseUserPosition ? userPos : null;
+  const preciseUserPos = hasPreciseUserPosition ? rawOrigin : null;
   const approximateUserPos =
-    userPos && !hasPreciseUserPosition && userPos.accuracy != null ? userPos : null;
-  const origin = preciseUserPos ?? fallbackCenter;
+    rawOrigin && rawOrigin.accuracy != null && !hasPreciseUserPosition ? rawOrigin : null;
+  const usableOrigin = rawOrigin ?? fallbackCenter;
+  const origin = usableOrigin;
 
   const results = useMemo(() => {
     const rows = facilities
@@ -361,15 +451,24 @@ export function CartePage() {
       return;
     }
     if (results.length === 0) {
-      setFitPoints(preciseUserPos ? [preciseUserPos] : null);
+      setFitPoints(rawOrigin ? [usableOrigin] : null);
       return;
     }
     const nearest = [...results]
       .sort((a, b) => a.distanceKm - b.distanceKm)
       .slice(0, 6)
       .map((f) => ({ lat: f.latitude, lng: f.longitude }));
-    setFitPoints(preciseUserPos ? [preciseUserPos, ...nearest] : nearest);
-  }, [hasActiveSearch, searchKey, resultPointKey, results, preciseUserPos, origin.lat, origin.lng]);
+    setFitPoints(rawOrigin ? [usableOrigin, ...nearest] : nearest);
+  }, [
+    hasActiveSearch,
+    searchKey,
+    resultPointKey,
+    results,
+    rawOrigin,
+    usableOrigin,
+    origin.lat,
+    origin.lng,
+  ]);
 
   const demandTargetFacilityIds = pendingTargetFacilityIds ?? results.map((f) => f.id);
   const demandUserPos = pendingUserPos ?? preciseUserPos;
@@ -555,12 +654,13 @@ export function CartePage() {
           routeCoords={routeCoords}
           userPosition={preciseUserPos}
           approximatePosition={approximateUserPos}
-          marketCenter={fallbackCenter}
+          marketCenter={usableOrigin}
           marketZoom={market?.default_zoom ?? 12.2}
           revealKey={searchRunKey}
           showFacilities={true}
           showUserLocation={hasPreciseUserPosition}
           onRevealStateChange={setRevealRunning}
+          onViewportChange={setVisibleViewport}
           focus={selected ? { lat: selected.latitude, lng: selected.longitude } : null}
           fitPoints={selected ? null : fitPoints}
           className="h-full w-full"

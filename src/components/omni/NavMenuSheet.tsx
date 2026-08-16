@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Bell,
   CreditCard,
   Heart,
   ListChecks,
@@ -30,7 +29,6 @@ import {
 } from "@/components/ui/sheet";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { listNotifications, type NotificationRow } from "@/lib/omni.functions";
-import { markNotificationsRead } from "@/lib/checkout.functions";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { toast } from "sonner";
@@ -44,8 +42,6 @@ type Props = {
   onOpenOrders?: (() => void) | undefined;
   onOpenChat?: (() => void) | undefined;
   onOpenDemand?: (() => void) | undefined;
-  notifications: NotificationRow[];
-  onNotificationsRead: () => void;
 };
 
 /** Single glass navigation panel holding every secondary action. */
@@ -58,26 +54,10 @@ export function NavMenuSheet({
   onOpenOrders,
   onOpenChat,
   onOpenDemand,
-  notifications,
-  onNotificationsRead,
 }: Props) {
   const navigate = useNavigate();
   const { user, isStaff, signOut } = useAuth();
   const cart = useCart();
-  const markRead = useServerFn(markNotificationsRead);
-  const unread = notifications.filter((n) => !n.read_at).length;
-
-  useEffect(() => {
-    if (!open || unread === 0 || !user) return;
-    void (async () => {
-      try {
-        await markRead({});
-        onNotificationsRead();
-      } catch {
-        /* silencieux */
-      }
-    })();
-  }, [open, unread, user, markRead, onNotificationsRead]);
 
   function go(action?: () => void) {
     onOpenChange(false);
@@ -210,38 +190,6 @@ export function NavMenuSheet({
                 label="Paramètres"
                 onClick={() => comingSoon("Les paramètres")}
               />
-            </div>
-          </section>
-        )}
-
-        {user && (
-          <section className="mt-6">
-            <h3 className="flex items-center gap-2 text-sm font-semibold">
-              <Bell className="h-4 w-4 shrink-0" /> Notifications
-              {unread > 0 && (
-                <span className="rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
-                  {unread}
-                </span>
-              )}
-            </h3>
-            <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border bg-background/70">
-              {notifications.length === 0 && (
-                <p className="px-3 py-4 text-sm text-muted-foreground">Aucune notification.</p>
-              )}
-              {notifications.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  className="block w-full border-b border-border px-3 py-2 text-left last:border-0 hover:bg-secondary"
-                  onClick={() => go(() => n.link && navigate({ to: n.link }))}
-                >
-                  <span className="block truncate text-sm font-medium">{n.title}</span>
-                  {n.body && <span className="block text-xs text-muted-foreground">{n.body}</span>}
-                  <span className="block text-[11px] text-muted-foreground">
-                    {new Date(n.created_at).toLocaleString("fr-FR")}
-                  </span>
-                </button>
-              ))}
             </div>
           </section>
         )}
