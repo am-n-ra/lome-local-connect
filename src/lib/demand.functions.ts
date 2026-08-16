@@ -130,6 +130,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     );
 
     const creditCost = Math.max(1, targets.length);
+    const radiusKm = data.radiusKm ?? 10;
     const remainingCredits =
       Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
     if (data.mode === "bulk" && remainingCredits < creditCost) {
@@ -155,7 +156,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         data.quantity,
         data.latitude ?? null,
         data.longitude ?? null,
-        data.radiusKm ?? null,
+        radiusKm,
         data.budgetMax ?? null,
         targets.length,
         creditCost,
