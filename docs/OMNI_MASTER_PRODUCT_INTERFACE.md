@@ -4,9 +4,10 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-16  
+> **Version canonique :** 2026-08-16 (patched 2026-08-16 — see §0.5/§0.6)  
 > **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md` et les décisions UI/UX confirmées.  
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
+> **Patch note :** duplicate section numbers (old §151, old §168, old §167 addendum) resolved — see renumbered §169–§172. New §0.5 (V1 Scope Gate) and §0.6 (Manual Operations Layer) added as the build contract; read these two sections before implementing anything else in this document.
 
 ## 0. INSTRUCTION GÉNÉRALE
 
@@ -55,6 +56,112 @@ The **AI agent executes work**.
 The **transaction layer connects intent to real-world action**.
 
 Build the product so that these are one coherent system, not separate applications.
+
+---
+
+# 0.5 V1 SCOPE GATE
+
+> **This section is the build contract. Every other section in this document describes the destination — what Omni becomes. This section says what ships now.**
+>
+> An agent, contractor, or future session implementing Omni reads this section first. If a task isn't listed as `V1` or `V1-Manual` below, it is not built yet, no matter how normatively it is phrased elsewhere in this document. When in doubt, this section overrules the tone of any other section.
+
+## 0.5.1 Why this section exists
+
+Sections 1–172 describe Omni at maturity: AI agents, visual search, offline sync, 3D discovery, digital subscriptions, OSM auto-ingestion, advertising. All of it is correct as a destination. None of it is what makes the next milestone (Lomé density, verified CAC, Aflao replication) succeed. Building against the full document as if every section were equally urgent is the single biggest risk to shipping. This gate exists to prevent that.
+
+The rule: **build the V1 loop with production quality. Fake or skip everything else. Never build V2+ scope early just because it's specified.**
+
+## 0.5.2 The V1 loop
+
+```text
+Search → Discover → Facility/Product → Check Availability (manual) → Purchase Intent → Contact/QR → Transaction recorded
+```
+
+If a user can do this, once, reliably, for a real product, in Lomé — V1 works. Everything else is in service of making this loop wider, faster, or more automated.
+
+## 0.5.3 Scope table
+
+Status legend: **V1** = build now, production quality. **V1-Manual** = the capability exists for the user, but is powered by a human (you or your ops team) behind the scenes, not by automation. **Deferred** = not built. The section number still describes the correct end-state; it is simply not in scope yet.
+
+| Area | Sections | Status | Note |
+|---|---|---|---|
+| Map (Mercator/static, single pin, zoom/pan/recenter) | §5, §16, §87 (basic only) | **V1** | No globe projection, no staged geographic reveal, no clustering engine. One city, one zoom range. |
+| Globe projection, staged reveal choreography, accuracy-banded geolocation | §16–17, §170, §171, §172 | **Deferred** | Excellent spec, wrong phase. Revisit once V1 loop is proven and you're funding multi-market expansion. |
+| Search (text, structured quantity/budget) | §12 (text only), §13, §14 (keyword+basic semantic) | **V1** | No voice, image, or video search yet. |
+| Search by image/video, visual embeddings | §11, §37 (visual pipeline) | **Deferred** | |
+| Facility object + states (Unclaimed → Claimed → Certified → Confirmed) | §4, §5, §17 (this doc) | **V1** | States must exist in the data model even though certification is done by hand. |
+| Facility auto-discovery via OSM/Overpass | §20–22, §172 (backfill) | **Deferred** | You don't have enough facility density yet to need automated backfill; your field agents are the discovery mechanism. Revisit once agent-driven onboarding saturates and you need to fill gaps. |
+| Content indexing (articles/video/social) | §7–10, §139–143 | **Deferred** | |
+| Availability (manual, single-facility) | §37, §38 | **V1-Manual** | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6. |
+| Bulk availability, seller Auto/Semi-Auto modes | §39–41, §51 | **Deferred** | Do this by hand 20–50 times (per your own stated plan) before automating. |
+| Purchase Intent, QR, transaction chat, transaction data model | §56–60, §158 (transaction layer, per addendum §15–16) | **V1** | Core commercial proof. Payment can be external/manual; the record must be real. |
+| Coupons, promotions | §61–62 | **V1 (basic)** | Percentage/fixed discount only. No buy-X-get-Y, no automated coupon engine. |
+| Seller Free/Pro plan limits (1 facility/5 products vs. unlimited) | §23–24, §42–43 | **V1** | Plan enforcement is a monetization signal you're already testing — keep it. |
+| Buyer/Seller AI Agent, natural-language intent, automation modes | §28–36, §44–50 | **Deferred** | This is the automation of what §0.6 documents as manual today. Do not build the agent before the manual version has run enough volume to know what to automate. |
+| Bulk import, AI schema matching | §25–27 | **Deferred** | |
+| Digital products/subscriptions | §63–64 | **Deferred** | |
+| Wallet, credits, ad credit, advertising system | §112–113, §123–125 (per this doc's numbering context) | **Deferred** | |
+| Offline mode, offline sync | §53–55, §108 | **Deferred** | |
+| Mobile-native (GPS, camera, QR scan, voice) | §49–52, §84–86, §94–98 | **Deferred — mobile V1 planned for Oct 1, web V1 first** | |
+| Notifications (basic transactional only) | §99, §161 | **V1 (basic)** | Availability response, order status, QR. No promotional/ad notifications yet. |
+| Admin/verification queue, fraud system | §110–112, §122, §125–127 | **V1-Manual** | You are the admin queue right now. Formal tooling deferred. |
+| Global AI kill switch | §22 (per addendum) | **N/A until an Agent exists** | Trivially true today since there is no automation to switch off. Build the toggle when §28–50 is built, not before. |
+
+## 0.5.4 What this means in practice
+
+- If a section elsewhere in this document says "must," "AI must," or gives a Core Acceptance Test (§153–166) for something marked **Deferred** above — that test is not part of the V1 gate. It becomes relevant when that section's status changes.
+- Every **V1-Manual** row must still have the correct *data model* underneath it (the states, the object shapes) even though a human is producing the output. This is what lets automation replace the human later without a schema rewrite. Build the skeleton; fake the muscle.
+- Re-evaluate this table when: (a) the V1 loop has run enough real transactions to show where the manual bottleneck actually is, or (b) a funding milestone (HERLOG, YC, seed) changes what needs to be true. Update the table, don't silently drift from it.
+
+---
+
+# 0.6 MANUAL OPERATIONS LAYER (V1-Manual implementation record)
+
+> This section documents how the sections marked **V1-Manual** in §0.5.3 are actually being fulfilled today, by people, not software. It exists so that (a) the gap between this document and operational reality is closed, and (b) whoever eventually builds the automation (§28–50) has an honest record of what the manual process actually does, instead of guessing from the idealized spec.
+
+## 0.6.1 Principle
+
+Per the document's own rule — *"Tout ce que l'Agent peut faire doit déjà exister comme action manuelle dans Omni"* — the manual layer is not a stopgap to be embarrassed about. It is the design research for the agent. Every manual step performed here should be logged with enough detail that a future automation pass can read this section and know exactly what tool the agent needs.
+
+## 0.6.2 Seller onboarding (manual implementation of §81, §104, §106)
+
+Performed by field agents. A field agent visits or contacts a business, collects: name, category, location (GPS pin or address), contact info, and initial product list (photographed or manually noted). This is entered into Omni on the business's behalf. No self-serve seller onboarding flow is required for V1 — the field agent *is* the onboarding flow.
+
+## 0.6.3 Facility certification (manual implementation of §5.5, §110–112)
+
+There is no automated KYC/document-verification pipeline. Certification today means: a person on the team has physically visited or directly confirmed the business exists at the stated location and is operated by the person claiming it. This satisfies the `CERTIFIED` state honestly — it is manual evidence, not automated evidence, but it is real evidence. Record who certified, when, and how (visit / phone confirmation / referral) against the facility record, so the future admin queue (§110) can distinguish manually-certified facilities from automatically-certified ones without re-verifying them.
+
+## 0.6.4 Availability matching (manual implementation of §37–38, per addendum §13)
+
+This is the highest-value manual process running today and the one most worth instrumenting carefully. When a buyer requests availability:
+
+```text
+Buyer asks Omni "is X available?"
+ ↓
+Operator (you / ops team) receives the request
+ ↓
+Operator contacts the seller directly — WhatsApp or phone call
+ ↓
+Seller confirms Available / Partial / Unavailable, and quantity/price if it differs
+ ↓
+Operator enters the response back into Omni
+ ↓
+Buyer sees the same "Available / Partial / Unavailable" result the spec describes
+```
+
+The buyer-facing outcome must be indistinguishable from an automated response. Track, per request: how long the round-trip took, how many sellers didn't respond, how often the seller's real inventory differed from what was listed, and what information the operator had to ask for that wasn't already on the availability request. These four data points are exactly what §39–41 (Semi-Auto/Auto availability) need to be built correctly later — do not skip logging them for the sake of speed.
+
+## 0.6.5 Transaction recording (manual implementation of §60, per addendum §16)
+
+Payment today is external (cash, mobile money) in the large majority of cases. The operator or seller records the transaction manually against the Purchase Intent: product, quantity, price, payment method, completion status. The QR can still be generated and used for pickup/verification even though Omni did not process the payment — this matches §56 ("QR is not only a payment QR") exactly as specified; only the payment leg is manual, not the record.
+
+## 0.6.6 Demand intelligence (manual implementation of §55, §137–138)
+
+No automated "83 searches for school uniforms this week" surfacing yet. If a pattern in unmet demand becomes obvious from manually handling requests, it is noted and can be raised directly with a relevant seller. This is expected to stay fully manual until search volume is high enough that patterns aren't obvious by inspection.
+
+## 0.6.7 When to graduate a row from V1-Manual to automated
+
+A manual process in this section is ready to be replaced by its automated counterpart in §0.5.3 only when: the manual version has run enough real volume to know its actual failure modes (not hypothetical ones), and the automation would remove a proven bottleneck — not just a hypothetical one. Automating a process that hasn't shown a real bottleneck is premature optimization of the org, not just the code.
 
 ---
 
@@ -4266,7 +4373,7 @@ MORE DEMAND
 
 ---
 
-# 167. PRODUCT & INTERFACE SPECIFICATION ADDENDUM (2026-08-14)
+# 169. PRODUCT & INTERFACE SPECIFICATION ADDENDUM (2026-08-14)
 
 # OMNI — Product & Interface Specification
 
@@ -4489,7 +4596,7 @@ Non négociables : map-first, no in-app landing page, persistent bottom search, 
 
 ---
 
-# 168. CLEAN GLOBE AND STAGED SEARCH REVEAL CONTRACT
+# 170. CLEAN GLOBE AND STAGED SEARCH REVEAL CONTRACT
 
 The globe is the first product message. Omni represents the world's supply and demand, so the opening state must be clean, sparse, calm, and legible rather than a dense dashboard of pins. At rest, show restrained geography and atmosphere only. Do not show a permanent cloud of facility pins, labels, clusters, promotional cards, or analytics. The supplied Omni mark and the persistent search remain the primary interface signals.
 
@@ -4523,7 +4630,7 @@ This globe behavior is a product requirement and must be covered by automated st
 
 ---
 
-# 151. MAPLIBRE GLOBE PROJECTION CORRECTION
+# 171. MAPLIBRE GLOBE PROJECTION CORRECTION
 
 The Omni globe is the **MapLibre globe projection** rendered by the same geographic map instance that powers local search. It must not be replaced or visually masked by a decorative SVG, CSS sphere, image, Canvas 2D drawing, or other substitute. The resting experience uses MapLibre’s global projection with real geographic basemap data, sparse geographic styling, and slow camera rotation. Search transitions reuse this MapLibre instance as it moves from the globe through continent, country, region, town/area, and final-location scales.
 
@@ -4533,7 +4640,7 @@ Acceptance requires that the idle DOM contain no decorative globe surface, that 
 
 ---
 
-# 169. OMNI FIRST-PAGE COMPOSITION AND SEARCH DOCK REDESIGN
+# 172. OMNI FIRST-PAGE COMPOSITION AND SEARCH DOCK REDESIGN
 
 The first page of Omni is the real MapLibre globe plus one deliberate control composition. The surrounding spatial field uses a warm white or cream background, while the globe itself preserves grey/black water, white or warm-white land, restrained charcoal geography, and orange only for Omni actions and facility pins. The style must be applied atomically before the globe becomes visible; the user must not see a heavy full-viewport black loading surface or a raw source-style flash between map states.
 

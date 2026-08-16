@@ -684,8 +684,15 @@ export function CartePage() {
             <div
               className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-w-6xl"
               style={{ bottom: "var(--omni-dock-clearance, 12rem)" }}
+              role="region"
+              aria-label={`Résultats de recherche : ${results.length} facility${results.length === 1 ? "" : "s"}`}
+              aria-live="polite"
             >
-              <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
+              <div
+                className="pointer-events-auto flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center"
+                tabIndex={0}
+                aria-label="Panneau horizontal des facilities trouvées"
+              >
                 {results.slice(0, 6).map((facility, index) => {
                   const isUnclaimed = facility.status === "unclaimed";
                   const isTrusted =
@@ -694,12 +701,15 @@ export function CartePage() {
                     <button
                       key={facility.id}
                       type="button"
+                      aria-label={`${facility.name}. ${isUnclaimed ? "Facility non réclamée" : "Facility vérifiée"}. ${facility.product_count} offre${facility.product_count > 1 ? "s" : ""}.`}
+                      aria-posinset={index + 1}
+                      aria-setsize={Math.min(results.length, 6)}
                       onClick={() => {
                         setSelected(facility);
                         setRouteCoords(null);
                         setSteps([]);
                       }}
-                      className="omni-glass group w-[19rem] shrink-0 rounded-[1.5rem] p-3.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 active:scale-[0.99]"
+                      className="omni-glass group w-[19rem] shrink-0 snap-start rounded-[1.5rem] p-3.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99]"
                     >
                       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
                         {facility.cover_url ? (
@@ -825,10 +835,6 @@ export function CartePage() {
             locationAccuracy={userPos?.accuracy ?? null}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
-            onBrandClick={() => {
-              if (preciseUserPos) setFitPoints([preciseUserPos]);
-              else toast.info("Votre position précise est indisponible.");
-            }}
           />
         )}
 

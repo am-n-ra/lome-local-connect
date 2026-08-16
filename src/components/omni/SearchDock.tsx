@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { BrandMark } from "@/components/omni/BrandMark";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { categoryLabel, CATEGORIES, LOCATION_APPROXIMATE_ACCURACY_METERS } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
@@ -54,7 +53,6 @@ type Props = {
   filters: MapFilters;
   onFiltersChange: (value: MapFilters) => void;
   resultCount: number;
-  onBrandClick?: () => void;
   onVerifyAvailability?: () => void;
   quantity?: number;
   onQuantityChange?: (value: number) => void;
@@ -84,7 +82,6 @@ export function SearchDock({
   filters,
   onFiltersChange,
   resultCount,
-  onBrandClick,
   onVerifyAvailability,
   quantity = 1,
   onQuantityChange,
@@ -463,16 +460,6 @@ export function SearchDock({
             onSubmit={onSubmit}
             placeholder="Que cherchez-vous dans le monde ?"
             enablePhotoSearch={false}
-            trailing={
-              <button
-                type="button"
-                aria-label="Omni"
-                onClick={onBrandClick}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-primary/10 transition-transform hover:scale-105"
-              >
-                <BrandMark className="h-7 w-7" />
-              </button>
-            }
           />
         </div>
       </div>

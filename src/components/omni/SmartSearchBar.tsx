@@ -111,6 +111,11 @@ export function SmartSearchBar({
   const stopRef = useRef<(() => Promise<void>) | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
+  function submitSearch() {
+    if (busy || recording) return;
+    onSubmit?.();
+  }
+
   useEffect(() => () => void stopRef.current?.(), []);
 
   async function startRecording() {
@@ -265,7 +270,10 @@ export function SmartSearchBar({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") onSubmit?.();
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitSearch();
+              }
             }}
             placeholder={placeholder ?? "Que cherchez-vous ?"}
             aria-label="Rechercher un produit"
@@ -293,6 +301,16 @@ export function SmartSearchBar({
           )}
         </button>
 
+        <button
+          type="button"
+          aria-label="Lancer la recherche"
+          title="Lancer la recherche"
+          disabled={busy || recording}
+          onClick={submitSearch}
+          className="shrink-0 rounded-full bg-primary p-2 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+        >
+          <Search className="h-[18px] w-[18px]" />
+        </button>
         {trailing}
       </div>
     );
@@ -347,6 +365,16 @@ export function SmartSearchBar({
           ) : (
             <Mic className="h-4 w-4" />
           )}
+        </button>
+        <button
+          type="button"
+          aria-label="Lancer la recherche"
+          title="Lancer la recherche"
+          disabled={busy || recording}
+          onClick={submitSearch}
+          className="rounded-full bg-primary p-1.5 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+        >
+          <Search className="h-4 w-4" />
         </button>
       </div>
     </div>

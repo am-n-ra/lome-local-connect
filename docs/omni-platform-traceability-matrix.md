@@ -2,6 +2,8 @@
 
 > **Source normative :** [`OMNI_MASTER_PRODUCT_INTERFACE.md`](./OMNI_MASTER_PRODUCT_INTERFACE.md). Cette matrice décrit l’état d’exécution et de conformité ; elle ne remplace pas le master et ne peut pas introduire seule une nouvelle règle produit.
 >
+> **Build contract V1 :** lire d’abord le Scope Gate §0.5 et la Manual Operations Layer §0.6. Une ligne marquée `Deferred` n’est pas un blocage de la release V1 ; une ligne `V1-Manual` doit conserver un contrat de données réel même si l’opération est réalisée par un humain.
+>
 > **Pattern facility confirmé :** les panneaux horizontaux défilables des facilities sont le pattern officiel de découverte et doivent être validés sur mobile, desktop, clavier et touch.
 
 **Baseline:** Merged `main` branch at the beginning of the full-platform documentation pass.

@@ -9,12 +9,12 @@ Cette matrice relie les règles du document [`OMNI_MASTER_PRODUCT_INTERFACE.md`]
 | MASTER-03 | Contrôles carte limités à `+`, `−`, recentrage | `MapCanvas`, contrôles de carte | Vérification responsive et clavier | À auditer |
 | MASTER-04 | Notifications et menu uniquement dans le chrome supérieur | `TopNav`, `NotificationsBell`, menu Omni | Test mobile hamburger et desktop | Partiel |
 | MASTER-05 | Search Dock persistant, flottant et translucide | `SearchDock.tsx` | Vérifier tous les états map-first | Partiel |
-| MASTER-06 | Clic sur recherche et `Enter` utilisent un même contrat idempotent | `SmartSearchBar.tsx`, `SearchDock.tsx`, `carte.tsx` | Test clic, Enter, busy, erreur et double soumission | À corriger |
+| MASTER-06 | Clic sur recherche et `Enter` utilisent un même contrat idempotent | `SmartSearchBar.tsx`, `SearchDock.tsx`, `carte.tsx` | Test clic, Enter, busy, erreur et double soumission | Implémenté — test navigateur à faire |
 | MASTER-07 | Catégories comme raccourcis scrollables horizontaux | `SearchDock.tsx` | Touch, clavier, flèches et 320/375 px | Partiel |
 | MASTER-08 | Quantité/budget masqués par défaut et éditables lorsqu’utiles | `SearchDock.tsx`, filtres de recherche | Idle, recherche active, disponibilité | Partiel |
 | MASTER-09 | Auth avant première exécution backend avec restauration exacte | `carte.tsx`, auth/pending-search helpers | Logout → recherche → login → restauration | Partiel |
 | MASTER-10 | Facilities OSM unclaimed découvrables et clairement identifiées | `osm-coverage.server.ts`, `MapCanvas`, cards | Search mondial et statut unclaimed | Partiel |
-| MASTER-11 | Panneaux horizontaux de facilities comme pattern officiel | résultat/facility rail, `FacilityPanel` | Scroll horizontal, sélection, focus, safe area | Partiel |
+| MASTER-11 | Panneaux horizontaux de facilities comme pattern officiel | résultat/facility rail, `FacilityPanel` | Test responsive et clavier | Implémenté — audit responsive à faire |
 | MASTER-12 | Facility detail au-dessus de la carte, side sheet desktop/bottom sheet mobile | `FacilityPanel.tsx` | Responsive 320/375/768/1280 px | Partiel |
 | MASTER-13 | Availability toujours après discovery, manual et bulk | `DemandRequestPanel.tsx`, functions availability | Single facility, bulk, quotas, ranking | Vérifié/à réauditer |
 | MASTER-14 | États Available, Partial, Unavailable lisibles | `DemandRequestPanel.tsx` | Fixtures de réponses et erreurs | Vérifié/à réauditer |
