@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -57,6 +58,8 @@ type Props = {
   onVerifyAvailability?: () => void;
   quantity?: number;
   onQuantityChange?: (value: number) => void;
+  activeSearch?: boolean;
+  coverageStatus?: "idle" | "loading" | "ready" | "error";
   locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
   browserPermission?: "unknown" | "prompt" | "granted" | "denied" | "unsupported";
   locationAccuracy?: number | null;
@@ -85,6 +88,8 @@ export function SearchDock({
   onVerifyAvailability,
   quantity = 1,
   onQuantityChange,
+  activeSearch = false,
+  coverageStatus = "idle",
   locationStatus = "fallback",
   browserPermission = "unknown",
   locationAccuracy = null,
@@ -95,8 +100,11 @@ export function SearchDock({
   const dockRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [quantityDraft, setQuantityDraft] = useState(String(quantity));
+  const [budgetDraft, setBudgetDraft] = useState(
+    filters.maxPrice == null ? "" : String(filters.maxPrice),
+  );
   const activeCount = activeFilterCount(filters);
-  const hasIntent = Boolean(query.trim() || category);
   const isPrecise =
     locationStatus === "granted" &&
     locationAccuracy != null &&
@@ -105,6 +113,28 @@ export function SearchDock({
     locationStatus === "granted" &&
     locationAccuracy != null &&
     locationAccuracy > LOCATION_APPROXIMATE_ACCURACY_METERS;
+
+  useEffect(() => {
+    setQuantityDraft(String(quantity));
+  }, [quantity]);
+
+  useEffect(() => {
+    setBudgetDraft(filters.maxPrice == null ? "" : String(filters.maxPrice));
+  }, [filters.maxPrice]);
+
+  function commitQuantity() {
+    const parsed = Number.parseInt(quantityDraft, 10);
+    const next = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    setQuantityDraft(String(next));
+    onQuantityChange?.(next);
+  }
+
+  function commitBudget() {
+    const parsed = Number.parseInt(budgetDraft, 10);
+    const next = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    setBudgetDraft(next == null ? "" : String(next));
+    onFiltersChange({ ...filters, maxPrice: next });
+  }
 
   useEffect(() => {
     const dock = dockRef.current;
@@ -148,63 +178,107 @@ export function SearchDock({
     <div
       ref={dockRef}
       data-omni-dock="true"
-      data-omni-dock-mode={hasIntent ? (resultCount > 0 ? "results" : "request") : "idle"}
+      data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
+
       className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-5"
     >
       <div className="pointer-events-auto w-full max-w-4xl space-y-2.5">
         <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/55">
           <span>Omni · le monde est recherchable</span>
-          {hasIntent && (
+          {activeSearch && (
             <span>
               {resultCount} résultat{resultCount === 1 ? "" : "s"}
             </span>
           )}
         </div>
 
-        {hasIntent && (
-          <div
-            data-omni-dock-row="structured"
-            className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr_auto]"
-          >
-            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                  Quantité
-                </span>
-                <span className="text-[10px] text-muted-foreground">unités</span>
-              </div>
-              <div className="mt-1.5 flex items-center justify-between gap-3">
-                <button
-                  type="button"
-                  aria-label="Diminuer la quantité"
-                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
-                  className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
-                >
-                  <Minus className="h-3.5 w-3.5" />
-                </button>
-                <strong className="text-base" aria-live="polite">
-                  {quantity}
-                </strong>
-                <button
-                  type="button"
-                  aria-label="Augmenter la quantité"
-                  onClick={() => onQuantityChange?.(quantity + 1)}
-                  className="grid h-7 w-7 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              </div>
+        <div
+          data-omni-dock-row="structured"
+          className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
+        >
+          <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label
+                htmlFor="omni-quantity"
+                className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+              >
+                Quantité
+              </Label>
+              <span className="text-[10px] text-muted-foreground">unités</span>
             </div>
-            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
-              <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                Budget maximum
-              </div>
-              <div className="mt-2 truncate text-sm font-bold">
-                {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
-              </div>
+            <div className="mt-1.5 flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Diminuer la quantité"
+                onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <Input
+                id="omni-quantity"
+                inputMode="numeric"
+                min={1}
+                value={quantityDraft}
+                onChange={(event) => setQuantityDraft(event.target.value.replace(/\D/g, ""))}
+                onBlur={commitQuantity}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitQuantity();
+                }}
+                className="h-9 min-w-0 flex-1 bg-background/70 text-center text-sm font-bold"
+                aria-label="Quantité souhaitée"
+              />
+              <button
+                type="button"
+                aria-label="Augmenter la quantité"
+                onClick={() => onQuantityChange?.(quantity + 1)}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
-        )}
+          <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label
+                htmlFor="omni-budget"
+                className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+              >
+                Budget maximum
+              </Label>
+              <button
+                type="button"
+                aria-pressed={filters.maxPrice === null}
+                onClick={() => {
+                  setBudgetDraft("");
+                  onFiltersChange({ ...filters, maxPrice: null });
+                }}
+                className={`rounded-full px-2 py-1 text-[10px] font-bold ${filters.maxPrice === null ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}
+              >
+                Illimité
+              </button>
+            </div>
+            <div className="mt-1.5 flex items-center gap-2">
+              <Input
+                id="omni-budget"
+                inputMode="numeric"
+                min={0}
+                value={budgetDraft}
+                placeholder="Montant"
+                onChange={(event) => setBudgetDraft(event.target.value.replace(/\D/g, ""))}
+                onBlur={commitBudget}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") commitBudget();
+                }}
+                className="h-9 min-w-0 flex-1 bg-background/70 text-sm font-bold"
+                aria-label="Budget maximum"
+              />
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {filters.maxPrice === null ? "sans limite" : formatMoney(filters.maxPrice)}
+              </span>
+            </div>
+          </div>
+        </div>
 
         <div data-omni-dock-row="discovery" className="flex items-center gap-2">
           <button
@@ -262,7 +336,6 @@ export function SearchDock({
               <RefinementPanel
                 filters={filters}
                 activeCount={activeCount}
-                formatMoney={formatMoney}
                 onFiltersChange={onFiltersChange}
               />
             </div>
@@ -273,6 +346,21 @@ export function SearchDock({
           data-omni-dock-row="context"
           className="flex flex-wrap items-center justify-center gap-2"
         >
+          {coverageStatus !== "idle" && (
+            <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
+              {coverageStatus === "loading" && (
+                <LoaderCircle
+                  className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin"
+                  aria-hidden="true"
+                />
+              )}
+              {coverageStatus === "loading"
+                ? "Recherche de la zone…"
+                : coverageStatus === "error"
+                  ? "Zone momentanément indisponible"
+                  : "Zone cartographiée"}
+            </span>
+          )}
           <span
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold ${
               isPrecise
@@ -320,7 +408,7 @@ export function SearchDock({
           )}
         </div>
 
-        {hasIntent && (
+        {activeSearch && (
           <div data-omni-dock-row="action" className="flex justify-center gap-2">
             {resultCount > 0 ? (
               <>
@@ -390,16 +478,10 @@ export function SearchDock({
 type RefinementPanelProps = {
   filters: MapFilters;
   activeCount: number;
-  formatMoney: (amount: number) => string;
   onFiltersChange: (value: MapFilters) => void;
 };
 
-function RefinementPanel({
-  filters,
-  activeCount,
-  formatMoney,
-  onFiltersChange,
-}: RefinementPanelProps) {
+function RefinementPanel({ filters, activeCount, onFiltersChange }: RefinementPanelProps) {
   function patchFilters(next: Partial<MapFilters>) {
     onFiltersChange({ ...filters, ...next });
   }
@@ -424,38 +506,20 @@ function RefinementPanel({
         )}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Rayon</Label>
-            <span className="text-xs text-muted-foreground">
-              {filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}
-            </span>
-          </div>
-          <Slider
-            min={1}
-            max={50}
-            step={1}
-            value={[filters.radiusKm]}
-            onValueChange={([value]) => patchFilters({ radiusKm: value ?? 10 })}
-          />
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs">Rayon</Label>
+          <span className="text-xs text-muted-foreground">
+            {filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}
+          </span>
         </div>
-
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs">Budget maximum</Label>
-            <span className="text-xs text-muted-foreground">
-              {filters.maxPrice === null ? "À définir" : formatMoney(filters.maxPrice)}
-            </span>
-          </div>
-          <Slider
-            min={0}
-            max={100000}
-            step={1000}
-            value={[filters.maxPrice ?? 0]}
-            onValueChange={([value]) => patchFilters({ maxPrice: value ? value : null })}
-          />
-        </div>
+        <Slider
+          min={1}
+          max={50}
+          step={1}
+          value={[filters.radiusKm]}
+          onValueChange={([value]) => patchFilters({ radiusKm: value ?? 10 })}
+        />
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">

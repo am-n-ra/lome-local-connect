@@ -12,15 +12,17 @@ export type Bounds = { minLat: number; minLng: number; maxLat: number; maxLng: n
 
 /** Tiles of ~0.05° (~5.5 km) keep Overpass requests small and cacheable. */
 const TILE_SIZE = 0.05;
-/** Below this zoom the viewport is far too wide to import anything sane. */
-export const MIN_IMPORT_ZOOM = 13;
+/** Below this zoom the viewport is too wide; regional zooms can safely back-fill bounded tiles. */
+export const MIN_IMPORT_ZOOM = 9;
 const MAX_TILES_PER_REQUEST = 4;
+const EMPTY_TILE_RETRY_HOURS = 6;
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-const LOME_BOUNDS: Bounds = { minLat: 6.05, minLng: 1.05, maxLat: 6.35, maxLng: 1.45 };
+// Keep the city market bounded; nearby cross-border places such as Aflao must remain GLOBAL.
+const LOME_BOUNDS: Bounds = { minLat: 6.05, minLng: 1.2, maxLat: 6.25, maxLng: 1.32 };
 
 function marketFor(lat: number, lng: number): string {
   return lat >= LOME_BOUNDS.minLat &&
@@ -41,8 +43,8 @@ function tilesFor(bounds: Bounds): { key: string; bounds: Bounds }[] {
   const latEnd = Math.floor(bounds.maxLat / TILE_SIZE);
   const lngStart = Math.floor(bounds.minLng / TILE_SIZE);
   const lngEnd = Math.floor(bounds.maxLng / TILE_SIZE);
-  for (let y = latStart; y <= latEnd; y += 1) {
-    for (let x = lngStart; x <= lngEnd; x += 1) {
+  for (let y = latStart; y <= latEnd && tiles.length < 256; y += 1) {
+    for (let x = lngStart; x <= lngEnd && tiles.length < 256; x += 1) {
       tiles.push({
         key: `${y}:${x}`,
         bounds: {
@@ -52,10 +54,21 @@ function tilesFor(bounds: Bounds): { key: string; bounds: Bounds }[] {
           maxLng: (x + 1) * TILE_SIZE,
         },
       });
-      if (tiles.length >= MAX_TILES_PER_REQUEST * 4) return tiles;
     }
   }
-  return tiles;
+  const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+  const centerLng = (bounds.minLng + bounds.maxLng) / 2;
+  return tiles.sort((a, b) => {
+    const aLat = (a.bounds.minLat + a.bounds.maxLat) / 2;
+    const aLng = (a.bounds.minLng + a.bounds.maxLng) / 2;
+    const bLat = (b.bounds.minLat + b.bounds.maxLat) / 2;
+    const bLng = (b.bounds.minLng + b.bounds.maxLng) / 2;
+    return (
+      (aLat - centerLat) ** 2 +
+      (aLng - centerLng) ** 2 -
+      ((bLat - centerLat) ** 2 + (bLng - centerLng) ** 2)
+    );
+  });
 }
 
 const CATEGORY_BY_TAG: Record<string, string> = {
@@ -128,7 +141,11 @@ async function fetchOverpass(bounds: Bounds): Promise<OverpassElement[]> {
     try {
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "content-type": "application/x-www-form-urlencoded" },
+        headers: {
+          accept: "application/json",
+          "content-type": "application/x-www-form-urlencoded",
+          "user-agent": "Omni global facility discovery/1.0 (viewport coverage)",
+        },
         body: `data=${encodeURIComponent(body)}`,
         signal: AbortSignal.timeout(25_000),
       });
@@ -194,11 +211,21 @@ export async function ensureCoverage(bounds: Bounds, zoom: number): Promise<numb
   const tiles = tilesFor(bounds);
   if (tiles.length === 0) return 0;
 
-  const known = await query<{ tile_key: string }>(
-    `SELECT tile_key FROM public.osm_tiles WHERE tile_key = ANY($1::text[])`,
+  const known = await query<{ tile_key: string; facility_count: number; fetched_at: string }>(
+    `SELECT tile_key, facility_count, fetched_at
+     FROM public.osm_tiles
+     WHERE tile_key = ANY($1::text[])`,
     [tiles.map((tile) => tile.key)],
   );
-  const seen = new Set(known.map((row) => row.tile_key));
+  const seen = new Set(
+    known
+      .filter(
+        (row) =>
+          row.facility_count > 0 ||
+          Date.now() - new Date(row.fetched_at).getTime() < EMPTY_TILE_RETRY_HOURS * 60 * 60 * 1000,
+      )
+      .map((row) => row.tile_key),
+  );
   const missing = tiles.filter((tile) => !seen.has(tile.key)).slice(0, MAX_TILES_PER_REQUEST);
   if (missing.length === 0) return 0;
 

@@ -94,6 +94,8 @@ function VendeurPage() {
   const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
   const [ready, setReady] = useState(false);
+  const [activeFacilityId, setActiveFacilityId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("apercu");
   const [bonusOpen, setBonusOpen] = useState(false);
   const [hours, setHours] = useState("");
 
@@ -164,7 +166,8 @@ function VendeurPage() {
     })();
   }, [depot, user, confirmDeposit, refresh, navigate]);
 
-  const facility = data?.facilities[0] ?? null;
+  const facility =
+    data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
   const subscription = data?.subscription ?? null;
   const products = useMemo(() => data?.products ?? [], [data]);
   const pro = useMemo(
@@ -558,16 +561,38 @@ function VendeurPage() {
                 opérations quotidiennes.
               </p>
             </div>
-            <label className="flex shrink-0 items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
-              <span className={facility.is_online ? "text-forest" : "text-muted-foreground"}>
-                {facility.is_online ? "En ligne" : "En pause"}
-              </span>
-              <Switch checked={facility.is_online} onCheckedChange={(v) => void toggleOnline(v)} />
-            </label>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              {data && data.facilities.length > 1 && (
+                <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
+                  <span className="text-muted-foreground">Facility</span>
+                  <select
+                    value={facility.id}
+                    onChange={(event) => setActiveFacilityId(event.target.value)}
+                    className="max-w-40 bg-transparent text-xs font-bold outline-none"
+                    aria-label="Facility active"
+                  >
+                    {data.facilities.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
+                <span className={facility.is_online ? "text-forest" : "text-muted-foreground"}>
+                  {facility.is_online ? "En ligne" : "En pause"}
+                </span>
+                <Switch
+                  checked={facility.is_online}
+                  onCheckedChange={(v) => void toggleOnline(v)}
+                />
+              </label>
+            </div>
           </div>
         </section>
 
-        <Tabs defaultValue="apercu" className="mt-5">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
           <TabsList className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
             {pro && OMNI_CONFIG.sellerAgentEnabled && (
@@ -719,6 +744,58 @@ function VendeurPage() {
                   </div>
                 </div>
               </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <button
+                type="button"
+                onClick={() => setActiveTab("demandes")}
+                className="omni-card text-left transition-transform hover:-translate-y-0.5"
+              >
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                  À traiter
+                </p>
+                <p className="mt-2 font-display text-2xl font-extrabold">
+                  {data?.requests.length ?? 0}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Demandes reçues</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("produits")}
+                className="omni-card text-left transition-transform hover:-translate-y-0.5"
+              >
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Stock</p>
+                <p className="mt-2 font-display text-2xl font-extrabold">
+                  {products.filter((product) => !product.in_stock).length}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Produits à confirmer</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("demande-locale")}
+                className="omni-card text-left transition-transform hover:-translate-y-0.5"
+              >
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                  Demande
+                </p>
+                <p className="mt-2 font-display text-2xl font-extrabold">
+                  {data?.demand.length ?? 0}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Signaux locaux</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("solde")}
+                className="omni-card text-left transition-transform hover:-translate-y-0.5"
+              >
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                  Balance
+                </p>
+                <p className="mt-2 font-display text-2xl font-extrabold text-primary">
+                  {formatMoney(data?.walletBalance ?? 0)}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Crédits Omni disponibles</p>
+              </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="omni-card p-5">

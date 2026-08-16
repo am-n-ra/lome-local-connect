@@ -73,6 +73,7 @@ export function CartePage() {
   const [facilities, setFacilities] = useState<ApiFacility[]>([]);
   const [discoveryFacilities, setDiscoveryFacilities] = useState<ApiFacility[]>([]);
   const [query, setQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [filters, setFilters] = useState<MapFilters>(DEFAULT_FILTERS);
   const [searchRunKey, setSearchRunKey] = useState<string | null>(null);
@@ -111,9 +112,12 @@ export function CartePage() {
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
   const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [visibleViewport, setVisibleViewport] = useState<ViewportBounds | null>(null);
+  const [coverageStatus, setCoverageStatus] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle",
+  );
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
-  const hasCoverageSearch = Boolean(query.trim() || category);
+  const hasCoverageSearch = Boolean(submittedQuery.trim() || category);
 
   useEffect(() => {
     if (!visibleViewport) return;
@@ -123,7 +127,7 @@ export function CartePage() {
       Math.round(visibleViewport.east * 1000),
       Math.round(visibleViewport.north * 1000),
       Math.floor(visibleViewport.zoom),
-      query.trim(),
+      submittedQuery.trim(),
       category ?? "",
     ].join(":");
     if (viewportRequestKeyRef.current === key) return;
@@ -131,10 +135,11 @@ export function CartePage() {
     let active = true;
     const handle = window.setTimeout(
       () => {
+        setCoverageStatus("loading");
         void fetchFacilitiesInBounds({
           data: {
             ...visibleViewport,
-            search: hasCoverageSearch ? query.trim() || undefined : undefined,
+            search: hasCoverageSearch ? submittedQuery.trim() || undefined : undefined,
             category: hasCoverageSearch ? (category ?? undefined) : undefined,
             includeUnclaimed: true,
             limit: hasCoverageSearch ? 240 : 120,
@@ -144,9 +149,11 @@ export function CartePage() {
             if (!active) return;
             if (hasCoverageSearch) setFacilities(rows);
             else setDiscoveryFacilities(rows);
+            setCoverageStatus("ready");
           })
           .catch(() => {
             if (!active) return;
+            setCoverageStatus("error");
             toast.error("La découverte de cette zone est momentanément indisponible.");
           });
       },
@@ -156,7 +163,7 @@ export function CartePage() {
       active = false;
       window.clearTimeout(handle);
     };
-  }, [category, fetchFacilitiesInBounds, hasCoverageSearch, query, visibleViewport]);
+  }, [category, fetchFacilitiesInBounds, hasCoverageSearch, submittedQuery, visibleViewport]);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -420,14 +427,15 @@ export function CartePage() {
   // After each search or filter change, frame the user plus the nearest visible matches.
   const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
   const hasActiveSearch =
-    Boolean(query.trim()) ||
+    Boolean(submittedQuery.trim()) ||
     Boolean(category) ||
-    filters.radiusKm !== DEFAULT_FILTERS.radiusKm ||
-    filters.maxPrice !== DEFAULT_FILTERS.maxPrice ||
-    filters.openOnly !== DEFAULT_FILTERS.openOnly ||
-    filters.discountOnly !== DEFAULT_FILTERS.discountOnly ||
-    filters.sort !== DEFAULT_FILTERS.sort;
-  const searchKey = `${query.trim()}|${category ?? ""}|${filters.radiusKm}|${filters.maxPrice ?? ""}|${filters.openOnly}|${filters.discountOnly}|${filters.sort}`;
+    (Boolean(searchRunKey) &&
+      (filters.radiusKm !== DEFAULT_FILTERS.radiusKm ||
+        filters.maxPrice !== DEFAULT_FILTERS.maxPrice ||
+        filters.openOnly !== DEFAULT_FILTERS.openOnly ||
+        filters.discountOnly !== DEFAULT_FILTERS.discountOnly ||
+        filters.sort !== DEFAULT_FILTERS.sort));
+  const searchKey = `${submittedQuery.trim()}|${category ?? ""}|${filters.radiusKm}|${filters.maxPrice ?? ""}|${filters.openOnly}|${filters.discountOnly}|${filters.sort}`;
   const resultPointKey = results
     .slice(0, 12)
     .map((f) => `${f.id}:${f.latitude.toFixed(5)}:${f.longitude.toFixed(5)}`)
@@ -485,7 +493,7 @@ export function CartePage() {
     facility?: MapFacility | null,
   ) {
     const payload = {
-      term: query,
+      term: submittedQuery,
       category,
       filters,
       targetFacilityIds: facility ? [facility.id] : results.map((f) => f.id),
@@ -537,6 +545,7 @@ export function CartePage() {
     const pending = restorePendingAvailabilitySearch();
     if (!pending) return;
     setQuery(pending.term);
+    setSubmittedQuery(pending.term);
     setCategory(pending.category);
     setFilters(pending.filters as MapFilters);
     setPendingTargetFacilityIds(pending.targetFacilityIds);
@@ -577,6 +586,7 @@ export function CartePage() {
     setSelected(null);
     setRouteCoords(null);
     setSteps([]);
+    setSubmittedQuery(query.trim());
     setSearchRunKey(`${Date.now()}:${query.trim()}:${category ?? ""}`);
   }
 
@@ -668,7 +678,7 @@ export function CartePage() {
 
         {!revealRunning &&
           !selected &&
-          (query.trim() || category) &&
+          hasActiveSearch &&
           results.length > 0 &&
           steps.length === 0 && (
             <div
@@ -691,6 +701,20 @@ export function CartePage() {
                       }}
                       className="omni-glass group w-[19rem] shrink-0 rounded-[1.5rem] p-3.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 active:scale-[0.99]"
                     >
+                      <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
+                        {facility.cover_url ? (
+                          <img
+                            src={facility.cover_url}
+                            alt={`Aperçu de ${facility.name}`}
+                            loading="lazy"
+                            className="h-28 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                          />
+                        ) : (
+                          <div className="grid h-28 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                            Omni · média à venir
+                          </div>
+                        )}
+                      </div>
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex min-w-0 items-start gap-2.5">
                           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
@@ -714,7 +738,8 @@ export function CartePage() {
                       </div>
                       <div className="mt-3 rounded-2xl bg-background/72 px-3 py-2.5">
                         <p className="truncate text-sm font-semibold">
-                          {query.trim() || (category ? categoryLabel(category) : "Recherche Omni")}
+                          {submittedQuery.trim() ||
+                            (category ? categoryLabel(category) : "Recherche Omni")}
                         </p>
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
                           {isUnclaimed
@@ -784,11 +809,14 @@ export function CartePage() {
                 return;
               }
               setCategory(value);
+              setSubmittedQuery("");
               setSearchRunKey(`${Date.now()}:category:${value}`);
             }}
             filters={filters}
             onFiltersChange={setFilters}
             resultCount={results.length}
+            activeSearch={hasActiveSearch}
+            coverageStatus={coverageStatus}
             onVerifyAvailability={openDemandRequest}
             quantity={quantity}
             onQuantityChange={setQuantity}
@@ -822,6 +850,20 @@ export function CartePage() {
               >
                 <X className="h-4 w-4" />
               </Button>
+            </div>
+            <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
+              {selected.cover_url ? (
+                <img
+                  src={selected.cover_url}
+                  alt={`Aperçu de ${selected.name}`}
+                  loading="lazy"
+                  className="h-36 w-full object-cover"
+                />
+              ) : (
+                <div className="grid h-36 place-items-center bg-secondary/50 text-center text-xs font-semibold text-muted-foreground">
+                  Aucun média public disponible
+                </div>
+              )}
             </div>
             <FacilityPanel
               facility={selected}

@@ -136,17 +136,20 @@ export const listFacilities = createServerFn({ method: "GET" })
         search: z.string().max(120).optional(),
         category: z.string().max(40).optional(),
         includeUnclaimed: z.boolean().optional(),
-        market_code: z.string().max(20).default("TG-LOME"),
+        market_code: z.string().max(20).optional(),
       })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
     const clauses: string[] = [
-      "f.market_code = $1",
       "(f.is_online = true OR f.status = 'unclaimed')",
       "COALESCE(f.emergency_shutdown, false) = false",
     ];
-    const params: unknown[] = [data.market_code];
+    const params: unknown[] = [];
+    if (data.market_code) {
+      params.push(data.market_code);
+      clauses.unshift(`f.market_code = $${params.length}`);
+    }
 
     if (data.category && data.category !== "all") {
       params.push(data.category);
