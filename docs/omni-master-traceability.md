@@ -38,3 +38,10 @@ Cette matrice relie les règles du document [`OMNI_MASTER_PRODUCT_INTERFACE.md`]
 ## Règle de mise à jour
 
 Toute modification du master ou du code doit mettre à jour la ligne concernée, le test de validation et le journal de décisions lorsque la règle normative change.
+
+## Correctif 2026-08-16 — availability et rail responsive
+
+| ID | Exigence | Code/migration | Validation | Statut |
+|---|---|---|---|---|
+| MASTER-23 | `demand_requests` expose le coût de crédit utilisé par les demandes de disponibilité | `db/migrations/019_demand_credit_cost_compatibility.sql`, `src/lib/demand.functions.ts` | Audit Neon avant/après ; colonne présente en `integer NOT NULL DEFAULT 1` | Vérifié en production |
+| MASTER-24 | Le rail horizontal reste dans le viewport et au-dessus du dock | `src/routes/carte.tsx`, `SearchDock.tsx` | Build Vercel réussi ; validation navigateur 320/375 px à compléter | Implémenté — validation responsive à compléter |

@@ -682,8 +682,8 @@ export function CartePage() {
           results.length > 0 &&
           steps.length === 0 && (
             <div
-              className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-w-6xl"
-              style={{ bottom: "var(--omni-dock-clearance, 12rem)" }}
+              className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-h-[calc(100dvh-var(--omni-dock-clearance,12rem)-0.75rem)] max-w-6xl"
+              style={{ bottom: "max(0.75rem, var(--omni-dock-clearance, 12rem))" }}
               role="region"
               aria-label={`Résultats de recherche : ${results.length} facility${results.length === 1 ? "" : "s"}`}
               aria-live="polite"
@@ -709,7 +709,7 @@ export function CartePage() {
                         setRouteCoords(null);
                         setSteps([]);
                       }}
-                      className="omni-glass group w-[19rem] shrink-0 snap-start rounded-[1.5rem] p-3.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99]"
+                      className="omni-glass group max-h-[calc(100dvh-var(--omni-dock-clearance,12rem)-0.75rem)] w-[min(19rem,calc(100vw-1.5rem))] shrink-0 snap-start overflow-y-auto rounded-[1.5rem] p-3 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
                     >
                       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
                         {facility.cover_url ? (
@@ -717,10 +717,10 @@ export function CartePage() {
                             src={facility.cover_url}
                             alt={`Aperçu de ${facility.name}`}
                             loading="lazy"
-                            className="h-28 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                            className="h-20 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] md:h-28"
                           />
                         ) : (
-                          <div className="grid h-28 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                          <div className="grid h-20 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
                             Aucun média public disponible
                           </div>
                         )}

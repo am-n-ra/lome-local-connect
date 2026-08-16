@@ -58,3 +58,9 @@ Aucune modification V1 ne doit réintroduire une landing page séparée, une nav
 Le commit `ff89b7b` a été poussé sur `main` et la production a répondu `HTTP 200` sur `/`, `/carte`, `/auth` et `/vendeur`. Sur `/carte`, le nouveau bouton accessible **« Lancer la recherche »** est visible. Avec la requête `pharmacie`, son clic a déclenché le parcours d’authentification attendu vers `/auth?redirectTo=%2Fcarte%3FpendingSearch%3D1`, ce qui confirme que le bouton appelle le même contrat que la soumission clavier et préserve la requête avant authentification.
 
 Le smoke test a également confirmé que MapLibre est bien présent dans le DOM de production. La couche de fond géographique a affiché une indisponibilité de données cartographiques pendant le test, mais l’application est restée utilisable avec son contrôle de réessai ; cette dépendance de style/tiles doit faire partie de l’audit de résilience réseau de la prochaine tranche.
+
+## Tranche availability et responsive
+
+L’audit Neon a confirmé que la base de production contenait `demand_requests`, mais pas la colonne `credit_cost`, alors que `src/lib/demand.functions.ts` l’utilisait dans l’`INSERT` et dans la lecture des demandes. La migration additive `019_demand_credit_cost_compatibility.sql` a été créée puis appliquée avec succès : la colonne existe maintenant en `integer NOT NULL DEFAULT 1` avec une contrainte positive. Aucun secret de connexion n’a été ajouté au dépôt.
+
+Le rail de résultats a également été corrigé. Chaque carte utilise désormais une largeur bornée par `min(19rem, calc(100vw - 1.5rem))`, une hauteur maximale dérivée de la hauteur dynamique du dock et de `100dvh`, un défilement vertical interne si nécessaire, une image plus courte sur mobile et un ancrage `snap-start`. Le rail conserve son défilement horizontal mais ne peut plus dépasser par le haut du viewport sur les petits écrans.
