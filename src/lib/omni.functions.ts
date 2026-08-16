@@ -4,6 +4,7 @@ import { z } from "zod";
 import { optionalAuth, requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
 import { enforceRateLimit } from "./rate-limit.server";
+import { ensureOsmCoverage, type CoverageViewport } from "./osm-coverage.server";
 
 export type MapFacility = {
   id: string;
@@ -168,6 +169,85 @@ export const listFacilities = createServerFn({ method: "GET" })
       `${FACILITY_SELECT} WHERE ${clauses.join(" AND ")} ORDER BY sponsored DESC, f.name ASC LIMIT 800`,
       params,
     );
+  });
+
+const coverageInput = z.object({
+  west: z.number().min(-180).max(180),
+  south: z.number().min(-85).max(85),
+  east: z.number().min(-180).max(180),
+  north: z.number().min(-85).max(85),
+  zoom: z.number().min(0).max(22),
+  search: z.string().max(120).optional(),
+  category: z.string().max(40).optional(),
+  includeUnclaimed: z.boolean().optional().default(true),
+  limit: z.number().int().min(1).max(240).default(120),
+});
+
+function boundsWhere(
+  data: CoverageViewport & {
+    search?: string | undefined;
+    category?: string | undefined;
+    includeUnclaimed?: boolean | undefined;
+    limit: number;
+  },
+) {
+  const clauses = [
+    "(f.is_online = true OR f.status = 'unclaimed')",
+    "COALESCE(f.emergency_shutdown, false) = false",
+    "f.latitude BETWEEN $1 AND $2",
+    data.west <= data.east
+      ? "f.longitude BETWEEN $3 AND $4"
+      : "(f.longitude >= $3 OR f.longitude <= $4)",
+  ];
+  const params: unknown[] = [data.south, data.north, data.west, data.east];
+  if (data.category && data.category !== "all") {
+    params.push(data.category);
+    clauses.push(`f.category = $${params.length}`);
+  }
+  if (data.search?.trim()) {
+    params.push(`%${data.search.trim()}%`);
+    const index = params.length;
+    clauses.push(`(
+      f.name ILIKE $${index} OR f.description ILIKE $${index} OR f.address ILIKE $${index}
+      OR f.neighbourhood ILIKE $${index}
+      OR EXISTS (
+        SELECT 1 FROM public.products pr
+        WHERE pr.facility_id = f.id AND pr.in_stock
+          AND COALESCE(pr.status, 'active') = 'active'
+          AND COALESCE(pr.quantity_available, 1) > 0
+          AND COALESCE(pr.omni_allocation_percent, 100) > 0
+          AND pr.name ILIKE $${index}
+      )
+    )`);
+  }
+  if (data.includeUnclaimed === false) clauses.push("f.status <> 'unclaimed'");
+  return { clauses, params };
+}
+
+/** Public buyer discovery constrained to the currently visible MapLibre bounds. */
+export const listFacilitiesInBounds = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) => coverageInput.parse(input))
+  .handler(async ({ data }) => {
+    const load = async () => {
+      const { clauses, params } = boundsWhere(data);
+      return query<MapFacility>(
+        `${FACILITY_SELECT} WHERE ${clauses.join(" AND ")}
+         ORDER BY (f.status <> 'unclaimed') DESC, sponsored DESC, f.name ASC
+         LIMIT ${data.limit}`,
+        params,
+      );
+    };
+
+    let rows = await load();
+    if (rows.length === 0 && data.zoom >= 9) {
+      try {
+        await ensureOsmCoverage(data);
+        rows = await load();
+      } catch (error) {
+        console.warn("[Omni coverage] bbox back-fill unavailable", error);
+      }
+    }
+    return rows;
   });
 
 export const getFacility = createServerFn({ method: "GET" })
