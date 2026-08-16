@@ -170,6 +170,67 @@ export const listFacilities = createServerFn({ method: "GET" })
     );
   });
 
+/**
+ * Viewport-driven discovery: every facility inside the visible rectangle, all
+ * markets included. Areas never imported are back-filled from OpenStreetMap.
+ */
+export const listFacilitiesInBounds = createServerFn({ method: "GET" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        minLat: z.number().min(-90).max(90),
+        maxLat: z.number().min(-90).max(90),
+        minLng: z.number().min(-180).max(180),
+        maxLng: z.number().min(-180).max(180),
+        zoom: z.number().min(0).max(24),
+        category: z.string().max(40).optional(),
+        limit: z.number().int().min(1).max(400).default(240),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const bounds = {
+      minLat: Math.min(data.minLat, data.maxLat),
+      maxLat: Math.max(data.minLat, data.maxLat),
+      minLng: Math.min(data.minLng, data.maxLng),
+      maxLng: Math.max(data.minLng, data.maxLng),
+    };
+
+    const runQuery = async () => {
+      const params: unknown[] = [bounds.minLat, bounds.maxLat, bounds.minLng, bounds.maxLng];
+      const clauses = [
+        "f.latitude BETWEEN $1 AND $2",
+        "f.longitude BETWEEN $3 AND $4",
+        "COALESCE(f.emergency_shutdown, false) = false",
+      ];
+      if (data.category && data.category !== "all") {
+        params.push(data.category);
+        clauses.push(`f.category = $${params.length}`);
+      }
+      params.push(data.limit);
+      return query<MapFacility>(
+        `${FACILITY_SELECT} WHERE ${clauses.join(" AND ")}
+         ORDER BY sponsored DESC, (f.status <> 'unclaimed') DESC, f.name ASC
+         LIMIT $${params.length}`,
+        params,
+      );
+    };
+
+    let rows = await runQuery();
+    if (rows.length < 12) {
+      const { ensureCoverage } = await import("@/lib/osm-coverage.server");
+      try {
+        const imported = await ensureCoverage(bounds, data.zoom);
+        if (imported > 0) rows = await runQuery();
+      } catch {
+        // Coverage back-fill is best effort: never break the map.
+      }
+    }
+    return rows;
+  });
+
+
+
 export const getFacility = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
