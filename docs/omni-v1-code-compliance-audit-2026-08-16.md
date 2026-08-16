@@ -52,3 +52,9 @@ Le manuel opérationnel doit rester le muscle du V1 : le buyer envoie une demand
 ## Règle de non-régression
 
 Aucune modification V1 ne doit réintroduire une landing page séparée, une navbar globale permanente, un marché hardcodé, une fausse position utilisateur, une facility unclaimed présentée comme vendeur actif, une disponibilité accessible avant discovery, ni des contrôles quantité/budget visibles par défaut lorsqu’ils ne sont pas pertinents.
+
+## Preuve de la première tranche
+
+Le commit `ff89b7b` a été poussé sur `main` et la production a répondu `HTTP 200` sur `/`, `/carte`, `/auth` et `/vendeur`. Sur `/carte`, le nouveau bouton accessible **« Lancer la recherche »** est visible. Avec la requête `pharmacie`, son clic a déclenché le parcours d’authentification attendu vers `/auth?redirectTo=%2Fcarte%3FpendingSearch%3D1`, ce qui confirme que le bouton appelle le même contrat que la soumission clavier et préserve la requête avant authentification.
+
+Le smoke test a également confirmé que MapLibre est bien présent dans le DOM de production. La couche de fond géographique a affiché une indisponibilité de données cartographiques pendant le test, mais l’application est restée utilisable avec son contrôle de réessai ; cette dépendance de style/tiles doit faire partie de l’audit de résilience réseau de la prochaine tranche.

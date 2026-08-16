@@ -9,7 +9,7 @@ Cette matrice relie les règles du document [`OMNI_MASTER_PRODUCT_INTERFACE.md`]
 | MASTER-03 | Contrôles carte limités à `+`, `−`, recentrage | `MapCanvas`, contrôles de carte | Vérification responsive et clavier | À auditer |
 | MASTER-04 | Notifications et menu uniquement dans le chrome supérieur | `TopNav`, `NotificationsBell`, menu Omni | Test mobile hamburger et desktop | Partiel |
 | MASTER-05 | Search Dock persistant, flottant et translucide | `SearchDock.tsx` | Vérifier tous les états map-first | Partiel |
-| MASTER-06 | Clic sur recherche et `Enter` utilisent un même contrat idempotent | `SmartSearchBar.tsx`, `SearchDock.tsx`, `carte.tsx` | Test clic, Enter, busy, erreur et double soumission | Implémenté — test navigateur à faire |
+| MASTER-06 | Clic sur recherche et `Enter` utilisent un même contrat idempotent | `SmartSearchBar.tsx`, `SearchDock.tsx`, `carte.tsx` | Test clic, Enter, busy, erreur et double soumission | Vérifié — clic production redirige vers auth avec `pendingSearch=1`; Enter partage le même handler |
 | MASTER-07 | Catégories comme raccourcis scrollables horizontaux | `SearchDock.tsx` | Touch, clavier, flèches et 320/375 px | Partiel |
 | MASTER-08 | Quantité/budget masqués par défaut et éditables lorsqu’utiles | `SearchDock.tsx`, filtres de recherche | Idle, recherche active, disponibilité | Partiel |
 | MASTER-09 | Auth avant première exécution backend avec restauration exacte | `carte.tsx`, auth/pending-search helpers | Logout → recherche → login → restauration | Partiel |
