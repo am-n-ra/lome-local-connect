@@ -1,4 +1,8 @@
-# OMNI — Product & Interface Specification
+# OMNI — Product & Interface Specification (source intégrée)
+
+> **STATUT : SOURCE INTÉGRÉE / RÉFÉRENCE HISTORIQUE**
+>
+> La source de vérité normative est désormais [`OMNI_MASTER_PRODUCT_INTERFACE.md`](./OMNI_MASTER_PRODUCT_INTERFACE.md). Les règles de ce document ont été intégrées au master canonique ; toute nouvelle décision doit être ajoutée au master, au journal de décisions et à la matrice de traçabilité.
 
 ## 0. Principe directeur
 Omni est une plateforme de **discovery + real-time availability + transaction**. Le parcours fondamental est :

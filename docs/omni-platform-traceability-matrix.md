@@ -1,5 +1,9 @@
 # Omni Platform Requirement Traceability Matrix
 
+> **Source normative :** [`OMNI_MASTER_PRODUCT_INTERFACE.md`](./OMNI_MASTER_PRODUCT_INTERFACE.md). Cette matrice décrit l’état d’exécution et de conformité ; elle ne remplace pas le master et ne peut pas introduire seule une nouvelle règle produit.
+>
+> **Pattern facility confirmé :** les panneaux horizontaux défilables des facilities sont le pattern officiel de découverte et doivent être validés sur mobile, desktop, clavier et touch.
+
 **Baseline:** Merged `main` branch at the beginning of the full-platform documentation pass.
 
 **Status vocabulary:** `Verified` means browser or repository evidence exists; `Partial` means a meaningful implementation exists but does not meet the complete specification; `Planned` means the requirement is described but not yet implemented; `Guarded` means the capability exists behind a feature flag or plan gate.
