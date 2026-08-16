@@ -51,3 +51,18 @@ La timeline buyer affichée en production contient les huit événements suivant
 ## Conformité et réserve
 
 La boucle fonctionnelle V1 est donc vérifiée de bout en bout en production. Le paiement reste volontairement manuel/externe, conformément au périmètre V1 ; aucune transaction financière réelle n’a été exécutée. Le test browser a été réalisé sur la largeur desktop du navigateur disponible. Un audit séparé des captures aux largeurs 320, 375, 768 et 1280 px reste recommandé avant la clôture finale de la phase responsive.
+
+## Audit responsive final — 2026-08-16
+
+Le commit `dd427c3` a été poussé sur `origin/main` après succès du lint ciblé et du build de production. La validation production après propagation confirme que le workspace seller continue de se charger, que les onglets `Demandes reçues` et `Scanner QR` restent accessibles et que la surface opérationnelle conserve son rendu glass.
+
+| Surface | 320–375 px — règle vérifiée | 768 px | 1280 px — observation production |
+|---|---|---|---|
+| Cartes de résultats buyer | Largeur contrainte à `min(19rem, 100vw - 1.5rem)` ; texte avec `break-words` ; les quatre métriques restent en grille 2 colonnes | La carte conserve son gabarit compact | Aucun débordement horizontal observé |
+| Dock de recherche | Grille mono-colonne pour quantité/budget ; boutons et champs en largeur disponible | Passage progressif vers deux colonnes | Dock centré et contenu dans la largeur utile |
+| Panneau seller availability | Champs prix et quantité désormais `w-full` sur mobile puis tailles compactes à partir de `sm` | Les contrôles reviennent en ligne avec `flex-wrap` | Rendu inchangé et réponse Available opérationnelle |
+| Scanner QR seller | Champ et bouton empilés sur mobile ; bouton pleine largeur | Retour en ligne à partir de `sm` | Scan et rafraîchissement des transactions conservés |
+| Panneau buyer Orders/QR | Sheet pleine largeur sous `sm`, boutons pleine largeur, timeline avec texte compact | Sheet limitée à `md` | Timeline et QR vérifiés dans le parcours complet |
+| Navigation seller | Grille de raccourcis mobile 2 colonnes ; onglets secondaires avec défilement horizontal intentionnel | Raccourcis 4 colonnes | Aucun élément hors écran observé à `1280px` |
+
+Le contrôle runtime à `1280px` a confirmé `document.scrollWidth = document.clientWidth` et aucun élément visible ne dépassait les limites horizontales du viewport. Les règles mobile sont désormais explicites sur les formulaires seller les plus sensibles. Une capture automatisée avec viewport matériel 320/375 px reste recommandée si un appareil physique ou un runner mobile est disponible ; aucun runner Playwright/Puppeteer n’était présent dans l’environnement de vérification actuel.
