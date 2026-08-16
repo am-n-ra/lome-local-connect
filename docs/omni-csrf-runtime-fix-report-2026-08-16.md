@@ -55,3 +55,7 @@ Evidence files:
 ## Deployment status
 
 The fix is ready to push to `main`. Post-deploy verification must confirm that the production aliases no longer show `createCsrfMiddleware is not a function`. Vercel runtime log access is not available in the sandbox, so the final production check requires the deployment to complete and the public routes to be requested after the push.
+
+## Post-push check
+
+The dependency repair and report were pushed to `main` at `16ec94088fb35590fa828cb402c79314bc20f8e1`. Thirty seconds after the push, the public alias still returned HTTP 500 for `/`, `/carte`, `/auth`, `/vendeur`, `/api-docs`, `/a-propos`, and `/api/auth/token`. The response remained the generic Vercel error page with `x-vercel-cache: MISS`, so production recovery is not yet confirmed. The deployment may still be building, may not be connected to this repository branch, or may still be using a failing cached/runtime bundle. Fresh Vercel runtime logs for the new deployment are required before declaring the issue resolved.
