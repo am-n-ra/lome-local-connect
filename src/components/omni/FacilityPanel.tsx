@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
+import { useNavigate } from "@tanstack/react-router";
 import { useCart } from "@/lib/cart";
 import {
   categoryLabel,
@@ -44,6 +45,7 @@ export function FacilityPanel({
   onCheckAvailability,
 }: Props) {
   const { formatMoney } = useMarket();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const cart = useCart();
   const [products, setProducts] = useState<ProductRow[]>([]);
@@ -136,6 +138,10 @@ export function FacilityPanel({
   async function startProductIntent(product: ProductRow, quantity: number) {
     if (!user) {
       toast.info("Connectez-vous pour commencer un achat.");
+      navigate({
+        to: "/auth",
+        search: { redirectTo: `/fiche/${facility.id}` },
+      });
       return;
     }
     setIntentBusy(product.id);

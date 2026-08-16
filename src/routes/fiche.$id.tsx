@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { MapCanvas } from "@/components/omni/MapCanvas";
 import { FacilityPanel } from "@/components/omni/FacilityPanel";
 import { MediaCarousel } from "@/components/omni/MediaCarousel";
-import { TopNav } from "@/components/omni/TopNav";
 import { haversineKm, DEFAULT_CENTER } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 
@@ -20,9 +19,16 @@ export const Route = createFileRoute("/fiche/$id")({
   head: () => ({
     meta: [
       { title: "Fiche commerce — OmniView" },
-      { name: "description", content: "Produits disponibles, disponibilité en temps réel et itinéraire vers ce commerce de Lomé." },
+      {
+        name: "description",
+        content:
+          "Produits disponibles, disponibilité en temps réel et itinéraire vers ce commerce de Lomé.",
+      },
       { property: "og:title", content: "Fiche commerce — OmniView" },
-      { property: "og:description", content: "Voir les produits, la disponibilité et l'itinéraire." },
+      {
+        property: "og:description",
+        content: "Voir les produits, la disponibilité et l'itinéraire.",
+      },
     ],
   }),
   component: FichePage,
@@ -31,9 +37,10 @@ export const Route = createFileRoute("/fiche/$id")({
 function FichePage() {
   const { id } = Route.useParams();
   const { market } = useMarket();
-  const fallbackCenter = market?.default_lat != null
-    ? { lat: market.default_lat, lng: market.default_lng }
-    : DEFAULT_CENTER;
+  const fallbackCenter =
+    market?.default_lat != null
+      ? { lat: market.default_lat, lng: market.default_lng }
+      : DEFAULT_CENTER;
   const [facility, setFacility] = useState<ApiFacility | null>(null);
   const [media, setMedia] = useState<FacilityMediaRow[]>([]);
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
@@ -72,7 +79,9 @@ function FichePage() {
       const res = await fetch(
         `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${facility.longitude},${facility.latitude}?overview=full&geometries=geojson`,
       );
-      const json = (await res.json()) as { routes?: { geometry: { coordinates: [number, number][] } }[] };
+      const json = (await res.json()) as {
+        routes?: { geometry: { coordinates: [number, number][] } }[];
+      };
       if (!json.routes?.[0]) {
         toast.error("Itinéraire indisponible.");
         return;
@@ -87,7 +96,6 @@ function FichePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav activeRole="acheteur" />
       <main className="mx-auto max-w-5xl px-4 py-6">
         <Button asChild variant="ghost" size="sm" className="mb-4">
           <Link to="/carte">
@@ -103,7 +111,10 @@ function FichePage() {
               <MediaCarousel media={media} />
               <FacilityPanel
                 facility={{ ...facility, isPro: facility.sponsored || facility.tier === "pro" }}
-                distanceKm={haversineKm(userPos ?? fallbackCenter, { lat: facility.latitude, lng: facility.longitude })}
+                distanceKm={haversineKm(userPos ?? fallbackCenter, {
+                  lat: facility.latitude,
+                  lng: facility.longitude,
+                })}
                 routingBusy={busy}
                 onItinerary={() => void itinerary()}
               />

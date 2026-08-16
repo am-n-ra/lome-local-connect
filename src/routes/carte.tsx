@@ -711,7 +711,7 @@ export function CartePage() {
                           />
                         ) : (
                           <div className="grid h-28 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                            Omni · média à venir
+                            Aucun média public disponible
                           </div>
                         )}
                       </div>

@@ -13,7 +13,6 @@ import {
   type AdminFacilityRow,
   type AdminStats,
 } from "@/lib/admin.functions";
-import { TopNav } from "@/components/omni/TopNav";
 import { OpsPanel } from "@/components/omni/admin/OpsPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -136,7 +135,6 @@ function AdminPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="mx-auto max-w-2xl p-6">
           <h1 className="font-display text-2xl font-bold">Console interne</h1>
           <p className="mt-2 text-muted-foreground">Connectez-vous avec un compte de l'équipe.</p>
@@ -148,7 +146,6 @@ function AdminPage() {
   if (denied || !isStaff) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav />
         <main className="mx-auto max-w-2xl p-6">
           <h1 className="font-display text-2xl font-bold">Accès réservé</h1>
           <p className="mt-2 text-muted-foreground">
@@ -161,7 +158,6 @@ function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
       <main className="mx-auto max-w-6xl space-y-6 p-4 pb-24">
         <header>
           <h1 className="font-display text-2xl font-bold">Console acquisition</h1>

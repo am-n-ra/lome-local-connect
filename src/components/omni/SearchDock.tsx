@@ -99,12 +99,14 @@ export function SearchDock({
   const { formatMoney } = useMarket();
   const dockRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [parametersOpen, setParametersOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(String(quantity));
   const [budgetDraft, setBudgetDraft] = useState(
     filters.maxPrice == null ? "" : String(filters.maxPrice),
   );
   const activeCount = activeFilterCount(filters);
+  const hasExplicitStructuredValues = quantity !== 1 || filters.maxPrice !== null;
+  const controlsOpen = parametersOpen || hasExplicitStructuredValues;
   const isPrecise =
     locationStatus === "granted" &&
     locationAccuracy != null &&
@@ -192,110 +194,113 @@ export function SearchDock({
           )}
         </div>
 
-        <div
-          data-omni-dock-row="structured"
-          className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
-        >
-          <div className="rounded-2xl bg-background/72 px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label
-                htmlFor="omni-quantity"
-                className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
-              >
-                Quantité
-              </Label>
-              <span className="text-[10px] text-muted-foreground">unités</span>
+        {controlsOpen && (
+          <div
+            data-omni-dock-row="structured"
+            className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
+          >
+            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label
+                  htmlFor="omni-quantity"
+                  className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+                >
+                  Quantité
+                </Label>
+                <span className="text-[10px] text-muted-foreground">unités</span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Diminuer la quantité"
+                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <Input
+                  id="omni-quantity"
+                  inputMode="numeric"
+                  min={1}
+                  value={quantityDraft}
+                  onChange={(event) => setQuantityDraft(event.target.value.replace(/\D/g, ""))}
+                  onBlur={commitQuantity}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") commitQuantity();
+                  }}
+                  className="h-9 min-w-0 flex-1 bg-background/70 text-center text-sm font-bold"
+                  aria-label="Quantité souhaitée"
+                />
+                <button
+                  type="button"
+                  aria-label="Augmenter la quantité"
+                  onClick={() => onQuantityChange?.(quantity + 1)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-            <div className="mt-1.5 flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Diminuer la quantité"
-                onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-              <Input
-                id="omni-quantity"
-                inputMode="numeric"
-                min={1}
-                value={quantityDraft}
-                onChange={(event) => setQuantityDraft(event.target.value.replace(/\D/g, ""))}
-                onBlur={commitQuantity}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") commitQuantity();
-                }}
-                className="h-9 min-w-0 flex-1 bg-background/70 text-center text-sm font-bold"
-                aria-label="Quantité souhaitée"
-              />
-              <button
-                type="button"
-                aria-label="Augmenter la quantité"
-                onClick={() => onQuantityChange?.(quantity + 1)}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
+            <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label
+                  htmlFor="omni-budget"
+                  className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
+                >
+                  Budget maximum
+                </Label>
+                <button
+                  type="button"
+                  aria-pressed={filters.maxPrice === null}
+                  onClick={() => {
+                    setBudgetDraft("");
+                    onFiltersChange({ ...filters, maxPrice: null });
+                  }}
+                  className={`rounded-full px-2 py-1 text-[10px] font-bold ${filters.maxPrice === null ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}
+                >
+                  Illimité
+                </button>
+              </div>
+              <div className="mt-1.5 flex items-center gap-2">
+                <Input
+                  id="omni-budget"
+                  inputMode="numeric"
+                  min={0}
+                  value={budgetDraft}
+                  placeholder="Montant"
+                  onChange={(event) => setBudgetDraft(event.target.value.replace(/\D/g, ""))}
+                  onBlur={commitBudget}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") commitBudget();
+                  }}
+                  className="h-9 min-w-0 flex-1 bg-background/70 text-sm font-bold"
+                  aria-label="Budget maximum"
+                />
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {filters.maxPrice === null ? "sans limite" : formatMoney(filters.maxPrice)}
+                </span>
+              </div>
             </div>
           </div>
-          <div className="rounded-2xl bg-background/72 px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label
-                htmlFor="omni-budget"
-                className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground"
-              >
-                Budget maximum
-              </Label>
-              <button
-                type="button"
-                aria-pressed={filters.maxPrice === null}
-                onClick={() => {
-                  setBudgetDraft("");
-                  onFiltersChange({ ...filters, maxPrice: null });
-                }}
-                className={`rounded-full px-2 py-1 text-[10px] font-bold ${filters.maxPrice === null ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground"}`}
-              >
-                Illimité
-              </button>
-            </div>
-            <div className="mt-1.5 flex items-center gap-2">
-              <Input
-                id="omni-budget"
-                inputMode="numeric"
-                min={0}
-                value={budgetDraft}
-                placeholder="Montant"
-                onChange={(event) => setBudgetDraft(event.target.value.replace(/\D/g, ""))}
-                onBlur={commitBudget}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") commitBudget();
-                }}
-                className="h-9 min-w-0 flex-1 bg-background/70 text-sm font-bold"
-                aria-label="Budget maximum"
-              />
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {filters.maxPrice === null ? "sans limite" : formatMoney(filters.maxPrice)}
-              </span>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div data-omni-dock-row="discovery" className="flex items-center gap-2">
           <button
             type="button"
-            aria-label={categoriesOpen ? "Masquer les catégories" : "Afficher les catégories"}
-            aria-expanded={categoriesOpen}
-            onClick={() => setCategoriesOpen((open) => !open)}
+            aria-label={controlsOpen ? "Masquer les paramètres" : "Afficher les paramètres"}
+            aria-expanded={controlsOpen}
+            onClick={() => setParametersOpen((open) => !open)}
             className="omni-glass grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
           >
-            {categoriesOpen ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronUp className="h-4 w-4" />
-            )}
+            {controlsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
-          {categoriesOpen && (
+          {controlsOpen && (
             <div className="omni-glass min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
+              {hasExplicitStructuredValues && !parametersOpen && (
+                <p className="px-2 text-[11px] text-muted-foreground">
+                  Paramètres actifs. Ouvrez le chevron pour les modifier.
+                </p>
+              )}
               <div className="flex min-w-0 items-center gap-1 rounded-full bg-background/35 p-1">
                 <button
                   type="button"

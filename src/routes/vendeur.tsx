@@ -395,7 +395,7 @@ function VendeurPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav activeRole="vendeur" />
+        <TopNav activeRole="vendeur" minimalMapChrome />
         <div className="mx-auto max-w-md px-4 py-20 text-center">
           <Store className="mx-auto h-10 w-10 text-primary" />
           <h1 className="mt-4 font-display text-2xl font-bold">Connectez-vous pour vendre</h1>
@@ -415,7 +415,7 @@ function VendeurPage() {
   if (!facility) {
     return (
       <div className="min-h-screen bg-background">
-        <TopNav activeRole="vendeur" />
+        <TopNav activeRole="vendeur" minimalMapChrome />
         <div className="mx-auto max-w-lg px-4 py-10">
           <h1 className="font-display text-3xl font-bold">Créez votre fiche</h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -539,7 +539,7 @@ function VendeurPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TopNav activeRole="vendeur" />
+      <TopNav activeRole="vendeur" minimalMapChrome />
       <main className="mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
         <section className="omni-glass rounded-[1.6rem] p-4 shadow-[var(--shadow-soft)] sm:p-5">
           <div className="flex flex-wrap items-start gap-3">
@@ -593,7 +593,31 @@ function VendeurPage() {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
-          <TabsList className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
+            {[
+              ["apercu", "Aujourd'hui"],
+              ["demandes", "Demandes"],
+              ["produits", "Catalogue"],
+              ["encaisser", "Scanner QR"],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setActiveTab(value)}
+                className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                  activeTab === value
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-card/70 text-muted-foreground hover:bg-secondary"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <TabsList
+            aria-label="Opérations vendeur"
+            className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             <TabsTrigger value="apercu">Aperçu</TabsTrigger>
             {pro && OMNI_CONFIG.sellerAgentEnabled && (
               <TabsTrigger value="agent">Agent IA</TabsTrigger>
@@ -601,9 +625,9 @@ function VendeurPage() {
             <TabsTrigger value="solde">Solde</TabsTrigger>
             <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
             <TabsTrigger value="parametres">Paramètres</TabsTrigger>
-            <TabsTrigger value="produits">Produits</TabsTrigger>
+            <TabsTrigger value="produits">Catalogue & inventaire</TabsTrigger>
             <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
-            <TabsTrigger value="encaisser">Encaisser</TabsTrigger>
+            <TabsTrigger value="encaisser">Scanner QR</TabsTrigger>
             <TabsTrigger value="pub">Publicité</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
             <TabsTrigger value="demande-locale">Demande locale</TabsTrigger>
@@ -679,18 +703,11 @@ function VendeurPage() {
               </p>
               <h2 className="font-display text-2xl font-bold">Configuration du commerce</h2>
               <p className="text-sm text-muted-foreground">
-                Les horaires, la position, le statut en ligne et l'arrêt d'urgence se gèrent dans
-                l'onglet Aperçu. Les réglages de profil avancés seront ajoutés à ce point d'entrée.
+                Les réglages actuellement disponibles sont regroupés dans l&apos;aperçu opérationnel
+                : horaires, position, statut en ligne et arrêt d&apos;urgence.
               </p>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  toast.info(
-                    "Les réglages avancés seront disponibles dans une prochaine mise à jour.",
-                  )
-                }
-              >
-                Réglages avancés
+              <Button variant="outline" onClick={() => setActiveTab("apercu")}>
+                Ouvrir les réglages opérationnels
               </Button>
             </div>
           </TabsContent>

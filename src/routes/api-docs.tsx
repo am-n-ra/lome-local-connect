@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { TopNav } from "@/components/omni/TopNav";
 
 export const Route = createFileRoute("/api-docs")({
   component: ApiDocsPage,
@@ -14,7 +13,8 @@ export const Route = createFileRoute("/api-docs")({
       { property: "og:title", content: "API publique OmniView" },
       {
         property: "og:description",
-        content: "Endpoints REST en lecture seule sur les commerces de Lomé référencés par OmniView.",
+        content:
+          "Endpoints REST en lecture seule sur les commerces de Lomé référencés par OmniView.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -52,7 +52,6 @@ const ENDPOINTS = [
 function ApiDocsPage() {
   return (
     <div className="min-h-screen bg-background">
-      <TopNav />
       <main className="mx-auto max-w-3xl space-y-6 p-4 pb-24">
         <header>
           <h1 className="font-display text-2xl font-bold">API publique OmniView</h1>

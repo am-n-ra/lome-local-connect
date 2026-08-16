@@ -91,31 +91,6 @@ export function TopNav({
         )}
 
         <div className="flex min-w-0 items-center justify-end gap-2 md:gap-3">
-          <div className="pointer-events-auto hidden shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur md:flex">
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/carte" })}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
-                activeRole === "acheteur"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-background/70"
-              }`}
-            >
-              Acheteur
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate({ to: "/vendeur" })}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition-colors ${
-                activeRole === "vendeur"
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-background/70"
-              }`}
-            >
-              Vendeur
-            </button>
-          </div>
-
           <div className="pointer-events-auto shrink-0">
             <NotificationsBell />
           </div>
@@ -145,6 +120,7 @@ export function TopNav({
         onOpenOrders={onOpenOrders}
         onOpenChat={onOpenChat}
         onOpenDemand={onOpenDemand}
+        activeRole={activeRole}
       />
     </header>
   );

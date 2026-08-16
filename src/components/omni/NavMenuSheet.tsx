@@ -40,6 +40,7 @@ type Props = {
   onOpenOrders?: (() => void) | undefined;
   onOpenChat?: (() => void) | undefined;
   onOpenDemand?: (() => void) | undefined;
+  activeRole?: "acheteur" | "vendeur";
 };
 
 /** Single glass navigation panel holding every secondary action. */
@@ -51,6 +52,7 @@ export function NavMenuSheet({
   onOpenOrders,
   onOpenChat,
   onOpenDemand,
+  activeRole = "acheteur",
 }: Props) {
   const navigate = useNavigate();
   const { user, isStaff, signOut } = useAuth();
@@ -88,6 +90,38 @@ export function NavMenuSheet({
             Retrouvez vos recherches, demandes et achats depuis ce panneau.
           </p>
         </div>
+
+        <section className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            Espace actif
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => go(() => navigate({ to: "/carte" }))}
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+                activeRole === "acheteur"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background/70 text-muted-foreground hover:bg-background"
+              }`}
+              aria-pressed={activeRole === "acheteur"}
+            >
+              Acheteur
+            </button>
+            <button
+              type="button"
+              onClick={() => go(() => navigate({ to: "/vendeur" }))}
+              className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
+                activeRole === "vendeur"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background/70 text-muted-foreground hover:bg-background"
+              }`}
+              aria-pressed={activeRole === "vendeur"}
+            >
+              Vendeur
+            </button>
+          </div>
+        </section>
 
         <nav className="mt-5 grid gap-1.5" aria-label="Navigation secondaire">
           <MenuRow
