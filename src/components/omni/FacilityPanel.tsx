@@ -183,16 +183,16 @@ export function FacilityPanel({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       {facility.cover_url && (
         <img
           src={facility.cover_url}
           alt={`Vitrine de ${facility.name}`}
           loading="lazy"
-          className="aspect-[16/9] w-full rounded-2xl border border-border object-cover"
+          className="aspect-[16/9] w-full rounded-[1.35rem] border border-border/70 object-cover shadow-[var(--shadow-soft)]"
         />
       )}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
         <div className="min-w-0">
           <h2 className="font-display text-xl font-bold">{facility.name}</h2>
           <p className="text-sm text-muted-foreground">
@@ -224,7 +224,7 @@ export function FacilityPanel({
       )}
 
       {facility.status === "unclaimed" && (
-        <div className="omni-card space-y-2 border-dashed p-3">
+        <div className="omni-glass space-y-2 rounded-2xl border border-dashed border-primary/35 p-3">
           <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
           <p className="text-xs text-muted-foreground">
             Les horaires, produits et prix ne sont pas confirmés.
@@ -236,38 +236,53 @@ export function FacilityPanel({
       )}
 
       {onCheckAvailability && (
-        <Button className="w-full" onClick={onCheckAvailability}>
+        <Button className="min-h-10 w-full" onClick={onCheckAvailability}>
           <CheckCircle2 className="mr-1.5 h-4 w-4" />
           Vérifier la disponibilité
         </Button>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={onItinerary} disabled={routingBusy}>
+      <div className="grid gap-2 sm:flex sm:flex-wrap">
+        <Button
+          className="min-h-10 min-w-0 flex-1"
+          variant="outline"
+          onClick={onItinerary}
+          disabled={routingBusy}
+        >
           <Navigation className="mr-1.5 h-4 w-4" />
           {routingBusy ? "Calcul…" : "Itinéraire"}
         </Button>
-        <Button variant="outline" onClick={() => setShowPhone((v) => !v)}>
+        <Button
+          className="min-h-10 min-w-0 flex-1"
+          variant="outline"
+          onClick={() => setShowPhone((v) => !v)}
+        >
           <Phone className="mr-1.5 h-4 w-4" />
           {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
         </Button>
-        <Button variant="outline" onClick={() => setDemandOpen((v) => !v)}>
+        <Button
+          className="min-h-10 min-w-0 flex-1"
+          variant="outline"
+          onClick={() => setDemandOpen((v) => !v)}
+        >
           <Search className="mr-1.5 h-4 w-4" />
           Je cherche ce produit
         </Button>
       </div>
 
       {demandOpen && (
-        <div className="omni-card space-y-2 p-3">
+        <div className="omni-glass space-y-2 rounded-2xl p-3">
           <p className="text-sm font-medium">Quel produit cherchez-vous et ne trouvez pas ?</p>
-          <div className="flex gap-2">
+          <div className="grid gap-2 sm:flex">
             <Input
               value={demandTerm}
               maxLength={120}
               onChange={(e) => setDemandTerm(e.target.value)}
               placeholder="Ex. Batterie externe solaire"
             />
-            <Button onClick={() => void submitDemand()}>Envoyer</Button>
+            <Button className="min-h-10 shrink-0" onClick={() => void submitDemand()}>
+              Envoyer
+            </Button>
           </div>
         </div>
       )}
@@ -278,7 +293,7 @@ export function FacilityPanel({
           {coupons.map((c) => (
             <div
               key={c.id}
-              className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-2 text-sm"
+              className="omni-glass flex min-w-0 items-center gap-2 rounded-2xl border border-dashed border-primary/35 p-2 text-sm"
             >
               <Ticket className="h-4 w-4 text-primary" />
               <span className="font-mono font-bold">{c.code}</span>
@@ -295,7 +310,10 @@ export function FacilityPanel({
         {products.map((p) => {
           const qty = quantities[p.id] ?? 1;
           return (
-            <div key={p.id} className="omni-card flex items-center gap-3 p-3">
+            <div
+              key={p.id}
+              className="omni-glass grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl p-3 sm:flex sm:items-center"
+            >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xl">
                 {p.photo_url ? (
                   <img
@@ -330,7 +348,7 @@ export function FacilityPanel({
                   </Badge>
                 </div>
               </div>
-              <div className="flex flex-col items-end gap-1.5">
+              <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-col sm:items-end sm:gap-1.5">
                 <div className="flex items-center gap-1">
                   <Button
                     variant="outline"

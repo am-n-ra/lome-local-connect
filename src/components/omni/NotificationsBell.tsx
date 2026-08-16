@@ -59,7 +59,12 @@ export function NotificationsBell() {
   return (
     <Popover open={open} onOpenChange={(v) => void onOpenChange(v)}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Notifications" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Notifications"
+          className="omni-glass relative h-10 w-10 rounded-full"
+        >
           <Bell className="h-5 w-5" />
           {unread > 0 && (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
@@ -68,7 +73,11 @@ export function NotificationsBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 p-0">
+      <PopoverContent
+        align="end"
+        collisionPadding={12}
+        className="w-[min(20rem,calc(100vw-1.5rem))] p-0"
+      >
         <p className="border-b border-border px-3 py-2 text-sm font-semibold">Notifications</p>
         <div className="max-h-80 overflow-y-auto">
           {items.length === 0 && (
@@ -85,9 +94,7 @@ export function NotificationsBell() {
               }}
             >
               <span className="block text-sm font-medium">{n.title}</span>
-              {n.body && (
-                <span className="block text-xs text-muted-foreground">{n.body}</span>
-              )}
+              {n.body && <span className="block text-xs text-muted-foreground">{n.body}</span>}
               <span className="block text-[11px] text-muted-foreground">
                 {new Date(n.created_at).toLocaleString("fr-FR")}
               </span>

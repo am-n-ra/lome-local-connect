@@ -229,7 +229,13 @@ export function SearchDock({
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="end" side="top" className="w-80 space-y-4 rounded-2xl">
+              <PopoverContent
+                align="end"
+                side="top"
+                sideOffset={10}
+                collisionPadding={12}
+                className="w-[min(20rem,calc(100vw-1.5rem))] max-h-[min(34rem,calc(100dvh-var(--omni-dock-clearance,12rem)-1rem))] space-y-4 overflow-y-auto overscroll-contain rounded-2xl"
+              >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-xs">Rayon</Label>
