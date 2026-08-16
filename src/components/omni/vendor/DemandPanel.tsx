@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatDateFr } from "@/lib/omni";
+import { formatDateFr, formatFcfa } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import type { DemandSignal } from "@/lib/vendor.functions";
 import {
@@ -77,8 +77,8 @@ export function DemandPanel({
       <div className="space-y-3">
         <h3 className="font-display text-lg font-bold">Demandes en direct</h3>
         <p className="text-sm text-muted-foreground">
-          Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou
-          indisponible avec votre prix et la quantité exacte disponible.
+          Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou indisponible
+          avec votre prix et la quantité exacte disponible.
         </p>
         <ul className="space-y-2">
           {live.map((r) => (
@@ -90,6 +90,64 @@ export function DemandPanel({
                   {r.distance_km !== null ? ` · ${r.distance_km.toFixed(1)} km` : ""}
                 </span>
               </div>
+              <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-primary/8 p-3">
+                {r.matched_product_photo_url ? (
+                  <img
+                    src={r.matched_product_photo_url}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                  />
+                ) : (
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                    ●
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                    Produit recherché
+                  </p>
+                  <p className="break-words text-sm font-semibold">
+                    {r.matched_product_name ?? r.search_term}
+                  </p>
+                  <p className="break-words text-xs text-muted-foreground">
+                    {r.matched_product_name
+                      ? `Correspondance catalogue${r.matched_product_price != null ? ` · ${formatFcfa(r.matched_product_price)}` : ""}${r.matched_product_quantity != null ? ` · ${r.matched_product_quantity} disponible(s)` : ""}`
+                      : "Correspondance à confirmer avant réponse"}
+                  </p>
+                </div>
+              </div>
+              {r.budget_max != null && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Budget buyer :{" "}
+                  <span className="font-semibold text-foreground">{formatFcfa(r.budget_max)}</span>
+                </p>
+              )}
+              {!r.answered && r.matched_product_name && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full"
+                  onClick={() => {
+                    setPrices((current) => ({
+                      ...current,
+                      [r.id]:
+                        r.matched_product_price != null
+                          ? String(r.matched_product_price)
+                          : (current[r.id] ?? ""),
+                    }));
+                    setQuantities((current) => ({
+                      ...current,
+                      [r.id]:
+                        r.matched_product_quantity != null
+                          ? String(r.matched_product_quantity)
+                          : (current[r.id] ?? ""),
+                    }));
+                  }}
+                >
+                  Utiliser ce produit pour répondre
+                </Button>
+              )}
               {r.answered ? (
                 <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
               ) : (

@@ -45,3 +45,12 @@ Toute modification du master ou du code doit mettre à jour la ligne concernée,
 |---|---|---|---|---|
 | MASTER-23 | `demand_requests` expose le coût de crédit utilisé par les demandes de disponibilité | `db/migrations/019_demand_credit_cost_compatibility.sql`, `src/lib/demand.functions.ts` | Audit Neon avant/après ; colonne présente en `integer NOT NULL DEFAULT 1` | Vérifié en production |
 | MASTER-24 | Le rail horizontal reste dans le viewport et au-dessus du dock | `src/routes/carte.tsx`, `SearchDock.tsx` | Build Vercel réussi ; validation navigateur 320/375 px à compléter | Implémenté — validation responsive à compléter |
+
+## Correctif 2026-08-16 — cartes, couverture et produit seller
+
+| ID | Exigence | Code | Validation | Statut |
+|---|---|---|---|---|
+| MASTER-25 | Une erreur de couverture ne doit pas exposer un message technique au buyer | `src/components/omni/SearchDock.tsx` | État `error` masqué dans le dock ; diagnostics conservés côté serveur | Implémenté |
+| MASTER-26 | Une card facility affiche entièrement le contexte de la recherche sans scroll interne | `src/routes/carte.tsx` | Card sans `overflow-y-auto`, largeur bornée par viewport, rail horizontal conservé | Implémenté — validation multi-breakpoint à compléter |
+| MASTER-27 | La card affiche le produit correspondant uniquement lorsqu’une correspondance catalogue fiable existe | `src/lib/omni.functions.ts`, `src/routes/carte.tsx` | Match produit par facility et terme ; fallback honnête « Correspondance à confirmer » | Implémenté |
+| MASTER-28 | Le seller voit et peut utiliser le produit correspondant à une demande availability | `src/lib/demand.functions.ts`, `src/components/omni/vendor/DemandPanel.tsx` | Produit, prix, quantité, média, budget et préremplissage de réponse | Implémenté — test authentifié seller à compléter |

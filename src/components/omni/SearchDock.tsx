@@ -348,7 +348,7 @@ export function SearchDock({
           data-omni-dock-row="context"
           className="flex flex-wrap items-center justify-center gap-2"
         >
-          {coverageStatus !== "idle" && (
+          {coverageStatus !== "idle" && coverageStatus !== "error" && (
             <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
               {coverageStatus === "loading" && (
                 <LoaderCircle
@@ -357,9 +357,9 @@ export function SearchDock({
                 />
               )}
               {coverageStatus === "loading"
-                ? "Recherche de la zone…"
+                ? "Exploration en cours…"
                 : coverageStatus === "error"
-                  ? "Zone momentanément indisponible"
+                  ? "Exploration disponible"
                   : "Zone cartographiée"}
             </span>
           )}

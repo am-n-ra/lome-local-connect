@@ -39,11 +39,18 @@ export type VendorDemandRequest = {
   id: string;
   search_term: string;
   quantity: number;
+  budget_max: number | null;
+  mode: "bulk" | "manual" | string;
   created_at: string;
   expires_at: string;
   buyer_name: string | null;
   distance_km: number | null;
   answered: boolean;
+  matched_product_id: string | null;
+  matched_product_name: string | null;
+  matched_product_price: number | null;
+  matched_product_quantity: number | null;
+  matched_product_photo_url: string | null;
 };
 
 /** Mode B — one search broadcast to every nearby seller. */
@@ -260,7 +267,7 @@ export const listDemandForFacility = createServerFn({ method: "GET" })
     if (!facility) throw new Error("Ce commerce ne vous appartient pas.");
 
     return query<VendorDemandRequest>(
-      `SELECT d.id, d.search_term, d.quantity, d.created_at, d.expires_at,
+      `SELECT d.id, d.search_term, d.quantity, d.budget_max, d.mode, d.created_at, d.expires_at,
               p.name AS buyer_name,
               CASE WHEN d.latitude IS NULL THEN NULL ELSE
                 6371 * acos(LEAST(1, GREATEST(-1,
@@ -269,12 +276,29 @@ export const listDemandForFacility = createServerFn({ method: "GET" })
                   sin(radians(d.latitude)) * sin(radians($2))
                 )))
               END AS distance_km,
+              match.id AS matched_product_id,
+              match.name AS matched_product_name,
+              match.price AS matched_product_price,
+              match.quantity_available AS matched_product_quantity,
+              match.photo_url AS matched_product_photo_url,
               EXISTS (
                 SELECT 1 FROM public.demand_responses r
                 WHERE r.request_id = d.id AND r.facility_id = $1
               ) AS answered
        FROM public.demand_requests d
        JOIN public.profiles p ON p.id = d.buyer_id
+       LEFT JOIN LATERAL (
+         SELECT pr.id, pr.name, pr.price, pr.quantity_available, pr.photo_url
+         FROM public.products pr
+         WHERE pr.facility_id = $1
+           AND pr.name ILIKE '%' || d.search_term || '%'
+           AND pr.in_stock = true
+           AND COALESCE(pr.status, 'active') = 'active'
+           AND COALESCE(pr.quantity_available, 1) > 0
+           AND COALESCE(pr.omni_allocation_percent, 100) > 0
+         ORDER BY pr.quantity_available DESC, pr.last_confirmed_at DESC NULLS LAST, pr.name ASC
+         LIMIT 1
+       ) match ON true
        WHERE d.status = 'open' AND d.expires_at > now()
        ORDER BY d.created_at DESC
        LIMIT 40`,

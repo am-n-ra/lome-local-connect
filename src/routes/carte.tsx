@@ -697,6 +697,7 @@ export function CartePage() {
                   const isUnclaimed = facility.status === "unclaimed";
                   const isTrusted =
                     facility.status === "confirmed" || facility.status === "certified";
+                  const hasMatchedProduct = Boolean(facility.matched_product_name);
                   return (
                     <button
                       key={facility.id}
@@ -709,7 +710,7 @@ export function CartePage() {
                         setRouteCoords(null);
                         setSteps([]);
                       }}
-                      className="omni-glass group max-h-[calc(100dvh-var(--omni-dock-clearance,12rem)-0.75rem)] w-[min(19rem,calc(100vw-1.5rem))] shrink-0 snap-start overflow-y-auto rounded-[1.5rem] p-3 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
+                      className="omni-glass group min-w-0 w-[min(19rem,calc(100vw-1.5rem))] shrink-0 snap-start rounded-[1.5rem] p-2.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
                     >
                       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
                         {facility.cover_url ? (
@@ -717,10 +718,10 @@ export function CartePage() {
                             src={facility.cover_url}
                             alt={`Aperçu de ${facility.name}`}
                             loading="lazy"
-                            className="h-20 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] md:h-28"
+                            className="h-16 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] md:h-28"
                           />
                         ) : (
-                          <div className="grid h-20 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
+                          <div className="grid h-16 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
                             Aucun média public disponible
                           </div>
                         )}
@@ -731,7 +732,7 @@ export function CartePage() {
                             {String(index + 1).padStart(2, "0")}
                           </span>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{facility.name}</p>
+                            <p className="break-words text-sm font-bold">{facility.name}</p>
                             <p className="mt-0.5 truncate text-[11px] text-muted-foreground">
                               {isUnclaimed
                                 ? "Découverte OSM · non réclamée"
@@ -747,14 +748,20 @@ export function CartePage() {
                         </Badge>
                       </div>
                       <div className="mt-3 rounded-2xl bg-background/72 px-3 py-2.5">
-                        <p className="truncate text-sm font-semibold">
-                          {submittedQuery.trim() ||
+                        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                          Produit recherché
+                        </p>
+                        <p className="mt-1 break-words text-sm font-semibold">
+                          {facility.matched_product_name ||
+                            submittedQuery.trim() ||
                             (category ? categoryLabel(category) : "Recherche Omni")}
                         </p>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {isUnclaimed
-                            ? "Informations publiques · achat non disponible"
-                            : "Produits et services liés"}
+                        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
+                          {hasMatchedProduct
+                            ? `Correspond à votre recherche${facility.matched_product_price != null ? ` · ${formatMoney(facility.matched_product_price)}` : ""}${facility.matched_product_quantity != null ? ` · ${facility.matched_product_quantity} disponible(s)` : ""}`
+                            : isUnclaimed
+                              ? "Correspondance à confirmer · achat non disponible"
+                              : "Correspondance à confirmer · disponibilité à vérifier"}
                         </p>
                       </div>
                       <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px]">

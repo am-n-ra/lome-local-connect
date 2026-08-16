@@ -23,6 +23,11 @@ export type MapFacility = {
   product_count: number;
   min_price: number | null;
   max_discount_percent: number;
+  matched_product_id?: string | null;
+  matched_product_name?: string | null;
+  matched_product_price?: number | null;
+  matched_product_photo_url?: string | null;
+  matched_product_quantity?: number | null;
 
   sponsored: boolean;
   tier: string;
@@ -234,6 +239,45 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       );
     };
 
+    const decorateMatches = async (facilities: MapFacility[]) => {
+      const term = data.search?.trim();
+      if (!term || facilities.length === 0) return facilities;
+
+      const matches = await query<{
+        facility_id: string;
+        id: string;
+        name: string;
+        price: number;
+        photo_url: string | null;
+        quantity_available: number;
+      }>(
+        `SELECT DISTINCT ON (facility_id)
+           facility_id, id, name, price, photo_url,
+           COALESCE(quantity_available, 0)::int AS quantity_available
+         FROM public.products
+         WHERE facility_id = ANY($1::uuid[])
+           AND name ILIKE $2
+           AND in_stock = true
+           AND COALESCE(status, 'active') = 'active'
+           AND COALESCE(quantity_available, 1) > 0
+           AND COALESCE(omni_allocation_percent, 100) > 0
+         ORDER BY facility_id, quantity_available DESC, last_confirmed_at DESC NULLS LAST, name ASC`,
+        [facilities.map((facility) => facility.id), `%${term}%`],
+      );
+      const byFacility = new Map(matches.map((match) => [match.facility_id, match]));
+      return facilities.map((facility) => {
+        const match = byFacility.get(facility.id);
+        return {
+          ...facility,
+          matched_product_id: match?.id ?? null,
+          matched_product_name: match?.name ?? null,
+          matched_product_price: match?.price ?? null,
+          matched_product_photo_url: match?.photo_url ?? null,
+          matched_product_quantity: match?.quantity_available ?? null,
+        };
+      });
+    };
+
     let rows = await runQuery();
     if (rows.length < 12 && data.zoom >= 9) {
       const { ensureCoverage } = await import("@/lib/osm-coverage.server");
@@ -244,7 +288,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
         // Coverage back-fill is best effort: never break the map.
       }
     }
-    return rows;
+    return decorateMatches(rows);
   });
 
 export const getFacility = createServerFn({ method: "GET" })
