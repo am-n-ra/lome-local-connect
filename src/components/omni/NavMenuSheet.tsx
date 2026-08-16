@@ -14,7 +14,6 @@ import {
   ShoppingCart,
   MessageCircle,
   Megaphone,
-  Store,
   User,
   Wallet,
 } from "lucide-react";
@@ -36,7 +35,6 @@ import { toast } from "sonner";
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activeRole?: "acheteur" | "vendeur" | undefined;
   onOpenCart?: (() => void) | undefined;
   onOpenWishlist?: (() => void) | undefined;
   onOpenOrders?: (() => void) | undefined;
@@ -48,7 +46,6 @@ type Props = {
 export function NavMenuSheet({
   open,
   onOpenChange,
-  activeRole = "acheteur",
   onOpenCart,
   onOpenWishlist,
   onOpenOrders,
@@ -70,7 +67,10 @@ export function NavMenuSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="omni-glass w-full max-w-sm overflow-y-auto p-5">
+      <SheetContent
+        side="right"
+        className="omni-glass w-full max-w-sm overflow-y-auto border-l border-border/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-[var(--shadow-soft)]"
+      >
         <SheetHeader className="p-0 text-left">
           <SheetTitle className="flex items-center gap-2">
             <BrandMark className="h-6 w-6" /> OmniView
@@ -80,33 +80,16 @@ export function NavMenuSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-border bg-secondary/70 p-1 text-sm font-semibold">
-          <button
-            type="button"
-            onClick={() => go(() => navigate({ to: "/carte" }))}
-            className={`rounded-full px-3 py-2 transition-colors ${
-              activeRole === "acheteur"
-                ? "bg-primary text-primary-foreground"
-                : "text-secondary-foreground"
-            }`}
-          >
-            Acheteur
-          </button>
-          <button
-            type="button"
-            onClick={() => go(() => navigate({ to: "/vendeur" }))}
-            className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2 transition-colors ${
-              activeRole === "vendeur"
-                ? "bg-primary text-primary-foreground"
-                : "text-secondary-foreground"
-            }`}
-          >
-            <Store className="h-4 w-4 shrink-0" />
-            Vendeur
-          </button>
+        <div className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            Navigation
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Retrouvez vos recherches, demandes et achats depuis ce panneau.
+          </p>
         </div>
 
-        <nav className="mt-5 grid gap-1.5">
+        <nav className="mt-5 grid gap-1.5" aria-label="Navigation secondaire">
           <MenuRow
             icon={<ShoppingCart className="h-4 w-4" />}
             label="Panier"

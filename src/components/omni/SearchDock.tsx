@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ChevronDown,
+  LoaderCircle,
   ChevronLeft,
   ChevronRight,
   ChevronUp,
   Minus,
   Plus,
-  SlidersHorizontal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -61,8 +61,6 @@ type Props = {
   locationStatus?: "pending" | "granted" | "fallback" | "unavailable";
   browserPermission?: "unknown" | "prompt" | "granted" | "denied" | "unsupported";
   locationAccuracy?: number | null;
-  locationCoordinates?: { lat: number; lng: number } | null;
-  locationRequestId?: number | null;
   onRequestLocation?: () => void;
   onUseMarketFallback?: () => void;
 };
@@ -91,8 +89,6 @@ export function SearchDock({
   locationStatus = "fallback",
   browserPermission = "unknown",
   locationAccuracy = null,
-  locationCoordinates = null,
-  locationRequestId = null,
   onRequestLocation,
   onUseMarketFallback,
 }: Props) {
@@ -110,7 +106,6 @@ export function SearchDock({
     locationStatus === "granted" &&
     locationAccuracy != null &&
     locationAccuracy > LOCATION_APPROXIMATE_ACCURACY_METERS;
-  const accuracyText = locationAccuracy != null ? `±${Math.round(locationAccuracy)} m` : "";
 
   useEffect(() => {
     const dock = dockRef.current;
@@ -143,16 +138,16 @@ export function SearchDock({
 
   const locationLabel =
     locationStatus === "pending"
-      ? "Autorisation de localisation en cours…"
+      ? "Localisation en cours…"
       : isPrecise
-        ? `Position GPS précise · ${accuracyText}`
+        ? "Position précise"
         : isApproximate
-          ? `Zone réseau approximative · ${accuracyText}`
+          ? "Zone approximative"
           : browserPermission === "denied"
-            ? "Localisation bloquée — autorisez-la puis réessayez"
+            ? "Localisation bloquée"
             : locationStatus === "unavailable"
-              ? "Localisation indisponible — réessayez"
-              : "Marché approximatif — aucune position exacte";
+              ? "Localisation indisponible"
+              : "Marché approximatif";
 
   return (
     <div
@@ -174,7 +169,7 @@ export function SearchDock({
         {hasIntent && (
           <div
             data-omni-dock-row="structured"
-            className="omni-glass grid grid-cols-2 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr_auto]"
+            className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr_auto]"
           >
             <div className="rounded-2xl bg-background/72 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
@@ -218,10 +213,10 @@ export function SearchDock({
                 <button
                   type="button"
                   aria-label="Ouvrir les filtres"
-                  className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-background/72 px-3 text-xs font-bold text-foreground transition-colors hover:bg-background"
+                  className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-background/72 px-3 text-xs font-bold text-foreground transition-colors hover:bg-background"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span className="hidden sm:inline">Affiner</span>
+                  <ChevronDown className="h-4 w-4" />
+                  <span>Affiner</span>
                   {activeCount > 0 && (
                     <span className="grid h-5 min-w-5 place-items-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
                       {activeCount}
@@ -392,28 +387,22 @@ export function SearchDock({
                   : "text-muted-foreground"
             }`}
             data-omni-location-status={locationStatus}
-            data-omni-location-lat={locationCoordinates?.lat ?? ""}
-            data-omni-location-lng={locationCoordinates?.lng ?? ""}
-            data-omni-location-accuracy={locationAccuracy ?? ""}
           >
+            {locationStatus === "pending" && (
+              <LoaderCircle
+                className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin"
+                aria-hidden="true"
+              />
+            )}
             {locationLabel}
           </span>
-          {locationStatus === "granted" && locationCoordinates && (
-            <details className="omni-glass rounded-full px-3 py-1.5 text-[11px] text-muted-foreground">
-              <summary className="cursor-pointer list-none font-bold">Détails</summary>
-              <span className="ml-2 whitespace-nowrap font-mono text-[10px]">
-                lat {locationCoordinates.lat.toFixed(6)}, lng {locationCoordinates.lng.toFixed(6)}
-                {locationRequestId != null ? ` · requête ${locationRequestId}` : ""}
-              </span>
-            </details>
-          )}
           {isApproximate && onRequestLocation && (
             <button
               type="button"
               onClick={onRequestLocation}
               className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-bold text-primary"
             >
-              Réessayer en GPS précis
+              Affiner ma position
             </button>
           )}
           {locationStatus === "unavailable" && onRequestLocation && (
