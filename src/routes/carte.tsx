@@ -583,7 +583,7 @@ export function CartePage() {
   async function buildItinerary(f: MapFacility) {
     if (!preciseUserPos) {
       toast.info(
-        "Position GPS précise indisponible. Autorisez la localisation pour obtenir un itinéraire.",
+        "Votre position précise est indisponible. Autorisez la localisation pour obtenir un itinéraire.",
       );
       return;
     }
@@ -672,7 +672,7 @@ export function CartePage() {
           results.length > 0 &&
           steps.length === 0 && (
             <div
-              className="pointer-events-none absolute inset-x-3 z-10 mx-auto max-w-6xl"
+              className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-w-6xl"
               style={{ bottom: "var(--omni-dock-clearance, 12rem)" }}
             >
               <div className="pointer-events-auto flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center">
@@ -795,19 +795,17 @@ export function CartePage() {
             locationStatus={locationStatus}
             browserPermission={browserPermission}
             locationAccuracy={userPos?.accuracy ?? null}
-            locationCoordinates={userPos}
-            locationRequestId={locationSnapshot?.requestId ?? null}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onBrandClick={() => {
               if (preciseUserPos) setFitPoints([preciseUserPos]);
-              else toast.info("Position GPS précise indisponible.");
+              else toast.info("Votre position précise est indisponible.");
             }}
           />
         )}
 
         {selected && (
-          <div className="absolute inset-x-0 bottom-0 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card p-4 shadow-[var(--shadow-sheet)] md:left-auto md:right-4 md:top-4 md:max-h-[calc(100%-2rem)] md:w-[420px] md:rounded-2xl md:border">
+          <div className="absolute inset-x-0 bottom-0 z-40 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[var(--shadow-sheet)] backdrop-blur md:left-auto md:right-4 md:top-20 md:max-h-[calc(100%-6rem)] md:w-[420px] md:rounded-2xl md:border md:p-5">
             <div className="mb-2 flex justify-end gap-2">
               <Button
                 variant="ghost"

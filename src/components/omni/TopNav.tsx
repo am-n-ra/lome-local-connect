@@ -47,7 +47,7 @@ export function TopNav({
     <header
       className={
         minimalMapChrome
-          ? "pointer-events-none absolute inset-x-0 top-0 z-30 bg-transparent"
+          ? "pointer-events-none absolute inset-x-0 top-0 z-50 bg-transparent"
           : "sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur"
       }
     >
@@ -90,8 +90,8 @@ export function TopNav({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2">
-          <div className="pointer-events-auto hidden items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur md:flex">
+        <div className="flex min-w-0 items-center justify-end gap-2 md:gap-3">
+          <div className="pointer-events-auto hidden shrink-0 items-center gap-1 rounded-full border border-border/70 bg-card/75 p-1 backdrop-blur md:flex">
             <button
               type="button"
               onClick={() => navigate({ to: "/carte" })}
@@ -116,7 +116,9 @@ export function TopNav({
             </button>
           </div>
 
-          <NotificationsBell />
+          <div className="pointer-events-auto shrink-0">
+            <NotificationsBell />
+          </div>
 
           <Button
             variant="outline"
@@ -138,7 +140,6 @@ export function TopNav({
       <NavMenuSheet
         open={menuOpen}
         onOpenChange={setMenuOpen}
-        activeRole={activeRole}
         onOpenCart={onOpenCart}
         onOpenWishlist={onOpenWishlist}
         onOpenOrders={onOpenOrders}
