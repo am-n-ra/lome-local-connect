@@ -151,10 +151,10 @@ export function CartePage() {
             else setDiscoveryFacilities(rows);
             setCoverageStatus("ready");
           })
-          .catch(() => {
+          .catch((error) => {
             if (!active) return;
             setCoverageStatus("error");
-            toast.error("La découverte de cette zone est momentanément indisponible.");
+            console.warn("Omni coverage request failed", error);
           });
       },
       hasCoverageSearch ? 260 : 120,

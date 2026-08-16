@@ -54,3 +54,7 @@ Toute modification du master ou du code doit mettre à jour la ligne concernée,
 | MASTER-26 | Une card facility affiche entièrement le contexte de la recherche sans scroll interne | `src/routes/carte.tsx` | Card sans `overflow-y-auto`, largeur bornée par viewport, rail horizontal conservé | Implémenté — validation multi-breakpoint à compléter |
 | MASTER-27 | La card affiche le produit correspondant uniquement lorsqu’une correspondance catalogue fiable existe | `src/lib/omni.functions.ts`, `src/routes/carte.tsx` | Match produit par facility et terme ; fallback honnête « Correspondance à confirmer » | Implémenté |
 | MASTER-28 | Le seller voit et peut utiliser le produit correspondant à une demande availability | `src/lib/demand.functions.ts`, `src/components/omni/vendor/DemandPanel.tsx` | Produit, prix, quantité, média, budget et préremplissage de réponse | Implémenté — test authentifié seller à compléter |
+
+### Correctif complémentaire — état coverage non bloquant
+
+Le smoke test a identifié un second chemin qui affichait encore le message technique : le `catch` de `carte.tsx` envoyait un toast, indépendamment du badge du Search Dock. Ce chemin est maintenant silencieux côté utilisateur ; il conserve uniquement l’état interne `error` et un avertissement de diagnostic côté navigateur. Le résultat ou la carte existante ne sont pas effacés lorsqu’un backfill échoue.
