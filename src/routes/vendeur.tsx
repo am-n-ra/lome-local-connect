@@ -987,7 +987,8 @@ function VendeurPage() {
             </ul>
           </TabsContent>
 
-          <TabsContent value="demandes" className="mt-5">
+          <TabsContent value="demandes" className="mt-5 space-y-8">
+            <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
             <RequestsPanel
               facilityId={facility.id}
               requests={data?.requests ?? []}
@@ -1018,7 +1019,11 @@ function VendeurPage() {
           </TabsContent>
 
           <TabsContent value="demande-locale" className="mt-5">
-            <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
+            <DemandPanel
+              demand={data?.demand ?? []}
+              facilityId={facility.id}
+              showLiveRequests={false}
+            />
           </TabsContent>
         </Tabs>
       </main>

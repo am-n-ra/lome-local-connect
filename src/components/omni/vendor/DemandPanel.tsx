@@ -15,9 +15,11 @@ import {
 export function DemandPanel({
   demand,
   facilityId,
+  showLiveRequests = true,
 }: {
   demand: DemandSignal[];
   facilityId: string;
+  showLiveRequests?: boolean;
 }) {
   const { market } = useMarket();
   const list = useServerFn(listDemandForFacility);
@@ -74,133 +76,139 @@ export function DemandPanel({
 
   return (
     <div className="space-y-5">
-      <div className="space-y-3">
-        <h3 className="font-display text-lg font-bold">Demandes en direct</h3>
-        <p className="text-sm text-muted-foreground">
-          Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou indisponible
-          avec votre prix et la quantité exacte disponible.
-        </p>
-        <ul className="space-y-2">
-          {live.map((r) => (
-            <li key={r.id} className="rounded-lg border border-border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="font-semibold">{r.search_term}</p>
-                <span className="text-xs text-muted-foreground">
-                  {r.quantity} unité(s) · {formatDateFr(r.created_at)}
-                  {r.distance_km !== null ? ` · ${r.distance_km.toFixed(1)} km` : ""}
-                </span>
-              </div>
-              <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-primary/8 p-3">
-                {r.matched_product_photo_url ? (
-                  <img
-                    src={r.matched_product_photo_url}
-                    alt=""
-                    className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                  />
-                ) : (
-                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
-                    ●
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
-                    Produit recherché
-                  </p>
-                  <p className="break-words text-sm font-semibold">
-                    {r.matched_product_name ?? r.search_term}
-                  </p>
-                  <p className="break-words text-xs text-muted-foreground">
-                    {r.matched_product_name
-                      ? `Correspondance catalogue${r.matched_product_price != null ? ` · ${formatFcfa(r.matched_product_price)}` : ""}${r.matched_product_quantity != null ? ` · ${r.matched_product_quantity} disponible(s)` : ""}`
-                      : "Correspondance à confirmer avant réponse"}
-                  </p>
+      {showLiveRequests && (
+        <div className="space-y-3">
+          <h3 className="font-display text-lg font-bold">Demandes en direct</h3>
+          <p className="text-sm text-muted-foreground">
+            Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou
+            indisponible avec votre prix et la quantité exacte disponible.
+          </p>
+          <ul className="space-y-2">
+            {live.map((r) => (
+              <li key={r.id} className="rounded-lg border border-border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{r.search_term}</p>
+                  <span className="text-xs text-muted-foreground">
+                    {r.quantity} unité(s) · {formatDateFr(r.created_at)}
+                    {r.distance_km !== null ? ` · ${r.distance_km.toFixed(1)} km` : ""}
+                  </span>
                 </div>
-              </div>
-              {r.budget_max != null && (
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Budget buyer :{" "}
-                  <span className="font-semibold text-foreground">{formatFcfa(r.budget_max)}</span>
-                </p>
-              )}
-              {!r.answered && r.matched_product_name && (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="mt-2 w-full"
-                  onClick={() => {
-                    setPrices((current) => ({
-                      ...current,
-                      [r.id]:
-                        r.matched_product_price != null
-                          ? String(r.matched_product_price)
-                          : (current[r.id] ?? ""),
-                    }));
-                    setQuantities((current) => ({
-                      ...current,
-                      [r.id]:
-                        r.matched_product_quantity != null
-                          ? String(r.matched_product_quantity)
-                          : (current[r.id] ?? ""),
-                    }));
-                  }}
-                >
-                  Utiliser ce produit pour répondre
-                </Button>
-              )}
-              {r.answered ? (
-                <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
-              ) : (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    placeholder={`Prix ${market?.currency_symbol ?? "FCFA"}`}
-                    className="h-9 w-32"
-                    value={prices[r.id] ?? ""}
-                    onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}
-                  />
-                  <Input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    placeholder="Qté dispo"
-                    className="h-9 w-28"
-                    value={quantities[r.id] ?? ""}
-                    onChange={(e) => setQuantities((q) => ({ ...q, [r.id]: e.target.value }))}
-                  />
+                <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-primary/8 p-3">
+                  {r.matched_product_photo_url ? (
+                    <img
+                      src={r.matched_product_photo_url}
+                      alt=""
+                      className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/12 text-primary">
+                      ●
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                      Produit recherché
+                    </p>
+                    <p className="break-words text-sm font-semibold">
+                      {r.matched_product_name ?? r.search_term}
+                    </p>
+                    <p className="break-words text-xs text-muted-foreground">
+                      {r.matched_product_name
+                        ? `Correspondance catalogue${r.matched_product_price != null ? ` · ${formatFcfa(r.matched_product_price)}` : ""}${r.matched_product_quantity != null ? ` · ${r.matched_product_quantity} disponible(s)` : ""}`
+                        : "Correspondance à confirmer avant réponse"}
+                    </p>
+                  </div>
+                </div>
+                {r.budget_max != null && (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Budget buyer :{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatFcfa(r.budget_max)}
+                    </span>
+                  </p>
+                )}
+                {!r.answered && r.matched_product_name && (
                   <Button
-                    size="sm"
-                    disabled={busy === r.id}
-                    onClick={() => void answer(r.id, "available")}
-                  >
-                    Disponible
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={busy === r.id}
-                    onClick={() => void answer(r.id, "partial")}
-                  >
-                    Partiel
-                  </Button>
-                  <Button
+                    type="button"
                     size="sm"
                     variant="outline"
-                    disabled={busy === r.id}
-                    onClick={() => void answer(r.id, "unavailable")}
+                    className="mt-2 w-full"
+                    onClick={() => {
+                      setPrices((current) => ({
+                        ...current,
+                        [r.id]:
+                          r.matched_product_price != null
+                            ? String(r.matched_product_price)
+                            : (current[r.id] ?? ""),
+                      }));
+                      setQuantities((current) => ({
+                        ...current,
+                        [r.id]:
+                          r.matched_product_quantity != null
+                            ? String(r.matched_product_quantity)
+                            : (current[r.id] ?? ""),
+                      }));
+                    }}
                   >
-                    Indisponible
+                    Utiliser ce produit pour répondre
                   </Button>
-                </div>
-              )}
-            </li>
-          ))}
-          {live.length === 0 && (
-            <p className="text-sm text-muted-foreground">Aucune demande en direct actuellement.</p>
-          )}
-        </ul>
-      </div>
+                )}
+                {r.answered ? (
+                  <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
+                ) : (
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder={`Prix ${market?.currency_symbol ?? "FCFA"}`}
+                      className="h-9 w-32"
+                      value={prices[r.id] ?? ""}
+                      onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}
+                    />
+                    <Input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      placeholder="Qté dispo"
+                      className="h-9 w-28"
+                      value={quantities[r.id] ?? ""}
+                      onChange={(e) => setQuantities((q) => ({ ...q, [r.id]: e.target.value }))}
+                    />
+                    <Button
+                      size="sm"
+                      disabled={busy === r.id}
+                      onClick={() => void answer(r.id, "available")}
+                    >
+                      Disponible
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy === r.id}
+                      onClick={() => void answer(r.id, "partial")}
+                    >
+                      Partiel
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy === r.id}
+                      onClick={() => void answer(r.id, "unavailable")}
+                    >
+                      Indisponible
+                    </Button>
+                  </div>
+                )}
+              </li>
+            ))}
+            {live.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                Aucune demande en direct actuellement.
+              </p>
+            )}
+          </ul>
+        </div>
+      )}
 
       <div className="space-y-3">
         <h3 className="font-display text-lg font-bold">Tendances de recherche</h3>
