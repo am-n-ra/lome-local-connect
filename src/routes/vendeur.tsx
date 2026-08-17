@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { useServerFn } from "@/lib/useServerFn";
-import { CreditCard, MapPin, Plus, Store } from "lucide-react";
+import { CreditCard, MapPin, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -39,7 +38,7 @@ import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { OmniStatusBadge } from "@/components/omni/ui/OmniPrimitives";
 import { BalanceSheet } from "@/components/omni/ui/BalanceSheet";
-import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
+import { daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
 import { OMNI_CONFIG } from "@/lib/omni.config";
@@ -224,10 +223,6 @@ function VendeurPage() {
 
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
-
-  function invalidateSurfaceCache(facilityId: string) {
-    surfaceCache.current.delete(facilityId);
-  }
 
   async function startTopUp() {
     const amount = Number(topUpAmount);
