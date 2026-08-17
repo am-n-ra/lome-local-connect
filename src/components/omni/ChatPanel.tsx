@@ -13,6 +13,15 @@ import {
   type ChatThread,
 } from "@/lib/chat.functions";
 import { useAuth } from "@/lib/auth";
+import {
+  confirmProductReceived,
+  confirmTransactionPayment,
+  createTransactionQr,
+  getTransactionTimeline,
+  type BuyerOrder,
+  type TransactionTimeline,
+} from "@/lib/checkout.functions";
+import { TransactionThreadCard } from "@/components/omni/TransactionThreadCard";
 
 type Props = {
   open: boolean;
@@ -41,6 +50,10 @@ export function ChatPanel({
   const fetchThreads = useServerFn(listChatThreads);
   const fetchMessages = useServerFn(listMessages);
   const post = useServerFn(sendMessage);
+  const fetchTimeline = useServerFn(getTransactionTimeline);
+  const generateQr = useServerFn(createTransactionQr);
+  const confirmPayment = useServerFn(confirmTransactionPayment);
+  const confirmReceived = useServerFn(confirmProductReceived);
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [active, setActive] = useState<{
@@ -52,6 +65,8 @@ export function ChatPanel({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
+  const [transactionBusy, setTransactionBusy] = useState(false);
+  const [transactionTimeline, setTransactionTimeline] = useState<TransactionTimeline | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
   const transactionId = transactionContext?.transactionId ?? null;
 
@@ -63,6 +78,18 @@ export function ChatPanel({
       setThreads([]);
     }
   }, [fetchThreads, user]);
+
+  const refreshTransaction = useCallback(async () => {
+    if (!transactionId) {
+      setTransactionTimeline(null);
+      return;
+    }
+    try {
+      setTransactionTimeline(await fetchTimeline({ data: { transactionId } }));
+    } catch {
+      setTransactionTimeline(null);
+    }
+  }, [fetchTimeline, transactionId]);
 
   const refreshMessages = useCallback(async () => {
     if (!active) return;
@@ -92,15 +119,37 @@ export function ChatPanel({
   }, [open, facilityId, facilityName, refreshThreads, transactionId]);
 
   useEffect(() => {
-    if (!open || !active) return;
+    if (!open || !transactionId) {
+      setTransactionTimeline(null);
+      return;
+    }
+    void refreshTransaction();
+    const interval = window.setInterval(() => void refreshTransaction(), 12000);
+    return () => window.clearInterval(interval);
+  }, [open, refreshTransaction, transactionId]);
+
+  useEffect(() => {
+    if (!open || !active || transactionContext) return;
     void refreshMessages();
     const id = setInterval(() => void refreshMessages(), 12000);
     return () => clearInterval(id);
-  }, [open, active, refreshMessages]);
+  }, [open, active, refreshMessages, transactionContext]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ block: "end" });
   }, [messages]);
+
+  async function runTransactionAction(action: () => Promise<unknown>) {
+    setTransactionBusy(true);
+    try {
+      await action();
+      await refreshTransaction();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Action transactionnelle impossible.");
+    } finally {
+      setTransactionBusy(false);
+    }
+  }
 
   async function submit() {
     if (!active || !draft.trim()) return;
@@ -129,7 +178,7 @@ export function ChatPanel({
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b border-border p-4">
           <SheetTitle>{active ? active.name : "Messages"}</SheetTitle>
-          {transactionContext && (
+          {transactionContext && !transactionTimeline && (
             <div className="mt-2 rounded-xl bg-secondary/70 p-2 text-left text-xs">
               <div className="flex items-center justify-between gap-2 font-semibold">
                 <span>Conversation transactionnelle</span>
@@ -183,7 +232,40 @@ export function ChatPanel({
           </div>
         )}
 
-        {user && active && (
+        {user && active && transactionContext && (
+          <div className="flex-1 overflow-y-auto p-4">
+            {transactionTimeline ? (
+              <TransactionThreadCard
+                order={toBuyerOrder(transactionTimeline)}
+                timeline={transactionTimeline}
+                busy={transactionBusy}
+                onGenerateQr={() =>
+                  void runTransactionAction(() =>
+                    generateQr({ data: { transactionId: transactionTimeline.transaction.id } }),
+                  )
+                }
+                onConfirmPayment={() =>
+                  void runTransactionAction(() =>
+                    confirmPayment({ data: { transactionId: transactionTimeline.transaction.id } }),
+                  )
+                }
+                onConfirmReceived={() =>
+                  void runTransactionAction(() =>
+                    confirmReceived({
+                      data: { transactionId: transactionTimeline.transaction.id },
+                    }),
+                  )
+                }
+              />
+            ) : (
+              <p className="rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">
+                Chargement du fil transactionnel…
+              </p>
+            )}
+          </div>
+        )}
+
+        {user && active && !transactionContext && (
           <>
             <div className="flex-1 space-y-2 overflow-y-auto p-4">
               {threads.length > 0 && (
@@ -235,4 +317,32 @@ export function ChatPanel({
       </SheetContent>
     </Sheet>
   );
+}
+
+function toBuyerOrder(timeline: TransactionTimeline): BuyerOrder {
+  const transaction = timeline.transaction;
+  return {
+    id: transaction.id,
+    source: "intent",
+    facility_id: transaction.facility_id,
+    facility_name: transaction.facility_name,
+    status: transaction.status,
+    created_at: transaction.intent_created_at ?? new Date().toISOString(),
+    total: transaction.amount,
+    items: [
+      {
+        name: "Intention d’achat",
+        quantity: 1,
+        price_at_time: transaction.amount,
+      },
+    ],
+    qr_token: transaction.qr_token,
+    qr_expires_at: transaction.qr_expires_at,
+    transaction_id: transaction.id,
+    transaction_status: transaction.status,
+    intent_created_at: transaction.intent_created_at,
+    payment_mode: transaction.payment_mode,
+    amount: transaction.amount,
+    platform_fee: null,
+  };
 }
