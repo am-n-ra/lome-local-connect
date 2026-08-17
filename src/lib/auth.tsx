@@ -179,7 +179,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const payload = await authFetch("/get-session");
       const next = readUser(payload);
       setUser(next);
-      await loadRoles(Boolean(next));
+      // Role hydration is secondary to establishing the session. A slow or
+      // unavailable identity function must never leave the auth form pending.
+      void loadRoles(Boolean(next));
     } catch {
       setUser(null);
       setRoles([]);
