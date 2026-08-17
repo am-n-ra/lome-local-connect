@@ -144,9 +144,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     try {
       const result = await redeem({ data: { facilityId, code: code.trim() } });
       toast.success(
-        `Vente validée : ${formatMoney(result.amount)} — commission ${formatMoney(
-          result.platformFee,
-        )}, à reverser ${formatMoney(result.payout)}.`,
+        `Transaction validée : ${formatMoney(result.amount)}. Le règlement se poursuit selon votre accord sur place.`,
       );
       setCode("");
       await refresh();
@@ -164,11 +162,11 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       <div className="omni-card space-y-3 p-4">
         <div className="flex items-center gap-2">
           <QrCode className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg font-bold">Encaisser une vente</h3>
+          <h3 className="font-display text-lg font-bold">Valider une transaction sur place</h3>
         </div>
         <p className="text-sm text-muted-foreground">
-          Demandez au client son code de retrait (QR ou 8 caractères) et validez-le ici. Le paiement
-          se fait sur place ; le paiement en ligne est en mode démo.
+          Demandez au client son code de transaction (QR ou 8 caractères) et vérifiez-le ici. Omni
+          ne gère pas de paiement client in-app ni de retrait vendeur dans la V1.
         </p>
         <div className="grid gap-2 sm:grid-cols-[auto_1fr_auto]">
           <Button
@@ -212,7 +210,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
               />
               <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
               <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
-                Caméra active · Cadrez le QR de retrait
+                Caméra active · Cadrez le QR de transaction
               </p>
             </>
           ) : (
