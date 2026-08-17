@@ -1,71 +1,87 @@
-# Omni — Refonte UI v2 : un langage d'interface unique
+# Omni V1 — Réparer, auditer, simplifier
 
-Objectif : garder la coque map-first acheteur (qui fonctionne) et remonter au même niveau tout le reste — menus, onboarding, availability, transaction, vendeur, catalogue, ads, import. Une seule grammaire visuelle, livrée par lots.
+Audit exécuté sur la préversion (mobile 390px) : `/`, `/carte`, `/vendeur`, `/onboarding`, `/admin`, `/auth`.
 
-## Direction retenue
+## Constat runtime (mesuré, pas supposé)
 
-- Glassmorphism **conservé mais discipliné** : le flou est réservé aux couches qui flottent au-dessus de la carte (dock de recherche, sheets, contrôles). Tout contenu dense (listes, formulaires, tableaux, catalogue) passe sur une surface quasi opaque, lisible, avec une hiérarchie typographique nette.
-- Trois niveaux de surface : `float` (verre, au-dessus de la carte), `sheet` (panneau opaque translucide léger), `page` (fond plein, densité console).
-- Vendeur : **hybride**, recommandé. Carte pour ce qui est spatial (facilities, zones d'ads, aperçu acheteur) ; console pour ce qui est tabulaire (catalogue, requests, transactions, balance, abonnement). Un seul header vendeur, un switch `Carte / Console`.
-- Transaction : **timeline chat**. Le fil est la source de vérité ; chaque étape est une card d'événement dans le fil (intent, offre, QR, paiement, réception, clôture), avec une barre d'état compacte épinglée en haut du fil.
+Toutes les routes sauf `/auth` sont **cassées à l'hydratation** par une seule erreur :
 
-## Lot 1 — Socle d'interface partagé
+```text
+Uncaught TypeError: import_browser_external_node_async_hooks.AsyncLocalStorage is not a constructor
+```
 
-- Tokens de surface (`--surface-float`, `--surface-sheet`, `--surface-page`), rayons, ombres et échelle typographique unifiés dans `src/styles.css`.
-- Primitives partagées : `OmniSheet` (bottom sheet mobile / side sheet desktop, header sticky, contenu scrollable, footer d'action collant), `OmniSectionHeader`, `OmniEmptyState`, `OmniStatCard`, `OmniStatusBadge` (statuts facility, availability, transaction), `OmniStepper`.
-- Règle mobile : tout panneau a une hauteur max, un scroll interne, un footer d'action toujours visible, et respecte les safe-areas. Fin des panneaux qui dépassent de l'écran.
+Conséquences observées :
+- `/` et `/carte` : 0 `<canvas>`, bloqués sur « Chargement de la carte… / Localisation en cours… ».
+- `/vendeur` : bloqué sur « Chargement… ».
+- `/onboarding` : bloqué sur « Préparation de votre espace… ».
+- `/admin` : page vide (0 caractère).
+- `/auth` : seule route qui rend réellement.
 
-## Lot 2 — Navigation et menu
+Cause identifiée : `src/lib/auth-middleware.ts` n'a pas d'extension `.server`, donc il n'est pas exclu du bundle navigateur, et il importe statiquement `neon-auth.server` → `db.server` → driver Neon → `async_hooks`. Tous les modules `*.functions.ts` importent ce fichier, donc la chaîne serveur part dans le client sur chaque route. Les symptômes « MapLibre bloqué », « onboarding silencieux », « admin blanc » de l'audit précédent sont tous ce même bug, pas trois bugs distincts.
 
-- Menu remplacé par un panneau structuré : en-tête identité (avatar, plan, solde), puis groupes courts — `Activité` (recherches, disponibilités, transactions, messages), `Compte` (profil, plan, balance, notifications, paramètres), `Espace` (switch Acheteur / Vendeur), `Aide`.
-- Chaque ligne porte une valeur à droite (compteur, statut, solde) au lieu d'un simple libellé.
-- Notifications : panneau dédié groupé par type, avec deep-link vers l'état concerné (recherche, availability, intent, QR, paiement, transaction).
-- Suppression des doublons actuels (« Produits recherchés » / « Recherches », « Vérifier la disponibilité » / « Disponibilités »).
+Tant que ce point n'est pas corrigé, aucun autre constat UI ou flow n'est mesurable en conditions réelles.
 
-## Lot 3 — Onboarding
+## Lot 0 — Déblocage (P0, avant tout le reste)
 
-- Acheteur : séquence courte plein écran — bienvenue, localisation (avec l'animation d'atterrissage carte), centres d'intérêt, puis dépôt direct sur la carte. Skippable, reprise possible.
-- Vendeur : parcours en étapes avec progression persistante — identité, facility (position sur carte), catégorie, premier produit, horaires, certification. Chaque étape est une carte unique avec un seul objectif, plus un récapitulatif final « ce que voit un acheteur ».
-- Un composant d'étape commun aux deux parcours.
+1. Sortir la chaîne serveur du bundle client : renommer `src/lib/auth-middleware.ts` en `auth-middleware.server.ts` (ou charger `neon-auth.server` dynamiquement dans les handlers), et vérifier chaque `*.functions.ts` : au niveau module, seulement imports, types et déclarations de server functions.
+2. Ajouter un garde-fou permanent : vérification automatisée que le bundle client ne contient aucun module `.server` ni built-in Node.
+3. Re-passer le scan des 6 routes : zéro `pageerror`, canvas carte présent, onboarding et admin qui rendent.
+4. Carte : timeout + état d'erreur + bouton « Réessayer » sur le chargement MapLibre, au lieu d'un spinner infini.
+5. Auth : distinguer explicitement `loading` / `signed-out` / `signed-in`. Un état de chargement ne doit jamais durer indéfiniment ; `signed-out` redirige vers `/auth`, `forbidden` affiche un écran clair sur `/admin`.
 
-## Lot 4 — Availability et comparaison
+## Lot 1 — Audit complet réel (livrable écrit)
 
-- Demande d'availability en 3 pas dans une seule sheet : quoi (produit/variante/quantité), où (facility unique ou bulk sur les résultats), contraintes (distance, délai ; budget privé, jamais transmis au vendeur).
-- Compteur de quota bulk visible pour Buyer Free, message clair à la limite.
-- Écran de comparaison des réponses : cards triables (quantité couverte, prix, distance, délai de réponse, niveau de confiance), la meilleure mise en avant, action `Créer l'intention d'achat` directe.
-- Côté vendeur : réponse en un geste depuis la console et depuis la notification — `Disponible / Partiel / Indisponible` + quantité et prix.
+Une fois l'app rendue, parcours end-to-end scripté (mobile + desktop) sur : découverte carte, recherche, mur de compte, fiche facility, availability simple et bulk, comparaison, intention d'achat, QR, chat/timeline, clôture et avis, puis côté vendeur : onboarding, facility, produit, availability, requests, transactions, promotions, ads, balance, plan, paramètres, et enfin admin.
 
-## Lot 5 — Transaction (timeline chat)
+Rapport structuré en quatre parties, chaque ligne avec écran, preuve (capture ou log), impact et priorité P0–P3 :
+1. Divergences UI (écarts avec la vision Omni V1, incohérences de composants, densité, états manquants).
+2. Dettes UX / convenience / accessibilité (nombre de gestes, libellés, feedback, focus, contraste, cibles tactiles, safe-areas).
+3. Défauts logiques (états morts, doublons d'intention, expirations, retries, erreurs avalées, tabs orphelines côté vendeur : balance, plan, paramètres, agent).
+4. Risques financiers et intégrations (coupons, soldes, webhooks FedaPay, QR rejouable, quotas) + dettes de performance.
 
-- Une surface transaction unique : barre d'état épinglée (étape courante + montant + facility) puis fil chronologique.
-- Cards d'événement typées dans le fil : intention créée, offre confirmée, QR généré (QR affiché en grand, code manuel de secours), vérification vendeur, paiement, réception, clôture, avis.
-- Actions contextuelles en pied de fil, jamais plus de deux à la fois ; la confirmation reste toujours à l'utilisateur.
-- Même timeline côté vendeur, avec les actions inversées.
+## Lot 2 — Simplification de l'UI et des flux (le cœur de la demande)
 
-## Lot 6 — Vendeur : carte + console
+Principe : **un écran = une décision**. La carte reste la maison ; tout le reste est une couche qui s'ouvre, se décide, se ferme.
 
-- Header vendeur avec switch `Carte / Console`, indicateur online/offline, solde et plan.
-- Vue Carte : uniquement ses facilities, aperçu fidèle de la fiche acheteur, édition de position, zones d'ads.
-- Vue Console : sections `Facilities`, `Catalogue`, `Availability & Requests`, `Transactions`, `Promotions`, `Ads`, `Balance & Abonnement`, `Paramètres`. Navigation latérale desktop, sélecteur compact mobile.
-- Chaque section commence par une ligne de métriques puis une liste dense avec actions inline.
+### Acheteur — un seul fil, cinq gestes
+1. Ouvrir → carte à ma position, une barre de recherche en bas, rien d'autre.
+2. Chercher → résultats en liste synchronisée avec les pins ; la card met en avant l'objet cherché (prix, distance, statut), pas le nom du commerce.
+3. Ouvrir une card → fiche courte : ce que je cherche, prix, distance, confiance, un seul bouton `Vérifier la disponibilité`.
+4. Réponses → un écran de comparaison, la meilleure option mise en avant, un seul bouton `Je veux acheter`.
+5. Transaction → un fil unique : QR en haut, étapes en cards dans le fil, une action à la fois.
 
-## Lot 7 — Catalogue, création produit, import, ads
+Tout ce qui n'est pas sur ce chemin (panier, wishlist, demandes, messages) est regroupé dans le menu, jamais en concurrence avec le chemin principal.
 
-- Création produit : formulaire en une colonne, sections repliables (essentiel visible, options repliées), aperçu live de la card acheteur à côté (desktop) ou en bas (mobile).
-- Import : écran dédié — source, mapping des colonnes, prévisualisation des lignes avec erreurs signalées, import partiel accepté, rapport final.
-- Promotions et ads : builder en étapes avec estimation de portée et coût, statut de campagne lisible, arrêt/reprise en un geste.
-- Cards produit et facility homogènes entre acheteur, aperçu vendeur et résultats de recherche : un seul composant.
+### Vendeur — deux vues, zéro tab orpheline
+- Un header vendeur avec bascule `Carte / Console`, statut en ligne, solde, plan.
+- Carte : mes facilities, aperçu exact de ce que voit l'acheteur, position, zones d'ads.
+- Console : `Facilities`, `Catalogue`, `Requests`, `Transactions`, `Promotions`, `Ads`, `Balance & Plan`, `Paramètres` — toutes exposées, aucune section implémentée mais inaccessible.
+- Chaque section : une ligne de métriques, une liste dense, actions inline. Répondre à une demande de disponibilité = un geste (`Disponible / Partiel / Indisponible` + quantité + prix).
+
+### Onboarding — court et interrompable
+- Acheteur : bienvenue → localisation → centres d'intérêt → carte. Skippable, reprise au même point.
+- Vendeur : identité → facility sur la carte → catégorie → premier produit → horaires → récapitulatif « ce que voit un acheteur ».
+
+### Langage visuel
+Glassmorphism conservé mais discipliné : le verre uniquement pour ce qui flotte au-dessus de la carte ; les listes, formulaires et la console vendeur passent sur des surfaces opaques lisibles. Trois niveaux de surface (`float`, `sheet`, `page`), une échelle typographique, un jeu de badges de statut unique, des primitives partagées (sheet avec header collant et footer d'action, section header, état vide, stat card, stepper).
+
+## Lot 3 — Certification fonctionnelle
+
+- Tests d'intégration sur la boucle transactionnelle : intention en double, expiration, retry de paiement, QR déjà consommé, application de coupon, impact sur les soldes.
+- Tests des quotas (bulk availability Free/Pro) et des limites vendeur.
+- Scan automatisé des routes : zéro erreur console, zéro débordement horizontal à 360 / 768 / 1280, chaque écran atteint un état stable.
+- Critères de sortie : Lot 0 vert, rapport du Lot 1 sans P0 restant, boucle transactionnelle couverte par des tests.
 
 ## Détails techniques
 
-- Nouveaux composants sous `src/components/omni/ui/` (primitives) et `src/components/omni/vendor/console/` (sections vendeur).
-- `src/routes/vendeur.tsx` éclaté en sections pour sortir des 1200 lignes actuelles ; `src/routes/carte.tsx` conserve la machine d'états (`src/lib/omni-state.ts`) et délègue les panneaux.
-- Refonte présentation uniquement : les server functions, migrations et règles métier existantes sont réutilisées telles quelles. Les seules données nouvelles éventuelles sont des champs d'affichage déjà disponibles.
-- Audit responsive final sur chaque nouvel écran : 360px, 768px, 1280px, aucun débordement horizontal, footer d'action accessible.
+- Correctifs frontière serveur/client dans `src/lib/auth-middleware.ts` et les `*.functions.ts` ; aucune modification du schéma.
+- Nouvelles primitives sous `src/components/omni/ui/`, sections vendeur sous `src/components/omni/vendor/console/`.
+- `src/routes/vendeur.tsx` (1216 lignes) et `src/routes/carte.tsx` (978 lignes) éclatés en sections ; la machine d'états `src/lib/omni-state.ts` reste la source de vérité.
+- Refonte de présentation : les server functions, migrations et règles métier existantes sont réutilisées telles quelles.
 
 ## Ordre de livraison
 
-1. Lot 1 + 2 (socle, navigation)
-2. Lot 4 + 5 (availability, transaction timeline)
-3. Lot 6 + 7 (vendeur, catalogue, import, ads)
-4. Lot 3 (onboarding, une fois le langage stabilisé)
+1. Lot 0 (déblocage) — indispensable, rien d'autre n'est vérifiable avant.
+2. Lot 1 (audit réel et rapport priorisé).
+3. Lot 2 (simplification acheteur, puis vendeur, puis onboarding).
+4. Lot 3 (tests et certification).
