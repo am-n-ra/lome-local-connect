@@ -626,12 +626,16 @@ export const redeemCheckout = createServerFn({ method: "POST" })
       throw new Error("Ce code a expiré. Demandez au client d'en générer un nouveau.");
     }
 
-    await query(
+    const authorised = await queryOne<{ id: string }>(
       `UPDATE public.transactions
        SET status = 'payment_pending', qr_authorised_at = now()
-       WHERE id = $1`,
+       WHERE id = $1 AND status IN ('qr_generated', 'qr_verified')
+       RETURNING id`,
       [txn.id],
     );
+    if (!authorised) {
+      throw new Error("Ce code a déjà été vérifié ou n'est plus actif.");
+    }
     await recordTransactionEvent(txn.id, "seller_verified", context.userId, {
       facility_id: data.facilityId,
     });
@@ -704,7 +708,16 @@ export const confirmTransactionPayment = createServerFn({ method: "POST" })
        RETURNING id, facility_id, amount`,
       [data.transactionId, context.userId],
     );
-    if (!txn) throw new Error("Le paiement ne peut pas encore être confirmé.");
+    if (!txn) {
+      const existing = await queryOne<{ status: string }>(
+        "SELECT status FROM public.transactions WHERE id = $1 AND buyer_id = $2",
+        [data.transactionId, context.userId],
+      );
+      if (existing?.status === "paid" || existing?.status === "completed") {
+        return { ok: true, alreadyConfirmed: true };
+      }
+      throw new Error("Le paiement ne peut pas encore être confirmé.");
+    }
     await recordTransactionEvent(txn.id, "payment_confirmed", context.userId, {
       amount: txn.amount,
     });
@@ -742,7 +755,16 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
        RETURNING id, facility_id, cart_id, payout_amount`,
       [data.transactionId, context.userId],
     );
-    if (!txn) throw new Error("La réception ne peut pas encore être confirmée.");
+    if (!txn) {
+      const existing = await queryOne<{ status: string }>(
+        "SELECT status FROM public.transactions WHERE id = $1 AND buyer_id = $2",
+        [data.transactionId, context.userId],
+      );
+      if (existing?.status === "completed") {
+        return { ok: true, alreadyCompleted: true };
+      }
+      throw new Error("La réception ne peut pas encore être confirmée.");
+    }
     await recordTransactionEvent(txn.id, "product_received", context.userId);
     await recordTransactionEvent(txn.id, "completed", context.userId);
     const payoutAccountId = await ensureWalletAccount({ facilityId: txn.facility_id });
