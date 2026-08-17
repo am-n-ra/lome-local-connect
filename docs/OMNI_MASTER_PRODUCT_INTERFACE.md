@@ -4653,3 +4653,66 @@ Selected-facility, availability, cart, wishlist, order, chat, and navigation sur
 The native geolocation prompt is permission-state aware. On landing, Omni queries the browser permission state; `prompt` invokes the native request once without blocking the globe, `granted` refreshes a real coordinate, and `denied` is explained as a browser setting with explicit retry/recovery. A stale session flag must never suppress a still-`prompt` browser state. Only a successful coordinate callback with accuracy at or below 500 metres creates a personal blue user-position marker. The callback's `coords.accuracy` must be retained and exposed. Each request must use a fresh coordinate (`maximumAge: 0`) rather than accepting a cached network estimate: accuracy at or below 500 metres is labeled `Position GPS active`, while accuracy above 500 metres is labeled `Position approximative (réseau)`, shown with a translucent uncertainty radius and neutral network-context marker, and must not render a personal blue pin or be described as a precise GPS fix. Low-accuracy coordinates may inform approximate discovery but cannot enable exact recentering, walking itineraries, or exact final reveal. Development diagnostics must log latitude, longitude, accuracy, accuracy band, fallback market center, and whether the callback coordinate equals the market center so that an ISP/network-center response cannot be confused with an application-supplied fallback. Resting discovery is loaded from the visible MapLibre bbox rather than a hard-coded market filter. At local zoom, an empty bbox may trigger a bounded, cached OpenStreetMap/Overpass back-fill; imported points are deduplicated by `source_ref`, stored as `unclaimed`, and attached to the local market when applicable or to the `GLOBAL` catch-all context. Low zoom uses clustered source-backed points and expands them into individual facilities as the user zooms.
 
 Acceptance for this first-page contract covers idle, location-pending, location-fallback, active search, no-results request, search results, facility selection, availability, and navigation states at desktop, tablet, and narrow mobile widths. It also requires controlled callback tests for a precise coordinate, a low-accuracy coordinate at the market center, and a denied callback. Every state must preserve visible focus, safe-area spacing, non-overlapping controls, real MapLibre projection, truthful location semantics, source-backed facilities, and no decorative map substitute.
+
+
+---
+
+# 0.7 CURRENT PLATFORM EXPANSION CONTRACT — 2026-08-17
+
+> This section is the current implementation contract for the next Omni delivery cycle. It extends the V1 Scope Gate without promoting deferred capabilities to active scope.
+
+## 0.7.1 Search-first product identity
+
+Omni is first a **geospatial supply-and-demand search engine**. The first screen is the product itself: map, location context, search input, categories and discovery signals. There is no conventional marketing landing page. The logo should remain visible enough to anchor trust and recall, while the search action remains the dominant interaction.
+
+A visitor may type a query before onboarding. Omni preserves the query and the intended location/context through authentication. Full result retrieval, persistence of demand, availability requests, chat and transaction actions require the appropriate account state. The UI must never pretend that a backend search was completed when authentication or consent is still pending.
+
+## 0.7.2 Progressive onboarding with product education
+
+Onboarding is progressive and contextual rather than a blocking registration wall. It explains to every buyer and seller, with short interactive demos, how Omni works: search the world, understand a facility, ask availability, converse around an intent, use a QR reference and complete a tracked real-world transaction.
+
+The buyer path collects only what is needed at each step: language preference, optional location permission, market/category preferences, analytics consent and account identity. The original query is retained and restored after authentication. The seller path explains facility states, claim requirements, catalogue publication, availability responses, QR operations, coupons, visibility and Pro unlockers before asking for optional enrichment.
+
+Language selection should default from the browser/device locale and market context when reliable, while always exposing a manual language switch. Locale inference must never be used as a hidden identity or precise-location signal.
+
+## 0.7.3 PWA web-first contract
+
+The web application is the immediate mobile product while native mobile remains deferred. Omni must be installable as a PWA with a safe app shell, versioned updates, controlled caching, dynamic viewport support and top/bottom safe-area handling. Private transactions, chat, availability responses, balances and user-specific offers are network-first and must not be placed in a public cache.
+
+Offline screens may expose cached discovery context and saved intent, but real-time availability, balance, payment, QR verification and transaction completion must visibly require connectivity. The install prompt must be optional and non-disruptive.
+
+## 0.7.4 Facility state and unlocker contract
+
+Facility states are `unclaimed`, `claimed`, `certified` and `confirmed`. Each transition records actor, timestamp, evidence and reason. A facility cannot be shown as certified because a user paid for Pro. Pro unlocks tools, limits, visibility and analytics; it never manufactures trust evidence.
+
+A candidate commercial unlocker is the **three-completed-sales rule**: after three eligible transactions reach `completed`, an eligible Free seller may receive a one-time **US$20 Pro testing credit**, non-cash, non-transferable and expiring after a defined test window. Eligibility, anti-abuse checks, reversal handling and accounting treatment must be implemented before this incentive is displayed as active.
+
+## 0.7.5 Balance and payment contract
+
+Balances are first-class seller account data and must remain connected to the existing FedaPay/deposit flow. The UI must distinguish available balance, pending deposit, spendable ad/coupon credit, Pro testing credit and transaction money. No balance may be displayed as available until the server confirms it.
+
+External/manual payment remains valid for the V1 transaction loop. Omni records the commercial event, payment method, QR reference, fulfilment and completion without claiming that Omni processed external money.
+
+## 0.7.6 Product offers and coupon contract
+
+Every published product must expose an **offer state**. The state is either an active coupon/offer with explicit rules or a transparent `Aucune remise active` state. Omni must never invent a discount merely to satisfy a visual requirement.
+
+When a seller, facility budget or Omni promotion authorizes it, the offer engine may calculate a personalized offer for the current user and transaction using product, facility, first-purchase, quantity, date, budget, eligibility and usage rules. The calculated result must include reason, expiry, maximum discount, sponsor and atomic consumption state. A personalized offer cannot change the seller's price without explicit seller consent and an auditable record.
+
+## 0.7.7 Chat and transaction contract
+
+Transaction chat is part of the V1 operational loop. A thread is scoped to a demand, offer or transaction and displays the product, facility, quantity, price, offer, QR reference and next action. System messages are generated for availability response, purchase intent, QR generation, seller verification, payment pending, payment confirmation, product received and completion.
+
+Unread counts, timestamps, controlled media, report/block actions and access checks are required. A participant may only read or write messages for an authorized demand or transaction.
+
+## 0.7.8 Data company contract
+
+Omni collects data to improve search, supply matching, trust and conversion, not to secretly profile individuals. The product event schema must answer: who or which pseudonymous account acted, what was searched or bought, when, where at an appropriate geographic precision, quantity, price, discount, duration, outcome and rating—subject to consent, minimization and retention rules.
+
+Operational transaction data and analytics data remain separated. Generic analytics must not contain precise location, private chat content or unnecessary payment secrets. Users must have consent, opt-out, deletion/export and transparent explanations. Admin access and data changes are audited.
+
+Core events include onboarding started/completed, search submitted, results viewed, facility/product opened, availability requested/answered, chat started/message sent, offer viewed/applied, QR generated/verified, payment confirmed, product received, transaction completed, coupon viewed/applied, ad impression/click, balance deposit confirmed and PWA installed.
+
+## 0.7.9 Motion and interface quality
+
+All new onboarding, offer, chat and dashboard surfaces must use the Omni creamy-glass design system, clear hierarchy, responsive layouts and purposeful animations. Motion should clarify state changes, preserve keyboard/accessibility behavior, stay short and respect reduced-motion preferences. The map and search remain visually primary; dashboard density must not bury the next operational action.
