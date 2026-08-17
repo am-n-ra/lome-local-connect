@@ -364,9 +364,13 @@ export function CartePage() {
     };
   }, [requestLocation]);
 
-  function ensureFallbackViewport() {
-    if (visibleViewport) return;
+  function ensureFallbackViewport(force = false) {
+    if (visibleViewport && !force) return;
     viewportRequestKeyRef.current = null;
+    if (visibleViewport && force) {
+      setVisibleViewport((current) => (current ? { ...current } : current));
+      return;
+    }
     const zoom = market?.default_zoom ?? 12.2;
     const latitudeSpan = Math.max(0.12, 2.5 / 2 ** Math.max(0, zoom - 8));
     const longitudeSpan = Math.max(0.16, 3.5 / 2 ** Math.max(0, zoom - 8));
@@ -385,7 +389,7 @@ export function CartePage() {
     setLocationSnapshot(null);
     bestPositionRef.current = null;
     setLocationStatus("fallback");
-    ensureFallbackViewport();
+    ensureFallbackViewport(true);
     try {
       window.sessionStorage.removeItem("omni:last-location");
     } catch {
@@ -595,7 +599,7 @@ export function CartePage() {
       return;
     }
     if (locationStatus === "pending") setLocationStatus("fallback");
-    ensureFallbackViewport();
+    if (!visibleViewport) ensureFallbackViewport();
     setSelected(null);
     setRouteCoords(null);
     setSteps([]);

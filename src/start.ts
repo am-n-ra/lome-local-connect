@@ -1,14 +1,7 @@
-import {
-  createCsrfMiddleware,
-  createMiddleware,
-  createStart,
-} from "@tanstack/start-client-core";
+import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/start-client-core";
 
 import { renderErrorPage } from "./lib/error-page";
 import { getAccessToken } from "./lib/auth";
-import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
-
-
 const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
@@ -25,12 +18,10 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 // Attaches the Neon Auth bearer token to every server-function call.
-const attachNeonAuth = createMiddleware({ type: "function" }).client(
-  async ({ next }) => {
-    const token = typeof window === "undefined" ? null : await getAccessToken();
-    return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
-  },
-);
+const attachNeonAuth = createMiddleware({ type: "function" }).client(async ({ next }) => {
+  const token = typeof window === "undefined" ? null : await getAccessToken();
+  return next(token ? { headers: { Authorization: `Bearer ${token}` } } : {});
+});
 
 // Start installs this automatically when src/start.ts is absent; defining the
 // file opts out, so re-add it explicitly to keep server functions protected
@@ -40,6 +31,6 @@ const csrfMiddleware = createCsrfMiddleware({
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachSupabaseAuth, attachNeonAuth],
+  functionMiddleware: [attachNeonAuth],
   requestMiddleware: [errorMiddleware, csrfMiddleware],
 }));
