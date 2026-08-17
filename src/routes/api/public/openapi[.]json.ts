@@ -27,7 +27,10 @@ const spec = {
     version: "1.0.0",
     description:
       "Lecture seule : commerces de Lomé référencés par OmniView, leurs produits en stock et les statistiques du marché. Aucune authentification, 120 requêtes/minute/IP.",
-    license: { name: "ODbL (données OpenStreetMap)", url: "https://opendatacommons.org/licenses/odbl/" },
+    license: {
+      name: "ODbL (données OpenStreetMap)",
+      url: "https://opendatacommons.org/licenses/odbl/",
+    },
   },
   servers: [{ url: "/api/public/v1" }],
   paths: {
@@ -40,10 +43,17 @@ const spec = {
           {
             name: "status",
             in: "query",
-            schema: { type: "string", enum: ["unclaimed", "unconfirmed", "certified", "confirmed"] },
+            schema: {
+              type: "string",
+              enum: ["unclaimed", "unconfirmed", "certified", "confirmed"],
+            },
           },
           { name: "neighbourhood", in: "query", schema: { type: "string", maxLength: 80 } },
-          { name: "limit", in: "query", schema: { type: "integer", minimum: 1, maximum: 200, default: 50 } },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", minimum: 1, maximum: 200, default: 50 },
+          },
           { name: "offset", in: "query", schema: { type: "integer", minimum: 0, default: 0 } },
         ],
         responses: {

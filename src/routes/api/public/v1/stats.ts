@@ -28,7 +28,8 @@ export const Route = createFileRoute("/api/public/v1/stats")({
         }
         const url = new URL(request.url);
         const marketCode = url.searchParams.get("market_code") ?? "TG-LOME";
-        const row = await queryOne<PublicStats>(`
+        const row = await queryOne<PublicStats>(
+          `
           SELECT
             (SELECT count(*) FROM public.facilities
               WHERE market_code = $1)::int AS facilities,
@@ -43,7 +44,9 @@ export const Route = createFileRoute("/api/public/v1/stats")({
               WHERE f.market_code = $1)::int AS products,
             (SELECT count(DISTINCT neighbourhood) FROM public.facilities
               WHERE market_code = $1 AND neighbourhood IS NOT NULL AND neighbourhood <> '')::int AS neighbourhoods
-        `, [marketCode]);
+        `,
+          [marketCode],
+        );
         const market = await queryOne<MarketInfo>(
           "SELECT market_code, currency_code FROM public.markets WHERE market_code = $1",
           [marketCode],
