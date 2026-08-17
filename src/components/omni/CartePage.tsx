@@ -23,7 +23,7 @@ import {
   DEFAULT_CENTER,
   LOCATION_APPROXIMATE_ACCURACY_METERS,
 } from "@/lib/omni";
-import { deriveOmniSurfaceState } from "@/lib/omni-state";
+import { deriveOmniMotionState, deriveOmniSurfaceState } from "@/lib/omni-state";
 import { useMarket } from "@/lib/market";
 import {
   restorePendingAvailabilitySearch,
@@ -470,6 +470,13 @@ export function CartePage() {
     availabilityOpen: demandOpen,
     revealRunning,
   });
+  const motionState = deriveOmniMotionState({
+    locating: locationStatus === "pending",
+    searching: hasActiveSearch && results.length === 0,
+    revealRunning,
+    selected: Boolean(selected),
+    transaction: surfaceState === "transaction_chat" || surfaceState === "completed",
+  });
 
   function handOffAvailabilitySearch(
     mode: "bulk" | "manual" = "bulk",
@@ -620,6 +627,7 @@ export function CartePage() {
     <div
       className="relative h-[100dvh] overflow-hidden bg-background"
       data-omni-surface={surfaceState}
+      data-omni-motion={motionState}
       data-omni-map-first="true"
     >
       <TopNav
