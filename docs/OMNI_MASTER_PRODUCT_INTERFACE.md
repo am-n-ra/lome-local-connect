@@ -4808,3 +4808,17 @@ La certification exige les tests unitaires de statuts provider, signature offici
 [2]: https://docs.fedapay.com/api-reference/transactions/create "FedaPay — Create a transaction"
 [3]: https://docs.fedapay.com/integration-api/en/sending-requests-en "FedaPay — Sending requests"
 [4]: https://docs-v1.fedapay.com/development/webhooks "FedaPay — Webhook signature verification"
+
+## UI v2 — langage partagé et performance seller
+
+Omni utilise désormais trois niveaux de surface : `float` pour les éléments légers au-dessus de la carte, `sheet` pour les opérations contextuelles quasi opaques et `page` pour les consoles denses. Le blur est réservé aux surfaces flottantes ; les listes, formulaires, balances et tableaux doivent rester lisibles sur une surface quasi opaque.
+
+Le seller suit un modèle hybride carte + console : la carte reste le contexte permanent pour les facilities, positions et zones publicitaires ; les opérations denses — catalogue, availability, transactions, promotions, ads, balance, abonnement et paramètres — apparaissent dans des sheets ou dans une console structurée. L’écran initial seller ne montre pas la grille complète par défaut. Les détails sont repliés et le dock d’actions est unique : barre horizontale sur mobile, dock vertical sur desktop.
+
+Les primitives UI partagées sont `OmniSheet`, `OmniSectionHeader`, `OmniEmptyState`, `OmniStatCard`, `OmniStatusBadge`, `OmniStepper`, `OmniLoadingState`, `OmniDisclosure` et `OmniActionDock`. Tout panneau mobile doit avoir une hauteur maximale, un scroll interne, un footer d’action accessible et respecter les safe areas.
+
+Le shell seller critique doit charger la facility active, sa position, son statut, les compteurs essentiels et les balances nécessaires au contexte. Produits, coupons, demandes, campagnes, transactions et formulaires doivent être chargés ou préchargés à faible priorité par surface, avec cache par facility et invalidation ciblée. Le changement d’un onglet ne doit pas refetcher tout le dashboard ni recréer les données MapLibre.
+
+Les objectifs de performance seller sont : carte interactive en moins de 2,5 secondes sur connexion moyenne, ouverture d’une surface en moins de 200 ms sur cache chaud, absence de refetch global pour une mutation locale et parité d’interaction avec buyer à ±20 %. Ces objectifs sont validés aux viewports 360, 375, 768 et 1280 px, avec contrôle du focus mobile, du zoom automatique, des safe areas, de l’accessibilité clavier et du respect de `prefers-reduced-motion`.
+
+Le rapport détaillé de l’audit est conservé dans `docs/OMNI_UI_V2_PERFORMANCE_AUDIT.md`.
