@@ -371,6 +371,32 @@ export const getVendorRequests = createServerFn({ method: "GET" })
     });
   });
 
+export const getVendorCoupons = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.userId, data.facilityId);
+    return query<VendorCoupon>(
+      `SELECT c.id, c.code, c.description, c.discount_percent, c.created_at,
+              (SELECT count(*) FROM public.redemptions r WHERE r.coupon_id = c.id)::int AS redemption_count
+       FROM public.coupons c WHERE c.facility_id = $1 ORDER BY c.created_at DESC`,
+      [data.facilityId],
+    );
+  });
+
+export const getVendorCampaigns = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.userId, data.facilityId);
+    return query<VendorCampaign>(
+      `SELECT id, facility_id, product_ids, radius_km, is_city_wide, cost_fcfa,
+              reach_estimate, campaign_active_until, created_at
+       FROM public.ad_campaigns WHERE facility_id = $1 ORDER BY created_at DESC`,
+      [data.facilityId],
+    );
+  });
+
 export const createFacility = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) =>

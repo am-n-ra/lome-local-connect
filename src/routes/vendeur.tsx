@@ -39,6 +39,8 @@ import {
   confirmStock,
   createFacility as createFacilityFn,
   deleteProduct,
+  getVendorCampaigns,
+  getVendorCoupons,
   getVendorDashboard,
   getVendorProducts,
   getVendorRequests,
@@ -134,12 +136,22 @@ function VendeurPage() {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
   const surfaceCache = useRef(
-    new Map<string, { products?: VendorProduct[]; requests?: VendorRequest[] }>(),
+    new Map<
+      string,
+      {
+        products?: VendorProduct[];
+        requests?: VendorRequest[];
+        coupons?: VendorCoupon[];
+        campaigns?: VendorCampaign[];
+      }
+    >(),
   );
 
   const loadDashboard = useServerFn(getVendorDashboard);
   const loadProducts = useServerFn(getVendorProducts);
   const loadRequests = useServerFn(getVendorRequests);
+  const loadCoupons = useServerFn(getVendorCoupons);
+  const loadCampaigns = useServerFn(getVendorCampaigns);
   const loadShell = useServerFn(getVendorShell);
   const createFacility = useServerFn(createFacilityFn);
   const saveProduct = useServerFn(upsertProduct);
@@ -478,7 +490,7 @@ function VendeurPage() {
   }, [facility?.id, facility?.operating_hours]);
 
   useEffect(() => {
-    if (!facility || (activeTab !== "produits" && activeTab !== "demandes")) return;
+    if (!facility || !["produits", "demandes", "coupons", "pub"].includes(activeTab)) return;
     const cached = surfaceCache.current.get(facility.id);
     if (activeTab === "produits" && cached?.products) {
       setData((current) => (current ? { ...current, products: cached.products! } : current));
@@ -486,6 +498,14 @@ function VendeurPage() {
     }
     if (activeTab === "demandes" && cached?.requests) {
       setData((current) => (current ? { ...current, requests: cached.requests! } : current));
+      return;
+    }
+    if (activeTab === "coupons" && cached?.coupons) {
+      setData((current) => (current ? { ...current, coupons: cached.coupons! } : current));
+      return;
+    }
+    if (activeTab === "pub" && cached?.campaigns) {
+      setData((current) => (current ? { ...current, campaigns: cached.campaigns! } : current));
       return;
     }
     let cancelled = false;
@@ -501,7 +521,7 @@ function VendeurPage() {
             });
             setData((current) => (current ? { ...current, products } : current));
           }
-        } else {
+        } else if (activeTab === "demandes") {
           const requests = await loadRequests({ data: { facilityId: facility.id } });
           if (!cancelled) {
             surfaceCache.current.set(facility.id, {
@@ -509,6 +529,24 @@ function VendeurPage() {
               requests,
             });
             setData((current) => (current ? { ...current, requests } : current));
+          }
+        } else if (activeTab === "coupons") {
+          const coupons = await loadCoupons({ data: { facilityId: facility.id } });
+          if (!cancelled) {
+            surfaceCache.current.set(facility.id, {
+              ...surfaceCache.current.get(facility.id),
+              coupons,
+            });
+            setData((current) => (current ? { ...current, coupons } : current));
+          }
+        } else {
+          const campaigns = await loadCampaigns({ data: { facilityId: facility.id } });
+          if (!cancelled) {
+            surfaceCache.current.set(facility.id, {
+              ...surfaceCache.current.get(facility.id),
+              campaigns,
+            });
+            setData((current) => (current ? { ...current, campaigns } : current));
           }
         }
       } catch {
@@ -520,7 +558,7 @@ function VendeurPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, facility?.id, loadProducts, loadRequests]);
+  }, [activeTab, facility?.id, loadCampaigns, loadCoupons, loadProducts, loadRequests]);
 
   if (loading || !ready) {
     return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
