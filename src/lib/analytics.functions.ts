@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuth } from "./auth-middleware";
+import { requireAuth, requireStaff } from "./auth-middleware";
 import { query } from "./db.server";
 
 const eventName = z.enum([
@@ -65,6 +65,25 @@ export const recordProductEvent = createServerFn({ method: "POST" })
     );
     return { ok: true };
   });
+
+export type ProductFunnelSummary = {
+  event_name: string;
+  event_count: number;
+  unique_users: number;
+};
+
+export const getProductFunnelSummary = createServerFn({ method: "GET" })
+  .middleware([requireStaff])
+  .handler(async () =>
+    query<ProductFunnelSummary>(
+      `SELECT event_name, count(*)::int AS event_count,
+              count(DISTINCT user_id)::int AS unique_users
+       FROM public.product_events
+       WHERE created_at >= now() - interval '30 days'
+       GROUP BY event_name
+       ORDER BY event_count DESC, event_name ASC`,
+    ),
+  );
 
 export const saveAnalyticsConsent = createServerFn({ method: "POST" })
   .middleware([requireAuth])

@@ -13,6 +13,7 @@ import {
   type AdminFacilityRow,
   type AdminStats,
 } from "@/lib/admin.functions";
+import { getProductFunnelSummary, type ProductFunnelSummary } from "@/lib/analytics.functions";
 import { OpsPanel } from "@/components/omni/admin/OpsPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ function AdminPage() {
   const [denied, setDenied] = useState(false);
 
   const [stats, setStats] = useState<AdminStats | null>(null);
+  const [funnel, setFunnel] = useState<ProductFunnelSummary[]>([]);
   const [rows, setRows] = useState<AdminFacilityRow[]>([]);
   const [hoods, setHoods] = useState<{ neighbourhood: string; count: number }[]>([]);
   const [search, setSearch] = useState("");
@@ -70,6 +72,7 @@ function AdminPage() {
   const [busy, setBusy] = useState(false);
 
   const fetchStats = useServerFn(getAdminStats);
+  const fetchFunnel = useServerFn(getProductFunnelSummary);
   const fetchRows = useServerFn(listAdminFacilities);
   const fetchHoods = useServerFn(listNeighbourhoods);
   const contactFn = useServerFn(markContacted);
@@ -78,7 +81,7 @@ function AdminPage() {
 
   const reload = useCallback(async () => {
     try {
-      const [s, list] = await Promise.all([
+      const [s, list, funnelRows] = await Promise.all([
         fetchStats(),
         fetchRows({
           data: {
@@ -89,14 +92,16 @@ function AdminPage() {
             contacted,
           },
         }),
+        fetchFunnel(),
       ]);
       setStats(s);
       setRows(list);
+      setFunnel(funnelRows);
       setDenied(false);
     } catch {
       setDenied(true);
     }
-  }, [fetchStats, fetchRows, search, status, category, hood, contacted]);
+  }, [fetchStats, fetchRows, fetchFunnel, search, status, category, hood, contacted]);
 
   useEffect(() => {
     if (!user || !isStaff) return;
@@ -215,6 +220,37 @@ function AdminPage() {
             ))}
           </div>
         )}
+
+        <section className="omni-card space-y-3 p-4">
+          <div>
+            <h2 className="font-display text-lg font-bold">Funnel produit — 30 derniers jours</h2>
+            <p className="text-xs text-muted-foreground">
+              Données minimisées, réservées à l’équipe staff.
+            </p>
+          </div>
+          {funnel.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Aucun événement consenti pour cette période.
+            </p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {funnel.map((row) => (
+                <div
+                  key={row.event_name}
+                  className="rounded-xl border border-border bg-background/60 p-3"
+                >
+                  <p className="truncate text-xs font-semibold text-muted-foreground">
+                    {row.event_name}
+                  </p>
+                  <p className="mt-1 font-display text-2xl font-bold">{row.event_count}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {row.unique_users} utilisateur(s)
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <div className="omni-card grid gap-3 p-3 md:grid-cols-5">
           <Input
