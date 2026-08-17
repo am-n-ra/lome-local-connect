@@ -56,39 +56,63 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="omni-card space-y-3 p-5">
-        <p className="font-display text-lg font-bold">Créer un coupon</p>
-        <div className="grid gap-3 sm:grid-cols-3">
+      <form
+        className="omni-card space-y-5 p-5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <div>
+          <h3 className="font-display text-lg font-bold">Créer une offre</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Donnez un code simple à partager. Le client verra immédiatement l’économie appliquée.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="ccode">Code</Label>
+            <Label htmlFor="ccode">Code du coupon</Label>
             <Input
               id="ccode"
               value={code}
-              onChange={(e) => setCode(e.target.value)}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="Ex. BIENVENUE"
               maxLength={24}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cdesc">Description</Label>
-            <Input
-              id="cdesc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={140}
+              required
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cpct">Remise (%)</Label>
             <Input
               id="cpct"
+              type="number"
               inputMode="numeric"
+              min="1"
+              max="90"
               value={percent}
               onChange={(e) => setPercent(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label htmlFor="cdesc">Description (facultative)</Label>
+            <Input
+              id="cdesc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Ex. Offre de bienvenue sur votre catalogue"
+              maxLength={140}
             />
           </div>
         </div>
-        <Button onClick={() => void submit()}>Créer le coupon</Button>
-      </div>
+        {code.trim() && (
+          <p className="rounded-lg bg-secondary/60 px-3 py-2 text-sm text-muted-foreground">
+            Aperçu client : <strong>{code.trim().toUpperCase()}</strong> · économie de{" "}
+            {percent || "0"} %
+          </p>
+        )}
+        <Button type="submit">Créer le coupon</Button>
+      </form>
 
       <ul className="space-y-2">
         {coupons.map((c) => (
