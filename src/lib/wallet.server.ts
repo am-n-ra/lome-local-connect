@@ -61,6 +61,37 @@ export async function appendWalletEntry(input: {
   return row.id;
 }
 
+export async function consumeWalletBucket(input: {
+  accountId: string;
+  bucket: WalletBucket;
+  amount: number;
+  referenceType: string;
+  referenceId?: string | null;
+  idempotencyKey: string;
+  actorUserId?: string | null;
+  source?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+}): Promise<string> {
+  const row = await queryOne<{ id: string }>(
+    `SELECT public.omni_consume_wallet_bucket(
+      $1::uuid, $2, $3::bigint, $4, $5, $6, $7, $8, $9::jsonb
+    ) AS id`,
+    [
+      input.accountId,
+      input.bucket,
+      input.amount,
+      input.referenceType,
+      input.referenceId ?? null,
+      input.idempotencyKey,
+      input.actorUserId ?? null,
+      input.source ?? "system",
+      JSON.stringify(input.metadata ?? {}),
+    ],
+  );
+  if (!row?.id) throw new Error("Impossible de consommer le crédit wallet.");
+  return row.id;
+}
+
 export async function transferWalletBuckets(input: {
   accountId: string;
   fromBucket: WalletBucket;

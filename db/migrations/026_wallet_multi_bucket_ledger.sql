@@ -267,3 +267,52 @@ FROM public.subscriptions s
 JOIN public.wallet_accounts wa ON wa.facility_id = s.facility_id AND wa.currency = 'XOF'
 ON CONFLICT (account_id, bucket, currency) DO UPDATE
 SET available_amount = EXCLUDED.available_amount, updated_at = now();
+
+-- Consume a bucket atomically for ad, coupon or Pro usage.
+CREATE OR REPLACE FUNCTION public.omni_consume_wallet_bucket(
+  p_account_id uuid,
+  p_bucket text,
+  p_amount bigint,
+  p_reference_type text,
+  p_reference_id text,
+  p_idempotency_key text,
+  p_actor_user_id text DEFAULT NULL,
+  p_source text DEFAULT 'system',
+  p_metadata jsonb DEFAULT '{}'::jsonb
+)
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_id uuid;
+  v_existing public.wallet_ledger_entries%ROWTYPE;
+  v_available bigint;
+BEGIN
+  IF p_amount <= 0 THEN RAISE EXCEPTION 'wallet consumption amount must be positive'; END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended(p_account_id::text || ':' || p_bucket, 0));
+  PERFORM public.omni_rebuild_wallet_snapshot(p_account_id, p_bucket);
+  SELECT available_amount INTO v_available
+  FROM public.wallet_balance_snapshots
+  WHERE account_id = p_account_id AND bucket = p_bucket AND currency = 'XOF'
+  FOR UPDATE;
+  IF COALESCE(v_available, 0) < p_amount THEN RAISE EXCEPTION 'insufficient wallet balance'; END IF;
+  INSERT INTO public.wallet_ledger_entries
+    (account_id, bucket, amount, currency, reference_type, reference_id, idempotency_key,
+     actor_user_id, source, metadata)
+  VALUES
+    (p_account_id, p_bucket, -p_amount, 'XOF', p_reference_type, p_reference_id, p_idempotency_key,
+     p_actor_user_id, p_source, COALESCE(p_metadata, '{}'::jsonb))
+  ON CONFLICT (account_id, idempotency_key) DO NOTHING
+  RETURNING id INTO v_id;
+  IF v_id IS NULL THEN
+    SELECT * INTO v_existing FROM public.wallet_ledger_entries
+    WHERE account_id = p_account_id AND idempotency_key = p_idempotency_key;
+    IF v_existing.amount <> -p_amount OR v_existing.bucket <> p_bucket THEN
+      RAISE EXCEPTION 'idempotency key conflicts with an existing consumption';
+    END IF;
+    RETURN v_existing.id;
+  END IF;
+  PERFORM public.omni_rebuild_wallet_snapshot(p_account_id, p_bucket);
+  RETURN v_id;
+END;
+$$;
