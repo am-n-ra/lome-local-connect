@@ -25,7 +25,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [cameraStatus, setCameraStatus] = useState<
-    "idle" | "permission_pending" | "active" | "denied" | "unsupported"
+    "idle" | "permission_pending" | "active" | "denied" | "unsupported" | "error"
   >("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -75,12 +75,32 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       );
       return;
     }
-    if (!("BarcodeDetector" in window)) {
-      setCameraStatus("unsupported");
-      setCameraError("Le scan QR n’est pas supporté ici. Saisissez le code manuellement.");
-      return;
-    }
     try {
+      // Request permission before checking QR decoding support. On Safari and
+      // Firefox BarcodeDetector may be absent even though camera preview works.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (!videoRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        setCameraStatus("error");
+        setCameraError("Aperçu caméra indisponible. Saisissez le code manuellement.");
+        return;
+      }
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      setCameraStatus("active");
+      setScanning(true);
+
+      if (!("BarcodeDetector" in window)) {
+        setCameraError(
+          "Aperçu caméra actif. Le scan automatique n’est pas disponible ici : saisissez le code QR sous la caméra.",
+        );
+        return;
+      }
+
       const BarcodeDetectorCtor = (
         window as unknown as {
           BarcodeDetector: new (options?: { formats?: string[] }) => {
@@ -89,16 +109,6 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
         }
       ).BarcodeDetector;
       const detector = new BarcodeDetectorCtor({ formats: ["qr_code"] });
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-      streamRef.current = stream;
-      if (!videoRef.current) return;
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
-      setCameraStatus("active");
-      setScanning(true);
 
       const scan = async () => {
         if (!videoRef.current || !streamRef.current) return;
@@ -230,7 +240,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
                   ? "Caméra refusée — saisie manuelle disponible"
                   : cameraStatus === "unsupported"
                     ? "Scan indisponible — saisie manuelle disponible"
-                    : "Scanner QR prêt sur cet appareil"}
+                    : cameraStatus === "error"
+                      ? "Caméra indisponible — saisie manuelle disponible"
+                      : "Scanner QR prêt sur cet appareil"}
           </span>
           {cameraError && <span>{cameraError}</span>}
         </div>

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { useServerFn } from "@/lib/useServerFn";
-import { MapPin, Plus, Store } from "lucide-react";
+import { CreditCard, MapPin, Plus, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -131,6 +131,7 @@ function VendeurPage() {
   const [pCouponCode, setPCouponCode] = useState("");
   const [pCouponDescription, setPCouponDescription] = useState("");
   const [pCouponPercent, setPCouponPercent] = useState("10");
+  const [productAdvancedOpen, setProductAdvancedOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
@@ -1103,23 +1104,36 @@ function VendeurPage() {
                         balances={data?.balances ?? []}
                         formatMoney={formatMoney}
                         topUpControl={
-                          <div className="flex items-center gap-2">
-                            <Input
-                              inputMode="numeric"
-                              value={topUpAmount}
-                              onChange={(event) =>
-                                setTopUpAmount(event.target.value.replace(/\\D/g, ""))
-                              }
-                              className="h-9 w-28 text-base sm:text-sm"
-                              aria-label="Montant de recharge en FCFA"
-                            />
+                          <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+                            <div className="min-w-32 flex-1 sm:flex-none">
+                              <Label htmlFor="omni-wallet-top-up" className="sr-only">
+                                Montant à recharger en FCFA
+                              </Label>
+                              <Input
+                                id="omni-wallet-top-up"
+                                inputMode="numeric"
+                                type="number"
+                                min="500"
+                                value={topUpAmount}
+                                onChange={(event) =>
+                                  setTopUpAmount(event.target.value.replace(/\\D/g, ""))
+                                }
+                                className="h-9 text-base sm:w-32 sm:text-sm"
+                                aria-label="Montant à recharger en FCFA"
+                              />
+                            </div>
                             <Button
                               size="sm"
                               onClick={() => void startTopUp()}
                               disabled={topUpBusy}
                             >
-                              {topUpBusy ? "Ouverture…" : "Recharger"}
+                              <CreditCard className="mr-1.5 h-4 w-4" />
+                              {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
                             </Button>
+                            <p className="w-full text-[11px] text-muted-foreground sm:max-w-64">
+                              FedaPay ouvre son checkout sécurisé avec les moyens activés, dont la
+                              carte bancaire si disponible.
+                            </p>
                           </div>
                         }
                       />
@@ -1200,80 +1214,176 @@ function VendeurPage() {
             </TabsContent>
 
             <TabsContent value="produits" className="mt-5">
-              <div className="omni-card flex flex-wrap gap-2 p-4">
-                <Input
-                  placeholder="Nom du produit"
-                  value={pName}
-                  onChange={(e) => setPName(e.target.value)}
-                  className="flex-1"
-                />
-                <Input
-                  placeholder="Prix (FCFA)"
-                  inputMode="numeric"
-                  value={pPrice}
-                  onChange={(e) => setPPrice(e.target.value)}
-                  className="w-36"
-                />
-                <Input
-                  placeholder="Qté stock"
-                  inputMode="numeric"
-                  value={pQuantity}
-                  onChange={(e) => setPQuantity(e.target.value)}
-                  className="w-28"
-                />
-                <Input
-                  placeholder="Allocation Omni %"
-                  inputMode="numeric"
-                  value={pAllocation}
-                  onChange={(e) => setPAllocation(e.target.value)}
-                  className="w-36"
-                />
-                <select
-                  value={pStatus}
-                  onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="active">Actif</option>
-                  <option value="draft">Brouillon</option>
-                  <option value="paused">En pause</option>
-                  <option value="sold_out">Épuisé</option>
-                </select>
-                <Input
-                  placeholder="URL photo (optionnel)"
-                  value={pPhoto}
-                  onChange={(e) => setPPhoto(e.target.value)}
-                  className="w-56"
-                />
-                <Input
-                  placeholder="Coupon produit (optionnel)"
-                  value={pCouponCode}
-                  onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
-                  className="w-48"
-                  maxLength={24}
-                />
-                <Input
-                  placeholder="Remise %"
-                  inputMode="numeric"
-                  value={pCouponPercent}
-                  onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
-                  className="w-28"
-                  disabled={!pCouponCode.trim()}
-                />
-                <Input
-                  placeholder="Description coupon (optionnel)"
-                  value={pCouponDescription}
-                  onChange={(e) => setPCouponDescription(e.target.value)}
-                  className="min-w-48 flex-1"
-                  maxLength={200}
-                  disabled={!pCouponCode.trim()}
-                />
-                <Button disabled={atProductCap} onClick={() => void addProduct()}>
-                  <Plus className="mr-1.5 h-4 w-4" /> Ajouter
-                </Button>
-                <Button variant="outline" onClick={() => void confirmEverything()}>
-                  Tout confirmer
-                </Button>
-              </div>
+              <form
+                className="omni-card space-y-5 p-4 sm:p-5"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void addProduct();
+                }}
+              >
+                <div>
+                  <h3 className="font-display text-lg font-bold">Ajouter un produit</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Commencez par l’essentiel. Les options avancées restent disponibles sans
+                    encombrer le formulaire.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="vendor-product-name">Nom du produit</Label>
+                    <Input
+                      id="vendor-product-name"
+                      value={pName}
+                      onChange={(e) => setPName(e.target.value)}
+                      placeholder="Ex. Ciment 50 kg"
+                      autoComplete="off"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="vendor-product-price">Prix unitaire (FCFA)</Label>
+                    <Input
+                      id="vendor-product-price"
+                      inputMode="numeric"
+                      type="number"
+                      min="0"
+                      value={pPrice}
+                      onChange={(e) => setPPrice(e.target.value)}
+                      placeholder="12 000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="vendor-product-quantity">Quantité disponible</Label>
+                    <Input
+                      id="vendor-product-quantity"
+                      inputMode="numeric"
+                      type="number"
+                      min="0"
+                      value={pQuantity}
+                      onChange={(e) => setPQuantity(e.target.value)}
+                      placeholder="1"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button type="submit" disabled={atProductCap}>
+                    <Plus className="mr-1.5 h-4 w-4" /> Publier le produit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setProductAdvancedOpen((open) => !open)}
+                    aria-expanded={productAdvancedOpen}
+                  >
+                    {productAdvancedOpen ? "Masquer les options" : "Afficher les options avancées"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => void confirmEverything()}>
+                    Tout confirmer
+                  </Button>
+                </div>
+                {productAdvancedOpen && (
+                  <div className="space-y-4 rounded-xl border border-border/70 bg-secondary/30 p-4">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="vendor-product-status">Visibilité</Label>
+                        <select
+                          id="vendor-product-status"
+                          value={pStatus}
+                          onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
+                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        >
+                          <option value="active">Actif — visible dans la recherche</option>
+                          <option value="draft">Brouillon — non publié</option>
+                          <option value="paused">En pause</option>
+                          <option value="sold_out">Épuisé</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="vendor-product-allocation">
+                          Allocation interne Omni (%)
+                        </Label>
+                        <Input
+                          id="vendor-product-allocation"
+                          inputMode="numeric"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={pAllocation}
+                          onChange={(e) => setPAllocation(e.target.value)}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Allocation interne, pas un portefeuille séparé.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label htmlFor="vendor-product-photo">
+                          Photo ou média (URL facultative)
+                        </Label>
+                        <Input
+                          id="vendor-product-photo"
+                          value={pPhoto}
+                          onChange={(e) => setPPhoto(e.target.value)}
+                          placeholder="Ajoutez un média ou laissez le placeholder"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-3 border-t border-border/70 pt-4">
+                      <div>
+                        <p className="font-semibold">Coupon produit (facultatif)</p>
+                        <p className="text-xs text-muted-foreground">
+                          Le client verra l’économie directement sur l’offre.
+                        </p>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="vendor-product-coupon">Code coupon</Label>
+                          <Input
+                            id="vendor-product-coupon"
+                            value={pCouponCode}
+                            onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
+                            placeholder="Ex. BIENVENUE"
+                            maxLength={24}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="vendor-product-coupon-percent">Remise (%)</Label>
+                          <Input
+                            id="vendor-product-coupon-percent"
+                            inputMode="numeric"
+                            type="number"
+                            min="1"
+                            max="90"
+                            value={pCouponPercent}
+                            onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
+                            disabled={!pCouponCode.trim()}
+                          />
+                        </div>
+                        <div className="space-y-1.5 sm:col-span-2">
+                          <Label htmlFor="vendor-product-coupon-description">
+                            Description du coupon
+                          </Label>
+                          <Textarea
+                            id="vendor-product-coupon-description"
+                            value={pCouponDescription}
+                            onChange={(e) => setPCouponDescription(e.target.value)}
+                            placeholder="Ex. Offre de bienvenue sur ce produit"
+                            maxLength={200}
+                            disabled={!pCouponCode.trim()}
+                          />
+                        </div>
+                      </div>
+                      {pCouponCode.trim() && (
+                        <p className="rounded-lg bg-background px-3 py-2 text-sm text-muted-foreground">
+                          Aperçu client : <strong>{pCouponCode.trim().toUpperCase()}</strong> · le
+                          client économise {pCouponPercent || "0"} %.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </form>
               {atProductCap && (
                 <p className="mt-2 text-sm text-destructive">
                   Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille
