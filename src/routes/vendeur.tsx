@@ -46,6 +46,8 @@ import {
   type VendorProduct,
   type VendorRequest,
   type VendorSubscription,
+  type VendorBalance,
+  type VendorUnlock,
   type DemandSignal,
 } from "@/lib/vendor.functions";
 import { confirmWalletDeposit } from "@/lib/payments.functions";
@@ -81,6 +83,8 @@ type Dashboard = {
   requests: VendorRequest[];
   demand: DemandSignal[];
   walletBalance: number;
+  balances: VendorBalance[];
+  unlock: VendorUnlock | null;
 };
 
 function VendeurPage() {
@@ -841,6 +845,61 @@ function VendeurPage() {
                 <p className="mt-1 font-display text-2xl font-extrabold">
                   {data?.campaigns.length ?? 0}
                 </p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+              <div className="omni-card p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                      Unlocker vendeur
+                    </p>
+                    <h3 className="mt-1 font-display text-xl font-bold">
+                      Crédit Pro de test · 20 USD
+                    </h3>
+                  </div>
+                  <Badge variant={data?.unlock?.status === "eligible" ? "default" : "secondary"}>
+                    {data?.unlock?.status === "eligible"
+                      ? "Éligible"
+                      : data?.unlock?.status === "granted"
+                        ? "Accordé"
+                        : "En progression"}
+                  </Badge>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {data?.unlock?.qualifying_count ?? 0} / {data?.unlock?.required_count ?? 3} ventes
+                  terminées. Le crédit est non monétaire et n’est activé qu’après validation
+                  serveur.
+                </p>
+                <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+                  <div
+                    className="h-full rounded-full bg-primary transition-[width]"
+                    style={{
+                      width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="omni-card p-5">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                  Balances
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  {(data?.balances ?? []).map((balance) => (
+                    <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        {balance.bucket.replaceAll("_", " ")}
+                      </p>
+                      <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
+                    </div>
+                  ))}
+                  {(data?.balances ?? []).length === 0 && (
+                    <p className="col-span-2 text-sm text-muted-foreground">
+                      Aucun mouvement segmenté enregistré.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 

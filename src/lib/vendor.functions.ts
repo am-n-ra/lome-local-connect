@@ -71,6 +71,16 @@ export type VendorCoupon = {
   redemption_count: number;
 };
 
+export type VendorBalance = { bucket: string; amount: number };
+
+export type VendorUnlock = {
+  unlock_type: string;
+  status: string;
+  qualifying_count: number;
+  required_count: number;
+  expires_at: string | null;
+};
+
 export type VendorRequest = {
   id: string;
   status: string;
@@ -123,6 +133,8 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
         requests: [],
         demand: [],
         walletBalance: 0,
+        balances: [],
+        unlock: null,
       };
     }
 
@@ -146,36 +158,37 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
         )) ?? subscription;
     }
 
-    const [products, campaigns, coupons, requestRows, demand] = await Promise.all([
-      query<VendorProduct>(
-        `SELECT id, facility_id, name, price, discount_percent, in_stock,
+    const [products, campaigns, coupons, requestRows, demand, balances, unlock] = await Promise.all(
+      [
+        query<VendorProduct>(
+          `SELECT id, facility_id, name, price, discount_percent, in_stock,
                 COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
                 COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
                 COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
                 photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY created_at DESC`,
-        [facility.id],
-      ),
-      query<VendorCampaign>(
-        `SELECT id, facility_id, product_ids, radius_km, is_city_wide, cost_fcfa,
+          [facility.id],
+        ),
+        query<VendorCampaign>(
+          `SELECT id, facility_id, product_ids, radius_km, is_city_wide, cost_fcfa,
                 reach_estimate, campaign_active_until, created_at
          FROM public.ad_campaigns WHERE facility_id = $1 ORDER BY created_at DESC`,
-        [facility.id],
-      ),
-      query<VendorCoupon>(
-        `SELECT c.id, c.code, c.description, c.discount_percent, c.created_at,
+          [facility.id],
+        ),
+        query<VendorCoupon>(
+          `SELECT c.id, c.code, c.description, c.discount_percent, c.created_at,
                 (SELECT count(*) FROM public.redemptions r WHERE r.coupon_id = c.id)::int AS redemption_count
          FROM public.coupons c WHERE c.facility_id = $1 ORDER BY c.created_at DESC`,
-        [facility.id],
-      ),
-      query<{
-        id: string;
-        status: string;
-        created_at: string;
-        buyer_name: string | null;
-        items: { name: string; quantity: number; price_at_time: number }[] | null;
-      }>(
-        `SELECT ca.id, ca.status, ca.created_at, p.name AS buyer_name,
+          [facility.id],
+        ),
+        query<{
+          id: string;
+          status: string;
+          created_at: string;
+          buyer_name: string | null;
+          items: { name: string; quantity: number; price_at_time: number }[] | null;
+        }>(
+          `SELECT ca.id, ca.status, ca.created_at, p.name AS buyer_name,
                 COALESCE(
                   json_agg(json_build_object('name', pr.name, 'quantity', ci.quantity,
                                              'price_at_time', ci.price_at_time))
@@ -188,17 +201,32 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
          WHERE ca.facility_id = $1
          GROUP BY ca.id, p.name
          ORDER BY ca.created_at DESC LIMIT 50`,
-        [facility.id],
-      ),
-      query<DemandSignal>(
-        `SELECT lower(search_term) AS search_term, count(*)::int AS hits,
+          [facility.id],
+        ),
+        query<DemandSignal>(
+          `SELECT lower(search_term) AS search_term, count(*)::int AS hits,
                 max(created_at) AS last_seen
          FROM public.wishlists
          WHERE created_at > now() - interval '30 days'
          GROUP BY lower(search_term)
          ORDER BY hits DESC, last_seen DESC LIMIT 20`,
-      ),
-    ]);
+        ),
+        query<VendorBalance>(
+          `SELECT bucket, COALESCE(sum(amount), 0)::int AS amount
+         FROM public.balance_ledger
+         WHERE facility_id = $1
+         GROUP BY bucket
+         ORDER BY bucket`,
+          [facility.id],
+        ),
+        queryOne<VendorUnlock>(
+          `SELECT unlock_type, status, qualifying_count, required_count, expires_at
+         FROM public.seller_unlocks
+         WHERE facility_id = $1 AND unlock_type = 'pro_test_credit_20_usd'`,
+          [facility.id],
+        ),
+      ],
+    );
 
     const requests: VendorRequest[] = requestRows.map((r) => {
       const items = r.items ?? [];
@@ -221,6 +249,8 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
       requests,
       demand,
       walletBalance: effective.wallet_balance,
+      balances,
+      unlock,
     };
   });
 
@@ -452,15 +482,12 @@ export const deleteProduct = createServerFn({ method: "POST" })
 
 export const confirmStock = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     await assertOwner(context.userId, data.facilityId);
-    await query(
-      "UPDATE public.products SET last_confirmed_at = now() WHERE facility_id = $1",
-      [data.facilityId],
-    );
+    await query("UPDATE public.products SET last_confirmed_at = now() WHERE facility_id = $1", [
+      data.facilityId,
+    ]);
     return { ok: true };
   });
 
