@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { toast } from "sonner";
 import { Camera, CameraOff, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraStatus, setCameraStatus] = useState<
+    "idle" | "permission_pending" | "active" | "denied" | "unsupported"
+  >("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -59,17 +62,21 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setScanning(false);
+    setCameraStatus("idle");
   }
 
   async function startScanner() {
     setCameraError(null);
-    if (!navigator.mediaDevices?.getUserMedia) {
+    setCameraStatus("permission_pending");
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setCameraStatus("unsupported");
       setCameraError(
         "La caméra n’est pas disponible dans ce navigateur. Saisissez le code manuellement.",
       );
       return;
     }
     if (!("BarcodeDetector" in window)) {
+      setCameraStatus("unsupported");
       setCameraError("Le scan QR n’est pas supporté ici. Saisissez le code manuellement.");
       return;
     }
@@ -90,6 +97,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       if (!videoRef.current) return;
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      setCameraStatus("active");
       setScanning(true);
 
       const scan = async () => {
@@ -110,8 +118,10 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       frameRef.current = requestAnimationFrame(() => void scan());
     } catch (error) {
       stopScanner();
+      const denied = error instanceof DOMException && error.name === "NotAllowedError";
+      setCameraStatus(denied ? "denied" : "unsupported");
       setCameraError(
-        error instanceof DOMException && error.name === "NotAllowedError"
+        denied
           ? "Accès caméra refusé. Autorisez la caméra ou saisissez le code manuellement."
           : "Caméra indisponible. Saisissez le code manuellement.",
       );
@@ -210,7 +220,20 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
             </div>
           )}
         </div>
-        {cameraError && <p className="text-xs text-muted-foreground">{cameraError}</p>}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span aria-live="polite">
+            {cameraStatus === "permission_pending"
+              ? "Demande d’autorisation caméra…"
+              : cameraStatus === "active"
+                ? "Caméra prête à scanner"
+                : cameraStatus === "denied"
+                  ? "Caméra refusée — saisie manuelle disponible"
+                  : cameraStatus === "unsupported"
+                    ? "Scan indisponible — saisie manuelle disponible"
+                    : "Scanner QR prêt sur cet appareil"}
+          </span>
+          {cameraError && <span>{cameraError}</span>}
+        </div>
       </div>
 
       <div className="omni-card space-y-2 p-4">
