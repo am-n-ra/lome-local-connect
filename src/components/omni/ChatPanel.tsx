@@ -20,18 +20,33 @@ type Props = {
   /** Optional conversation to open directly (buyer side). */
   facilityId?: string | undefined;
   facilityName?: string | undefined;
+  transactionContext?:
+    | {
+        status: string;
+        amountLabel: string;
+        qrCode?: string | null;
+      }
+    | undefined;
 };
 
-export function ChatPanel({ open, onOpenChange, facilityId, facilityName }: Props) {
+export function ChatPanel({
+  open,
+  onOpenChange,
+  facilityId,
+  facilityName,
+  transactionContext,
+}: Props) {
   const { user } = useAuth();
   const fetchThreads = useServerFn(listChatThreads);
   const fetchMessages = useServerFn(listMessages);
   const post = useServerFn(sendMessage);
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
-  const [active, setActive] = useState<{ facilityId: string; buyerId?: string; name: string } | null>(
-    null,
-  );
+  const [active, setActive] = useState<{
+    facilityId: string;
+    buyerId?: string;
+    name: string;
+  } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -50,7 +65,10 @@ export function ChatPanel({ open, onOpenChange, facilityId, facilityName }: Prop
     if (!active) return;
     try {
       const res = await fetchMessages({
-        data: { facilityId: active.facilityId, ...(active.buyerId ? { buyerId: active.buyerId } : {}) },
+        data: {
+          facilityId: active.facilityId,
+          ...(active.buyerId ? { buyerId: active.buyerId } : {}),
+        },
       });
       setMessages(res.messages);
     } catch {
@@ -101,6 +119,20 @@ export function ChatPanel({ open, onOpenChange, facilityId, facilityName }: Prop
       <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
         <SheetHeader className="border-b border-border p-4">
           <SheetTitle>{active ? active.name : "Messages"}</SheetTitle>
+          {transactionContext && (
+            <div className="mt-2 rounded-xl bg-secondary/70 p-2 text-left text-xs">
+              <div className="flex items-center justify-between gap-2 font-semibold">
+                <span>Conversation transactionnelle</span>
+                <span className="rounded-full bg-background px-2 py-0.5">
+                  {transactionContext.status}
+                </span>
+              </div>
+              <p className="mt-1 text-muted-foreground">
+                Total : {transactionContext.amountLabel}
+                {transactionContext.qrCode ? ` · QR ${transactionContext.qrCode}` : ""}
+              </p>
+            </div>
+          )}
         </SheetHeader>
 
         {!user && (
@@ -119,7 +151,11 @@ export function ChatPanel({ open, onOpenChange, facilityId, facilityName }: Prop
                 key={`${t.facility_id}-${t.buyer_id}`}
                 type="button"
                 onClick={() =>
-                  setActive({ facilityId: t.facility_id, buyerId: t.buyer_id, name: t.facility_name })
+                  setActive({
+                    facilityId: t.facility_id,
+                    buyerId: t.buyer_id,
+                    name: t.facility_name,
+                  })
                 }
                 className="omni-card w-full p-3 text-left"
               >
