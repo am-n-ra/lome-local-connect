@@ -30,6 +30,7 @@ import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
 import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniStatusBadge } from "@/components/omni/ui/OmniPrimitives";
+import { BalanceSheet } from "@/components/omni/ui/BalanceSheet";
 import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
@@ -927,51 +928,31 @@ function VendeurPage() {
                         />
                       </div>
                     </div>
-                    <div className="omni-card p-5 sm:col-span-2">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                            Solde opérationnel
-                          </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Les crédits non monétaires ne sont pas retirables et chaque recharge
-                            passe par FedaPay.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Input
-                            inputMode="numeric"
-                            value={topUpAmount}
-                            onChange={(event) =>
-                              setTopUpAmount(event.target.value.replace(/\\D/g, ""))
-                            }
-                            className="h-9 w-28 text-base sm:text-sm"
-                            aria-label="Montant de recharge en FCFA"
-                          />
-                          <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
-                            {topUpBusy ? "Ouverture…" : "Recharger"}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-                        {[
-                          ["wallet", "Wallet"],
-                          ["payout", "Payout"],
-                          ["ad_credit", "Publicité"],
-                          ["coupon_credit", "Coupons"],
-                          ["pro_credit", "Pro"],
-                        ].map(([bucket, label]) => {
-                          const balance = data?.balances.find((item) => item.bucket === bucket);
-                          return (
-                            <div key={bucket} className="rounded-xl bg-secondary/60 p-2.5">
-                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                {label}
-                              </p>
-                              <p className="mt-1 font-bold">{formatMoney(balance?.amount ?? 0)}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
+                    <div className="sm:col-span-2">
+                      <BalanceSheet
+                        balances={data?.balances ?? []}
+                        formatMoney={formatMoney}
+                        topUpControl={
+                          <div className="flex items-center gap-2">
+                            <Input
+                              inputMode="numeric"
+                              value={topUpAmount}
+                              onChange={(event) =>
+                                setTopUpAmount(event.target.value.replace(/\\D/g, ""))
+                              }
+                              className="h-9 w-28 text-base sm:text-sm"
+                              aria-label="Montant de recharge en FCFA"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => void startTopUp()}
+                              disabled={topUpBusy}
+                            >
+                              {topUpBusy ? "Ouverture…" : "Recharger"}
+                            </Button>
+                          </div>
+                        }
+                      />
                     </div>
                     <div className="hidden">
                       <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
