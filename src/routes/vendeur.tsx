@@ -207,6 +207,10 @@ function VendeurPage() {
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
 
+  function invalidateSurfaceCache(facilityId: string) {
+    surfaceCache.current.delete(facilityId);
+  }
+
   async function startTopUp() {
     const amount = Number(topUpAmount);
     if (!Number.isInteger(amount) || amount < 500) {
@@ -308,6 +312,7 @@ function VendeurPage() {
             : null,
         },
       });
+      invalidateSurfaceCache(facility.id);
       await refresh();
       setPName("");
       setPPrice("");
@@ -341,6 +346,7 @@ function VendeurPage() {
           photoUrl: product.photo_url,
         },
       });
+      invalidateSurfaceCache(facility.id);
       await refresh();
     } catch {
       toast.error("Mise à jour impossible.");
@@ -364,6 +370,7 @@ function VendeurPage() {
           photoUrl: product.photo_url,
         },
       });
+      invalidateSurfaceCache(facility.id);
       await refresh();
       toast.success("Disponibilité confirmée.");
     } catch {
@@ -375,6 +382,7 @@ function VendeurPage() {
     if (!facility) return;
     try {
       await removeProductFn({ data: { facilityId: facility.id, productId: product.id } });
+      invalidateSurfaceCache(facility.id);
       await refresh();
     } catch {
       toast.error("Suppression impossible.");
@@ -385,6 +393,7 @@ function VendeurPage() {
     if (!facility) return;
     try {
       await confirmAll({ data: { facilityId: facility.id } });
+      invalidateSurfaceCache(facility.id);
       await refresh();
       toast.success("Tout le catalogue a été confirmé.");
     } catch {
