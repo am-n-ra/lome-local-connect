@@ -16,9 +16,16 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Connexion — OmniView" },
-      { name: "description", content: "Connectez-vous à OmniView pour gérer vos favoris, vos demandes et votre commerce." },
+      {
+        name: "description",
+        content:
+          "Connectez-vous à OmniView pour gérer vos favoris, vos demandes et votre commerce.",
+      },
       { property: "og:title", content: "Connexion — OmniView" },
-      { property: "og:description", content: "Accédez à votre compte acheteur et vendeur OmniView." },
+      {
+        property: "og:description",
+        content: "Accédez à votre compte acheteur et vendeur OmniView.",
+      },
     ],
   }),
   component: AuthPage,
@@ -62,7 +69,11 @@ function AuthPage() {
           parsed.data.name || parsed.data.email.split("@")[0]!,
         );
       }
-      navigate({ to: target });
+      if (mode === "signup") {
+        navigate({ to: "/onboarding", search: { redirectTo: target } });
+      } else {
+        navigate({ to: target });
+      }
     } catch (error) {
       toast.error(
         error instanceof Error && error.message
@@ -77,7 +88,10 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
-        <Link to="/" className="mb-6 flex items-center justify-center gap-1.5 font-display text-xl font-extrabold">
+        <Link
+          to="/"
+          className="mb-6 flex items-center justify-center gap-1.5 font-display text-xl font-extrabold"
+        >
           <BrandMark className="h-8 w-8" /> OmniView
         </Link>
         <div className="omni-card p-6">
@@ -90,11 +104,21 @@ function AuthPage() {
             <TabsContent value="signin" className="mt-5 space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="email">E-mail</Label>
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Mot de passe</Label>
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               <Button className="w-full" disabled={busy} onClick={() => void submit("signin")}>
                 {busy ? "Connexion…" : "Se connecter"}
@@ -111,11 +135,21 @@ function AuthPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="email2">E-mail</Label>
-                <Input id="email2" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  id="email2"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password2">Mot de passe</Label>
-                <Input id="password2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input
+                  id="password2"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
               <Button className="w-full" disabled={busy} onClick={() => void submit("signup")}>
                 {busy ? "Création…" : "Créer mon compte"}
