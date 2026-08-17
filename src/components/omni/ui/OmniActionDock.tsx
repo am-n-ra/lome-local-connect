@@ -14,19 +14,24 @@ export function OmniActionDock({
   active,
   onChange,
   className,
+  placement = "floating",
 }: {
   items: OmniActionItem[];
   active: string;
   onChange: (value: string) => void;
   className?: string;
+  placement?: "floating" | "inline";
 }) {
+  const placementClass =
+    placement === "inline"
+      ? "relative z-20 mx-auto flex w-full max-w-3xl gap-1 overflow-x-auto rounded-2xl p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:items-center"
+      : "fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex w-[min(44rem,calc(100vw-1.5rem))] gap-1 overflow-x-auto rounded-2xl p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:inset-x-auto sm:right-5 sm:top-1/2 sm:bottom-auto sm:translate-y-[-50%] sm:mx-0 sm:w-auto sm:max-w-[11rem] sm:flex-col sm:items-stretch";
+
   return (
     <nav
       aria-label="Actions principales"
-      className={cn(
-        "omni-glass pointer-events-auto fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex w-[min(44rem,calc(100vw-1.5rem))] gap-1 overflow-x-auto rounded-2xl p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:inset-x-auto sm:right-5 sm:top-1/2 sm:bottom-auto sm:translate-y-[-50%] sm:mx-0 sm:w-auto sm:max-w-[11rem] sm:flex-col sm:items-stretch",
-        className,
-      )}
+      data-omni-action-dock={placement}
+      className={cn("omni-glass pointer-events-auto", placementClass, className)}
     >
       {items.map((item) => {
         const selected = active === item.value;
@@ -35,6 +40,7 @@ export function OmniActionDock({
             key={item.value}
             type="button"
             aria-current={selected ? "page" : undefined}
+            aria-label={item.label}
             onClick={() => onChange(item.value)}
             className={cn(
               "flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition-[background-color,color,transform] duration-150 active:scale-[0.98] sm:justify-start",

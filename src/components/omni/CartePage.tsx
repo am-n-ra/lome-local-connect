@@ -15,6 +15,7 @@ import { ChatPanel } from "@/components/omni/ChatPanel";
 import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
+import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 
 import {
   categoryLabel,
@@ -651,26 +652,10 @@ export function CartePage() {
   }
 
   return (
-    <div
-      className="relative h-[100dvh] overflow-hidden bg-background"
-      data-omni-surface={surfaceState}
-      data-omni-motion={motionState}
-      data-omni-map-first="true"
-    >
-      <TopNav
-        query={query}
-        onQueryChange={setQuery}
-        onOpenCart={() => setCartOpen(true)}
-        onOpenWishlist={() => setWishOpen(true)}
-        onOpenOrders={() => setOrdersOpen(true)}
-        onOpenChat={() => setChatOpen(true)}
-        onOpenDemand={() => setDemandOpen(true)}
-        activeRole="acheteur"
-        hideSearch
-        minimalMapChrome
-      />
-
-      <div className="absolute inset-0 overflow-hidden">
+    <OmniMapShell
+      label="Carte de recherche Omni"
+      className="bg-background"
+      map={
         <MapCanvas
           facilities={hasActiveSearch ? results : discoveryResults}
           selectedId={selected?.id ?? null}
@@ -693,7 +678,27 @@ export function CartePage() {
           fitPoints={selected ? null : fitPoints}
           className="h-full w-full"
         />
-
+      }
+      chrome={
+        <TopNav
+          query={query}
+          onQueryChange={setQuery}
+          onOpenCart={() => setCartOpen(true)}
+          onOpenWishlist={() => setWishOpen(true)}
+          onOpenOrders={() => setOrdersOpen(true)}
+          onOpenChat={() => setChatOpen(true)}
+          onOpenDemand={() => setDemandOpen(true)}
+          activeRole="acheteur"
+          hideSearch
+          minimalMapChrome
+        />
+      }
+    >
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        data-omni-surface={surfaceState}
+        data-omni-motion={motionState}
+      >
         {!revealRunning &&
           !selected &&
           hasActiveSearch &&
@@ -864,7 +869,7 @@ export function CartePage() {
         )}
 
         {selected && (
-          <div className="absolute inset-x-0 bottom-0 z-40 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[var(--shadow-sheet)] backdrop-blur md:left-auto md:right-4 md:top-20 md:max-h-[calc(100%-6rem)] md:w-[420px] md:rounded-2xl md:border md:p-5">
+          <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[var(--shadow-sheet)] backdrop-blur md:left-auto md:right-4 md:top-20 md:max-h-[calc(100%-6rem)] md:w-[420px] md:rounded-2xl md:border md:p-5">
             <div className="mb-2 flex justify-end gap-2">
               <Button
                 variant="ghost"
@@ -916,7 +921,7 @@ export function CartePage() {
         )}
 
         {steps.length > 0 && (
-          <div className="absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
+          <div className="pointer-events-auto absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
             <div className="mb-2 flex items-center justify-between">
               <p className="font-display font-bold">Guidage à pied</p>
               <div className="flex gap-1">
@@ -995,7 +1000,7 @@ export function CartePage() {
         onOpenChange={setWishOpen}
         onRerun={(term) => setQuery(term)}
       />
-    </div>
+    </OmniMapShell>
   );
 }
 
