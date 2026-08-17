@@ -92,6 +92,19 @@ export type VendorRequest = {
 
 export type DemandSignal = { search_term: string; hits: number; last_seen: string };
 
+export type VendorShell = {
+  facilities: VendorFacility[];
+  subscription: VendorSubscription | null;
+  balances: VendorBalance[];
+  unlock: VendorUnlock | null;
+  counts: {
+    products: number;
+    requests: number;
+    coupons: number;
+    campaigns: number;
+  };
+};
+
 async function assertOwner(userId: string, facilityId: string) {
   const row = await queryOne<{ id: string }>(
     "SELECT id FROM public.facilities WHERE id = $1 AND owner_id = $2",
@@ -251,6 +264,59 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
       walletBalance: effective.wallet_balance,
       balances,
       unlock,
+    };
+  });
+
+/** Lightweight map-first payload. Heavy sections load when their surface opens. */
+export const getVendorShell = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }): Promise<VendorShell> => {
+    const facilities = await query<VendorFacility>(
+      `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
+              phone, status, type, is_online, last_position_update, operating_hours, emergency_shutdown, created_at
+       FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
+      [context.userId],
+    );
+    if (facilities.length === 0) {
+      return {
+        facilities: [],
+        subscription: null,
+        balances: [],
+        unlock: null,
+        counts: { products: 0, requests: 0, coupons: 0, campaigns: 0 },
+      };
+    }
+    const facility = facilities[0]!;
+    const [subscription, balances, unlock, counts] = await Promise.all([
+      ensureSubscription(facility.id),
+      query<VendorBalance>(
+        `SELECT s.bucket, s.available_amount::int AS amount
+         FROM public.wallet_balance_snapshots s
+         JOIN public.wallet_accounts a ON a.id = s.account_id
+         WHERE a.facility_id = $1 AND s.currency = 'XOF'
+         ORDER BY s.bucket`,
+        [facility.id],
+      ),
+      queryOne<VendorUnlock>(
+        `SELECT unlock_type, status, qualifying_count, required_count, expires_at
+         FROM public.seller_unlocks WHERE facility_id = $1 AND unlock_type = 'pro_test_credit_20_usd'`,
+        [facility.id],
+      ),
+      queryOne<VendorShell["counts"]>(
+        `SELECT
+          (SELECT count(*)::int FROM public.products WHERE facility_id = $1) AS products,
+          (SELECT count(*)::int FROM public.carts WHERE facility_id = $1 AND status IN ('pending','requested')) AS requests,
+          (SELECT count(*)::int FROM public.coupons WHERE facility_id = $1) AS coupons,
+          (SELECT count(*)::int FROM public.ad_campaigns WHERE facility_id = $1) AS campaigns`,
+        [facility.id],
+      ),
+    ]);
+    return {
+      facilities,
+      subscription,
+      balances,
+      unlock,
+      counts: counts ?? { products: 0, requests: 0, coupons: 0, campaigns: 0 },
     };
   });
 
