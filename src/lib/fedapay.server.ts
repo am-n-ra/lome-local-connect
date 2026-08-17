@@ -1,3 +1,4 @@
+import { WebhookSignature } from "fedapay";
 import { query, queryOne } from "./db.server";
 import { extendedProUntil, QUALIFYING_AMOUNT } from "./vendor";
 import { currentMonthKey } from "./omni";
@@ -145,42 +146,16 @@ export async function creditDeposit(depositId: string, providerStatus: string): 
   return true;
 }
 
-/** Verifies the `x-fedapay-signature: t=...,s=...` header over the raw body. */
+/** Verifies FedaPay's X-FEDAPAY-SIGNATURE with the official SDK. */
 export async function verifyWebhookSignature(
   rawBody: string,
   header: string | null,
 ): Promise<boolean> {
   const secret = process.env["FEDAPAY_WEBHOOK_SECRET"];
   if (!secret || !header) return false;
-
-  const parts = Object.fromEntries(
-    header.split(",").map((chunk) => {
-      const [k, v] = chunk.split("=");
-      return [k?.trim() ?? "", v?.trim() ?? ""];
-    }),
-  ) as { t?: string; s?: string };
-  if (!parts.t || !parts.s) return false;
-
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(`${parts.t}.${rawBody}`),
-  );
-  const expected = Array.from(new Uint8Array(mac))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  if (expected.length !== parts.s.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i += 1) {
-    diff |= expected.charCodeAt(i) ^ parts.s.charCodeAt(i);
+  try {
+    return WebhookSignature.verifyHeader(rawBody, header, secret, 300);
+  } catch {
+    return false;
   }
-  return diff === 0;
 }

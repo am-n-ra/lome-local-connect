@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "vitest run",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -51,6 +52,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
+    "fedapay": "^1.2.5",
     "input-otp": "^1.4.2",
     "jose": "^6.2.8",
     "lucide-react": "^0.575.0",
