@@ -125,6 +125,7 @@ function VendeurPage() {
   const [pCouponPercent, setPCouponPercent] = useState("10");
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   const loadDashboard = useServerFn(getVendorDashboard);
   const createFacility = useServerFn(createFacilityFn);
@@ -770,6 +771,14 @@ function VendeurPage() {
                     La carte reste visible en permanence. Utilisez les onglets ci-dessous pour agir
                     sans perdre votre contexte géospatial.
                   </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-4 rounded-full"
+                    onClick={() => setOverviewExpanded((value) => !value)}
+                  >
+                    {overviewExpanded ? "Réduire les détails" : "Afficher les opérations"}
+                  </Button>
                 </div>
                 <div className="mt-4 rounded-2xl border border-border/70 bg-background/55 p-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -789,235 +798,246 @@ function VendeurPage() {
                   </p>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("demandes")}
-                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                    À traiter
-                  </p>
-                  <p className="mt-2 font-display text-2xl font-extrabold">
-                    {data?.requests.length ?? 0}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">Demandes reçues</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("produits")}
-                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                    Stock
-                  </p>
-                  <p className="mt-2 font-display text-2xl font-extrabold">
-                    {products.filter((product) => !product.in_stock).length}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">Produits à confirmer</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("demandes")}
-                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                    Demande
-                  </p>
-                  <p className="mt-2 font-display text-2xl font-extrabold">
-                    {data?.demand.length ?? 0}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground"> Demandes à traiter</p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("coupons")}
-                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
-                >
-                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                    Coupons
-                  </p>
-                  <p className="mt-2 font-display text-2xl font-extrabold text-primary">
-                    {data?.coupons.length ?? 0}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground"> Offres produit à gérer</p>
-                </button>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-4">
-                <div className="omni-card p-5">
-                  <p className="text-sm text-muted-foreground">Portefeuille</p>
-                  <p className="mt-1 font-display text-2xl font-extrabold text-primary">
-                    {formatMoney(data?.walletBalance ?? 0)}
-                  </p>
-                </div>
-                <div className="omni-card p-5">
-                  <p className="text-sm text-muted-foreground">Produits</p>
-                  <p className="mt-1 font-display text-2xl font-extrabold">{products.length}</p>
-                </div>
-                <div className="omni-card p-5">
-                  <p className="text-sm text-muted-foreground">Palier</p>
-                  <p className="mt-1 font-display text-2xl font-extrabold">
-                    {pro ? "Pro" : "Gratuit"}
-                  </p>
-                  {pro && (
-                    <p className="text-xs text-muted-foreground">
-                      {daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants
-                    </p>
-                  )}
-                </div>
-                <div className="omni-card p-5">
-                  <p className="text-sm text-muted-foreground">Campagnes</p>
-                  <p className="mt-1 font-display text-2xl font-extrabold">
-                    {data?.campaigns.length ?? 0}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-                <div className="omni-card p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                        Unlocker vendeur
+              {overviewExpanded && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("demandes")}
+                      className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                        À traiter
                       </p>
-                      <h3 className="mt-1 font-display text-xl font-bold">
-                        Crédit Pro de test · 20 USD
-                      </h3>
-                    </div>
-                    <Badge variant={data?.unlock?.status === "eligible" ? "default" : "secondary"}>
-                      {data?.unlock?.status === "eligible"
-                        ? "Éligible"
-                        : data?.unlock?.status === "granted"
-                          ? "Accordé"
-                          : "En progression"}
-                    </Badge>
-                  </div>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {data?.unlock?.qualifying_count ?? 0} / {data?.unlock?.required_count ?? 3}{" "}
-                    ventes terminées. Le crédit est non monétaire et n’est activé qu’après
-                    validation serveur.
-                  </p>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
-                    <div
-                      className="h-full rounded-full bg-primary transition-[width]"
-                      style={{
-                        width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="omni-card p-5 sm:col-span-2">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                        Solde opérationnel
+                      <p className="mt-2 font-display text-2xl font-extrabold">
+                        {data?.requests.length ?? 0}
                       </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        Les crédits non monétaires ne sont pas retirables et chaque recharge passe
-                        par FedaPay.
+                      <p className="mt-1 text-xs text-muted-foreground">Demandes reçues</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("produits")}
+                      className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                        Stock
+                      </p>
+                      <p className="mt-2 font-display text-2xl font-extrabold">
+                        {products.filter((product) => !product.in_stock).length}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">Produits à confirmer</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("demandes")}
+                      className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                        Demande
+                      </p>
+                      <p className="mt-2 font-display text-2xl font-extrabold">
+                        {data?.demand.length ?? 0}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground"> Demandes à traiter</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab("coupons")}
+                      className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                        Coupons
+                      </p>
+                      <p className="mt-2 font-display text-2xl font-extrabold text-primary">
+                        {data?.coupons.length ?? 0}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground"> Offres produit à gérer</p>
+                    </button>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-4">
+                    <div className="omni-card p-5">
+                      <p className="text-sm text-muted-foreground">Portefeuille</p>
+                      <p className="mt-1 font-display text-2xl font-extrabold text-primary">
+                        {formatMoney(data?.walletBalance ?? 0)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        inputMode="numeric"
-                        value={topUpAmount}
-                        onChange={(event) => setTopUpAmount(event.target.value.replace(/\\D/g, ""))}
-                        className="h-9 w-28 text-base sm:text-sm"
-                        aria-label="Montant de recharge en FCFA"
-                      />
-                      <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
-                        {topUpBusy ? "Ouverture…" : "Recharger"}
-                      </Button>
+                    <div className="omni-card p-5">
+                      <p className="text-sm text-muted-foreground">Produits</p>
+                      <p className="mt-1 font-display text-2xl font-extrabold">{products.length}</p>
                     </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-                    {[
-                      ["wallet", "Wallet"],
-                      ["payout", "Payout"],
-                      ["ad_credit", "Publicité"],
-                      ["coupon_credit", "Coupons"],
-                      ["pro_credit", "Pro"],
-                    ].map(([bucket, label]) => {
-                      const balance = data?.balances.find((item) => item.bucket === bucket);
-                      return (
-                        <div key={bucket} className="rounded-xl bg-secondary/60 p-2.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                            {label}
-                          </p>
-                          <p className="mt-1 font-bold">{formatMoney(balance?.amount ?? 0)}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="hidden">
-                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                    Legacy balances
-                  </p>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                    {(data?.balances ?? []).map((balance) => (
-                      <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          {balance.bucket.replaceAll("_", " ")}
+                    <div className="omni-card p-5">
+                      <p className="text-sm text-muted-foreground">Palier</p>
+                      <p className="mt-1 font-display text-2xl font-extrabold">
+                        {pro ? "Pro" : "Gratuit"}
+                      </p>
+                      {pro && (
+                        <p className="text-xs text-muted-foreground">
+                          {daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants
                         </p>
-                        <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
-                      </div>
-                    ))}
-                    {(data?.balances ?? []).length === 0 && (
-                      <p className="col-span-2 text-sm text-muted-foreground">
-                        Aucun mouvement segmenté enregistré.
+                      )}
+                    </div>
+                    <div className="omni-card p-5">
+                      <p className="text-sm text-muted-foreground">Campagnes</p>
+                      <p className="mt-1 font-display text-2xl font-extrabold">
+                        {data?.campaigns.length ?? 0}
                       </p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                    <div className="omni-card p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                            Unlocker vendeur
+                          </p>
+                          <h3 className="mt-1 font-display text-xl font-bold">
+                            Crédit Pro de test · 20 USD
+                          </h3>
+                        </div>
+                        <Badge
+                          variant={data?.unlock?.status === "eligible" ? "default" : "secondary"}
+                        >
+                          {data?.unlock?.status === "eligible"
+                            ? "Éligible"
+                            : data?.unlock?.status === "granted"
+                              ? "Accordé"
+                              : "En progression"}
+                        </Badge>
+                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {data?.unlock?.qualifying_count ?? 0} / {data?.unlock?.required_count ?? 3}{" "}
+                        ventes terminées. Le crédit est non monétaire et n’est activé qu’après
+                        validation serveur.
+                      </p>
+                      <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full bg-primary transition-[width]"
+                          style={{
+                            width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="omni-card p-5 sm:col-span-2">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                            Solde opérationnel
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            Les crédits non monétaires ne sont pas retirables et chaque recharge
+                            passe par FedaPay.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            inputMode="numeric"
+                            value={topUpAmount}
+                            onChange={(event) =>
+                              setTopUpAmount(event.target.value.replace(/\\D/g, ""))
+                            }
+                            className="h-9 w-28 text-base sm:text-sm"
+                            aria-label="Montant de recharge en FCFA"
+                          />
+                          <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
+                            {topUpBusy ? "Ouverture…" : "Recharger"}
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+                        {[
+                          ["wallet", "Wallet"],
+                          ["payout", "Payout"],
+                          ["ad_credit", "Publicité"],
+                          ["coupon_credit", "Coupons"],
+                          ["pro_credit", "Pro"],
+                        ].map(([bucket, label]) => {
+                          const balance = data?.balances.find((item) => item.bucket === bucket);
+                          return (
+                            <div key={bucket} className="rounded-xl bg-secondary/60 p-2.5">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                {label}
+                              </p>
+                              <p className="mt-1 font-bold">{formatMoney(balance?.amount ?? 0)}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="hidden">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                        Legacy balances
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                        {(data?.balances ?? []).map((balance) => (
+                          <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              {balance.bucket.replaceAll("_", " ")}
+                            </p>
+                            <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
+                          </div>
+                        ))}
+                        {(data?.balances ?? []).length === 0 && (
+                          <p className="col-span-2 text-sm text-muted-foreground">
+                            Aucun mouvement segmenté enregistré.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="omni-card p-5">
+                    <p className="font-display text-lg font-bold">Opérations</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte
+                      pour corriger l'emplacement affiché aux acheteurs.
+                    </p>
+                    <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
+                      <Input
+                        value={hours}
+                        onChange={(e) => setHours(e.target.value)}
+                        placeholder="Horaires (ex. Lun-Sam 8h-19h)"
+                      />
+                      <Button variant="outline" onClick={() => void saveOperatingHours()}>
+                        Enregistrer horaires
+                      </Button>
+                      <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                        <Switch
+                          checked={facility.emergency_shutdown}
+                          onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
+                        />
+                        Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
+                      </label>
+                    </div>
+                    <div className="mt-3 rounded-lg border border-border bg-secondary/45 p-3 text-sm text-muted-foreground">
+                      La carte persistante en arrière-plan est le contexte unique de positionnement.
+                      Touchez-la directement pour déplacer la facility.
+                    </div>
+                    {facility.type === "mobile" && (
+                      <Button
+                        className="mt-3"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          navigator.geolocation?.getCurrentPosition(
+                            (p) =>
+                              void updatePosition({
+                                lat: p.coords.latitude,
+                                lng: p.coords.longitude,
+                              }),
+                            () => toast.error("Position GPS indisponible."),
+                          )
+                        }
+                      >
+                        <MapPin className="mr-1.5 h-4 w-4" /> Mettre à jour ma position GPS
+                      </Button>
                     )}
                   </div>
-                </div>
-              </div>
 
-              <div className="omni-card p-5">
-                <p className="font-display text-lg font-bold">Opérations</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour
-                  corriger l'emplacement affiché aux acheteurs.
-                </p>
-                <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
-                  <Input
-                    value={hours}
-                    onChange={(e) => setHours(e.target.value)}
-                    placeholder="Horaires (ex. Lun-Sam 8h-19h)"
-                  />
-                  <Button variant="outline" onClick={() => void saveOperatingHours()}>
-                    Enregistrer horaires
-                  </Button>
-                  <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                    <Switch
-                      checked={facility.emergency_shutdown}
-                      onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
-                    />
-                    Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
-                  </label>
-                </div>
-                <div className="mt-3 rounded-lg border border-border bg-secondary/45 p-3 text-sm text-muted-foreground">
-                  La carte persistante en arrière-plan est le contexte unique de positionnement.
-                  Touchez-la directement pour déplacer la facility.
-                </div>
-                {facility.type === "mobile" && (
-                  <Button
-                    className="mt-3"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      navigator.geolocation?.getCurrentPosition(
-                        (p) =>
-                          void updatePosition({ lat: p.coords.latitude, lng: p.coords.longitude }),
-                        () => toast.error("Position GPS indisponible."),
-                      )
-                    }
-                  >
-                    <MapPin className="mr-1.5 h-4 w-4" /> Mettre à jour ma position GPS
-                  </Button>
-                )}
-              </div>
-
-              {OMNI_CONFIG.mediaUiEnabled && <MediaManager facilityId={facility.id} />}
+                  {OMNI_CONFIG.mediaUiEnabled && <MediaManager facilityId={facility.id} />}
+                </>
+              )}
             </TabsContent>
 
             <TabsContent value="produits" className="mt-5">
