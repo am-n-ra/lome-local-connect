@@ -142,7 +142,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON TABLE public.wallet_ledger_entries IS 'Append-only financial journal. Never update or delete posted entries; reverse with a compensating entry.';
+COMMENT ON TABLE public.wallet_ledger_entries IS 'Append-only financial journal. Never update or delete posted entries - reverse with a compensating entry.';
 COMMENT ON TABLE public.wallet_transfers IS 'Atomic logical transfers between non-cash or cash buckets; paired journal entries share journal_id.';
 COMMENT ON TABLE public.wallet_balance_snapshots IS 'Rebuildable projection for fast UI reads; ledger remains the source of truth.';
 
@@ -250,3 +250,20 @@ SELECT wa.id, b.bucket, 'XOF', 0, 0
 FROM public.wallet_accounts wa
 CROSS JOIN (VALUES ('wallet'), ('payout'), ('ad_credit'), ('coupon_credit'), ('pro_credit')) AS b(bucket)
 ON CONFLICT (account_id, bucket, currency) DO NOTHING;
+
+-- Preserve legacy payout balances as opening entries in the payout bucket.
+INSERT INTO public.wallet_ledger_entries
+  (account_id, bucket, amount, currency, reference_type, reference_id, idempotency_key, source, metadata)
+SELECT wa.id, 'payout', s.payout_balance::bigint, 'XOF', 'legacy_subscription_payout_opening', s.facility_id::text,
+       'legacy_subscription_payout_opening:' || s.facility_id::text, 'migration', jsonb_build_object('legacy_table', 'subscriptions')
+FROM public.subscriptions s
+JOIN public.wallet_accounts wa ON wa.facility_id = s.facility_id AND wa.currency = 'XOF'
+WHERE s.payout_balance > 0
+ON CONFLICT (account_id, idempotency_key) DO NOTHING;
+
+INSERT INTO public.wallet_balance_snapshots (account_id, bucket, currency, available_amount)
+SELECT wa.id, 'payout', 'XOF', GREATEST(s.payout_balance::bigint, 0)
+FROM public.subscriptions s
+JOIN public.wallet_accounts wa ON wa.facility_id = s.facility_id AND wa.currency = 'XOF'
+ON CONFLICT (account_id, bucket, currency) DO UPDATE
+SET available_amount = EXCLUDED.available_amount, updated_at = now();

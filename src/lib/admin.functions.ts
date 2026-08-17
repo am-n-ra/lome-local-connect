@@ -238,8 +238,10 @@ export const getPlatformMetrics = createServerFn({ method: "GET" })
         (SELECT COALESCE(sum(amount), 0) FROM public.wallet_deposits WHERE status = 'approved')::int AS deposits_total,
         (SELECT count(*) FROM public.wallet_deposits WHERE status = 'approved')::int AS deposits_approved,
         (SELECT count(*) FROM public.wallet_deposits WHERE status = 'pending')::int AS deposits_pending,
-        (SELECT COALESCE(sum(wallet_balance), 0) FROM public.subscriptions)::int AS wallet_total,
-        (SELECT COALESCE(sum(payout_balance), 0) FROM public.subscriptions)::int AS payout_total,
+        (SELECT COALESCE(sum(available_amount) FILTER (WHERE bucket = 'wallet'), 0)
+         FROM public.wallet_balance_snapshots)::int AS wallet_total,
+        (SELECT COALESCE(sum(available_amount) FILTER (WHERE bucket = 'payout'), 0)
+         FROM public.wallet_balance_snapshots)::int AS payout_total,
         (SELECT count(*) FROM public.subscriptions WHERE tier = 'pro')::int AS pro_facilities,
         (SELECT count(*) FROM public.carts WHERE status = 'pending')::int AS carts_pending,
         (SELECT count(*) FROM public.profiles)::int AS users
@@ -277,9 +279,14 @@ export const adjustWallet = createServerFn({ method: "POST" })
     z
       .object({
         facilityId: z.string().uuid(),
-        amount: z.number().int().min(-1_000_000).max(1_000_000).refine((v) => v !== 0, {
-          message: "Montant requis",
-        }),
+        amount: z
+          .number()
+          .int()
+          .min(-1_000_000)
+          .max(1_000_000)
+          .refine((v) => v !== 0, {
+            message: "Montant requis",
+          }),
         reason: z.string().min(3).max(300),
       })
       .parse(input),

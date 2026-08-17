@@ -1,6 +1,7 @@
 import { WebhookSignature } from "fedapay";
 import { query, queryOne } from "./db.server";
 import { extendedProUntil, QUALIFYING_AMOUNT } from "./vendor";
+import { appendWalletEntry, ensureWalletAccount } from "./wallet.server";
 import { currentMonthKey } from "./omni";
 
 /** FedaPay REST helpers. Server-only: never imported from client code. */
@@ -115,7 +116,26 @@ export async function creditDeposit(depositId: string, providerStatus: string): 
     return false;
   }
 
-  // Only the first transition out of `pending` credits the wallet.
+  const pending = await queryOne<{ facility_id: string; amount: number }>(
+    `SELECT facility_id, amount FROM public.wallet_deposits WHERE id = $1 AND status = 'pending'`,
+    [depositId],
+  );
+  if (!pending) return false;
+
+  // The ledger write is idempotent before the legacy status transition. If a process
+  // crashes between these statements, a retry reuses the same ledger entry safely.
+  const accountId = await ensureWalletAccount({ facilityId: pending.facility_id });
+  await appendWalletEntry({
+    accountId,
+    bucket: "wallet",
+    amount: pending.amount,
+    referenceType: "fedapay_deposit",
+    referenceId: depositId,
+    idempotencyKey: `fedapay:deposit:${depositId}`,
+    source: "fedapay",
+    metadata: { provider_status: providerStatus },
+  });
+
   const claimed = await queryOne<{ facility_id: string; amount: number }>(
     `UPDATE public.wallet_deposits
        SET status = 'approved', normalized_status = 'approved', credited_at = now(), last_reconciled_at = now(), updated_at = now()
