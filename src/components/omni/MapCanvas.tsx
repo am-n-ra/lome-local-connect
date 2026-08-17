@@ -3,6 +3,7 @@ import {
   applyPastelPalette,
   setGlobeLabelVisibility,
   PASTEL_STYLE_URL,
+  rewriteOpenFreeMapGlyphUrl,
   useMapLibreState,
   type MapInstance,
 } from "@/lib/maplibre";
@@ -581,6 +582,9 @@ export function MapCanvas({
     const map = new gl.Map({
       container: containerRef.current,
       style: PASTEL_STYLE_URL,
+      transformRequest: (url: string, resourceType: string) => ({
+        url: resourceType === "Glyphs" ? rewriteOpenFreeMapGlyphUrl(url) : url,
+      }),
       center: GLOBE_START_CENTER,
       zoom: GLOBE_START_ZOOM,
       interactive,

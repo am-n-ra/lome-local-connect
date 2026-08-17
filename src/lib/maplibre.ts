@@ -126,6 +126,14 @@ export function useMapLibre() {
  */
 export const PASTEL_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
+/** OpenFreeMap serves Noto Sans, while some style revisions still request Open Sans. */
+export function rewriteOpenFreeMapGlyphUrl(url: string) {
+  return url
+    .replace(/Open(?:%20|\s)Sans(?:%20|\s)Bold/g, "Noto%20Sans%20Bold")
+    .replace(/Open(?:%20|\s)Sans(?:%20|\s)Regular/g, "Noto%20Sans%20Regular")
+    .replace(/Open(?:%20|\s)Sans(?:%20|\s)Italic/g, "Noto%20Sans%20Italic");
+}
+
 const PASTEL = {
   water: "#2d3335",
   green: "#ffffff",
