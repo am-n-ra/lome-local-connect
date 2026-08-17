@@ -66,6 +66,7 @@ type Props = {
   locationAccuracy?: number | null;
   onRequestLocation?: () => void;
   onUseMarketFallback?: () => void;
+  onRetryCoverage?: () => void;
 };
 
 const CHIPS = [
@@ -95,6 +96,7 @@ export function SearchDock({
   locationAccuracy = null,
   onRequestLocation,
   onUseMarketFallback,
+  onRetryCoverage,
 }: Props) {
   const { formatMoney } = useMarket();
   const sendEvent = useServerFn(recordProductEvent);
@@ -372,20 +374,35 @@ export function SearchDock({
           data-omni-dock-row="context"
           className="flex flex-wrap items-center justify-center gap-2"
         >
-          {coverageStatus !== "idle" && (
+          {coverageStatus === "loading" && (
             <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
-              {coverageStatus === "loading" && (
-                <LoaderCircle
-                  className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin"
-                  aria-hidden="true"
-                />
-              )}
-              {coverageStatus === "loading"
-                ? "Exploration en cours…"
-                : coverageStatus === "error"
-                  ? "Exploration indisponible"
-                  : "Zone cartographiée"}
+              <LoaderCircle
+                className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin"
+                aria-hidden="true"
+              />
+              Recherche de la zone…
             </span>
+          )}
+          {coverageStatus === "ready" && (
+            <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
+              Zone cartographiée
+            </span>
+          )}
+          {coverageStatus === "error" && (
+            <>
+              <span className="omni-glass rounded-full border border-destructive/25 px-3 py-1.5 text-[11px] font-semibold text-destructive">
+                Résultats non actualisés
+              </span>
+              {onRetryCoverage ? (
+                <button
+                  type="button"
+                  onClick={onRetryCoverage}
+                  className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-bold text-primary"
+                >
+                  Réessayer
+                </button>
+              ) : null}
+            </>
           )}
           <span
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold ${

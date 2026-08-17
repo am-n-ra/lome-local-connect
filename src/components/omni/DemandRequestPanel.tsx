@@ -165,9 +165,7 @@ export function DemandRequestPanel({
           mode: selectedMode,
         },
       });
-      toast.success(
-        `Vérification lancée sur ${res.targeted} commerce(s) pour ${res.creditCost} crédit(s), dont ${res.aiAnswered} réponse(s) IA.`,
-      );
+      toast.success(`Vérification lancée sur ${res.targeted} commerce(s).`);
       setTerm("");
       setQuantity(1);
       setBudgetMax("");
@@ -378,24 +376,10 @@ export function DemandRequestPanel({
                       </Button>
                     )}
                   </div>
-                  <div className="grid gap-1 rounded-lg bg-muted/60 p-2 text-xs text-muted-foreground">
-                    <p>
-                      <span className="font-semibold text-foreground">Coût crédits :</span>{" "}
-                      {r.credit_cost}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-foreground">Cibles :</span>{" "}
-                      {r.targeted_count} commerce(s)
-                    </p>
-                    <p>
-                      <span className="font-semibold text-foreground">Résumé IA :</span>{" "}
-                      {r.ai_summary ?? "En attente de réponses suffisantes."}
-                    </p>
-                    <p>
-                      <span className="font-semibold text-foreground">Recommandation :</span>{" "}
-                      {r.ai_recommended_facility_name ?? "Aucune recommandation pour le moment."}
-                    </p>
-                  </div>
+                  <p className="rounded-xl bg-muted/60 p-2 text-xs text-muted-foreground">
+                    {r.targeted_count} commerce(s) ciblé(s). Les réponses restent manuelles et
+                    apparaissent ici au fil de leur confirmation.
+                  </p>
                   {answers.map((a) => (
                     <div
                       key={a.id}

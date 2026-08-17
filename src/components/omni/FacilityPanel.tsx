@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Heart, Minus, Navigation, Phone, Plus, Search, Ticket } from "lucide-react";
+import { CheckCircle2, Heart, Navigation, Phone, Search, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@/lib/useServerFn";
 import {
@@ -13,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
-import { useNavigate } from "@tanstack/react-router";
-import { useCart } from "@/lib/cart";
 import {
   categoryLabel,
   formatDistance,
@@ -25,7 +23,6 @@ import {
   type ProductRow,
 } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
-import { createPurchaseIntent } from "@/lib/checkout.functions";
 import { getProductOffer, type ProductOffer } from "@/lib/offers.functions";
 
 type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
@@ -35,7 +32,6 @@ type Props = {
   distanceKm: number | null;
   onItinerary?: () => void;
   onCheckAvailability?: () => void;
-  onTransactionCreated?: (context: { transactionId: string; amount: number }) => void;
   routingBusy?: boolean;
 };
 
@@ -45,27 +41,17 @@ export function FacilityPanel({
   onItinerary,
   routingBusy,
   onCheckAvailability,
-  onTransactionCreated,
 }: Props) {
   const { formatMoney } = useMarket();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const cart = useCart();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [offers, setOffers] = useState<Record<string, ProductOffer>>({});
-  const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [favorite, setFavorite] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
   const [claiming, setClaiming] = useState(false);
-  const [intentBusy, setIntentBusy] = useState<string | null>(null);
-  const [purchaseIntentCreated, setPurchaseIntentCreated] = useState(false);
-  const [purchaseTransaction, setPurchaseTransaction] = useState<{
-    transactionId: string;
-    amount: number;
-  } | null>(null);
   const isUnclaimed = facility.status === "unclaimed";
 
   const loadFacility = useServerFn(getFacility);
@@ -73,7 +59,6 @@ export function FacilityPanel({
   const toggleFavoriteRemote = useServerFn(toggleFavoriteFn);
   const sendWishlist = useServerFn(recordWishlist);
   const claimFacilityRemote = useServerFn(claimFacility);
-  const createIntent = useServerFn(createPurchaseIntent);
   const loadOffer = useServerFn(getProductOffer);
 
   useEffect(() => {
@@ -156,42 +141,6 @@ export function FacilityPanel({
       toast.error("Réclamation impossible pour le moment.");
     } finally {
       setClaiming(false);
-    }
-  }
-
-  async function startProductIntent(product: ProductRow, quantity: number) {
-    if (!user) {
-      toast.info("Connectez-vous pour commencer un achat.");
-      navigate({
-        to: "/auth",
-        search: { redirectTo: `/fiche/${facility.id}` },
-      });
-      return;
-    }
-    setIntentBusy(product.id);
-    try {
-      const result = await createIntent({
-        data: {
-          productId: product.id,
-          facilityId: facility.id,
-          quantity,
-          amount: product.price * quantity,
-          paymentMode: "cash",
-        },
-      });
-      const transaction = { transactionId: result.transactionId, amount: product.price * quantity };
-      setPurchaseIntentCreated(true);
-      setPurchaseTransaction(transaction);
-      onTransactionCreated?.(transaction);
-      const offer = await loadOffer({
-        data: { productId: product.id, transactionId: result.transactionId },
-      });
-      setOffers((current) => ({ ...current, [product.id]: offer }));
-      toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Intention impossible.");
-    } finally {
-      setIntentBusy(null);
     }
   }
 
@@ -289,17 +238,9 @@ export function FacilityPanel({
         </div>
       )}
 
-      {purchaseIntentCreated ? (
-        <div className="space-y-2">
-          {purchaseTransaction && onTransactionCreated && (
-            <Button
-              className="min-h-10 w-full"
-              onClick={() => onTransactionCreated(purchaseTransaction)}
-            >
-              Ouvrir le chat transactionnel
-            </Button>
-          )}
-          <div className="grid gap-2 sm:flex sm:flex-wrap">
+      {!isUnclaimed && (
+        <div className="grid gap-2 sm:flex sm:flex-wrap">
+          {onItinerary ? (
             <Button
               className="min-h-10 min-w-0 flex-1"
               variant="outline"
@@ -309,28 +250,26 @@ export function FacilityPanel({
               <Navigation className="mr-1.5 h-4 w-4" />
               {routingBusy ? "Calcul…" : "Itinéraire"}
             </Button>
+          ) : null}
+          {facility.phone ? (
             <Button
               className="min-h-10 min-w-0 flex-1"
               variant="outline"
               onClick={() => setShowPhone((v) => !v)}
             >
               <Phone className="mr-1.5 h-4 w-4" />
-              {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
+              {showPhone ? facility.phone : "Contacter"}
             </Button>
-            <Button
-              className="min-h-10 min-w-0 flex-1"
-              variant="outline"
-              onClick={() => setDemandOpen((v) => !v)}
-            >
-              <Search className="mr-1.5 h-4 w-4" />
-              Je cherche ce produit
-            </Button>
-          </div>
+          ) : null}
+          <Button
+            className="min-h-10 min-w-0 flex-1"
+            variant="outline"
+            onClick={() => setDemandOpen((v) => !v)}
+          >
+            <Search className="mr-1.5 h-4 w-4" />
+            Je cherche ce produit
+          </Button>
         </div>
-      ) : (
-        <p className="rounded-xl bg-secondary/55 px-3 py-2 text-center text-[11px] text-muted-foreground">
-          Créez une intention d'achat pour débloquer l'itinéraire et le contact.
-        </p>
       )}
 
       {demandOpen && (
@@ -371,7 +310,6 @@ export function FacilityPanel({
       <div className="space-y-2">
         <p className="text-sm font-semibold">Produits ({products.length})</p>
         {products.map((p) => {
-          const qty = quantities[p.id] ?? 1;
           const offer = offers[p.id];
           return (
             <div
@@ -417,55 +355,11 @@ export function FacilityPanel({
                   )}
                 </div>
               </div>
-              <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-col sm:items-end sm:gap-1.5">
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    aria-label="Diminuer"
-                    onClick={() => setQuantities((q) => ({ ...q, [p.id]: Math.max(1, qty - 1) }))}
-                  >
-                    <Minus className="h-3 w-3" />
-                  </Button>
-                  <span className="w-6 text-center text-sm font-semibold">{qty}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-7 w-7"
-                    aria-label="Augmenter"
-                    onClick={() => setQuantities((q) => ({ ...q, [p.id]: Math.min(99, qty + 1) }))}
-                  >
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={isUnclaimed || !p.in_stock || intentBusy === p.id}
-                  onClick={() => void startProductIntent(p, qty)}
-                >
-                  {intentBusy === p.id ? "Création…" : "Je veux acheter"}
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={isUnclaimed || !p.in_stock}
-                  onClick={() => {
-                    cart.add(
-                      {
-                        productId: p.id,
-                        facilityId: facility.id,
-                        facilityName: facility.name,
-                        name: p.name,
-                        price: p.price,
-                      },
-                      qty,
-                    );
-                    toast.success(`${p.name} ajouté au panier`);
-                  }}
-                >
-                  Ajouter au panier
-                </Button>
+              <div className="col-span-2 min-w-0 sm:ml-auto sm:max-w-40 sm:text-right">
+                <p className="text-[11px] font-semibold text-muted-foreground">
+                  {p.in_stock ? "Stock signalé par le vendeur" : "Stock indisponible"}
+                </p>
+                <p className="mt-1 text-[11px] text-primary">Vérification requise avant achat</p>
               </div>
             </div>
           );
