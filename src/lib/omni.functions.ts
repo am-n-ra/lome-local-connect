@@ -278,7 +278,47 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       });
     };
 
-    let rows = await runQuery();
+    const runMinimalQuery = async () => {
+      const params: unknown[] = [bounds.minLat, bounds.maxLat, bounds.minLng, bounds.maxLng];
+      const clauses = [
+        "f.latitude BETWEEN $1 AND $2",
+        "f.longitude BETWEEN $3 AND $4",
+        "(f.is_online = true OR f.status = 'unclaimed')",
+      ];
+      if (data.category && data.category !== "all") {
+        params.push(data.category);
+        clauses.push(`f.category = $${params.length}`);
+      }
+      if (data.search?.trim()) {
+        params.push(`%${data.search.trim()}%`);
+        const index = params.length;
+        clauses.push(
+          `(f.name ILIKE $${index} OR f.address ILIKE $${index} OR f.neighbourhood ILIKE $${index})`,
+        );
+      }
+      params.push(data.limit);
+      return query<MapFacility>(
+        `SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
+                f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
+                f.last_position_update, f.owner_id,
+                NULL::text AS cover_url, 0::int AS product_count,
+                NULL::int AS min_price, 0::int AS max_discount_percent,
+                'free'::text AS tier, false AS sponsored
+         FROM public.facilities f
+         WHERE ${clauses.join(" AND ")}
+         ORDER BY (f.status <> 'unclaimed') DESC, f.name ASC
+         LIMIT $${params.length}`,
+        params,
+      );
+    };
+
+    let rows: MapFacility[];
+    try {
+      rows = await runQuery();
+    } catch (error) {
+      console.warn("Omni coverage primary query failed; using minimal facility fallback", error);
+      rows = await runMinimalQuery();
+    }
     if (rows.length < 12 && data.zoom >= 9) {
       const { ensureCoverage } = await import("@/lib/osm-coverage.server");
       try {
@@ -288,7 +328,15 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
         // Coverage back-fill is best effort: never break the map.
       }
     }
-    return decorateMatches(rows);
+    try {
+      return await decorateMatches(rows);
+    } catch (error) {
+      console.warn(
+        "Omni coverage product decoration failed; returning facilities without matches",
+        error,
+      );
+      return rows;
+    }
   });
 
 export const getFacility = createServerFn({ method: "GET" })
