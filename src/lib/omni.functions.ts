@@ -317,7 +317,15 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       rows = await runQuery();
     } catch (error) {
       console.warn("Omni coverage primary query failed; using minimal facility fallback", error);
-      rows = await runMinimalQuery();
+      try {
+        rows = await runMinimalQuery();
+      } catch (fallbackError) {
+        console.warn(
+          "Omni coverage fallback query failed; returning empty discovery",
+          fallbackError,
+        );
+        return [];
+      }
     }
     if (rows.length < 12 && data.zoom >= 9) {
       const { ensureCoverage } = await import("@/lib/osm-coverage.server");
