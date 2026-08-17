@@ -8,18 +8,26 @@ export const CORS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, OPTIONS",
   "access-control-allow-headers": "content-type",
-  "cache-control": "public, max-age=60",
 } as const;
+
+const READ_CACHE = "public, max-age=60, stale-while-revalidate=30";
 
 export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "content-type": "application/json; charset=utf-8", ...CORS },
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...CORS,
+      "cache-control": status >= 400 ? "no-store" : READ_CACHE,
+    },
   });
 }
 
 export function preflight(): Response {
-  return new Response(null, { status: 204, headers: CORS });
+  return new Response(null, {
+    status: 204,
+    headers: { ...CORS, "cache-control": "no-store" },
+  });
 }
 
 export function clientIp(request: Request): string {
@@ -78,7 +86,6 @@ export type PublicFacility = {
   cover_url: string | null;
 };
 
-
 export const listQuerySchema = z.object({
   search: z.string().max(120).optional(),
   category: z.string().max(40).optional(),
@@ -110,7 +117,9 @@ export async function listPublicFacilities(
   if (params.search?.trim()) {
     values.push(`%${params.search.trim()}%`);
     const i = values.length;
-    clauses.push(`(f.name ILIKE $${i} OR f.description ILIKE $${i} OR f.neighbourhood ILIKE $${i})`);
+    clauses.push(
+      `(f.name ILIKE $${i} OR f.description ILIKE $${i} OR f.neighbourhood ILIKE $${i})`,
+    );
   }
 
   values.push(params.limit, params.offset);

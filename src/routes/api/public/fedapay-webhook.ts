@@ -8,15 +8,13 @@ export const Route = createFileRoute("/api/public/fedapay-webhook")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        const declaredLength = Number(request.headers.get("content-length") ?? "0");
+        if (declaredLength > 1_000_000) return new Response("Payload too large", { status: 413 });
         const raw = await request.text();
-        const { verifyWebhookSignature, creditDeposit } = await import(
-          "@/lib/fedapay.server"
-        );
+        if (raw.length > 1_000_000) return new Response("Payload too large", { status: 413 });
+        const { verifyWebhookSignature, creditDeposit } = await import("@/lib/fedapay.server");
 
-        const valid = await verifyWebhookSignature(
-          raw,
-          request.headers.get("x-fedapay-signature"),
-        );
+        const valid = await verifyWebhookSignature(raw, request.headers.get("x-fedapay-signature"));
         if (!valid) return new Response("Invalid signature", { status: 401 });
 
         let payload: {
@@ -28,6 +26,9 @@ export const Route = createFileRoute("/api/public/fedapay-webhook")({
           payload = JSON.parse(raw) as typeof payload;
         } catch {
           return new Response("Invalid payload", { status: 400 });
+        }
+        if (payload.id == null || String(payload.id).trim() === "") {
+          return new Response("Missing event id", { status: 400 });
         }
 
         const { query, queryOne } = await import("@/lib/db.server");
