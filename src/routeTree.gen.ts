@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ApiDocsRouteImport } from './routes/api-docs'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CarteRouteImport } from './routes/carte'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -52,6 +53,11 @@ const AuthRoute = AuthRouteImport.update({
 const CarteRoute = CarteRouteImport.update({
   id: '/carte',
   path: '/carte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VendeurRoute = VendeurRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -118,6 +125,7 @@ export interface FileRoutesByTo {
   '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -135,6 +143,7 @@ export interface FileRoutesById {
   '/api-docs': typeof ApiDocsRoute
   '/auth': typeof AuthRoute
   '/carte': typeof CarteRoute
+  '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -153,6 +162,7 @@ export interface FileRouteTypes {
     | '/api-docs'
     | '/auth'
     | '/carte'
+    | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/api-docs'
     | '/auth'
     | '/carte'
+    | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/api-docs'
     | '/auth'
     | '/carte'
+    | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
     | '/api/auth/$'
@@ -202,6 +214,7 @@ export interface RootRouteChildren {
   ApiDocsRoute: typeof ApiDocsRoute
   AuthRoute: typeof AuthRoute
   CarteRoute: typeof CarteRoute
+  OnboardingRoute: typeof OnboardingRoute
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -253,6 +266,13 @@ declare module '@tanstack/react-router' {
       path: '/carte'
       fullPath: '/carte'
       preLoaderRoute: typeof CarteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/vendeur': {
@@ -334,6 +354,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDocsRoute: ApiDocsRoute,
   AuthRoute: AuthRoute,
   CarteRoute: CarteRoute,
+  OnboardingRoute: OnboardingRoute,
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
