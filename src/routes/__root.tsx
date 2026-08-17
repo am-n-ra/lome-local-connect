@@ -15,7 +15,7 @@ import { AuthProvider } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
 import { MarketProvider } from "@/lib/market";
 import { Toaster } from "@/components/ui/sonner";
-
+import { PwaRuntime } from "@/components/omni/PwaRuntime";
 
 function NotFoundComponent() {
   return (
@@ -81,7 +81,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "OmniView — Trouvez ce que vous cherchez près de vous" },
       {
         name: "description",
@@ -100,6 +100,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap",
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/pwa-icon-192.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -133,10 +135,10 @@ function RootComponent() {
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
             <Toaster position="top-center" richColors />
+            <PwaRuntime />
           </CartProvider>
         </MarketProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
 }
-
