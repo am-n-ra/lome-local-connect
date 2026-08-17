@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { newTransactionCode } from "./qr";
 import { appendWalletEntry, ensureWalletAccount } from "./wallet.server";

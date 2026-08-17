@@ -3,7 +3,7 @@ import {
   applyPastelPalette,
   setGlobeLabelVisibility,
   PASTEL_STYLE_URL,
-  useMapLibre,
+  useMapLibreState,
   type MapInstance,
 } from "@/lib/maplibre";
 import { LOCATION_APPROXIMATE_ACCURACY_METERS, type FacilityRow } from "@/lib/omni";
@@ -522,7 +522,7 @@ export function MapCanvas({
   onRevealStateChange,
   onViewportChange,
 }: Props) {
-  const gl = useMapLibre();
+  const { gl, error: mapLoadError, retry: retryMapLibre } = useMapLibreState();
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [revealRunning, setRevealRunning] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -1185,17 +1185,18 @@ export function MapCanvas({
         </div>
       )}
 
-      {gl && mapStatus === "error" && (
+      {mapLoadError && (
         <div className="absolute left-1/2 top-20 z-10 w-[min(92vw,24rem)] -translate-x-1/2">
           <div className="omni-glass rounded-2xl px-4 py-3 text-center text-sm text-foreground">
             <p className="font-semibold">Données cartographiques indisponibles</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Le globe MapLibre reste utilisable. Réessayez pour recharger le fond géographique.
+              Le globe ne peut pas être chargé dans cet environnement. Réessayez pour relancer le
+              chargement.
             </p>
             <button
               type="button"
               className="mt-3 rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
-              onClick={() => window.location.reload()}
+              onClick={retryMapLibre}
             >
               Réessayer
             </button>
@@ -1203,7 +1204,7 @@ export function MapCanvas({
         </div>
       )}
 
-      {!gl && (
+      {!gl && !mapLoadError && (
         <div className="flex h-full w-full items-center justify-center bg-muted text-sm text-muted-foreground">
           Chargement de la carte…
         </div>

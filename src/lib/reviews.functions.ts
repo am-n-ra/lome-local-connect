@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 
 export type FacilityReview = {
@@ -24,9 +24,7 @@ export type PendingConfirmation = {
 
 /** Public: ratings shown on a facility sheet. */
 export const listFacilityReviews = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     const summary = await queryOne<{ avg: string | null; count: number }>(
       `SELECT AVG(rating)::numeric(3,2) AS avg, count(*)::int AS count
@@ -67,9 +65,7 @@ export const listPendingConfirmations = createServerFn({ method: "GET" })
 /** Buyer confirms the purchase actually happened. */
 export const confirmCompletion = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ transactionId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const txn = await queryOne<{ id: string; cart_id: string | null }>(
       `UPDATE public.transactions SET buyer_confirmed_at = now()
@@ -110,13 +106,24 @@ export const submitReview = createServerFn({ method: "POST" })
        VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT (transaction_id) DO UPDATE
          SET rating = EXCLUDED.rating, comment = EXCLUDED.comment`,
-      [txn.facility_id, context.userId, data.transactionId, data.rating, data.comment?.trim() || null],
+      [
+        txn.facility_id,
+        context.userId,
+        data.transactionId,
+        data.rating,
+        data.comment?.trim() || null,
+      ],
     );
     if (txn.owner_id) {
       await query(
         `INSERT INTO public.notifications (user_id, title, body, link)
          VALUES ($1,$2,$3,$4)`,
-        [txn.owner_id, "Nouvel avis client", `Vous avez reçu une note de ${data.rating}/5.`, "/vendeur"],
+        [
+          txn.owner_id,
+          "Nouvel avis client",
+          `Vous avez reçu une note de ${data.rating}/5.`,
+          "/vendeur",
+        ],
       );
     }
     return { ok: true };

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 
-import { optionalAuth } from "./auth-middleware";
+import { optionalAuth } from "./auth-middleware.server";
 
 export type Identity = {
   userId: string | null;

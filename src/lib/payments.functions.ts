@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestUrl } from "@tanstack/react-start/server";
 import { z } from "zod";
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 import { listDeposits, reconcileDeposit, startDeposit } from "./payments.server";
 import { enforceRateLimit } from "./rate-limit.server";
 

@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 
 export type MediaRow = {
@@ -22,7 +22,8 @@ export const MEDIA_LIMITS = {
   maxVideoSeconds: 60,
 } as const;
 
-const STORAGE_UNSET = "Stockage média non configuré. Ajoutez les variables R2 pour activer l'envoi.";
+const STORAGE_UNSET =
+  "Stockage média non configuré. Ajoutez les variables R2 pour activer l'envoi.";
 
 async function assertFacilityOwner(userId: string, facilityId: string) {
   const row = await queryOne<{ id: string }>(
@@ -44,9 +45,7 @@ async function assertProductOwner(userId: string, productId: string) {
 
 /** Public read: media attached to a facility, showcase first. */
 export const listFacilityMedia = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) =>
     query<MediaRow>(
       `SELECT id, kind, url, thumb_url, position, duration_s
@@ -83,7 +82,8 @@ export const createMediaUploadUrl = createServerFn({ method: "POST" })
       if (data.bytes > MEDIA_LIMITS.maxImageBytes)
         throw new Error("Image trop lourde (3 Mo maximum après compression).");
     } else {
-      if (data.scope === "product") throw new Error("Les vidéos ne sont pas permises sur un produit.");
+      if (data.scope === "product")
+        throw new Error("Les vidéos ne sont pas permises sur un produit.");
       if (!data.contentType.startsWith("video/")) throw new Error("Format vidéo invalide.");
       if (data.bytes > MEDIA_LIMITS.maxVideoBytes)
         throw new Error("Vidéo trop lourde (25 Mo maximum).");
@@ -178,10 +178,10 @@ export const registerMedia = createServerFn({ method: "POST" })
       [data.targetId, data.url, data.thumbUrl ?? null, data.storageKey, next?.n ?? 0, data.bytes],
     );
     // The first product photo also becomes the product thumbnail.
-    await query(
-      "UPDATE public.products SET photo_url = COALESCE(photo_url, $2) WHERE id = $1",
-      [data.targetId, data.url],
-    );
+    await query("UPDATE public.products SET photo_url = COALESCE(photo_url, $2) WHERE id = $1", [
+      data.targetId,
+      data.url,
+    ]);
     return row!;
   });
 
@@ -240,10 +240,11 @@ export const reorderMedia = createServerFn({ method: "POST" })
     const table = data.scope === "facility" ? "facility_media" : "product_media";
     const column = data.scope === "facility" ? "facility_id" : "product_id";
     for (const [index, id] of data.orderedIds.entries()) {
-      await query(
-        `UPDATE public.${table} SET position = $1 WHERE id = $2 AND ${column} = $3`,
-        [index, id, data.targetId],
-      );
+      await query(`UPDATE public.${table} SET position = $1 WHERE id = $2 AND ${column} = $3`, [
+        index,
+        id,
+        data.targetId,
+      ]);
     }
     return { ok: true };
   });

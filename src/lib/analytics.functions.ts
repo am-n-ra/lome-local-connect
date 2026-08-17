@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireAuth, requireStaff } from "./auth-middleware";
+import { requireAuth, requireStaff } from "./auth-middleware.server";
 import { query } from "./db.server";
 
 const eventName = z.enum([

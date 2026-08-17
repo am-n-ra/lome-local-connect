@@ -69,30 +69,54 @@ let loader: Promise<MapLibreGlobal> | null = null;
 function loadMapLibre(): Promise<MapLibreGlobal> {
   if (typeof window === "undefined") return Promise.reject(new Error("no window"));
   if (loader) return loader;
-  loader = (async () => {
+  const importPromise = (async () => {
     await import("maplibre-gl/dist/maplibre-gl.css");
     const mod = await import("maplibre-gl");
     return (mod.default ?? mod) as unknown as MapLibreGlobal;
   })();
+  loader = Promise.race([
+    importPromise,
+    new Promise<MapLibreGlobal>((_, reject) =>
+      window.setTimeout(() => reject(new Error("Chargement MapLibre expiré")), 12_000),
+    ),
+  ]);
   return loader;
 }
 
-export function useMapLibre() {
+export function useMapLibreState() {
   const [gl, setGl] = useState<MapLibreGlobal | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setGl(null);
+    setError(null);
     loadMapLibre()
       .then((lib) => {
         if (!cancelled) setGl(lib);
       })
-      .catch(() => undefined);
+      .catch((reason: unknown) => {
+        if (cancelled) return;
+        setError(reason instanceof Error ? reason : new Error("MapLibre indisponible"));
+      });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
-  return gl;
+  return {
+    gl,
+    error,
+    retry: () => {
+      loader = null;
+      setAttempt((value) => value + 1);
+    },
+  };
+}
+
+export function useMapLibre() {
+  return useMapLibreState().gl;
 }
 
 /**

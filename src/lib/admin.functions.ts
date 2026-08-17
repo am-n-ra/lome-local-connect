@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireStaff } from "./auth-middleware";
+import { requireStaff } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
 

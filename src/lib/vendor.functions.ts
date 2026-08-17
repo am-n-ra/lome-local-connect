@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { requireAuth } from "./auth-middleware";
+import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
 import { campaignCostFor, extendedProUntil, FREE_PRODUCT_CAP, QUALIFYING_AMOUNT } from "./vendor";

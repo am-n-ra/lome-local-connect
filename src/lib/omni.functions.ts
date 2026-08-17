@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { optionalAuth, requireAuth } from "./auth-middleware";
+import { optionalAuth, requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { enforceRateLimit } from "./rate-limit.server";
 
