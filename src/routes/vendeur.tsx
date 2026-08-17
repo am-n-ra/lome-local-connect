@@ -925,12 +925,9 @@ function VendeurPage() {
                   Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
                 </label>
               </div>
-              <div className="mt-3 h-64 overflow-hidden rounded-lg border border-border">
-                <MapCanvas
-                  facilities={[{ ...facility, owner_id: user.id }]}
-                  focus={{ lat: facility.latitude, lng: facility.longitude }}
-                  onMapClick={(c) => void updatePosition(c)}
-                />
+              <div className="mt-3 rounded-lg border border-border bg-secondary/45 p-3 text-sm text-muted-foreground">
+                La carte persistante en arrière-plan est le contexte unique de positionnement.
+                Touchez-la directement pour déplacer la facility.
               </div>
               {facility.type === "mobile" && (
                 <Button
