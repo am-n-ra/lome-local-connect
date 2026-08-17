@@ -22,13 +22,13 @@ import {
 } from "@/components/ui/dialog";
 import { TopNav } from "@/components/omni/TopNav";
 import { MapCanvas } from "@/components/omni/MapCanvas";
-import { AdsPanel } from "@/components/omni/vendor/AdsPanel";
 import { CouponsPanel } from "@/components/omni/vendor/CouponsPanel";
 import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
 import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
 import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
+import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { OmniStatusBadge } from "@/components/omni/ui/OmniPrimitives";
 import { BalanceSheet } from "@/components/omni/ui/BalanceSheet";
 import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
@@ -39,16 +39,13 @@ import {
   confirmStock,
   createFacility as createFacilityFn,
   deleteProduct,
-  getVendorCampaigns,
   getVendorCoupons,
-  getVendorDashboard,
   getVendorProducts,
   getVendorRequests,
   getVendorShell,
   updateFacility,
   updateMobilePosition,
   upsertProduct,
-  type VendorCampaign,
   type VendorCoupon,
   type VendorFacility,
   type VendorProduct,
@@ -86,13 +83,13 @@ type Dashboard = {
   facilities: VendorFacility[];
   subscription: VendorSubscription | null;
   products: VendorProduct[];
-  campaigns: VendorCampaign[];
   coupons: VendorCoupon[];
   requests: VendorRequest[];
   demand: DemandSignal[];
   walletBalance: number;
   balances: VendorBalance[];
   unlock: VendorUnlock | null;
+  counts: { products: number; requests: number; coupons: number; campaigns: number };
 };
 
 function VendeurPage() {
@@ -143,16 +140,13 @@ function VendeurPage() {
         products?: VendorProduct[];
         requests?: VendorRequest[];
         coupons?: VendorCoupon[];
-        campaigns?: VendorCampaign[];
       }
     >(),
   );
 
-  const loadDashboard = useServerFn(getVendorDashboard);
   const loadProducts = useServerFn(getVendorProducts);
   const loadRequests = useServerFn(getVendorRequests);
   const loadCoupons = useServerFn(getVendorCoupons);
-  const loadCampaigns = useServerFn(getVendorCampaigns);
   const loadShell = useServerFn(getVendorShell);
   const createFacility = useServerFn(createFacilityFn);
   const saveProduct = useServerFn(upsertProduct);
@@ -164,7 +158,7 @@ function VendeurPage() {
   const createDeposit = useServerFn(createWalletDeposit);
 
   const reloadSurface = useCallback(
-    async (facilityId: string, surface: "products" | "requests" | "coupons" | "campaigns") => {
+    async (facilityId: string, surface: "products" | "requests" | "coupons") => {
       surfaceCache.current.delete(facilityId);
       if (surface === "products") {
         const products = await loadProducts({ data: { facilityId } });
@@ -174,42 +168,40 @@ function VendeurPage() {
         const requests = await loadRequests({ data: { facilityId } });
         surfaceCache.current.set(facilityId, { requests });
         setData((current) => (current ? { ...current, requests } : current));
-      } else if (surface === "coupons") {
+      } else {
         const coupons = await loadCoupons({ data: { facilityId } });
         surfaceCache.current.set(facilityId, { coupons });
         setData((current) => (current ? { ...current, coupons } : current));
-      } else {
-        const campaigns = await loadCampaigns({ data: { facilityId } });
-        surfaceCache.current.set(facilityId, { campaigns });
-        setData((current) => (current ? { ...current, campaigns } : current));
       }
     },
-    [loadCampaigns, loadCoupons, loadProducts, loadRequests],
+    [loadCoupons, loadProducts, loadRequests],
   );
 
   const refresh = useCallback(async () => {
     try {
       const shell = await loadShell();
+      const walletBalance =
+        shell.balances.find((balance) => balance.bucket === "wallet")?.amount ??
+        shell.subscription?.wallet_balance ??
+        0;
       setData({
         facilities: shell.facilities,
         subscription: shell.subscription,
         products: [],
-        campaigns: [],
         coupons: [],
         requests: [],
         demand: [],
-        walletBalance: shell.subscription?.wallet_balance ?? 0,
+        walletBalance,
         balances: shell.balances,
         unlock: shell.unlock,
+        counts: shell.counts,
       });
       setReady(true);
-      await new Promise((resolve) => window.setTimeout(resolve, 120));
-      setData((await loadDashboard()) as Dashboard);
     } catch {
       setData(null);
       setReady(true);
     }
-  }, [loadDashboard, loadShell]);
+  }, [loadShell]);
 
   useEffect(() => {
     if (!user) {
@@ -481,10 +473,6 @@ function VendeurPage() {
     if (facility) await reloadSurface(facility.id, "coupons");
   }, [facility?.id, reloadSurface]);
 
-  const refreshCampaigns = useCallback(async () => {
-    if (facility) await reloadSurface(facility.id, "campaigns");
-  }, [facility?.id, reloadSurface]);
-
   const updatePosition = useCallback(
     async (coords: { lat: number; lng: number }) => {
       if (!facility) return;
@@ -517,7 +505,7 @@ function VendeurPage() {
   }, [facility?.id, facility?.operating_hours]);
 
   useEffect(() => {
-    if (!facility || !["produits", "demandes", "coupons", "pub"].includes(activeTab)) return;
+    if (!facility || !["produits", "demandes", "coupons"].includes(activeTab)) return;
     const cached = surfaceCache.current.get(facility.id);
     if (activeTab === "produits" && cached?.products) {
       setData((current) => (current ? { ...current, products: cached.products! } : current));
@@ -529,10 +517,6 @@ function VendeurPage() {
     }
     if (activeTab === "coupons" && cached?.coupons) {
       setData((current) => (current ? { ...current, coupons: cached.coupons! } : current));
-      return;
-    }
-    if (activeTab === "pub" && cached?.campaigns) {
-      setData((current) => (current ? { ...current, campaigns: cached.campaigns! } : current));
       return;
     }
     let cancelled = false;
@@ -566,15 +550,6 @@ function VendeurPage() {
             });
             setData((current) => (current ? { ...current, coupons } : current));
           }
-        } else {
-          const campaigns = await loadCampaigns({ data: { facilityId: facility.id } });
-          if (!cancelled) {
-            surfaceCache.current.set(facility.id, {
-              ...surfaceCache.current.get(facility.id),
-              campaigns,
-            });
-            setData((current) => (current ? { ...current, campaigns } : current));
-          }
         }
       } catch {
         if (!cancelled) toast.error("Impossible de charger cette surface.");
@@ -585,7 +560,7 @@ function VendeurPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, facility?.id, loadCampaigns, loadCoupons, loadProducts, loadRequests]);
+  }, [activeTab, facility?.id, loadCoupons, loadProducts, loadRequests]);
 
   if (loading || !ready) {
     return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
@@ -737,19 +712,24 @@ function VendeurPage() {
   }
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden bg-background">
-      <TopNav activeRole="vendeur" minimalMapChrome />
-      <div className="absolute inset-0 z-0 pt-14" aria-label="Carte opérationnelle vendeur">
-        <MapCanvas
-          facilities={mapFacilities}
-          selectedId={facility.id}
-          focus={{ lat: facility.latitude, lng: facility.longitude }}
-          onMapClick={updatePosition}
-          className="h-full w-full"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-background/18" />
-      </div>
-      <main className="pointer-events-none absolute inset-0 z-10 max-h-[100dvh] overflow-y-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] [scrollbar-width:thin] sm:px-5">
+    <OmniMapShell
+      label="Carte opérationnelle vendeur Omni"
+      className="bg-background"
+      map={
+        <>
+          <MapCanvas
+            facilities={mapFacilities}
+            selectedId={facility.id}
+            focus={{ lat: facility.latitude, lng: facility.longitude }}
+            onMapClick={updatePosition}
+            className="h-full w-full"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-background/18" />
+        </>
+      }
+      chrome={<TopNav activeRole="vendeur" minimalMapChrome />}
+    >
+      <main className="pointer-events-none absolute inset-0 z-10 max-h-[100dvh] overflow-y-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] [scrollbar-width:thin] sm:px-5">
         <div className="pointer-events-auto mx-auto max-w-2xl">
           <section className="omni-glass rounded-[1.5rem] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-4">
             <div className="flex flex-wrap items-start gap-3">
@@ -811,51 +791,29 @@ function VendeurPage() {
             <OmniActionDock
               active={activeTab}
               onChange={setActiveTab}
+              placement="inline"
               items={[
                 { value: "apercu", label: "Facility", shortLabel: "Accueil" },
                 {
                   value: "produits",
                   label: "Catalogue",
                   shortLabel: "Produits",
-                  count: products.length,
+                  count: products.length || data?.counts.products || 0,
                 },
                 {
                   value: "demandes",
                   label: "Demandes reçues",
                   shortLabel: "Demandes",
-                  count: data?.requests.length ?? 0,
+                  count: data?.requests.length || data?.counts.requests || 0,
                 },
                 { value: "encaisser", label: "Scanner QR", shortLabel: "Scanner" },
+                { value: "solde", label: "Omni Wallet", shortLabel: "Wallet" },
                 {
                   value: "coupons",
                   label: "Coupons",
                   shortLabel: "Coupons",
-                  count: data?.coupons.length ?? 0,
+                  count: data?.coupons.length || data?.counts.coupons || 0,
                 },
-                {
-                  value: "pub",
-                  label: "Publicité V1",
-                  shortLabel: "Ads",
-                  count: data?.campaigns.length ?? 0,
-                },
-                {
-                  value: "solde",
-                  label: "Solde & recharge",
-                  shortLabel: "Solde",
-                },
-                {
-                  value: "abonnement",
-                  label: "Plan vendeur",
-                  shortLabel: "Plan",
-                },
-                {
-                  value: "parametres",
-                  label: "Paramètres",
-                  shortLabel: "Réglages",
-                },
-                ...(pro && OMNI_CONFIG.sellerAgentEnabled
-                  ? [{ value: "agent", label: "Agent Omni", shortLabel: "Agent" }]
-                  : []),
               ]}
             />
 
@@ -1059,7 +1017,7 @@ function VendeurPage() {
                     <div className="omni-card p-5">
                       <p className="text-sm text-muted-foreground">Campagnes</p>
                       <p className="mt-1 font-display text-2xl font-extrabold">
-                        {data?.campaigns.length ?? 0}
+                        {data?.counts.campaigns ?? 0}
                       </p>
                     </div>
                   </div>
@@ -1437,16 +1395,6 @@ function VendeurPage() {
               <CheckoutPanel facilityId={facility.id} />
             </TabsContent>
 
-            <TabsContent value="pub" className="mt-5">
-              <AdsPanel
-                facility={facility}
-                products={products}
-                subscription={subscription}
-                campaigns={data?.campaigns ?? []}
-                onRefresh={refreshCampaigns}
-              />
-            </TabsContent>
-
             <TabsContent value="coupons" className="mt-5">
               <CouponsPanel
                 facilityId={facility.id}
@@ -1480,6 +1428,6 @@ function VendeurPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </OmniMapShell>
   );
 }
