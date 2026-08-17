@@ -1131,8 +1131,8 @@ function VendeurPage() {
                               {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
                             </Button>
                             <p className="w-full text-[11px] text-muted-foreground sm:max-w-64">
-                              FedaPay ouvre son checkout sécurisé avec les moyens activés, dont la
-                              carte bancaire si disponible.
+                              Le checkout FedaPay sécurisé affiche les moyens activés, notamment
+                              Visa et Mastercard lorsque la carte est disponible dans votre pays.
                             </p>
                           </div>
                         }
