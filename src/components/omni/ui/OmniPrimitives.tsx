@@ -1,6 +1,7 @@
+import { AlertCircle, ArrowRight, Check, ChevronDown, Clock3, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
-import { AlertCircle, ArrowRight, Check, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { deriveProgressStatus } from "@/lib/transaction-progress";
 import {
   Sheet,
   SheetContent,
@@ -55,6 +56,61 @@ export function OmniSheet({
         ) : null}
       </SheetContent>
     </Sheet>
+  );
+}
+
+export function OmniGlassCard({
+  children,
+  className,
+  as: Component = "div",
+}: {
+  children: ReactNode;
+  className?: string;
+  as?: "div" | "section" | "article";
+}) {
+  return <Component className={cn("omni-glass min-w-0", className)}>{children}</Component>;
+}
+
+export function OmniFloat({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("omni-glass pointer-events-auto", className)}>{children}</div>;
+}
+
+export function OmniSheetSurface({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("omni-sheet min-w-0 rounded-[1.5rem]", className)}>{children}</div>;
+}
+
+export function OmniPageSurface({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return <div className={cn("omni-page min-w-0", className)}>{children}</div>;
+}
+
+export function OmniActionFooter({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "omni-safe-bottom flex shrink-0 flex-wrap items-center gap-2 border-t border-border/70 bg-card/95 px-4 pb-3 pt-3 backdrop-blur-md",
+        className,
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -127,7 +183,7 @@ export function OmniErrorState({
         {onRetry ? (
           <button
             type="button"
-            className="mt-4 rounded-full border border-border px-4 py-2 text-xs font-semibold transition hover:bg-muted"
+            className="mt-4 rounded-full border border-border px-4 py-2 text-xs font-semibold transition hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             onClick={onRetry}
           >
             Réessayer
@@ -195,34 +251,107 @@ export function OmniStatusBadge({
   );
 }
 
-export function OmniStepper({ steps, current }: { steps: string[]; current: number }) {
+export type OmniProgressStatus =
+  "upcoming" | "active" | "complete" | "blocked" | "expired" | "error";
+
+export type OmniProgressStep = {
+  label: string;
+  description?: string;
+  status?: OmniProgressStatus;
+};
+
+function progressIcon(status: OmniProgressStatus) {
+  if (status === "complete") return <Check className="h-4 w-4" aria-hidden="true" />;
+  if (status === "error" || status === "expired") {
+    return <AlertCircle className="h-4 w-4" aria-hidden="true" />;
+  }
+  if (status === "active") return <Clock3 className="h-4 w-4" aria-hidden="true" />;
+  return null;
+}
+
+export function TransactionProgress({
+  steps,
+  current,
+  statuses,
+  ariaLabel = "Progression de transaction",
+}: {
+  steps: OmniProgressStep[] | string[];
+  current: number;
+  statuses?: OmniProgressStatus[];
+  ariaLabel?: string;
+}) {
+  const normalized = steps.map((step, index) => {
+    const fallbackStatus = deriveProgressStatus(index, current) as OmniProgressStatus;
+    const value = typeof step === "string" ? { label: step } : step;
+    return { ...value, status: statuses?.[index] ?? value.status ?? fallbackStatus };
+  });
+
   return (
-    <ol className="flex items-center gap-1.5" aria-label="Progression">
-      {steps.map((step, index) => {
-        const complete = index < current;
-        const active = index === current;
+    <ol
+      className="grid gap-2 sm:flex sm:items-start sm:gap-1"
+      aria-label={ariaLabel}
+      data-omni-progress="transaction"
+    >
+      {normalized.map((step, index) => {
+        const status = step.status!;
+        const active = status === "active";
+        const icon = progressIcon(status);
         return (
-          <li key={step} className="flex min-w-0 flex-1 items-center gap-1.5">
-            <span
-              className={cn(
-                "grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold",
-                complete && "bg-forest text-forest-foreground",
-                active && "bg-primary text-primary-foreground",
-                !complete && !active && "bg-muted text-muted-foreground",
-              )}
-            >
-              {complete ? <Check className="h-3.5 w-3.5" /> : index + 1}
-            </span>
-            <span
-              className={cn(
-                "hidden truncate text-[11px] font-semibold sm:block",
-                active ? "text-foreground" : "text-muted-foreground",
-              )}
-            >
-              {step}
-            </span>
-            {index < steps.length - 1 ? (
-              <ArrowRight className="ml-auto h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+          <li
+            key={`${step.label}-${index}`}
+            className="flex min-w-0 items-start gap-3 sm:flex-1 sm:flex-col sm:items-center sm:gap-1.5 sm:text-center"
+            aria-current={active ? "step" : undefined}
+            data-omni-progress-status={status}
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3 sm:w-full sm:flex-col sm:items-center sm:gap-1.5">
+              <span
+                className={cn(
+                  "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold ring-1 ring-inset transition-colors",
+                  status === "complete" && "bg-forest text-forest-foreground ring-forest/30",
+                  status === "active" && "bg-primary text-primary-foreground ring-primary/30",
+                  status === "upcoming" && "bg-muted text-muted-foreground ring-border",
+                  status === "blocked" && "bg-muted text-muted-foreground ring-border",
+                  status === "expired" && "bg-primary/15 text-primary ring-primary/35",
+                  status === "error" && "bg-destructive/12 text-destructive ring-destructive/35",
+                )}
+                aria-hidden="true"
+              >
+                {icon ?? (status === "blocked" ? "–" : index + 1)}
+              </span>
+              <span className="min-w-0 flex-1 sm:w-full">
+                <span
+                  className={cn(
+                    "block break-words text-xs font-bold leading-tight",
+                    active ? "text-foreground" : "text-muted-foreground",
+                  )}
+                >
+                  {step.label}
+                </span>
+                {step.description ? (
+                  <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
+                    {step.description}
+                  </span>
+                ) : null}
+                <span className="sr-only">
+                  {status === "complete"
+                    ? "terminée"
+                    : status === "active"
+                      ? "active"
+                      : status === "blocked"
+                        ? "bloquée"
+                        : status === "expired"
+                          ? "expirée"
+                          : status === "error"
+                            ? "en erreur"
+                            : "à venir"}
+                </span>
+              </span>
+            </div>
+            {index < normalized.length - 1 ? (
+              <ArrowRight
+                className="mt-2 hidden h-3.5 w-3.5 shrink-0 text-muted-foreground/45 sm:block"
+                aria-hidden="true"
+              />
             ) : null}
           </li>
         );
@@ -231,10 +360,18 @@ export function OmniStepper({ steps, current }: { steps: string[]; current: numb
   );
 }
 
+/** Compatibility wrapper while buyer availability migrates to TransactionProgress. */
+export function OmniStepper({ steps, current }: { steps: string[]; current: number }) {
+  return <TransactionProgress steps={steps} current={current} />;
+}
+
 export function OmniLoadingState({ label = "Chargement…" }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" />
+    <span
+      className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+      aria-live="polite"
+    >
+      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
       {label}
     </span>
   );
@@ -243,9 +380,12 @@ export function OmniLoadingState({ label = "Chargement…" }: { label?: string }
 export function OmniDisclosure({ title, children }: { title: string; children: ReactNode }) {
   return (
     <details className="group rounded-2xl border border-border/70 bg-card/70">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <span>{title}</span>
-        <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+        <ChevronDown
+          className="h-4 w-4 transition-transform group-open:rotate-180"
+          aria-hidden="true"
+        />
       </summary>
       <div className="border-t border-border/60 px-4 py-4">{children}</div>
     </details>

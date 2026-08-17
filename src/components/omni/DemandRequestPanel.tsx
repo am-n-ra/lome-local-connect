@@ -17,6 +17,7 @@ import { useMarket } from "@/lib/market";
 import { savePendingAvailabilitySearch, useAuth } from "@/lib/auth";
 import { createPurchaseIntent } from "@/lib/checkout.functions";
 import { OmniErrorState, OmniStepper } from "@/components/omni/ui/OmniPrimitives";
+import { AVAILABILITY_PROGRESS_LABELS } from "@/lib/transaction-progress";
 
 type Props = {
   open: boolean;
@@ -178,7 +179,7 @@ export function DemandRequestPanel({
     }
   }
 
-  const steps = ["Produit", "Commerces", "Contraintes"];
+  const steps = [...AVAILABILITY_PROGRESS_LABELS];
 
   function continueFromStep() {
     if (step === 0) {

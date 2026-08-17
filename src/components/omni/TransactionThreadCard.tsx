@@ -6,6 +6,7 @@ import { OmniStepper } from "@/components/omni/ui/OmniPrimitives";
 import { TransactionMessageThread } from "@/components/omni/TransactionMessageThread";
 import type { BuyerOrder, TransactionEvent, TransactionTimeline } from "@/lib/checkout.functions";
 import { deriveTransactionUiState, TRANSACTION_STATUS_LABEL } from "@/lib/transaction-state";
+import { TRANSACTION_PROGRESS_LABELS } from "@/lib/transaction-progress";
 
 const EVENT_LABEL: Record<string, string> = {
   intent_created: "Intention créée",
@@ -68,10 +69,7 @@ export function TransactionThreadCard({
         <Badge variant="outline">{TRANSACTION_STATUS_LABEL[currentStatus] ?? currentStatus}</Badge>
       </div>
 
-      <OmniStepper
-        steps={["Intention", "Offre", "QR", "Paiement", "Réception"]}
-        current={progress}
-      />
+      <OmniStepper steps={[...TRANSACTION_PROGRESS_LABELS]} current={progress} />
 
       <div className="flex items-center justify-between border-y border-border py-3 text-sm">
         <span className="text-muted-foreground">Total</span>
