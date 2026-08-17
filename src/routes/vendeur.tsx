@@ -30,6 +30,10 @@ import {
   SellerProductForm,
   type SellerProductDraft,
 } from "@/components/omni/vendor/SellerProductForm";
+import {
+  SellerOnboardingFlow,
+  type SellerOnboardingDraft,
+} from "@/components/omni/vendor/SellerOnboardingFlow";
 import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
@@ -112,14 +116,6 @@ function VendeurPage() {
   const [bonusOpen, setBonusOpen] = useState(false);
   const [hours, setHours] = useState("");
 
-  // onboarding form
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState<string>(CATEGORIES[0]?.value ?? "food");
-  const [type, setType] = useState<"fixe" | "mobile">("fixe");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
-  const [pos, setPos] = useState(fallbackCenter);
   const [saving, setSaving] = useState(false);
 
   const [topUpAmount, setTopUpAmount] = useState("5000");
@@ -268,23 +264,19 @@ function VendeurPage() {
   );
   const atProductCap = !pro && products.length >= FREE_PRODUCT_CAP;
 
-  async function submitOnboarding() {
-    if (name.trim().length < 2) {
-      toast.error("Indiquez le nom de votre commerce.");
-      return;
-    }
+  async function submitOnboarding(draft: SellerOnboardingDraft) {
     setSaving(true);
     try {
       await createFacility({
         data: {
-          name: name.trim().slice(0, 80),
-          category,
-          type,
-          phone: phone.trim().slice(0, 30) || undefined,
-          address: address.trim().slice(0, 140) || undefined,
-          description: description.trim().slice(0, 400) || undefined,
-          latitude: pos.lat,
-          longitude: pos.lng,
+          name: draft.name.trim().slice(0, 80),
+          category: draft.category,
+          type: draft.type,
+          phone: draft.phone.trim().slice(0, 30) || undefined,
+          address: draft.address.trim().slice(0, 140) || undefined,
+          description: draft.description.trim().slice(0, 400) || undefined,
+          latitude: draft.position.lat,
+          longitude: draft.position.lng,
         },
       });
       await refresh();
@@ -566,126 +558,10 @@ function VendeurPage() {
 
   if (!facility) {
     return (
-      <div className="min-h-[100dvh] bg-background">
+      <>
         <TopNav activeRole="vendeur" minimalMapChrome />
-        <div className="mx-auto max-w-lg px-4 py-10">
-          <h1 className="font-display text-3xl font-bold">Créez votre fiche</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            2 minutes suffisent. 10 000 FCFA offerts à la création.
-          </p>
-          <div className="omni-card mt-6 space-y-4 p-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="fname">Nom du commerce</Label>
-              <Input
-                id="fname"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={80}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fcat">Catégorie</Label>
-              <select
-                id="fcat"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fdesc">Description</Label>
-              <Textarea
-                id="fdesc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={400}
-                rows={3}
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div>
-                <p className="text-sm font-medium">Commerce ambulant</p>
-                <p className="text-xs text-muted-foreground">
-                  Position mise à jour quand vous êtes en ligne
-                </p>
-              </div>
-              <Switch
-                checked={type === "mobile"}
-                onCheckedChange={(v) => setType(v ? "mobile" : "fixe")}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="faddr">Quartier / adresse</Label>
-              <Input
-                id="faddr"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                maxLength={140}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="fphone">Téléphone</Label>
-              <Input
-                id="fphone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                maxLength={30}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Position sur la carte</Label>
-              <p className="text-xs text-muted-foreground">
-                Touchez la carte pour placer votre commerce, ou utilisez votre position GPS.
-              </p>
-              <div className="h-56 overflow-hidden rounded-lg border border-border">
-                <MapCanvas
-                  facilities={[
-                    {
-                      id: "new",
-                      owner_id: null,
-                      name: name || "Mon commerce",
-                      category,
-                      description: null,
-                      address: null,
-                      latitude: pos.lat,
-                      longitude: pos.lng,
-                      phone: null,
-                      status: "unconfirmed",
-                      is_online: true,
-                      type,
-                      last_position_update: null,
-                    },
-                  ]}
-                  focus={pos}
-                  onMapClick={setPos}
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  navigator.geolocation?.getCurrentPosition(
-                    (p) => setPos({ lat: p.coords.latitude, lng: p.coords.longitude }),
-                    () => toast.error("Position GPS indisponible."),
-                  )
-                }
-              >
-                <MapPin className="mr-1.5 h-4 w-4" /> Utiliser ma position
-              </Button>
-            </div>
-            <Button className="w-full" disabled={saving} onClick={() => void submitOnboarding()}>
-              {saving ? "Création…" : "Créer ma fiche et recevoir 10 000 FCFA"}
-            </Button>
-          </div>
-        </div>
-      </div>
+        <SellerOnboardingFlow center={fallbackCenter} saving={saving} onSubmit={submitOnboarding} />
+      </>
     );
   }
 
