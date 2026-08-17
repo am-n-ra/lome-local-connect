@@ -26,6 +26,10 @@ import { CouponsPanel } from "@/components/omni/vendor/CouponsPanel";
 import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
 import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
+import {
+  SellerProductForm,
+  type SellerProductDraft,
+} from "@/components/omni/vendor/SellerProductForm";
 import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
@@ -118,17 +122,6 @@ function VendeurPage() {
   const [pos, setPos] = useState(fallbackCenter);
   const [saving, setSaving] = useState(false);
 
-  // product form
-  const [pName, setPName] = useState("");
-  const [pPrice, setPPrice] = useState("");
-  const [pPhoto, setPPhoto] = useState("");
-  const [pQuantity, setPQuantity] = useState("1");
-  const [pAllocation, setPAllocation] = useState("100");
-  const [pStatus, setPStatus] = useState<"draft" | "active" | "paused" | "sold_out">("active");
-  const [pCouponCode, setPCouponCode] = useState("");
-  const [pCouponDescription, setPCouponDescription] = useState("");
-  const [pCouponPercent, setPCouponPercent] = useState("10");
-  const [productAdvancedOpen, setProductAdvancedOpen] = useState(false);
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
@@ -303,13 +296,13 @@ function VendeurPage() {
     }
   }
 
-  async function addProduct() {
-    if (!facility) return;
-    const price = Number(pPrice);
-    const quantityAvailable = Number(pQuantity);
-    const omniAllocationPercent = Number(pAllocation);
+  async function addProduct(draft: SellerProductDraft) {
+    if (!facility) throw new Error("Aucune facility active.");
+    const price = Number(draft.price);
+    const quantityAvailable = Number(draft.quantity);
+    const omniAllocationPercent = Number(draft.allocation);
     if (
-      pName.trim().length < 2 ||
+      draft.name.trim().length < 2 ||
       !Number.isFinite(price) ||
       price < 0 ||
       !Number.isFinite(quantityAvailable) ||
@@ -318,43 +311,28 @@ function VendeurPage() {
       omniAllocationPercent < 0 ||
       omniAllocationPercent > 100
     ) {
-      toast.error("Nom et prix valides requis.");
-      return;
+      throw new Error("Nom et prix valides requis.");
     }
-    try {
-      await saveProduct({
-        data: {
-          facilityId: facility.id,
-          name: pName.trim().slice(0, 80),
-          price: Math.round(price),
-          inStock: pStatus === "active" && quantityAvailable > 0,
-          status: pStatus,
-          quantityAvailable: Math.round(quantityAvailable),
-          omniAllocationPercent: Math.round(omniAllocationPercent),
-          photoUrl: pPhoto.trim() || null,
-          coupon: pCouponCode.trim()
-            ? {
-                code: pCouponCode.trim().toUpperCase().slice(0, 24),
-                description: pCouponDescription.trim().slice(0, 200) || undefined,
-                discountPercent: Math.max(1, Math.min(90, Number(pCouponPercent) || 10)),
-              }
-            : null,
-        },
-      });
-      await reloadSurface(facility.id, "products");
-      setPName("");
-      setPPrice("");
-      setPPhoto("");
-      setPQuantity("1");
-      setPAllocation("100");
-      setPStatus("active");
-      setPCouponCode("");
-      setPCouponDescription("");
-      setPCouponPercent("10");
-      toast.success(pCouponCode.trim() ? "Produit et coupon ajoutés." : "Produit ajouté.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ajout impossible.");
-    }
+    await saveProduct({
+      data: {
+        facilityId: facility.id,
+        name: draft.name.trim().slice(0, 80),
+        price: Math.round(price),
+        inStock: draft.status === "active" && quantityAvailable > 0,
+        status: draft.status,
+        quantityAvailable: Math.round(quantityAvailable),
+        omniAllocationPercent: Math.round(omniAllocationPercent),
+        photoUrl: draft.photoUrl.trim() || null,
+        coupon: draft.couponCode.trim()
+          ? {
+              code: draft.couponCode.trim().toUpperCase().slice(0, 24),
+              description: draft.couponDescription.trim().slice(0, 200) || undefined,
+              discountPercent: Math.max(1, Math.min(90, Number(draft.couponPercent) || 10)),
+            }
+          : null,
+      },
+    });
+    await reloadSurface(facility.id, "products");
   }
 
   async function toggleStock(product: VendorProduct) {
@@ -1171,194 +1149,29 @@ function VendeurPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="produits" className="mt-5">
-              <form
-                className="omni-card space-y-5 p-4 sm:p-5"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void addProduct();
-                }}
-              >
+            <TabsContent value="produits" className="mt-5 space-y-4">
+              <SellerProductForm atProductCap={atProductCap} onSubmit={addProduct} />
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h3 className="font-display text-lg font-bold">Ajouter un produit</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Commencez par l’essentiel. Les options avancées restent disponibles sans
-                    encombrer le formulaire.
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                    Stock
                   </p>
+                  <h3 className="mt-1 font-display text-xl font-bold">Produits publiés</h3>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="vendor-product-name">Nom du produit</Label>
-                    <Input
-                      id="vendor-product-name"
-                      value={pName}
-                      onChange={(e) => setPName(e.target.value)}
-                      placeholder="Ex. Ciment 50 kg"
-                      autoComplete="off"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="vendor-product-price">Prix unitaire (FCFA)</Label>
-                    <Input
-                      id="vendor-product-price"
-                      inputMode="numeric"
-                      type="number"
-                      min="0"
-                      value={pPrice}
-                      onChange={(e) => setPPrice(e.target.value)}
-                      placeholder="12 000"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="vendor-product-quantity">Quantité disponible</Label>
-                    <Input
-                      id="vendor-product-quantity"
-                      inputMode="numeric"
-                      type="number"
-                      min="0"
-                      value={pQuantity}
-                      onChange={(e) => setPQuantity(e.target.value)}
-                      placeholder="1"
-                      required
-                    />
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button type="submit" disabled={atProductCap}>
-                    <Plus className="mr-1.5 h-4 w-4" /> Publier le produit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setProductAdvancedOpen((open) => !open)}
-                    aria-expanded={productAdvancedOpen}
-                  >
-                    {productAdvancedOpen ? "Masquer les options" : "Afficher les options avancées"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => void confirmEverything()}>
-                    Tout confirmer
-                  </Button>
-                </div>
-                {productAdvancedOpen && (
-                  <div className="space-y-4 rounded-xl border border-border/70 bg-secondary/30 p-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="vendor-product-status">Visibilité</Label>
-                        <select
-                          id="vendor-product-status"
-                          value={pStatus}
-                          onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                        >
-                          <option value="active">Actif — visible dans la recherche</option>
-                          <option value="draft">Brouillon — non publié</option>
-                          <option value="paused">En pause</option>
-                          <option value="sold_out">Épuisé</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="vendor-product-allocation">
-                          Allocation interne Omni (%)
-                        </Label>
-                        <Input
-                          id="vendor-product-allocation"
-                          inputMode="numeric"
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={pAllocation}
-                          onChange={(e) => setPAllocation(e.target.value)}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Allocation interne, pas un portefeuille séparé.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label htmlFor="vendor-product-photo">
-                          Photo ou média (URL facultative)
-                        </Label>
-                        <Input
-                          id="vendor-product-photo"
-                          value={pPhoto}
-                          onChange={(e) => setPPhoto(e.target.value)}
-                          placeholder="Ajoutez un média ou laissez le placeholder"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-3 border-t border-border/70 pt-4">
-                      <div>
-                        <p className="font-semibold">Coupon produit (facultatif)</p>
-                        <p className="text-xs text-muted-foreground">
-                          Le client verra l’économie directement sur l’offre.
-                        </p>
-                      </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="vendor-product-coupon">Code coupon</Label>
-                          <Input
-                            id="vendor-product-coupon"
-                            value={pCouponCode}
-                            onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
-                            placeholder="Ex. BIENVENUE"
-                            maxLength={24}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="vendor-product-coupon-percent">Remise (%)</Label>
-                          <Input
-                            id="vendor-product-coupon-percent"
-                            inputMode="numeric"
-                            type="number"
-                            min="1"
-                            max="90"
-                            value={pCouponPercent}
-                            onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
-                            disabled={!pCouponCode.trim()}
-                          />
-                        </div>
-                        <div className="space-y-1.5 sm:col-span-2">
-                          <Label htmlFor="vendor-product-coupon-description">
-                            Description du coupon
-                          </Label>
-                          <Textarea
-                            id="vendor-product-coupon-description"
-                            value={pCouponDescription}
-                            onChange={(e) => setPCouponDescription(e.target.value)}
-                            placeholder="Ex. Offre de bienvenue sur ce produit"
-                            maxLength={200}
-                            disabled={!pCouponCode.trim()}
-                          />
-                        </div>
-                      </div>
-                      {pCouponCode.trim() && (
-                        <p className="rounded-lg bg-background px-3 py-2 text-sm text-muted-foreground">
-                          Aperçu client : <strong>{pCouponCode.trim().toUpperCase()}</strong> · le
-                          client économise {pCouponPercent || "0"} %.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </form>
-              {atProductCap && (
-                <p className="mt-2 text-sm text-destructive">
-                  Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille
-                  pour repasser Pro.
-                </p>
-              )}
-              <ul className="mt-4 space-y-2">
+                <Button variant="outline" size="sm" onClick={() => void confirmEverything()}>
+                  Tout confirmer
+                </Button>
+              </div>
+              <ul className="space-y-2">
                 {products.map((p) => (
                   <li
                     key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card/80 p-3"
                   >
-                    <div>
-                      <p className="font-medium">{p.name}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{p.name}</p>
                       <p className="text-sm text-muted-foreground">
-                        {formatMoney(p.price)} · Stock {p.quantity_available} · Omni{" "}
-                        {p.omni_allocation_percent}% · {p.status} ·{" "}
+                        {formatMoney(p.price)} · Stock {p.quantity_available} · {p.status} ·{" "}
                         {freshnessLabel(p.last_confirmed_at)}
                       </p>
                     </div>
@@ -1377,7 +1190,7 @@ function VendeurPage() {
                   </li>
                 ))}
                 {products.length === 0 && (
-                  <p className="text-sm text-muted-foreground">Aucun produit pour l'instant.</p>
+                  <p className="text-sm text-muted-foreground">Aucun produit pour l’instant.</p>
                 )}
               </ul>
             </TabsContent>
