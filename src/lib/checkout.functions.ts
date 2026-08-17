@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
 import { newTransactionCode } from "./qr";
+import { appendWalletEntry, ensureWalletAccount } from "./wallet.server";
 import { enforceRateLimit } from "./rate-limit.server";
 
 export type BuyerOrder = {
@@ -744,6 +745,17 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
     if (!txn) throw new Error("La réception ne peut pas encore être confirmée.");
     await recordTransactionEvent(txn.id, "product_received", context.userId);
     await recordTransactionEvent(txn.id, "completed", context.userId);
+    const payoutAccountId = await ensureWalletAccount({ facilityId: txn.facility_id });
+    await appendWalletEntry({
+      accountId: payoutAccountId,
+      bucket: "payout",
+      amount: txn.payout_amount,
+      referenceType: "transaction_payout",
+      referenceId: txn.id,
+      idempotencyKey: `transaction:payout:${txn.id}`,
+      source: "transaction",
+      metadata: { transaction_id: txn.id },
+    });
     await query(
       `INSERT INTO public.subscriptions (facility_id, payout_balance)
        VALUES ($1, $2)
