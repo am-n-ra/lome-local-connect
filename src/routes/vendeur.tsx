@@ -441,6 +441,11 @@ function VendeurPage() {
     }
   }
 
+  const refreshRequests = useCallback(async () => {
+    if (facility) invalidateSurfaceCache(facility.id);
+    await refresh();
+  }, [facility?.id, refresh]);
+
   const updatePosition = useCallback(
     async (coords: { lat: number; lng: number }) => {
       if (!facility) return;
@@ -1232,7 +1237,7 @@ function VendeurPage() {
               <RequestsPanel
                 facilityId={facility.id}
                 requests={data?.requests ?? []}
-                onRefresh={refresh}
+                onRefresh={refreshRequests}
               />
             </TabsContent>
 
