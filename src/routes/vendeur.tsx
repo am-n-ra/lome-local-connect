@@ -50,7 +50,7 @@ import {
   type VendorUnlock,
   type DemandSignal,
 } from "@/lib/vendor.functions";
-import { confirmWalletDeposit } from "@/lib/payments.functions";
+import { createWalletDeposit, confirmWalletDeposit } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/vendeur")({
   validateSearch: z.object({ depot: z.string().uuid().optional() }),
@@ -123,6 +123,8 @@ function VendeurPage() {
   const [pCouponCode, setPCouponCode] = useState("");
   const [pCouponDescription, setPCouponDescription] = useState("");
   const [pCouponPercent, setPCouponPercent] = useState("10");
+  const [topUpAmount, setTopUpAmount] = useState("5000");
+  const [topUpBusy, setTopUpBusy] = useState(false);
 
   const loadDashboard = useServerFn(getVendorDashboard);
   const createFacility = useServerFn(createFacilityFn);
@@ -132,6 +134,7 @@ function VendeurPage() {
   const patchFacility = useServerFn(updateFacility);
   const moveMobile = useServerFn(updateMobilePosition);
   const confirmDeposit = useServerFn(confirmWalletDeposit);
+  const createDeposit = useServerFn(createWalletDeposit);
 
   const refresh = useCallback(async () => {
     try {
@@ -175,6 +178,26 @@ function VendeurPage() {
 
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
+
+  async function startTopUp() {
+    const amount = Number(topUpAmount);
+    if (!Number.isInteger(amount) || amount < 500) {
+      toast.error("La recharge minimale est de 500 FCFA.");
+      return;
+    }
+    if (!facility) {
+      toast.error("Aucune facility active n’est disponible.");
+      return;
+    }
+    setTopUpBusy(true);
+    try {
+      const result = await createDeposit({ data: { facilityId: facility.id, amount } });
+      window.location.assign(result.url);
+    } catch {
+      toast.error("Impossible d’ouvrir la recharge FedaPay.");
+      setTopUpBusy(false);
+    }
+  }
   const subscription = data?.subscription ?? null;
   const products = useMemo(() => data?.products ?? [], [data]);
   const pro = useMemo(
@@ -567,543 +590,591 @@ function VendeurPage() {
         />
         <div className="pointer-events-none absolute inset-0 bg-background/18" />
       </div>
-      <main className="relative z-10 mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
-        <section className="omni-glass rounded-[1.6rem] p-4 shadow-[var(--shadow-soft)] sm:p-5">
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                Espace opérationnel vendeur
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">
-                  {facility.name}
-                </h1>
-                <Badge variant="secondary">
-                  {STATUS_LABEL[facility.status] ?? facility.status}
-                </Badge>
-                {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
-              </div>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Votre facility est le point d’ancrage de la carte, des demandes, du catalogue et des
-                opérations quotidiennes.
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              {data && data.facilities.length > 1 && (
-                <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
-                  <span className="text-muted-foreground">Facility</span>
-                  <select
-                    value={facility.id}
-                    onChange={(event) => setActiveFacilityId(event.target.value)}
-                    className="max-w-40 bg-transparent text-xs font-bold outline-none"
-                    aria-label="Facility active"
-                  >
-                    {data.facilities.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
-                <span className={facility.is_online ? "text-forest" : "text-muted-foreground"}>
-                  {facility.is_online ? "En ligne" : "En pause"}
-                </span>
-                <Switch
-                  checked={facility.is_online}
-                  onCheckedChange={(v) => void toggleOnline(v)}
-                />
-              </label>
-            </div>
-          </div>
-        </section>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
-          <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
-            {[
-              ["apercu", "Aujourd'hui"],
-              ["demandes", "Demandes"],
-              ["produits", "Catalogue"],
-              ["encaisser", "Scanner QR"],
-              ["coupons", "Coupons"],
-            ].map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setActiveTab(value ?? "apercu")}
-                className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
-                  activeTab === value
-                    ? "border-primary bg-primary text-primary-foreground"
-                    : "border-border bg-card/70 text-muted-foreground hover:bg-secondary"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <TabsList
-            aria-label="Opérations vendeur"
-            className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          >
-            <TabsTrigger value="apercu">Facility</TabsTrigger>
-            <TabsTrigger value="produits">Produits</TabsTrigger>
-            <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
-            <TabsTrigger value="encaisser">Scanner QR</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons</TabsTrigger>
-            <TabsTrigger value="pub">Publicité V1</TabsTrigger>
-          </TabsList>
-
-          {pro && OMNI_CONFIG.sellerAgentEnabled && (
-            <TabsContent value="agent" className="mt-5 space-y-4">
-              <div className="omni-card space-y-3 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Agent Omni
+      <main className="pointer-events-none absolute inset-0 z-10 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] sm:px-5">
+        <div className="pointer-events-auto mx-auto max-w-2xl">
+          <section className="omni-glass rounded-[1.5rem] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-4">
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
+                  Facility active · vue globe
                 </p>
-                <h2 className="font-display text-2xl font-bold">Votre copilote vendeur</h2>
-                <p className="text-sm text-muted-foreground">
-                  L'Agent priorise les demandes locales, prépare les réponses de disponibilité et
-                  met en avant les actions qui renforcent la confiance.
-                </p>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Demandes locales</p>
-                    <p className="mt-1 text-2xl font-bold">{data?.demand.length ?? 0}</p>
-                  </div>
-                  <div className="rounded-xl border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Demandes reçues</p>
-                    <p className="mt-1 text-2xl font-bold">{data?.requests.length ?? 0}</p>
-                  </div>
-                  <div className="rounded-xl border border-border p-3">
-                    <p className="text-xs text-muted-foreground">Statut</p>
-                    <p className="mt-1 text-2xl font-bold">
-                      {facility.is_online ? "Actif" : "En pause"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </TabsContent>
-          )}
-
-          <TabsContent value="solde" className="mt-5 space-y-4">
-            <div className="omni-card space-y-3 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Portefeuille vendeur
-              </p>
-              <h2 className="font-display text-3xl font-bold text-primary">
-                {formatMoney(data?.walletBalance ?? 0)}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Le solde finance les campagnes de visibilité et les services vendeur. Les opérations
-                de dépôt et de réconciliation restent accessibles depuis le parcours de paiement
-                sécurisé.
-              </p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="abonnement" className="mt-5 space-y-4">
-            <div className="omni-card space-y-3 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Plan Omni
-              </p>
-              <h2 className="font-display text-2xl font-bold">
-                {pro ? "Pro actif" : "Plan gratuit"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {pro
-                  ? `${daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants sur votre accès Pro.`
-                  : `Le plan gratuit autorise jusqu'à ${FREE_PRODUCT_CAP} produits publiés. Utilisez le solde pour développer votre visibilité.`}
-              </p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="parametres" className="mt-5 space-y-4">
-            <div className="omni-card space-y-3 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                Paramètres
-              </p>
-              <h2 className="font-display text-2xl font-bold">Configuration du commerce</h2>
-              <p className="text-sm text-muted-foreground">
-                Les réglages actuellement disponibles sont regroupés dans l&apos;aperçu opérationnel
-                : horaires, position, statut en ligne et arrêt d&apos;urgence.
-              </p>
-              <Button variant="outline" onClick={() => setActiveTab("apercu")}>
-                Ouvrir les réglages opérationnels
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="apercu" className="mt-5 space-y-4">
-            <div className="pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] border border-border/70 bg-card/92 p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Surface seller map-first
-                </p>
-                <h2 className="mt-1 font-display text-2xl font-bold">
-                  Vos opérations autour de cette facility
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  La carte reste visible en permanence. Utilisez les onglets ci-dessous pour agir
-                  sans perdre votre contexte géospatial.
-                </p>
-              </div>
-              <div className="mt-4 rounded-2xl border border-border/70 bg-background/55 p-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold">{facility.name}</p>
-                  <Badge variant={facility.is_online ? "default" : "secondary"}>
-                    {facility.is_online ? "En ligne" : "Hors ligne"}
-                  </Badge>
-                  {facility.emergency_shutdown && (
-                    <Badge variant="destructive">Arrêt urgence</Badge>
-                  )}
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">
+                    {facility.name}
+                  </h1>
                   <Badge variant="secondary">
                     {STATUS_LABEL[facility.status] ?? facility.status}
                   </Badge>
+                  {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}
+                <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
+                  La carte reste visible ; vos opérations apparaissent au-dessus du contexte
+                  géospatial.
                 </p>
               </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <button
-                type="button"
-                onClick={() => setActiveTab("demandes")}
-                className="omni-card text-left transition-transform hover:-translate-y-0.5"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                  À traiter
-                </p>
-                <p className="mt-2 font-display text-2xl font-extrabold">
-                  {data?.requests.length ?? 0}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">Demandes reçues</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("produits")}
-                className="omni-card text-left transition-transform hover:-translate-y-0.5"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Stock</p>
-                <p className="mt-2 font-display text-2xl font-extrabold">
-                  {products.filter((product) => !product.in_stock).length}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">Produits à confirmer</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("demandes")}
-                className="omni-card text-left transition-transform hover:-translate-y-0.5"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                  Demande
-                </p>
-                <p className="mt-2 font-display text-2xl font-extrabold">
-                  {data?.demand.length ?? 0}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground"> Demandes à traiter</p>
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("coupons")}
-                className="omni-card text-left transition-transform hover:-translate-y-0.5"
-              >
-                <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                  Coupons
-                </p>
-                <p className="mt-2 font-display text-2xl font-extrabold text-primary">
-                  {data?.coupons.length ?? 0}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground"> Offres produit à gérer</p>
-              </button>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-4">
-              <div className="omni-card p-5">
-                <p className="text-sm text-muted-foreground">Portefeuille</p>
-                <p className="mt-1 font-display text-2xl font-extrabold text-primary">
-                  {formatMoney(data?.walletBalance ?? 0)}
-                </p>
-              </div>
-              <div className="omni-card p-5">
-                <p className="text-sm text-muted-foreground">Produits</p>
-                <p className="mt-1 font-display text-2xl font-extrabold">{products.length}</p>
-              </div>
-              <div className="omni-card p-5">
-                <p className="text-sm text-muted-foreground">Palier</p>
-                <p className="mt-1 font-display text-2xl font-extrabold">
-                  {pro ? "Pro" : "Gratuit"}
-                </p>
-                {pro && (
-                  <p className="text-xs text-muted-foreground">
-                    {daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants
-                  </p>
+              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                {data && data.facilities.length > 1 && (
+                  <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
+                    <span className="text-muted-foreground">Facility</span>
+                    <select
+                      value={facility.id}
+                      onChange={(event) => setActiveFacilityId(event.target.value)}
+                      className="max-w-40 bg-transparent text-xs font-bold outline-none"
+                      aria-label="Facility active"
+                    >
+                      {data.facilities.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 )}
-              </div>
-              <div className="omni-card p-5">
-                <p className="text-sm text-muted-foreground">Campagnes</p>
-                <p className="mt-1 font-display text-2xl font-extrabold">
-                  {data?.campaigns.length ?? 0}
-                </p>
+                <label className="flex items-center gap-2 rounded-full bg-background/60 px-3 py-2 text-xs font-semibold">
+                  <span className={facility.is_online ? "text-forest" : "text-muted-foreground"}>
+                    {facility.is_online ? "En ligne" : "En pause"}
+                  </span>
+                  <Switch
+                    checked={facility.is_online}
+                    onCheckedChange={(v) => void toggleOnline(v)}
+                  />
+                </label>
               </div>
             </div>
+          </section>
 
-            <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-              <div className="omni-card p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                      Unlocker vendeur
-                    </p>
-                    <h3 className="mt-1 font-display text-xl font-bold">
-                      Crédit Pro de test · 20 USD
-                    </h3>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
+            <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
+              {[
+                ["apercu", "Aujourd'hui"],
+                ["demandes", "Demandes"],
+                ["produits", "Catalogue"],
+                ["encaisser", "Scanner QR"],
+                ["coupons", "Coupons"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setActiveTab(value ?? "apercu")}
+                  className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
+                    activeTab === value
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card/70 text-muted-foreground hover:bg-secondary"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <TabsList
+              aria-label="Opérations vendeur"
+              className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex w-[min(42rem,calc(100vw-1.5rem))] gap-1 overflow-x-auto rounded-2xl border border-border/60 bg-card/92 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              <TabsTrigger value="apercu">Facility</TabsTrigger>
+              <TabsTrigger value="produits">Produits</TabsTrigger>
+              <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
+              <TabsTrigger value="encaisser">Scanner QR</TabsTrigger>
+              <TabsTrigger value="coupons">Coupons</TabsTrigger>
+              <TabsTrigger value="pub">Publicité V1</TabsTrigger>
+            </TabsList>
+
+            {pro && OMNI_CONFIG.sellerAgentEnabled && (
+              <TabsContent value="agent" className="mt-5 space-y-4">
+                <div className="omni-card space-y-3 p-5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                    Agent Omni
+                  </p>
+                  <h2 className="font-display text-2xl font-bold">Votre copilote vendeur</h2>
+                  <p className="text-sm text-muted-foreground">
+                    L'Agent priorise les demandes locales, prépare les réponses de disponibilité et
+                    met en avant les actions qui renforcent la confiance.
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border p-3">
+                      <p className="text-xs text-muted-foreground">Demandes locales</p>
+                      <p className="mt-1 text-2xl font-bold">{data?.demand.length ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border border-border p-3">
+                      <p className="text-xs text-muted-foreground">Demandes reçues</p>
+                      <p className="mt-1 text-2xl font-bold">{data?.requests.length ?? 0}</p>
+                    </div>
+                    <div className="rounded-xl border border-border p-3">
+                      <p className="text-xs text-muted-foreground">Statut</p>
+                      <p className="mt-1 text-2xl font-bold">
+                        {facility.is_online ? "Actif" : "En pause"}
+                      </p>
+                    </div>
                   </div>
-                  <Badge variant={data?.unlock?.status === "eligible" ? "default" : "secondary"}>
-                    {data?.unlock?.status === "eligible"
-                      ? "Éligible"
-                      : data?.unlock?.status === "granted"
-                        ? "Accordé"
-                        : "En progression"}
-                  </Badge>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {data?.unlock?.qualifying_count ?? 0} / {data?.unlock?.required_count ?? 3} ventes
-                  terminées. Le crédit est non monétaire et n’est activé qu’après validation
-                  serveur.
+              </TabsContent>
+            )}
+
+            <TabsContent value="solde" className="mt-5 space-y-4">
+              <div className="omni-card space-y-3 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Portefeuille vendeur
                 </p>
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className="h-full rounded-full bg-primary transition-[width]"
-                    style={{
-                      width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
-                    }}
-                  />
+                <h2 className="font-display text-3xl font-bold text-primary">
+                  {formatMoney(data?.walletBalance ?? 0)}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Le solde finance les campagnes de visibilité et les services vendeur. Les
+                  opérations de dépôt et de réconciliation restent accessibles depuis le parcours de
+                  paiement sécurisé.
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="abonnement" className="mt-5 space-y-4">
+              <div className="omni-card space-y-3 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Plan Omni
+                </p>
+                <h2 className="font-display text-2xl font-bold">
+                  {pro ? "Pro actif" : "Plan gratuit"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {pro
+                    ? `${daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants sur votre accès Pro.`
+                    : `Le plan gratuit autorise jusqu'à ${FREE_PRODUCT_CAP} produits publiés. Utilisez le solde pour développer votre visibilité.`}
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="parametres" className="mt-5 space-y-4">
+              <div className="omni-card space-y-3 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Paramètres
+                </p>
+                <h2 className="font-display text-2xl font-bold">Configuration du commerce</h2>
+                <p className="text-sm text-muted-foreground">
+                  Les réglages actuellement disponibles sont regroupés dans l&apos;aperçu
+                  opérationnel : horaires, position, statut en ligne et arrêt d&apos;urgence.
+                </p>
+                <Button variant="outline" onClick={() => setActiveTab("apercu")}>
+                  Ouvrir les réglages opérationnels
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="apercu" className="mt-5 space-y-4">
+              <div className="pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] border border-border/70 bg-card/92 p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                    Surface seller map-first
+                  </p>
+                  <h2 className="mt-1 font-display text-2xl font-bold">
+                    Vos opérations autour de cette facility
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    La carte reste visible en permanence. Utilisez les onglets ci-dessous pour agir
+                    sans perdre votre contexte géospatial.
+                  </p>
+                </div>
+                <div className="mt-4 rounded-2xl border border-border/70 bg-background/55 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{facility.name}</p>
+                    <Badge variant={facility.is_online ? "default" : "secondary"}>
+                      {facility.is_online ? "En ligne" : "Hors ligne"}
+                    </Badge>
+                    {facility.emergency_shutdown && (
+                      <Badge variant="destructive">Arrêt urgence</Badge>
+                    )}
+                    <Badge variant="secondary">
+                      {STATUS_LABEL[facility.status] ?? facility.status}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}
+                  </p>
                 </div>
               </div>
-              <div className="omni-card p-5">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                  Balances
-                </p>
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  {(data?.balances ?? []).map((balance) => (
-                    <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {balance.bucket.replaceAll("_", " ")}
-                      </p>
-                      <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
-                    </div>
-                  ))}
-                  {(data?.balances ?? []).length === 0 && (
-                    <p className="col-span-2 text-sm text-muted-foreground">
-                      Aucun mouvement segmenté enregistré.
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("demandes")}
+                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                    À traiter
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-extrabold">
+                    {data?.requests.length ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Demandes reçues</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("produits")}
+                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                    Stock
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-extrabold">
+                    {products.filter((product) => !product.in_stock).length}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">Produits à confirmer</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("demandes")}
+                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                    Demande
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-extrabold">
+                    {data?.demand.length ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground"> Demandes à traiter</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("coupons")}
+                  className="omni-card text-left transition-transform hover:-translate-y-0.5"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
+                    Coupons
+                  </p>
+                  <p className="mt-2 font-display text-2xl font-extrabold text-primary">
+                    {data?.coupons.length ?? 0}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground"> Offres produit à gérer</p>
+                </button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-4">
+                <div className="omni-card p-5">
+                  <p className="text-sm text-muted-foreground">Portefeuille</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold text-primary">
+                    {formatMoney(data?.walletBalance ?? 0)}
+                  </p>
+                </div>
+                <div className="omni-card p-5">
+                  <p className="text-sm text-muted-foreground">Produits</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold">{products.length}</p>
+                </div>
+                <div className="omni-card p-5">
+                  <p className="text-sm text-muted-foreground">Palier</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold">
+                    {pro ? "Pro" : "Gratuit"}
+                  </p>
+                  {pro && (
+                    <p className="text-xs text-muted-foreground">
+                      {daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants
                     </p>
                   )}
                 </div>
+                <div className="omni-card p-5">
+                  <p className="text-sm text-muted-foreground">Campagnes</p>
+                  <p className="mt-1 font-display text-2xl font-extrabold">
+                    {data?.campaigns.length ?? 0}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div className="omni-card p-5">
-              <p className="font-display text-lg font-bold">Opérations</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour
-                corriger l'emplacement affiché aux acheteurs.
-              </p>
-              <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
-                <Input
-                  value={hours}
-                  onChange={(e) => setHours(e.target.value)}
-                  placeholder="Horaires (ex. Lun-Sam 8h-19h)"
-                />
-                <Button variant="outline" onClick={() => void saveOperatingHours()}>
-                  Enregistrer horaires
-                </Button>
-                <label className="flex items-center gap-2 text-sm sm:col-span-2">
-                  <Switch
-                    checked={facility.emergency_shutdown}
-                    onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
+              <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+                <div className="omni-card p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                        Unlocker vendeur
+                      </p>
+                      <h3 className="mt-1 font-display text-xl font-bold">
+                        Crédit Pro de test · 20 USD
+                      </h3>
+                    </div>
+                    <Badge variant={data?.unlock?.status === "eligible" ? "default" : "secondary"}>
+                      {data?.unlock?.status === "eligible"
+                        ? "Éligible"
+                        : data?.unlock?.status === "granted"
+                          ? "Accordé"
+                          : "En progression"}
+                    </Badge>
+                  </div>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {data?.unlock?.qualifying_count ?? 0} / {data?.unlock?.required_count ?? 3}{" "}
+                    ventes terminées. Le crédit est non monétaire et n’est activé qu’après
+                    validation serveur.
+                  </p>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-primary transition-[width]"
+                      style={{
+                        width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="omni-card p-5 sm:col-span-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                        Solde opérationnel
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Les crédits non monétaires ne sont pas retirables et chaque recharge passe
+                        par FedaPay.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        inputMode="numeric"
+                        value={topUpAmount}
+                        onChange={(event) => setTopUpAmount(event.target.value.replace(/\\D/g, ""))}
+                        className="h-9 w-28 text-base sm:text-sm"
+                        aria-label="Montant de recharge en FCFA"
+                      />
+                      <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
+                        {topUpBusy ? "Ouverture…" : "Recharger"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+                    {[
+                      ["wallet", "Wallet"],
+                      ["payout", "Payout"],
+                      ["ad_credit", "Publicité"],
+                      ["coupon_credit", "Coupons"],
+                      ["pro_credit", "Pro"],
+                    ].map(([bucket, label]) => {
+                      const balance = data?.balances.find((item) => item.bucket === bucket);
+                      return (
+                        <div key={bucket} className="rounded-xl bg-secondary/60 p-2.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            {label}
+                          </p>
+                          <p className="mt-1 font-bold">{formatMoney(balance?.amount ?? 0)}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="hidden">
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                    Legacy balances
+                  </p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                    {(data?.balances ?? []).map((balance) => (
+                      <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {balance.bucket.replaceAll("_", " ")}
+                        </p>
+                        <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
+                      </div>
+                    ))}
+                    {(data?.balances ?? []).length === 0 && (
+                      <p className="col-span-2 text-sm text-muted-foreground">
+                        Aucun mouvement segmenté enregistré.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="omni-card p-5">
+                <p className="font-display text-lg font-bold">Opérations</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la carte pour
+                  corriger l'emplacement affiché aux acheteurs.
+                </p>
+                <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
+                  <Input
+                    value={hours}
+                    onChange={(e) => setHours(e.target.value)}
+                    placeholder="Horaires (ex. Lun-Sam 8h-19h)"
                   />
-                  Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
-                </label>
+                  <Button variant="outline" onClick={() => void saveOperatingHours()}>
+                    Enregistrer horaires
+                  </Button>
+                  <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                    <Switch
+                      checked={facility.emergency_shutdown}
+                      onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
+                    />
+                    Arrêt d'urgence : masque immédiatement la facility des opérations en ligne.
+                  </label>
+                </div>
+                <div className="mt-3 rounded-lg border border-border bg-secondary/45 p-3 text-sm text-muted-foreground">
+                  La carte persistante en arrière-plan est le contexte unique de positionnement.
+                  Touchez-la directement pour déplacer la facility.
+                </div>
+                {facility.type === "mobile" && (
+                  <Button
+                    className="mt-3"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      navigator.geolocation?.getCurrentPosition(
+                        (p) =>
+                          void updatePosition({ lat: p.coords.latitude, lng: p.coords.longitude }),
+                        () => toast.error("Position GPS indisponible."),
+                      )
+                    }
+                  >
+                    <MapPin className="mr-1.5 h-4 w-4" /> Mettre à jour ma position GPS
+                  </Button>
+                )}
               </div>
-              <div className="mt-3 rounded-lg border border-border bg-secondary/45 p-3 text-sm text-muted-foreground">
-                La carte persistante en arrière-plan est le contexte unique de positionnement.
-                Touchez-la directement pour déplacer la facility.
-              </div>
-              {facility.type === "mobile" && (
-                <Button
-                  className="mt-3"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    navigator.geolocation?.getCurrentPosition(
-                      (p) =>
-                        void updatePosition({ lat: p.coords.latitude, lng: p.coords.longitude }),
-                      () => toast.error("Position GPS indisponible."),
-                    )
-                  }
+
+              {OMNI_CONFIG.mediaUiEnabled && <MediaManager facilityId={facility.id} />}
+            </TabsContent>
+
+            <TabsContent value="produits" className="mt-5">
+              <div className="omni-card flex flex-wrap gap-2 p-4">
+                <Input
+                  placeholder="Nom du produit"
+                  value={pName}
+                  onChange={(e) => setPName(e.target.value)}
+                  className="flex-1"
+                />
+                <Input
+                  placeholder="Prix (FCFA)"
+                  inputMode="numeric"
+                  value={pPrice}
+                  onChange={(e) => setPPrice(e.target.value)}
+                  className="w-36"
+                />
+                <Input
+                  placeholder="Qté stock"
+                  inputMode="numeric"
+                  value={pQuantity}
+                  onChange={(e) => setPQuantity(e.target.value)}
+                  className="w-28"
+                />
+                <Input
+                  placeholder="Allocation Omni %"
+                  inputMode="numeric"
+                  value={pAllocation}
+                  onChange={(e) => setPAllocation(e.target.value)}
+                  className="w-36"
+                />
+                <select
+                  value={pStatus}
+                  onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <MapPin className="mr-1.5 h-4 w-4" /> Mettre à jour ma position GPS
+                  <option value="active">Actif</option>
+                  <option value="draft">Brouillon</option>
+                  <option value="paused">En pause</option>
+                  <option value="sold_out">Épuisé</option>
+                </select>
+                <Input
+                  placeholder="URL photo (optionnel)"
+                  value={pPhoto}
+                  onChange={(e) => setPPhoto(e.target.value)}
+                  className="w-56"
+                />
+                <Input
+                  placeholder="Coupon produit (optionnel)"
+                  value={pCouponCode}
+                  onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
+                  className="w-48"
+                  maxLength={24}
+                />
+                <Input
+                  placeholder="Remise %"
+                  inputMode="numeric"
+                  value={pCouponPercent}
+                  onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
+                  className="w-28"
+                  disabled={!pCouponCode.trim()}
+                />
+                <Input
+                  placeholder="Description coupon (optionnel)"
+                  value={pCouponDescription}
+                  onChange={(e) => setPCouponDescription(e.target.value)}
+                  className="min-w-48 flex-1"
+                  maxLength={200}
+                  disabled={!pCouponCode.trim()}
+                />
+                <Button disabled={atProductCap} onClick={() => void addProduct()}>
+                  <Plus className="mr-1.5 h-4 w-4" /> Ajouter
                 </Button>
+                <Button variant="outline" onClick={() => void confirmEverything()}>
+                  Tout confirmer
+                </Button>
+              </div>
+              {atProductCap && (
+                <p className="mt-2 text-sm text-destructive">
+                  Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille
+                  pour repasser Pro.
+                </p>
               )}
-            </div>
+              <ul className="mt-4 space-y-2">
+                {products.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+                  >
+                    <div>
+                      <p className="font-medium">{p.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatMoney(p.price)} · Stock {p.quantity_available} · Omni{" "}
+                        {p.omni_allocation_percent}% · {p.status} ·{" "}
+                        {freshnessLabel(p.last_confirmed_at)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => void confirmProduct(p)}>
+                        Confirmer
+                      </Button>
+                      <span className="text-xs text-muted-foreground">
+                        {p.in_stock ? "Disponible" : "En rupture"}
+                      </span>
+                      <Switch checked={p.in_stock} onCheckedChange={() => void toggleStock(p)} />
+                      <Button size="sm" variant="ghost" onClick={() => void removeProduct(p)}>
+                        Supprimer
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+                {products.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Aucun produit pour l'instant.</p>
+                )}
+              </ul>
+            </TabsContent>
 
-            {OMNI_CONFIG.mediaUiEnabled && <MediaManager facilityId={facility.id} />}
-          </TabsContent>
+            <TabsContent value="demandes" className="mt-5 space-y-8">
+              <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
+              <RequestsPanel
+                facilityId={facility.id}
+                requests={data?.requests ?? []}
+                onRefresh={refresh}
+              />
+            </TabsContent>
 
-          <TabsContent value="produits" className="mt-5">
-            <div className="omni-card flex flex-wrap gap-2 p-4">
-              <Input
-                placeholder="Nom du produit"
-                value={pName}
-                onChange={(e) => setPName(e.target.value)}
-                className="flex-1"
-              />
-              <Input
-                placeholder="Prix (FCFA)"
-                inputMode="numeric"
-                value={pPrice}
-                onChange={(e) => setPPrice(e.target.value)}
-                className="w-36"
-              />
-              <Input
-                placeholder="Qté stock"
-                inputMode="numeric"
-                value={pQuantity}
-                onChange={(e) => setPQuantity(e.target.value)}
-                className="w-28"
-              />
-              <Input
-                placeholder="Allocation Omni %"
-                inputMode="numeric"
-                value={pAllocation}
-                onChange={(e) => setPAllocation(e.target.value)}
-                className="w-36"
-              />
-              <select
-                value={pStatus}
-                onChange={(e) => setPStatus(e.target.value as typeof pStatus)}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-              >
-                <option value="active">Actif</option>
-                <option value="draft">Brouillon</option>
-                <option value="paused">En pause</option>
-                <option value="sold_out">Épuisé</option>
-              </select>
-              <Input
-                placeholder="URL photo (optionnel)"
-                value={pPhoto}
-                onChange={(e) => setPPhoto(e.target.value)}
-                className="w-56"
-              />
-              <Input
-                placeholder="Coupon produit (optionnel)"
-                value={pCouponCode}
-                onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
-                className="w-48"
-                maxLength={24}
-              />
-              <Input
-                placeholder="Remise %"
-                inputMode="numeric"
-                value={pCouponPercent}
-                onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
-                className="w-28"
-                disabled={!pCouponCode.trim()}
-              />
-              <Input
-                placeholder="Description coupon (optionnel)"
-                value={pCouponDescription}
-                onChange={(e) => setPCouponDescription(e.target.value)}
-                className="min-w-48 flex-1"
-                maxLength={200}
-                disabled={!pCouponCode.trim()}
-              />
-              <Button disabled={atProductCap} onClick={() => void addProduct()}>
-                <Plus className="mr-1.5 h-4 w-4" /> Ajouter
-              </Button>
-              <Button variant="outline" onClick={() => void confirmEverything()}>
-                Tout confirmer
-              </Button>
-            </div>
-            {atProductCap && (
-              <p className="mt-2 text-sm text-destructive">
-                Palier gratuit limité à {FREE_PRODUCT_CAP} produits. Alimentez votre portefeuille
-                pour repasser Pro.
-              </p>
-            )}
-            <ul className="mt-4 space-y-2">
-              {products.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
-                >
-                  <div>
-                    <p className="font-medium">{p.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatMoney(p.price)} · Stock {p.quantity_available} · Omni{" "}
-                      {p.omni_allocation_percent}% · {p.status} ·{" "}
-                      {freshnessLabel(p.last_confirmed_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => void confirmProduct(p)}>
-                      Confirmer
-                    </Button>
-                    <span className="text-xs text-muted-foreground">
-                      {p.in_stock ? "Disponible" : "En rupture"}
-                    </span>
-                    <Switch checked={p.in_stock} onCheckedChange={() => void toggleStock(p)} />
-                    <Button size="sm" variant="ghost" onClick={() => void removeProduct(p)}>
-                      Supprimer
-                    </Button>
-                  </div>
-                </li>
-              ))}
-              {products.length === 0 && (
-                <p className="text-sm text-muted-foreground">Aucun produit pour l'instant.</p>
-              )}
-            </ul>
-          </TabsContent>
+            <TabsContent value="encaisser" className="mt-5">
+              <CheckoutPanel facilityId={facility.id} />
+            </TabsContent>
 
-          <TabsContent value="demandes" className="mt-5 space-y-8">
-            <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
-            <RequestsPanel
-              facilityId={facility.id}
-              requests={data?.requests ?? []}
-              onRefresh={refresh}
-            />
-          </TabsContent>
+            <TabsContent value="pub" className="mt-5">
+              <AdsPanel
+                facility={facility}
+                products={products}
+                subscription={subscription}
+                campaigns={data?.campaigns ?? []}
+                onRefresh={refresh}
+              />
+            </TabsContent>
 
-          <TabsContent value="encaisser" className="mt-5">
-            <CheckoutPanel facilityId={facility.id} />
-          </TabsContent>
+            <TabsContent value="coupons" className="mt-5">
+              <CouponsPanel
+                facilityId={facility.id}
+                coupons={data?.coupons ?? []}
+                onRefresh={refresh}
+              />
+            </TabsContent>
 
-          <TabsContent value="pub" className="mt-5">
-            <AdsPanel
-              facility={facility}
-              products={products}
-              subscription={subscription}
-              campaigns={data?.campaigns ?? []}
-              onRefresh={refresh}
-            />
-          </TabsContent>
-
-          <TabsContent value="coupons" className="mt-5">
-            <CouponsPanel
-              facilityId={facility.id}
-              coupons={data?.coupons ?? []}
-              onRefresh={refresh}
-            />
-          </TabsContent>
-
-          <TabsContent value="demande-locale" className="mt-5">
-            <DemandPanel
-              demand={data?.demand ?? []}
-              facilityId={facility.id}
-              showLiveRequests={false}
-            />
-          </TabsContent>
-        </Tabs>
+            <TabsContent value="demande-locale" className="mt-5">
+              <DemandPanel
+                demand={data?.demand ?? []}
+                facilityId={facility.id}
+                showLiveRequests={false}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
       </main>
 
       <Dialog open={bonusOpen} onOpenChange={setBonusOpen}>

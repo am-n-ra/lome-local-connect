@@ -24,6 +24,11 @@ export const createWalletDeposit = createServerFn({ method: "POST" })
       .object({
         facilityId: z.string().uuid(),
         amount: z.number().int().min(500).max(1_000_000),
+        idempotencyKey: z
+          .string()
+          .min(16)
+          .max(120)
+          .default(() => crypto.randomUUID()),
       })
       .parse(input),
   )
@@ -42,6 +47,7 @@ export const createWalletDeposit = createServerFn({ method: "POST" })
       name: context.user.name,
       facilityId: data.facilityId,
       amount: data.amount,
+      idempotencyKey: data.idempotencyKey,
       origin,
     });
   });
@@ -49,16 +55,13 @@ export const createWalletDeposit = createServerFn({ method: "POST" })
 /** Confirms a deposit when the buyer comes back from the checkout page. */
 export const confirmWalletDeposit = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ depositId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ depositId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => reconcileDeposit(context.userId, data.depositId));
 
 export const getWalletDeposits = createServerFn({ method: "POST" })
   .middleware([requireAuth])
-  .inputValidator((input: unknown) =>
-    z.object({ facilityId: z.string().uuid() }).parse(input),
-  )
-  .handler(async ({ data, context }) =>
-    listDeposits(context.userId, data.facilityId) as Promise<WalletDeposit[]>,
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(
+    async ({ data, context }) =>
+      listDeposits(context.userId, data.facilityId) as Promise<WalletDeposit[]>,
   );

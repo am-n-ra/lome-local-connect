@@ -6,9 +6,7 @@ import { currentMonthKey } from "./omni";
 
 function apiBase(): string {
   const env = (process.env["FEDAPAY_ENV"] ?? "live").toLowerCase();
-  return env === "sandbox"
-    ? "https://sandbox-api.fedapay.com/v1"
-    : "https://api.fedapay.com/v1";
+  return env === "sandbox" ? "https://sandbox-api.fedapay.com/v1" : "https://api.fedapay.com/v1";
 }
 
 function secretKey(): string {
@@ -93,7 +91,9 @@ export async function fetchFedapayTransaction(
 const APPROVED = new Set(["approved", "transferred"]);
 const FAILED = new Set(["declined", "canceled", "failed", "expired"]);
 
-export function normaliseStatus(providerStatus: string): "pending" | "approved" | "declined" | "canceled" {
+export function normaliseStatus(
+  providerStatus: string,
+): "pending" | "approved" | "declined" | "canceled" {
   if (APPROVED.has(providerStatus)) return "approved";
   if (providerStatus === "canceled") return "canceled";
   if (FAILED.has(providerStatus)) return "declined";
@@ -104,14 +104,11 @@ export function normaliseStatus(providerStatus: string): "pending" | "approved" 
  * Credits the wallet exactly once for an approved deposit.
  * Returns true when this call performed the credit.
  */
-export async function creditDeposit(
-  depositId: string,
-  providerStatus: string,
-): Promise<boolean> {
+export async function creditDeposit(depositId: string, providerStatus: string): Promise<boolean> {
   const status = normaliseStatus(providerStatus);
   if (status !== "approved") {
     await query(
-      "UPDATE public.wallet_deposits SET status = $1, updated_at = now() WHERE id = $2 AND status = 'pending'",
+      "UPDATE public.wallet_deposits SET status = $1, normalized_status = $1, last_reconciled_at = now(), updated_at = now() WHERE id = $2 AND status = 'pending'",
       [status, depositId],
     );
     return false;
@@ -120,8 +117,8 @@ export async function creditDeposit(
   // Only the first transition out of `pending` credits the wallet.
   const claimed = await queryOne<{ facility_id: string; amount: number }>(
     `UPDATE public.wallet_deposits
-     SET status = 'approved', credited_at = now(), updated_at = now()
-     WHERE id = $1 AND status = 'pending'
+       SET status = 'approved', normalized_status = 'approved', credited_at = now(), last_reconciled_at = now(), updated_at = now()
+       WHERE id = $1 AND status = 'pending'
      RETURNING facility_id, amount`,
     [depositId],
   );
