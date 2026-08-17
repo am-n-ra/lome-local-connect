@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { Webhook } from "fedapay";
 import { normaliseStatus, verifyWebhookSignature } from "./fedapay.server";
 import { WALLET_BUCKETS } from "./wallet.server";
+import { isValidTransactionCode, newTransactionCode } from "./qr";
 
 describe("FedaPay status normalization", () => {
   it.each([
@@ -38,6 +39,16 @@ describe("FedaPay webhook signature", () => {
       if (previous === undefined) delete process.env["FEDAPAY_WEBHOOK_SECRET"];
       else process.env["FEDAPAY_WEBHOOK_SECRET"] = previous;
     }
+  });
+});
+
+describe("transaction QR code contract", () => {
+  it("generates an 8-character code accepted by manual fallback", () => {
+    const code = newTransactionCode();
+    expect(code).toHaveLength(8);
+    expect(isValidTransactionCode(code)).toBe(true);
+    expect(isValidTransactionCode(`${code}0`)).toBe(false);
+    expect(isValidTransactionCode("O0I1AAAA")).toBe(false);
   });
 });
 

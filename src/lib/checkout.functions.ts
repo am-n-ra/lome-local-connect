@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAuth } from "./auth-middleware";
 import { query, queryOne } from "./db.server";
+import { newTransactionCode } from "./qr";
 import { enforceRateLimit } from "./rate-limit.server";
 
 export type BuyerOrder = {
@@ -63,13 +64,6 @@ export type VendorTransaction = {
   created_at: string;
   buyer_name: string | null;
 };
-
-const CODE_ALPHABET = "ACDEFGHJKLMNPQRSTUVWXYZ2345679";
-
-function newCode(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(8));
-  return Array.from(bytes, (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
-}
 
 async function recordTransactionEvent(
   transactionId: string,
@@ -368,7 +362,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
 
     const feePercent = await feePercentFor(facilityId);
     const platformFee = Math.round((amount * feePercent) / 100);
-    const qrCode = newCode();
+    const qrCode = newTransactionCode();
     const txn = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
@@ -492,7 +486,7 @@ export const createCheckout = createServerFn({ method: "POST" })
     const feePercent = await feePercentFor(cart.facility_id);
     const platformFee = Math.round((amount * feePercent) / 100);
 
-    const code = newCode();
+    const code = newTransactionCode();
     const txn = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
@@ -551,7 +545,7 @@ export const createTransactionQr = createServerFn({ method: "POST" })
     ) {
       return { code: transaction.qr_token, expiresAt: transaction.qr_expires_at };
     }
-    const code = newCode();
+    const code = newTransactionCode();
     const updated = await queryOne<{ qr_token: string; qr_expires_at: string }>(
       `UPDATE public.transactions
        SET status = 'qr_generated', qr_token = $2, qr_expires_at = now() + interval '2 hours'
