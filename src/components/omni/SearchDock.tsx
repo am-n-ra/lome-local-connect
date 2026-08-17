@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import {
   ChevronDown,
   LoaderCircle,
@@ -17,6 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { SmartSearchBar } from "@/components/omni/SmartSearchBar";
 import { categoryLabel, CATEGORIES, LOCATION_APPROXIMATE_ACCURACY_METERS } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
+import { recordProductEvent } from "@/lib/analytics.functions";
+import { getAnalyticsSessionId, hasAnalyticsConsent } from "@/lib/analytics-browser";
 
 export type MapFilters = {
   radiusKm: number;
@@ -94,6 +97,7 @@ export function SearchDock({
   onUseMarketFallback,
 }: Props) {
   const { formatMoney } = useMarket();
+  const sendEvent = useServerFn(recordProductEvent);
   const dockRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
   const [parametersOpen, setParametersOpen] = useState(false);
@@ -158,6 +162,26 @@ export function SearchDock({
       left: direction * Math.max(180, railRef.current.clientWidth * 0.75),
       behavior: "smooth",
     });
+  }
+
+  async function handleSubmit() {
+    onSubmit?.();
+    if (hasAnalyticsConsent()) {
+      void sendEvent({
+        data: {
+          eventName: "search_submitted",
+          sessionId: getAnalyticsSessionId(),
+          role: "buyer",
+          objectType: "search",
+          source: "search_dock",
+          metadata: {
+            hasCategory: Boolean(category),
+            hasBudget: filters.maxPrice !== null,
+            quantity,
+          },
+        },
+      }).catch(() => undefined);
+    }
   }
 
   const locationLabel =
@@ -457,7 +481,7 @@ export function SearchDock({
             layout="dock"
             value={query}
             onChange={onQueryChange}
-            onSubmit={onSubmit}
+            onSubmit={() => void handleSubmit()}
             placeholder="Que cherchez-vous dans le monde ?"
             enablePhotoSearch={false}
           />
