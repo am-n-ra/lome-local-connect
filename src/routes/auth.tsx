@@ -101,59 +101,89 @@ function AuthPage() {
               <TabsTrigger value="signup">Créer un compte</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="signin" className="mt-5 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Mot de passe</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button className="w-full" disabled={busy} onClick={() => void submit("signin")}>
-                {busy ? "Connexion…" : "Se connecter"}
-              </Button>
-              <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-                Compte de démonstration : <strong>demo@omni.tg</strong> / <strong>Demo1234!</strong>
-              </p>
+            <TabsContent value="signin" className="mt-5">
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submit("signin");
+                }}
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">E-mail</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Mot de passe</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="current-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {busy ? "Connexion…" : "Se connecter"}
+                </Button>
+                <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
+                  Compte de démonstration : <strong>demo@omni.tg</strong> /{" "}
+                  <strong>Demo1234!</strong>
+                </p>
+              </form>
             </TabsContent>
 
-            <TabsContent value="signup" className="mt-5 space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Nom</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email2">E-mail</Label>
-                <Input
-                  id="email2"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password2">Mot de passe</Label>
-                <Input
-                  id="password2"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
-              <Button className="w-full" disabled={busy} onClick={() => void submit("signup")}>
-                {busy ? "Création…" : "Créer mon compte"}
-              </Button>
+            <TabsContent value="signup" className="mt-5">
+              <form
+                className="space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void submit("signup");
+                }}
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="name">Nom</Label>
+                  <Input
+                    id="name"
+                    autoComplete="name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="email2">E-mail</Label>
+                  <Input
+                    id="email2"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="password2">Mot de passe</Label>
+                  <Input
+                    id="password2"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={busy}>
+                  {busy ? "Création…" : "Créer mon compte"}
+                </Button>
+              </form>
             </TabsContent>
           </Tabs>
         </div>

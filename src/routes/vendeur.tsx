@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { MapPin, Plus, Store } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
@@ -837,6 +837,24 @@ function VendeurPage() {
                   shortLabel: "Ads",
                   count: data?.campaigns.length ?? 0,
                 },
+                {
+                  value: "solde",
+                  label: "Solde & recharge",
+                  shortLabel: "Solde",
+                },
+                {
+                  value: "abonnement",
+                  label: "Plan vendeur",
+                  shortLabel: "Plan",
+                },
+                {
+                  value: "parametres",
+                  label: "Paramètres",
+                  shortLabel: "Réglages",
+                },
+                ...(pro && OMNI_CONFIG.sellerAgentEnabled
+                  ? [{ value: "agent", label: "Agent Omni", shortLabel: "Agent" }]
+                  : []),
               ]}
             />
 

@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import {
   Heart,
   ListChecks,
   LogIn,
   LogOut,
-  SearchCheck,
   Shield,
   ShoppingCart,
   MessageCircle,
@@ -78,7 +77,7 @@ export function NavMenuSheet({
             Navigation
           </p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Retrouvez vos recherches, demandes et achats depuis ce panneau.
+            Retrouvez votre activité sans quitter le contexte de la carte.
           </p>
         </div>
 
@@ -114,73 +113,69 @@ export function NavMenuSheet({
           </div>
         </section>
 
-        <nav className="mt-5 grid gap-1.5" aria-label="Navigation secondaire">
-          {onOpenCart && (
-            <MenuRow
-              icon={<ShoppingCart className="h-4 w-4" />}
-              label="Panier"
-              badge={cart.count}
-              onClick={() => go(onOpenCart)}
-            />
-          )}
-          {onOpenOrders && (
-            <MenuRow
-              icon={<ListChecks className="h-4 w-4" />}
-              label="Mes demandes"
-              onClick={() => go(onOpenOrders)}
-            />
-          )}
-          {onOpenChat && (
-            <MenuRow
-              icon={<MessageCircle className="h-4 w-4" />}
-              label="Messages"
-              onClick={() => go(onOpenChat)}
-            />
-          )}
-          {onOpenDemand && (
-            <MenuRow
-              icon={<Megaphone className="h-4 w-4" />}
-              label="Vérifier la disponibilité"
-              onClick={() => go(onOpenDemand)}
-            />
-          )}
-          {onOpenWishlist && (
-            <MenuRow
-              icon={<Heart className="h-4 w-4" />}
-              label="Produits recherchés"
-              onClick={() => go(onOpenWishlist)}
-            />
-          )}
-          {isStaff && (
-            <MenuRow
-              icon={<Shield className="h-4 w-4" />}
-              label="Administration"
-              onClick={() => go(() => navigate({ to: "/admin" }))}
-            />
-          )}
-        </nav>
+        <section className="mt-5">
+          <h3 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+            Activité
+          </h3>
+          <nav className="grid gap-1.5" aria-label="Activité">
+            {onOpenDemand && (
+              <MenuRow
+                icon={<Megaphone className="h-4 w-4" />}
+                label="Disponibilités"
+                onClick={() => go(onOpenDemand)}
+              />
+            )}
+            {onOpenOrders && (
+              <MenuRow
+                icon={<ListChecks className="h-4 w-4" />}
+                label="Transactions"
+                onClick={() => go(onOpenOrders)}
+              />
+            )}
+            {onOpenChat && (
+              <MenuRow
+                icon={<MessageCircle className="h-4 w-4" />}
+                label="Messages"
+                onClick={() => go(onOpenChat)}
+              />
+            )}
+            {onOpenWishlist && (
+              <MenuRow
+                icon={<Heart className="h-4 w-4" />}
+                label="Recherches enregistrées"
+                onClick={() => go(onOpenWishlist)}
+              />
+            )}
+            {onOpenCart && (
+              <MenuRow
+                icon={<ShoppingCart className="h-4 w-4" />}
+                label="Panier"
+                badge={cart.count}
+                onClick={() => go(onOpenCart)}
+              />
+            )}
+          </nav>
+        </section>
 
         {user && (
           <section className="mt-6">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-              <User className="h-4 w-4 shrink-0" /> Mon compte
+            <h3 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Compte
             </h3>
-            <div className="grid gap-1.5">
-              {onOpenWishlist && (
+            <nav className="grid gap-1.5" aria-label="Compte">
+              <MenuRow
+                icon={<User className="h-4 w-4" />}
+                label="Profil et préférences"
+                onClick={() => go(() => navigate({ to: "/onboarding" }))}
+              />
+              {isStaff && (
                 <MenuRow
-                  icon={<SearchCheck className="h-4 w-4" />}
-                  label="Recherches"
-                  onClick={() => go(onOpenWishlist)}
+                  icon={<Shield className="h-4 w-4" />}
+                  label="Administration"
+                  onClick={() => go(() => navigate({ to: "/admin" }))}
                 />
               )}
-              {onOpenDemand && (
-                <MenuRow
-                  icon={<Megaphone className="h-4 w-4" />}
-                  label="Disponibilités"
-                  onClick={() => go(onOpenDemand)}
-                />
-              )}
-            </div>
+            </nav>
           </section>
         )}
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowRight, Check, ChevronDown, Loader2 } from "lucide-react";
+import { AlertCircle, ArrowRight, Check, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -107,6 +107,39 @@ export function OmniEmptyState({
       </div>
     </div>
   );
+}
+
+export function OmniErrorState({
+  title = "Impossible de charger cette surface",
+  description = "Vérifiez votre connexion puis réessayez.",
+  onRetry,
+}: {
+  title?: string;
+  description?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="omni-card grid min-h-36 place-items-center p-6 text-center">
+      <div>
+        <AlertCircle className="mx-auto h-5 w-5 text-destructive" aria-hidden="true" />
+        <p className="mt-2 font-display font-bold">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+        {onRetry ? (
+          <button
+            type="button"
+            className="mt-4 rounded-full border border-border px-4 py-2 text-xs font-semibold transition hover:bg-muted"
+            onClick={onRetry}
+          >
+            Réessayer
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+export function OmniSkeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse rounded-2xl bg-muted", className)} aria-hidden="true" />;
 }
 
 export function OmniStatCard({
