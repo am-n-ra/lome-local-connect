@@ -53,7 +53,7 @@ export function deriveTransactionUiState(
     };
   }
 
-  if (qrActive || status === "qr_generated" || status === "qr_verified") {
+  if (qrActive || status === "qr_verified") {
     return {
       currentStep: 2,
       canGenerateQr: false,
@@ -62,7 +62,7 @@ export function deriveTransactionUiState(
     };
   }
 
-  if (status === "pending") {
+  if (status === "pending" || status === "qr_generated") {
     return {
       currentStep: 1,
       canGenerateQr: true,

@@ -20,6 +20,15 @@ describe("deriveTransactionUiState", () => {
     });
   });
 
+  it("reopens QR generation when the persisted QR has expired", () => {
+    expect(deriveTransactionUiState("qr_generated", false)).toEqual({
+      currentStep: 1,
+      canGenerateQr: true,
+      canConfirmPayment: false,
+      canConfirmReceived: false,
+    });
+  });
+
   it("allows the buyer to confirm payment only after seller verification", () => {
     expect(deriveTransactionUiState("payment_pending", false)).toEqual({
       currentStep: 3,

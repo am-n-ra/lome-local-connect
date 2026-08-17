@@ -533,7 +533,11 @@ export const createTransactionQr = createServerFn({ method: "POST" })
       [data.transactionId, context.userId],
     );
     if (!transaction) throw new Error("Transaction introuvable.");
-    if (transaction.status !== "pending")
+    const qrExpired =
+      transaction.status === "qr_generated" &&
+      Boolean(transaction.qr_expires_at) &&
+      new Date(transaction.qr_expires_at!).getTime() <= Date.now();
+    if (transaction.status !== "pending" && !qrExpired)
       throw new Error("Cette intention n'est plus en attente d'offre.");
     if (
       transaction.qr_token &&
@@ -550,11 +554,14 @@ export const createTransactionQr = createServerFn({ method: "POST" })
        RETURNING qr_token, qr_expires_at`,
       [data.transactionId, code],
     );
-    await recordTransactionEvent(data.transactionId, "offer_confirmed", context.userId, {
-      amount: transaction.amount,
-    });
+    if (!qrExpired) {
+      await recordTransactionEvent(data.transactionId, "offer_confirmed", context.userId, {
+        amount: transaction.amount,
+      });
+    }
     await recordTransactionEvent(data.transactionId, "qr_generated", context.userId, {
       expires_at: updated!.qr_expires_at,
+      ...(qrExpired ? { regenerated: true } : {}),
     });
     const owner = await queryOne<{ owner_id: string | null }>(
       "SELECT owner_id FROM public.facilities WHERE id = $1",
