@@ -458,6 +458,16 @@ function VendeurPage() {
     await refresh();
   }, [facility?.id, refresh]);
 
+  const refreshCoupons = useCallback(async () => {
+    if (facility) invalidateSurfaceCache(facility.id);
+    await refresh();
+  }, [facility?.id, refresh]);
+
+  const refreshCampaigns = useCallback(async () => {
+    if (facility) invalidateSurfaceCache(facility.id);
+    await refresh();
+  }, [facility?.id, refresh]);
+
   const updatePosition = useCallback(
     async (coords: { lat: number; lng: number }) => {
       if (!facility) return;
@@ -1289,7 +1299,7 @@ function VendeurPage() {
                 products={products}
                 subscription={subscription}
                 campaigns={data?.campaigns ?? []}
-                onRefresh={refresh}
+                onRefresh={refreshCampaigns}
               />
             </TabsContent>
 
@@ -1297,7 +1307,7 @@ function VendeurPage() {
               <CouponsPanel
                 facilityId={facility.id}
                 coupons={data?.coupons ?? []}
-                onRefresh={refresh}
+                onRefresh={refreshCoupons}
               />
             </TabsContent>
 
