@@ -28,6 +28,8 @@ import { RequestsPanel } from "@/components/omni/vendor/RequestsPanel";
 import { DemandPanel } from "@/components/omni/vendor/DemandPanel";
 import { CheckoutPanel } from "@/components/omni/vendor/CheckoutPanel";
 import { MediaManager } from "@/components/omni/MediaManager";
+import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
+import { OmniStatusBadge } from "@/components/omni/ui/OmniPrimitives";
 import { CATEGORIES, daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { FREE_PRODUCT_CAP } from "@/lib/vendor";
@@ -201,6 +203,10 @@ function VendeurPage() {
   }
   const subscription = data?.subscription ?? null;
   const products = useMemo(() => data?.products ?? [], [data]);
+  const mapFacilities = useMemo(
+    () => data?.facilities.map((item) => ({ ...item, owner_id: user?.id ?? null })) ?? [],
+    [data?.facilities, user?.id],
+  );
   const pro = useMemo(
     () =>
       !!subscription &&
@@ -401,29 +407,32 @@ function VendeurPage() {
     }
   }
 
-  async function updatePosition(coords: { lat: number; lng: number }) {
-    if (!facility) return;
-    try {
-      if (facility.type === "mobile") {
-        await moveMobile({
-          data: {
-            facilityId: facility.id,
-            latitude: coords.lat,
-            longitude: coords.lng,
-            active: facility.is_online,
-          },
-        });
-      } else {
-        await patchFacility({
-          data: { facilityId: facility.id, latitude: coords.lat, longitude: coords.lng },
-        });
+  const updatePosition = useCallback(
+    async (coords: { lat: number; lng: number }) => {
+      if (!facility) return;
+      try {
+        if (facility.type === "mobile") {
+          await moveMobile({
+            data: {
+              facilityId: facility.id,
+              latitude: coords.lat,
+              longitude: coords.lng,
+              active: facility.is_online,
+            },
+          });
+        } else {
+          await patchFacility({
+            data: { facilityId: facility.id, latitude: coords.lat, longitude: coords.lng },
+          });
+        }
+        await refresh();
+        toast.success("Position mise à jour.");
+      } catch {
+        toast.error("Position non enregistrée.");
       }
-      await refresh();
-      toast.success("Position mise à jour.");
-    } catch {
-      toast.error("Position non enregistrée.");
-    }
-  }
+    },
+    [facility, moveMobile, patchFacility, refresh],
+  );
 
   useEffect(() => {
     setHours(facility?.operating_hours ?? "");
@@ -583,10 +592,10 @@ function VendeurPage() {
       <TopNav activeRole="vendeur" minimalMapChrome />
       <div className="absolute inset-0 z-0 pt-14" aria-label="Carte opérationnelle vendeur">
         <MapCanvas
-          facilities={data?.facilities.map((item) => ({ ...item, owner_id: user.id })) ?? []}
+          facilities={mapFacilities}
           selectedId={facility.id}
           focus={{ lat: facility.latitude, lng: facility.longitude }}
-          onMapClick={(c) => void updatePosition(c)}
+          onMapClick={updatePosition}
           className="h-full w-full"
         />
         <div className="pointer-events-none absolute inset-0 bg-background/18" />
@@ -603,9 +612,9 @@ function VendeurPage() {
                   <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">
                     {facility.name}
                   </h1>
-                  <Badge variant="secondary">
+                  <OmniStatusBadge tone={facility.is_online ? "positive" : "neutral"}>
                     {STATUS_LABEL[facility.status] ?? facility.status}
-                  </Badge>
+                  </OmniStatusBadge>
                   {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
                 </div>
                 <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -645,39 +654,38 @@ function VendeurPage() {
           </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
-            <div className="mb-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:hidden">
-              {[
-                ["apercu", "Aujourd'hui"],
-                ["demandes", "Demandes"],
-                ["produits", "Catalogue"],
-                ["encaisser", "Scanner QR"],
-                ["coupons", "Coupons"],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setActiveTab(value ?? "apercu")}
-                  className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
-                    activeTab === value
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card/70 text-muted-foreground hover:bg-secondary"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <TabsList
-              aria-label="Opérations vendeur"
-              className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex w-[min(42rem,calc(100vw-1.5rem))] gap-1 overflow-x-auto rounded-2xl border border-border/60 bg-card/92 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              <TabsTrigger value="apercu">Facility</TabsTrigger>
-              <TabsTrigger value="produits">Produits</TabsTrigger>
-              <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
-              <TabsTrigger value="encaisser">Scanner QR</TabsTrigger>
-              <TabsTrigger value="coupons">Coupons</TabsTrigger>
-              <TabsTrigger value="pub">Publicité V1</TabsTrigger>
-            </TabsList>
+            <OmniActionDock
+              active={activeTab}
+              onChange={setActiveTab}
+              items={[
+                { value: "apercu", label: "Facility", shortLabel: "Accueil" },
+                {
+                  value: "produits",
+                  label: "Catalogue",
+                  shortLabel: "Produits",
+                  count: products.length,
+                },
+                {
+                  value: "demandes",
+                  label: "Demandes reçues",
+                  shortLabel: "Demandes",
+                  count: data?.requests.length ?? 0,
+                },
+                { value: "encaisser", label: "Scanner QR", shortLabel: "Scanner" },
+                {
+                  value: "coupons",
+                  label: "Coupons",
+                  shortLabel: "Coupons",
+                  count: data?.coupons.length ?? 0,
+                },
+                {
+                  value: "pub",
+                  label: "Publicité V1",
+                  shortLabel: "Ads",
+                  count: data?.campaigns.length ?? 0,
+                },
+              ]}
+            />
 
             {pro && OMNI_CONFIG.sellerAgentEnabled && (
               <TabsContent value="agent" className="mt-5 space-y-4">
