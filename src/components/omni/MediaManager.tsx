@@ -132,7 +132,9 @@ export function MediaManager({ facilityId }: Props) {
     const ordered = [id, ...media.filter((m) => m.id !== id).map((m) => m.id)];
     try {
       const { reorderMedia } = await import("@/lib/media.functions");
-      await reorderMedia({ data: { scope: "facility", targetId: facilityId, orderedIds: ordered } });
+      await reorderMedia({
+        data: { scope: "facility", targetId: facilityId, orderedIds: ordered },
+      });
       toast.success("Vitrine mise à jour");
       await reload();
     } catch (error) {
@@ -153,10 +155,20 @@ export function MediaManager({ facilityId }: Props) {
       </header>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => imageInput.current?.click()}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => imageInput.current?.click()}
+        >
           <ImageIcon className="mr-2 h-4 w-4" /> Ajouter des photos
         </Button>
-        <Button size="sm" variant="outline" disabled={busy} onClick={() => videoInput.current?.click()}>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={() => videoInput.current?.click()}
+        >
           <Video className="mr-2 h-4 w-4" /> Ajouter une vidéo
         </Button>
         <input
@@ -192,7 +204,12 @@ export function MediaManager({ facilityId }: Props) {
                   className="aspect-square w-full object-cover"
                 />
               ) : (
-                <video src={item.url} muted playsInline className="aspect-square w-full object-cover" />
+                <video
+                  src={item.url}
+                  muted
+                  playsInline
+                  className="aspect-square w-full object-cover"
+                />
               )}
               {index === 0 && (
                 <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground">

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -80,7 +80,13 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
     setBusy(true);
     try {
       await launchCampaign({
-        data: { facilityId: facility.id, productIds: selected, radiusKm, cityWide, durationDays: 7 },
+        data: {
+          facilityId: facility.id,
+          productIds: selected,
+          radiusKm,
+          cityWide,
+          durationDays: 7,
+        },
       });
       await onRefresh();
       setBuilderOpen(false);
@@ -117,7 +123,9 @@ export function AdsPanel({ facility, products, subscription, campaigns, onRefres
       <div className="omni-card flex flex-wrap items-center gap-3 p-5">
         <div>
           <p className="text-sm text-muted-foreground">Budget publicitaire disponible</p>
-          <p className="font-display text-3xl font-extrabold text-primary">{formatMoney(balance)}</p>
+          <p className="font-display text-3xl font-extrabold text-primary">
+            {formatMoney(balance)}
+          </p>
         </div>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" onClick={() => setDepositOpen(true)}>

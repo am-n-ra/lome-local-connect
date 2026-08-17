@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -61,7 +61,12 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label htmlFor="ccode">Code</Label>
-            <Input id="ccode" value={code} onChange={(e) => setCode(e.target.value)} maxLength={24} />
+            <Input
+              id="ccode"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              maxLength={24}
+            />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cdesc">Description</Label>
