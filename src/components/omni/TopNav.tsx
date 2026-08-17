@@ -52,8 +52,6 @@ export function TopNav({
       onOpenWishlist={onOpenWishlist}
       onOpenOrders={onOpenOrders}
       onOpenChat={onOpenChat}
-      onOpenDemand={onOpenDemand}
-      activeRole={activeRole}
     />
   );
 

@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@/lib/useServerFn";
-import {
-  Heart,
-  ListChecks,
-  LogIn,
-  LogOut,
-  Shield,
-  ShoppingCart,
-  MessageCircle,
-  Megaphone,
-  User,
-} from "lucide-react";
+import { Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -33,8 +23,6 @@ type Props = {
   onOpenWishlist?: (() => void) | undefined;
   onOpenOrders?: (() => void) | undefined;
   onOpenChat?: (() => void) | undefined;
-  onOpenDemand?: (() => void) | undefined;
-  activeRole?: "acheteur" | "vendeur";
 };
 
 /** Single glass navigation panel holding every secondary action. */
@@ -45,11 +33,9 @@ export function NavMenuSheet({
   onOpenWishlist,
   onOpenOrders,
   onOpenChat,
-  onOpenDemand,
-  activeRole = "acheteur",
 }: Props) {
   const navigate = useNavigate();
-  const { user, isStaff, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const cart = useCart();
 
   function go(action?: () => void) {
@@ -81,50 +67,11 @@ export function NavMenuSheet({
           </p>
         </div>
 
-        <section className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            Espace actif
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => go(() => navigate({ to: "/carte" }))}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                activeRole === "acheteur"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background/70 text-muted-foreground hover:bg-background"
-              }`}
-              aria-pressed={activeRole === "acheteur"}
-            >
-              Acheteur
-            </button>
-            <button
-              type="button"
-              onClick={() => go(() => navigate({ to: "/vendeur" }))}
-              className={`rounded-xl px-3 py-2 text-xs font-bold transition-colors ${
-                activeRole === "vendeur"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background/70 text-muted-foreground hover:bg-background"
-              }`}
-              aria-pressed={activeRole === "vendeur"}
-            >
-              Vendeur
-            </button>
-          </div>
-        </section>
-
         <section className="mt-5">
           <h3 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Activité
           </h3>
           <nav className="grid gap-1.5" aria-label="Activité">
-            {onOpenDemand && (
-              <MenuRow
-                icon={<Megaphone className="h-4 w-4" />}
-                label="Disponibilités"
-                onClick={() => go(onOpenDemand)}
-              />
-            )}
             {onOpenOrders && (
               <MenuRow
                 icon={<ListChecks className="h-4 w-4" />}
@@ -156,28 +103,6 @@ export function NavMenuSheet({
             )}
           </nav>
         </section>
-
-        {user && (
-          <section className="mt-6">
-            <h3 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Compte
-            </h3>
-            <nav className="grid gap-1.5" aria-label="Compte">
-              <MenuRow
-                icon={<User className="h-4 w-4" />}
-                label="Profil et préférences"
-                onClick={() => go(() => navigate({ to: "/onboarding" }))}
-              />
-              {isStaff && (
-                <MenuRow
-                  icon={<Shield className="h-4 w-4" />}
-                  label="Administration"
-                  onClick={() => go(() => navigate({ to: "/admin" }))}
-                />
-              )}
-            </nav>
-          </section>
-        )}
 
         <div className="mt-6">
           {user ? (
