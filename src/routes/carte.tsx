@@ -635,7 +635,7 @@ export function CartePage() {
 
   return (
     <div
-      className="flex min-h-[100dvh] flex-col bg-background"
+      className="relative h-[100dvh] overflow-hidden bg-background"
       data-omni-surface={surfaceState}
       data-omni-map-first="true"
     >
@@ -652,7 +652,7 @@ export function CartePage() {
         minimalMapChrome
       />
 
-      <div className="relative flex-1 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden">
         <MapCanvas
           facilities={hasActiveSearch ? results : discoveryResults}
           selectedId={selected?.id ?? null}

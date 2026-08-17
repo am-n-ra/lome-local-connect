@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { QrCode } from "lucide-react";
+import { Camera, CameraOff, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,11 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const fetchProgress = useServerFn(getConfirmationProgress);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const frameRef = useRef<number | null>(null);
   const [rows, setRows] = useState<VendorTransaction[]>([]);
   const [progress, setProgress] = useState<{
     buyers: number;
@@ -44,7 +49,74 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
 
   useEffect(() => {
     void refresh();
+    return () => stopScanner();
   }, [refresh]);
+
+  function stopScanner() {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setScanning(false);
+  }
+
+  async function startScanner() {
+    setCameraError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError(
+        "La caméra n’est pas disponible dans ce navigateur. Saisissez le code manuellement.",
+      );
+      return;
+    }
+    if (!("BarcodeDetector" in window)) {
+      setCameraError("Le scan QR n’est pas supporté ici. Saisissez le code manuellement.");
+      return;
+    }
+    try {
+      const BarcodeDetectorCtor = (
+        window as unknown as {
+          BarcodeDetector: new (options?: { formats?: string[] }) => {
+            detect: (source: HTMLVideoElement) => Promise<Array<{ rawValue?: string }>>;
+          };
+        }
+      ).BarcodeDetector;
+      const detector = new BarcodeDetectorCtor({ formats: ["qr_code"] });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (!videoRef.current) return;
+      videoRef.current.srcObject = stream;
+      await videoRef.current.play();
+      setScanning(true);
+
+      const scan = async () => {
+        if (!videoRef.current || !streamRef.current) return;
+        try {
+          const [result] = await detector.detect(videoRef.current);
+          if (result?.rawValue) {
+            setCode(result.rawValue.toUpperCase().trim());
+            stopScanner();
+            toast.success("QR lu. Vérifiez le code puis validez la vente.");
+            return;
+          }
+        } catch {
+          // A frame can be unreadable while the camera is starting; keep scanning.
+        }
+        frameRef.current = requestAnimationFrame(() => void scan());
+      };
+      frameRef.current = requestAnimationFrame(() => void scan());
+    } catch (error) {
+      stopScanner();
+      setCameraError(
+        error instanceof DOMException && error.name === "NotAllowedError"
+          ? "Accès caméra refusé. Autorisez la caméra ou saisissez le code manuellement."
+          : "Caméra indisponible. Saisissez le code manuellement.",
+      );
+    }
+  }
 
   async function validate() {
     if (code.trim().length < 4) return;
@@ -78,7 +150,21 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
           Demandez au client son code de retrait (QR ou 8 caractères) et validez-le ici. Le paiement
           se fait sur place ; le paiement en ligne est en mode démo.
         </p>
-        <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+        <div className="grid gap-2 sm:grid-cols-[auto_1fr_auto]">
+          <Button
+            type="button"
+            variant={scanning ? "secondary" : "outline"}
+            className="w-full sm:w-auto"
+            onClick={() => (scanning ? stopScanner() : void startScanner())}
+            disabled={busy}
+          >
+            {scanning ? (
+              <CameraOff className="mr-2 h-4 w-4" />
+            ) : (
+              <Camera className="mr-2 h-4 w-4" />
+            )}
+            {scanning ? "Arrêter caméra" : "Scanner caméra"}
+          </Button>
           <Input
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
@@ -94,6 +180,22 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
             {busy ? "Validation…" : "Valider"}
           </Button>
         </div>
+        {scanning && (
+          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-black">
+            <video
+              ref={videoRef}
+              muted
+              playsInline
+              className="aspect-[4/3] w-full object-cover"
+              aria-label="Aperçu caméra QR"
+            />
+            <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
+            <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
+              Cadrez le QR de retrait
+            </p>
+          </div>
+        )}
+        {cameraError && <p className="text-xs text-muted-foreground">{cameraError}</p>}
       </div>
 
       <div className="omni-card space-y-2 p-4">

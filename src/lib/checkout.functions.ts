@@ -314,6 +314,48 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
     }
 
     if (!facilityId) throw new Error("Commerce introuvable.");
+
+    let appliedCoupon: { id: string; discountAmount: number } | null = null;
+    if (data.offerId || data.couponCode) {
+      const coupon = await queryOne<{
+        id: string;
+        product_id: string | null;
+        discount_type: "percent" | "fixed";
+        discount_percent: number;
+        fixed_discount: number | null;
+      }>(
+        `SELECT c.id, c.product_id, c.discount_type, c.discount_percent, c.fixed_discount
+         FROM public.coupons c
+         LEFT JOIN public.coupon_assignments ca
+           ON ca.coupon_id = c.id AND ca.user_id = $1
+         WHERE c.facility_id = $2
+           AND c.status = 'active'
+           AND c.active_from <= now()
+           AND (c.active_until IS NULL OR c.active_until > now())
+           AND (c.id = $3::uuid OR ca.personalized_code = upper($4))
+           AND (c.product_id IS NULL OR c.product_id = $5::uuid)
+           AND (ca.status IS NULL OR ca.status IN ('offered', 'applied'))
+         LIMIT 1`,
+        [
+          context.userId,
+          facilityId,
+          data.offerId ?? null,
+          data.couponCode ?? "",
+          data.productId ?? null,
+        ],
+      );
+      if (!coupon) throw new Error("Cette offre n’est plus disponible pour cette transaction.");
+      const rawDiscount =
+        coupon.discount_type === "fixed"
+          ? Number(coupon.fixed_discount ?? 0)
+          : Math.round((amount * Number(coupon.discount_percent)) / 100);
+      const discountAmount = Math.max(0, Math.min(amount, rawDiscount));
+      amount = Math.max(0, amount - discountAmount);
+      appliedCoupon = { id: coupon.id, discountAmount };
+      metadata["coupon_id"] = coupon.id;
+      metadata["discount_amount"] = discountAmount;
+    }
+
     const existing = await queryOne<{ id: string; amount: number; status: string }>(
       `SELECT id, amount, status FROM public.transactions
        WHERE buyer_id = $1 AND facility_id = $2 AND ($3::uuid IS NULL OR cart_id = $3)
@@ -345,6 +387,32 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
       ],
     );
     await recordTransactionEvent(txn!.id, "intent_created", context.userId, metadata);
+
+    if (appliedCoupon) {
+      await query(
+        `INSERT INTO public.redemptions (coupon_id, facility_id, user_id, transaction_id, discount_amount)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (coupon_id, user_id, transaction_id) DO NOTHING`,
+        [appliedCoupon.id, facilityId, context.userId, txn!.id, appliedCoupon.discountAmount],
+      );
+      await query(
+        `UPDATE public.coupon_assignments
+         SET status = 'consumed', transaction_id = $2
+         WHERE coupon_id = $1 AND user_id = $3 AND status IN ('offered','applied')`,
+        [appliedCoupon.id, txn!.id, context.userId],
+      );
+      await query(
+        `INSERT INTO public.offer_events (coupon_id, facility_id, user_id, transaction_id, event_type, metadata)
+         VALUES ($1,$2,$3,$4,'consumed',$5::jsonb)`,
+        [
+          appliedCoupon.id,
+          facilityId,
+          context.userId,
+          txn!.id,
+          JSON.stringify({ discount_amount: appliedCoupon.discountAmount }),
+        ],
+      );
+    }
 
     const owner = await queryOne<{ owner_id: string | null; name: string }>(
       `SELECT owner_id, name FROM public.facilities WHERE id = $1`,

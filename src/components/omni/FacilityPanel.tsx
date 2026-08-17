@@ -26,6 +26,7 @@ import {
 } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import { createPurchaseIntent } from "@/lib/checkout.functions";
+import { getProductOffer, type ProductOffer } from "@/lib/offers.functions";
 
 type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
 
@@ -50,6 +51,7 @@ export function FacilityPanel({
   const cart = useCart();
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [offers, setOffers] = useState<Record<string, ProductOffer>>({});
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [favorite, setFavorite] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
@@ -66,6 +68,7 @@ export function FacilityPanel({
   const sendWishlist = useServerFn(recordWishlist);
   const claimFacilityRemote = useServerFn(claimFacility);
   const createIntent = useServerFn(createPurchaseIntent);
+  const loadOffer = useServerFn(getProductOffer);
 
   useEffect(() => {
     let active = true;
@@ -73,8 +76,23 @@ export function FacilityPanel({
       try {
         const result = await loadFacility({ data: { id: facility.id } });
         if (!active || !result) return;
-        setProducts(result.products as unknown as ProductRow[]);
+        const productRows = result.products as unknown as ProductRow[];
+        setProducts(productRows);
         setCoupons(result.coupons);
+        if (user && productRows.length > 0) {
+          const offerRows = await Promise.all(
+            productRows.map(async (product) => {
+              try {
+                return [product.id, await loadOffer({ data: { productId: product.id } })] as const;
+              } catch {
+                return [product.id, { state: "none", label: "Aucune remise active" }] as const;
+              }
+            }),
+          );
+          if (active) setOffers(Object.fromEntries(offerRows));
+        } else {
+          setOffers({});
+        }
       } catch {
         /* la fiche reste affichée sans produits */
       }
@@ -82,7 +100,7 @@ export function FacilityPanel({
     return () => {
       active = false;
     };
-  }, [facility.id, loadFacility]);
+  }, [facility.id, loadFacility, loadOffer, user]);
 
   useEffect(() => {
     if (!user) {
@@ -156,6 +174,10 @@ export function FacilityPanel({
         },
       });
       setPurchaseIntentCreated(true);
+      const offer = await loadOffer({
+        data: { productId: product.id, transactionId: result.transactionId },
+      });
+      setOffers((current) => ({ ...current, [product.id]: offer }));
       toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Intention impossible.");
@@ -331,6 +353,7 @@ export function FacilityPanel({
         <p className="text-sm font-semibold">Produits ({products.length})</p>
         {products.map((p) => {
           const qty = quantities[p.id] ?? 1;
+          const offer = offers[p.id];
           return (
             <div
               key={p.id}
@@ -368,6 +391,11 @@ export function FacilityPanel({
                   >
                     {freshnessLabel(p.last_confirmed_at)}
                   </Badge>
+                  {offer?.state === "active" && (
+                    <Badge variant="outline" className="border-primary text-primary">
+                      Coupon −{offer.discountValue}% · {offer.code}
+                    </Badge>
+                  )}
                 </div>
               </div>
               <div className="col-span-2 grid min-w-0 grid-cols-2 gap-2 sm:ml-auto sm:flex sm:flex-col sm:items-end sm:gap-1.5">

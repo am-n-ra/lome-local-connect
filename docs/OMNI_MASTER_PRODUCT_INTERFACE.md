@@ -4716,3 +4716,15 @@ Core events include onboarding started/completed, search submitted, results view
 ## 0.7.9 Motion and interface quality
 
 All new onboarding, offer, chat and dashboard surfaces must use the Omni creamy-glass design system, clear hierarchy, responsive layouts and purposeful animations. Motion should clarify state changes, preserve keyboard/accessibility behavior, stay short and respect reduced-motion preferences. The map and search remain visually primary; dashboard density must not bury the next operational action.
+
+## 0.8 — Corrections V1 map-first, QR caméra, Pro et coupons (17 août 2026)
+
+La carte est la surface principale de recherche. La scène doit utiliser la hauteur dynamique complète du viewport et les docks doivent rester des overlays positionnés par clearance, sans réduire la zone cartographique. L’invite d’installation PWA reste compacte, masquable et placée au-dessus du dock.
+
+Le scanner QR caméra appartient à la V1 transactionnelle. Le seller peut demander explicitement l’accès à la caméra arrière, lire un QR via `BarcodeDetector` lorsque le navigateur le supporte, puis appeler la même validation serveur que le code manuel. Le fallback par saisie reste obligatoire pour les navigateurs sans détection QR, les permissions refusées et les environnements sans caméra.
+
+Le bulk availability est une capacité du plan buyer Pro. Le serveur autorise le bulk Pro sans décompte de crédits et conserve pour Free la vérification facility par facility avec la limite de crédits existante. Le masquage de l’action dans l’interface ne remplace jamais le contrôle server-side.
+
+Le menu hamburger V1 ne montre que les actions réellement branchées. Les placeholders non interactifs de profil, paramètres, solde, plan et crédits et transactions ne doivent pas apparaître dans la navigation principale. Le seller workspace est facility-first : Facility, Produits, Demandes reçues, Scanner QR, Coupons et Publicité V1 constituent les surfaces principales.
+
+La création d’un produit seller peut créer simultanément un coupon produit. Le checkout vérifie l’offre assignée au buyer, calcule la remise, l’attache à la transaction et enregistre une redemption et un événement `consumed`. Une absence d’offre reste affichée honnêtement ; aucun code fictif ne doit être généré côté client.

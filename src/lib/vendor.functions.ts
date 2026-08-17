@@ -400,6 +400,14 @@ export const upsertProduct = createServerFn({ method: "POST" })
         omniAllocationPercent: z.number().int().min(0).max(100).optional(),
         discountPercent: z.number().int().min(0).max(90).optional(),
         photoUrl: z.string().url().max(500).nullable().optional(),
+        coupon: z
+          .object({
+            code: z.string().min(3).max(24),
+            description: z.string().max(200).optional(),
+            discountPercent: z.number().int().min(1).max(90),
+          })
+          .nullable()
+          .optional(),
       })
       .parse(input),
   )
@@ -407,12 +415,13 @@ export const upsertProduct = createServerFn({ method: "POST" })
     await assertOwner(context.userId, data.facilityId);
 
     if (data.productId) {
-      await query(
+      const updated = await queryOne<{ id: string }>(
         `UPDATE public.products
          SET name = $1, price = $2, in_stock = $3, discount_percent = $4,
              photo_url = $5, last_confirmed_at = now(), status = $8,
              quantity_available = $9, omni_allocation_percent = $10
-         WHERE id = $6 AND facility_id = $7`,
+         WHERE id = $6 AND facility_id = $7
+         RETURNING id`,
         [
           data.name,
           data.price,
@@ -426,7 +435,24 @@ export const upsertProduct = createServerFn({ method: "POST" })
           data.omniAllocationPercent ?? 100,
         ],
       );
-      return { ok: true };
+      if (!updated) throw new Error("Produit introuvable.");
+      if (data.coupon) {
+        await query(
+          `INSERT INTO public.coupons (facility_id, product_id, code, description, discount_percent, status)
+           VALUES ($1,$2,upper($3),$4,$5,'active')
+           ON CONFLICT (facility_id, upper(code)) DO UPDATE
+           SET product_id = EXCLUDED.product_id, description = EXCLUDED.description,
+               discount_percent = EXCLUDED.discount_percent, status = 'active'`,
+          [
+            data.facilityId,
+            updated.id,
+            data.coupon.code.trim(),
+            data.coupon.description ?? null,
+            data.coupon.discountPercent,
+          ],
+        );
+      }
+      return { ok: true, productId: updated.id };
     }
 
     const subscription = await ensureSubscription(data.facilityId);
@@ -446,11 +472,12 @@ export const upsertProduct = createServerFn({ method: "POST" })
       }
     }
 
-    await query(
+    const created = await queryOne<{ id: string }>(
       `INSERT INTO public.products
          (facility_id, name, price, in_stock, discount_percent, photo_url, last_confirmed_at,
           status, quantity_available, omni_allocation_percent)
-       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9)`,
+       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9)
+       RETURNING id`,
       [
         data.facilityId,
         data.name,
@@ -463,7 +490,23 @@ export const upsertProduct = createServerFn({ method: "POST" })
         data.omniAllocationPercent ?? 100,
       ],
     );
-    return { ok: true };
+    if (data.coupon && created) {
+      await query(
+        `INSERT INTO public.coupons (facility_id, product_id, code, description, discount_percent, status)
+         VALUES ($1,$2,upper($3),$4,$5,'active')
+         ON CONFLICT (facility_id, upper(code)) DO UPDATE
+         SET product_id = EXCLUDED.product_id, description = EXCLUDED.description,
+             discount_percent = EXCLUDED.discount_percent, status = 'active'`,
+        [
+          data.facilityId,
+          created.id,
+          data.coupon.code.trim(),
+          data.coupon.description ?? null,
+          data.coupon.discountPercent,
+        ],
+      );
+    }
+    return { ok: true, productId: created?.id ?? null };
   });
 
 export const deleteProduct = createServerFn({ method: "POST" })

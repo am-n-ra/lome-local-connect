@@ -2,20 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  CreditCard,
   Heart,
   ListChecks,
   LogIn,
   LogOut,
-  Receipt,
   SearchCheck,
-  Settings,
   Shield,
   ShoppingCart,
   MessageCircle,
   Megaphone,
   User,
-  Wallet,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,7 +26,6 @@ import { BrandMark } from "@/components/omni/BrandMark";
 import { listNotifications, type NotificationRow } from "@/lib/omni.functions";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { toast } from "sonner";
 
 type Props = {
   open: boolean;
@@ -61,10 +56,6 @@ export function NavMenuSheet({
   function go(action?: () => void) {
     onOpenChange(false);
     action?.();
-  }
-
-  function comingSoon(section: string) {
-    go(() => toast.info(`${section} sera disponible dans une prochaine mise à jour.`));
   }
 
   return (
@@ -124,37 +115,42 @@ export function NavMenuSheet({
         </section>
 
         <nav className="mt-5 grid gap-1.5" aria-label="Navigation secondaire">
-          <MenuRow
-            icon={<ShoppingCart className="h-4 w-4" />}
-            label="Panier"
-            badge={cart.count}
-            onClick={() => go(onOpenCart)}
-            disabled={!onOpenCart}
-          />
-          <MenuRow
-            icon={<ListChecks className="h-4 w-4" />}
-            label="Mes demandes"
-            onClick={() => go(onOpenOrders)}
-            disabled={!onOpenOrders}
-          />
-          <MenuRow
-            icon={<MessageCircle className="h-4 w-4" />}
-            label="Messages"
-            onClick={() => go(onOpenChat)}
-            disabled={!onOpenChat}
-          />
-          <MenuRow
-            icon={<Megaphone className="h-4 w-4" />}
-            label="Demande groupée"
-            onClick={() => go(onOpenDemand)}
-            disabled={!onOpenDemand}
-          />
-          <MenuRow
-            icon={<Heart className="h-4 w-4" />}
-            label="Produits recherchés"
-            onClick={() => go(onOpenWishlist)}
-            disabled={!onOpenWishlist}
-          />
+          {onOpenCart && (
+            <MenuRow
+              icon={<ShoppingCart className="h-4 w-4" />}
+              label="Panier"
+              badge={cart.count}
+              onClick={() => go(onOpenCart)}
+            />
+          )}
+          {onOpenOrders && (
+            <MenuRow
+              icon={<ListChecks className="h-4 w-4" />}
+              label="Mes demandes"
+              onClick={() => go(onOpenOrders)}
+            />
+          )}
+          {onOpenChat && (
+            <MenuRow
+              icon={<MessageCircle className="h-4 w-4" />}
+              label="Messages"
+              onClick={() => go(onOpenChat)}
+            />
+          )}
+          {onOpenDemand && (
+            <MenuRow
+              icon={<Megaphone className="h-4 w-4" />}
+              label="Vérifier la disponibilité"
+              onClick={() => go(onOpenDemand)}
+            />
+          )}
+          {onOpenWishlist && (
+            <MenuRow
+              icon={<Heart className="h-4 w-4" />}
+              label="Produits recherchés"
+              onClick={() => go(onOpenWishlist)}
+            />
+          )}
           {isStaff && (
             <MenuRow
               icon={<Shield className="h-4 w-4" />}
@@ -170,43 +166,20 @@ export function NavMenuSheet({
               <User className="h-4 w-4 shrink-0" /> Mon compte
             </h3>
             <div className="grid gap-1.5">
-              <MenuRow
-                icon={<User className="h-4 w-4" />}
-                label="Profil"
-                onClick={() => comingSoon("Le profil")}
-              />
-              <MenuRow
-                icon={<CreditCard className="h-4 w-4" />}
-                label="Plan et crédits"
-                onClick={() => comingSoon("Le plan et les crédits")}
-              />
-              <MenuRow
-                icon={<Wallet className="h-4 w-4" />}
-                label="Solde"
-                onClick={() => comingSoon("Le solde")}
-              />
-              <MenuRow
-                icon={<SearchCheck className="h-4 w-4" />}
-                label="Recherches"
-                onClick={() => go(onOpenWishlist)}
-                disabled={!onOpenWishlist}
-              />
-              <MenuRow
-                icon={<Megaphone className="h-4 w-4" />}
-                label="Disponibilités"
-                onClick={() => go(onOpenDemand)}
-                disabled={!onOpenDemand}
-              />
-              <MenuRow
-                icon={<Receipt className="h-4 w-4" />}
-                label="Transactions"
-                onClick={() => comingSoon("Les transactions")}
-              />
-              <MenuRow
-                icon={<Settings className="h-4 w-4" />}
-                label="Paramètres"
-                onClick={() => comingSoon("Les paramètres")}
-              />
+              {onOpenWishlist && (
+                <MenuRow
+                  icon={<SearchCheck className="h-4 w-4" />}
+                  label="Recherches"
+                  onClick={() => go(onOpenWishlist)}
+                />
+              )}
+              {onOpenDemand && (
+                <MenuRow
+                  icon={<Megaphone className="h-4 w-4" />}
+                  label="Disponibilités"
+                  onClick={() => go(onOpenDemand)}
+                />
+              )}
             </div>
           </section>
         )}

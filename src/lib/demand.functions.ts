@@ -92,7 +92,9 @@ export const createDemandRequest = createServerFn({ method: "POST" })
        RETURNING plan, requests_used, extra_credits, period_month`,
       [context.userId],
     );
-    const includedCredits = plan?.plan === "pro" ? 30 : OMNI_CONFIG.freeBuyerBulkLimit;
+    const buyerPlan = plan?.plan === "pro" ? "pro" : "free";
+    const isBuyerPro = buyerPlan === "pro";
+    const includedCredits = isBuyerPro ? Number.MAX_SAFE_INTEGER : OMNI_CONFIG.freeBuyerBulkLimit;
 
     // Bulk targets the map's active result IDs when present. Geographic limits are owned by search filters.
     const targets = await query<{
@@ -129,13 +131,14 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       ],
     );
 
-    const creditCost = Math.max(1, targets.length);
+    const creditCost = isBuyerPro ? 0 : Math.max(1, targets.length);
     const radiusKm = data.radiusKm ?? 10;
-    const remainingCredits =
-      Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
-    if (data.mode === "bulk" && remainingCredits < creditCost) {
+    const remainingCredits = isBuyerPro
+      ? Number.MAX_SAFE_INTEGER
+      : Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
+    if (data.mode === "bulk" && !isBuyerPro && remainingCredits < creditCost) {
       throw new Error(
-        `Crédits de vérification insuffisants : ${creditCost} crédit(s) requis, ${remainingCredits} disponible(s). Le plan gratuit inclut 3 crédits/mois, soit 3 vérifications normales.`,
+        `Le bulk availability nécessite le plan Pro ou des crédits suffisants : ${creditCost} crédit(s) requis, ${remainingCredits} disponible(s). Le plan gratuit conserve la vérification facility par facility.`,
       );
     }
 
@@ -166,7 +169,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       ],
     );
 
-    if (data.mode === "bulk") {
+    if (data.mode === "bulk" && !isBuyerPro) {
       await query(
         `UPDATE public.user_plans SET
            requests_used = requests_used + LEAST($3, GREATEST(0, $2 - requests_used)),
@@ -211,6 +214,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       targeted: targets.length,
       aiAnswered: proTargets.length,
       creditCost,
+      buyerPlan,
+      bulkUnlimited: isBuyerPro,
     };
   });
 

@@ -120,6 +120,9 @@ function VendeurPage() {
   const [pQuantity, setPQuantity] = useState("1");
   const [pAllocation, setPAllocation] = useState("100");
   const [pStatus, setPStatus] = useState<"draft" | "active" | "paused" | "sold_out">("active");
+  const [pCouponCode, setPCouponCode] = useState("");
+  const [pCouponDescription, setPCouponDescription] = useState("");
+  const [pCouponPercent, setPCouponPercent] = useState("10");
 
   const loadDashboard = useServerFn(getVendorDashboard);
   const createFacility = useServerFn(createFacilityFn);
@@ -241,6 +244,13 @@ function VendeurPage() {
           quantityAvailable: Math.round(quantityAvailable),
           omniAllocationPercent: Math.round(omniAllocationPercent),
           photoUrl: pPhoto.trim() || null,
+          coupon: pCouponCode.trim()
+            ? {
+                code: pCouponCode.trim().toUpperCase().slice(0, 24),
+                description: pCouponDescription.trim().slice(0, 200) || undefined,
+                discountPercent: Math.max(1, Math.min(90, Number(pCouponPercent) || 10)),
+              }
+            : null,
         },
       });
       await refresh();
@@ -250,7 +260,10 @@ function VendeurPage() {
       setPQuantity("1");
       setPAllocation("100");
       setPStatus("active");
-      toast.success("Produit ajouté.");
+      setPCouponCode("");
+      setPCouponDescription("");
+      setPCouponPercent("10");
+      toast.success(pCouponCode.trim() ? "Produit et coupon ajoutés." : "Produit ajouté.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Ajout impossible.");
     }
@@ -603,6 +616,7 @@ function VendeurPage() {
               ["demandes", "Demandes"],
               ["produits", "Catalogue"],
               ["encaisser", "Scanner QR"],
+              ["coupons", "Coupons"],
             ].map(([value, label]) => (
               <button
                 key={value}
@@ -622,19 +636,12 @@ function VendeurPage() {
             aria-label="Opérations vendeur"
             className="flex w-full gap-1 overflow-x-auto rounded-2xl bg-secondary/60 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <TabsTrigger value="apercu">Aperçu</TabsTrigger>
-            {pro && OMNI_CONFIG.sellerAgentEnabled && (
-              <TabsTrigger value="agent">Agent IA</TabsTrigger>
-            )}
-            <TabsTrigger value="solde">Solde</TabsTrigger>
-            <TabsTrigger value="abonnement">Abonnement</TabsTrigger>
-            <TabsTrigger value="parametres">Paramètres</TabsTrigger>
-            <TabsTrigger value="produits">Catalogue & inventaire</TabsTrigger>
+            <TabsTrigger value="apercu">Facility</TabsTrigger>
+            <TabsTrigger value="produits">Produits</TabsTrigger>
             <TabsTrigger value="demandes">Demandes reçues</TabsTrigger>
             <TabsTrigger value="encaisser">Scanner QR</TabsTrigger>
-            <TabsTrigger value="pub">Publicité</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
-            <TabsTrigger value="demande-locale">Demande locale</TabsTrigger>
+            <TabsTrigger value="pub">Publicité V1</TabsTrigger>
           </TabsList>
 
           {pro && OMNI_CONFIG.sellerAgentEnabled && (
@@ -793,7 +800,7 @@ function VendeurPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("demande-locale")}
+                onClick={() => setActiveTab("demandes")}
                 className="omni-card text-left transition-transform hover:-translate-y-0.5"
               >
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
@@ -802,20 +809,20 @@ function VendeurPage() {
                 <p className="mt-2 font-display text-2xl font-extrabold">
                   {data?.demand.length ?? 0}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">Signaux locaux</p>
+                <p className="mt-1 text-xs text-muted-foreground"> Demandes à traiter</p>
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("solde")}
+                onClick={() => setActiveTab("coupons")}
                 className="omni-card text-left transition-transform hover:-translate-y-0.5"
               >
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">
-                  Balance
+                  Coupons
                 </p>
                 <p className="mt-2 font-display text-2xl font-extrabold text-primary">
-                  {formatMoney(data?.walletBalance ?? 0)}
+                  {data?.coupons.length ?? 0}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">Crédits Omni disponibles</p>
+                <p className="mt-1 text-xs text-muted-foreground"> Offres produit à gérer</p>
               </button>
             </div>
             <div className="grid gap-4 sm:grid-cols-4">
@@ -998,6 +1005,29 @@ function VendeurPage() {
                 value={pPhoto}
                 onChange={(e) => setPPhoto(e.target.value)}
                 className="w-56"
+              />
+              <Input
+                placeholder="Coupon produit (optionnel)"
+                value={pCouponCode}
+                onChange={(e) => setPCouponCode(e.target.value.toUpperCase())}
+                className="w-48"
+                maxLength={24}
+              />
+              <Input
+                placeholder="Remise %"
+                inputMode="numeric"
+                value={pCouponPercent}
+                onChange={(e) => setPCouponPercent(e.target.value.replace(/\D/g, ""))}
+                className="w-28"
+                disabled={!pCouponCode.trim()}
+              />
+              <Input
+                placeholder="Description coupon (optionnel)"
+                value={pCouponDescription}
+                onChange={(e) => setPCouponDescription(e.target.value)}
+                className="min-w-48 flex-1"
+                maxLength={200}
+                disabled={!pCouponCode.trim()}
               />
               <Button disabled={atProductCap} onClick={() => void addProduct()}>
                 <Plus className="mr-1.5 h-4 w-4" /> Ajouter
