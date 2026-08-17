@@ -600,7 +600,7 @@ function VendeurPage() {
         />
         <div className="pointer-events-none absolute inset-0 bg-background/18" />
       </div>
-      <main className="pointer-events-none absolute inset-0 z-10 px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] sm:px-5">
+      <main className="pointer-events-none absolute inset-0 z-10 max-h-[100dvh] overflow-y-auto overscroll-contain px-3 pb-[calc(env(safe-area-inset-bottom)+5.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] [scrollbar-width:thin] sm:px-5">
         <div className="pointer-events-auto mx-auto max-w-2xl">
           <section className="omni-glass rounded-[1.5rem] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-4">
             <div className="flex flex-wrap items-start gap-3">
