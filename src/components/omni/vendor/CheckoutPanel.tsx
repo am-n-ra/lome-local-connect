@@ -13,6 +13,7 @@ import {
   type VendorTransaction,
 } from "@/lib/checkout.functions";
 import { STATUS_LABEL } from "@/lib/omni";
+import { cameraStatusLabel, type CameraScannerStatus } from "@/lib/camera-scanner";
 import { useMarket } from "@/lib/market";
 
 export function CheckoutPanel({ facilityId }: { facilityId: string }) {
@@ -24,9 +25,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [cameraStatus, setCameraStatus] = useState<
-    "idle" | "permission_pending" | "active" | "denied" | "unsupported" | "error"
-  >("idle");
+  const [cameraStatus, setCameraStatus] = useState<CameraScannerStatus>("idle");
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
@@ -71,6 +70,14 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     setCameraStatus("idle");
   }
 
+  async function waitForVideoElement(timeoutMs = 2500): Promise<HTMLVideoElement | null> {
+    const deadline = Date.now() + timeoutMs;
+    while (!videoRef.current && Date.now() < deadline) {
+      await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+    }
+    return videoRef.current;
+  }
+
   async function startScanner() {
     setCameraError(null);
     setCameraStatus("permission_pending");
@@ -89,16 +96,22 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
         audio: false,
       });
       streamRef.current = stream;
-      if (!videoRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
+      // Render the preview first. The video element does not exist until this state
+      // update commits; checking videoRef immediately after getUserMedia caused the
+      // previous implementation to stop the stream and turn the camera light off.
+      setScanning(true);
+      const video = await waitForVideoElement();
+      if (!video || !streamRef.current) {
+        stopScanner();
         setCameraStatus("error");
         setCameraError("Aperçu caméra indisponible. Saisissez le code manuellement.");
         return;
       }
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+      video.srcObject = streamRef.current;
+      video.muted = true;
+      video.playsInline = true;
+      await video.play();
       setCameraStatus("active");
-      setScanning(true);
 
       if (!("BarcodeDetector" in window)) {
         setCameraError(
@@ -129,6 +142,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
         } catch {
           // A frame can be unreadable while the camera is starting; keep scanning.
         }
+
         frameRef.current = requestAnimationFrame(() => void scan());
       };
       frameRef.current = requestAnimationFrame(() => void scan());
@@ -210,23 +224,27 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
             {busy ? "Validation…" : "Valider"}
           </Button>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-black">
+        <div
+          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-primary/30 bg-slate-950"
+          data-omni-camera-preview="true"
+        >
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            autoPlay
+            className={`absolute inset-0 h-full w-full object-cover ${scanning ? "opacity-100" : "opacity-0"}`}
+            aria-label="Aperçu caméra QR"
+          />
           {scanning ? (
             <>
-              <video
-                ref={videoRef}
-                muted
-                playsInline
-                className="aspect-[4/3] w-full object-cover"
-                aria-label="Aperçu caméra QR"
-              />
               <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
               <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
                 Caméra active · Cadrez le QR de transaction
               </p>
             </>
           ) : (
-            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-slate-950 px-6 text-center text-white">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-white">
               <Camera className="h-9 w-9 text-primary" />
               <div>
                 <p className="font-semibold">Prêt à scanner</p>
@@ -241,19 +259,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
           )}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span aria-live="polite">
-            {cameraStatus === "permission_pending"
-              ? "Demande d’autorisation caméra…"
-              : cameraStatus === "active"
-                ? "Caméra prête à scanner"
-                : cameraStatus === "denied"
-                  ? "Caméra refusée — saisie manuelle disponible"
-                  : cameraStatus === "unsupported"
-                    ? "Scan indisponible — saisie manuelle disponible"
-                    : cameraStatus === "error"
-                      ? "Caméra indisponible — saisie manuelle disponible"
-                      : "Scanner QR prêt sur cet appareil"}
-          </span>
+          <span aria-live="polite">{cameraStatusLabel(cameraStatus)}</span>
           {cameraError && <span>{cameraError}</span>}
         </div>
       </div>
