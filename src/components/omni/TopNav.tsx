@@ -54,8 +54,8 @@ export function TopNav({
       <div
         className={
           minimalMapChrome
-            ? "flex items-center justify-end px-3 py-3 md:px-5"
-            : "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 py-2 md:px-5 md:py-3"
+            ? "flex items-center justify-end px-3 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:px-5 md:pt-5"
+            : "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-3 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] md:px-5 md:pb-3 md:pt-[calc(env(safe-area-inset-top)+0.75rem)]"
         }
       >
         {!minimalMapChrome && (

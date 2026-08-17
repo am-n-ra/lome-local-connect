@@ -635,7 +635,7 @@ export function CartePage() {
 
   return (
     <div
-      className="flex h-screen flex-col bg-background"
+      className="flex min-h-[100dvh] flex-col bg-background"
       data-omni-surface={surfaceState}
       data-omni-map-first="true"
     >

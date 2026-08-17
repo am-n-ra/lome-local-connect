@@ -164,7 +164,7 @@ function VendeurPage() {
         void navigate({ to: "/vendeur", search: {}, replace: true });
       }
     })();
-  }, [depot, user, confirmDeposit, refresh, navigate]);
+  }, [depot, user, confirmDeposit, refresh, navigate, formatMoney]);
 
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
@@ -394,7 +394,7 @@ function VendeurPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <TopNav activeRole="vendeur" minimalMapChrome />
         <div className="mx-auto max-w-md px-4 py-20 text-center">
           <Store className="mx-auto h-10 w-10 text-primary" />
@@ -414,7 +414,7 @@ function VendeurPage() {
 
   if (!facility) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-[100dvh] bg-background">
         <TopNav activeRole="vendeur" minimalMapChrome />
         <div className="mx-auto max-w-lg px-4 py-10">
           <h1 className="font-display text-3xl font-bold">Créez votre fiche</h1>
@@ -538,7 +538,7 @@ function VendeurPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] bg-background">
       <TopNav activeRole="vendeur" minimalMapChrome />
       <main className="mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
         <section className="omni-glass rounded-[1.6rem] p-4 shadow-[var(--shadow-soft)] sm:p-5">
@@ -603,7 +603,7 @@ function VendeurPage() {
               <button
                 key={value}
                 type="button"
-                onClick={() => setActiveTab(value)}
+                onClick={() => setActiveTab(value ?? "apercu")}
                 className={`rounded-xl border px-3 py-2 text-xs font-bold transition-colors ${
                   activeTab === value
                     ? "border-primary bg-primary text-primary-foreground"
