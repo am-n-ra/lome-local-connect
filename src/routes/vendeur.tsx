@@ -40,6 +40,7 @@ import {
   createFacility as createFacilityFn,
   deleteProduct,
   getVendorDashboard,
+  getVendorShell,
   updateFacility,
   updateMobilePosition,
   upsertProduct,
@@ -131,6 +132,7 @@ function VendeurPage() {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   const loadDashboard = useServerFn(getVendorDashboard);
+  const loadShell = useServerFn(getVendorShell);
   const createFacility = useServerFn(createFacilityFn);
   const saveProduct = useServerFn(upsertProduct);
   const removeProductFn = useServerFn(deleteProduct);
@@ -142,13 +144,27 @@ function VendeurPage() {
 
   const refresh = useCallback(async () => {
     try {
+      const shell = await loadShell();
+      setData({
+        facilities: shell.facilities,
+        subscription: shell.subscription,
+        products: [],
+        campaigns: [],
+        coupons: [],
+        requests: [],
+        demand: [],
+        walletBalance: shell.subscription?.wallet_balance ?? 0,
+        balances: shell.balances,
+        unlock: shell.unlock,
+      });
+      setReady(true);
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
       setData((await loadDashboard()) as Dashboard);
     } catch {
       setData(null);
-    } finally {
       setReady(true);
     }
-  }, [loadDashboard]);
+  }, [loadDashboard, loadShell]);
 
   useEffect(() => {
     if (!user) {
