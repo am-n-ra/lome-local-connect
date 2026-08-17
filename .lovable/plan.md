@@ -1,87 +1,208 @@
-# Omni V1 — Réparer, auditer, simplifier
+# Omni V1 — Wireframes de refonte des flux fragmentés
 
-Audit exécuté sur la préversion (mobile 390px) : `/`, `/carte`, `/vendeur`, `/onboarding`, `/admin`, `/auth`.
+Objectif : remplacer les surfaces éclatées (availability, intention, QR, paiement, timeline, chat, requests vendeur, menu) par des surfaces continues, une décision par écran. La carte reste la maison ; tout le reste est une couche empilée dessus qui s'ouvre, se décide, se ferme.
 
-## Constat runtime (mesuré, pas supposé)
+## Lot 0 — Prérequis bloquant
 
-Toutes les routes sauf `/auth` sont **cassées à l'hydratation** par une seule erreur :
+Toutes les routes sauf `/auth` cassent à l'hydratation (`AsyncLocalStorage is not a constructor`) : carte sans canvas, `/onboarding` figé, `/admin` vide. Cause : `src/lib/auth-middleware.ts` n'a pas d'extension `.server` et entraîne `neon-auth.server` → `db.server` → driver Neon dans le bundle navigateur. Correction avant toute refonte, plus un garde-fou automatisé qui échoue si un module `.server` ou un built-in Node entre dans le bundle client.
+
+## Principe de navigation : une pile, pas des panneaux concurrents
 
 ```text
-Uncaught TypeError: import_browser_external_node_async_hooks.AsyncLocalStorage is not a constructor
+CARTE (toujours vivante, jamais remplacée)
+  └─ SHEET niveau 1   résultats / fiche
+       └─ SHEET niveau 2   availability  (3 étapes, une seule sheet)
+            └─ PLEIN ÉCRAN  transaction  (fil unique, QR inclus)
 ```
 
-Conséquences observées :
-- `/` et `/carte` : 0 `<canvas>`, bloqués sur « Chargement de la carte… / Localisation en cours… ».
-- `/vendeur` : bloqué sur « Chargement… ».
-- `/onboarding` : bloqué sur « Préparation de votre espace… ».
-- `/admin` : page vide (0 caractère).
-- `/auth` : seule route qui rend réellement.
+Règles : jamais plus de deux niveaux de sheet ; retour = un geste (swipe bas / Échap / flèche) ; le focus revient sur l'élément déclencheur ; chaque sheet a un header collant, un contenu scrollable, un footer d'action collant.
 
-Cause identifiée : `src/lib/auth-middleware.ts` n'a pas d'extension `.server`, donc il n'est pas exclu du bundle navigateur, et il importe statiquement `neon-auth.server` → `db.server` → driver Neon → `async_hooks`. Tous les modules `*.functions.ts` importent ce fichier, donc la chaîne serveur part dans le client sur chaque route. Les symptômes « MapLibre bloqué », « onboarding silencieux », « admin blanc » de l'audit précédent sont tous ce même bug, pas trois bugs distincts.
+## 1. Availability — une sheet, trois étapes
 
-Tant que ce point n'est pas corrigé, aucun autre constat UI ou flow n'est mesurable en conditions réelles.
+Aujourd'hui : formulaire, quota, liste de demandes et réponses cohabitent dans le même panneau, mode manuel et bulk mélangés. Cible :
 
-## Lot 0 — Déblocage (P0, avant tout le reste)
+```text
+┌──────────────────────────────────────┐
+│ ←  Vérifier la disponibilité   1/3  │  header collant + progression
+├──────────────────────────────────────┤
+│ QUOI                                 │
+│ [ ciment 50 kg                    ]  │
+│ Quantité   [ − ] 4 [ + ]             │
+│ Variante   ⌄ (si le produit en a)    │
+├──────────────────────────────────────┤
+│           (contenu scrollable)       │
+├──────────────────────────────────────┤
+│              [  Continuer  ]         │  footer collant
+└──────────────────────────────────────┘
 
-1. Sortir la chaîne serveur du bundle client : renommer `src/lib/auth-middleware.ts` en `auth-middleware.server.ts` (ou charger `neon-auth.server` dynamiquement dans les handlers), et vérifier chaque `*.functions.ts` : au niveau module, seulement imports, types et déclarations de server functions.
-2. Ajouter un garde-fou permanent : vérification automatisée que le bundle client ne contient aucun module `.server` ni built-in Node.
-3. Re-passer le scan des 6 routes : zéro `pageerror`, canvas carte présent, onboarding et admin qui rendent.
-4. Carte : timeout + état d'erreur + bouton « Réessayer » sur le chargement MapLibre, au lieu d'un spinner infini.
-5. Auth : distinguer explicitement `loading` / `signed-out` / `signed-in`. Un état de chargement ne doit jamais durer indéfiniment ; `signed-out` redirige vers `/auth`, `forbidden` affiche un écran clair sur `/admin`.
+Étape 2 — OÙ
+┌──────────────────────────────────────┐
+│ ←  Vérifier la disponibilité   2/3  │
+│  ( ) Ce commerce — Chez Ama          │
+│  (•) Les 12 résultats visibles       │
+│      Quota bulk : 2 / 3 ce mois-ci   │
+│      [ mini-carte des 12 pins ]      │
+│              [  Continuer  ]         │
+└──────────────────────────────────────┘
 
-## Lot 1 — Audit complet réel (livrable écrit)
+Étape 3 — CONTRAINTES
+┌──────────────────────────────────────┐
+│ ←  Vérifier la disponibilité   3/3  │
+│  Distance max   [ 2 km ▁▂▃ ]         │
+│  Réponse avant  [ 2 h ⌄ ]            │
+│  Budget max     [ 15 000 ]  🔒 privé │
+│  « Jamais transmis au vendeur »      │
+│         [  Envoyer la demande  ]     │
+└──────────────────────────────────────┘
+```
 
-Une fois l'app rendue, parcours end-to-end scripté (mobile + desktop) sur : découverte carte, recherche, mur de compte, fiche facility, availability simple et bulk, comparaison, intention d'achat, QR, chat/timeline, clôture et avis, puis côté vendeur : onboarding, facility, produit, availability, requests, transactions, promotions, ads, balance, plan, paramètres, et enfin admin.
+Après envoi, la sheet ne se ferme pas : elle bascule sur l'écran d'attente puis de comparaison.
 
-Rapport structuré en quatre parties, chaque ligne avec écran, preuve (capture ou log), impact et priorité P0–P3 :
-1. Divergences UI (écarts avec la vision Omni V1, incohérences de composants, densité, états manquants).
-2. Dettes UX / convenience / accessibilité (nombre de gestes, libellés, feedback, focus, contraste, cibles tactiles, safe-areas).
-3. Défauts logiques (états morts, doublons d'intention, expirations, retries, erreurs avalées, tabs orphelines côté vendeur : balance, plan, paramètres, agent).
-4. Risques financiers et intégrations (coupons, soldes, webhooks FedaPay, QR rejouable, quotas) + dettes de performance.
+```text
+┌──────────────────────────────────────┐
+│ ←  ciment 50 kg · 4 unités           │
+│ 5 réponses sur 12 · encore 1 h 12    │
+│ Trier : [Prix] [Distance] [Confiance]│
+├──────────────────────────────────────┤
+│ ★ MEILLEURE OPTION                   │
+│ Chez Ama            ● Disponible     │
+│ 4/4 · 12 000 F · 800 m · répond 6min │
+│ [   Je veux acheter   ]              │
+├──────────────────────────────────────┤
+│ Quincaillerie Sud   ◐ Partiel        │
+│ 2/4 · 11 500 F · 1,4 km              │
+│ [ Je veux acheter (2) ]              │
+├──────────────────────────────────────┤
+│ Dépôt Est           ○ Indisponible   │
+└──────────────────────────────────────┘
+```
 
-## Lot 2 — Simplification de l'UI et des flux (le cœur de la demande)
+Une card = une réponse = une décision. Les demandes passées sortent d'ici et vivent dans `Menu → Disponibilités`.
 
-Principe : **un écran = une décision**. La carte reste la maison ; tout le reste est une couche qui s'ouvre, se décide, se ferme.
+## 2. Transaction acheteur — un seul plein écran
 
-### Acheteur — un seul fil, cinq gestes
-1. Ouvrir → carte à ma position, une barre de recherche en bas, rien d'autre.
-2. Chercher → résultats en liste synchronisée avec les pins ; la card met en avant l'objet cherché (prix, distance, statut), pas le nom du commerce.
-3. Ouvrir une card → fiche courte : ce que je cherche, prix, distance, confiance, un seul bouton `Vérifier la disponibilité`.
-4. Réponses → un écran de comparaison, la meilleure option mise en avant, un seul bouton `Je veux acheter`.
-5. Transaction → un fil unique : QR en haut, étapes en cards dans le fil, une action à la fois.
+Aujourd'hui : intention, commandes, QR, paiement, timeline et chat sont quatre surfaces séparées, les conséquences arrivent par toast. Cible : un plein écran unique, le QR en tête, le fil comme source de vérité, une action à la fois.
 
-Tout ce qui n'est pas sur ce chemin (panier, wishlist, demandes, messages) est regroupé dans le menu, jamais en concurrence avec le chemin principal.
+```text
+┌──────────────────────────────────────┐
+│ ←   Chez Ama · ciment 50 kg          │  header collant
+│  ①──②──③──④──⑤   Étape 3/5           │  stepper compact
+│  48 000 F · 4 unités · retrait       │
+├──────────────────────────────────────┤
+│        ▛▀▀▀▀▀▀▀▀▀▀▜                  │
+│        ▌  QR CODE  ▐   K7QM2PDX      │  carte-ticket repliable
+│        ▙▄▄▄▄▄▄▄▄▄▄▟   [Agrandir]     │
+│  Valide jusqu'à 18:40 · code manuel  │
+├──────────────────────────────────────┤
+│  ● Intention créée         10:02     │
+│  ● Offre confirmée         10:04     │
+│    4 × 12 000 F = 48 000 F           │
+│  ● Coupon BIENVENUE −2 000 F 10:05   │  conséquence inline, pas un toast
+│  ● QR généré               10:05     │
+│  ○ Vérification vendeur    en attente│
+│  ○ Paiement                          │
+│  ○ Produit reçu                      │
+│                                      │
+│  [Ama] Je vous garde les 4 sacs.     │  messages dans le même fil
+│  [Vous] J'arrive dans 20 min.        │
+├──────────────────────────────────────┤
+│ [ Écrire un message ]  [ J'ai payé ] │  footer : 1 champ + 1 action max
+└──────────────────────────────────────┘
+```
 
-### Vendeur — deux vues, zéro tab orpheline
-- Un header vendeur avec bascule `Carte / Console`, statut en ligne, solde, plan.
-- Carte : mes facilities, aperçu exact de ce que voit l'acheteur, position, zones d'ads.
-- Console : `Facilities`, `Catalogue`, `Requests`, `Transactions`, `Promotions`, `Ads`, `Balance & Plan`, `Paramètres` — toutes exposées, aucune section implémentée mais inaccessible.
-- Chaque section : une ligne de métriques, une liste dense, actions inline. Répondre à une demande de disponibilité = un geste (`Disponible / Partiel / Indisponible` + quantité + prix).
+- Les événements système et les messages humains partagent le même fil, différenciés visuellement (puce d'état vs bulle).
+- Le QR se réduit en bandeau une fois consommé, remplacé par « Vérifié par le vendeur à 10:31 ».
+- Erreurs (QR déjà utilisé, expiration, paiement rejeté) : card d'événement rouge dans le fil avec l'action de reprise, jamais un toast seul.
+- Côté vendeur : exactement le même écran, actions inversées (`Vérifier le QR`, `Confirmer l'encaissement`).
 
-### Onboarding — court et interrompable
-- Acheteur : bienvenue → localisation → centres d'intérêt → carte. Skippable, reprise au même point.
-- Vendeur : identité → facility sur la carte → catégorie → premier produit → horaires → récapitulatif « ce que voit un acheteur ».
+## 3. Vendeur — deux vues, zéro surface orpheline
 
-### Langage visuel
-Glassmorphism conservé mais discipliné : le verre uniquement pour ce qui flotte au-dessus de la carte ; les listes, formulaires et la console vendeur passent sur des surfaces opaques lisibles. Trois niveaux de surface (`float`, `sheet`, `page`), une échelle typographique, un jeu de badges de statut unique, des primitives partagées (sheet avec header collant et footer d'action, section header, état vide, stat card, stepper).
+```text
+┌──────────────────────────────────────┐
+│ Ma boutique   ● En ligne   12 400 F  │
+│      [ Carte ]  [ Console ]          │
+├──────────────────────────────────────┤
+│ CONSOLE                              │
+│  Facilities        2                 │
+│  Catalogue         18 produits       │
+│  Demandes          3 en attente  ●   │
+│  Transactions      1 en cours    ●   │
+│  Promotions        1 active          │
+│  Publicité         —                 │
+│  Solde & Plan      12 400 F · Pro    │
+│  Paramètres                          │
+└──────────────────────────────────────┘
+```
 
-## Lot 3 — Certification fonctionnelle
+Toutes les sections implémentées sont listées ici (solde, plan, paramètres, agent inclus) : plus de tab orpheline. Chaque section = métriques en tête + liste dense + actions inline.
 
-- Tests d'intégration sur la boucle transactionnelle : intention en double, expiration, retry de paiement, QR déjà consommé, application de coupon, impact sur les soldes.
-- Tests des quotas (bulk availability Free/Pro) et des limites vendeur.
-- Scan automatisé des routes : zéro erreur console, zéro débordement horizontal à 360 / 768 / 1280, chaque écran atteint un état stable.
-- Critères de sortie : Lot 0 vert, rapport du Lot 1 sans P0 restant, boucle transactionnelle couverte par des tests.
+Répondre à une demande, en un geste, depuis la liste ou la notification :
+
+```text
+┌──────────────────────────────────────┐
+│ ciment 50 kg · 4 unités · 800 m      │
+│ Demandé il y a 6 min                 │
+│ [ Disponible ] [ Partiel ] [ Non ]   │
+│  ↳ si Partiel :  qté [ 2 ]  prix [ ] │
+│                  [ Envoyer ]         │
+└──────────────────────────────────────┘
+```
+
+Le solde segmenté est explicité en clair : chaque poche indique à quoi elle sert et ce qu'elle autorise (`Recharge — utilisable pour abonnement et pub`, `Gains — retirable`), avec l'action permise sur chaque ligne.
+
+## 4. Menu — trois groupes, pas un empilement
+
+```text
+┌──────────────────────────────────────┐
+│  Kossi A.   Pro · Solde 3 200 F      │
+│  [ Acheteur ]     Vendeur            │  bascule de rôle isolée en tête
+├──────────────────────────────────────┤
+│  ACTIVITÉ                            │
+│   Disponibilités              2 ●    │
+│   Transactions                1 ●    │
+│   Messages                    3 ●    │
+│   Recherches enregistrées     7      │
+├──────────────────────────────────────┤
+│  COMPTE                              │
+│   Profil · Plan · Solde · Notifs     │
+├──────────────────────────────────────┤
+│  Aide          Déconnexion           │
+└──────────────────────────────────────┘
+```
+
+Chaque ligne porte sa valeur à droite. Les doublons actuels (« Produits recherchés » / « Recherches », « Vérifier la disponibilité » / « Disponibilités ») disparaissent.
+
+## 5. États d'entrée : jamais de vide ni d'attente infinie
+
+```text
+Carte en échec              Auth / onboarding / admin
+┌───────────────────┐       ┌───────────────────┐
+│   Carte           │       │  Vérification…    │  ≤ 5 s
+│   indisponible    │  →    │  puis :           │
+│ [ Réessayer ]     │       │  • connecté  → contenu
+│ Réseau instable ? │       │  • déconnecté→ /auth
+└───────────────────┘       │  • refusé → « Accès réservé »
+                            └───────────────────┘
+```
+
+- Chaque surface chargée en différé a son propre squelette local, son état vide et son état d'erreur avec `Réessayer`.
+- Formulaire d'auth sémantique (`<form>`, `type=email`, `autocomplete`) : Entrée soumet, l'autofill mobile fonctionne.
+- Les contrôles carte se réduisent à trois : zoom +, zoom −, me recentrer. Le vocabulaire technique (diagnostic, exploration approximative, précision) sort de l'écran principal.
+- Le bouton « Affiner » redevient secondaire : icône discrète à côté de la recherche, jamais de la même taille que l'action principale.
+- Accessibilité : cards et pins comme un seul contexte de sélection annoncé, cibles ≥ 44px, retour du focus au déclencheur à la fermeture, Échap ferme un seul niveau, changements d'état annoncés en région live.
 
 ## Détails techniques
 
-- Correctifs frontière serveur/client dans `src/lib/auth-middleware.ts` et les `*.functions.ts` ; aucune modification du schéma.
-- Nouvelles primitives sous `src/components/omni/ui/`, sections vendeur sous `src/components/omni/vendor/console/`.
-- `src/routes/vendeur.tsx` (1216 lignes) et `src/routes/carte.tsx` (978 lignes) éclatés en sections ; la machine d'états `src/lib/omni-state.ts` reste la source de vérité.
-- Refonte de présentation : les server functions, migrations et règles métier existantes sont réutilisées telles quelles.
+- Nouvelles primitives partagées sous `src/components/omni/ui/` : `OmniSheet` (header collant, scroll, footer d'action, gestion du focus et d'Échap), `OmniStepper`, `OmniStatusBadge`, `OmniEmptyState`, `OmniErrorState`, `OmniSkeleton`.
+- Availability : une seule sheet à étapes remplaçant `DemandRequestPanel`, l'historique déplacé dans le menu.
+- Transaction : nouvelle route plein écran acheteur/vendeur alimentée par `transaction_events` (déjà en base) et `messages.transaction_id`, fusionnant `OrdersPanel`, `ChatPanel`, QR et paiement.
+- Vendeur : `src/routes/vendeur.tsx` (1216 lignes) éclaté en sections sous `src/components/omni/vendor/console/`, toutes routées depuis la console.
+- Refonte de présentation : server functions, migrations et règles métier existantes réutilisées telles quelles.
 
 ## Ordre de livraison
 
-1. Lot 0 (déblocage) — indispensable, rien d'autre n'est vérifiable avant.
-2. Lot 1 (audit réel et rapport priorisé).
-3. Lot 2 (simplification acheteur, puis vendeur, puis onboarding).
-4. Lot 3 (tests et certification).
+1. Lot 0 — déblocage runtime et garde-fou.
+2. Transaction acheteur/vendeur en fil unique (sécurité et lisibilité des conséquences).
+3. Availability en sheet à trois étapes + écran de comparaison.
+4. Console vendeur complète (aucune surface orpheline) et réponse en un geste.
+5. Menu, états d'entrée, accessibilité, certification device.
