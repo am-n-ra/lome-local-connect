@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { ArrowRight, CheckCircle2, Globe2, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { z } from "zod";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { recordProductEvent, saveAnalyticsConsent } from "@/lib/analytics.functions";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ redirectTo: z.string().optional() });
@@ -65,10 +67,28 @@ function OnboardingPage() {
   const [locationState, setLocationState] = useState<"idle" | "pending" | "granted" | "denied">(
     "idle",
   );
+  const [analyticsConsent, setAnalyticsConsent] = useState(false);
+  const recordEvent = useServerFn(recordProductEvent);
+  const saveConsent = useServerFn(saveAnalyticsConsent);
 
   const target = useMemo(() => (redirectTo?.startsWith("/") ? redirectTo : "/carte"), [redirectTo]);
 
   useEffect(() => {
+    if (!loading && user) {
+      const sessionId =
+        typeof window !== "undefined"
+          ? window.sessionStorage.getItem("omni.analytics.session")
+          : null;
+      if (sessionId)
+        void recordEvent({
+          data: {
+            eventName: "onboarding_started",
+            sessionId,
+            role: "unknown",
+            source: "onboarding",
+          },
+        }).catch(() => undefined);
+    }
     if (!loading && !user) {
       void navigate({ to: "/auth", search: { redirectTo: target } });
     }
@@ -78,8 +98,23 @@ function OnboardingPage() {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(
         "omni.onboarding.v1",
-        JSON.stringify({ completedAt: new Date().toISOString(), role, language, locationState }),
+        JSON.stringify({
+          completedAt: new Date().toISOString(),
+          role,
+          language,
+          locationState,
+          analyticsConsent,
+        }),
       );
+      const sessionId = window.sessionStorage.getItem("omni.analytics.session");
+      if (analyticsConsent && sessionId) {
+        void saveConsent({
+          data: { consentType: "product_analytics", granted: true, policyVersion: "2026-08-17" },
+        }).catch(() => undefined);
+        void recordEvent({
+          data: { eventName: "onboarding_completed", sessionId, role, source: "onboarding" },
+        }).catch(() => undefined);
+      }
     }
     toast.success(
       role === "seller" ? "Votre espace vendeur est prêt." : "Votre recherche est prête.",
@@ -204,7 +239,20 @@ function OnboardingPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <label className="mt-5 flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-3 text-xs leading-5 text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={analyticsConsent}
+                onChange={(event) => setAnalyticsConsent(event.target.checked)}
+                className="mt-1 accent-primary"
+              />
+              <span>
+                J’accepte les mesures anonymisées qui aident Omni à améliorer la recherche et les
+                parcours. Je peux retirer ce consentement plus tard.
+              </span>
+            </label>
+
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="rounded-2xl border border-border bg-background/50 p-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   Langue
