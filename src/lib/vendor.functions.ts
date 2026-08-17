@@ -320,6 +320,57 @@ export const getVendorShell = createServerFn({ method: "GET" })
     };
   });
 
+export const getVendorProducts = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.userId, data.facilityId);
+    return query<VendorProduct>(
+      `SELECT id, facility_id, name, price, discount_percent, in_stock,
+              COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
+              COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
+              COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
+              photo_url, last_confirmed_at
+       FROM public.products WHERE facility_id = $1 ORDER BY created_at DESC`,
+      [data.facilityId],
+    );
+  });
+
+export const getVendorRequests = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    await assertOwner(context.userId, data.facilityId);
+    const rows = await query<{
+      id: string;
+      status: string;
+      created_at: string;
+      buyer_name: string | null;
+      items: { name: string; quantity: number; price_at_time: number }[] | null;
+    }>(
+      `SELECT ca.id, ca.status, ca.created_at, p.name AS buyer_name,
+              COALESCE(json_agg(json_build_object('name', pr.name, 'quantity', ci.quantity,
+                                                   'price_at_time', ci.price_at_time))
+                       FILTER (WHERE ci.id IS NOT NULL), '[]') AS items
+       FROM public.carts ca
+       LEFT JOIN public.profiles p ON p.id = ca.buyer_id
+       LEFT JOIN public.cart_items ci ON ci.cart_id = ca.id
+       LEFT JOIN public.products pr ON pr.id = ci.product_id
+       WHERE ca.facility_id = $1
+       GROUP BY ca.id, p.name
+       ORDER BY ca.created_at DESC LIMIT 50`,
+      [data.facilityId],
+    );
+    return rows.map((row) => {
+      const items = row.items ?? [];
+      return {
+        ...row,
+        items,
+        total: items.reduce((sum, item) => sum + item.quantity * item.price_at_time, 0),
+      } satisfies VendorRequest;
+    });
+  });
+
 export const createFacility = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) =>
