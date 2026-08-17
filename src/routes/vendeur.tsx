@@ -703,19 +703,37 @@ function VendeurPage() {
             )}
 
             <TabsContent value="solde" className="mt-5 space-y-4">
-              <div className="omni-card space-y-3 p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  Portefeuille vendeur
-                </p>
-                <h2 className="font-display text-3xl font-bold text-primary">
-                  {formatMoney(data?.walletBalance ?? 0)}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Le solde finance les campagnes de visibilité et les services vendeur. Les
-                  opérations de dépôt et de réconciliation restent accessibles depuis le parcours de
-                  paiement sécurisé.
-                </p>
-              </div>
+              <BalanceSheet
+                balances={data?.balances ?? []}
+                formatMoney={formatMoney}
+                topUpControl={
+                  <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+                    <div className="min-w-32 flex-1 sm:flex-none">
+                      <Label htmlFor="omni-wallet-top-up" className="sr-only">
+                        Montant à recharger en FCFA
+                      </Label>
+                      <Input
+                        id="omni-wallet-top-up"
+                        inputMode="numeric"
+                        type="number"
+                        min="500"
+                        value={topUpAmount}
+                        onChange={(event) => setTopUpAmount(event.target.value.replace(/\\D/g, ""))}
+                        className="h-9 text-base sm:w-32 sm:text-sm"
+                        aria-label="Montant à recharger en FCFA"
+                      />
+                    </div>
+                    <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
+                      <CreditCard className="mr-1.5 h-4 w-4" />
+                      {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
+                    </Button>
+                    <p className="w-full text-[11px] text-muted-foreground sm:max-w-64">
+                      Le checkout FedaPay sécurisé affiche les moyens activés, notamment Visa et
+                      Mastercard lorsque la carte est disponible dans votre pays.
+                    </p>
+                  </div>
+                }
+              />
             </TabsContent>
 
             <TabsContent value="abonnement" className="mt-5 space-y-4">
@@ -909,65 +927,6 @@ function VendeurPage() {
                             width: `${Math.min(100, ((data?.unlock?.qualifying_count ?? 0) / Math.max(1, data?.unlock?.required_count ?? 3)) * 100)}%`,
                           }}
                         />
-                      </div>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <BalanceSheet
-                        balances={data?.balances ?? []}
-                        formatMoney={formatMoney}
-                        topUpControl={
-                          <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
-                            <div className="min-w-32 flex-1 sm:flex-none">
-                              <Label htmlFor="omni-wallet-top-up" className="sr-only">
-                                Montant à recharger en FCFA
-                              </Label>
-                              <Input
-                                id="omni-wallet-top-up"
-                                inputMode="numeric"
-                                type="number"
-                                min="500"
-                                value={topUpAmount}
-                                onChange={(event) =>
-                                  setTopUpAmount(event.target.value.replace(/\\D/g, ""))
-                                }
-                                className="h-9 text-base sm:w-32 sm:text-sm"
-                                aria-label="Montant à recharger en FCFA"
-                              />
-                            </div>
-                            <Button
-                              size="sm"
-                              onClick={() => void startTopUp()}
-                              disabled={topUpBusy}
-                            >
-                              <CreditCard className="mr-1.5 h-4 w-4" />
-                              {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
-                            </Button>
-                            <p className="w-full text-[11px] text-muted-foreground sm:max-w-64">
-                              Le checkout FedaPay sécurisé affiche les moyens activés, notamment
-                              Visa et Mastercard lorsque la carte est disponible dans votre pays.
-                            </p>
-                          </div>
-                        }
-                      />
-                    </div>
-                    <div className="hidden">
-                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                        Legacy balances
-                      </p>
-                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                        {(data?.balances ?? []).map((balance) => (
-                          <div key={balance.bucket} className="rounded-xl bg-secondary/60 p-2.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              {balance.bucket.replaceAll("_", " ")}
-                            </p>
-                            <p className="mt-1 font-bold">{formatMoney(balance.amount)}</p>
-                          </div>
-                        ))}
-                        {(data?.balances ?? []).length === 0 && (
-                          <p className="col-span-2 text-sm text-muted-foreground">
-                            Aucun mouvement segmenté enregistré.
-                          </p>
-                        )}
                       </div>
                     </div>
                   </div>
