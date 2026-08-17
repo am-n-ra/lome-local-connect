@@ -11,7 +11,13 @@ import { useMarket } from "@/lib/market";
 
 type Availability = { inStock: boolean; label: string };
 
-export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function CartPanel({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const { formatMoney } = useMarket();
   const cart = useCart();
   const { user } = useAuth();
@@ -35,9 +41,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
       for (const row of rows) {
         next[row.id] = {
           inStock: row.in_stock,
-          label: row.in_stock
-            ? freshnessLabel(row.last_confirmed_at)
-            : "Indisponible actuellement",
+          label: row.in_stock ? freshnessLabel(row.last_confirmed_at) : "Indisponible actuellement",
         };
       }
       setAvailability((prev) => ({ ...prev, ...next }));
@@ -113,7 +117,6 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
     }
   }
 
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
@@ -137,9 +140,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                       {availability[l.productId] && (
                         <p
                           className={`flex items-center gap-1 text-xs ${
-                            availability[l.productId]!.inStock
-                              ? "text-primary"
-                              : "text-destructive"
+                            availability[l.productId]!.inStock ? "text-primary" : "text-destructive"
                           }`}
                         >
                           {availability[l.productId]!.inStock ? (
@@ -203,7 +204,6 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                     {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
                   </Button>
                 </div>
-
               </div>
             );
           })}
@@ -220,9 +220,7 @@ export function CartPanel({ open, onOpenChange }: { open: boolean; onOpenChange:
                   onClick={() => void sendAll()}
                 >
                   <Send className="mr-2 h-4 w-4" />
-                  {sendingAll
-                    ? "Envoi…"
-                    : `Envoyer aux ${facilityIds.length} vendeurs`}
+                  {sendingAll ? "Envoi…" : `Envoyer aux ${facilityIds.length} vendeurs`}
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">

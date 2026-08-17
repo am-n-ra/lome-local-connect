@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Loader2, Mic, Search, Square } from "lucide-react";
 import { toast } from "sonner";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 
 import { Input } from "@/components/ui/input";
 import { searchTermFromImage, transcribeSearchAudio } from "@/lib/search.functions";

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { deleteWishlist, listWishlists } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -47,7 +47,11 @@ export function WishlistPanel({
           <SheetTitle>Produits recherchés</SheetTitle>
         </SheetHeader>
         <div className="space-y-3 p-4">
-          {!user && <p className="text-sm text-muted-foreground">Connectez-vous pour retrouver vos recherches.</p>}
+          {!user && (
+            <p className="text-sm text-muted-foreground">
+              Connectez-vous pour retrouver vos recherches.
+            </p>
+          )}
           {user && entries.length === 0 && (
             <p className="text-sm text-muted-foreground">
               Aucune recherche enregistrée. Utilisez « Je cherche ce produit » sur une fiche.
@@ -66,7 +70,12 @@ export function WishlistPanel({
                 <p className="truncate font-medium">{e.search_term}</p>
                 <p className="text-xs text-muted-foreground">{formatDateFr(e.created_at)}</p>
               </button>
-              <Button variant="ghost" size="icon" aria-label="Retirer" onClick={() => void remove(e.id)}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Retirer"
+                onClick={() => void remove(e.id)}
+              >
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
