@@ -96,7 +96,7 @@ export function TransactionThreadCard({
           <p className="mt-1 text-xs text-muted-foreground">
             {qrExpiry
               ? `Valide jusqu'à ${new Date(qrExpiry).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
-              : "Code de retrait actif"}
+              : "QR transactionnel actif"}
           </p>
         </div>
       ) : null}

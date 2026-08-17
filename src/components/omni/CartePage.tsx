@@ -89,6 +89,12 @@ export function CartePage() {
   const [wishOpen, setWishOpen] = useState(false);
   const [ordersOpen, setOrdersOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [transactionChat, setTransactionChat] = useState<{
+    transactionId: string;
+    facilityId: string;
+    facilityName: string;
+    amount: number;
+  } | null>(null);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandMode, setDemandMode] = useState<"bulk" | "manual">("bulk");
   const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
@@ -875,6 +881,15 @@ export function CartePage() {
               routingBusy={routingBusy}
               onItinerary={() => void buildItinerary(selected)}
               onCheckAvailability={() => openManualAvailability(selected)}
+              onTransactionCreated={({ transactionId, amount }) => {
+                setTransactionChat({
+                  transactionId,
+                  amount,
+                  facilityId: selected.id,
+                  facilityName: selected.name,
+                });
+                setChatOpen(true);
+              }}
             />
           </div>
         )}
@@ -924,7 +939,21 @@ export function CartePage() {
 
       <CartPanel open={cartOpen} onOpenChange={setCartOpen} />
       <OrdersPanel open={ordersOpen} onOpenChange={setOrdersOpen} />
-      <ChatPanel open={chatOpen} onOpenChange={setChatOpen} />
+      <ChatPanel
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        facilityId={transactionChat?.facilityId}
+        facilityName={transactionChat?.facilityName}
+        transactionContext={
+          transactionChat
+            ? {
+                transactionId: transactionChat.transactionId,
+                status: "Intention créée",
+                amountLabel: formatMoney(transactionChat.amount),
+              }
+            : undefined
+        }
+      />
       <DemandRequestPanel
         open={demandOpen}
         onOpenChange={setDemandOpen}
@@ -934,6 +963,11 @@ export function CartePage() {
         mode={demandMode}
         facilityName={demandFacilityName}
         initialQuantity={quantity}
+        onTransactionCreated={({ transactionId, facilityId, facilityName, amount }) => {
+          setTransactionChat({ transactionId, facilityId, facilityName, amount });
+          setDemandOpen(false);
+          setChatOpen(true);
+        }}
       />
       <WishlistPanel
         open={wishOpen}

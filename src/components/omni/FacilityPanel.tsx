@@ -35,6 +35,7 @@ type Props = {
   distanceKm: number | null;
   onItinerary?: () => void;
   onCheckAvailability?: () => void;
+  onTransactionCreated?: (context: { transactionId: string; amount: number }) => void;
   routingBusy?: boolean;
 };
 
@@ -44,6 +45,7 @@ export function FacilityPanel({
   onItinerary,
   routingBusy,
   onCheckAvailability,
+  onTransactionCreated,
 }: Props) {
   const { formatMoney } = useMarket();
   const navigate = useNavigate();
@@ -60,6 +62,10 @@ export function FacilityPanel({
   const [claiming, setClaiming] = useState(false);
   const [intentBusy, setIntentBusy] = useState<string | null>(null);
   const [purchaseIntentCreated, setPurchaseIntentCreated] = useState(false);
+  const [purchaseTransaction, setPurchaseTransaction] = useState<{
+    transactionId: string;
+    amount: number;
+  } | null>(null);
   const isUnclaimed = facility.status === "unclaimed";
 
   const loadFacility = useServerFn(getFacility);
@@ -173,7 +179,10 @@ export function FacilityPanel({
           paymentMode: "cash",
         },
       });
+      const transaction = { transactionId: result.transactionId, amount: product.price * quantity };
       setPurchaseIntentCreated(true);
+      setPurchaseTransaction(transaction);
+      onTransactionCreated?.(transaction);
       const offer = await loadOffer({
         data: { productId: product.id, transactionId: result.transactionId },
       });
@@ -281,32 +290,42 @@ export function FacilityPanel({
       )}
 
       {purchaseIntentCreated ? (
-        <div className="grid gap-2 sm:flex sm:flex-wrap">
-          <Button
-            className="min-h-10 min-w-0 flex-1"
-            variant="outline"
-            onClick={onItinerary}
-            disabled={routingBusy}
-          >
-            <Navigation className="mr-1.5 h-4 w-4" />
-            {routingBusy ? "Calcul…" : "Itinéraire"}
-          </Button>
-          <Button
-            className="min-h-10 min-w-0 flex-1"
-            variant="outline"
-            onClick={() => setShowPhone((v) => !v)}
-          >
-            <Phone className="mr-1.5 h-4 w-4" />
-            {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
-          </Button>
-          <Button
-            className="min-h-10 min-w-0 flex-1"
-            variant="outline"
-            onClick={() => setDemandOpen((v) => !v)}
-          >
-            <Search className="mr-1.5 h-4 w-4" />
-            Je cherche ce produit
-          </Button>
+        <div className="space-y-2">
+          {purchaseTransaction && onTransactionCreated && (
+            <Button
+              className="min-h-10 w-full"
+              onClick={() => onTransactionCreated(purchaseTransaction)}
+            >
+              Ouvrir le chat transactionnel
+            </Button>
+          )}
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
+            <Button
+              className="min-h-10 min-w-0 flex-1"
+              variant="outline"
+              onClick={onItinerary}
+              disabled={routingBusy}
+            >
+              <Navigation className="mr-1.5 h-4 w-4" />
+              {routingBusy ? "Calcul…" : "Itinéraire"}
+            </Button>
+            <Button
+              className="min-h-10 min-w-0 flex-1"
+              variant="outline"
+              onClick={() => setShowPhone((v) => !v)}
+            >
+              <Phone className="mr-1.5 h-4 w-4" />
+              {showPhone ? (facility.phone ?? "Non renseigné") : "Contacter"}
+            </Button>
+            <Button
+              className="min-h-10 min-w-0 flex-1"
+              variant="outline"
+              onClick={() => setDemandOpen((v) => !v)}
+            >
+              <Search className="mr-1.5 h-4 w-4" />
+              Je cherche ce produit
+            </Button>
+          </div>
         </div>
       ) : (
         <p className="rounded-xl bg-secondary/55 px-3 py-2 text-center text-[11px] text-muted-foreground">

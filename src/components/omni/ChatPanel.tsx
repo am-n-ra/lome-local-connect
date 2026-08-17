@@ -53,6 +53,7 @@ export function ChatPanel({
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const transactionId = transactionContext?.transactionId ?? null;
 
   const refreshThreads = useCallback(async () => {
     if (!user) return;
@@ -85,12 +86,10 @@ export function ChatPanel({
     if (facilityId)
       setActive({
         facilityId,
-        ...(transactionContext?.transactionId
-          ? { transactionId: transactionContext.transactionId }
-          : {}),
+        ...(transactionId ? { transactionId } : {}),
         name: facilityName ?? "Conversation",
       });
-  }, [open, facilityId, facilityName, refreshThreads]);
+  }, [open, facilityId, facilityName, refreshThreads, transactionId]);
 
   useEffect(() => {
     if (!open || !active) return;

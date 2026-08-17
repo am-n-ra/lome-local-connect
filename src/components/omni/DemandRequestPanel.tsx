@@ -27,6 +27,12 @@ type Props = {
   mode?: "bulk" | "manual";
   facilityName?: string | null;
   initialQuantity?: number;
+  onTransactionCreated?: (context: {
+    transactionId: string;
+    facilityId: string;
+    facilityName: string;
+    amount: number;
+  }) => void;
 };
 
 /** Mode B — broadcast one need to the active filtered result set. */
@@ -39,6 +45,7 @@ export function DemandRequestPanel({
   mode = "bulk",
   facilityName,
   initialQuantity = 1,
+  onTransactionCreated,
 }: Props) {
   const navigate = useNavigate();
   const { formatMoney } = useMarket();
@@ -122,6 +129,12 @@ export function DemandRequestPanel({
           amount: answer.price ?? undefined,
           paymentMode: "cash",
         },
+      });
+      onTransactionCreated?.({
+        transactionId: result.transactionId,
+        facilityId: answer.facility_id,
+        facilityName: answer.facility_name,
+        amount: answer.price ?? 0,
       });
       toast.success(`Intention d'achat créée. Référence ${result.transactionId.slice(0, 8)}.`);
       await refresh();

@@ -94,7 +94,7 @@ export function OrdersPanel({
         await startCheckout({ data: { cartId: order.id } });
       }
       await refresh();
-      toast.success("Code de retrait généré. Montrez-le au commerçant.");
+      toast.success("QR transactionnel généré. Montrez-le au commerçant.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Génération impossible.");
     } finally {
