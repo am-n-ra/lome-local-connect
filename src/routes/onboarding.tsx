@@ -89,10 +89,7 @@ function OnboardingPage() {
           },
         }).catch(() => undefined);
     }
-    if (!loading && !user) {
-      void navigate({ to: "/auth", search: { redirectTo: target } });
-    }
-  }, [loading, navigate, target, user]);
+  }, [loading, recordEvent, target, user]);
 
   function finish() {
     if (typeof window !== "undefined") {
@@ -135,11 +132,43 @@ function OnboardingPage() {
     );
   }
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
         Préparation de votre espace…
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main className="grid min-h-[100dvh] place-items-center bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.25),transparent_35%),var(--color-background)] px-4 py-8">
+        <section className="omni-glass w-full max-w-lg space-y-5 p-6 text-center sm:p-8">
+          <BrandMark className="mx-auto h-12 w-12" />
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              Bienvenue dans Omni
+            </p>
+            <h1 className="mt-2 font-display text-3xl font-extrabold">
+              Créez votre compte pour accéder à Omni
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Commencez par créer votre compte, puis faites votre recherche. Nous restaurerons
+              automatiquement votre recherche initiale et vous montrerons comment comparer, vérifier
+              la disponibilité et acheter.
+            </p>
+          </div>
+          <Button
+            className="w-full"
+            onClick={() => void navigate({ to: "/auth", search: { redirectTo: target } })}
+          >
+            Créer mon compte et faire ma recherche <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Votre recherche reste attachée à cette session jusqu’à la fin de l’inscription.
+          </p>
+        </section>
+      </main>
     );
   }
 

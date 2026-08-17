@@ -6,23 +6,29 @@ import { query } from "./db.server";
 const eventName = z.enum([
   "onboarding_started",
   "onboarding_completed",
+  "search_authenticated",
   "search_submitted",
   "search_results_viewed",
   "facility_opened",
   "product_opened",
   "availability_requested",
   "availability_answered",
+  "purchase_intent_created",
   "chat_started",
   "message_sent",
   "qr_generated",
+  "qr_verified",
   "seller_verified",
   "payment_confirmed",
   "transaction_completed",
   "coupon_viewed",
   "coupon_applied",
+  "coupon_consumed",
   "ad_impression",
   "ad_clicked",
   "balance_deposit_confirmed",
+  "balance_deposit_approved",
+  "balance_deposit_failed",
   "pwa_installed",
 ]);
 
@@ -74,14 +80,20 @@ export type ProductFunnelSummary = {
 
 export const getProductFunnelSummary = createServerFn({ method: "GET" })
   .middleware([requireStaff])
-  .handler(async () =>
+  .inputValidator((input: unknown) =>
+    z
+      .object({ days: z.union([z.literal(7), z.literal(30), z.literal(90)]).default(30) })
+      .parse(input),
+  )
+  .handler(async ({ data }) =>
     query<ProductFunnelSummary>(
       `SELECT event_name, count(*)::int AS event_count,
               count(DISTINCT user_id)::int AS unique_users
        FROM public.product_events
-       WHERE created_at >= now() - interval '30 days'
+       WHERE created_at >= now() - ($1::int * interval '1 day')
        GROUP BY event_name
        ORDER BY event_count DESC, event_name ASC`,
+      [data.days],
     ),
   );
 

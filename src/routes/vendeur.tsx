@@ -555,9 +555,19 @@ function VendeurPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background">
+    <div className="relative min-h-[100dvh] overflow-hidden bg-background">
       <TopNav activeRole="vendeur" minimalMapChrome />
-      <main className="mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
+      <div className="absolute inset-0 z-0 pt-14" aria-label="Carte opérationnelle vendeur">
+        <MapCanvas
+          facilities={data?.facilities.map((item) => ({ ...item, owner_id: user.id })) ?? []}
+          selectedId={facility.id}
+          focus={{ lat: facility.latitude, lng: facility.longitude }}
+          onMapClick={(c) => void updatePosition(c)}
+          className="h-full w-full"
+        />
+        <div className="pointer-events-none absolute inset-0 bg-background/18" />
+      </div>
+      <main className="relative z-10 mx-auto max-w-7xl px-3 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 sm:px-5 sm:pt-6">
         <section className="omni-glass rounded-[1.6rem] p-4 shadow-[var(--shadow-soft)] sm:p-5">
           <div className="flex flex-wrap items-start gap-3">
             <div className="min-w-0 flex-1">
@@ -724,53 +734,35 @@ function VendeurPage() {
           </TabsContent>
 
           <TabsContent value="apercu" className="mt-5 space-y-4">
-            <div className="omni-card overflow-hidden p-0">
-              <div className="grid gap-0 lg:grid-cols-[1.4fr_0.9fr]">
-                <div className="h-80 min-h-80 lg:h-[460px]">
-                  <MapCanvas
-                    facilities={data?.facilities.map((f) => ({ ...f, owner_id: user.id })) ?? []}
-                    selectedId={facility.id}
-                    focus={{ lat: facility.latitude, lng: facility.longitude }}
-                    onMapClick={(c) => void updatePosition(c)}
-                    className="h-full w-full"
-                  />
+            <div className="pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] border border-border/70 bg-card/92 p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+                  Surface seller map-first
+                </p>
+                <h2 className="mt-1 font-display text-2xl font-bold">
+                  Vos opérations autour de cette facility
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  La carte reste visible en permanence. Utilisez les onglets ci-dessous pour agir
+                  sans perdre votre contexte géospatial.
+                </p>
+              </div>
+              <div className="mt-4 rounded-2xl border border-border/70 bg-background/55 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-semibold">{facility.name}</p>
+                  <Badge variant={facility.is_online ? "default" : "secondary"}>
+                    {facility.is_online ? "En ligne" : "Hors ligne"}
+                  </Badge>
+                  {facility.emergency_shutdown && (
+                    <Badge variant="destructive">Arrêt urgence</Badge>
+                  )}
+                  <Badge variant="secondary">
+                    {STATUS_LABEL[facility.status] ?? facility.status}
+                  </Badge>
                 </div>
-                <div className="space-y-4 p-5">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Tableau de bord carte
-                    </p>
-                    <h2 className="mt-1 font-display text-2xl font-bold">
-                      Vos facilities en exploitation
-                    </h2>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      La carte vendeur montre uniquement vos facilities et reprend le rendu
-                      opérationnel vu par les acheteurs.
-                    </p>
-                  </div>
-                  <div className="rounded-2xl border border-border p-4">
-                    <p className="font-semibold">Aperçu acheteur</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {facility.name} ·{" "}
-                      {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}
-                    </p>
-                    <p className="mt-2 text-sm">
-                      {facility.description ??
-                        "Ajoutez une description pour améliorer la confiance."}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Badge variant={facility.is_online ? "default" : "secondary"}>
-                        {facility.is_online ? "En ligne" : "Hors ligne"}
-                      </Badge>
-                      {facility.emergency_shutdown && (
-                        <Badge variant="destructive">Arrêt urgence</Badge>
-                      )}
-                      <Badge variant="secondary">
-                        {STATUS_LABEL[facility.status] ?? facility.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {facility.address ?? facility.neighbourhood ?? "Adresse à compléter"}
+                </p>
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

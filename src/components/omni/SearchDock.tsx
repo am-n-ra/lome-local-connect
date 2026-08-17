@@ -203,7 +203,7 @@ export function SearchDock({
       data-omni-dock="true"
       data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
 
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.85rem)] sm:px-5"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+1.15rem)] sm:px-5"
     >
       <div className="pointer-events-auto w-full max-w-4xl space-y-2.5">
         <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/55">
@@ -249,7 +249,7 @@ export function SearchDock({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitQuantity();
                   }}
-                  className="h-9 min-w-0 flex-1 bg-background/70 text-center text-sm font-bold"
+                  className="h-9 min-w-0 flex-1 bg-background/70 text-center text-base font-bold sm:text-sm"
                   aria-label="Quantité souhaitée"
                 />
                 <button
@@ -294,7 +294,7 @@ export function SearchDock({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitBudget();
                   }}
-                  className="h-9 min-w-0 flex-1 bg-background/70 text-sm font-bold"
+                  className="h-9 min-w-0 flex-1 bg-background/70 text-base font-bold sm:text-sm"
                   aria-label="Budget maximum"
                 />
                 <span className="shrink-0 text-xs text-muted-foreground">

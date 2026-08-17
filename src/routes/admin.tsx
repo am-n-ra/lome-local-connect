@@ -60,6 +60,7 @@ function AdminPage() {
 
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [funnel, setFunnel] = useState<ProductFunnelSummary[]>([]);
+  const [funnelDays, setFunnelDays] = useState<7 | 30 | 90>(30);
   const [rows, setRows] = useState<AdminFacilityRow[]>([]);
   const [hoods, setHoods] = useState<{ neighbourhood: string; count: number }[]>([]);
   const [search, setSearch] = useState("");
@@ -92,7 +93,7 @@ function AdminPage() {
             contacted,
           },
         }),
-        fetchFunnel(),
+        fetchFunnel({ data: { days: funnelDays } }),
       ]);
       setStats(s);
       setRows(list);
@@ -101,7 +102,7 @@ function AdminPage() {
     } catch {
       setDenied(true);
     }
-  }, [fetchStats, fetchRows, fetchFunnel, search, status, category, hood, contacted]);
+  }, [fetchStats, fetchRows, fetchFunnel, funnelDays, search, status, category, hood, contacted]);
 
   useEffect(() => {
     if (!user || !isStaff) return;
@@ -222,11 +223,31 @@ function AdminPage() {
         )}
 
         <section className="omni-card space-y-3 p-4">
-          <div>
-            <h2 className="font-display text-lg font-bold">Funnel produit — 30 derniers jours</h2>
-            <p className="text-xs text-muted-foreground">
-              Données minimisées, réservées à l’équipe staff.
-            </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-bold">
+                Funnel produit — {funnelDays} derniers jours
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Volume, utilisateurs pseudonymisés uniques et métriques consenties ; aucun contenu
+                de chat ni coordonnée précise.
+              </p>
+            </div>
+            <div
+              className="flex gap-1 rounded-full bg-secondary/60 p-1"
+              aria-label="Fenêtre analytics"
+            >
+              {[7, 30, 90].map((days) => (
+                <button
+                  key={days}
+                  type="button"
+                  onClick={() => setFunnelDays(days as 7 | 30 | 90)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold ${funnelDays === days ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                >
+                  {days} j
+                </button>
+              ))}
+            </div>
           </div>
           {funnel.length === 0 ? (
             <p className="text-sm text-muted-foreground">

@@ -4,8 +4,8 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-16 (patched 2026-08-16 — see §0.5/§0.6)  
-> **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md` et les décisions UI/UX confirmées.  
+> **Version canonique :** 2026-08-16 (patched 2026-08-16 — see §0.5/§0.6)
+> **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md` et les décisions UI/UX confirmées.
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
 > **Patch note :** duplicate section numbers (old §151, old §168, old §167 addendum) resolved — see renumbered §169–§172. New §0.5 (V1 Scope Gate) and §0.6 (Manual Operations Layer) added as the build contract; read these two sections before implementing anything else in this document.
 
@@ -83,34 +83,34 @@ If a user can do this, once, reliably, for a real product, in Lomé — V1 works
 
 Status legend: **V1** = build now, production quality. **V1-Manual** = the capability exists for the user, but is powered by a human (you or your ops team) behind the scenes, not by automation. **Deferred** = not built. The section number still describes the correct end-state; it is simply not in scope yet.
 
-| Area | Sections | Status | Note |
-|---|---|---|---|
-| Map (Mercator/static, single pin, zoom/pan/recenter) | §5, §16, §87 (basic only) | **V1** | No globe projection, no staged geographic reveal, no clustering engine. One city, one zoom range. |
-| Globe projection, staged reveal choreography, accuracy-banded geolocation | §16–17, §170, §171, §172 | **Deferred** | Excellent spec, wrong phase. Revisit once V1 loop is proven and you're funding multi-market expansion. |
-| Search (text, structured quantity/budget) | §12 (text only), §13, §14 (keyword+basic semantic) | **V1** | No voice, image, or video search yet. |
-| Search by image/video, visual embeddings | §11, §37 (visual pipeline) | **Deferred** | |
-| Facility object + states (Unclaimed → Claimed → Certified → Confirmed) | §4, §5, §17 (this doc) | **V1** | States must exist in the data model even though certification is done by hand. |
-| Facility auto-discovery via OSM/Overpass | §20–22, §172 (backfill) | **Deferred** | You don't have enough facility density yet to need automated backfill; your field agents are the discovery mechanism. Revisit once agent-driven onboarding saturates and you need to fill gaps. |
-| Content indexing (articles/video/social) | §7–10, §139–143 | **Deferred** | |
-| Availability (manual, single-facility) | §37, §38 | **V1-Manual** | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6. |
-| Bulk availability, seller Auto/Semi-Auto modes | §39–41, §51 | **Deferred** | Do this by hand 20–50 times (per your own stated plan) before automating. |
-| Purchase Intent, QR, transaction chat, transaction data model | §56–60, §158 (transaction layer, per addendum §15–16) | **V1** | Core commercial proof. Payment can be external/manual; the record must be real. |
-| Coupons, promotions | §61–62 | **V1 (basic)** | Percentage/fixed discount only. No buy-X-get-Y, no automated coupon engine. |
-| Seller Free/Pro plan limits (1 facility/5 products vs. unlimited) | §23–24, §42–43 | **V1** | Plan enforcement is a monetization signal you're already testing — keep it. |
-| Buyer/Seller AI Agent, natural-language intent, automation modes | §28–36, §44–50 | **Deferred** | This is the automation of what §0.6 documents as manual today. Do not build the agent before the manual version has run enough volume to know what to automate. |
-| Bulk import, AI schema matching | §25–27 | **Deferred** | |
-| Digital products/subscriptions | §63–64 | **Deferred** | |
-| Wallet, credits, ad credit, advertising system | §112–113, §123–125 (per this doc's numbering context) | **Deferred** | |
-| Offline mode, offline sync | §53–55, §108 | **Deferred** | |
-| Mobile-native (GPS, camera, QR scan, voice) | §49–52, §84–86, §94–98 | **Deferred — mobile V1 planned for Oct 1, web V1 first** | |
-| Notifications (basic transactional only) | §99, §161 | **V1 (basic)** | Availability response, order status, QR. No promotional/ad notifications yet. |
-| Admin/verification queue, fraud system | §110–112, §122, §125–127 | **V1-Manual** | You are the admin queue right now. Formal tooling deferred. |
-| Global AI kill switch | §22 (per addendum) | **N/A until an Agent exists** | Trivially true today since there is no automation to switch off. Build the toggle when §28–50 is built, not before. |
+| Area                                                                      | Sections                                              | Status                                                   | Note                                                                                                                                                                                            |
+| ------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Map (Mercator/static, single pin, zoom/pan/recenter)                      | §5, §16, §87 (basic only)                             | **V1**                                                   | No globe projection, no staged geographic reveal, no clustering engine. One city, one zoom range.                                                                                               |
+| Globe projection, staged reveal choreography, accuracy-banded geolocation | §16–17, §170, §171, §172                              | **Deferred**                                             | Excellent spec, wrong phase. Revisit once V1 loop is proven and you're funding multi-market expansion.                                                                                          |
+| Search (text, structured quantity/budget)                                 | §12 (text only), §13, §14 (keyword+basic semantic)    | **V1**                                                   | No voice, image, or video search yet.                                                                                                                                                           |
+| Search by image/video, visual embeddings                                  | §11, §37 (visual pipeline)                            | **Deferred**                                             |                                                                                                                                                                                                 |
+| Facility object + states (Unclaimed → Claimed → Certified → Confirmed)    | §4, §5, §17 (this doc)                                | **V1**                                                   | States must exist in the data model even though certification is done by hand.                                                                                                                  |
+| Facility auto-discovery via OSM/Overpass                                  | §20–22, §172 (backfill)                               | **Deferred**                                             | You don't have enough facility density yet to need automated backfill; your field agents are the discovery mechanism. Revisit once agent-driven onboarding saturates and you need to fill gaps. |
+| Content indexing (articles/video/social)                                  | §7–10, §139–143                                       | **Deferred**                                             |                                                                                                                                                                                                 |
+| Availability (manual, single-facility)                                    | §37, §38                                              | **V1-Manual**                                            | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6.                                            |
+| Bulk availability, seller Auto/Semi-Auto modes                            | §39–41, §51                                           | **Deferred**                                             | Do this by hand 20–50 times (per your own stated plan) before automating.                                                                                                                       |
+| Purchase Intent, QR, transaction chat, transaction data model             | §56–60, §158 (transaction layer, per addendum §15–16) | **V1**                                                   | Core commercial proof. Payment can be external/manual; the record must be real.                                                                                                                 |
+| Coupons, promotions                                                       | §61–62                                                | **V1 (basic)**                                           | Percentage/fixed discount only. No buy-X-get-Y, no automated coupon engine.                                                                                                                     |
+| Seller Free/Pro plan limits (1 facility/5 products vs. unlimited)         | §23–24, §42–43                                        | **V1**                                                   | Plan enforcement is a monetization signal you're already testing — keep it.                                                                                                                     |
+| Buyer/Seller AI Agent, natural-language intent, automation modes          | §28–36, §44–50                                        | **Deferred**                                             | This is the automation of what §0.6 documents as manual today. Do not build the agent before the manual version has run enough volume to know what to automate.                                 |
+| Bulk import, AI schema matching                                           | §25–27                                                | **Deferred**                                             |                                                                                                                                                                                                 |
+| Digital products/subscriptions                                            | §63–64                                                | **Deferred**                                             |                                                                                                                                                                                                 |
+| Wallet, credits, ad credit, advertising system                            | §112–113, §123–125 (per this doc's numbering context) | **Deferred**                                             |                                                                                                                                                                                                 |
+| Offline mode, offline sync                                                | §53–55, §108                                          | **Deferred**                                             |                                                                                                                                                                                                 |
+| Mobile-native (GPS, camera, QR scan, voice)                               | §49–52, §84–86, §94–98                                | **Deferred — mobile V1 planned for Oct 1, web V1 first** |                                                                                                                                                                                                 |
+| Notifications (basic transactional only)                                  | §99, §161                                             | **V1 (basic)**                                           | Availability response, order status, QR. No promotional/ad notifications yet.                                                                                                                   |
+| Admin/verification queue, fraud system                                    | §110–112, §122, §125–127                              | **V1-Manual**                                            | You are the admin queue right now. Formal tooling deferred.                                                                                                                                     |
+| Global AI kill switch                                                     | §22 (per addendum)                                    | **N/A until an Agent exists**                            | Trivially true today since there is no automation to switch off. Build the toggle when §28–50 is built, not before.                                                                             |
 
 ## 0.5.4 What this means in practice
 
 - If a section elsewhere in this document says "must," "AI must," or gives a Core Acceptance Test (§153–166) for something marked **Deferred** above — that test is not part of the V1 gate. It becomes relevant when that section's status changes.
-- Every **V1-Manual** row must still have the correct *data model* underneath it (the states, the object shapes) even though a human is producing the output. This is what lets automation replace the human later without a schema rewrite. Build the skeleton; fake the muscle.
+- Every **V1-Manual** row must still have the correct _data model_ underneath it (the states, the object shapes) even though a human is producing the output. This is what lets automation replace the human later without a schema rewrite. Build the skeleton; fake the muscle.
 - Re-evaluate this table when: (a) the V1 loop has run enough real transactions to show where the manual bottleneck actually is, or (b) a funding milestone (HERLOG, YC, seed) changes what needs to be true. Update the table, don't silently drift from it.
 
 ---
@@ -121,11 +121,11 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 
 ## 0.6.1 Principle
 
-Per the document's own rule — *"Tout ce que l'Agent peut faire doit déjà exister comme action manuelle dans Omni"* — the manual layer is not a stopgap to be embarrassed about. It is the design research for the agent. Every manual step performed here should be logged with enough detail that a future automation pass can read this section and know exactly what tool the agent needs.
+Per the document's own rule — _"Tout ce que l'Agent peut faire doit déjà exister comme action manuelle dans Omni"_ — the manual layer is not a stopgap to be embarrassed about. It is the design research for the agent. Every manual step performed here should be logged with enough detail that a future automation pass can read this section and know exactly what tool the agent needs.
 
 ## 0.6.2 Seller onboarding (manual implementation of §81, §104, §106)
 
-Performed by field agents. A field agent visits or contacts a business, collects: name, category, location (GPS pin or address), contact info, and initial product list (photographed or manually noted). This is entered into Omni on the business's behalf. No self-serve seller onboarding flow is required for V1 — the field agent *is* the onboarding flow.
+Performed by field agents. A field agent visits or contacts a business, collects: name, category, location (GPS pin or address), contact info, and initial product list (photographed or manually noted). This is entered into Omni on the business's behalf. No self-serve seller onboarding flow is required for V1 — the field agent _is_ the onboarding flow.
 
 ## 0.6.3 Facility certification (manual implementation of §5.5, §110–112)
 
@@ -4654,7 +4654,6 @@ The native geolocation prompt is permission-state aware. On landing, Omni querie
 
 Acceptance for this first-page contract covers idle, location-pending, location-fallback, active search, no-results request, search results, facility selection, availability, and navigation states at desktop, tablet, and narrow mobile widths. It also requires controlled callback tests for a precise coordinate, a low-accuracy coordinate at the market center, and a denied callback. Every state must preserve visible focus, safe-area spacing, non-overlapping controls, real MapLibre projection, truthful location semantics, source-backed facilities, and no decorative map substitute.
 
-
 ---
 
 # 0.7 CURRENT PLATFORM EXPANSION CONTRACT — 2026-08-17
@@ -4728,3 +4727,51 @@ Le bulk availability est une capacité du plan buyer Pro. Le serveur autorise le
 Le menu hamburger V1 ne montre que les actions réellement branchées. Les placeholders non interactifs de profil, paramètres, solde, plan et crédits et transactions ne doivent pas apparaître dans la navigation principale. Le seller workspace est facility-first : Facility, Produits, Demandes reçues, Scanner QR, Coupons et Publicité V1 constituent les surfaces principales.
 
 La création d’un produit seller peut créer simultanément un coupon produit. Le checkout vérifie l’offre assignée au buyer, calcule la remise, l’attache à la transaction et enregistre une redemption et un événement `consumed`. Une absence d’offre reste affichée honnêtement ; aucun code fictif ne doit être généré côté client.
+
+# ANNEXE NORMATIVE V1 — CERTIFICATION MOBILE, SELLER MAP-FIRST ET DATA COMPANY
+
+## A. Seller workspace map-first obligatoire
+
+Le dashboard seller ne doit jamais remplacer la carte par une page de gestion opaque. La carte opérationnelle des facilities du vendeur est montée en arrière-plan de la route `/vendeur`, sous le chrome minimal et les surfaces d’action. La facility active est sélectionnée par pin, liste ou sélecteur de facility ; les opérations apparaissent dans des panneaux flottants ou des feuilles basses au-dessus de cette carte.
+
+Sur desktop, la surface utilise un rail ou un panneau flottant latéral. Sur tablette, elle utilise une feuille inférieure redimensionnable. Sur mobile, elle utilise une feuille basse à hauteur limitée, avec la carte visible autour et derrière le panneau. Les actions V1 sont ordonnées ainsi : état de la facility, demandes reçues, catalogue et coupon, scanner QR, solde/recharge, puis publicité V1. Les paramètres secondaires et analytics avancées ne doivent pas prendre la place du contexte opérationnel.
+
+Le menu seller ne doit exposer que les routes fonctionnelles. Les entrées sans implémentation ne sont pas affichées comme si elles étaient disponibles.
+
+## B. Machine transactionnelle buyer V1
+
+Après `Je veux acheter`, Omni crée l’intention avec sa quantité, son montant, son offre et son coupon personnalisé éventuel. **Le QR transactionnel est généré immédiatement dans la même création d’intention**, avec expiration et événement de timeline `qr_generated`. Le buyer peut ensuite voir le QR et la timeline ; le vendeur le vérifie avec la caméra ou le code manuel.
+
+Le chat transactionnel, le contact vendeur et les actions de suivi ne sont disponibles que dans le contexte de cette transaction et ne peuvent lire ou écrire qu’avec un `transaction_id` autorisé. Le coupon est validé au serveur, attaché à la transaction, consommé de façon idempotente et reflété dans le montant avant/après remise. Les états au minimum supportés sont `qr_generated`, `qr_verified`, `payment_pending`, `paid`, `fulfillment` et `completed`, ainsi que les chemins d’échec `expired`, `declined` et `cancelled`.
+
+## C. Scanner QR caméra prêt à scanner
+
+L’ouverture de l’interface scanner affiche immédiatement une surface `Prêt à scanner`, une zone caméra, un cadre de cadrage, le bouton `Autoriser et démarrer la caméra`, l’état de permission et le fallback `Saisir le code`. La permission navigateur ne doit être demandée qu’à une action utilisateur explicite. Si elle est refusée, si la caméra est indisponible ou si `BarcodeDetector` n’est pas disponible, l’utilisateur reçoit une explication actionnable et peut continuer manuellement.
+
+La caméra arrière est préférée, les tracks sont arrêtés à la fermeture, au changement de visibilité, après détection ou en cas d’erreur, et aucun contenu privé ne doit être révélé par une erreur de décodage.
+
+## D. Soldes et FedaPay
+
+Les soldes sont des écritures ledger idempotentes, jamais seulement des nombres affichés. Les buckets V1 sont `wallet`, `payout`, `ad_credit`, `coupon_credit` et `pro_credit`, avec propriétaire buyer, seller ou facility, devise, disponible, réservé et historique. Une recharge FedaPay n’est considérée approuvée qu’après statut provider approuvé, callback ou réconciliation vérifiée, protection idempotente et écriture ledger correspondante.
+
+Le seller peut utiliser `wallet` pour les campagnes, `payout` pour les montants à reverser, `ad_credit` pour la publicité, `coupon_credit` pour les coupons sponsorisés et `pro_credit` pour les avantages Pro. Le buyer peut utiliser `wallet` pour une recharge ou des paiements Omni autorisés et `pro_credit` pour le bulk availability et les capacités Pro. Aucun débit n’est validé si l’écriture de ledger et la référence métier correspondante ne sont pas présentes.
+
+## E. Dictionnaire data company V1
+
+Le dashboard admin agrège, par défaut sur les 30 derniers jours avec options 7 et 90 jours, les événements suivants : `search_submitted`, `search_authenticated`, `onboarding_started`, `onboarding_completed`, `search_results_viewed`, `facility_opened`, `product_opened`, `availability_requested`, `availability_answered`, `chat_started`, `message_sent`, `purchase_intent_created`, `qr_generated`, `qr_verified`, `payment_confirmed`, `transaction_completed`, `coupon_viewed`, `coupon_applied`, `coupon_consumed`, `ad_impression`, `ad_clicked`, `balance_deposit_approved`, `balance_deposit_failed` et `pwa_installed`.
+
+Pour chaque événement, le dashboard affiche le volume, les utilisateurs pseudonymisés uniques, la période et une définition. Les agrégats ne contiennent pas le contenu du chat, les secrets de paiement, les coordonnées exactes ni une localisation précise. Les événements pré-authentification utilisent uniquement un identifiant de session pseudonymisé et ne sont persistés dans les agrégats produit qu’après consentement applicable. Tout consentement doit être révocable et associé à une version de politique.
+
+## F. Règles mobile transverses
+
+Les champs de saisie mobiles utilisent une taille de texte d’au moins 16 px au moment du focus afin d’éviter le zoom automatique des navigateurs, sans supprimer la capacité utilisateur de zoomer. Le dock doit respecter `100dvh` et les safe areas sans pousser la carte hors écran. Le chevron des paramètres doit rester séparé des contrôles de recentrage et ne doit jamais les recouvrir. Les résultats sélectionnés doivent être réversibles : fermer une fiche restaure la recherche, la liste et la position de carte.
+
+## G. Onboarding d’accès
+
+Un visiteur non authentifié doit voir explicitement : `Créez votre compte pour accéder à Omni`, puis `Créez votre compte et faites votre recherche`. La requête initiale est conservée pendant l’inscription. Après authentification, l’onboarding explique rechercher, comparer, vérifier la disponibilité, acheter, utiliser le QR et parler dans le chat transactionnel avant de restaurer la recherche.
+
+Cette annexe complète et prévaut sur les anciens documents lorsqu’ils décrivent une navigation seller en onglets opaques, un QR créé avant ou après un état non conforme à la section B, un solde décoratif ou des métriques non gouvernées.
+
+## H. Critères de certification
+
+La V1 est conforme lorsque la carte reste visible sur buyer et seller, l’interface QR est prête à scanner dès son ouverture, l’autorisation caméra et le fallback manuel sont explicites, l’intention génère le QR immédiatement, le chat est strictement transactionnel, les coupons sont atomiques, le seller est map-first, les soldes et recharges sont vérifiés par ledger/FedaPay, l’onboarding restaure la recherche, et chaque métrique admin dispose d’une définition, d’un consentement et d’une politique de minimisation.

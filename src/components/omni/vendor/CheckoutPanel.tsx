@@ -163,7 +163,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
             ) : (
               <Camera className="mr-2 h-4 w-4" />
             )}
-            {scanning ? "Arrêter caméra" : "Scanner caméra"}
+            {scanning ? "Arrêter caméra" : "Autoriser et démarrer la caméra"}
           </Button>
           <Input
             value={code}
@@ -180,21 +180,36 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
             {busy ? "Validation…" : "Valider"}
           </Button>
         </div>
-        {scanning && (
-          <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-black">
-            <video
-              ref={videoRef}
-              muted
-              playsInline
-              className="aspect-[4/3] w-full object-cover"
-              aria-label="Aperçu caméra QR"
-            />
-            <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
-            <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
-              Cadrez le QR de retrait
-            </p>
-          </div>
-        )}
+        <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-black">
+          {scanning ? (
+            <>
+              <video
+                ref={videoRef}
+                muted
+                playsInline
+                className="aspect-[4/3] w-full object-cover"
+                aria-label="Aperçu caméra QR"
+              />
+              <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
+              <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
+                Caméra active · Cadrez le QR de retrait
+              </p>
+            </>
+          ) : (
+            <div className="flex aspect-[4/3] flex-col items-center justify-center gap-3 bg-slate-950 px-6 text-center text-white">
+              <Camera className="h-9 w-9 text-primary" />
+              <div>
+                <p className="font-semibold">Prêt à scanner</p>
+                <p className="mt-1 text-xs text-white/70">
+                  Appuyez sur « Autoriser et démarrer la caméra », puis cadrez le QR du client.
+                </p>
+              </div>
+              <p className="text-[11px] text-white/60">
+                Si la caméra est refusée ou indisponible, saisissez le code manuellement ci-dessus.
+              </p>
+            </div>
+          )}
+        </div>
         {cameraError && <p className="text-xs text-muted-foreground">{cameraError}</p>}
       </div>
 

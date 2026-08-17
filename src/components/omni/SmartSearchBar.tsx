@@ -277,7 +277,7 @@ export function SmartSearchBar({
             }}
             placeholder={placeholder ?? "Que cherchez-vous ?"}
             aria-label="Rechercher un produit"
-            className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+            className="min-w-0 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground sm:text-sm"
           />
         )}
 
@@ -323,7 +323,7 @@ export function SmartSearchBar({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder ?? "Que cherchez-vous ?"}
-        className="pl-9 pr-20"
+        className="pl-9 pr-20 text-base sm:text-sm"
         aria-label="Rechercher un produit"
       />
 

@@ -368,12 +368,13 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
 
     const feePercent = await feePercentFor(facilityId);
     const platformFee = Math.round((amount * feePercent) / 100);
-    const txn = await queryOne<{ id: string }>(
+    const qrCode = newCode();
+    const txn = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
-          fee_percent, payment_mode, status, intent_created_at, intent_metadata)
-       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'pending',now(),$9::jsonb)
-       RETURNING id`,
+          fee_percent, payment_mode, status, qr_token, qr_expires_at, intent_created_at, intent_metadata)
+       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'qr_generated',$10,now() + interval '2 hours',now(),$9::jsonb)
+       RETURNING id, qr_token, qr_expires_at`,
       [
         facilityId,
         context.userId,
@@ -384,9 +385,17 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         feePercent,
         data.paymentMode,
         JSON.stringify(metadata),
+        qrCode,
       ],
     );
     await recordTransactionEvent(txn!.id, "intent_created", context.userId, metadata);
+    await recordTransactionEvent(txn!.id, "offer_confirmed", context.userId, {
+      amount,
+      payment_mode: data.paymentMode,
+    });
+    await recordTransactionEvent(txn!.id, "qr_generated", context.userId, {
+      expires_at: txn!.qr_expires_at,
+    });
 
     if (appliedCoupon) {
       await query(
@@ -430,7 +439,13 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         ],
       );
     }
-    return { transactionId: txn!.id, amount, status: "pending" };
+    return {
+      transactionId: txn!.id,
+      amount,
+      status: "qr_generated",
+      code: txn!.qr_token,
+      expiresAt: txn!.qr_expires_at,
+    };
   });
 
 /**
