@@ -162,6 +162,30 @@ function VendeurPage() {
   const confirmDeposit = useServerFn(confirmWalletDeposit);
   const createDeposit = useServerFn(createWalletDeposit);
 
+  const reloadSurface = useCallback(
+    async (facilityId: string, surface: "products" | "requests" | "coupons" | "campaigns") => {
+      surfaceCache.current.delete(facilityId);
+      if (surface === "products") {
+        const products = await loadProducts({ data: { facilityId } });
+        surfaceCache.current.set(facilityId, { products });
+        setData((current) => (current ? { ...current, products } : current));
+      } else if (surface === "requests") {
+        const requests = await loadRequests({ data: { facilityId } });
+        surfaceCache.current.set(facilityId, { requests });
+        setData((current) => (current ? { ...current, requests } : current));
+      } else if (surface === "coupons") {
+        const coupons = await loadCoupons({ data: { facilityId } });
+        surfaceCache.current.set(facilityId, { coupons });
+        setData((current) => (current ? { ...current, coupons } : current));
+      } else {
+        const campaigns = await loadCampaigns({ data: { facilityId } });
+        surfaceCache.current.set(facilityId, { campaigns });
+        setData((current) => (current ? { ...current, campaigns } : current));
+      }
+    },
+    [loadCampaigns, loadCoupons, loadProducts, loadRequests],
+  );
+
   const refresh = useCallback(async () => {
     try {
       const shell = await loadShell();
@@ -324,8 +348,7 @@ function VendeurPage() {
             : null,
         },
       });
-      invalidateSurfaceCache(facility.id);
-      await refresh();
+      await reloadSurface(facility.id, "products");
       setPName("");
       setPPrice("");
       setPPhoto("");
@@ -358,8 +381,7 @@ function VendeurPage() {
           photoUrl: product.photo_url,
         },
       });
-      invalidateSurfaceCache(facility.id);
-      await refresh();
+      await reloadSurface(facility.id, "products");
     } catch {
       toast.error("Mise à jour impossible.");
     }
@@ -382,8 +404,7 @@ function VendeurPage() {
           photoUrl: product.photo_url,
         },
       });
-      invalidateSurfaceCache(facility.id);
-      await refresh();
+      await reloadSurface(facility.id, "products");
       toast.success("Disponibilité confirmée.");
     } catch {
       toast.error("Confirmation impossible.");
@@ -394,8 +415,7 @@ function VendeurPage() {
     if (!facility) return;
     try {
       await removeProductFn({ data: { facilityId: facility.id, productId: product.id } });
-      invalidateSurfaceCache(facility.id);
-      await refresh();
+      await reloadSurface(facility.id, "products");
     } catch {
       toast.error("Suppression impossible.");
     }
@@ -405,8 +425,7 @@ function VendeurPage() {
     if (!facility) return;
     try {
       await confirmAll({ data: { facilityId: facility.id } });
-      invalidateSurfaceCache(facility.id);
-      await refresh();
+      await reloadSurface(facility.id, "products");
       toast.success("Tout le catalogue a été confirmé.");
     } catch {
       toast.error("Confirmation impossible.");
@@ -454,19 +473,16 @@ function VendeurPage() {
   }
 
   const refreshRequests = useCallback(async () => {
-    if (facility) invalidateSurfaceCache(facility.id);
-    await refresh();
-  }, [facility?.id, refresh]);
+    if (facility) await reloadSurface(facility.id, "requests");
+  }, [facility?.id, reloadSurface]);
 
   const refreshCoupons = useCallback(async () => {
-    if (facility) invalidateSurfaceCache(facility.id);
-    await refresh();
-  }, [facility?.id, refresh]);
+    if (facility) await reloadSurface(facility.id, "coupons");
+  }, [facility?.id, reloadSurface]);
 
   const refreshCampaigns = useCallback(async () => {
-    if (facility) invalidateSurfaceCache(facility.id);
-    await refresh();
-  }, [facility?.id, refresh]);
+    if (facility) await reloadSurface(facility.id, "campaigns");
+  }, [facility?.id, reloadSurface]);
 
   const updatePosition = useCallback(
     async (coords: { lat: number; lng: number }) => {
