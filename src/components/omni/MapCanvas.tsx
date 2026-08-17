@@ -462,6 +462,46 @@ function renderedFacilityCount(map: MapInstance) {
   return ids.size;
 }
 
+export type ViewportSnapshot = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  zoom: number;
+};
+
+function clampViewportCoordinate(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function readViewportSnapshot(map: MapInstance): ViewportSnapshot | null {
+  const mapWithBounds = map as MapInstance & {
+    getBounds?: () => {
+      getWest: () => number;
+      getSouth: () => number;
+      getEast: () => number;
+      getNorth: () => number;
+    };
+  };
+  const bounds = mapWithBounds.getBounds?.();
+  const zoom = map.getZoom();
+  if (!bounds || !Number.isFinite(zoom)) return null;
+
+  const west = clampViewportCoordinate(bounds.getWest(), -180, 180);
+  const east = clampViewportCoordinate(bounds.getEast(), -180, 180);
+  const rawSouth = clampViewportCoordinate(bounds.getSouth(), -85, 85);
+  const rawNorth = clampViewportCoordinate(bounds.getNorth(), -85, 85);
+  if (![west, east, rawSouth, rawNorth].every(Number.isFinite)) return null;
+
+  return {
+    west,
+    south: Math.min(rawSouth, rawNorth),
+    east,
+    north: Math.max(rawSouth, rawNorth),
+    zoom: clampViewportCoordinate(zoom, 0, 24),
+  };
+}
+
 function debugMapEvent(map: MapInstance, event: string, details: Record<string, unknown> = {}) {
   if (!import.meta.env.DEV) return;
   console.debug("[OmniMap]", event, {
@@ -649,28 +689,25 @@ export function MapCanvas({
     };
 
     let viewportTimer: number | null = null;
-    const emitViewport = () => {
+    let initialViewportTimer: number | null = null;
+    const emitViewport = (reason = "event") => {
       if (viewportTimer != null) window.clearTimeout(viewportTimer);
       viewportTimer = window.setTimeout(() => {
-        const mapWithBounds = map as MapInstance & {
-          getBounds?: () => {
-            getWest: () => number;
-            getSouth: () => number;
-            getEast: () => number;
-            getNorth: () => number;
-          };
-        };
-        const bounds = mapWithBounds.getBounds?.();
-        if (!bounds) return;
-        viewportChangeRef.current?.({
-          west: bounds.getWest(),
-          south: bounds.getSouth(),
-          east: bounds.getEast(),
-          north: bounds.getNorth(),
-          zoom: map.getZoom(),
-        });
+        const viewport = readViewportSnapshot(map);
+        if (!viewport) {
+          debugMapEvent(map, "viewport-unavailable", { reason });
+          return;
+        }
+        debugMapEvent(map, "viewport-ready", { reason, viewport });
+        viewportChangeRef.current?.(viewport);
       }, 180);
     };
+    const emitInitialViewport = () => {
+      emitViewport("initial-ready");
+      if (initialViewportTimer != null) window.clearTimeout(initialViewportTimer);
+      initialViewportTimer = window.setTimeout(() => emitViewport("initial-fallback"), 900);
+    };
+    const handleMoveEnd = () => emitViewport("moveend");
 
     const pauseForInteraction = () => {
       stopRotation();
@@ -731,11 +768,12 @@ export function MapCanvas({
       cameraModeRef.current = "resting_globe";
       setMapStatus("ready");
       scheduleIdleRotation(600);
-      emitViewport();
+      emitInitialViewport();
     };
 
     map.on("load", applyLoadedStyle);
     map.on("style.load", applyLoadedStyle);
+    map.once("idle", () => emitViewport("idle"));
     map.on("error", () => {
       debugMapEvent(map, "style-error", { styleReady: styleReadyRef.current });
       if (!styleReadyRef.current) setMapStatus("error");
@@ -770,7 +808,7 @@ export function MapCanvas({
 
     map.on("zoom", refreshLivingBoundary);
     map.on("moveend", refreshLivingBoundary);
-    map.on("moveend", emitViewport);
+    map.on("moveend", handleMoveEnd);
     map.on("dragstart", pauseForInteraction);
     map.on("zoomstart", pauseForInteraction);
     map.on("rotatestart", pauseForInteraction);
@@ -833,10 +871,11 @@ export function MapCanvas({
       if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
       if (styleRecoveryTimerRef.current != null) window.clearTimeout(styleRecoveryTimerRef.current);
       if (viewportTimer != null) window.clearTimeout(viewportTimer);
+      if (initialViewportTimer != null) window.clearTimeout(initialViewportTimer);
       const mapWithOff = map as MapInstance & {
         off?: (event: string, listener: () => void) => void;
       };
-      mapWithOff.off?.("moveend", emitViewport);
+      mapWithOff.off?.("moveend", handleMoveEnd);
       approximateMarkerRef.current?.remove();
       approximateMarkerRef.current = null;
       userMarkerRef.current?.remove();
