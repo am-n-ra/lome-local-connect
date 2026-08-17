@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
@@ -40,6 +40,8 @@ import {
   createFacility as createFacilityFn,
   deleteProduct,
   getVendorDashboard,
+  getVendorProducts,
+  getVendorRequests,
   getVendorShell,
   updateFacility,
   updateMobilePosition,
@@ -130,8 +132,14 @@ function VendeurPage() {
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [surfaceLoading, setSurfaceLoading] = useState(false);
+  const surfaceCache = useRef(
+    new Map<string, { products?: VendorProduct[]; requests?: VendorRequest[] }>(),
+  );
 
   const loadDashboard = useServerFn(getVendorDashboard);
+  const loadProducts = useServerFn(getVendorProducts);
+  const loadRequests = useServerFn(getVendorRequests);
   const loadShell = useServerFn(getVendorShell);
   const createFacility = useServerFn(createFacilityFn);
   const saveProduct = useServerFn(upsertProduct);
@@ -455,6 +463,51 @@ function VendeurPage() {
     setHours(facility?.operating_hours ?? "");
   }, [facility?.id, facility?.operating_hours]);
 
+  useEffect(() => {
+    if (!facility || (activeTab !== "produits" && activeTab !== "demandes")) return;
+    const cached = surfaceCache.current.get(facility.id);
+    if (activeTab === "produits" && cached?.products) {
+      setData((current) => (current ? { ...current, products: cached.products! } : current));
+      return;
+    }
+    if (activeTab === "demandes" && cached?.requests) {
+      setData((current) => (current ? { ...current, requests: cached.requests! } : current));
+      return;
+    }
+    let cancelled = false;
+    setSurfaceLoading(true);
+    void (async () => {
+      try {
+        if (activeTab === "produits") {
+          const products = await loadProducts({ data: { facilityId: facility.id } });
+          if (!cancelled) {
+            surfaceCache.current.set(facility.id, {
+              ...surfaceCache.current.get(facility.id),
+              products,
+            });
+            setData((current) => (current ? { ...current, products } : current));
+          }
+        } else {
+          const requests = await loadRequests({ data: { facilityId: facility.id } });
+          if (!cancelled) {
+            surfaceCache.current.set(facility.id, {
+              ...surfaceCache.current.get(facility.id),
+              requests,
+            });
+            setData((current) => (current ? { ...current, requests } : current));
+          }
+        }
+      } catch {
+        if (!cancelled) toast.error("Impossible de charger cette surface.");
+      } finally {
+        if (!cancelled) setSurfaceLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, facility?.id, loadProducts, loadRequests]);
+
   if (loading || !ready) {
     return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
   }
@@ -671,6 +724,11 @@ function VendeurPage() {
           </section>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
+            {surfaceLoading ? (
+              <p className="mt-3 text-center text-xs font-semibold text-muted-foreground">
+                Chargement de la surface…
+              </p>
+            ) : null}
             <OmniActionDock
               active={activeTab}
               onChange={setActiveTab}
