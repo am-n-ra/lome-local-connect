@@ -4775,3 +4775,36 @@ Cette annexe complète et prévaut sur les anciens documents lorsqu’ils décri
 ## H. Critères de certification
 
 La V1 est conforme lorsque la carte reste visible sur buyer et seller, l’interface QR est prête à scanner dès son ouverture, l’autorisation caméra et le fallback manuel sont explicites, l’intention génère le QR immédiatement, le chat est strictement transactionnel, les coupons sont atomiques, le seller est map-first, les soldes et recharges sont vérifiés par ledger/FedaPay, l’onboarding restaure la recherche, et chaque métrique admin dispose d’une définition, d’un consentement et d’une politique de minimisation.
+
+# ANNEXE NORMATIVE V2 — LEDGER MULTI-BUCKETS, FEDAPAY ET SELLER GLOBE-FIRST
+
+## I. Ledger financier et buckets
+
+Omni utilise un journal financier append-only. Les colonnes legacy `subscriptions.wallet_balance`, `subscriptions.payout_balance` et `balance_ledger` restent en compatibilité pendant la migration, mais ne doivent plus être la source de vérité après bascule. La source de vérité cible est composée de `wallet_accounts`, `wallet_ledger_entries`, `wallet_transfers` et `wallet_balance_snapshots`.
+
+Chaque compte appartient à exactement un utilisateur ou une facility et utilise XOF en unités entières. Les buckets obligatoires sont `wallet`, `payout`, `ad_credit`, `coupon_credit` et `pro_credit`. Les crédits `ad_credit`, `coupon_credit` et `pro_credit` sont non monétaires et non retirable par défaut. Un transfert entre buckets est un groupe atomique de deux écritures opposées qui partagent un `journal_id`. Toute écriture possède une clé d’idempotence par compte ; un conflit avec une écriture existante portant un montant, bucket ou type de référence différent doit être rejeté.
+
+Les snapshots sont reconstruisibles et accélèrent la lecture UI, mais ne remplacent pas le journal. Une correction, un remboursement ou une annulation ajoute une écriture compensatrice ; une écriture postée n’est jamais supprimée ni modifiée.
+
+## J. FedaPay comme preuve provider
+
+FedaPay sandbox et live utilisent des URL et clés distinctes. Le retour navigateur peut afficher un état pending, mais seul un état provider réconcilié et confirmé côté serveur peut créditer le ledger. Les webhooks FedaPay sont reçus en HTTP POST, doivent être répondus en 2xx, peuvent être redélivrés et doivent être dédupliqués par event id ou identifiant d’objet. La signature doit être vérifiée avec le header `X-FEDAPAY-SIGNATURE`, le secret d’endpoint correspondant au mode et le vérificateur officiel FedaPay.
+
+Les événements minimum suivis sont `transaction.created`, `transaction.approved`, `transaction.declined`, `transaction.canceled`, `transaction.transferred` et `transaction.updated`. L’endpoint doit rester rapide, redacted dans ses logs et découpler l’accusé de réception du traitement lourd. Les clés provider ne doivent apparaître ni dans le dépôt, ni dans les plans, ni dans les logs, ni dans le bundle client.
+
+## K. Seller globe-first premium
+
+Le seller reprend la composition buyer : un seul canvas MapLibre/globe plein écran est le centre de focus, avec attribution accessible dans un contrôle discret. Le top chrome est minimal. Une puce facility flottante expose l’établissement actif, son statut, son niveau de confiance et le changement de facility. Un dock flottant inférieur expose les actions prioritaires : demandes, produits, scanner QR, solde et plus. Chaque action ouvre une bottom sheet ou surface contextuelle et conserve suffisamment de carte visible pour maintenir le lien géospatial.
+
+Les statistiques seller ne doivent pas apparaître comme une grille de back-office avant la carte. Les métriques rapides sont compactes et superposées. Le solde est une surface active qui sépare disponibilité, réservé et crédits par bucket. Le scanner s’ouvre directement dans une feuille caméra prête à scanner. L’onboarding d’une nouvelle facility utilise la carte existante, sans créer une seconde carte persistante dans le workspace.
+
+## L. Certification P0
+
+La certification exige les tests unitaires de statuts provider, signature officielle, idempotence, solde insuffisant, transfert atomique, coupon, QR signé/expiré et autorisation du chat. Les tests d’intégration doivent couvrir approved, pending, declined, canceled, transferred, retry webhook, retour navigateur répété et deux recharges concurrentes. Les tests navigateur doivent couvrir permission caméra, caméra indisponible, fallback manuel, rotation mobile, zoom au focus, safe-area, chevron/recentrage, fermeture de fiche, retour et perte de contexte map-first.
+
+## Références provider
+
+[1]: https://docs.fedapay.com/integration-api/en/webhooks-en "FedaPay — Webhooks and Events"
+[2]: https://docs.fedapay.com/api-reference/transactions/create "FedaPay — Create a transaction"
+[3]: https://docs.fedapay.com/integration-api/en/sending-requests-en "FedaPay — Sending requests"
+[4]: https://docs-v1.fedapay.com/development/webhooks "FedaPay — Webhook signature verification"
