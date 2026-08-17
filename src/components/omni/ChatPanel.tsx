@@ -25,6 +25,7 @@ type Props = {
         status: string;
         amountLabel: string;
         qrCode?: string | null;
+        transactionId?: string | null;
       }
     | undefined;
 };
@@ -45,6 +46,7 @@ export function ChatPanel({
   const [active, setActive] = useState<{
     facilityId: string;
     buyerId?: string;
+    transactionId?: string;
     name: string;
   } | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -68,6 +70,7 @@ export function ChatPanel({
         data: {
           facilityId: active.facilityId,
           ...(active.buyerId ? { buyerId: active.buyerId } : {}),
+          ...(active.transactionId ? { transactionId: active.transactionId } : {}),
         },
       });
       setMessages(res.messages);
@@ -79,7 +82,14 @@ export function ChatPanel({
   useEffect(() => {
     if (!open) return;
     void refreshThreads();
-    if (facilityId) setActive({ facilityId, name: facilityName ?? "Conversation" });
+    if (facilityId)
+      setActive({
+        facilityId,
+        ...(transactionContext?.transactionId
+          ? { transactionId: transactionContext.transactionId }
+          : {}),
+        name: facilityName ?? "Conversation",
+      });
   }, [open, facilityId, facilityName, refreshThreads]);
 
   useEffect(() => {
@@ -101,6 +111,7 @@ export function ChatPanel({
         data: {
           facilityId: active.facilityId,
           ...(active.buyerId ? { buyerId: active.buyerId } : {}),
+          ...(active.transactionId ? { transactionId: active.transactionId } : {}),
           body: draft.trim(),
         },
       });

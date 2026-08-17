@@ -358,6 +358,7 @@ export function OrdersPanel({
                   chatOrder.status,
                 amountLabel: formatMoney(chatOrder.total),
                 qrCode: chatOrder.qr_token,
+                transactionId: chatOrder.transaction_id,
               }
             : undefined
         }
