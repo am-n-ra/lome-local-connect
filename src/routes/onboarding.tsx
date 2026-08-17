@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { useServerFn } from "@/lib/useServerFn";
 import { ArrowRight, CheckCircle2, Globe2, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { z } from "zod";
 import { BrandMark } from "@/components/omni/BrandMark";
