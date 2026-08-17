@@ -5,7 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@tanstack/start-storage-context@1.167.26': 6dfebed4d6ee606d513e4342204ed162ff4450035b5d74681cb9abd0190506ed
+  '@tanstack/start-storage-context@1.167.26':
+    hash: 6dfebed4d6ee606d513e4342204ed162ff4450035b5d74681cb9abd0190506ed
+    path: patches/@tanstack__start-storage-context@1.167.26.patch
 
 importers:
 
