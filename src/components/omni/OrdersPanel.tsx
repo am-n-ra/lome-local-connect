@@ -197,6 +197,7 @@ export function OrdersPanel({
                   onGenerateQr={() => void generate(order)}
                   onConfirmPayment={() => void transition(order.transaction_id!, "payment")}
                   onConfirmReceived={() => void transition(order.transaction_id!, "received")}
+                  onRetry={() => void refresh()}
                 />
               );
             })}

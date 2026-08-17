@@ -36,6 +36,12 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     required: number;
     status: string | null;
   }>({ buyers: 0, required: 3, status: null });
+  const [lastValidated, setLastValidated] = useState<{
+    amount: number;
+    platformFee: number;
+    payout: number;
+    verifiedAt: string;
+  } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -143,8 +149,14 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     setBusy(true);
     try {
       const result = await redeem({ data: { facilityId, code: code.trim() } });
+      setLastValidated({
+        amount: result.amount,
+        platformFee: result.platformFee,
+        payout: result.payout,
+        verifiedAt: new Date().toISOString(),
+      });
       toast.success(
-        `Transaction validée : ${formatMoney(result.amount)}. Le règlement se poursuit selon votre accord sur place.`,
+        `QR vérifié : ${formatMoney(result.amount)}. Attendez la confirmation du paiement par l'acheteur.`,
       );
       setCode("");
       await refresh();
@@ -245,6 +257,48 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
           {cameraError && <span>{cameraError}</span>}
         </div>
       </div>
+
+      {lastValidated ? (
+        <div className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                QR vérifié
+              </p>
+              <h3 className="mt-1 font-display text-lg font-bold">
+                Paiement à confirmer par l’acheteur
+              </h3>
+            </div>
+            <Badge>Étape 4/5</Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Le code est autorisé pour cette facility. Remettez le produit selon votre accord, puis
+            laissez l’acheteur confirmer le paiement et la réception dans son fil transactionnel.
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="rounded-xl bg-background/80 p-2">
+              <span className="block text-muted-foreground">Montant</span>
+              <strong>{formatMoney(lastValidated.amount)}</strong>
+            </div>
+            <div className="rounded-xl bg-background/80 p-2">
+              <span className="block text-muted-foreground">Commission</span>
+              <strong>{formatMoney(lastValidated.platformFee)}</strong>
+            </div>
+            <div className="rounded-xl bg-background/80 p-2">
+              <span className="block text-muted-foreground">Payout prévu</span>
+              <strong>{formatMoney(lastValidated.payout)}</strong>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Vérifié à{" "}
+            {new Date(lastValidated.verifiedAt).toLocaleTimeString("fr-FR", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            · Aucun retrait vendeur n’est disponible en V1.
+          </p>
+        </div>
+      ) : null}
 
       <div className="omni-card space-y-2 p-4">
         <div className="flex items-center justify-between">

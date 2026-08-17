@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { OmniStepper } from "@/components/omni/ui/OmniPrimitives";
 import { TransactionMessageThread } from "@/components/omni/TransactionMessageThread";
 import type { BuyerOrder, TransactionEvent, TransactionTimeline } from "@/lib/checkout.functions";
+import { deriveTransactionUiState, TRANSACTION_STATUS_LABEL } from "@/lib/transaction-state";
 
 const EVENT_LABEL: Record<string, string> = {
   intent_created: "Intention créée",
@@ -29,6 +30,7 @@ export function TransactionThreadCard({
   onGenerateQr,
   onConfirmPayment,
   onConfirmReceived,
+  onRetry,
 }: {
   order: BuyerOrder;
   timeline?: TransactionTimeline | undefined;
@@ -36,6 +38,7 @@ export function TransactionThreadCard({
   onGenerateQr: () => void;
   onConfirmPayment: () => void;
   onConfirmReceived: () => void;
+  onRetry?: () => void;
 }) {
   const transaction = timeline?.transaction;
   const qrToken = order.qr_token ?? transaction?.qr_token ?? null;
@@ -43,20 +46,15 @@ export function TransactionThreadCard({
   const qrActive = Boolean(qrToken && (!qrExpiry || new Date(qrExpiry).getTime() > Date.now()));
   const currentStatus = order.transaction_status ?? order.status;
   const accepted = order.status === "confirmed" || order.status === "partially_confirmed";
+  const uiState = deriveTransactionUiState(currentStatus, qrActive);
   const canGenerate =
-    order.source === "intent" ? currentStatus === "pending" : accepted && !qrActive;
-  const paymentPending = currentStatus === "payment_pending";
-  const canConfirmReceived = currentStatus === "paid" || currentStatus === "fulfillment";
+    order.source === "intent"
+      ? uiState.canGenerateQr
+      : accepted && !qrActive && currentStatus !== "completed";
+  const paymentPending = uiState.canConfirmPayment;
+  const canConfirmReceived = uiState.canConfirmReceived;
   const events = timeline?.events ?? [];
-  const progress = paymentPending
-    ? 2
-    : qrActive
-      ? 2
-      : currentStatus === "paid"
-        ? 3
-        : currentStatus === "completed"
-          ? 4
-          : 1;
+  const progress = uiState.currentStep;
 
   return (
     <div className="omni-card space-y-4 p-4">
@@ -67,7 +65,7 @@ export function TransactionThreadCard({
             {order.items.map((item) => `${item.quantity} × ${item.name}`).join(" · ")}
           </p>
         </div>
-        <Badge variant="outline">{currentStatus}</Badge>
+        <Badge variant="outline">{TRANSACTION_STATUS_LABEL[currentStatus] ?? currentStatus}</Badge>
       </div>
 
       <OmniStepper
@@ -112,7 +110,7 @@ export function TransactionThreadCard({
         ) : (
           <ol className="space-y-2">
             {events.map((event) => (
-              <TransactionEventRow key={event.id} event={event} />
+              <TransactionEventRow key={event.id} event={event} {...(onRetry ? { onRetry } : {})} />
             ))}
           </ol>
         )}
@@ -139,7 +137,13 @@ export function TransactionThreadCard({
   );
 }
 
-function TransactionEventRow({ event }: { event: TransactionEvent }) {
+function TransactionEventRow({
+  event,
+  onRetry,
+}: {
+  event: TransactionEvent;
+  onRetry?: () => void;
+}) {
   const error = ERROR_EVENTS.has(event.event_type);
   return (
     <li
@@ -167,8 +171,12 @@ function TransactionEventRow({ event }: { event: TransactionEvent }) {
             <p className="mt-1 text-muted-foreground">{String(event.metadata["message"])}</p>
           ) : null}
           {error ? (
-            <button type="button" className="mt-2 font-semibold text-destructive underline">
-              Reprendre
+            <button
+              type="button"
+              className="mt-2 font-semibold text-destructive underline"
+              onClick={onRetry}
+            >
+              Réessayer
             </button>
           ) : null}
         </div>

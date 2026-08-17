@@ -256,6 +256,7 @@ export function ChatPanel({
                     }),
                   )
                 }
+                onRetry={() => void refreshTransaction()}
               />
             ) : (
               <p className="rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">
