@@ -118,7 +118,12 @@ function VendeurPage() {
   const [activeTab, setActiveTab] = useState("apercu");
 
   useEffect(() => {
-    if (transactionId) setActiveTab("encaisser");
+    if (!transactionId) return;
+    setActiveTab("encaisser");
+    window.sessionStorage.setItem(
+      "omni:last-transaction-room",
+      JSON.stringify({ transactionId, role: "seller" }),
+    );
   }, [transactionId]);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [hours, setHours] = useState("");

@@ -152,6 +152,14 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
   }, [fetchMyOrders, user]);
 
   useEffect(() => {
+    if (!transactionChat) return;
+    window.sessionStorage.setItem(
+      "omni:last-transaction-room",
+      JSON.stringify({ transactionId: transactionChat.transactionId, role: "buyer" }),
+    );
+  }, [transactionChat]);
+
+  useEffect(() => {
     if (!user || !initialTransactionId) return;
     let active = true;
     void fetchInitialTimeline({ data: { transactionId: initialTransactionId } })
@@ -971,6 +979,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         initialQuantity={quantity}
         onTransactionCreated={({ transactionId, facilityId, facilityName, amount }) => {
           setTransactionChat({ transactionId, facilityId, facilityName, amount });
+          setActiveTransactionCount((count) => Math.max(1, count + 1));
           setDemandOpen(false);
           setChatOpen(true);
         }}
