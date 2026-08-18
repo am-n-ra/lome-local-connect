@@ -222,27 +222,101 @@ CREATE TABLE public.cart_items (
 );
 
 CREATE TABLE public.transactions (
-  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  facility_id        uuid NOT NULL REFERENCES public.facilities(id) ON DELETE CASCADE,
-  buyer_id           uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
-  cart_id            uuid REFERENCES public.carts(id) ON DELETE SET NULL,
-  kind               text NOT NULL DEFAULT 'in_app' CHECK (kind IN ('in_app','external','wallet_topup')),
-  amount             integer NOT NULL DEFAULT 0,
-  platform_fee       integer NOT NULL DEFAULT 0,
-  payout_amount      integer NOT NULL DEFAULT 0,
-  currency_code      text NOT NULL DEFAULT 'XOF',
-  status             text NOT NULL DEFAULT 'pending'
-                     CHECK (status IN ('pending','completed','failed','refunded')),
-  provider           text,
-  provider_ref       text,
-  qr_token           text,
-  qr_authorised_at   timestamptz,
-  completed_at       timestamptz,
-  created_at         timestamptz NOT NULL DEFAULT now()
+  id                         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  facility_id                uuid NOT NULL REFERENCES public.facilities(id) ON DELETE CASCADE,
+  buyer_id                   uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  cart_id                    uuid REFERENCES public.carts(id) ON DELETE SET NULL,
+  kind                       text NOT NULL DEFAULT 'in_app'
+                             CHECK (kind IN ('in_app','external','wallet_topup')),
+  amount                     integer NOT NULL DEFAULT 0,
+  platform_fee               integer NOT NULL DEFAULT 0,
+  payout_amount              integer NOT NULL DEFAULT 0,
+  currency_code              text NOT NULL DEFAULT 'XOF',
+  fee_percent                numeric(5,2) NOT NULL DEFAULT 2,
+  payment_mode               text NOT NULL DEFAULT 'cash',
+  status                     text NOT NULL DEFAULT 'pending'
+                             CHECK (status IN (
+                               'pending','qr_generated','qr_verified','payment_pending','paid',
+                               'fulfillment','user_confirmed','completed','cancelled','failed',
+                               'disputed','expired','refunded'
+                             )),
+  provider                   text,
+  provider_ref               text,
+  qr_token                  text,
+  qr_expires_at              timestamptz,
+  qr_authorised_at           timestamptz,
+  intent_created_at          timestamptz,
+  intent_metadata            jsonb NOT NULL DEFAULT '{}'::jsonb,
+  paid_at                    timestamptz,
+  user_confirmed_at          timestamptz,
+  automation_level           text NOT NULL DEFAULT 'manual'
+                             CHECK (automation_level IN ('manual','assisted','auto')),
+  payment_preference         text
+                             CHECK (payment_preference IS NULL OR payment_preference IN
+                               ('cash_on_delivery','tmoney','flooz','external_other')),
+  buyer_payment_declared_at  timestamptz,
+  seller_payment_confirmed_at timestamptz,
+  fulfillment_started_at    timestamptz,
+  completed_at               timestamptz,
+  created_at                 timestamptz NOT NULL DEFAULT now(),
+  CHECK (payment_preference IS NULL OR status IN ('payment_pending','paid','fulfillment','completed')),
+  CHECK (buyer_payment_declared_at IS NULL OR (
+    payment_preference IS NOT NULL
+    AND status IN ('payment_pending','paid','fulfillment','completed')
+  )),
+  CHECK (seller_payment_confirmed_at IS NULL OR status IN ('paid','fulfillment','completed')),
+  CHECK (fulfillment_started_at IS NULL OR status IN ('fulfillment','completed'))
 );
 CREATE UNIQUE INDEX transactions_provider_ref_key ON public.transactions (provider, provider_ref)
   WHERE provider_ref IS NOT NULL;
+CREATE UNIQUE INDEX transactions_qr_token_unique ON public.transactions (qr_token)
+  WHERE qr_token IS NOT NULL;
 CREATE INDEX transactions_facility_idx ON public.transactions (facility_id, status);
+CREATE INDEX transactions_buyer_idx ON public.transactions (buyer_id, created_at DESC);
+CREATE INDEX transactions_payment_preference_idx
+  ON public.transactions (payment_preference, status, created_at DESC);
+CREATE INDEX transactions_seller_payment_idx
+  ON public.transactions (facility_id, seller_payment_confirmed_at DESC)
+  WHERE seller_payment_confirmed_at IS NOT NULL;
+
+CREATE OR REPLACE FUNCTION public.omni_validate_transaction_transition()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.status = OLD.status THEN
+    RETURN NEW;
+  END IF;
+  IF OLD.status = 'pending' AND NEW.status IN ('qr_generated', 'cancelled') THEN RETURN NEW; END IF;
+  IF OLD.status = 'qr_generated' AND NEW.status IN ('qr_verified', 'payment_pending', 'expired', 'cancelled') THEN RETURN NEW; END IF;
+  IF OLD.status = 'qr_verified' AND NEW.status IN ('payment_pending', 'cancelled') THEN RETURN NEW; END IF;
+  IF OLD.status = 'expired' AND NEW.status IN ('qr_generated', 'cancelled') THEN RETURN NEW; END IF;
+  IF OLD.status = 'payment_pending' AND NEW.status IN ('paid', 'cancelled', 'failed') THEN RETURN NEW; END IF;
+  IF OLD.status = 'paid' AND NEW.status IN ('fulfillment', 'cancelled', 'refunded') THEN RETURN NEW; END IF;
+  IF OLD.status = 'fulfillment' AND NEW.status IN ('completed', 'cancelled', 'disputed') THEN RETURN NEW; END IF;
+  IF OLD.status = 'completed' AND NEW.status IN ('disputed', 'refunded') THEN RETURN NEW; END IF;
+  IF NEW.status IN ('failed', 'cancelled', 'disputed', 'refunded') THEN RETURN NEW; END IF;
+  RAISE EXCEPTION 'Illegal Omni transaction transition: % -> %', OLD.status, NEW.status
+    USING ERRCODE = '23514';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER transactions_validate_transition
+BEFORE UPDATE OF status ON public.transactions
+FOR EACH ROW EXECUTE FUNCTION public.omni_validate_transaction_transition();
+
+CREATE TABLE public.transaction_events (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL REFERENCES public.transactions(id) ON DELETE CASCADE,
+  event_type     text NOT NULL CHECK (event_type IN (
+    'intent_created','offer_confirmed','coupon_applied','qr_generated','seller_verified',
+    'payment_pending','payment_preference_selected','payment_declared','payment_confirmed',
+    'fulfillment_started','product_received','completed','cancelled','expired','error'
+  )),
+  actor_id       uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
+  metadata       jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX transaction_events_transaction_created_idx
+  ON public.transaction_events (transaction_id, created_at ASC);
 
 CREATE TABLE public.certification_submissions (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
