@@ -113,6 +113,33 @@ export function SellerProductForm({
             required
           />
         </div>
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="vendor-product-photo">Photo ou média</Label>
+          <Input
+            id="vendor-product-photo"
+            value={draft.photoUrl}
+            onChange={(event) => patch({ photoUrl: event.target.value })}
+            placeholder="https://… (facultatif)"
+            inputMode="url"
+          />
+          <p className="text-xs text-muted-foreground">Une image aide les acheteurs à reconnaître rapidement votre produit.</p>
+        </div>
+        {draft.photoUrl.trim() ? (
+          <div className="flex items-center gap-3 rounded-2xl border border-border/70 bg-secondary/30 p-3 sm:col-span-2">
+            <img
+              src={draft.photoUrl.trim()}
+              alt="Aperçu du produit"
+              className="h-16 w-16 rounded-xl object-cover"
+              onError={(event) => {
+                event.currentTarget.style.display = "none";
+              }}
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-primary">Aperçu</p>
+              <p className="truncate text-sm text-muted-foreground">L’image sera visible sur la fiche et les résultats.</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -172,15 +199,6 @@ export function SellerProductForm({
                 <p className="text-xs text-muted-foreground">
                   Allocation interne, jamais un portefeuille séparé.
                 </p>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="vendor-product-photo">Photo ou média (URL facultative)</Label>
-                <Input
-                  id="vendor-product-photo"
-                  value={draft.photoUrl}
-                  onChange={(event) => patch({ photoUrl: event.target.value })}
-                  placeholder="https://…"
-                />
               </div>
             </div>
           </OmniDisclosure>
