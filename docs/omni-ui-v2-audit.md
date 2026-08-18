@@ -1,99 +1,168 @@
-# Omni UI V2 — Audit visuel et fonctionnel de référence
+# Omni Atlas Glass — Final UI Rebuild and Certification Report
 
-**Date :** 18 août 2026  
-**Source :** production `https://omni.sparkafrika.online`  
-**Références observées :** `/`, `/vendeur`, `/carte`, onboarding et room transactionnelle déjà certifiées lors de la passe précédente.
+**Date:** 18 August 2026
+**Repository:** `am-n-ra/lome-local-connect`
+**Branch:** `main`
+**Production:** [omni.sparkafrika.online](https://omni.sparkafrika.online/)
+**Author:** Manus AI
 
-## Synthèse
+## Executive summary
 
-L’application est fonctionnelle et le globe MapLibre reste bien le héros visuel. La prochaine amélioration ne doit donc pas remplacer la carte, les pins ou la couverture OSM ; elle doit réduire la concurrence entre surfaces et établir une hiérarchie plus éditoriale. Les défauts les plus visibles sont une densité de commandes encore trop uniforme, un dock qui porte simultanément recherche, statut de zone, PWA et contraintes, et une console seller qui ressemble davantage à une grande surface de gestion qu’à une mission priorisée.
+The Atlas Glass rebuild is now implemented and published on `main`. The interface has been reworked around a single principle: **the MapLibre globe remains the discovery stage, while every buyer and seller action floats above it as a calm, compact, task-oriented surface**. The rebuild does not replace MapLibre GL, the globe projection, facility pins, clusters, OSM discovery, or the transaction contracts.
 
-## Observations production
+The most important visual and functional debt identified in the previous audit has been addressed. The buyer landing now presents a compact centered search dock with the placeholder **“Chercher un produit ou un commerce”**, a separate notification control, a persistent transaction-resume pill, Atlas Glass facility cards, a product-first facility sheet, a three-step availability flow, and a transaction room with a clearer QR and net-amount hierarchy. The seller route now keeps the map visible, exposes a mission-first availability surface in the overview, retains the required métier segments, and presents the scanner as a primary operational action.
 
-| Surface | Ce qui fonctionne | Écart visuel ou fonctionnel | Priorité |
-|---|---|---|---|
-| Landing `/` | Canvas MapLibre présent, globe centré, attribution discrète, recherche accessible, localisation et approximation explicitement séparées, pill de transactions visible. | La zone centrale est visuellement très vide autour du globe ; le dock bas porte trop de micro-actions concurrentes. Le prompt de recherche, le PWA install banner et les états de zone ne forment pas encore un seul système de commande. | Gênant |
-| Chrome carte | Zoom, recentrage, notifications et menu séparés ; la carte reste manipulable. | Les contrôles carte sont très petits et éloignés du langage visuel des cards. Le menu et la notification pourraient être regroupés dans un chrome supérieur plus silencieux. | Finition |
-| Pill transaction | Reprise persistante claire et reliée à Mes demandes. | Le pill devrait afficher, lorsque possible, l’étape courante et la facility sans devenir plus haut que le dock. | Gênant |
-| Seller `/vendeur` | Carte toujours visible, statut online, tabs Facility/Catalogue/Demandes/Scanner/Wallet/Coupons, compteur et raccourcis présents. | La grille seller reste dense et peu séquencée : l’utilisateur ne sait pas immédiatement quelle demande traiter, quelle action est la plus urgente ni quelle information est secondaire. La console devrait afficher une mission active et une synthèse courte plutôt qu’un inventaire de tabs. | Bloquant UX |
-| Seller carte | La facility et sa position restent visibles. | Le contenu seller couvre une grande surface verticale et détourne le regard de la carte ; la hiérarchie de la console devrait se faire par colonne et par priorité, pas par accumulation de cards. | Gênant |
-| Onboarding | Les trois étapes, le choix de rôle, localisation optionnelle et consentement sont compréhensibles. | À densité mobile élevée, les options secondaires peuvent rivaliser avec le CTA final. La prochaine passe doit garder une seule question dominante par étape. | Gênant |
-| Room transactionnelle | QR, progression, bloc d’action et reprise persistante sont présents. | Le résumé net/réduction et la prochaine action doivent être encore plus immédiatement lisibles que le fil et le chat. Le chat doit rester secondaire. | Gênant |
+All available automated checks pass: **48 unit tests, TypeScript compilation, production build, and client-boundary validation**. Production smoke checks confirm the real MapLibre globe, visible clusters, the buyer dock, seller mission card, onboarding flow, and the absence of the former global navigation bar. The only certification items that remain explicitly open are an authenticated, real transaction E2E run and physical-device camera verification; the available QA fixture currently contains no transaction associated with the audited demo buyer.
 
-## Écarts de hiérarchie
+## Scope and non-scope
 
-L’interface utilise déjà les bons composants conceptuels, mais plusieurs niveaux visuels ont presque le même poids : titre, statut, tabs, cards de synthèse, CTA et textes explicatifs. L’amélioration principale sera donc une réduction contrôlée : un écran, un élément dominant, une action principale, un niveau secondaire repliable.
+| Area | Final decision | Status |
+|---|---|---|
+| Map rendering | Preserve MapLibre GL v5 globe projection and existing canvas lifecycle | Preserved |
+| Discovery | Preserve OSM-backed facilities, pins, clusters, visible-bounds loading, and fallback states | Preserved |
+| Buyer visual system | Warm cream Atlas paper, translucent glass surfaces, orange primary CTA, green success, amber partial | Implemented |
+| Seller visual system | Map-first workspace with mission-first dark charcoal card and concise operational summary | Implemented |
+| Transaction contracts | Preserve QR-at-intent, external buyer-to-seller payment, resumable room, rating-before-completion | Preserved |
+| Wallet and FedaPay | No change to the existing single Omni Wallet or hosted FedaPay recharge contract | Out of scope for this visual pass |
+| Database schema | No schema migration introduced by this UI pass | Out of scope |
+| Secrets | No `.env` file or database credential committed | Confirmed |
 
-La landing doit être traitée comme un **stage** : le globe au centre, le chrome en haut, le dock en bas et une seule notification de reprise entre les deux. Les informations techniques MapLibre restent en attribution. Les états de couverture ou de localisation doivent être présentés comme une micro-card contextuelle, non comme un second panneau de commande.
+> **Invariant:** Atlas Glass changes the hierarchy and presentation of the existing product. It does not introduce a substitute map or alter the discovery and transaction business contracts.
 
-La console seller doit être traitée comme un **poste de contrôle** : colonne opérationnelle pour la demande ou transaction active, colonne de synthèse pour wallet, statut, compteurs et raccourcis. Les tabs deviennent des destinations secondaires ; la première vue doit proposer une décision directe.
+## Published implementation
 
-## Matrice des prochains composants
+The following commits are published on `main` and `origin/main`.
 
-| Composant | Surface V2 | Action principale | Refactor attendu |
-|---|---|---|---|
-| `CartePage` | Stage map-first | lancer/reprendre une recherche | séparer dock commande, contraintes et micro-états |
-| `SearchDock` | FLOAT | rechercher | réduire les controls visibles, ajouter états focus/submit sans déplacer le globe |
-| `ResultRail` | FLOAT/SHEET hybride | ouvrir une fiche | cartes product-first, médias et statut en niveaux |
-| `FacilityPanel` | SHEET | vérifier disponibilité | header média + trust + CTA unique |
-| `DemandRequestPanel` | SHEET | continuer/envoyer | une question dominante par étape, pied fixe |
-| `TransactionThreadCard` | SHEET | action courante | résumé net + bloc maintenant + fil secondaire |
-| `vendeur.tsx` | PAGE/FLOAT | traiter la demande active | deux colonnes, mission active et synthèse |
-| `CheckoutPanel` | SHEET | scanner/vérifier | grande zone vidéo, état permission, saisie manuelle |
-| `SellerProductForm` | SHEET | enregistrer produit | étapes visibles, aperçu et coupon associé |
-| `CouponsPanel` | SHEET | enregistrer coupon | réduction calculée, période lisible, CTA unique |
-| `NavMenuSheet` | SHEET | basculer de rôle ou ouvrir activité | compte prioritaire, destinations implémentées uniquement |
+| Commit | Change |
+|---|---|
+| `3713eda` | Published the Omni Atlas Glass product/build documentation package |
+| `74e306b` | Rebuilt the buyer and seller shell, dock surfaces, and global Atlas tokens |
+| `c346405` | Surfaced the seller mission-first Console overview |
+| `7f646e9` | Rebuilt the transaction room surface, QR block, progress, and financial summary |
+| `e38c55c` | Rebuilt buyer facility cards, facility sheet, result rail, chat, orders, and account menu |
+| `4e35d1b` | Rebuilt availability, seller scanner, and onboarding surfaces |
+| `8e12bc7` | Published the Atlas Glass rebuild audit |
+| `babee08` | Published the final production and fixture audit findings |
 
-## Critères de réussite V2
+The local branch reports `main...origin/main` with no divergence. The working tree contains only pre-existing untracked audit/deployment helper artifacts; none are part of the published UI commits.
 
-La passe sera considérée réussie lorsque la carte reste visible et libre autour du globe, que le dock ne présente pas un formulaire de contraintes par défaut, que le rail ne dépasse pas le viewport, que la fiche conduit à une disponibilité en trois étapes sans perte de recherche, que la room met en avant le net et l’action courante, que le seller voit une mission prioritaire avant les métriques secondaires, et que tous les états loading/empty/error/unauthorized/success restent explicites.
+## Implemented visual system
 
-La caméra QR devra encore être vérifiée sur appareil réel HTTPS. Les captures observées ici proviennent de la production et ne remplacent pas la certification exhaustive 320/390/768/1024/1280 px.
+The shared stylesheet now defines the Atlas vocabulary: warm paper, deep paper, ink, translucent glass, strong glass, glass border, orange, green, amber, and diffuse shadow tokens. The shared utilities `omni-atlas-surface`, `omni-atlas-ink`, and `omni-atlas-mission` establish consistent surfaces without changing existing semantic component contracts.
 
-## Smoke visuel après Atlas Premium
+The landing shell uses the Atlas paper background and a restrained top veil around the map. The map remains at the lowest layer, while dock, controls, results, facility sheets, resume pill, notifications, and menus remain floating overlays. The primary action uses orange; green is reserved for success and verified states; amber is reserved for partial availability; red remains reserved for errors.
 
-Après le déploiement du commit `2079761`, `/` affiche toujours le globe MapLibre central, le pill de reprise, les contrôles de carte, la recherche et les états de localisation sans erreur SSR. Le dock est plus compact et le bouton de paramètres reste séparé de la commande principale.
+## Buyer rebuild
 
-`/vendeur` conserve la carte en arrière-plan, le statut online, les tabs Facility/Catalogue/Demandes/Scanner/Wallet/Coupons et les raccourcis. La surface reste à poursuivre vers une hiérarchie de mission active plus forte, mais aucune régression fonctionnelle visible n’a été introduite par la passe scanner.
+| Surface | Implemented result | Contract preserved |
+|---|---|---|
+| `OmniMapShell` | Warm Atlas paper stage with map canvas preserved underneath | MapLibre globe and canvas lifecycle unchanged |
+| `SearchDock` | Compact centered dock, max-width constrained, parameters hidden behind refinement, new product-or-commerce placeholder | Search submission, location state, and discovery controls preserved |
+| `ResultRail` | Atlas Glass rail with safe-area padding and responsive card containment | Horizontal facility discovery and selection preserved |
+| `FacilityResultCard` | Product-first hierarchy, stable 16:9 media, matched product, trust state, price/distance, orange CTA | Facility selection and matched-result data preserved |
+| `FacilityPanel` | Media header, trust/status badges, dominant “Vérifier la disponibilité” CTA, Atlas product cards | Unclaimed state and contact/itinerary gating preserved |
+| `DemandRequestPanel` | Three-step flow with fixed action footer, clear facility/visible scope, optional quantity and budget, response ranking | Manual checks remain zero-cost; bulk checks remain plan-governed |
+| `ChatPanel` | Atlas sheet with transaction room embedded above secondary messages | Existing message and transaction handlers preserved |
+| `OrdersPanel` | Atlas sheet with “À confirmer” block and resumable transaction cards | Existing order, receipt, rating, and payment handlers preserved |
+| `NavMenuSheet` | Atlas account sheet with only implemented activity destinations | Role switch removed from the menu; role switching remains in the appropriate desktop/workspace control |
 
-## Rebuild Atlas Glass — smoke production du checkpoint `74e306b`
+The buyer flow now communicates the intended sequence: **search → facility → availability → response comparison → “Je veux payer ici” → QR-at-intent transaction room**. Contact and itinerary remain unavailable before purchase intent, and the external payment distinction remains explicit in the transaction room.
 
-Le shell buyer de production conserve le globe MapLibre centré, les clusters/pins et les contrôles de carte. Le pill de reprise `2 transactions en cours` reste visible. Le dock est flottant au bas de la carte avec paramètres, état de localisation, fallback et recherche.
+## Transaction Room rebuild
 
-Le shell seller conserve la carte derrière la surface, le header facility/status, les tabs métier, les compteurs, les raccourcis Voir les demandes/Ouvrir le scanner et le segment map-first. La réponse serveur affichée reste stable ; aucun crash SSR ou erreur de route n’a été observé.
+The transaction room now uses a single Atlas surface with a clearer hierarchy. The transaction facility and status appear first, progress is placed on a paper inset, the catalogue amount and Omni reduction lead to a prominent net amount, and the QR is displayed in a high-contrast white card with copy/share actions. The current action is placed above the event thread; payment selection, payment declaration, receipt confirmation, and mandatory rating remain state-driven.
 
-Le rendu de production montre encore un placeholder buyer historique (`Que cherchez-vous dans le monde ?`) et la console seller n’expose une mission dominante que lorsque les demandes live sont chargées. Ces deux points doivent être revalidés après invalidation du cache/deployment et font partie de la passe suivante, sans modifier MapLibre.
+The following transaction contract remains intact:
 
+> **Intent creates the QR. The QR identifies the transaction. The buyer declares an external payment. The seller confirms receipt. Fulfillment follows. The buyer confirms receipt, submits a rating, and only then does the transaction complete.**
 
-## 2026-08-18 — smoke production après la passe Atlas Glass
+Closing a panel does not cancel the transaction. The buyer resume pill and the persistent `/transaction/$id` route remain the recovery paths.
 
-La page `https://omni.sparkafrika.online/` charge finalement le vrai canvas **MapLibre GL globe** après l’état transitoire « Chargement de la carte… ». Le rendu observé est un globe central noir et blanc sur fond crème, avec deux clusters de facilities visibles, ce qui confirme que la projection et les pins/clusters sont présents.
+## Seller rebuild
 
-Le chrome observé respecte le rebuild : dock de recherche compact centré avec le placeholder « Chercher un produit ou un commerce », bouton vocal, CTA recherche orange, notifications séparées avec badge `1`, menu hamburger, contrôles zoom/recentrage sur la gauche et pilule « 2 transactions en cours — Reprendre depuis Mes demandes » en haut. Aucun ancien bandeau de navigation globale n’est visible.
+The seller route now treats the map as the shared context rather than a background that disappears behind a dashboard. The main overview contains the facility identity, online state, métier segments, a concise “À garder sous la main” summary, and a directly visible mission block. The mission block is dark and dominant, with the product searched, date/distance context, quantity and price fields, and the three explicit response actions:
 
-L’état de localisation affiché est « Localisation bloquée », accompagné de `Réessayer` et `Explorer le marché approximatif`. Cette branche est cohérente avec une permission navigateur refusée dans le contexte sandbox ; elle ne doit pas être interprétée comme une erreur MapLibre.
+| Seller action | Meaning |
+|---|---|
+| **Disponible** | The seller can satisfy the request as stated |
+| **Partiel** | The seller can satisfy only part of the requested quantity |
+| **Indisponible** | The seller cannot satisfy the request |
 
-Le contrôle d’attribution MapLibre reste présent dans le DOM avec les liens MapLibre/OpenFreeMap/OpenMapTiles/OpenStreetMap. Les contrôles de carte sont positionnés à gauche et ne sont pas couverts par le dock dans la vue observée.
+The overview retains the required shortcuts **Voir les demandes** and **Ouvrir le scanner**. The route also preserves the Catalogue, Scanner QR, Omni Wallet, and Coupons destinations without introducing dead menu items.
 
+The seller scanner now has a large camera preview region, an explicit permission-pending/active/denied/unsupported state, a QR framing guide, a manual code fallback, and the existing QR verification, payment confirmation, and fulfillment actions. The implementation deliberately keeps camera authorization and preview rendering separate so that the stream is not stopped immediately after permission is granted.
 
-## 2026-08-18 — smoke production seller
+## Onboarding rebuild
 
-La route `/vendeur` affiche d’abord un skeleton puis rend la Console seller map-first avec le globe MapLibre en arrière-plan. La surface principale contient `Facility`, `Catalogue`, `Demandes reçues`, `Scanner QR`, `Omni Wallet` et `Coupons`, ainsi que les notifications et le menu dans le chrome supérieur.
+Onboarding now follows the same Atlas hierarchy as the main product. It presents one primary explanation, three named steps, a buyer/seller role choice, optional location permission, language selection, analytics consent, and one clear bottom action. Unauthenticated visitors receive the explicit message **“Créez votre compte pour accéder à Omni”** and the CTA **“Créer mon compte et faire ma recherche”** before entering the guided flow.
 
-La mission active est désormais réellement exposée dans l’overview : titre « Demande de disponibilité », produit recherché, distance/date, champ prix, quantité et trois réponses Disponible/Partiel/Indisponible. La carte reste visible et la mission prioritaire est visuellement plus forte que la synthèse secondaire Fiches/Produits/Demandes/Coupons. Les raccourcis « Voir les demandes » et « Ouvrir le scanner » sont présents.
+The main onboarding layout uses `overflow-x-hidden`, safe-area padding, bounded cards, and responsive grid behavior. The production screenshot confirms that the PWA install prompt remains secondary to the onboarding CTA.
 
-La route est observée avec la fixture seller `Omni QA — Fixture Seller`, statut `Non confirmé`, ce qui confirme un état métier réaliste et non une page vide. Le scanner QR et les autres onglets sont exposés sans ancienne barre globale.
+## Production smoke findings
 
+### Buyer landing
 
-## 2026-08-18 — onboarding et mesure responsive
+The production landing loads the real MapLibre canvas after the transient loading state. The observed globe is centered on the warm cream stage, with visible dark-and-white geography and facility clusters. The buyer chrome exposes zoom, approximate-market fallback, a persistent pill reading **“2 transactions en cours — Reprendre depuis Mes demandes”**, the settings/refinement control, the compact search dock, a notification icon with badge, and the hamburger menu. No former global navigation bar is visible.
 
-L’onboarding production rend le nouveau flow Atlas : « Le monde est recherchable », trois étapes explicites, choix Acheteur/Vendeur, consentement analytics, langue, localisation optionnelle, CTA `Continuer` et sortie `Passer pour l’instant`. Le bandeau PWA `Installer Omni` reste secondaire en bas et ne masque pas le CTA principal.
+The observed location state was **“Localisation bloquée”**, with `Réessayer` and `Explorer le marché approximatif`. This is a valid permission-denied branch in the sandbox browser context and is not evidence of a MapLibre failure. MapLibre attribution links remain present in the DOM, as required by the map provider.
 
-Une mesure DOM de la Console seller en viewport `1280 × 1100` rapporte `scrollWidth = clientWidth = 1280`, donc aucun débordement horizontal. Le canvas MapLibre occupe toute la largeur et la saisie de prix reste contenue dans la surface opérationnelle. Cette mesure couvre le desktop observé ; une certification automatisée multi-viewport reste à compléter sur appareil ou émulation mobile.
+### Seller Console
 
+The production seller route first renders a loading skeleton and then the map-first Console. The inspected fixture is `Omni QA — Fixture Seller`, with `Non confirmé` state. The mission block visibly contains two test availability requests, product `lait`, distance/date context, price and quantity inputs, and the three response controls. The facility summary and scanner shortcut remain visible beside the map-first operational surface.
 
-## 2026-08-18 — audit des fixtures et des contrats de flow
+A DOM measurement at viewport `1280 × 1100` reported `scrollWidth = clientWidth = 1280`, so no horizontal overflow was present in the observed desktop seller state. The MapLibre canvas occupied the full width, and the price input remained contained inside the seller operational surface.
 
-L’audit read-only de la base QA confirme la présence de plusieurs profils `demo@omni.tg`, de facilities seller certifiées/non certifiées, d’une demande manual à `credit_cost = 0`, d’une demande bulk à `credit_cost = 1`, ainsi que de réponses `available` et `partial` avec prix/quantité. Cela valide les données nécessaires au tri Disponible → Partiel → Indisponible et au cas manual sans coût.
+### Onboarding
 
-Aucune transaction n’est actuellement rattachée au profil sélectionné par le script (`transactions: []`). Le smoke transactionnel complet ne peut donc pas être déclaré exécuté uniquement depuis cette fixture ; il reste à jouer avec une session buyer/seller authentifiée et une intention d’achat réelle. Aucun changement de données n’a été effectué par cet audit.
+The production onboarding route renders **Le monde est recherchable**, the three steps, Acheteur/Vendeur selection, consent, language, optional location, `Continuer`, and `Passer pour l’instant`. The PWA install banner appears as a secondary bottom prompt and does not cover the main CTA in the observed viewport.
+
+## Automated validation
+
+| Validation | Result | Evidence |
+|---|---:|---|
+| Vitest | Pass | 9 test files, 48 tests passed |
+| TypeScript | Pass | `pnpm exec tsc --noEmit` |
+| Production build | Pass | `pnpm build` completed and generated Vercel/Nitro output |
+| Client boundary | Pass | 43 JavaScript artifacts and 166 source files checked |
+| Formatting/diff safety | Pass | `git diff --check` |
+| Git publication | Pass | `main` aligned with `origin/main` at the final documentation commit |
+| MapLibre unit coverage | Pass | Existing maplibre and MapCanvas tests remain green |
+| Camera scanner unit coverage | Pass | Existing camera scanner tests remain green |
+
+The automated checks were repeated after the visual passes; the suite remained at **48/48 passing** throughout publication.
+
+## Fixture and data audit
+
+The read-only QA audit confirms that the database contains multiple demo profiles, certified and uncertified facilities, a manual availability request with `credit_cost = 0`, a bulk request with `credit_cost = 1`, and available/partial responses with price and quantity data. This validates the data required for the seller response ordering **Disponible → Partiel → Indisponible** and the manual single-facility zero-cost path.
+
+The audited demo buyer currently has no associated transaction rows. Therefore, a full authenticated transaction E2E cannot honestly be marked complete from the existing fixture alone. No data was written or mutated by the audit script.
+
+## Remaining certification items
+
+| Item | Current state | Required next action |
+|---|---|---|
+| Authenticated buyer E2E | Not claimed complete; no fixture transaction exists | Run search → availability → intent → QR → external payment declaration → seller confirmation → fulfillment → receipt → rating with a real authenticated session |
+| Authenticated seller E2E | UI and server handlers are present; not fully executed in this pass | Open the fixture seller session, scan or enter the QR, confirm payment, and start fulfillment |
+| Physical camera | Preview and permission states are implemented; sandbox production smoke did not grant a physical camera | Verify on a real HTTPS mobile device, including permission denial, rear camera, QR detection, and manual fallback |
+| Responsive certification | Desktop DOM measurement passed at 1280 px; code uses safe-area and bounded widths | Execute captures at 320, 390, 768, 1024, and 1280 px on a real device/emulator |
+| PWA install | Production banner is visible and secondary | Verify install, relaunch, safe-area behavior, and cache invalidation on Android/iOS browsers |
+
+These are **certification gaps**, not unimplemented UI surfaces. They should be completed with authenticated browser sessions and a device/emulator rather than by changing the MapLibre or transaction architecture.
+
+## Final delivery state
+
+The Atlas Glass rebuild is ready for the next production-hardening step. The visual debt reduction is published, the buyer and seller shells now share one coherent language, and the primary flows remain aligned with the approved transaction contracts. The main branch is clean with respect to tracked changes, the production build succeeds, and the central product promise remains visible: **the world’s supply and demand is searchable through a living globe**.
+
+## References
+
+[1]: https://omni.sparkafrika.online/ "Omni production application"
+
+[2]: https://predeploy-44ae5f66-omnimap-gmngu3h4-2xgzgq5mdgitftoy.manus.space/ "Omni buyer visual reference"
+
+[3]: https://predeploy-44ae5f66-omnimap-gmngu3h4-2xgzgq5mdgitftoy.manus.space/seller "Omni seller visual reference"
+
+[4]: https://maplibre.org/ "MapLibre GL project"
+
+[5]: https://openfreemap.org/ "OpenFreeMap tile source"
+
+[6]: https://www.openstreetmap.org/copyright "OpenStreetMap attribution"
