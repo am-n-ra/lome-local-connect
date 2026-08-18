@@ -18,7 +18,13 @@ import { STATUS_LABEL } from "@/lib/omni";
 import { cameraStatusLabel, type CameraScannerStatus } from "@/lib/camera-scanner";
 import { useMarket } from "@/lib/market";
 
-export function CheckoutPanel({ facilityId }: { facilityId: string }) {
+export function CheckoutPanel({
+  facilityId,
+  initialTransactionId,
+}: {
+  facilityId: string;
+  initialTransactionId?: string;
+}) {
   const { formatMoney } = useMarket();
   const redeem = useServerFn(redeemCheckout);
   const confirmPayment = useServerFn(confirmTransactionPayment);
@@ -34,6 +40,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const [rows, setRows] = useState<VendorTransaction[]>([]);
+  const [focusedTransactionId, setFocusedTransactionId] = useState<string | null>(
+    initialTransactionId ?? null,
+  );
   const [progress, setProgress] = useState<{
     buyers: number;
     required: number;
@@ -56,10 +65,13 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       ]);
       setRows(txns);
       setProgress(prog);
+      if (initialTransactionId && txns.some((transaction) => transaction.id === initialTransactionId)) {
+        setFocusedTransactionId(initialTransactionId);
+      }
     } catch {
       setRows([]);
     }
-  }, [facilityId, fetchProgress, fetchTransactions]);
+  }, [facilityId, fetchProgress, fetchTransactions, initialTransactionId]);
 
   useEffect(() => {
     void refresh();
@@ -215,6 +227,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   }
 
   const pct = Math.min(100, Math.round((progress.buyers / progress.required) * 100));
+  const focusedTransaction = focusedTransactionId
+    ? rows.find((transaction) => transaction.id === focusedTransactionId) ?? null
+    : null;
 
   return (
     <div className="space-y-4">
@@ -296,6 +311,60 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
           {cameraError && <span>{cameraError}</span>}
         </div>
       </div>
+
+      {focusedTransaction ? (
+        <div className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                Room transactionnelle
+              </p>
+              <h3 className="mt-1 font-display text-lg font-bold">
+                {focusedTransaction.buyer_name ?? "Client"}
+              </h3>
+            </div>
+            <Badge variant="outline">{focusedTransaction.status}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="rounded-xl bg-background/80 p-3">
+              <span className="block text-xs text-muted-foreground">Montant</span>
+              <strong>{formatMoney(focusedTransaction.amount)}</strong>
+            </div>
+            <div className="rounded-xl bg-background/80 p-3">
+              <span className="block text-xs text-muted-foreground">Paiement</span>
+              <strong>{focusedTransaction.payment_preference ?? "À choisir"}</strong>
+            </div>
+          </div>
+          {focusedTransaction.status === "payment_pending" &&
+          focusedTransaction.payment_preference &&
+          (focusedTransaction.payment_preference === "cash_on_delivery" ||
+            focusedTransaction.buyer_payment_declared_at) ? (
+            <Button
+              className="w-full"
+              disabled={actionBusy === focusedTransaction.id}
+              onClick={() => void confirmSellerPayment(focusedTransaction.id)}
+            >
+              {actionBusy === focusedTransaction.id ? "Confirmation…" : "Confirmer le paiement reçu"}
+            </Button>
+          ) : null}
+          {focusedTransaction.status === "paid" ? (
+            <Button
+              className="w-full"
+              disabled={actionBusy === focusedTransaction.id}
+              onClick={() => void beginFulfillment(focusedTransaction.id)}
+            >
+              {actionBusy === focusedTransaction.id ? "Mise à jour…" : "Lancer la remise ou la livraison"}
+            </Button>
+          ) : null}
+          <Button
+            variant="ghost"
+            className="w-full"
+            onClick={() => setFocusedTransactionId(null)}
+          >
+            Voir toutes les transactions
+          </Button>
+        </div>
+      ) : null}
 
       {lastValidated ? (
         <div className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">

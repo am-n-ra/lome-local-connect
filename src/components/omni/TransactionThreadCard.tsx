@@ -6,7 +6,12 @@ import { Button } from "@/components/ui/button";
 import { TransactionProgress } from "@/components/omni/ui/OmniPrimitives";
 import { TransactionMessageThread } from "@/components/omni/TransactionMessageThread";
 import type { BuyerOrder, TransactionEvent, TransactionTimeline } from "@/lib/checkout.functions";
-import { buildTransactionLink, type PaymentPreferenceMethod } from "@/lib/omni-v1-contracts";
+import {
+  buildTransactionLink,
+  deriveTransactionRoomAction,
+  type PaymentPreferenceMethod,
+  type TransactionRoomStatus,
+} from "@/lib/omni-v1-contracts";
 import { deriveTransactionUiState, TRANSACTION_STATUS_LABEL } from "@/lib/transaction-state";
 import { TRANSACTION_PROGRESS_LABELS } from "@/lib/transaction-progress";
 
@@ -54,7 +59,8 @@ export function TransactionThreadCard({
   order,
   timeline,
   busy,
-  onGenerateQr,
+  onRegenerateQr,
+  onCreateRoom,
   onSelectPayment,
   onDeclarePayment,
   onConfirmReceived,
@@ -63,7 +69,8 @@ export function TransactionThreadCard({
   order: BuyerOrder;
   timeline?: TransactionTimeline | undefined;
   busy: boolean;
-  onGenerateQr: () => void;
+  onRegenerateQr?: () => void;
+  onCreateRoom?: () => void;
   onSelectPayment?: (method: PaymentPreferenceMethod) => void;
   onDeclarePayment?: () => void;
   onConfirmReceived: () => void;
@@ -77,10 +84,24 @@ export function TransactionThreadCard({
   const paymentPreference = transaction?.payment_preference ?? null;
   const uiState = deriveTransactionUiState(currentStatus, qrActive, paymentPreference);
   const accepted = order.status === "confirmed" || order.status === "partially_confirmed";
-  const canGenerate =
-    order.source === "intent"
-      ? uiState.canGenerateQr
-      : accepted && !qrActive && currentStatus !== "completed";
+  const qrExpired = Boolean(qrToken && qrExpiry && new Date(qrExpiry).getTime() <= Date.now());
+  const roomAction = deriveTransactionRoomAction("buyer", currentStatus as TransactionRoomStatus, {
+    hasQr: qrActive,
+    paymentChoice:
+      paymentPreference === "cash_on_delivery"
+        ? "pay_on_delivery"
+        : paymentPreference === "tmoney" || paymentPreference === "flooz" || paymentPreference === "external_other"
+          ? "mobile_money"
+          : null,
+    buyerPaymentDeclared: Boolean(transaction?.buyer_payment_declared_at),
+  });
+  const nextActionLabel: Record<string, string> = {
+    present_qr: "Présenter le QR au vendeur",
+    choose_payment: "Choisir le mode de paiement",
+    declare_paid: "Déclarer le paiement",
+    confirm_received: "Confirmer la réception",
+    rate_transaction: "Noter la transaction",
+  };
   const events = timeline?.events ?? [];
   const progress = uiState.currentStep;
   const qrLink = qrToken
@@ -137,11 +158,22 @@ export function TransactionThreadCard({
         </span>
       </div>
 
-      {canGenerate ? (
-        <Button className="w-full" disabled={busy} onClick={onGenerateQr}>
+      {qrExpired && onRegenerateQr ? (
+        <Button className="w-full" disabled={busy} onClick={onRegenerateQr}>
           <QrCode className="mr-2 h-4 w-4" />
-          {busy ? "Génération…" : "Confirmer l’offre et générer le QR"}
+          {busy ? "Régénération…" : "Générer un nouveau QR"}
         </Button>
+      ) : null}
+      {!qrToken && order.source === "cart" && accepted && onCreateRoom ? (
+        <Button className="w-full" disabled={busy} onClick={onCreateRoom}>
+          <QrCode className="mr-2 h-4 w-4" />
+          {busy ? "Ouverture…" : "Créer la room transactionnelle"}
+        </Button>
+      ) : null}
+      {roomAction && roomAction !== "present_qr" && nextActionLabel[roomAction] ? (
+        <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
+          Prochaine étape : {nextActionLabel[roomAction]}
+        </p>
       ) : null}
 
       {qrToken && qrActive ? (

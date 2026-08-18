@@ -33,7 +33,7 @@ import {
   savePendingAvailabilitySearch,
   useAuth,
 } from "@/lib/auth";
-import { getTransactionTimeline } from "@/lib/checkout.functions";
+import { getTransactionTimeline, listMyOrders } from "@/lib/checkout.functions";
 type RouteStep = { instruction: string; distance: number };
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
@@ -99,6 +99,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
     facilityName: string;
     amount: number;
   } | null>(null);
+  const [activeTransactionCount, setActiveTransactionCount] = useState(0);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandMode, setDemandMode] = useState<"bulk" | "manual">("bulk");
   const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
@@ -111,7 +112,44 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
   const fetchInitialTimeline = useServerFn(getTransactionTimeline);
+  const fetchMyOrders = useServerFn(listMyOrders);
   const hasCoverageSearch = Boolean(submittedQuery.trim() || category);
+
+  useEffect(() => {
+    if (!user) {
+      setActiveTransactionCount(0);
+      return;
+    }
+    let active = true;
+    const refreshActiveTransactions = async () => {
+      try {
+        const orders = await fetchMyOrders({});
+        if (!active) return;
+        const activeStatuses = new Set([
+          "pending",
+          "qr_generated",
+          "qr_verified",
+          "payment_pending",
+          "paid",
+          "fulfillment",
+          "received",
+          "rating_pending",
+        ]);
+        setActiveTransactionCount(
+          orders.filter((order) => Boolean(order.transaction_id) && activeStatuses.has(order.transaction_status ?? order.status))
+            .length,
+        );
+      } catch {
+        if (active) setActiveTransactionCount(0);
+      }
+    };
+    void refreshActiveTransactions();
+    const interval = window.setInterval(() => void refreshActiveTransactions(), 15000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [fetchMyOrders, user]);
 
   useEffect(() => {
     if (!user || !initialTransactionId) return;
@@ -730,6 +768,21 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         />
       }
     >
+      {activeTransactionCount > 0 ? (
+        <div className="pointer-events-auto absolute inset-x-3 top-[calc(env(safe-area-inset-top)+4.75rem)] z-20 flex justify-center md:top-20">
+          <button
+            type="button"
+            className="omni-glass inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
+            onClick={() => setOrdersOpen(true)}
+            aria-label={`Reprendre ${activeTransactionCount} transaction${activeTransactionCount > 1 ? "s" : ""}`}
+          >
+            <span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
+            {activeTransactionCount} transaction{activeTransactionCount > 1 ? "s" : ""} en cours
+            <span className="text-xs text-muted-foreground">Reprendre</span>
+          </button>
+        </div>
+      ) : null}
+
       <div
         className="pointer-events-none absolute inset-0 overflow-hidden"
         data-omni-surface={surfaceState}

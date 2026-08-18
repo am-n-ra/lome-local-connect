@@ -36,7 +36,7 @@ export function OrdersPanel({
   const { user } = useAuth();
   const fetchOrders = useServerFn(listMyOrders);
   const startCheckout = useServerFn(createCheckout);
-  const startTransactionQr = useServerFn(createTransactionQr);
+  const regenerateTransactionQr = useServerFn(createTransactionQr);
   const fetchTimeline = useServerFn(getTransactionTimeline);
   const selectPayment = useServerFn(selectTransactionPaymentPreference);
   const declarePaymentServer = useServerFn(declareTransactionPayment);
@@ -86,19 +86,28 @@ export function OrdersPanel({
     if (open) void refresh();
   }, [open, refresh]);
 
-  async function generate(order: BuyerOrder) {
-    if (!order.transaction_id && order.source !== "cart") return;
+  async function createLegacyRoom(order: BuyerOrder) {
+    if (order.source !== "cart") return;
     setBusy(order.id);
     try {
-      if (order.source === "intent" && order.transaction_id) {
-        await startTransactionQr({ data: { transactionId: order.transaction_id } });
-      } else {
-        await startCheckout({ data: { cartId: order.id } });
-      }
+      await startCheckout({ data: { cartId: order.id } });
       await refresh();
-      toast.success("QR transactionnel généré. Montrez-le au commerçant.");
+      toast.success("Room transactionnelle prête. Montrez le QR au commerçant.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Génération impossible.");
+      toast.error(error instanceof Error ? error.message : "Ouverture impossible.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function regenerateQr(transactionId: string) {
+    setBusy(transactionId);
+    try {
+      await regenerateTransactionQr({ data: { transactionId } });
+      await refresh();
+      toast.success("Nouveau QR transactionnel généré.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Régénération impossible.");
     } finally {
       setBusy(null);
     }
@@ -224,9 +233,19 @@ export function OrdersPanel({
                   order={order}
                   timeline={timeline}
                   busy={busy === order.id || busy === order.transaction_id}
-                  onGenerateQr={() => void generate(order)}
-                  onSelectPayment={(method) => void choosePayment(order.transaction_id!, method)}
-                  onDeclarePayment={() => void declarePayment(order.transaction_id!)}
+                  {...(order.transaction_id
+                    ? { onRegenerateQr: () => void regenerateQr(order.transaction_id!) }
+                    : {})}
+                  {...(order.source === "cart"
+                    ? { onCreateRoom: () => void createLegacyRoom(order) }
+                    : {})}
+                  {...(order.transaction_id
+                    ? {
+                        onSelectPayment: (method: "cash_on_delivery" | "tmoney" | "flooz" | "external_other") =>
+                          void choosePayment(order.transaction_id!, method),
+                        onDeclarePayment: () => void declarePayment(order.transaction_id!),
+                      }
+                    : {})}
                   onConfirmReceived={() => void confirmReceivedTransition(order.transaction_id!)}
                   onRetry={() => void refresh()}
                 />

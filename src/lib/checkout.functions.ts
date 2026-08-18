@@ -492,7 +492,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
           owner.owner_id,
           "Nouvelle intention d'achat · QR prêt",
           `Un acheteur souhaite acheter chez ${owner.name}. Le QR de transaction est prêt à vérifier.`,
-          "/vendeur",
+          `/vendeur?transactionId=${txn!.id}`,
         ],
       );
     }
@@ -641,7 +641,7 @@ export const createTransactionQr = createServerFn({ method: "POST" })
           owner.owner_id,
           "Offre confirmée",
           "Un QR de retrait a été généré pour une intention d'achat.",
-          "/vendeur",
+          `/vendeur?transactionId=${data.transactionId}`,
         ],
       );
     }
@@ -745,7 +745,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
           txn.buyer_id,
           "Retrait vérifié",
           "Le commerçant a vérifié votre QR. Confirmez le paiement puis la réception du produit.",
-          "/carte",
+          `/carte?transactionId=${txn.id}`,
         ],
       );
     }
@@ -756,7 +756,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
         context.userId,
         "Retrait vérifié",
         `Le QR a été vérifié. Le paiement reste à confirmer par l'acheteur. Commission prévue : ${await formatMoneyServer(data.facilityId, txn.platform_fee)}.`,
-        "/vendeur",
+        `/vendeur?transactionId=${txn.id}`,
       ],
     );
 
@@ -1033,7 +1033,7 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
           owner.owner_id,
           "Produit reçu",
           "L'acheteur a confirmé la réception du produit.",
-          "/vendeur",
+          `/vendeur?transactionId=${txn.id}`,
         ],
       );
     }

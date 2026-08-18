@@ -1144,7 +1144,10 @@ function VendeurPage() {
                 </TabsContent>
 
                 <TabsContent value="encaisser" className="mt-5">
-                  <CheckoutPanel facilityId={facility.id} />
+                  <CheckoutPanel
+                    facilityId={facility.id}
+                    {...(transactionId ? { initialTransactionId: transactionId } : {})}
+                  />
                 </TabsContent>
 
                 <TabsContent value="coupons" className="mt-5">

@@ -52,7 +52,7 @@ export function ChatPanel({
   const fetchMessages = useServerFn(listMessages);
   const post = useServerFn(sendMessage);
   const fetchTimeline = useServerFn(getTransactionTimeline);
-  const generateQr = useServerFn(createTransactionQr);
+  const regenerateTransactionQr = useServerFn(createTransactionQr);
   const selectPayment = useServerFn(selectTransactionPaymentPreference);
   const declarePaymentServer = useServerFn(declareTransactionPayment);
   const confirmReceived = useServerFn(confirmProductReceived);
@@ -241,9 +241,9 @@ export function ChatPanel({
                 order={toBuyerOrder(transactionTimeline)}
                 timeline={transactionTimeline}
                 busy={transactionBusy}
-                onGenerateQr={() =>
+                onRegenerateQr={() =>
                   void runTransactionAction(() =>
-                    generateQr({ data: { transactionId: transactionTimeline.transaction.id } }),
+                    regenerateTransactionQr({ data: { transactionId: transactionTimeline.transaction.id } }),
                   )
                 }
                 onSelectPayment={(method) =>
