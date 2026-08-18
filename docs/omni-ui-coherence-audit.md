@@ -43,3 +43,7 @@ La Console affiche simultanément six onglets (`Facility`, `Catalogue`, `Demande
 ## Vérification post-déploiement
 
 Après le commit de cohérence, la session seller actuellement ouverte affiche exclusivement `Onboarding vendeur V1` avec les trois étapes et le globe intégré; la Console n’est pas rendue simultanément dans cette session. Le risque de double rendu n’est donc pas reproduit dans ce contexte. La vérification précédente reste utile comme preuve d’une transition/état de session à contrôler, mais la priorité corrective confirmée est maintenant la hiérarchie de Console et la synchronisation mission/compteurs.
+
+## Smoke buyer post-déploiement
+
+La landing buyer production conserve un chrome minimal avec menu unique, contrôles MapLibre, états de localisation en petites pills et un dock unique avec placeholder `Chercher un produit ou un commerce`, bouton paramètres, recherche vocale et CTA recherche. La capture read-only a été prise pendant le chargement du globe (`Chargement du globe MapLibre…`); elle ne permet donc pas de conclure sur les pins, mais confirme qu’aucune barre globale concurrente n’est visible au repos.

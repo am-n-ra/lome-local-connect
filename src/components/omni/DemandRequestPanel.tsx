@@ -194,10 +194,17 @@ export function DemandRequestPanel({
     void broadcast();
   }
 
+  const comparisonReady = requests.length > 0;
+  const resetFlow = () => {
+    setRequests([]);
+    setResponses([]);
+    setStep(0);
+  };
+
   const actionFooter = user ? (
     <OmniActionFooter className="w-full border-0 bg-transparent p-0">
       <div className="flex w-full gap-2">
-        {step > 0 ? (
+        {step > 0 && !comparisonReady ? (
           <Button
             type="button"
             variant="outline"
@@ -207,15 +214,21 @@ export function DemandRequestPanel({
             <ArrowLeft className="mr-1.5 h-4 w-4" /> Retour
           </Button>
         ) : null}
-        <Button
-          type="button"
-          className="min-h-11 flex-1"
-          disabled={busy || (step === 0 && term.trim().length < 2)}
-          onClick={continueFromStep}
-        >
-          {busy ? "Vérification…" : step === 2 ? "Envoyer la demande" : "Continuer"}
-          {step < 2 && !busy ? <ArrowRight className="ml-1.5 h-4 w-4" /> : null}
-        </Button>
+        {comparisonReady ? (
+          <Button type="button" variant="outline" className="min-h-11 flex-1" onClick={resetFlow}>
+            Nouvelle vérification
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            className="min-h-11 flex-1"
+            disabled={busy || (step === 0 && term.trim().length < 2)}
+            onClick={continueFromStep}
+          >
+            {busy ? "Vérification…" : step === 2 ? "Envoyer la demande" : "Continuer"}
+            {step < 2 && !busy ? <ArrowRight className="ml-1.5 h-4 w-4" /> : null}
+          </Button>
+        )}
       </div>
     </OmniActionFooter>
   ) : null;
