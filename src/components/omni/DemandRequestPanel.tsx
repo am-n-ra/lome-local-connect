@@ -5,8 +5,7 @@ import { ArrowLeft, ArrowRight, HandCoins, Megaphone, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { OmniActionFooter } from "@/components/omni/ui/OmniPrimitives";
+import { OmniActionFooter, OmniFlowSheet } from "@/components/omni/ui/OmniPrimitives";
 import {
   closeDemandRequest,
   createDemandRequest,
@@ -196,24 +195,47 @@ export function DemandRequestPanel({
     void broadcast();
   }
 
+  const actionFooter = user ? (
+    <OmniActionFooter className="w-full border-0 bg-transparent p-0">
+      <div className="flex w-full gap-2">
+        {step > 0 ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="min-h-11 shrink-0"
+            onClick={() => setStep((value) => value - 1)}
+          >
+            <ArrowLeft className="mr-1.5 h-4 w-4" /> Retour
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          className="min-h-11 flex-1"
+          disabled={busy || (step === 0 && term.trim().length < 2)}
+          onClick={continueFromStep}
+        >
+          {busy ? "Vérification…" : step === 2 ? "Envoyer la demande" : "Continuer"}
+          {step < 2 && !busy ? <ArrowRight className="ml-1.5 h-4 w-4" /> : null}
+        </Button>
+      </div>
+    </OmniActionFooter>
+  ) : null;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
-      >
-        <SheetHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-4 text-left">
-          <div className="flex items-center justify-between gap-3">
-            <SheetTitle>
-              {selectedMode === "manual" ? "Vérifier la disponibilité" : "Demande groupée"}
-            </SheetTitle>
-            <span className="text-xs font-semibold text-muted-foreground">{step + 1}/3</span>
-          </div>
-          <div className="mt-3">
-            <OmniStepper steps={steps} current={step} />
-          </div>
-        </SheetHeader>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+    <OmniFlowSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      eyebrow={selectedMode === "manual" ? "Disponibilité · flow buyer" : "Demande groupée"}
+      title={selectedMode === "manual" ? "Vérifier la disponibilité" : "Demande groupée"}
+      progress={
+        <div>
+          <div className="mb-2 text-right text-xs font-semibold text-muted-foreground">{step + 1}/3</div>
+          <OmniStepper steps={steps} current={step} />
+        </div>
+      }
+      {...(actionFooter ? { footer: actionFooter } : {})}
+    >
+      <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {selectedMode === "manual"
               ? `Vérifiez la disponibilité directement auprès de ${facilityName ?? "ce commerce"}.`
@@ -438,33 +460,7 @@ export function DemandRequestPanel({
               );
             })}
         </div>
-        {user ? (
-          <OmniActionFooter>
-            <div className="flex w-full gap-2">
-              {step > 0 ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="shrink-0"
-                  onClick={() => setStep((value) => value - 1)}
-                >
-                  <ArrowLeft className="mr-1.5 h-4 w-4" /> Retour
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                className="flex-1"
-                disabled={busy || (step === 0 && term.trim().length < 2)}
-                onClick={continueFromStep}
-              >
-                {busy ? "Vérification…" : step === 2 ? "Envoyer la demande" : "Continuer"}
-                {step < 2 && !busy ? <ArrowRight className="ml-1.5 h-4 w-4" /> : null}
-              </Button>
-            </div>
-          </OmniActionFooter>
-        ) : null}
-      </SheetContent>
-    </Sheet>
+    </OmniFlowSheet>
   );
 }
 
