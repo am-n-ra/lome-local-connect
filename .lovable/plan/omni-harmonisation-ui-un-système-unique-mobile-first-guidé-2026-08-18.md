@@ -2,16 +2,18 @@
 
 Objectif : une seule grammaire visuelle et gestuelle du premier écran jusqu'à la note finale. L'utilisateur ne doit jamais se demander « où suis-je, que dois-je faire maintenant ». Le document produit s'appelle `docs/omni-ui-system.md` et fait autorité sur toutes les surfaces.
 
-## Ce que montrent les captures actuelles
+## Ce que montrent les captures actuelles(c'est un exemple  creer ailleurs pas notre code )
 
-| Capture | Défaut constaté |
-|---|---|
-| Fiche « Le Panier Bè » | La feuille déborde à droite (barre de défilement visible hors cadre), le CTA est collé au bord, pas de marge de sécurité |
-| Étapes 1/3 → 3/3 | Trois écrans avec trois hauteurs, trois paddings et deux positions de bouton retour différentes ; le retour flotte hors de la feuille en 2/3 et 3/3 |
-| « Votre espace » | Liste correcte mais coupée à droite, aucune hiérarchie entre le portefeuille et les compteurs, « Changer de rôle » perdu dans l'en-tête |
-| Console vendeur desktop | Contenu tassé en colonne étroite, immense vide en bas, dock `Carte / Console` posé par-dessus les cartes |
-| Modale coupon / Scanner QR | Deux systèmes de superposition différents (voile flou centré vs panneau ancré à droite, lui aussi coupé) |
-| Parcours vendeur 6/6 | Aperçu miniature illisible, deux CTA concurrents sur le même écran |
+
+| Capture                    | Défaut constaté                                                                                                                                     |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Fiche « Le Panier Bè »     | La feuille déborde à droite (barre de défilement visible hors cadre), le CTA est collé au bord, pas de marge de sécurité                            |
+| Étapes 1/3 → 3/3           | Trois écrans avec trois hauteurs, trois paddings et deux positions de bouton retour différentes ; le retour flotte hors de la feuille en 2/3 et 3/3 |
+| « Votre espace »           | Liste correcte mais coupée à droite, aucune hiérarchie entre le portefeuille et les compteurs, « Changer de rôle » perdu dans l'en-tête             |
+| Console vendeur desktop    | Contenu tassé en colonne étroite, immense vide en bas, dock `Carte / Console` posé par-dessus les cartes                                            |
+| Modale coupon / Scanner QR | Deux systèmes de superposition différents (voile flou centré vs panneau ancré à droite, lui aussi coupé)                                            |
+| Parcours vendeur 6/6       | Aperçu miniature illisible, deux CTA concurrents sur le même écran                                                                                  |
+
 
 Diagnostic : il n'existe pas de contrat de surface. Chaque écran réinvente son enveloppe, son padding, sa position d'action et son mode de superposition. C'est ça qui donne la sensation de patchwork, avant même toute question de style.
 
@@ -120,8 +122,11 @@ Discret, jamais décoratif. Feuille : glissement 220 ms avec sortie douce. Chang
 
 ## Ordre de livraison
 
-1. Déblocage runtime + garde-fou d'import serveur.
-2. `docs/omni-ui-system.md` et primitives normalisées (feuille unique, pied d'action, progression).
+1. `docs/omni-ui-system.md` et primitives normalisées (feuille unique, pied d'action, progression).   
+
+2. Déblocage runtime + garde-fou d'import serveur.
+    
+
 3. Parcours acheteur : carte → rail → fiche → disponibilité 3 étapes → comparaison.
 4. Écran transaction unique + barre de reprise + bascule de rôle.
 5. Console vendeur deux colonnes, scanner, coupons, parcours vendeur.
