@@ -36,7 +36,13 @@ import {
 import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
-import { OmniStatusBadge } from "@/components/omni/ui/OmniPrimitives";
+import {
+  OmniErrorState,
+  OmniResumeBar,
+  OmniSkeleton,
+  OmniStatCard,
+  OmniStatusBadge,
+} from "@/components/omni/ui/OmniPrimitives";
 import { BalanceSheet } from "@/components/omni/ui/BalanceSheet";
 import { daysLeft, freshnessLabel, DEFAULT_CENTER, STATUS_LABEL } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
@@ -137,6 +143,7 @@ function VendeurPage() {
   const [allocationBusy, setAllocationBusy] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const surfaceCache = useRef(
     new Map<
       string,
@@ -183,6 +190,7 @@ function VendeurPage() {
   );
 
   const refresh = useCallback(async () => {
+    setLoadError(null);
     try {
       const shell = await loadShell();
       const walletBalance =
@@ -202,8 +210,9 @@ function VendeurPage() {
         counts: shell.counts,
       });
       setReady(true);
-    } catch {
+    } catch (error) {
       setData(null);
+      setLoadError(error instanceof Error ? error.message : "Impossible de charger l’espace vendeur.");
       setReady(true);
     }
   }, [loadShell]);
@@ -587,7 +596,15 @@ function VendeurPage() {
   }, [activeTab, facility?.id, loadCoupons, loadProducts, loadRequests]);
 
   if (loading || !ready) {
-    return <p className="p-8 text-sm text-muted-foreground">Chargement…</p>;
+    return (
+      <main className="min-h-[100dvh] bg-background p-4 sm:p-8">
+        <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
+          <OmniSkeleton className="h-24" />
+          <OmniSkeleton className="h-24" />
+          <OmniSkeleton className="h-64 sm:col-span-2" />
+        </div>
+      </main>
+    );
   }
 
   if (!user) {
@@ -607,6 +624,16 @@ function VendeurPage() {
           </Button>
         </div>
       </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <main className="min-h-[100dvh] bg-background px-4 py-16">
+        <div className="mx-auto max-w-md">
+          <OmniErrorState title="Espace vendeur indisponible" description={loadError} onRetry={() => void refresh()} />
+        </div>
+      </main>
     );
   }
 
@@ -638,9 +665,9 @@ function VendeurPage() {
       chrome={<TopNav activeRole="vendeur" minimalMapChrome />}
     >
       <main className="pointer-events-none absolute inset-0 z-10 flex max-h-[100dvh] justify-center overflow-hidden px-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] sm:px-5">
-        <div className="pointer-events-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden rounded-[1.5rem] omni-sheet shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden rounded-[1.5rem] omni-sheet shadow-[var(--shadow-soft)] backdrop-blur-xl">
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-width:thin] sm:p-4">
-            <div className="mx-auto max-w-2xl">
+            <div className="mx-auto w-full max-w-5xl min-w-0">
               <section className="omni-glass rounded-[1.5rem] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
@@ -694,7 +721,18 @@ function VendeurPage() {
                 </div>
               </section>
 
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-5">
+              {transactionId ? (
+                <div className="mt-4">
+                  <OmniResumeBar
+                    label="Transaction seller en cours"
+                    detail="Ouvrir la vérification, le paiement ou la remise"
+                    onClick={() => setActiveTab("encaisser")}
+                  />
+                </div>
+              ) : null}
+
+              <div className="mt-5 grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="min-w-0">
                 {surfaceLoading ? (
                   <p className="mt-3 text-center text-xs font-semibold text-muted-foreground">
                     Chargement de la surface…
@@ -1171,6 +1209,24 @@ function VendeurPage() {
                   />
                 </TabsContent>
               </Tabs>
+              <aside className="hidden space-y-3 lg:sticky lg:top-4 lg:block">
+                <div className="omni-card space-y-3 p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">À garder sous la main</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <OmniStatCard label="Fiches" value={data?.facilities.length ?? 0} />
+                    <OmniStatCard label="Produits" value={data?.counts.products ?? 0} />
+                    <OmniStatCard label="Demandes" value={data?.counts.requests ?? 0} tone="warning" />
+                    <OmniStatCard label="Coupons" value={data?.counts.coupons ?? 0} />
+                  </div>
+                  <Button className="min-h-11 w-full" onClick={() => setActiveTab("demandes")}>
+                    Voir les demandes
+                  </Button>
+                  <Button variant="outline" className="min-h-11 w-full" onClick={() => setActiveTab("encaisser")}>
+                    Ouvrir le scanner
+                  </Button>
+                </div>
+              </aside>
+              </div>
             </div>
           </div>
         </div>

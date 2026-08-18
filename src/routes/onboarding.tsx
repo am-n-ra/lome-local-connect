@@ -4,6 +4,7 @@ import { useServerFn } from "@/lib/useServerFn";
 import { ArrowRight, CheckCircle2, Globe2, MapPin, Search, ShieldCheck, Store } from "lucide-react";
 import { z } from "zod";
 import { BrandMark } from "@/components/omni/BrandMark";
+import { OmniSkeleton } from "@/components/omni/ui/OmniPrimitives";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { recordProductEvent, saveAnalyticsConsent } from "@/lib/analytics.functions";
@@ -134,9 +135,14 @@ function OnboardingPage() {
 
   if (loading) {
     return (
-      <div className="grid min-h-[100dvh] place-items-center bg-background text-sm text-muted-foreground">
-        Préparation de votre espace…
-      </div>
+      <main className="grid min-h-[100dvh] place-items-center overflow-x-hidden bg-background px-4">
+        <div className="w-full max-w-md space-y-3">
+          <OmniSkeleton className="mx-auto h-12 w-12 rounded-2xl" />
+          <OmniSkeleton className="h-8 w-3/4" />
+          <OmniSkeleton className="h-20 w-full" />
+          <OmniSkeleton className="h-12 w-full" />
+        </div>
+      </main>
     );
   }
 
@@ -176,20 +182,20 @@ function OnboardingPage() {
   const Icon = current.icon;
 
   return (
-    <main className="min-h-[100dvh] bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.25),transparent_35%),var(--color-background)] px-4 py-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:px-6">
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.25),transparent_35%),var(--color-background)] px-4 py-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:px-6">
       <div className="mx-auto flex min-h-[calc(100dvh-2.5rem)] w-full max-w-5xl flex-col justify-center">
-        <header className="mb-6 flex items-center justify-between gap-3 sm:mb-8">
+        <header className="mb-6 flex min-w-0 items-center justify-between gap-3 sm:mb-8">
           <div className="flex items-center gap-2 font-display text-xl font-extrabold">
             <BrandMark className="h-8 w-8" />
-            <span>OmniView</span>
+            <span className="truncate">OmniView</span>
           </div>
           <span className="rounded-full bg-card/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Bienvenue dans la recherche
           </span>
         </header>
 
-        <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
-          <div className="omni-glass flex flex-col justify-between p-5 sm:p-8">
+        <section className="grid min-w-0 gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-stretch">
+          <div className="omni-glass min-w-0 flex flex-col justify-between p-5 sm:p-8">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
                 Comment fonctionne Omni
@@ -226,7 +232,7 @@ function OnboardingPage() {
             </div>
           </div>
 
-          <div className="omni-card flex flex-col p-5 sm:p-8">
+          <div className="omni-card min-w-0 flex flex-col p-5 sm:p-8">
             <div className="flex items-center justify-between gap-3">
               <span className={`grid h-12 w-12 place-items-center rounded-2xl ${current.accent}`}>
                 <Icon className="h-6 w-6" />
@@ -316,10 +322,10 @@ function OnboardingPage() {
             </div>
 
             <div className="mt-auto flex flex-col gap-2 pt-8 sm:flex-row sm:justify-between">
-              <Button variant="outline" onClick={() => (step > 0 ? setStep(step - 1) : finish())}>
+              <Button className="min-h-11 w-full sm:w-auto" variant="outline" onClick={() => (step > 0 ? setStep(step - 1) : finish())}>
                 {step > 0 ? "Retour" : "Passer pour l’instant"}
               </Button>
-              <Button onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>
+              <Button className="min-h-11 w-full sm:w-auto" onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>
                 {step < steps.length - 1
                   ? "Continuer"
                   : role === "seller"

@@ -27,8 +27,8 @@ function TransactionQrEntry() {
       .then((result) => {
         if (!active) return;
         navigate({
-          to: result.role === "seller" ? "/vendeur" : "/carte",
-          search: { transactionId: result.transactionId },
+          to: "/transaction/$id",
+          params: { id: result.transactionId },
           replace: true,
         });
       })

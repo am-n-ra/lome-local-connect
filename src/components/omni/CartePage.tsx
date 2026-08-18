@@ -16,7 +16,7 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
-import { OmniSheetSurface } from "@/components/omni/ui/OmniPrimitives";
+import { OmniResumeBar, OmniSheetSurface } from "@/components/omni/ui/OmniPrimitives";
 import { ResultRail } from "@/components/omni/ResultRail";
 
 import {
@@ -777,17 +777,12 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
       }
     >
       {activeTransactionCount > 0 ? (
-        <div className="pointer-events-auto absolute inset-x-3 top-[calc(env(safe-area-inset-top)+4.75rem)] z-20 flex justify-center md:top-20">
-          <button
-            type="button"
-            className="omni-glass inline-flex max-w-full items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
+        <div className="pointer-events-auto absolute inset-x-3 top-[calc(env(safe-area-inset-top)+4.75rem)] z-20 mx-auto w-[min(calc(100vw-1.5rem),34rem)] md:top-20">
+          <OmniResumeBar
+            label={`${activeTransactionCount} transaction${activeTransactionCount > 1 ? "s" : ""} en cours`}
+            detail="Reprendre depuis Mes demandes"
             onClick={() => setOrdersOpen(true)}
-            aria-label={`Reprendre ${activeTransactionCount} transaction${activeTransactionCount > 1 ? "s" : ""}`}
-          >
-            <span className="h-2 w-2 animate-pulse rounded-full bg-primary" aria-hidden="true" />
-            {activeTransactionCount} transaction{activeTransactionCount > 1 ? "s" : ""} en cours
-            <span className="text-xs text-muted-foreground">Reprendre</span>
-          </button>
+          />
         </div>
       ) : null}
 

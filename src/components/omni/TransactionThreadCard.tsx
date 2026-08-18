@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, Clock3, Copy, QrCode, Share2 } from "lucide-
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TransactionProgress } from "@/components/omni/ui/OmniPrimitives";
+import { OmniActionBlock, TransactionProgress } from "@/components/omni/ui/OmniPrimitives";
 import { TransactionMessageThread } from "@/components/omni/TransactionMessageThread";
 import type { BuyerOrder, TransactionEvent, TransactionTimeline } from "@/lib/checkout.functions";
 import {
@@ -28,6 +28,8 @@ const EVENT_LABEL: Record<string, string> = {
   payment_confirmed: "Paiement reçu par le vendeur",
   fulfillment_started: "Colis en route",
   product_received: "Marchandise reçue",
+  received_confirmed: "Réception confirmée",
+  rating_submitted: "Avis publié",
   completed: "Transaction terminée",
   cancelled: "Transaction annulée",
   expired: "QR expiré",
@@ -176,12 +178,18 @@ export function TransactionThreadCard({
         </Button>
       ) : null}
       {roomAction && roomAction !== "present_qr" && nextActionLabel[roomAction] ? (
-        <p className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-medium text-primary">
-          Prochaine étape : {nextActionLabel[roomAction]}
-        </p>
+        <OmniActionBlock
+          title={nextActionLabel[roomAction]}
+          description="La prochaine action est préparée ici. Le fil reste disponible sous ce bloc."
+          tone={roomAction === "rate_transaction" ? "warning" : "default"}
+        />
       ) : null}
 
       {qrToken && qrActive ? (
+        <OmniActionBlock
+          title="Montrez ce QR au vendeur"
+          description="Le vendeur vérifie ce code avant que le choix de paiement externe ne soit disponible."
+        >
         <div className="rounded-2xl bg-secondary p-4 text-center">
           <QRCodeSVG value={qrToken} size={156} level="M" includeMargin />
           <p className="mt-2 font-mono text-lg font-bold tracking-widest">{qrToken}</p>
@@ -203,6 +211,7 @@ export function TransactionThreadCard({
             </Button>
           </div>
         </div>
+        </OmniActionBlock>
       ) : null}
 
       <div className="space-y-2">

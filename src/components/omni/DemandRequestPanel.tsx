@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { OmniActionFooter } from "@/components/omni/ui/OmniPrimitives";
 import {
   closeDemandRequest,
   createDemandRequest,
@@ -438,8 +439,8 @@ export function DemandRequestPanel({
             })}
         </div>
         {user ? (
-          <div className="omni-safe-bottom shrink-0 border-t border-border/70 bg-card/95 p-4 backdrop-blur-md">
-            <div className="flex gap-2">
+          <OmniActionFooter>
+            <div className="flex w-full gap-2">
               {step > 0 ? (
                 <Button
                   type="button"
@@ -460,7 +461,7 @@ export function DemandRequestPanel({
                 {step < 2 && !busy ? <ArrowRight className="ml-1.5 h-4 w-4" /> : null}
               </Button>
             </div>
-          </div>
+          </OmniActionFooter>
         ) : null}
       </SheetContent>
     </Sheet>

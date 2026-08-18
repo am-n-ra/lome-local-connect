@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@/lib/useServerFn";
-import { Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
+import { ArrowRightLeft, Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +23,8 @@ type Props = {
   onOpenWishlist?: (() => void) | undefined;
   onOpenOrders?: (() => void) | undefined;
   onOpenChat?: (() => void) | undefined;
+  activeRole?: "acheteur" | "vendeur";
+  onSwitchRole?: (() => void) | undefined;
 };
 
 /** Single glass navigation panel holding every secondary action. */
@@ -33,6 +35,8 @@ export function NavMenuSheet({
   onOpenWishlist,
   onOpenOrders,
   onOpenChat,
+  activeRole = "acheteur",
+  onSwitchRole,
 }: Props) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
@@ -57,6 +61,19 @@ export function NavMenuSheet({
             {user?.email ?? "Vous n'êtes pas connecté."}
           </SheetDescription>
         </SheetHeader>
+
+        {user && onSwitchRole ? (
+          <section className="mt-5 shrink-0 rounded-2xl border border-primary/20 bg-primary/8 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Rôle actif</p>
+            <p className="mt-1 text-sm font-semibold">
+              Vous êtes en mode {activeRole === "vendeur" ? "Vendeur" : "Acheteur"}
+            </p>
+            <Button className="mt-3 min-h-11 w-full" variant="outline" onClick={() => go(onSwitchRole)}>
+              <ArrowRightLeft className="mr-2 h-4 w-4" />
+              Passer en mode {activeRole === "vendeur" ? "Acheteur" : "Vendeur"}
+            </Button>
+          </section>
+        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">

@@ -746,7 +746,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
           txn.buyer_id,
           "Retrait vérifié",
           "Le commerçant a vérifié votre QR. Confirmez le paiement puis la réception du produit.",
-          `/carte?transactionId=${txn.id}`,
+          `/transaction/${txn.id}`,
         ],
       );
     }
@@ -940,7 +940,7 @@ export const confirmTransactionPayment = createServerFn({ method: "POST" })
           txn.buyer_id,
           "Paiement reçu",
           "Le vendeur a confirmé la réception du paiement.",
-          `/carte?transactionId=${txn.id}`,
+          `/transaction/${txn.id}`,
         ],
       );
     }
@@ -969,7 +969,7 @@ export const startTransactionFulfillment = createServerFn({ method: "POST" })
           txn.buyer_id,
           "Colis en route",
           "Le vendeur a confirmé la remise ou l’envoi.",
-          `/carte?transactionId=${txn.id}`,
+          `/transaction/${txn.id}`,
         ],
       );
     }
