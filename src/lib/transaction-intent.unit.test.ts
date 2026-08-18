@@ -29,4 +29,11 @@ describe("transaction intent fingerprint", () => {
       buildTransactionIntentKey({ ...base, ...change }),
     );
   });
+
+  it("stays single-valued under concurrent identical calls", async () => {
+    const keys = await Promise.all(
+      Array.from({ length: 32 }, async () => buildTransactionIntentKey({ ...base })),
+    );
+    expect(new Set(keys)).toHaveLength(1);
+  });
 });
