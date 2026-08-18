@@ -16,6 +16,7 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
+import { OmniCenteredPanel } from "@/components/omni/ui/OmniPrimitives";
 import { ResultRail } from "@/components/omni/ResultRail";
 
 import {
@@ -775,7 +776,7 @@ export function CartePage() {
         )}
 
         {selected && (
-          <div className="pointer-events-auto absolute inset-x-0 bottom-0 z-40 max-h-[70%] overflow-y-auto rounded-t-3xl border-t border-border bg-card/95 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-[var(--shadow-sheet)] backdrop-blur md:left-auto md:right-4 md:top-20 md:max-h-[calc(100%-6rem)] md:w-[420px] md:rounded-2xl md:border md:p-5">
+          <OmniCenteredPanel className="z-40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
             <div className="mb-2 flex justify-end gap-2">
               <Button
                 variant="ghost"
@@ -807,14 +808,19 @@ export function CartePage() {
                 </div>
               )}
             </div>
-            <FacilityPanel
-              facility={selected}
-              distanceKm={haversineKm(origin, { lat: selected.latitude, lng: selected.longitude })}
-              routingBusy={routingBusy}
-              onItinerary={() => void buildItinerary(selected)}
-              onCheckAvailability={() => openManualAvailability(selected)}
-            />
-          </div>
+            <div className="min-h-0 overflow-y-auto">
+              <FacilityPanel
+                facility={selected}
+                distanceKm={haversineKm(origin, {
+                  lat: selected.latitude,
+                  lng: selected.longitude,
+                })}
+                routingBusy={routingBusy}
+                onItinerary={() => void buildItinerary(selected)}
+                onCheckAvailability={() => openManualAvailability(selected)}
+              />
+            </div>
+          </OmniCenteredPanel>
         )}
 
         {steps.length > 0 && (

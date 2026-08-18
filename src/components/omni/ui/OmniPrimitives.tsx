@@ -18,7 +18,7 @@ export function OmniSheet({
   description,
   children,
   footer,
-  side = "bottom",
+  side = "center",
   className,
 }: {
   open: boolean;
@@ -27,7 +27,7 @@ export function OmniSheet({
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  side?: "bottom" | "right";
+  side?: "bottom" | "right" | "center";
   className?: string;
 }) {
   return (
@@ -38,6 +38,7 @@ export function OmniSheet({
           "omni-sheet flex max-h-[min(88dvh,48rem)] flex-col overflow-hidden rounded-t-[1.75rem] p-0 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.5rem]",
           side === "right" &&
             "h-full max-h-full w-[min(92vw,32rem)] rounded-l-[1.5rem] rounded-t-none",
+          side === "center" && "max-h-[min(88dvh,48rem)] p-0 sm:max-h-[calc(100dvh-2rem)]",
           className,
         )}
       >
@@ -83,6 +84,28 @@ export function OmniSheetSurface({
   className?: string;
 }) {
   return <div className={cn("omni-sheet min-w-0 rounded-[1.5rem]", className)}>{children}</div>;
+}
+
+export function OmniCenteredPanel({
+  children,
+  className,
+  labelledBy,
+}: {
+  children: ReactNode;
+  className?: string;
+  labelledBy?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "pointer-events-auto absolute left-1/2 top-1/2 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),42rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[1.5rem] omni-sheet",
+        className,
+      )}
+      aria-labelledby={labelledBy}
+    >
+      {children}
+    </section>
+  );
 }
 
 export function OmniPageSurface({

@@ -197,7 +197,10 @@ export function DemandRequestPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-hidden sm:max-w-md">
+      <SheetContent
+        side="center"
+        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),42rem)] flex-col gap-0 overflow-hidden p-0"
+      >
         <SheetHeader className="shrink-0 border-b border-border/70 px-5 pb-4 pt-4 text-left">
           <div className="flex items-center justify-between gap-3">
             <SheetTitle>
