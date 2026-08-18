@@ -35,21 +35,21 @@ const steps = [
     description:
       "Écrivez un produit, un service ou un besoin. Omni regarde autour de vous et au-delà.",
     icon: Search,
-    accent: "bg-primary/12 text-primary",
+    accent: "bg-[var(--atlas-orange)]/12 text-[var(--atlas-orange)]",
   },
   {
     title: "Comprenez chaque facility",
     description:
       "Voyez les médias, la confiance, le stock, le prix, la distance et les offres actives.",
     icon: Globe2,
-    accent: "bg-forest/12 text-forest",
+    accent: "bg-[var(--atlas-green)]/12 text-[var(--atlas-green)]",
   },
   {
     title: "Passez de l’intention à l’action",
     description:
       "Demandez la disponibilité, échangez dans le chat, utilisez le QR et suivez la transaction.",
     icon: ShieldCheck,
-    accent: "bg-gold/20 text-amber-900",
+    accent: "bg-[var(--atlas-amber)]/18 text-[var(--atlas-ink)]",
   },
 ];
 
@@ -148,8 +148,8 @@ function OnboardingPage() {
 
   if (!user) {
     return (
-      <main className="grid min-h-[100dvh] place-items-center bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.25),transparent_35%),var(--color-background)] px-4 py-8">
-        <section className="omni-glass w-full max-w-lg space-y-5 p-6 text-center sm:p-8">
+      <main className="grid min-h-[100dvh] place-items-center overflow-x-hidden bg-[var(--atlas-paper)] px-4 py-8">
+        <section className="omni-atlas-surface w-full max-w-lg space-y-5 rounded-[1.75rem] p-6 text-center sm:p-8">
           <BrandMark className="mx-auto h-12 w-12" />
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
@@ -165,7 +165,7 @@ function OnboardingPage() {
             </p>
           </div>
           <Button
-            className="w-full"
+            className="w-full bg-[var(--atlas-orange)] text-white hover:bg-[#e85c0a]"
             onClick={() => void navigate({ to: "/auth", search: { redirectTo: target } })}
           >
             Créer mon compte et faire ma recherche <ArrowRight className="ml-2 h-4 w-4" />
@@ -182,20 +182,20 @@ function OnboardingPage() {
   const Icon = current.icon;
 
   return (
-    <main className="min-h-[100dvh] overflow-x-hidden bg-[radial-gradient(circle_at_top_right,hsl(var(--accent)/0.25),transparent_35%),var(--color-background)] px-4 py-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:px-6">
+    <main className="min-h-[100dvh] overflow-x-hidden bg-[var(--atlas-paper)] px-4 py-[calc(env(safe-area-inset-top)+1.25rem)] pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:px-6">
       <div className="mx-auto flex min-h-[calc(100dvh-2.5rem)] w-full max-w-5xl flex-col justify-center">
         <header className="mb-6 flex min-w-0 items-center justify-between gap-3 sm:mb-8">
           <div className="flex items-center gap-2 font-display text-xl font-extrabold">
             <BrandMark className="h-8 w-8" />
             <span className="truncate">OmniView</span>
           </div>
-          <span className="rounded-full bg-card/75 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+          <span className="rounded-full border border-[var(--atlas-glass-border)] bg-[var(--atlas-glass)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
             Bienvenue dans la recherche
           </span>
         </header>
 
         <section className="grid min-w-0 gap-5 xl:grid-cols-[1.05fr_0.95fr] xl:items-stretch">
-          <div className="omni-glass min-w-0 flex flex-col justify-between p-5 sm:p-8">
+          <div className="omni-atlas-surface min-w-0 flex flex-col justify-between rounded-[1.75rem] p-5 sm:p-8">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
                 Comment fonctionne Omni
@@ -218,7 +218,7 @@ function OnboardingPage() {
                     key={item.title}
                     type="button"
                     onClick={() => setStep(index)}
-                    className={`rounded-2xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${index === step ? "border-primary bg-primary/8 shadow-[var(--shadow-soft)]" : "border-border/70 bg-background/45"}`}
+                    className={`rounded-2xl border p-3 text-left transition-all duration-200 hover:-translate-y-0.5 ${index === step ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/8 shadow-[var(--atlas-shadow)]" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55"}`}
                   >
                     <span className={`grid h-9 w-9 place-items-center rounded-xl ${item.accent}`}>
                       <StepIcon className="h-4 w-4" />
@@ -232,7 +232,7 @@ function OnboardingPage() {
             </div>
           </div>
 
-          <div className="omni-card min-w-0 flex flex-col p-5 sm:p-8">
+          <div className="omni-atlas-surface min-w-0 flex flex-col rounded-[1.75rem] p-5 sm:p-8">
             <div className="flex items-center justify-between gap-3">
               <span className={`grid h-12 w-12 place-items-center rounded-2xl ${current.accent}`}>
                 <Icon className="h-6 w-6" />
@@ -252,7 +252,7 @@ function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => setRole("buyer")}
-                  className={`rounded-2xl border p-3 text-left ${role === "buyer" ? "border-primary bg-primary/8" : "border-border bg-background/50"}`}
+                  className={`rounded-2xl border p-3 text-left ${role === "buyer" ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/8" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55"}`}
                 >
                   <Search className="h-4 w-4 text-primary" />
                   <span className="mt-2 block text-sm font-bold">Acheteur</span>
@@ -263,7 +263,7 @@ function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => setRole("seller")}
-                  className={`rounded-2xl border p-3 text-left ${role === "seller" ? "border-primary bg-primary/8" : "border-border bg-background/50"}`}
+                  className={`rounded-2xl border p-3 text-left ${role === "seller" ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/8" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55"}`}
                 >
                   <Store className="h-4 w-4 text-primary" />
                   <span className="mt-2 block text-sm font-bold">Vendeur</span>
@@ -274,7 +274,7 @@ function OnboardingPage() {
               </div>
             </div>
 
-            <label className="mt-5 flex items-start gap-3 rounded-2xl border border-border bg-background/50 p-3 text-xs leading-5 text-muted-foreground">
+            <label className="mt-5 flex items-start gap-3 rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3 text-xs leading-5 text-muted-foreground">
               <input
                 type="checkbox"
                 checked={analyticsConsent}
@@ -288,7 +288,7 @@ function OnboardingPage() {
             </label>
 
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="rounded-2xl border border-border bg-background/50 p-3">
+              <label className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
                 <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   Langue
                 </span>
@@ -304,7 +304,7 @@ function OnboardingPage() {
               <button
                 type="button"
                 onClick={requestLocation}
-                className="rounded-2xl border border-border bg-background/50 p-3 text-left transition-colors hover:bg-secondary"
+                className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3 text-left transition-colors hover:bg-secondary"
               >
                 <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                   <MapPin className="h-3.5 w-3.5" /> Localisation
@@ -325,7 +325,7 @@ function OnboardingPage() {
               <Button className="min-h-11 w-full sm:w-auto" variant="outline" onClick={() => (step > 0 ? setStep(step - 1) : finish())}>
                 {step > 0 ? "Retour" : "Passer pour l’instant"}
               </Button>
-              <Button className="min-h-11 w-full sm:w-auto" onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>
+              <Button className="min-h-11 w-full bg-[var(--atlas-orange)] text-white hover:bg-[#e85c0a] sm:w-auto" onClick={() => (step < steps.length - 1 ? setStep(step + 1) : finish())}>
                 {step < steps.length - 1
                   ? "Continuer"
                   : role === "seller"

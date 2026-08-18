@@ -234,7 +234,7 @@ export function CheckoutPanel({
 
   return (
     <div className="space-y-4">
-      <div data-omni-seller-scanner="true" className="omni-card space-y-3 border-foreground/10 bg-card/92 p-4">
+      <div data-omni-seller-scanner="true" className="omni-atlas-surface space-y-3 rounded-[1.5rem] p-4 sm:p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Scanner · action prioritaire</p>
@@ -280,7 +280,7 @@ export function CheckoutPanel({
           </Button>
         </div>
         <div
-          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-foreground/15 bg-slate-950 md:aspect-video"
+          className="relative aspect-[4/3] overflow-hidden rounded-[1.35rem] border border-[var(--atlas-glass-border)] bg-[#171717] shadow-inner md:aspect-video"
           data-omni-camera-preview="true"
         >
           <video
@@ -300,7 +300,7 @@ export function CheckoutPanel({
             </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-white">
-              <Camera className="h-9 w-9 text-primary" />
+              <Camera className="h-9 w-9 text-[var(--atlas-orange)]" />
               <div>
                 <p className="font-semibold">Prêt à scanner</p>
                 <p className="mt-1 text-xs text-white/70">
@@ -320,7 +320,7 @@ export function CheckoutPanel({
       </div>
 
       {focusedTransaction ? (
-        <div data-omni-focused-transaction="true" className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
+        <div data-omni-focused-transaction="true" className="omni-atlas-surface space-y-3 rounded-[1.5rem] border-[var(--atlas-green)]/35 p-4" aria-live="polite">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
@@ -335,11 +335,11 @@ export function CheckoutPanel({
             </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-xl bg-background/80 p-3">
+            <div className="rounded-xl bg-[var(--atlas-paper)]/75 p-3">
               <span className="block text-xs text-muted-foreground">Montant</span>
               <strong>{formatMoney(focusedTransaction.amount)}</strong>
             </div>
-            <div className="rounded-xl bg-background/80 p-3">
+            <div className="rounded-xl bg-[var(--atlas-paper)]/75 p-3">
               <span className="block text-xs text-muted-foreground">Paiement</span>
               <strong>{focusedTransaction.payment_preference ?? "À choisir"}</strong>
             </div>
@@ -376,7 +376,7 @@ export function CheckoutPanel({
       ) : null}
 
       {lastValidated ? (
-        <div className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
+        <div className="omni-atlas-surface space-y-3 rounded-[1.5rem] border-[var(--atlas-green)]/35 p-4" aria-live="polite">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
@@ -394,15 +394,15 @@ export function CheckoutPanel({
             remise.
           </p>
           <div className="grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded-xl bg-background/80 p-2">
+            <div className="rounded-xl bg-[var(--atlas-paper)]/75 p-2">
               <span className="block text-muted-foreground">Montant</span>
               <strong>{formatMoney(lastValidated.amount)}</strong>
             </div>
-            <div className="rounded-xl bg-background/80 p-2">
+            <div className="rounded-xl bg-[var(--atlas-paper)]/75 p-2">
               <span className="block text-muted-foreground">Commission</span>
               <strong>{formatMoney(lastValidated.platformFee)}</strong>
             </div>
-            <div className="rounded-xl bg-background/80 p-2">
+            <div className="rounded-xl bg-[var(--atlas-paper)]/75 p-2">
               <span className="block text-muted-foreground">Payout prévu</span>
               <strong>{formatMoney(lastValidated.payout)}</strong>
             </div>

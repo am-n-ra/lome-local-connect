@@ -243,19 +243,19 @@ export function DemandRequestPanel({
           </p>
 
           {!user && (
-            <div className="space-y-3 rounded-lg border border-border bg-muted/40 p-3">
+            <div className="omni-atlas-surface space-y-3 rounded-[1.25rem] p-3">
               <p className="text-sm text-muted-foreground">
                 La carte reste consultable sans compte. Connectez-vous pour lancer la vérification
                 de disponibilité auprès des commerces.
               </p>
-              <Button className="w-full" onClick={redirectToAuth}>
+              <Button className="w-full bg-[var(--atlas-orange)] text-white hover:bg-[#e85c0a]" onClick={redirectToAuth}>
                 Se connecter et continuer
               </Button>
             </div>
           )}
 
           {user && step === 0 && (
-            <div className="omni-card space-y-3 p-4">
+            <div className="omni-atlas-surface space-y-3 rounded-[1.25rem] p-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Quoi</p>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -263,7 +263,6 @@ export function DemandRequestPanel({
                 </p>
               </div>
               <Input
-                autoFocus
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
                 placeholder="Ex. : ciment 50 kg, robe wax taille M…"
@@ -273,7 +272,7 @@ export function DemandRequestPanel({
 
           {user && step === 1 && (
             <div className="space-y-3">
-              <div className="rounded-2xl border border-border bg-muted/40 p-4">
+              <div className="rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-4">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                   Produit sélectionné
                 </p>
@@ -282,7 +281,7 @@ export function DemandRequestPanel({
               <div className="space-y-2">
                 <button
                   type="button"
-                  className={`w-full rounded-2xl border p-4 text-left transition ${scope === "facility" ? "border-primary bg-primary/8" : "border-border bg-card"}`}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${scope === "facility" ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/8" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70"}`}
                   onClick={() => setScope("facility")}
                   disabled={selectedMode !== "manual" && targetFacilityIds.length !== 1}
                 >
@@ -295,7 +294,7 @@ export function DemandRequestPanel({
                 </button>
                 <button
                   type="button"
-                  className={`w-full rounded-2xl border p-4 text-left transition ${scope === "visible" ? "border-primary bg-primary/8" : "border-border bg-card"}`}
+                  className={`w-full rounded-2xl border p-4 text-left transition ${scope === "visible" ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/8" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70"}`}
                   onClick={() => setScope("visible")}
                   disabled={selectedMode === "manual"}
                 >
@@ -316,7 +315,7 @@ export function DemandRequestPanel({
           )}
 
           {user && step === 2 && (
-            <div className="omni-card space-y-4 p-4">
+            <div className="omni-atlas-surface space-y-4 rounded-[1.25rem] p-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
                   Contraintes
@@ -346,7 +345,7 @@ export function DemandRequestPanel({
                   />
                 </label>
               </div>
-              <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+              <p className="rounded-[1.1rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-3 text-xs text-muted-foreground">
                 Le budget est optionnel et reste privé : il n'est jamais transmis au vendeur dans la
                 demande.
               </p>
@@ -378,7 +377,7 @@ export function DemandRequestPanel({
                 answers[0]?.id ??
                 null;
               return (
-                <div key={r.id} className="omni-card space-y-2 p-3">
+                <div key={r.id} className="omni-atlas-surface space-y-2 rounded-[1.25rem] p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-display font-bold">{r.search_term}</p>
@@ -409,7 +408,7 @@ export function DemandRequestPanel({
                   {answers.map((a) => (
                     <div
                       key={a.id}
-                      className={`rounded-lg border p-2 text-sm ${a.id === bestId ? "border-primary bg-primary/5" : "border-border"}`}
+                      className={`rounded-[1.1rem] border p-2 text-sm ${a.id === bestId ? "border-[var(--atlas-orange)] bg-[var(--atlas-orange)]/6" : "border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55"}`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">
@@ -423,9 +422,9 @@ export function DemandRequestPanel({
                         <span
                           className={
                             a.kind === "partial"
-                              ? "text-gold"
+                              ? "text-[var(--atlas-amber)]"
                               : a.available
-                                ? "text-primary"
+                                ? "text-[var(--atlas-green)]"
                                 : "text-destructive"
                           }
                         >
@@ -446,12 +445,12 @@ export function DemandRequestPanel({
                       {(a.available || a.kind === "partial") && (
                         <Button
                           size="sm"
-                          className="mt-2 w-full"
+                          className="mt-2 w-full bg-[var(--atlas-orange)] text-white hover:bg-[#e85c0a]"
                           disabled={intentBusy === a.id}
                           onClick={() => void startPurchaseIntent(r, a)}
                         >
                           <HandCoins className="mr-1.5 h-4 w-4" />
-                          {intentBusy === a.id ? "Création…" : "Je veux acheter"}
+                          {intentBusy === a.id ? "Création…" : "Je veux payer ici"}
                         </Button>
                       )}
                     </div>
