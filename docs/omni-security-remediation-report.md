@@ -103,3 +103,12 @@ Ensuite, il faudra exécuter la matrice mobile sur 320, 390, 768, 1024 et 1280 p
 [2]: https://omni.sparkafrika.online/ "Production Omni — buyer map-first"
 [3]: https://omni.sparkafrika.online/vendeur "Production Omni — seller Console"
 [4]: https://omni.sparkafrika.online/onboarding "Production Omni — onboarding"
+
+
+## Addendum — certification contrôlée E2E/mobile
+
+Le kit E2E staging a été publié dans `scripts/e2e/`. Le seed est protégé par un double verrou (`OMNI_E2E_TARGET=staging` et `OMNI_E2E_ALLOW_MUTATION=1`) et refuse donc la chaîne de connexion actuelle lorsqu’elle n’est pas explicitement déclarée staging. Le vérificateur read-only a confirmé zéro transaction post-cutoff `completed` sans review, zéro transaction active sans `intent_key`, zéro clé d’intention active dupliquée, zéro double redemption coupon, zéro dépôt FedaPay approuvé sans entrée ledger et zéro dérive snapshot/ledger. Il a séparément signalé trois transactions legacy `completed` sans review, créées avant le cutoff du nouveau contrat rating; aucun rating n’a été fabriqué pour les corriger.
+
+La reprise production read-only a été vérifiée depuis `https://omni.sparkafrika.online/`. La pill `2 transactions en cours — Reprendre depuis Mes demandes` ouvre la sheet de reprise et affiche les états `QR en attente de scan`, `Paiement à confirmer` et `Transaction terminée`, ainsi que les événements transactionnels correspondants. Aucun CTA de mutation n’a été déclenché.
+
+La certification statique mobile a validé dix garanties de code et 59 tests automatisés restent verts. Les captures headless de la landing à 320, 390, 768 et 1024 px ne montrent pas de débordement horizontal évident; le runner a été interrompu avant la capture 1280 px et cette preuve reste visuelle, non DOM complète. La caméra reste à certifier sur appareil réel HTTPS avec permission, caméra arrière, QR illisible, refus, reprise d’onglet et fermeture du scanner.
