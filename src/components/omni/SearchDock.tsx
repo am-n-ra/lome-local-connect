@@ -204,23 +204,14 @@ export function SearchDock({
       ref={dockRef}
       data-omni-dock="true"
       data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
-
+      data-omni-stage="buyer"
       className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+1.15rem)] sm:px-5"
     >
-      <div className="pointer-events-auto w-full max-w-4xl space-y-2.5">
-        <div className="flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/55">
-          <span>Omni · le monde est recherchable</span>
-          {activeSearch && (
-            <span>
-              {resultCount} résultat{resultCount === 1 ? "" : "s"}
-            </span>
-          )}
-        </div>
-
+      <div className="pointer-events-auto w-full max-w-3xl space-y-2">
         {controlsOpen && (
           <div
             data-omni-dock-row="structured"
-            className="omni-glass grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
+            className="omni-sheet grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
           >
             <div className="rounded-2xl bg-background/72 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
@@ -313,7 +304,7 @@ export function SearchDock({
             aria-label={controlsOpen ? "Masquer les paramètres" : "Afficher les paramètres"}
             aria-expanded={controlsOpen}
             onClick={() => setParametersOpen((open) => !open)}
-            className="omni-glass grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
+            className="omni-glass grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
           >
             {controlsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
@@ -372,7 +363,7 @@ export function SearchDock({
 
         <div
           data-omni-dock-row="context"
-          className="flex flex-wrap items-center justify-center gap-2"
+          className="flex min-w-0 items-center justify-start gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {coverageStatus === "loading" && (
             <span className="omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold text-muted-foreground">
@@ -492,7 +483,7 @@ export function SearchDock({
 
         <div
           data-omni-dock-row="primary"
-          className="omni-glass rounded-[1.6rem] p-1.5 shadow-[var(--shadow-soft)]"
+          className="omni-glass rounded-[1.6rem] border border-foreground/10 bg-card/92 p-1.5 shadow-[var(--shadow-soft)]"
         >
           <SmartSearchBar
             layout="dock"
@@ -522,7 +513,7 @@ function RefinementPanel({ filters, activeCount, onFiltersChange }: RefinementPa
   return (
     <div
       data-omni-refinement="true"
-      className="space-y-3 rounded-2xl bg-background/55 p-3"
+      className="space-y-3 rounded-2xl border border-border/65 bg-background/62 p-3"
       aria-label="Options d'affinage"
     >
       <div className="flex items-center justify-between gap-3">

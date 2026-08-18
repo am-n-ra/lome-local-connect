@@ -33,7 +33,8 @@ export function FacilityResultCard({
       aria-label={`${facility.name}. ${isUnclaimed ? "Facility non réclamée" : "Facility vérifiée"}. ${facility.product_count} offre${facility.product_count > 1 ? "s" : ""}.`}
       aria-posinset={index + 1}
       onClick={() => onSelect(facility)}
-      className="omni-glass group min-w-0 w-[min(19rem,calc(100vw-1.5rem))] shrink-0 snap-start rounded-[1.5rem] p-2.5 text-left shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
+      data-omni-result-card="true"
+      className="omni-glass group min-w-0 w-[min(20rem,calc(100vw-1.5rem))] shrink-0 snap-start rounded-[1.5rem] border border-foreground/10 bg-card/88 p-2.5 text-left shadow-[var(--shadow-soft)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
     >
       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
         {facility.cover_url || facility.matched_product_photo_url ? (
@@ -41,10 +42,10 @@ export function FacilityResultCard({
             src={facility.cover_url ?? facility.matched_product_photo_url ?? undefined}
             alt={`Aperçu de ${facility.name}`}
             loading="lazy"
-            className="h-16 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] md:h-28"
+            className="aspect-[16/9] w-full object-cover transition-transform duration-200 group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="grid h-16 place-items-center bg-secondary/50 px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
+          <div className="grid aspect-[16/9] place-items-center bg-secondary/50 px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Aperçu média indisponible
           </div>
         )}
@@ -97,7 +98,7 @@ export function FacilityResultCard({
         </span>
       </div>
       <div
-        className={`mt-3 rounded-full px-3 py-2 text-center text-[11px] font-bold ${isUnclaimed ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
+        className={`mt-3 grid min-h-11 place-items-center rounded-full px-3 py-2 text-center text-[11px] font-bold transition-colors ${isUnclaimed ? "bg-secondary text-foreground group-hover:bg-secondary/80" : "bg-primary text-primary-foreground group-hover:bg-primary/90"}`}
       >
         {isUnclaimed ? "Voir la fiche et réclamer" : "Voir et vérifier la disponibilité"}
       </div>

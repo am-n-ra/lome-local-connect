@@ -66,7 +66,7 @@ export function SellerProductForm({
   }
 
   return (
-    <form className="omni-card space-y-5 p-4 sm:p-5" onSubmit={(event) => void submit(event)}>
+    <form data-omni-seller-form="product" className="omni-card space-y-5 border-foreground/10 bg-card/92 p-4 sm:p-5" onSubmit={(event) => void submit(event)}>
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Catalogue</p>
         <h3 className="mt-1 font-display text-xl font-bold">Publier un produit</h3>
@@ -116,13 +116,14 @@ export function SellerProductForm({
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" disabled={atProductCap || busy}>
+        <Button type="submit" className="min-h-11" disabled={atProductCap || busy}>
           <Plus className="mr-1.5 h-4 w-4" />
           {busy ? "Publication…" : "Publier le produit"}
         </Button>
         <Button
           type="button"
           variant="outline"
+          className="min-h-11"
           onClick={() => setAdvancedOpen((open) => !open)}
           aria-expanded={advancedOpen}
         >
@@ -232,10 +233,17 @@ export function SellerProductForm({
                 </div>
               </div>
               {draft.couponCode.trim() ? (
-                <p className="rounded-lg bg-background px-3 py-2 text-sm text-muted-foreground">
-                  Aperçu client : <strong>{draft.couponCode.trim().toUpperCase()}</strong> ·
-                  économie de {draft.couponPercent || "0"} %.
-                </p>
+                <div className="rounded-2xl border border-primary/20 bg-primary/8 p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                    Aperçu client
+                  </p>
+                  <p className="mt-1 font-display text-lg font-bold">
+                    {draft.couponCode.trim().toUpperCase()}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Le client économise {draft.couponPercent || "0"} % sur ce produit.
+                  </p>
+                </div>
               ) : null}
             </div>
           </OmniDisclosure>

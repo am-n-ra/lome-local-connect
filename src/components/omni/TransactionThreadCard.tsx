@@ -92,6 +92,10 @@ export function TransactionThreadCard({
   const uiState = deriveTransactionUiState(currentStatus, qrActive, paymentPreference);
   const accepted = order.status === "confirmed" || order.status === "partially_confirmed";
   const qrExpired = Boolean(qrToken && qrExpiry && new Date(qrExpiry).getTime() <= Date.now());
+  const grossAmount = order.total;
+  const netAmount = transaction?.amount ?? order.amount ?? order.total;
+  const discountAmount = Math.max(0, grossAmount - netAmount);
+
   const roomAction = deriveTransactionRoomAction("buyer", currentStatus as TransactionRoomStatus, {
     hasQr: qrActive,
     paymentChoice:
@@ -158,11 +162,23 @@ export function TransactionThreadCard({
 
       <TransactionProgress steps={[...TRANSACTION_PROGRESS_LABELS]} current={progress} />
 
-      <div className="flex items-center justify-between border-y border-border py-3 text-sm">
-        <span className="text-muted-foreground">Total</span>
-        <span className="font-display text-lg font-bold">
-          {order.total.toLocaleString("fr-FR")} F
-        </span>
+      <div className="grid gap-2 rounded-2xl border border-border/70 bg-background/55 p-3 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-muted-foreground">Montant catalogue</span>
+          <span>{grossAmount.toLocaleString("fr-FR")} F</span>
+        </div>
+        {discountAmount > 0 ? (
+          <div className="flex items-center justify-between gap-3 text-forest">
+            <span>Réduction Omni</span>
+            <span>−{discountAmount.toLocaleString("fr-FR")} F</span>
+          </div>
+        ) : null}
+        <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-2">
+          <span className="font-semibold">Net à payer</span>
+          <span className="font-display text-xl font-bold text-primary">
+            {netAmount.toLocaleString("fr-FR")} F
+          </span>
+        </div>
       </div>
 
       {qrExpired && onRegenerateQr ? (

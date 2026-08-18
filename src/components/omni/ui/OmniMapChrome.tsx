@@ -26,14 +26,14 @@ export function OmniMapChrome({
         <div className="pointer-events-auto min-w-0">{left}</div>
         <div className="flex min-w-0 items-center justify-end gap-2 md:gap-3">
           {children}
-          <div className="pointer-events-auto shrink-0">
+          <div className="omni-glass pointer-events-auto shrink-0 rounded-full p-1">
             <NotificationsBell />
           </div>
           <Button
             variant="outline"
             size="icon"
             aria-label="Ouvrir le menu"
-            className="omni-glass pointer-events-auto relative shrink-0"
+            className="omni-glass pointer-events-auto relative h-11 w-11 shrink-0 rounded-full border-foreground/10 bg-card/82"
             onClick={onMenuOpen}
           >
             <Menu className="h-5 w-5" aria-hidden="true" />

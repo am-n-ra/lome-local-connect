@@ -23,6 +23,7 @@ import {
   type ProductRow,
 } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
+import { OmniActionBlock } from "@/components/omni/ui/OmniPrimitives";
 import { getProductOffer, type ProductOffer } from "@/lib/offers.functions";
 
 type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
@@ -175,7 +176,7 @@ export function FacilityPanel({
   }
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div data-omni-facility-sheet="true" className="min-w-0 space-y-4">
       {facility.cover_url && (
         <img
           src={facility.cover_url}
@@ -228,10 +229,16 @@ export function FacilityPanel({
       )}
 
       {!isUnclaimed && onCheckAvailability && (
-        <Button className="min-h-10 w-full" onClick={onCheckAvailability}>
-          <CheckCircle2 className="mr-1.5 h-4 w-4" />
-          Vérifier la disponibilité
-        </Button>
+        <OmniActionBlock
+          eyebrow="Maintenant"
+          title="Vérifier avant d’acheter"
+          description="Obtenez une réponse récente du vendeur avant de créer une intention d’achat."
+        >
+          <Button className="min-h-11 w-full" onClick={onCheckAvailability}>
+            <CheckCircle2 className="mr-1.5 h-4 w-4" />
+            Vérifier la disponibilité
+          </Button>
+        </OmniActionBlock>
       )}
 
       {isUnclaimed && (
@@ -319,7 +326,10 @@ export function FacilityPanel({
       )}
 
       <div className="space-y-2">
-        <p className="text-sm font-semibold">Produits ({products.length})</p>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold">Produits ({products.length})</p>
+            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Offres visibles</span>
+          </div>
         {products.map((p) => {
           const offer = offers[p.id];
           return (
