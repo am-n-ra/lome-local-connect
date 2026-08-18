@@ -57,7 +57,7 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
   return (
     <div className="space-y-4">
       <form
-        className="omni-card space-y-5 p-5"
+        className="omni-atlas-surface space-y-5 rounded-[1.5rem] p-4 sm:p-5"
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
@@ -78,6 +78,7 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               placeholder="Ex. BIENVENUE"
               maxLength={24}
+              className="text-base sm:text-sm"
               required
             />
           </div>
@@ -91,6 +92,7 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
               max="90"
               value={percent}
               onChange={(e) => setPercent(e.target.value)}
+              className="text-base sm:text-sm"
               required
             />
           </div>
@@ -102,6 +104,7 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Ex. Offre de bienvenue sur votre catalogue"
               maxLength={140}
+              className="text-base sm:text-sm"
             />
           </div>
         </div>
@@ -111,14 +114,14 @@ export function CouponsPanel({ facilityId, coupons, onRefresh }: Props) {
             {percent || "0"} %
           </p>
         )}
-        <Button type="submit">Créer le coupon</Button>
+        <Button type="submit" className="min-h-11 w-full sm:w-auto">Créer le coupon</Button>
       </form>
 
       <ul className="space-y-2">
         {coupons.map((c) => (
           <li
             key={c.id}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border p-3"
+            className="omni-atlas-surface flex flex-wrap items-center justify-between gap-2 rounded-[1.25rem] p-3"
           >
             <div>
               <p className="font-mono font-semibold">{c.code}</p>
