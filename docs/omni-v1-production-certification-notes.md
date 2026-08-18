@@ -65,3 +65,48 @@ La transition `seller_verified → payment_pending` est donc certifiée. La fina
 ## PWA et routes publiques
 
 La production expose `/manifest.webmanifest` en HTTP 200 avec le type `application/manifest+json` et `/sw.js` en HTTP 200 avec le type JavaScript. Les variantes `/manifest.json` et `/service-worker.js` renvoient 404, ce qui est attendu puisque les noms actifs sont ceux de l’application. Les routes `/`, `/carte`, `/vendeur` et `/auth` renvoient toutes HTTP 200. Aucun fichier `.env`, secret ou credential n’est suivi par Git.
+
+
+## Continuity Phase 10 browser checkpoint — 2026-08-18
+
+After the latest deployment, opening `/carte` in the production browser loaded the route and all primary controls: zoom, approximate-market exploration, settings, search input, voice search, submit search and hamburger menu. At the first view and again after waiting, the rendered scene remained visually blank/cream with the text `Chargement de la carte…` and `Localisation en cours…`. No SSR 500 was visible, but the map/globe and exact-position completion were not yet confirmed in this browser checkpoint and require console/network inspection before certification can be marked green.
+
+
+## Phase 10 console follow-up — 2026-08-18
+
+The browser console had no runtime error output. A read-only DOM check showed `document.readyState = complete`, one `.maplibregl-map`, one MapLibre canvas at 1280×1100 CSS pixels, and the body state `Zone cartographiée` plus `Localisation bloquée`, `Réessayer` and `Explorer le marché approximatif`. The initial screenshot’s loading copy had resolved; MapLibre was mounted and the remaining state was the expected location-permission fallback rather than a map crash.
+
+
+## Phase 10 search-button checkpoint — 2026-08-18
+
+The buyer search control remained visible after MapLibre mounted. A first attempt to input `tomates` targeted the pre-load input index; the subsequent rendered input still showed the placeholder rather than a confirmed value, so the explicit button click produced no visible search transition. This is recorded as an inconclusive browser interaction rather than a confirmed regression: the next check must reacquire the live input index, verify the value is present, and then click the live submit button or press Enter.
+
+
+## Phase 10 search-button result — 2026-08-18
+
+After reacquiring the live input index, `tomates` was visibly present in the field. Clicking the live `Lancer la recherche` button succeeded: production displayed `Pays`, `1 résultat` and `Vérifier la disponibilité`, while MapLibre progressively revealed and zoomed the globe toward Africa. The earlier inconclusive attempt was caused by using a stale pre-load element index, not by the search button itself.
+
+
+## Phase 10 availability panel result — 2026-08-18
+
+The production result opened a centered `Demande groupée` panel above the persistent globe/map. The canonical labels `Produit`, `Commerces`, `Contraintes` were visible, and the first step showed the product `tomates`. Advancing without submission moved the panel to `2/3`, exposed the selected facility and visible-result choices, and kept the result card and map context behind the panel. The single-result quota explanation was visible and no server-side availability request had yet been submitted.
+
+
+## Phase 10 seller initial checkpoint — 2026-08-18
+
+Opening `/vendeur` after the latest deployment initially rendered only `Chargement…` on the cream background with no interactive elements detected. This is an intermediate loading state; the seller shell must be rechecked after the authenticated server payload resolves before classifying it as a production failure.
+
+
+## Phase 10 seller and wallet result — 2026-08-18
+
+After the initial seller loading state resolved, `/vendeur` rendered a MapLibre map behind the centered seller workspace. The V1 dock exposed `Facility`, `Catalogue`, `Demandes reçues`, `Scanner QR`, `Omni Wallet` and `Coupons`, with no Ads or Agent entry. The Omni Wallet tab showed one rechargeable wallet, the FedaPay card checkout control, and the internal allocation selector for Pro/Publicité/Coupons. The map remained visible behind the surface.
+
+
+## Phase 10 camera result — 2026-08-18
+
+After explicit confirmation, the production camera action returned `Scan indisponible — saisie manuelle disponible` with `Caméra indisponible. Saisissez le code manuellement.` The preview frame stayed mounted and still displayed `Prêt à scanner`; the manual code field and `Valider` action remained visible. This confirms the fail-soft camera state in the certification browser. A real mobile HTTPS device is still required to certify actual video frames after permission is granted because the sandbox browser provides no camera stream.
+
+
+## Phase 10 public route result — 2026-08-18
+
+Public production checks returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, `/transaction/qr`, `/manifest.webmanifest` and `/sw.js`. The manifest content type is `application/manifest+json` and the service worker content type is JavaScript. The local branch remains synchronized with `origin/main`; only this certification-notes file is modified for the next documentation commit, while the previously identified `.vercel/` and local audit scripts remain intentionally untracked.
