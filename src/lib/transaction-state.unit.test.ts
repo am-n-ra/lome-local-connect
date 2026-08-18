@@ -75,7 +75,14 @@ describe("deriveTransactionUiState", () => {
   });
 
   it("does not expose actions after completion or for unknown states", () => {
-    expect(deriveTransactionUiState("completed", false).canConfirmReceived).toBe(false);
+    expect(deriveTransactionUiState("completed", false)).toMatchObject({
+      currentStep: 5,
+      canConfirmReceived: false,
+      canGenerateQr: false,
+      canChoosePayment: false,
+      canDeclarePayment: false,
+      canConfirmPayment: false,
+    });
     expect(deriveTransactionUiState("unknown", false)).toMatchObject({
       currentStep: 0,
       canGenerateQr: false,

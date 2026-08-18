@@ -122,6 +122,7 @@ function VendeurPage() {
   const [ready, setReady] = useState(false);
   const [activeFacilityId, setActiveFacilityId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("apercu");
+  const [liveDemandCount, setLiveDemandCount] = useState(0);
 
   useEffect(() => {
     if (!transactionId) return;
@@ -754,7 +755,7 @@ function VendeurPage() {
                       value: "demandes",
                       label: "Demandes reçues",
                       shortLabel: "Demandes",
-                      count: data?.requests.length || data?.counts.requests || 0,
+                      count: liveDemandCount || data?.requests.length || data?.counts.requests || 0,
                     },
                     { value: "encaisser", label: "Scanner QR", shortLabel: "Scanner" },
                     { value: "solde", label: "Omni Wallet", shortLabel: "Wallet" },
@@ -945,7 +946,12 @@ function VendeurPage() {
                     </div>
                   </div>
                   <div className="mt-4 omni-atlas-surface rounded-[1.6rem] p-4">
-                    <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} mode="mission" />
+                    <DemandPanel
+                    demand={data?.demand ?? []}
+                    facilityId={facility.id}
+                    mode="mission"
+                    onLiveCountChange={setLiveDemandCount}
+                  />
                   </div>
                   {overviewExpanded && (
                     <>
@@ -1181,7 +1187,11 @@ function VendeurPage() {
                 </TabsContent>
 
                 <TabsContent value="demandes" className="mt-5 space-y-8">
-                  <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} />
+                  <DemandPanel
+                    demand={data?.demand ?? []}
+                    facilityId={facility.id}
+                    onLiveCountChange={setLiveDemandCount}
+                  />
                   <RequestsPanel
                     facilityId={facility.id}
                     requests={data?.requests ?? []}

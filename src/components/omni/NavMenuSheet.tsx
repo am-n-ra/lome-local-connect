@@ -23,8 +23,6 @@ type Props = {
   onOpenWishlist?: (() => void) | undefined;
   onOpenOrders?: (() => void) | undefined;
   onOpenChat?: (() => void) | undefined;
-  activeRole?: "acheteur" | "vendeur";
-  onSwitchRole?: (() => void) | undefined;
 };
 
 /** Single glass navigation panel holding every secondary action. */
@@ -35,8 +33,6 @@ export function NavMenuSheet({
   onOpenWishlist,
   onOpenOrders,
   onOpenChat,
-  activeRole = "acheteur",
-  onSwitchRole,
 }: Props) {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();

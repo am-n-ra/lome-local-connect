@@ -17,11 +17,13 @@ export function DemandPanel({
   facilityId,
   showLiveRequests = true,
   mode = "full",
+  onLiveCountChange,
 }: {
   demand: DemandSignal[];
   facilityId: string;
   showLiveRequests?: boolean;
   mode?: "full" | "mission";
+  onLiveCountChange?: (count: number) => void;
 }) {
   const { market } = useMarket();
   const list = useServerFn(listDemandForFacility);
@@ -33,11 +35,13 @@ export function DemandPanel({
 
   const refresh = useCallback(async () => {
     try {
-      setLive(await list({ data: { facilityId } }));
+      const next = await list({ data: { facilityId } });
+      setLive(next);
+      onLiveCountChange?.(next.length);
     } catch {
       setLive([]);
     }
-  }, [facilityId, list]);
+  }, [facilityId, list, onLiveCountChange]);
 
   useEffect(() => {
     void refresh();
@@ -121,6 +125,9 @@ export function DemandPanel({
                     </p>
                     <p className="break-words text-sm font-semibold">
                       {r.matched_product_name ?? r.search_term}
+                    </p>
+                    <p className={index === 0 ? "break-words text-xs text-white/65" : "break-words text-xs text-muted-foreground"}>
+                      {r.buyer_name ? `Demande de ${r.buyer_name}` : "Demande Omni"}
                     </p>
                     <p className={index === 0 ? "break-words text-xs text-white/65" : "break-words text-xs text-muted-foreground"}>
                       {r.matched_product_name

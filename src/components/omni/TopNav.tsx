@@ -52,8 +52,6 @@ export function TopNav({
       onOpenWishlist={onOpenWishlist}
       onOpenOrders={onOpenOrders}
       onOpenChat={onOpenChat}
-      activeRole={activeRole}
-      onSwitchRole={() => void navigate({ to: activeRole === "vendeur" ? "/carte" : "/vendeur" })}
     />
   );
 

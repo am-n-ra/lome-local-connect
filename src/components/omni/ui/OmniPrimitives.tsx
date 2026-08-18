@@ -375,12 +375,15 @@ export function TransactionProgress({
     return { ...value, status: statuses?.[index] ?? value.status ?? fallbackStatus };
   });
 
+  const finished = current >= normalized.length;
+
   return (
-    <ol
-      className="grid gap-2 sm:flex sm:items-start sm:gap-1"
-      aria-label={ariaLabel}
-      data-omni-progress="transaction"
-    >
+    <div data-omni-progress-state={finished ? "completed" : "in_progress"}>
+      <ol
+        className="grid gap-2 sm:flex sm:items-start sm:gap-1"
+        aria-label={ariaLabel}
+        data-omni-progress="transaction"
+      >
       {normalized.map((step, index) => {
         const status = step.status!;
         const active = status === "active";
@@ -444,8 +447,14 @@ export function TransactionProgress({
             ) : null}
           </li>
         );
-      })}
-    </ol>
+        })}
+      </ol>
+      {finished ? (
+        <p className="mt-3 rounded-full bg-forest/10 px-3 py-1.5 text-center text-xs font-bold text-forest">
+          Transaction terminée
+        </p>
+      ) : null}
+    </div>
   );
 }
 

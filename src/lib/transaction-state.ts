@@ -14,7 +14,7 @@ export const TRANSACTION_STATUS_LABEL: Record<string, string> = {
 
 export type TransactionUiState = {
   /** Zero-based index consumed by TransactionProgress. */
-  currentStep: 0 | 1 | 2 | 3 | 4;
+  currentStep: 0 | 1 | 2 | 3 | 4 | 5;
   canGenerateQr: boolean;
   canChoosePayment: boolean;
   canDeclarePayment: boolean;
@@ -66,7 +66,9 @@ export function deriveTransactionUiState(
   }
 
   if (status === "completed") {
-    return { ...base, currentStep: 4 };
+    // A completed transaction is beyond the five operational steps: every step
+    // is complete and the UI can render a separate final state.
+    return { ...base, currentStep: 5 };
   }
 
   if (qrActive || status === "qr_verified") {
