@@ -18,7 +18,7 @@ export function OmniSheet({
   description,
   children,
   footer,
-  side = "center",
+  side = "bottom",
   className,
 }: {
   open: boolean;
@@ -27,7 +27,7 @@ export function OmniSheet({
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
-  side?: "bottom" | "right" | "center";
+  side?: "bottom";
   className?: string;
 }) {
   return (
@@ -35,10 +35,7 @@ export function OmniSheet({
       <SheetContent
         side={side}
         className={cn(
-          "omni-sheet flex max-h-[min(88dvh,48rem)] flex-col overflow-hidden rounded-t-[1.75rem] p-0 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.5rem]",
-          side === "right" &&
-            "h-full max-h-full w-[min(92vw,32rem)] rounded-l-[1.5rem] rounded-t-none",
-          side === "center" && "max-h-[min(88dvh,48rem)] p-0 sm:max-h-[calc(100dvh-2rem)]",
+          "omni-sheet w-[min(calc(100vw-1.5rem),34rem)] max-h-[min(88dvh,48rem)] flex flex-col overflow-hidden rounded-t-[1.75rem] p-0 sm:max-h-[calc(100dvh-2rem)] sm:rounded-[1.5rem]",
           className,
         )}
       >
@@ -86,25 +83,94 @@ export function OmniSheetSurface({
   return <div className={cn("omni-sheet min-w-0 rounded-[1.5rem]", className)}>{children}</div>;
 }
 
-export function OmniCenteredPanel({
+export function OmniFlowSheet({
+  open,
+  onOpenChange,
+  eyebrow,
+  title,
+  description,
+  progress,
   children,
-  className,
-  labelledBy,
+  footer,
 }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  progress?: ReactNode;
   children: ReactNode;
-  className?: string;
-  labelledBy?: string;
+  footer?: ReactNode;
+}) {
+  return (
+    <OmniSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={title}
+      {...(description ? { description } : {})}
+      {...(footer ? { footer } : {})}
+    >
+      {eyebrow ? <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p> : null}
+      {progress ? <div className="mb-4">{progress}</div> : null}
+      {children}
+    </OmniSheet>
+  );
+}
+
+export function OmniActionBlock({
+  eyebrow = "Maintenant",
+  title,
+  description,
+  children,
+  tone = "default",
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  children?: ReactNode;
+  tone?: "default" | "positive" | "warning" | "danger";
 }) {
   return (
     <section
+      aria-live="polite"
       className={cn(
-        "pointer-events-auto absolute left-1/2 top-1/2 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),42rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-[1.5rem] omni-sheet",
-        className,
+        "rounded-[1.25rem] border p-4 shadow-[0_12px_36px_-24px_rgba(35,30,26,0.6)]",
+        tone === "default" && "border-border/70 bg-card/95",
+        tone === "positive" && "border-forest/25 bg-forest/8",
+        tone === "warning" && "border-primary/25 bg-primary/8",
+        tone === "danger" && "border-destructive/25 bg-destructive/8",
       )}
-      aria-labelledby={labelledBy}
     >
-      {children}
+      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+      <h3 className="mt-1 font-display text-lg font-bold tracking-tight">{title}</h3>
+      {description ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
+      {children ? <div className="mt-4">{children}</div> : null}
     </section>
+  );
+}
+
+export function OmniResumeBar({
+  label,
+  detail,
+  onClick,
+}: {
+  label: string;
+  detail?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="omni-glass group flex min-h-11 w-full min-w-0 items-center gap-3 rounded-full px-4 py-2 text-left transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <span className="h-2 w-2 shrink-0 rounded-full bg-primary shadow-[0_0_0_4px_rgba(232,116,34,0.12)]" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-xs font-bold">{label}</span>
+        {detail ? <span className="block truncate text-[11px] text-muted-foreground">{detail}</span> : null}
+      </span>
+      <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+    </button>
   );
 }
 

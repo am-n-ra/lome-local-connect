@@ -46,8 +46,8 @@ export function NavMenuSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        side="right"
-        className="omni-glass w-full max-w-sm overflow-y-auto border-l border-border/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-[var(--shadow-soft)]"
+        side="bottom"
+        className="omni-glass flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col overflow-hidden rounded-t-[1.75rem] border-border/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-[var(--shadow-soft)] sm:rounded-[1.5rem]"
       >
         <SheetHeader className="p-0 text-left">
           <SheetTitle className="flex items-center gap-2">
@@ -58,7 +58,8 @@ export function NavMenuSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Navigation
           </p>
@@ -104,7 +105,9 @@ export function NavMenuSheet({
           </nav>
         </section>
 
-        <div className="mt-6">
+        </div>
+
+        <div className="mt-6 shrink-0">
           {user ? (
             <Button variant="outline" className="w-full" onClick={() => go(() => void signOut())}>
               <LogOut className="mr-2 h-4 w-4" /> Déconnexion

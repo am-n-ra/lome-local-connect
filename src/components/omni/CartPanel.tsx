@@ -119,11 +119,14 @@ export function CartPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md">
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
+      >
         <SheetHeader>
           <SheetTitle>Mon panier</SheetTitle>
         </SheetHeader>
-        <div className="space-y-5 p-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
           {cart.lines.length === 0 && (
             <p className="text-sm text-muted-foreground">Votre panier est vide.</p>
           )}

@@ -16,7 +16,7 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
-import { OmniCenteredPanel } from "@/components/omni/ui/OmniPrimitives";
+import { OmniSheetSurface } from "@/components/omni/ui/OmniPrimitives";
 import { ResultRail } from "@/components/omni/ResultRail";
 
 import {
@@ -861,7 +861,9 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         )}
 
         {selected && (
-          <OmniCenteredPanel className="z-40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+          <OmniSheetSurface
+            className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5"
+          >
             <div className="mb-2 flex justify-end gap-2">
               <Button
                 variant="ghost"
@@ -905,7 +907,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
                 onCheckAvailability={() => openManualAvailability(selected)}
               />
             </div>
-          </OmniCenteredPanel>
+          </OmniSheetSurface>
         )}
 
         {steps.length > 0 && (

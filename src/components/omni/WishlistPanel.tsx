@@ -42,11 +42,14 @@ export function WishlistPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
+      >
         <SheetHeader>
           <SheetTitle>Produits recherchés</SheetTitle>
         </SheetHeader>
-        <div className="space-y-3 p-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
           {!user && (
             <p className="text-sm text-muted-foreground">
               Connectez-vous pour retrouver vos recherches.

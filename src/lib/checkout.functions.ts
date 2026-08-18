@@ -54,6 +54,7 @@ export type TransactionTimeline = {
     intent_created_at: string | null;
     paid_at: string | null;
     completed_at: string | null;
+    viewer_role: "buyer" | "seller";
   };
   events: TransactionEvent[];
 };
@@ -783,6 +784,7 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
               t.seller_payment_confirmed_at, t.fulfillment_started_at,
               CASE WHEN t.status IN ('payment_pending','paid','fulfillment','received','rating_pending','completed')
                    THEN f.phone ELSE NULL END AS seller_contact,
+              CASE WHEN t.buyer_id = $2 THEN 'buyer' ELSE 'seller' END AS viewer_role,
               t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
        FROM public.transactions t
        JOIN public.facilities f ON f.id = t.facility_id

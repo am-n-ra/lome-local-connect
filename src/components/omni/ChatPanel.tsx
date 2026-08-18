@@ -179,7 +179,10 @@ export function ChatPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetContent
+        side="bottom"
+        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
+      >
         <SheetHeader className="border-b border-border p-4">
           <SheetTitle>{active ? active.name : "Messages"}</SheetTitle>
           {transactionContext && !transactionTimeline && (
@@ -237,7 +240,7 @@ export function ChatPanel({
         )}
 
         {user && active && transactionContext && (
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
             {transactionTimeline ? (
               <TransactionThreadCard
                 order={toBuyerOrder(transactionTimeline)}
