@@ -65,7 +65,10 @@ import {
 import { createWalletDeposit, confirmWalletDeposit } from "@/lib/payments.functions";
 
 export const Route = createFileRoute("/vendeur")({
-  validateSearch: z.object({ depot: z.string().uuid().optional() }),
+  validateSearch: z.object({
+    depot: z.string().uuid().optional(),
+    transactionId: z.string().uuid().optional(),
+  }),
   head: () => ({
     meta: [
       { title: "Espace vendeur — OmniView" },
@@ -106,12 +109,16 @@ function VendeurPage() {
     market?.default_lat != null
       ? { lat: market.default_lat, lng: market.default_lng }
       : DEFAULT_CENTER;
-  const { depot } = useSearch({ from: "/vendeur" });
+  const { depot, transactionId } = useSearch({ from: "/vendeur" });
   const navigate = useNavigate();
   const [data, setData] = useState<Dashboard | null>(null);
   const [ready, setReady] = useState(false);
   const [activeFacilityId, setActiveFacilityId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("apercu");
+
+  useEffect(() => {
+    if (transactionId) setActiveTab("encaisser");
+  }, [transactionId]);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [hours, setHours] = useState("");
 
@@ -893,9 +900,9 @@ function VendeurPage() {
                           )}
                         </div>
                         <div className="omni-card p-5">
-                          <p className="text-sm text-muted-foreground">Campagnes</p>
+                          <p className="text-sm text-muted-foreground">Coupons</p>
                           <p className="mt-1 font-display text-2xl font-extrabold">
-                            {data?.counts.campaigns ?? 0}
+                            {data?.counts.coupons ?? 0}
                           </p>
                         </div>
                       </div>
