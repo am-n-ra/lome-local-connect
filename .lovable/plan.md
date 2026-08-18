@@ -1,146 +1,128 @@
-# Omni V1 — Audit UI et refonte de l'état transaction
+# Omni — Harmonisation UI : un système unique, mobile-first, guidé
 
-Séquence confirmée : **vérification vendeur avant paiement**, contact et itinéraire débloqués dès l'intention. Le serveur applique déjà cet ordre (`redeem` fait passer `qr_generated → payment_pending` avec l'événement `seller_verified`, et `deriveTransactionRoomAccess` débloque contact/itinéraire sur `hasIntent`). C'est l'UI qui ne raconte pas cette histoire.
+Objectif : une seule grammaire visuelle et gestuelle du premier écran jusqu'à la note finale. L'utilisateur ne doit jamais se demander « où suis-je, que dois-je faire maintenant ». Le document produit s'appelle `docs/omni-ui-system.md` et fait autorité sur toutes les surfaces.
 
-## Audit — ce qui a été mesuré
+## Ce que montrent les captures actuelles
 
-Scan mobile 390 px sur `/`, `/vendeur`, `/onboarding`, `/admin`, `/auth` :
-
-| Route | État observé |
+| Capture | Défaut constaté |
 |---|---|
-| `/` | 0 canvas, figé sur « Chargement de la carte… / Localisation en cours… » |
-| `/vendeur` | figé sur « Chargement… » |
-| `/onboarding` | figé sur « Préparation de votre espace… » |
-| `/admin` | page vide (0 caractère) |
-| `/auth` | seule route qui rend |
+| Fiche « Le Panier Bè » | La feuille déborde à droite (barre de défilement visible hors cadre), le CTA est collé au bord, pas de marge de sécurité |
+| Étapes 1/3 → 3/3 | Trois écrans avec trois hauteurs, trois paddings et deux positions de bouton retour différentes ; le retour flotte hors de la feuille en 2/3 et 3/3 |
+| « Votre espace » | Liste correcte mais coupée à droite, aucune hiérarchie entre le portefeuille et les compteurs, « Changer de rôle » perdu dans l'en-tête |
+| Console vendeur desktop | Contenu tassé en colonne étroite, immense vide en bas, dock `Carte / Console` posé par-dessus les cartes |
+| Modale coupon / Scanner QR | Deux systèmes de superposition différents (voile flou centré vs panneau ancré à droite, lui aussi coupé) |
+| Parcours vendeur 6/6 | Aperçu miniature illisible, deux CTA concurrents sur le même écran |
 
-Erreur unique à l'origine des quatre premiers cas : `AsyncLocalStorage is not a constructor` à l'hydratation. `src/lib/auth-middleware.ts` n'a pas l'extension `.server`, donc `neon-auth.server → db.server →` driver Neon part dans le bundle navigateur, et tous les `*.functions.ts` importent ce fichier.
+Diagnostic : il n'existe pas de contrat de surface. Chaque écran réinvente son enveloppe, son padding, sa position d'action et son mode de superposition. C'est ça qui donne la sensation de patchwork, avant même toute question de style.
 
-### Dettes UI relevées dans le code
-
-1. **La transaction est éclatée en quatre surfaces** : `OrdersPanel` (sheet « Mes demandes »), `TransactionThreadCard`, `ChatPanel`, `CheckoutPanel` vendeur. Aucun endroit unique et reprenable.
-2. **`OrdersPanel` charge toutes les timelines en parallèle à l'ouverture** : lent, et une erreur unitaire est avalée silencieusement.
-3. **Les conséquences passent par des toasts** (coupon, paiement déclaré, QR régénéré) : elles disparaissent, alors que ce sont des faits de la transaction.
-4. **Pas d'URL par transaction** : impossible de partir ailleurs et de revenir au même endroit, ni de deep-linker une notification.
-5. **Le choix du paiement est présenté trop tôt** dans les cards, avant que le vendeur ait vérifié.
-6. **Contact et itinéraire ne sont pas visibles dès l'intention**, alors que l'acheteur doit se déplacer pour la vérification.
-7. **Sections vendeur orphelines** (wallet, plan, paramètres, agent) non exposées par la navigation.
-8. **États d'entrée non bornés** : chargements infinis, `/admin` blanc, formulaire d'auth non sémantique.
-
-## Machine d'états confirmée
+## Le système : trois surfaces, une seule action principale
 
 ```text
-intent_created
-   ↓                     contact + itinéraire DÉBLOQUÉS ici
-qr_generated             acheteur : QR affiché, code manuel de secours
-   ↓  vendeur scanne / vérifie en face à face
-seller_verified          « Transaction confirmée »
-   ↓
-payment_pending          acheteur voit le NET à payer (après réduction)
-   ↓  acheteur choisit    Cash · Mobile Money · Payer à la livraison
-payment_declared         acheteur : [ J'ai payé ]
-   ↓
-payment_confirmed        vendeur : [ Paiement reçu ]
-   ↓
-fulfillment              vendeur : [ Produit remis / livré ]
-   ↓
-received                 acheteur : [ Produit reçu ]
-   ↓
-rating_pending → completed
+FLOAT   éléments posés sur la carte (dock de recherche, barre de reprise, puces)
+SHEET   toute décision : fiche, étapes, compte, coupon, scanner
+PAGE    tout ce qui est long et tabulaire : console vendeur, admin
 ```
 
-Sorties : `expired` (QR périmé → régénérer), `cancelled`. Chaque transition écrit un `transaction_events` et une card dans le fil.
+Règles non négociables, appliquées partout :
 
-## Écran de transaction — persistant et reprenable
+- **Une action principale par écran**, en bas, pleine largeur, dans un pied fixe avec zone de sécurité. Le retour est une icône dans l'en-tête de la feuille — jamais un bouton flottant à côté du CTA.
+- **Enveloppe unique** : `min(100vw - 24px, 34rem)` en mobile, largeur fixe centrée au-delà ; `overflow-x` impossible par construction ; défilement uniquement dans le corps, jamais sur l'enveloppe.
+- **Un seul mode de superposition** : la feuille monte du bas en mobile, se centre en desktop. Plus de panneau ancré à droite, plus de modale d'un autre type.
+- **Rythme unique** : en-tête (sur-titre + titre), corps, pied. Mêmes paddings, mêmes rayons, mêmes tailles de texte partout.
+- **Cible tactile 44 px minimum**, y compris les `+` / `−` et le bouton de fermeture.
 
-Nouvelle route `/transaction/$id`, pas une sheet. On peut la quitter, naviguer, revenir : l'état est reconstruit depuis le serveur, et une barre de reprise apparaît sur la carte tant qu'une transaction est active.
+## Guider, pas seulement afficher
+
+Chaque écran répond à trois questions dans cet ordre : où j'en suis, ce qu'on attend de moi, ce qui se passe ensuite.
+
+- **Fil de progression persistant** sur toute séquence (disponibilité 1→3, transaction 1→5) : même composant, même position, sous le titre.
+- **Une phrase de conséquence** sous chaque action principale : « Votre demande part à 11 commerces », « Le vendeur voit votre QR immédiatement », « Il vous reste 46 000 F à payer ».
+- **Prochaine étape annoncée** avant de valider, jamais découverte après.
+- **États vides utiles** : pas de zone blanche, une phrase + l'action qui débloque.
+- **Aucun toast pour une conséquence durable.** Les faits (coupon appliqué, paiement déclaré, réponse vendeur) s'inscrivent dans l'écran concerné.
+
+## Le parcours, écran par écran
 
 ```text
-┌──────────────────────────────────────────┐
-│ ←  Chez Ama · ciment 50 kg          ⋯    │
-│ ①──②──③──④──⑤   Vérification vendeur     │
-│ 48 000 F − 2 000 F  →  46 000 F à payer  │
-├──────────────────────────────────────────┤
-│ ┌──────────────────────────────────────┐ │
-│ │  ÉTAT ACTUEL                         │ │  bloc « quoi faire maintenant »
-│ │  Montrez ce QR au vendeur            │ │
-│ │   ▛▀▀▀▜  K7QM2PDX   [ Agrandir ]     │ │
-│ │  ou dictez le code                   │ │
-│ └──────────────────────────────────────┘ │
-│ ┌──────────────────────────────────────┐ │
-│ │ Chez Ama · 800 m                     │ │  contact + itinéraire dès l'intention
-│ │ [ Itinéraire ]  [ Appeler ]          │ │
-│ └──────────────────────────────────────┘ │
-│ FIL                                      │
-│ ● Intention créée              10:02     │
-│ ● Offre confirmée 4 × 12 000             │
-│ ● Coupon BIENVENUE −2 000 F              │  conséquence inline, pas un toast
-│ ● QR généré                    10:05     │
-│ ○ Vérification vendeur — en attente      │
-│ [Ama] Je vous garde les 4 sacs.          │
-├──────────────────────────────────────────┤
-│ [ Écrire un message ]                    │  message = option, pas le contenant
-└──────────────────────────────────────────┘
+CARTE                    RÉSULTATS                FICHE
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│   globe      │  →      │  rail bas    │  →      │ photo/badges │
+│              │         │ ← carte1 →   │         │ prix · 3,4km │
+│ ⌕ Rechercher │         │ suit la carte│         │──────────────│
+└──────────────┘         └──────────────┘         │ Vérifier la  │
+   dock flottant           1 carte = 1 lieu       │ disponibilité│
+                                                   └──────────────┘
+        ↓
+DISPONIBILITÉ 1→3          COMPARAISON              INTENTION
+┌──────────────┐         ┌──────────────┐         ┌──────────────┐
+│ ●○○  Quoi ?  │         │ 3 réponses   │         │ QR + code    │
+│ produit / qté│    →    │ ✓ dispo 11800│    →    │ itinéraire   │
+│──────────────│         │ ~ partiel    │         │ appeler      │
+│  Continuer   │         │ ✗ non        │         │──────────────│
+└──────────────┘         └──────────────┘         │ suivi en bas │
+  même enveloppe           1 carte = 1 décision    └──────────────┘
+  aux 3 étapes
+        ↓
+TRANSACTION (écran unique, reprenable)
+┌───────────────────────────────────────┐
+│ ← Chez Ama          ①─②─③─④─⑤         │
+│ ┌───────────────────────────────────┐ │
+│ │ MAINTENANT : montrez ce QR        │ │  un seul bloc d'action
+│ │  ▛▀▜  K7QM2PDX                    │ │  qui se transforme
+│ └───────────────────────────────────┘ │  à chaque étape
+│ ● Intention créée · ● Coupon −2 000 F │
+│ ○ Vérification vendeur…               │
+│ [ Écrire un message ]                 │
+└───────────────────────────────────────┘
 ```
 
-Après vérification, le bloc d'état change seul, sans changer d'écran :
+Après vérification, le même bloc devient « Transaction confirmée · 46 000 F · Cash / Mobile Money / Livraison », puis « J'ai payé », puis « Reçu », puis la notation. Jamais de changement d'écran.
+
+**Barre de reprise** : tant qu'une transaction est active, une barre fine et tapable reste visible sur la carte et dans la console vendeur. On ne perd jamais le fil.
+
+## Rôle et compte
+
+Le changement de rôle sort de l'en-tête et devient la première ligne de la feuille compte, sous le nom, avec l'état courant lisible :
 
 ```text
-│  ✓ Transaction confirmée par Chez Ama    │
-│  Il vous reste  46 000 F  à payer        │
-│  Comment payez-vous ?                    │
-│  [ Cash ]  [ Mobile Money ]  [ À la livraison ] │
+┌──────────────────────────────────┐
+│ Afi Mensah                       │
+│ ● Vous êtes en mode Acheteur     │
+│ [ Passer en mode Vendeur ]       │  bascule pleine largeur, pas un menu
+├──────────────────────────────────┤
+│ Portefeuille            42 000 F │
+│ Disponibilités                 2 │
+│ Transactions                   1 │
+│ Messages                       3 │
+└──────────────────────────────────┘
 ```
 
-puis `[ J'ai payé ]`, puis attente de `Paiement reçu`, `Produit remis`, `[ Produit reçu ]`, notation, `Terminé`.
+La bascule est disponible depuis les deux mondes, au même endroit, et ramène à l'écran équivalent — pas à l'accueil.
 
-Règles : **un seul bloc d'action à la fois** en haut, le fil en dessous en lecture, le champ message toujours disponible mais jamais dominant. Erreurs (QR rejoué, expiré, paiement refusé) = card rouge dans le fil avec l'action de reprise.
+## Console vendeur
 
-### Reprise visible partout
+Le dock `Carte / Console` cesse de flotter au-dessus du contenu : il devient un segment dans l'en-tête. En desktop, la console passe en deux colonnes (demandes à gauche, actions et indicateurs à droite) pour supprimer le vide vertical. La demande de disponibilité en cours reste la carte la plus haute, avec trois réponses en un geste. Le scanner QR devient une feuille standard, caméra demandée uniquement au clic, saisie manuelle toujours visible.
 
-```text
-carte  →  ┌────────────────────────────────────┐
-          │ ● Transaction en cours · Chez Ama  │  barre fine, tapable
-          │   Vérification vendeur · 46 000 F  │
-          └────────────────────────────────────┘
-```
+## Mouvement
 
-Notifications et menu deep-linkent vers `/transaction/$id`.
-
-### Côté vendeur — même écran, actions inversées
-
-```text
-│ Kossi A. · ciment 50 kg · 4 unités       │
-│ ÉTAT : QR à vérifier                     │
-│ [ Scanner le QR ]   [ Saisir le code ]   │
-│ … puis  [ Paiement reçu ]                │
-│ … puis  [ Produit remis ]                │
-```
-
-La caméra n'est demandée qu'au clic « Scanner le QR », caméra arrière, stream arrêté à la fermeture, états `requesting / active / denied / unsupported` avec la saisie manuelle toujours visible.
-
-## Le reste de l'UI, corrigé dans la foulée
-
-- **Availability** : une sheet à trois étapes (Quoi → Où → Contraintes), puis l'écran de comparaison ; une card = une réponse = une décision ; l'historique part dans `Menu → Disponibilités`.
-- **Résultats** : rail horizontal synchronisé avec la carte, l'objet cherché avant le nom du commerce, `Affiner` redevient une icône discrète.
-- **Vendeur** : bascule `Carte / Console`, toutes les sections exposées (wallet, plan, paramètres, agent inclus), réponse à une demande en un geste.
-- **Wallet** : un seul Omni Wallet rechargeable, allocations en lecture, aucun CTA de retrait en V1.
-- **États d'entrée** : squelette local par surface, état vide, état d'erreur avec `Réessayer`, vérification d'auth bornée puis contenu / `/auth` / « Accès réservé ». Formulaire d'auth sémantique.
-- **Accessibilité** : cibles ≥ 44 px, focus rendu au déclencheur, Échap ferme un seul niveau, changements d'état annoncés en région live.
+Discret, jamais décoratif. Feuille : glissement 220 ms avec sortie douce. Changement d'étape : translation horizontale de 12 px + fondu. Nouvelle réponse vendeur : la carte apparaît par le haut avec un léger surlignement qui s'éteint. Compteurs : transition numérique courte. Tout est désactivé sous `prefers-reduced-motion`.
 
 ## Détails techniques
 
-- Lot 0 : renommer `src/lib/auth-middleware.ts` en `.server.ts` (ou charger `neon-auth.server` dans les handlers) + garde-fou automatisé qui échoue si un module `.server` ou un built-in Node entre dans le bundle client.
-- Nouvelle route `src/routes/transaction.$id.tsx` alimentée par `transaction_events` et `messages.transaction_id`, remplaçant l'usage transactionnel de `OrdersPanel`, `ChatPanel` et `CheckoutPanel`.
-- Dérivation d'action centralisée dans `src/lib/omni-v1-contracts.ts` (déjà présent) : l'UI n'invente aucune transition, elle affiche `deriveTransactionRoomAction`.
-- Chargement par transaction (plus de fan-out de timelines à l'ouverture d'un panneau) ; erreurs remontées, jamais avalées.
-- Refonte de présentation : server functions et migrations existantes réutilisées telles quelles.
+- `docs/omni-ui-system.md` : surfaces, tokens d'espacement, échelle typographique, règles d'action, matrice d'états (vide / chargement / erreur / succès), tableau de correspondance écran → surface.
+- Enveloppes normalisées dans `src/components/omni/ui/OmniPrimitives.tsx` : une seule `OmniSheet` (bas en mobile, centrée en desktop), suppression de la variante `right` et de `OmniCenteredPanel`, pied d'action obligatoire via `OmniActionFooter`.
+- Nouveau `OmniFlowSheet` : en-tête + progression + corps + pied, utilisé par la disponibilité, l'onboarding et le parcours vendeur, pour supprimer les divergences des captures 1/3 → 3/3.
+- Nouveau `OmniActionBlock` (bloc « maintenant ») et `OmniResumeBar`, alimentés par la dérivation d'état existante dans `src/lib/omni-v1-contracts.ts`. L'UI n'invente aucune transition.
+- Découpe de `src/routes/vendeur.tsx` et `src/components/omni/CartePage.tsx` en sections, sans changer les server functions.
+- Correctifs structurels de débordement : `min-w-0` sur tout conteneur de texte, `shrink-0` sur les icônes, grilles `grid-cols-[minmax(0,1fr)_auto]` sur les en-têtes mixtes.
+- Vérification automatisée : capture 320 / 390 / 768 / 1280 px sur chaque écran, échec si débordement horizontal, si un CTA sort du cadre, ou si une cible fait moins de 44 px.
+- Prérequis conservé : le blocage runtime `AsyncLocalStorage` (module serveur importé côté client) est corrigé en premier, sinon rien n'est vérifiable à l'écran.
 
 ## Ordre de livraison
 
-1. Lot 0 — déblocage runtime et garde-fou.
-2. Route transaction persistante + machine d'états + barre de reprise.
-3. Vendeur : vérification QR, encaissement, remise, dans le même écran.
-4. Availability trois étapes + comparaison.
-5. Console vendeur complète, wallet, menu, notifications deep-linkées.
-6. États d'entrée, accessibilité, certification 320 → 1280 px.
+1. Déblocage runtime + garde-fou d'import serveur.
+2. `docs/omni-ui-system.md` et primitives normalisées (feuille unique, pied d'action, progression).
+3. Parcours acheteur : carte → rail → fiche → disponibilité 3 étapes → comparaison.
+4. Écran transaction unique + barre de reprise + bascule de rôle.
+5. Console vendeur deux colonnes, scanner, coupons, parcours vendeur.
+6. Mouvement, états vides/erreurs, certification responsive 320 → 1280 px.
