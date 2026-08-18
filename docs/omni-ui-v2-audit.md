@@ -63,3 +63,30 @@ Le shell buyer de production conserve le globe MapLibre centré, les clusters/pi
 Le shell seller conserve la carte derrière la surface, le header facility/status, les tabs métier, les compteurs, les raccourcis Voir les demandes/Ouvrir le scanner et le segment map-first. La réponse serveur affichée reste stable ; aucun crash SSR ou erreur de route n’a été observé.
 
 Le rendu de production montre encore un placeholder buyer historique (`Que cherchez-vous dans le monde ?`) et la console seller n’expose une mission dominante que lorsque les demandes live sont chargées. Ces deux points doivent être revalidés après invalidation du cache/deployment et font partie de la passe suivante, sans modifier MapLibre.
+
+
+## 2026-08-18 — smoke production après la passe Atlas Glass
+
+La page `https://omni.sparkafrika.online/` charge finalement le vrai canvas **MapLibre GL globe** après l’état transitoire « Chargement de la carte… ». Le rendu observé est un globe central noir et blanc sur fond crème, avec deux clusters de facilities visibles, ce qui confirme que la projection et les pins/clusters sont présents.
+
+Le chrome observé respecte le rebuild : dock de recherche compact centré avec le placeholder « Chercher un produit ou un commerce », bouton vocal, CTA recherche orange, notifications séparées avec badge `1`, menu hamburger, contrôles zoom/recentrage sur la gauche et pilule « 2 transactions en cours — Reprendre depuis Mes demandes » en haut. Aucun ancien bandeau de navigation globale n’est visible.
+
+L’état de localisation affiché est « Localisation bloquée », accompagné de `Réessayer` et `Explorer le marché approximatif`. Cette branche est cohérente avec une permission navigateur refusée dans le contexte sandbox ; elle ne doit pas être interprétée comme une erreur MapLibre.
+
+Le contrôle d’attribution MapLibre reste présent dans le DOM avec les liens MapLibre/OpenFreeMap/OpenMapTiles/OpenStreetMap. Les contrôles de carte sont positionnés à gauche et ne sont pas couverts par le dock dans la vue observée.
+
+
+## 2026-08-18 — smoke production seller
+
+La route `/vendeur` affiche d’abord un skeleton puis rend la Console seller map-first avec le globe MapLibre en arrière-plan. La surface principale contient `Facility`, `Catalogue`, `Demandes reçues`, `Scanner QR`, `Omni Wallet` et `Coupons`, ainsi que les notifications et le menu dans le chrome supérieur.
+
+La mission active est désormais réellement exposée dans l’overview : titre « Demande de disponibilité », produit recherché, distance/date, champ prix, quantité et trois réponses Disponible/Partiel/Indisponible. La carte reste visible et la mission prioritaire est visuellement plus forte que la synthèse secondaire Fiches/Produits/Demandes/Coupons. Les raccourcis « Voir les demandes » et « Ouvrir le scanner » sont présents.
+
+La route est observée avec la fixture seller `Omni QA — Fixture Seller`, statut `Non confirmé`, ce qui confirme un état métier réaliste et non une page vide. Le scanner QR et les autres onglets sont exposés sans ancienne barre globale.
+
+
+## 2026-08-18 — onboarding et mesure responsive
+
+L’onboarding production rend le nouveau flow Atlas : « Le monde est recherchable », trois étapes explicites, choix Acheteur/Vendeur, consentement analytics, langue, localisation optionnelle, CTA `Continuer` et sortie `Passer pour l’instant`. Le bandeau PWA `Installer Omni` reste secondaire en bas et ne masque pas le CTA principal.
+
+Une mesure DOM de la Console seller en viewport `1280 × 1100` rapporte `scrollWidth = clientWidth = 1280`, donc aucun débordement horizontal. Le canvas MapLibre occupe toute la largeur et la saisie de prix reste contenue dans la surface opérationnelle. Cette mesure couvre le desktop observé ; une certification automatisée multi-viewport reste à compléter sur appareil ou émulation mobile.
