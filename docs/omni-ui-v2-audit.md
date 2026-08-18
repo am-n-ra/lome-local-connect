@@ -49,3 +49,9 @@ La console seller doit être traitée comme un **poste de contrôle** : colonne 
 La passe sera considérée réussie lorsque la carte reste visible et libre autour du globe, que le dock ne présente pas un formulaire de contraintes par défaut, que le rail ne dépasse pas le viewport, que la fiche conduit à une disponibilité en trois étapes sans perte de recherche, que la room met en avant le net et l’action courante, que le seller voit une mission prioritaire avant les métriques secondaires, et que tous les états loading/empty/error/unauthorized/success restent explicites.
 
 La caméra QR devra encore être vérifiée sur appareil réel HTTPS. Les captures observées ici proviennent de la production et ne remplacent pas la certification exhaustive 320/390/768/1024/1280 px.
+
+## Smoke visuel après Atlas Premium
+
+Après le déploiement du commit `2079761`, `/` affiche toujours le globe MapLibre central, le pill de reprise, les contrôles de carte, la recherche et les états de localisation sans erreur SSR. Le dock est plus compact et le bouton de paramètres reste séparé de la commande principale.
+
+`/vendeur` conserve la carte en arrière-plan, le statut online, les tabs Facility/Catalogue/Demandes/Scanner/Wallet/Coupons et les raccourcis. La surface reste à poursuivre vers une hiérarchie de mission active plus forte, mais aucune régression fonctionnelle visible n’a été introduite par la passe scanner.
