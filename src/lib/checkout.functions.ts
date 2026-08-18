@@ -359,24 +359,77 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
       metadata["discount_amount"] = discountAmount;
     }
 
-    const existing = await queryOne<{ id: string; amount: number; status: string }>(
-      `SELECT id, amount, status FROM public.transactions
+    const existing = await queryOne<{
+      id: string;
+      amount: number;
+      status: string;
+      qr_token: string | null;
+      qr_expires_at: string | null;
+    }>(
+      `SELECT id, amount, status, qr_token, qr_expires_at FROM public.transactions
        WHERE buyer_id = $1 AND facility_id = $2 AND ($3::uuid IS NULL OR cart_id = $3)
          AND status IN ('pending','qr_generated','qr_verified','payment_pending','paid','fulfillment')
        ORDER BY created_at DESC LIMIT 1`,
       [context.userId, facilityId, cartId],
     );
-    if (existing)
-      return { transactionId: existing.id, amount: existing.amount, status: existing.status };
+    if (existing) {
+      const qrStillActive = Boolean(
+        existing.qr_token &&
+          existing.qr_expires_at &&
+          new Date(existing.qr_expires_at).getTime() > Date.now(),
+      );
+      if (qrStillActive) {
+        return {
+          transactionId: existing.id,
+          amount: existing.amount,
+          status: existing.status,
+          code: existing.qr_token,
+          expiresAt: existing.qr_expires_at,
+        };
+      }
+      if (existing.status === "pending") {
+        const code = newTransactionCode();
+        const upgraded = await queryOne<{ qr_token: string; qr_expires_at: string }>(
+          `UPDATE public.transactions
+           SET status = 'qr_generated', qr_token = $2, qr_expires_at = now() + interval '2 hours'
+           WHERE id = $1 AND status = 'pending'
+           RETURNING qr_token, qr_expires_at`,
+          [existing.id, code],
+        );
+        if (upgraded) {
+          await recordTransactionEvent(existing.id, "offer_confirmed", context.userId, {
+            amount: existing.amount,
+          });
+          await recordTransactionEvent(existing.id, "qr_generated", context.userId, {
+            expires_at: upgraded.qr_expires_at,
+          });
+          return {
+            transactionId: existing.id,
+            amount: existing.amount,
+            status: "qr_generated",
+            code: upgraded.qr_token,
+            expiresAt: upgraded.qr_expires_at,
+          };
+        }
+      }
+      return {
+        transactionId: existing.id,
+        amount: existing.amount,
+        status: existing.status,
+        code: existing.qr_token,
+        expiresAt: existing.qr_expires_at,
+      };
+    }
 
     const feePercent = await feePercentFor(facilityId);
     const platformFee = Math.round((amount * feePercent) / 100);
-    const txn = await queryOne<{ id: string }>(
+    const code = newTransactionCode();
+    const txn = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
           fee_percent, payment_mode, status, qr_token, qr_expires_at, intent_created_at, intent_metadata)
-       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'pending',NULL,NULL,now(),$9::jsonb)
-       RETURNING id`,
+       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'qr_generated',$9,now() + interval '2 hours',now(),$10::jsonb)
+       RETURNING id, qr_token, qr_expires_at`,
       [
         facilityId,
         context.userId,
@@ -386,10 +439,15 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         amount - platformFee,
         feePercent,
         data.paymentMode,
+        code,
         JSON.stringify(metadata),
       ],
     );
     await recordTransactionEvent(txn!.id, "intent_created", context.userId, metadata);
+    await recordTransactionEvent(txn!.id, "offer_confirmed", context.userId, { amount });
+    await recordTransactionEvent(txn!.id, "qr_generated", context.userId, {
+      expires_at: txn!.qr_expires_at,
+    });
     if (appliedCoupon) {
       await recordTransactionEvent(txn!.id, "coupon_applied", context.userId, {
         discount_amount: appliedCoupon.discountAmount,
@@ -432,8 +490,8 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
          VALUES ($1,$2,$3,$4)`,
         [
           owner.owner_id,
-          "Nouvelle intention d'achat",
-          `Un acheteur souhaite acheter chez ${owner.name}.`,
+          "Nouvelle intention d'achat · QR prêt",
+          `Un acheteur souhaite acheter chez ${owner.name}. Le QR de transaction est prêt à vérifier.`,
           "/vendeur",
         ],
       );
@@ -441,9 +499,9 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
     return {
       transactionId: txn!.id,
       amount,
-      status: "pending",
-      code: null,
-      expiresAt: null,
+      status: "qr_generated",
+      code: txn!.qr_token,
+      expiresAt: txn!.qr_expires_at,
     };
   });
 

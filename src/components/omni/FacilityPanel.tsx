@@ -33,6 +33,8 @@ type Props = {
   onItinerary?: () => void;
   onCheckAvailability?: () => void;
   routingBusy?: boolean;
+  /** Contact and route are transaction-only disclosures after buyer intent. */
+  transactionAccessGranted?: boolean;
 };
 
 export function FacilityPanel({
@@ -41,6 +43,7 @@ export function FacilityPanel({
   onItinerary,
   routingBusy,
   onCheckAvailability,
+  transactionAccessGranted = false,
 }: Props) {
   const { formatMoney } = useMarket();
   const { user } = useAuth();
@@ -239,37 +242,45 @@ export function FacilityPanel({
       )}
 
       {!isUnclaimed && (
-        <div className="grid gap-2 sm:flex sm:flex-wrap">
-          {onItinerary ? (
+        <>
+          <div className="grid gap-2 sm:flex sm:flex-wrap">
+            {transactionAccessGranted && onItinerary ? (
+              <Button
+                className="min-h-10 min-w-0 flex-1"
+                variant="outline"
+                onClick={onItinerary}
+                disabled={routingBusy}
+              >
+                <Navigation className="mr-1.5 h-4 w-4" />
+                {routingBusy ? "Calcul…" : "Itinéraire"}
+              </Button>
+            ) : null}
+            {transactionAccessGranted && facility.phone ? (
+              <Button
+                className="min-h-10 min-w-0 flex-1"
+                variant="outline"
+                onClick={() => setShowPhone((v) => !v)}
+              >
+                <Phone className="mr-1.5 h-4 w-4" />
+                {showPhone ? facility.phone : "Contacter"}
+              </Button>
+            ) : null}
             <Button
               className="min-h-10 min-w-0 flex-1"
               variant="outline"
-              onClick={onItinerary}
-              disabled={routingBusy}
+              onClick={() => setDemandOpen((v) => !v)}
             >
-              <Navigation className="mr-1.5 h-4 w-4" />
-              {routingBusy ? "Calcul…" : "Itinéraire"}
+              <Search className="mr-1.5 h-4 w-4" />
+              Je cherche ce produit
             </Button>
+          </div>
+          {!transactionAccessGranted && (onItinerary || facility.phone) ? (
+            <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+              Le contact et l’itinéraire seront disponibles après votre intention d’achat dans la
+              transaction.
+            </p>
           ) : null}
-          {facility.phone ? (
-            <Button
-              className="min-h-10 min-w-0 flex-1"
-              variant="outline"
-              onClick={() => setShowPhone((v) => !v)}
-            >
-              <Phone className="mr-1.5 h-4 w-4" />
-              {showPhone ? facility.phone : "Contacter"}
-            </Button>
-          ) : null}
-          <Button
-            className="min-h-10 min-w-0 flex-1"
-            variant="outline"
-            onClick={() => setDemandOpen((v) => !v)}
-          >
-            <Search className="mr-1.5 h-4 w-4" />
-            Je cherche ce produit
-          </Button>
-        </div>
+        </>
       )}
 
       {demandOpen && (

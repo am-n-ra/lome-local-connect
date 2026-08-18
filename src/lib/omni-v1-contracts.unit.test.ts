@@ -6,6 +6,8 @@ import {
   canTransitionTransaction,
   canTransitionWalletRecharge,
   deriveTransactionPrimaryAction,
+  deriveTransactionRoomAccess,
+  deriveTransactionRoomAction,
   paymentPreference,
   toSellerAvailabilityPayload,
   validateAvailabilityInput,
@@ -96,6 +98,39 @@ describe("Omni V1 transaction contracts", () => {
     expect(link).toBe("https://omni.example/transaction/qr?token=qr-token-123");
     expect(link).not.toContain("buyer");
     expect(link).not.toContain("price");
+  });
+});
+
+describe("Omni V1 transaction room contracts", () => {
+  it("keeps the map unchanged while deriving one resumable action per role", () => {
+    expect(deriveTransactionRoomAction("buyer", "pending", { hasQr: true })).toBe("present_qr");
+    expect(deriveTransactionRoomAction("seller", "qr_generated", { hasQr: true })).toBe("verify_qr");
+    expect(deriveTransactionRoomAction("buyer", "qr_verified")).toBe("choose_payment");
+    expect(
+      deriveTransactionRoomAction("buyer", "payment_pending", {
+        paymentChoice: "mobile_money",
+        buyerPaymentDeclared: false,
+      }),
+    ).toBe("declare_paid");
+    expect(deriveTransactionRoomAction("seller", "payment_pending", { buyerPaymentDeclared: true })).toBe(
+      "confirm_payment",
+    );
+    expect(deriveTransactionRoomAction("seller", "paid")).toBe("confirm_fulfillment");
+    expect(deriveTransactionRoomAction("buyer", "received")).toBe("rate_transaction");
+  });
+
+  it("unlocks contact and route only inside a transaction after intent", () => {
+    expect(deriveTransactionRoomAccess(false, "pending")).toEqual({
+      contactUnlocked: false,
+      routeUnlocked: false,
+      qrVerified: false,
+    });
+    expect(deriveTransactionRoomAccess(true, "pending")).toEqual({
+      contactUnlocked: true,
+      routeUnlocked: true,
+      qrVerified: false,
+    });
+    expect(deriveTransactionRoomAccess(true, "qr_verified").qrVerified).toBe(true);
   });
 });
 

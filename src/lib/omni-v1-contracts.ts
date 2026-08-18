@@ -181,6 +181,89 @@ export function paymentPreference(method: PaymentPreferenceMethod): PaymentPrefe
   };
 }
 
+export type TransactionRoomStatus =
+  | TransactionStatus
+  | "received"
+  | "rating_pending";
+
+export type TransactionRoomAction =
+  | "present_qr"
+  | "verify_qr"
+  | "choose_payment"
+  | "declare_paid"
+  | "confirm_payment"
+  | "confirm_fulfillment"
+  | "confirm_received"
+  | "rate_transaction";
+
+export type TransactionRoomPaymentChoice = "cash" | "mobile_money" | "pay_on_delivery";
+
+export type TransactionRoomSnapshot = {
+  transactionId: string;
+  role: TransactionRole;
+  status: TransactionRoomStatus;
+  hasIntent: boolean;
+  nextAction: TransactionRoomAction | null;
+  qrVisible: boolean;
+  qrVerified: boolean;
+  contactUnlocked: boolean;
+  routeUnlocked: boolean;
+  amountDue: number | null;
+  discountAmount: number | null;
+  paymentChoice: TransactionRoomPaymentChoice | null;
+  buyerPaymentDeclared: boolean;
+  sellerPaymentConfirmed: boolean;
+};
+
+/**
+ * The transaction room is resumable and role-specific. It never changes map
+ * presentation; it only derives the next operation above the existing scene.
+ */
+export function deriveTransactionRoomAction(
+  role: TransactionRole,
+  status: TransactionRoomStatus,
+  options: {
+    hasQr?: boolean;
+    paymentChoice?: TransactionRoomPaymentChoice | null;
+    buyerPaymentDeclared?: boolean;
+  } = {},
+): TransactionRoomAction | null {
+  const hasQr = Boolean(options.hasQr);
+  const paymentChoice = options.paymentChoice ?? null;
+  const buyerPaymentDeclared = Boolean(options.buyerPaymentDeclared);
+
+  if (role === "buyer") {
+    if ((status === "pending" || status === "qr_generated") && hasQr) return "present_qr";
+    if (status === "qr_verified" && !paymentChoice) return "choose_payment";
+    if (status === "payment_pending" && paymentChoice && paymentChoice !== "pay_on_delivery" && !buyerPaymentDeclared) {
+      return "declare_paid";
+    }
+    if (status === "fulfillment") return "confirm_received";
+    if (status === "received" || status === "rating_pending") return "rate_transaction";
+    return null;
+  }
+
+  if (status === "qr_generated" && hasQr) return "verify_qr";
+  if (status === "payment_pending" && buyerPaymentDeclared) return "confirm_payment";
+  if (status === "paid") return "confirm_fulfillment";
+  return null;
+}
+
+export function deriveTransactionRoomAccess(
+  hasIntent: boolean,
+  status: TransactionRoomStatus,
+): Pick<TransactionRoomSnapshot, "contactUnlocked" | "routeUnlocked" | "qrVerified"> {
+  const qrVerified = status === "qr_verified" || status === "payment_pending" || status === "paid" ||
+    status === "fulfillment" || status === "received" || status === "rating_pending" || status === "completed";
+  return {
+    // Contact and route are transaction-only data: they appear after intent,
+    // never on a facility/result card before the buyer commits.
+    contactUnlocked: hasIntent,
+    routeUnlocked: hasIntent,
+    qrVerified,
+  };
+}
+
 export type WalletBucket = "wallet" | "payout" | "ad_credit" | "coupon_credit" | "pro_credit";
 export type WalletAllocationAction = "allocate" | "consume";
 export type WalletRechargeStatus = "pending" | "approved" | "declined" | "canceled" | "timeout";
