@@ -16,7 +16,7 @@ export function OmniMapShell({
 }) {
   return (
     <div
-      className={cn("relative h-[100dvh] overflow-hidden bg-background", className)}
+      className={cn("relative h-[100dvh] overflow-hidden bg-[var(--atlas-paper)] omni-atlas-ink", className)}
       data-omni-map-shell="true"
       data-omni-map-first="true"
       aria-label={label}
@@ -25,6 +25,7 @@ export function OmniMapShell({
         {map}
       </div>
       <div className="pointer-events-none absolute inset-0 z-10" data-omni-map-overlays="true">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[var(--atlas-paper)]/45 to-transparent" aria-hidden="true" />
         {children}
       </div>
       {chrome}

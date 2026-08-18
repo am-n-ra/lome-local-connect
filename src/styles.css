@@ -112,6 +112,16 @@
   --surface-page: var(--color-background);
   --shadow-float: 0 18px 48px -24px oklch(0.3 0.05 45 / 0.5);
   --shadow-sheet-raised: 0 -18px 56px -26px oklch(0.3 0.05 45 / 0.48);
+  --atlas-paper: oklch(0.992 0.008 82);
+  --atlas-paper-deep: oklch(0.968 0.018 78);
+  --atlas-ink: oklch(0.23 0.018 48);
+  --atlas-glass: color-mix(in oklab, var(--atlas-paper) 84%, transparent);
+  --atlas-glass-strong: color-mix(in oklab, var(--atlas-paper) 94%, transparent);
+  --atlas-glass-border: oklch(0.3 0.02 50 / 0.12);
+  --atlas-orange: oklch(0.61 0.17 40);
+  --atlas-green: oklch(0.48 0.105 154);
+  --atlas-amber: oklch(0.72 0.145 74);
+  --atlas-shadow: 0 24px 70px -34px oklch(0.22 0.025 45 / 0.5);
 }
 
 .dark {
@@ -155,7 +165,10 @@
   }
 
   body {
-    background-color: var(--color-background);
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at 50% -12%, oklch(0.99 0.02 82 / 0.96), transparent 42%),
+      var(--atlas-paper);
     color: var(--color-foreground);
   }
 }
@@ -186,10 +199,27 @@
 
 @utility omni-glass {
   border-radius: var(--radius-3xl);
-  border: 1px solid color-mix(in oklab, var(--color-card) 70%, transparent);
-  background-color: var(--surface-float);
-  backdrop-filter: blur(18px) saturate(150%);
-  box-shadow: var(--shadow-float);
+  border: 1px solid var(--atlas-glass-border);
+  background-color: var(--atlas-glass);
+  backdrop-filter: blur(18px) saturate(145%);
+  box-shadow: var(--atlas-shadow);
+}
+
+@utility omni-atlas-surface {
+  border: 1px solid var(--atlas-glass-border);
+  background-color: var(--atlas-glass-strong);
+  box-shadow: var(--atlas-shadow);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+@utility omni-atlas-ink {
+  color: var(--atlas-ink);
+}
+
+@utility omni-atlas-mission {
+  color: oklch(0.98 0.01 80);
+  background: linear-gradient(145deg, oklch(0.2 0.018 48), oklch(0.27 0.025 45));
+  box-shadow: 0 26px 70px -32px oklch(0.15 0.02 45 / 0.72);
 }
 
 @utility omni-sheet {
@@ -236,6 +266,16 @@
   textarea:focus-visible {
     outline: 2px solid var(--color-ring);
     outline-offset: 2px;
+  }
+
+  button,
+  a {
+    transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), opacity 160ms ease;
+  }
+
+  button:active,
+  a:active {
+    transform: scale(0.98);
   }
 }
 

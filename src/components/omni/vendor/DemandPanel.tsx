@@ -83,17 +83,24 @@ export function DemandPanel({
             Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou
             indisponible avec votre prix et la quantité exacte disponible.
           </p>
-          <ul className="space-y-2">
-            {live.map((r) => (
-              <li key={r.id} className="rounded-lg border border-border p-3">
+          <ul className="space-y-3">
+            {live.map((r, index) => (
+              <li
+                key={r.id}
+                className={
+                  index === 0
+                    ? "omni-atlas-mission rounded-[1.4rem] border border-white/10 p-4"
+                    : "rounded-[1.2rem] border border-border bg-card/80 p-3"
+                }
+              >
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold">{r.search_term}</p>
-                  <span className="text-xs text-muted-foreground">
+                  <p className="font-display text-lg font-bold">{r.search_term}</p>
+                  <span className={index === 0 ? "text-xs text-white/65" : "text-xs text-muted-foreground"}>
                     {r.quantity} unité(s) · {formatDateFr(r.created_at)}
                     {r.distance_km !== null ? ` · ${r.distance_km.toFixed(1)} km` : ""}
                   </span>
                 </div>
-                <div className="mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-primary/8 p-3">
+                  <div className={index === 0 ? "mt-4 flex min-w-0 items-center gap-3 rounded-2xl bg-white/10 p-3" : "mt-3 flex min-w-0 items-center gap-3 rounded-2xl bg-primary/8 p-3"}>
                   {r.matched_product_photo_url ? (
                     <img
                       src={r.matched_product_photo_url}
@@ -106,13 +113,13 @@ export function DemandPanel({
                     </div>
                   )}
                   <div className="min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+                    <p className={index === 0 ? "text-[10px] font-bold uppercase tracking-[0.12em] text-orange-200" : "text-[10px] font-bold uppercase tracking-[0.12em] text-primary"}>
                       Produit recherché
                     </p>
                     <p className="break-words text-sm font-semibold">
                       {r.matched_product_name ?? r.search_term}
                     </p>
-                    <p className="break-words text-xs text-muted-foreground">
+                    <p className={index === 0 ? "break-words text-xs text-white/65" : "break-words text-xs text-muted-foreground"}>
                       {r.matched_product_name
                         ? `Correspondance catalogue${r.matched_product_price != null ? ` · ${formatFcfa(r.matched_product_price)}` : ""}${r.matched_product_quantity != null ? ` · ${r.matched_product_quantity} disponible(s)` : ""}`
                         : "Correspondance à confirmer avant réponse"}
@@ -124,7 +131,7 @@ export function DemandPanel({
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="mt-2 w-full"
+                      className="mt-2 min-h-10 w-full border-white/20 bg-white/10 text-white hover:bg-white/15"
                     onClick={() => {
                       setPrices((current) => ({
                         ...current,
@@ -148,12 +155,12 @@ export function DemandPanel({
                 {r.answered ? (
                   <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
                 ) : (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Input
                       type="number"
                       inputMode="numeric"
                       placeholder={`Prix ${market?.currency_symbol ?? "FCFA"}`}
-                      className="h-9 w-full sm:w-32"
+                      className={index === 0 ? "h-10 w-full border-white/15 bg-white/10 text-white placeholder:text-white/50 sm:w-32" : "h-9 w-full sm:w-32"}
                       value={prices[r.id] ?? ""}
                       onChange={(e) => setPrices((p) => ({ ...p, [r.id]: e.target.value }))}
                     />
@@ -162,12 +169,13 @@ export function DemandPanel({
                       inputMode="numeric"
                       min={0}
                       placeholder="Qté dispo"
-                      className="h-9 w-full sm:w-28"
+                      className={index === 0 ? "h-10 w-full border-white/15 bg-white/10 text-white placeholder:text-white/50 sm:w-28" : "h-9 w-full sm:w-28"}
                       value={quantities[r.id] ?? ""}
                       onChange={(e) => setQuantities((q) => ({ ...q, [r.id]: e.target.value }))}
                     />
                     <Button
                       size="sm"
+                      className="min-h-11 flex-1 bg-emerald-600 text-white hover:bg-emerald-500"
                       disabled={busy === r.id}
                       onClick={() => void answer(r.id, "available")}
                     >
@@ -175,7 +183,7 @@ export function DemandPanel({
                     </Button>
                     <Button
                       size="sm"
-                      variant="secondary"
+                      className="min-h-11 flex-1 bg-amber-500 text-slate-950 hover:bg-amber-400"
                       disabled={busy === r.id}
                       onClick={() => void answer(r.id, "partial")}
                     >
@@ -183,7 +191,7 @@ export function DemandPanel({
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline"
+                      className="min-h-11 flex-1 bg-red-600 text-white hover:bg-red-500"
                       disabled={busy === r.id}
                       onClick={() => void answer(r.id, "unavailable")}
                     >

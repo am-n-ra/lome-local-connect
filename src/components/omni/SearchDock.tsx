@@ -205,13 +205,13 @@ export function SearchDock({
       data-omni-dock="true"
       data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
       data-omni-stage="buyer"
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+1.15rem)] sm:px-5"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] sm:px-5"
     >
-      <div className="pointer-events-auto w-full max-w-3xl space-y-2">
+      <div className="pointer-events-auto w-full max-w-[42rem] space-y-2.5">
         {controlsOpen && (
           <div
             data-omni-dock-row="structured"
-            className="omni-sheet grid grid-cols-1 gap-2 rounded-[1.4rem] p-2 sm:grid-cols-[1fr_1fr]"
+            className="omni-atlas-surface grid grid-cols-1 gap-2 rounded-[1.25rem] p-2 sm:grid-cols-[1fr_1fr]"
           >
             <div className="rounded-2xl bg-background/72 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
@@ -242,7 +242,7 @@ export function SearchDock({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitQuantity();
                   }}
-                  className="h-9 min-w-0 flex-1 bg-background/70 text-center text-base font-bold sm:text-sm"
+                  className="h-9 min-w-0 flex-1 bg-[var(--atlas-paper)]/70 text-center text-base font-bold sm:text-sm"
                   aria-label="Quantité souhaitée"
                 />
                 <button
@@ -287,7 +287,7 @@ export function SearchDock({
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitBudget();
                   }}
-                  className="h-9 min-w-0 flex-1 bg-background/70 text-base font-bold sm:text-sm"
+                  className="h-9 min-w-0 flex-1 bg-[var(--atlas-paper)]/70 text-base font-bold sm:text-sm"
                   aria-label="Budget maximum"
                 />
                 <span className="shrink-0 text-xs text-muted-foreground">
@@ -309,7 +309,7 @@ export function SearchDock({
             {controlsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
           {controlsOpen && (
-            <div className="omni-glass min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
+            <div className="omni-atlas-surface min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
               {hasExplicitStructuredValues && !parametersOpen && (
                 <p className="px-2 text-[11px] text-muted-foreground">
                   Paramètres actifs. Ouvrez le chevron pour les modifier.
@@ -483,14 +483,14 @@ export function SearchDock({
 
         <div
           data-omni-dock-row="primary"
-          className="omni-glass rounded-[1.6rem] border border-foreground/10 bg-card/92 p-1.5 shadow-[var(--shadow-soft)]"
+          className="omni-atlas-surface rounded-[1.6rem] p-1.5"
         >
           <SmartSearchBar
             layout="dock"
             value={query}
             onChange={onQueryChange}
             onSubmit={() => void handleSubmit()}
-            placeholder="Que cherchez-vous dans le monde ?"
+            placeholder="Chercher un produit ou un commerce"
             enablePhotoSearch={false}
           />
         </div>
@@ -513,7 +513,7 @@ function RefinementPanel({ filters, activeCount, onFiltersChange }: RefinementPa
   return (
     <div
       data-omni-refinement="true"
-      className="space-y-3 rounded-2xl border border-border/65 bg-background/62 p-3"
+      className="omni-atlas-surface space-y-3 rounded-[1.25rem] p-3"
       aria-label="Options d'affinage"
     >
       <div className="flex items-center justify-between gap-3">

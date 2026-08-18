@@ -736,7 +736,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
   return (
     <OmniMapShell
       label="Carte de recherche Omni"
-      className="bg-background"
+      className="bg-[var(--atlas-paper)]"
       map={
         <MapCanvas
           facilities={hasActiveSearch ? results : discoveryResults}
@@ -857,7 +857,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
 
         {selected && (
           <OmniSheetSurface
-            className="pointer-events-auto absolute left-1/2 top-1/2 z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5"
+            className="omni-atlas-surface pointer-events-auto absolute bottom-0 left-1/2 top-auto z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1rem),34rem)] -translate-x-1/2 flex-col overflow-hidden rounded-t-[1.75rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:p-5"
           >
             <div className="mb-2 flex justify-end gap-2">
               <Button
@@ -906,7 +906,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         )}
 
         {steps.length > 0 && (
-          <div className="pointer-events-auto absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
+          <div className="omni-atlas-surface pointer-events-auto absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl p-3 md:right-[460px] md:inset-x-auto md:left-3 md:w-96">
             <div className="mb-2 flex items-center justify-between">
               <p className="font-display font-bold">Guidage à pied</p>
               <div className="flex gap-1">

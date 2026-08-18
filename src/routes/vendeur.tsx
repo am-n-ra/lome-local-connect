@@ -649,7 +649,7 @@ function VendeurPage() {
   return (
     <OmniMapShell
       label="Carte opérationnelle vendeur Omni"
-      className="bg-background"
+      className="bg-[var(--atlas-paper)]"
       map={
         <>
           <MapCanvas
@@ -665,10 +665,10 @@ function VendeurPage() {
       chrome={<TopNav activeRole="vendeur" minimalMapChrome />}
     >
       <main className="pointer-events-none absolute inset-0 z-10 flex max-h-[100dvh] justify-center overflow-hidden px-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] sm:px-5">
-        <div className="pointer-events-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden rounded-[1.5rem] omni-sheet shadow-[var(--shadow-soft)] backdrop-blur-xl">
+        <div className="omni-atlas-surface pointer-events-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden rounded-[1.75rem]">
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-width:thin] sm:p-4">
             <div className="mx-auto w-full max-w-5xl min-w-0">
-              <section className="omni-glass rounded-[1.5rem] p-3 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-4">
+              <section className="omni-atlas-surface rounded-[1.5rem] p-3 sm:p-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
@@ -905,7 +905,7 @@ function VendeurPage() {
                 </TabsContent>
 
                 <TabsContent value="apercu" className="mt-5 space-y-4">
-                  <div className="pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] border border-border/70 bg-card/92 p-5 shadow-[var(--shadow-soft)] backdrop-blur-xl">
+                  <div className="omni-atlas-surface pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] p-5">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-primary">
                         Surface seller map-first
@@ -1210,7 +1210,7 @@ function VendeurPage() {
                 </TabsContent>
               </Tabs>
               <aside className="hidden space-y-3 lg:sticky lg:top-4 lg:block">
-                <div className="omni-card space-y-3 p-4">
+                <div className="omni-atlas-surface space-y-3 rounded-[1.4rem] p-4">
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">À garder sous la main</p>
                   <div className="grid grid-cols-2 gap-2">
                     <OmniStatCard label="Fiches" value={data?.facilities.length ?? 0} />

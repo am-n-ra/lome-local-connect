@@ -11,36 +11,49 @@ Avant d’écrire du code, comprends le produit : Omni est un moteur de recherch
 Utilise les deux références suivantes comme inspiration structurelle et visuelle, sans copier leur code ni leur identité de manière servile :
 
 - Buyer : `https://predeploy-44ae5f66-omnimap-gmngu3h4-2xgzgq5mdgitftoy.manus.space/`
+
 - Seller : `https://predeploy-44ae5f66-omnimap-gmngu3h4-2xgzgq5mdgitftoy.manus.space/seller`
 
-Extrais de la référence buyer la carte pleine surface, le chrome minimal, le dock flottant crème/glass, la recherche unique, le bouton orange dominant et les paramètres quantité/budget qui apparaissent à la demande. Extrais de la référence seller le segment **Carte / Console**, les compteurs courts, la card sombre de demande prioritaire avec les réponses Disponible/Partiel/Non et les quatre raccourcis Ajouter un produit, Créer un coupon, Scanner un code et Parcours vendeur.
+Extrais de la référence buyer la carte pleine surface le globe et lanimation continent pays... n'est pas a negliger, le chrome minimal, le dock flottant crème/glass, la recherche unique, le bouton orange dominant et les paramètres quantité/budget qui apparaissent à la demande. Extrais de la référence seller le segment **Carte / Console**, les compteurs courts, la card sombre de demande prioritaire avec les réponses Disponible/Partiel/Non et les quatre raccourcis Ajouter un produit, Créer un coupon, Scanner un code et Parcours vendeur.
 
 Ne remplace jamais ces qualités par un dashboard générique, un panneau latéral permanent ou une accumulation de cards.
 
 ## Contraintes non négociables
 
 1. **Conserver MapLibre GL v5 et la projection globe actuels.** Ne pas remplacer le globe par Google Maps, une carte plate, une image, un canvas simulé ou une bibliothèque différente.
-2. **Ne pas modifier la présentation des pins, clusters, discovery OSM, couverture mondiale ou animation de repos/search.** Toute amélioration doit agir autour de la carte, pas contre elle.
-3. **Le globe reste visible** sur landing, résultats, fiche facility, room transactionnelle et seller map-first. Les surfaces sont flottantes au-dessus de la carte.
-4. **Ne pas réintroduire de navigation globale lourde.** Le chrome contient seulement Omni, notification, menu/compte, rôle ou solde contextuel lorsque nécessaire.
-5. **Une seule Omni Wallet rechargeable.** FedaPay est réservé au rechargement hosted checkout. Pro, Publicité, Coupons et crédits sont des allocations internes ; aucun retrait seller et aucun paiement buyer-seller in-app en V1.
-6. **La disponibilité précède l’intention d’achat.** Aucun bouton d’achat direct depuis une facility ne doit contourner la disponibilité.
-7. **Le QR est créé immédiatement au clic `Je veux payer ici`.** Il devient l’identité de la room transactionnelle.
-8. **La room transactionnelle est persistante.** Fermer une surface ne cancel pas une transaction. La reprise fonctionne depuis la carte, le menu, la notification, le QR et `/transaction/$id`.
-9. **Contact et itinéraire sont gated.** Avant l’intention, ils restent masqués ou expliqués ; après l’intention et selon les règles de vérification, ils deviennent disponibles.
-10. **Paiement externe uniquement.** Cash, TMoney, Flooz et pay-on-delivery sont des choix déclaratifs. Le buyer déclare, le seller confirme.
-11. **Rating requis avant `completed`.** Le flow impose réception confirmée, note/commentaire puis complétion.
-12. **Mobile first.** Safe-area, pas de zoom automatique des inputs, CTA accessibles, caméra QR réelle sous HTTPS, fallback manuel permanent.
-13. **Ne jamais afficher de secrets.** Ne pas commit `.env`, credentials, fixtures sensibles, tokens ou artefacts `.vercel`.
+
+1. **Ne pas modifier la présentation des pins, clusters, discovery OSM, couverture mondiale ou animation de repos/search.** Toute amélioration doit agir autour de la carte, pas contre elle.
+
+1. **Le globe reste visible** sur landing, résultats, fiche facility, room transactionnelle et seller map-first. Les surfaces sont flottantes au-dessus de la carte et en contexte avec.
+
+1. **Ne pas réintroduire de navigation globale lourde.** Le chrome contient seulement Omni, notification, menu/compte, rôle ou solde contextuel lorsque nécessaire.
+
+1. **Une seule Omni Wallet rechargeable.** FedaPay est réservé au rechargement hosted checkout. Pro, Publicité, Coupons et crédits sont des allocations internes ; aucun retrait seller et aucun paiement buyer-seller in-app en V1.
+
+1. **La disponibilité précède l’intention d’achat.** Aucun bouton d’achat direct depuis une facility ne doit contourner la disponibilité.
+
+1. **Le QR est créé immédiatement au clic ****`Je veux payer ici`****.** Il devient l’identité de la room transactionnelle.
+
+1. **La room transactionnelle est persistante.** Fermer une surface ne cancel pas une transaction. La reprise fonctionne depuis la carte, le menu, la notification, le QR et `/transaction/$id`.
+
+1. **Contact et itinéraire sont gated.** Avant l’intention, ils restent masqués ou expliqués ; après l’intention et selon les règles de vérification, ils deviennent disponibles.
+
+1. **Paiement externe uniquement.** Cash, TMoney, Flooz et pay-on-delivery sont des choix déclaratifs. Le buyer déclare, le seller confirme.
+
+1. **Rating requis avant ****`completed`****.** Le flow impose réception confirmée, note/commentaire puis complétion.
+
+1. **Mobile first.** Safe-area, pas de zoom automatique des inputs, CTA accessibles, caméra QR réelle sous HTTPS, fallback manuel permanent.
+
+1. **Ne jamais afficher de secrets.** Ne pas commit `.env`, credentials, fixtures sensibles, tokens ou artefacts `.vercel`.
 
 ## Direction artistique — Atlas Glass
 
 Construis une interface lumineuse, calme et éditoriale. Le fond global est crème chaud, avec des surfaces blanc/crème translucides. Le verre ne doit jamais devenir un blur décoratif illisible : utilise une opacité réelle, une bordure fine, un contraste WCAG acceptable et une ombre diffuse.
 
 | Élément | Règle |
-|---|---|
+| --- | --- |
 | Fond | Crème chaud, texture ou variation radiale très subtile, jamais un fond noir autour du globe. |
-| Surface glass | `background: rgba(255, 252, 246, .78–.92)`, bordure `rgba(40, 35, 28, .10–.16)`, blur modéré, ombre large douce. |
+| Surface glass | `background: rgba(255, 252, 246, .78–.92 )`, bordure `rgba(40, 35, 28, .10–.16)`, blur modéré, ombre large douce. |
 | Surface sombre | Charbon brun-noir réservé à mission seller, QR/action critique et progression active. |
 | Orange | CTA primaire, recherche, progression et état actif. Un seul orange dominant par surface. |
 | Vert | Disponible, succès, paiement confirmé, seller online, localisation précise. |
@@ -85,8 +98,10 @@ Pour une facility confirmée, le seul CTA dominant est `Vérifier la disponibili
 Le flow disponibilité possède trois étapes visuelles :
 
 1. **Quoi ?** produit/service, quantité et unité.
-2. **Où ?** facility sélectionnée, zone, marché ou couverture.
-3. **Contraintes** budget, rayon, ouvert, remise et tri.
+
+1. **Où ?** facility sélectionnée, zone, marché ou couverture.
+
+1. **Contraintes** budget, rayon, ouvert, remise et tri.
 
 Chaque étape a un titre court, une explication d’une phrase, un corps simple et un pied d’action fixe. Les réponses se comparent disponible, partiel, indisponible puis prix. La meilleure option est marquée, pas imposée.
 
@@ -95,11 +110,17 @@ Chaque étape a un titre court, une explication d’une phrase, un corps simple 
 Fais de `/transaction/$id` la room canonique. Elle reste au-dessus de la carte et peut être reprise sans perte de contexte. L’en-tête montre facility, produit, statut et fermeture non destructive. Ensuite affiche :
 
 - Montant catalogue.
+
 - Réduction Omni/coupon si applicable.
+
 - Net à payer.
+
 - Progression `Intention → Offre → QR → Paiement → Réception`.
+
 - QR grand et lisible dès l’intention.
+
 - Bloc `MAINTENANT` avec une seule action courante.
+
 - Timeline secondaire en lecture.
 
 Le flow exact est : disponibilité → choix d’offre → `Je veux payer ici` → transaction + QR immédiat → seller vérifie QR → buyer choisit cash/TMoney/Flooz/pay-on-delivery → buyer déclare paiement → seller confirme paiement reçu → seller démarre remise/livraison → buyer confirme reçu → buyer note et commente → completed.
@@ -113,10 +134,14 @@ Le seller utilise un segment bas stable `Carte / Console`. En mode Carte, la car
 La Console suit cette structure :
 
 1. Header : Omni, online/offline, solde Omni Wallet rechargeable.
-2. Compteurs : Fiches, Catalogue, Demandes, Transactions/QR si disponible.
-3. Mission dominante : card sombre de demande ou transaction à traiter maintenant.
-4. Quatre raccourcis V1 : Ajouter un produit, Créer un coupon, Scanner un code, Parcours vendeur.
-5. Gestion secondaire : wallet, catalogue détaillé, coupons actifs et fonctions futures désactivées clairement.
+
+1. Compteurs : Fiches, Catalogue, Demandes, Transactions/QR si disponible.
+
+1. Mission dominante : card sombre de demande ou transaction à traiter maintenant.
+
+1. Quatre raccourcis V1 : Ajouter un produit, Créer un coupon, Scanner un code, Parcours vendeur.
+
+1. Gestion secondaire : wallet, catalogue détaillé, coupons actifs et fonctions futures désactivées clairement.
 
 La mission de disponibilité affiche produit, quantité, date de demande, facility et trois actions Disponibilité/Partiel/Non. La réponse doit mettre à jour le buyer sans faire naviguer vers un autre dashboard.
 
@@ -145,15 +170,24 @@ Ajoute focus rings visibles, navigation clavier, labels aria, états live pour c
 ## Méthode d’implémentation
 
 1. Lire les contrats, state machines et server functions existants avant de modifier l’UI.
-2. Ne pas dupliquer la logique métier dans les composants ; utiliser les helpers canoniques.
-3. Construire d’abord les primitives Atlas Glass et les tokens CSS.
-4. Construire le shell buyer et le dock avant les cards.
-5. Construire fiche → disponibilité → comparaison.
-6. Construire la room transactionnelle et la reprise.
-7. Construire le segment seller, la mission, les raccourcis et les forms.
-8. Construire scanner, wallet, onboarding et menu compte.
-9. Ajouter les états loading/empty/error/retry et les tests de contrat visuel.
-10. Valider chaque groupe avant le suivant et publier par commits atomiques.
+
+1. Ne pas dupliquer la logique métier dans les composants ; utiliser les helpers canoniques.
+
+1. Construire d’abord les primitives Atlas Glass et les tokens CSS.
+
+1. Construire le shell buyer et le dock avant les cards.
+
+1. Construire fiche → disponibilité → comparaison.
+
+1. Construire la room transactionnelle et la reprise.
+
+1. Construire le segment seller, la mission, les raccourcis et les forms.
+
+1. Construire scanner, wallet, onboarding et menu compte.
+
+1. Ajouter les états loading/empty/error/retry et les tests de contrat visuel.
+
+1. Valider chaque groupe avant le suivant et publier par commits atomiques.
 
 ## Critères de non-régression
 
