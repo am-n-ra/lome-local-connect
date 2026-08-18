@@ -4,6 +4,15 @@ import { queryOne, query } from "./db.server";
  * Fixed-window rate limiter backed by Postgres.
  * Server-only: keeps abuse control out of the browser's reach.
  */
+/** Returns a proxy-aware request subject without exposing raw headers to callers. */
+export async function requestRateLimitSubject(scope: string, fallback = "anonymous"): Promise<string> {
+  const { getRequestHeader } = await import("@tanstack/react-start/server");
+  const forwarded = getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim();
+  const realIp = getRequestHeader("x-real-ip")?.trim();
+  const subject = realIp || forwarded || fallback;
+  return `${scope}:${subject.slice(0, 120)}`;
+}
+
 export async function enforceRateLimit(input: {
   bucket: string;
   subject: string;

@@ -49,7 +49,7 @@ export async function verifyToken(token: string): Promise<AuthUser | null> {
 
 /**
  * Roles can also be carried by the identity provider itself (Neon Auth
- * metadata) instead of public.user_roles, so both sources are read.
+ * metadata) instead of public.user_roles, so both sources are read dynamically.
  */
 function readClaimRoles(payload: Record<string, unknown>): string[] {
   const buckets: unknown[] = [
@@ -78,31 +78,24 @@ function adminEmails(): string[] {
 }
 
 /**
- * Effective roles for a signed-in user: public.user_roles, plus roles carried
- * by the auth provider, plus the ADMIN_EMAILS allowlist. Provider/allowlist
- * roles are persisted back so the rest of the app only reads the table.
+ * Effective roles for a signed-in user: active public.user_roles, plus roles
+ * carried by the auth provider, plus the ADMIN_EMAILS allowlist. Provider and
+ * allowlist roles are deliberately not persisted so revocation is immediate.
  */
 export async function rolesFor(user: AuthUser): Promise<string[]> {
   const rows = await query<{ role: string }>(
-    "SELECT role FROM public.user_roles WHERE user_id = $1",
+    `SELECT role FROM public.user_roles
+     WHERE user_id = $1 AND (expires_at IS NULL OR expires_at > now())`,
     [user.userId],
   );
   const roles = new Set(rows.map((r) => r.role));
-  const extra = new Set<string>();
 
+  // Provider claims and the allowlist are evaluated on every request. They are
+  // deliberately not persisted so removing a claim/email takes effect immediately.
   for (const role of user.claimRoles ?? [])
-    if (["admin", "moderator", "acquisition"].includes(role)) extra.add(role);
-  if (user.email && adminEmails().includes(user.email.toLowerCase())) extra.add("admin");
+    if (["admin", "moderator", "acquisition"].includes(role)) roles.add(role);
+  if (user.email && adminEmails().includes(user.email.toLowerCase())) roles.add("admin");
 
-  for (const role of extra) {
-    if (roles.has(role)) continue;
-    roles.add(role);
-    await query(
-      `INSERT INTO public.user_roles (user_id, role) VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [user.userId, role],
-    );
-  }
   return [...roles];
 }
 
@@ -129,7 +122,7 @@ export async function ensureProfile(user: AuthUser) {
 
 export async function hasRole(userId: string, role: string): Promise<boolean> {
   const row = await queryOne(
-    "SELECT 1 AS ok FROM public.user_roles WHERE user_id = $1 AND role = $2",
+    "SELECT 1 AS ok FROM public.user_roles WHERE user_id = $1 AND role = $2 AND (expires_at IS NULL OR expires_at > now())",
     [userId, role],
   );
   return row !== null;

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { optionalAuth, requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
-import { enforceRateLimit } from "./rate-limit.server";
+import { enforceRateLimit, requestRateLimitSubject } from "./rate-limit.server";
 
 export type MapFacility = {
   id: string;
@@ -149,6 +149,14 @@ export const listFacilities = createServerFn({ method: "GET" })
       .parse(input ?? {}),
   )
   .handler(async ({ data }) => {
+    const requestSubject = await requestRateLimitSubject("discovery");
+    await enforceRateLimit({
+      bucket: "public-discovery",
+      subject: requestSubject,
+      limit: 120,
+      windowSeconds: 60,
+      message: "Trop de recherches. Réessayez dans une minute.",
+    });
     const clauses: string[] = [
       "(f.is_online = true OR f.status = 'unclaimed')",
       "COALESCE(f.emergency_shutdown, false) = false",
@@ -197,6 +205,15 @@ const coverageInput = z.object({
 export const listFacilitiesInBounds = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => coverageInput.parse(input))
   .handler(async ({ data }) => {
+    const requestSubject = await requestRateLimitSubject("bounds");
+    await enforceRateLimit({
+      bucket: "public-bounds-discovery",
+      subject: requestSubject,
+      limit: 120,
+      windowSeconds: 60,
+      message: "Trop de recherches cartographiques. Réessayez dans une minute.",
+    });
+    const crossesAntimeridian = data.west > data.east;
     const bounds = {
       minLat: Math.min(data.south, data.north),
       maxLat: Math.max(data.south, data.north),
@@ -208,7 +225,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       const params: unknown[] = [bounds.minLat, bounds.maxLat, bounds.minLng, bounds.maxLng];
       const clauses = [
         "f.latitude BETWEEN $1 AND $2",
-        "f.longitude BETWEEN $3 AND $4",
+        crossesAntimeridian ? "(f.longitude >= $3 OR f.longitude <= $4)" : "f.longitude BETWEEN $3 AND $4",
         "COALESCE(f.emergency_shutdown, false) = false",
         "(f.is_online = true OR f.status = 'unclaimed')",
       ];
@@ -285,7 +302,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       const params: unknown[] = [bounds.minLat, bounds.maxLat, bounds.minLng, bounds.maxLng];
       const clauses = [
         "f.latitude BETWEEN $1 AND $2",
-        "f.longitude BETWEEN $3 AND $4",
+        crossesAntimeridian ? "(f.longitude >= $3 OR f.longitude <= $4)" : "f.longitude BETWEEN $3 AND $4",
         "(f.is_online = true OR f.status = 'unclaimed')",
       ];
       if (data.category && data.category !== "all") {
@@ -333,6 +350,14 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
     if (rows.length < 12 && data.zoom >= 9) {
       const { ensureCoverage } = await import("@/lib/osm-coverage.server");
       try {
+        if (crossesAntimeridian) return await decorateMatches(rows);
+        await enforceRateLimit({
+          bucket: "osm-backfill",
+          subject: requestSubject,
+          limit: 10,
+          windowSeconds: 60,
+          message: "La couverture cartographique est momentanément limitée. Réessayez.",
+        });
         const imported = await ensureCoverage(bounds, data.zoom);
         if (imported > 0) rows = await runQuery();
       } catch {
