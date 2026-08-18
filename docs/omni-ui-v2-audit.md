@@ -90,3 +90,10 @@ La route est observée avec la fixture seller `Omni QA — Fixture Seller`, stat
 L’onboarding production rend le nouveau flow Atlas : « Le monde est recherchable », trois étapes explicites, choix Acheteur/Vendeur, consentement analytics, langue, localisation optionnelle, CTA `Continuer` et sortie `Passer pour l’instant`. Le bandeau PWA `Installer Omni` reste secondaire en bas et ne masque pas le CTA principal.
 
 Une mesure DOM de la Console seller en viewport `1280 × 1100` rapporte `scrollWidth = clientWidth = 1280`, donc aucun débordement horizontal. Le canvas MapLibre occupe toute la largeur et la saisie de prix reste contenue dans la surface opérationnelle. Cette mesure couvre le desktop observé ; une certification automatisée multi-viewport reste à compléter sur appareil ou émulation mobile.
+
+
+## 2026-08-18 — audit des fixtures et des contrats de flow
+
+L’audit read-only de la base QA confirme la présence de plusieurs profils `demo@omni.tg`, de facilities seller certifiées/non certifiées, d’une demande manual à `credit_cost = 0`, d’une demande bulk à `credit_cost = 1`, ainsi que de réponses `available` et `partial` avec prix/quantité. Cela valide les données nécessaires au tri Disponible → Partiel → Indisponible et au cas manual sans coût.
+
+Aucune transaction n’est actuellement rattachée au profil sélectionné par le script (`transactions: []`). Le smoke transactionnel complet ne peut donc pas être déclaré exécuté uniquement depuis cette fixture ; il reste à jouer avec une session buyer/seller authentifiée et une intention d’achat réelle. Aucun changement de données n’a été effectué par cet audit.
