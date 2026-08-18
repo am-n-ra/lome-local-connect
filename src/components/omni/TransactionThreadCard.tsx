@@ -149,7 +149,7 @@ export function TransactionThreadCard({
   }
 
   return (
-    <div className="omni-card min-w-0 space-y-4 p-4">
+    <div className="omni-atlas-surface min-w-0 space-y-4 rounded-[1.75rem] p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-bold">{order.facility_name}</p>
@@ -160,9 +160,11 @@ export function TransactionThreadCard({
         <Badge variant="outline">{TRANSACTION_STATUS_LABEL[currentStatus] ?? currentStatus}</Badge>
       </div>
 
-      <TransactionProgress steps={[...TRANSACTION_PROGRESS_LABELS]} current={progress} />
+      <div className="rounded-[1.25rem] bg-[var(--atlas-paper)]/60 p-3">
+        <TransactionProgress steps={[...TRANSACTION_PROGRESS_LABELS]} current={progress} />
+      </div>
 
-      <div className="grid gap-2 rounded-2xl border border-border/70 bg-background/55 p-3 text-sm">
+      <div className="grid gap-2 rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/72 p-3 text-sm">
         <div className="flex items-center justify-between gap-3">
           <span className="text-muted-foreground">Montant catalogue</span>
           <span>{grossAmount.toLocaleString("fr-FR")} F</span>
@@ -206,7 +208,7 @@ export function TransactionThreadCard({
           title="Montrez ce QR au vendeur"
           description="Le vendeur vérifie ce code avant que le choix de paiement externe ne soit disponible."
         >
-        <div className="rounded-2xl bg-secondary p-4 text-center">
+        <div className="rounded-[1.35rem] bg-white p-4 text-center text-[var(--atlas-ink)] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]">
           <QRCodeSVG value={qrToken} size={156} level="M" includeMargin />
           <p className="mt-2 font-mono text-lg font-bold tracking-widest">{qrToken}</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -248,7 +250,7 @@ export function TransactionThreadCard({
       </div>
 
       {uiState.canChoosePayment && onSelectPayment ? (
-        <div className="space-y-2 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+        <div className="omni-atlas-surface space-y-2 rounded-[1.25rem] p-3">
           <div>
             <p className="font-semibold">Choisissez comment vous paierez</p>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -300,7 +302,7 @@ export function TransactionThreadCard({
       ) : null}
 
       {(currentStatus === "received" || currentStatus === "rating_pending") && onSubmitRating ? (
-        <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+        <div className="omni-atlas-surface space-y-3 rounded-[1.25rem] p-3">
           <div>
             <p className="font-semibold">Votre avis est la dernière étape</p>
             <p className="mt-1 text-xs text-muted-foreground">
