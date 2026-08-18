@@ -127,7 +127,6 @@ export function DemandRequestPanel({
         data: {
           demandResponseId: answer.id,
           quantity: answer.quantity ?? request.quantity,
-          amount: answer.price ?? undefined,
           paymentMode: "cash",
         },
       });

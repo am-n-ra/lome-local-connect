@@ -75,6 +75,24 @@ export type VendorTransaction = {
   buyer_name: string | null;
 };
 
+export type TransactionIntentKeyInput = {
+  source: "cart" | "demand_response" | "product";
+  facilityId: string;
+  cartId: string | null;
+  productId: string | null;
+  demandResponseId: string | null;
+  quantity: number;
+  offerId: string | null;
+  couponCode: string | null;
+  baseAmount: number;
+  amount: number;
+};
+
+/** Stable server-side identity for one logical purchase intent. */
+export function buildTransactionIntentKey(input: TransactionIntentKeyInput): string {
+  return JSON.stringify(input);
+}
+
 async function recordTransactionEvent(
   transactionId: string,
   eventType: string,
@@ -224,7 +242,6 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         productId: z.string().uuid().optional(),
         facilityId: z.string().uuid().optional(),
         quantity: z.number().int().min(1).max(999).default(1),
-        amount: z.number().int().min(0).max(100_000_000).optional(),
         offerId: z.string().uuid().optional(),
         couponCode: z.string().max(80).optional(),
         paymentMode: z.enum(["cash", "delivery"]).default("cash"),
@@ -237,7 +254,8 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let facilityId = data.facilityId ?? null;
     let cartId = data.cartId ?? null;
-    let amount = data.amount ?? 0;
+    let amount = 0;
+    let effectiveQuantity = data.quantity;
     const metadata: Record<string, string | number | boolean | null> = {
       quantity: data.quantity,
       offer_id: data.offerId ?? null,
@@ -261,7 +279,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
          FROM public.cart_items WHERE cart_id = $1`,
         [cart.id],
       );
-      amount = data.amount ?? total?.total ?? 0;
+      amount = total?.total ?? 0;
       metadata["cart_id"] = cart.id;
     }
 
@@ -285,7 +303,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         throw new Error("Ce commerce doit être réclamé avant un achat.");
       if (!product.in_stock) throw new Error("Ce produit n'est plus disponible.");
       facilityId = product.facility_id;
-      amount = data.amount ?? product.price * data.quantity;
+      amount = product.price * data.quantity;
       metadata["product_id"] = product.id;
       metadata["product_name"] = product.name;
     }
@@ -311,13 +329,18 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         throw new Error("Cette réponse ne permet pas de créer une intention d'achat.");
       }
       facilityId = response.facility_id;
-      amount = data.amount ?? response.price ?? 0;
+      amount = response.price ?? 0;
+      effectiveQuantity = response.quantity ?? data.quantity;
       metadata["demand_response_id"] = data.demandResponseId;
       metadata["search_term"] = response.search_term;
       metadata["confirmed_quantity"] = response.quantity;
     }
 
     if (!facilityId) throw new Error("Commerce introuvable.");
+    if (!Number.isSafeInteger(amount) || amount < 0 || amount > 100_000_000) {
+      throw new Error("Le montant calculé est invalide.");
+    }
+    const baseAmount = amount;
 
     let appliedCoupon: { id: string; discountAmount: number } | null = null;
     if (data.offerId || data.couponCode) {
@@ -360,6 +383,18 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
       metadata["discount_amount"] = discountAmount;
     }
 
+    const intentKey = buildTransactionIntentKey({
+      source: data.cartId ? "cart" : data.demandResponseId ? "demand_response" : "product",
+      facilityId,
+      cartId,
+      productId: data.productId ?? null,
+      demandResponseId: data.demandResponseId ?? null,
+      quantity: effectiveQuantity,
+      offerId: data.offerId ?? null,
+      couponCode: data.couponCode?.trim().toUpperCase() ?? null,
+      baseAmount,
+      amount,
+    });
     const existing = await queryOne<{
       id: string;
       amount: number;
@@ -367,11 +402,12 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
       qr_token: string | null;
       qr_expires_at: string | null;
     }>(
-      `SELECT id, amount, status, qr_token, qr_expires_at FROM public.transactions
-       WHERE buyer_id = $1 AND facility_id = $2 AND ($3::uuid IS NULL OR cart_id = $3)
+      `SELECT id, amount, status, qr_token, qr_expires_at
+       FROM public.transactions
+       WHERE buyer_id = $1 AND intent_key = $2
          AND status IN ('pending','qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending')
        ORDER BY created_at DESC LIMIT 1`,
-      [context.userId, facilityId, cartId],
+      [context.userId, intentKey],
     );
     if (existing) {
       const qrStillActive = Boolean(
@@ -428,8 +464,8 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
     const txn = await queryOne<{ id: string; qr_token: string; qr_expires_at: string }>(
       `INSERT INTO public.transactions
          (facility_id, buyer_id, cart_id, kind, amount, platform_fee, payout_amount,
-          fee_percent, payment_mode, status, qr_token, qr_expires_at, intent_created_at, intent_metadata)
-       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'qr_generated',$9,now() + interval '2 hours',now(),$10::jsonb)
+          fee_percent, payment_mode, status, qr_token, qr_expires_at, intent_key, intent_created_at, intent_metadata)
+       VALUES ($1,$2,$3,'in_app',$4,$5,$6,$7,$8,'qr_generated',$9,now() + interval '2 hours',$10,now(),$11::jsonb)
        RETURNING id, qr_token, qr_expires_at`,
       [
         facilityId,
@@ -441,6 +477,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
         feePercent,
         data.paymentMode,
         code,
+        intentKey,
         JSON.stringify(metadata),
       ],
     );
