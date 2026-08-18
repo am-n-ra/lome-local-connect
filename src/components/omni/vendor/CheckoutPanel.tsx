@@ -17,6 +17,7 @@ import {
 import { STATUS_LABEL } from "@/lib/omni";
 import { cameraStatusLabel, type CameraScannerStatus } from "@/lib/camera-scanner";
 import { useMarket } from "@/lib/market";
+import { OmniActionBlock } from "@/components/omni/ui/OmniPrimitives";
 
 export function CheckoutPanel({
   facilityId,
@@ -233,10 +234,16 @@ export function CheckoutPanel({
 
   return (
     <div className="space-y-4">
-      <div className="omni-card space-y-3 p-4">
-        <div className="flex items-center gap-2">
-          <QrCode className="h-5 w-5 text-primary" />
-          <h3 className="font-display text-lg font-bold">Valider une transaction sur place</h3>
+      <div data-omni-seller-scanner="true" className="omni-card space-y-3 border-foreground/10 bg-card/92 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">Scanner · action prioritaire</p>
+            <h3 className="mt-1 flex items-center gap-2 font-display text-lg font-bold">
+              <QrCode className="h-5 w-5 text-primary" />
+              Valider une transaction sur place
+            </h3>
+          </div>
+          <Badge variant={scanning ? "default" : "outline"}>{cameraStatusLabel(cameraStatus)}</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           Demandez au client son code de transaction (QR ou 8 caractères) et vérifiez-le ici. Omni
@@ -261,7 +268,7 @@ export function CheckoutPanel({
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="Ex. K7QM2PDX"
-            className="min-w-0 flex-1 font-mono tracking-widest"
+            className="min-w-0 flex-1 font-mono text-base tracking-widest"
             maxLength={24}
           />
           <Button
@@ -273,7 +280,7 @@ export function CheckoutPanel({
           </Button>
         </div>
         <div
-          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-primary/30 bg-slate-950"
+          className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-foreground/15 bg-slate-950 md:aspect-video"
           data-omni-camera-preview="true"
         >
           <video
@@ -313,7 +320,7 @@ export function CheckoutPanel({
       </div>
 
       {focusedTransaction ? (
-        <div className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
+        <div data-omni-focused-transaction="true" className="omni-card space-y-3 border-primary/30 bg-primary/5 p-4" aria-live="polite">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
