@@ -119,14 +119,6 @@ export function DemandPanel({
                     </p>
                   </div>
                 </div>
-                {r.budget_max != null && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Budget buyer :{" "}
-                    <span className="font-semibold text-foreground">
-                      {formatFcfa(r.budget_max)}
-                    </span>
-                  </p>
-                )}
                 {!r.answered && r.matched_product_name && (
                   <Button
                     type="button"

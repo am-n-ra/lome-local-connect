@@ -287,7 +287,7 @@ export function DemandRequestPanel({
               <p className="text-xs text-muted-foreground">
                 {selectedMode === "manual"
                   ? "La demande manuelle ne consomme pas le quota de vérifications groupées."
-                  : `La vérification concerne les ${targetFacilityIds.length} résultat(s) visibles. Le coût éventuel sera affiché avant l'envoi.`}
+                  : `La vérification concerne les ${targetFacilityIds.length} résultat(s) visibles. Elle dépend du quota bulk de votre plan ; la vérification d’un seul commerce reste disponible.`}
               </p>
             </div>
           )}
@@ -361,8 +361,8 @@ export function DemandRequestPanel({
                       <p className="font-display font-bold">{r.search_term}</p>
                       <p className="text-xs text-muted-foreground">
                         {r.response_count} réponse(s) · {r.targeted_count} cible(s) ·{" "}
-                        {r.credit_cost}
-                        crédit(s) · {r.status === "open" ? "en cours" : "clôturée"}
+                        {r.mode === "bulk" ? "demande groupée" : "demande ciblée"} ·{" "}
+                        {r.status === "open" ? "en cours" : "clôturée"}
                       </p>
                     </div>
                     {r.status === "open" && (

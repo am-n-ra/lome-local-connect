@@ -44,12 +44,25 @@ export function FacilityResultCard({
             className="h-16 w-full object-cover transition-transform duration-200 group-hover:scale-[1.02] md:h-28"
           />
         ) : (
-          <div className="grid h-16 place-items-center bg-[radial-gradient(circle_at_30%_20%,hsl(var(--primary)/0.18),transparent_55%),linear-gradient(135deg,hsl(var(--secondary)),hsl(var(--background)))] px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
+          <div className="grid h-16 place-items-center bg-secondary/50 px-4 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground md:h-28">
             Aperçu média indisponible
           </div>
         )}
       </div>
-      <div className="flex items-start justify-between gap-3">
+      <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          Produit recherché
+        </p>
+        <p className="mt-1 break-words text-base font-semibold">{productLabel}</p>
+        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
+          {hasMatchedProduct
+            ? `Correspond à votre recherche${facility.matched_product_price != null ? ` · ${formatMoney(facility.matched_product_price)}` : ""}${facility.matched_product_quantity != null ? ` · ${facility.matched_product_quantity} disponible(s)` : ""}`
+            : isUnclaimed
+              ? "Correspondance à confirmer · achat non disponible"
+              : "Correspondance à confirmer · disponibilité à vérifier"}
+        </p>
+      </div>
+      <div className="mt-3 flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-2.5">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-bold text-primary">
             {String(index + 1).padStart(2, "0")}
@@ -64,19 +77,6 @@ export function FacilityResultCard({
         <Badge variant={isTrusted ? "default" : "secondary"} className="shrink-0 text-[10px]">
           {isTrusted ? "Vérifiée" : "À confirmer"}
         </Badge>
-      </div>
-      <div className="mt-3 rounded-2xl bg-background/72 px-3 py-2.5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-          Produit recherché
-        </p>
-        <p className="mt-1 break-words text-sm font-semibold">{productLabel}</p>
-        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">
-          {hasMatchedProduct
-            ? `Correspond à votre recherche${facility.matched_product_price != null ? ` · ${formatMoney(facility.matched_product_price)}` : ""}${facility.matched_product_quantity != null ? ` · ${facility.matched_product_quantity} disponible(s)` : ""}`
-            : isUnclaimed
-              ? "Correspondance à confirmer · achat non disponible"
-              : "Correspondance à confirmer · disponibilité à vérifier"}
-        </p>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px]">
         <span className="rounded-full bg-background/72 px-2.5 py-1.5 font-semibold">

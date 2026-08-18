@@ -39,7 +39,6 @@ export type VendorDemandRequest = {
   id: string;
   search_term: string;
   quantity: number;
-  budget_max: number | null;
   mode: "bulk" | "manual" | string;
   created_at: string;
   expires_at: string;
@@ -65,7 +64,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         longitude: z.number().min(-180).max(180).nullable().optional(),
         radiusKm: z.number().min(0.5).max(50).nullable().optional(),
         budgetMax: z.number().int().min(0).max(100_000_000).nullable().optional(),
-        targetFacilityIds: z.array(z.string().uuid()).max(700).default([]),
+        targetFacilityIds: z.array(z.string().uuid()).max(12).default([]),
         mode: z.enum(["bulk", "manual"]).default("bulk"),
       })
       .parse(input),
@@ -95,6 +94,9 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     const buyerPlan = plan?.plan === "pro" ? "pro" : "free";
     const isBuyerPro = buyerPlan === "pro";
     const includedCredits = isBuyerPro ? Number.MAX_SAFE_INTEGER : OMNI_CONFIG.freeBuyerBulkLimit;
+    if (data.mode === "manual" && data.targetFacilityIds.length !== 1) {
+      throw new Error("Une vérification manuelle doit cibler exactement un commerce.");
+    }
 
     // Bulk targets the map's active result IDs when present. Geographic limits are owned by search filters.
     const targets = await query<{
@@ -121,7 +123,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
              SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $5 || '%'
            ))
          )
-       LIMIT 700`,
+       LIMIT 12`,
       [
         data.targetFacilityIds,
         data.latitude ?? null,
@@ -131,7 +133,10 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       ],
     );
 
-    const creditCost = isBuyerPro ? 0 : Math.max(1, targets.length);
+    if (data.mode === "bulk" && targets.length === 0) {
+      throw new Error("Aucun commerce éligible dans cette zone.");
+    }
+    const creditCost = data.mode === "bulk" && !isBuyerPro ? Math.max(1, targets.length) : 0;
     const radiusKm = data.radiusKm ?? 10;
     const remainingCredits = isBuyerPro
       ? Number.MAX_SAFE_INTEGER
@@ -142,17 +147,10 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       );
     }
 
-    const proTargets = targets.filter((t) => t.seller_plan === "pro");
-    const recommendedFacilityId = proTargets[0]?.id ?? targets[0]?.id ?? null;
-    const aiSummary =
-      targets.length > 0
-        ? `${targets.length} commerce(s) ciblé(s), ${proTargets.length} réponse(s) IA priorisée(s).`
-        : "Aucun commerce ciblé par les filtres actuels.";
-
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
          (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, mode, ai_summary, ai_recommended_facility_id, ai_summary_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()) RETURNING id`,
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NULL,NULL,NULL) RETURNING id`,
       [
         context.userId,
         data.searchTerm.trim(),
@@ -164,8 +162,6 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         targets.length,
         creditCost,
         data.mode,
-        aiSummary,
-        recommendedFacilityId,
       ],
     );
 
@@ -177,20 +173,6 @@ export const createDemandRequest = createServerFn({ method: "POST" })
            updated_at = now()
          WHERE user_id = $1`,
         [context.userId, includedCredits, creditCost],
-      );
-    }
-
-    for (const t of proTargets.slice(0, 120)) {
-      await query(
-        `INSERT INTO public.demand_responses (request_id, facility_id, available, price, quantity, message, answered_by)
-         VALUES ($1,$2,true,NULL,$3,$4,'ai')
-         ON CONFLICT (request_id, facility_id) DO NOTHING`,
-        [
-          row!.id,
-          t.id,
-          data.quantity,
-          `Agent IA ${t.name} : disponibilité à confirmer, vendeur pro priorisé.`,
-        ],
       );
     }
 
@@ -212,7 +194,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       id: row!.id,
       notified: owners.length,
       targeted: targets.length,
-      aiAnswered: proTargets.length,
+      aiAnswered: 0,
       creditCost,
       buyerPlan,
       bulkUnlimited: isBuyerPro,
@@ -273,7 +255,7 @@ export const listDemandForFacility = createServerFn({ method: "GET" })
     if (!facility) throw new Error("Ce commerce ne vous appartient pas.");
 
     return query<VendorDemandRequest>(
-      `SELECT d.id, d.search_term, d.quantity, d.budget_max, d.mode, d.created_at, d.expires_at,
+      `SELECT d.id, d.search_term, d.quantity, d.mode, d.created_at, d.expires_at,
               p.name AS buyer_name,
               CASE WHEN d.latitude IS NULL THEN NULL ELSE
                 6371 * acos(LEAST(1, GREATEST(-1,
@@ -333,13 +315,26 @@ export const respondToDemand = createServerFn({ method: "POST" })
     );
     if (!owned) throw new Error("Ce commerce ne vous appartient pas.");
 
-    await query(
+    const request = await queryOne<{ buyer_id: string; search_term: string }>(
+      `SELECT buyer_id, search_term
+       FROM public.demand_requests
+       WHERE id = $1 AND status = 'open' AND expires_at > now()`,
+      [data.requestId],
+    );
+    if (!request) throw new Error("Cette demande n’est plus ouverte.");
+
+    const existing = await queryOne<{ id: string }>(
+      "SELECT id FROM public.demand_responses WHERE request_id = $1 AND facility_id = $2",
+      [data.requestId, data.facilityId],
+    );
+    if (existing) throw new Error("Vous avez déjà répondu à cette demande.");
+
+    const inserted = await query<{ id: string }>(
       `INSERT INTO public.demand_responses
          (request_id, facility_id, available, kind, price, quantity, message)
        VALUES ($1,$2,$3,$4,$5,$6,$7)
-       ON CONFLICT (request_id, facility_id) DO UPDATE
-         SET available = EXCLUDED.available, kind = EXCLUDED.kind, price = EXCLUDED.price,
-             quantity = EXCLUDED.quantity, message = EXCLUDED.message`,
+       ON CONFLICT (request_id, facility_id) DO NOTHING
+       RETURNING id`,
       [
         data.requestId,
         data.facilityId,
@@ -350,19 +345,16 @@ export const respondToDemand = createServerFn({ method: "POST" })
         data.message?.trim() || null,
       ],
     );
+    if (inserted.length === 0) throw new Error("Vous avez déjà répondu à cette demande.");
 
-    const buyer = await queryOne<{ buyer_id: string; search_term: string }>(
-      "SELECT buyer_id, search_term FROM public.demand_requests WHERE id = $1",
-      [data.requestId],
-    );
-    if (buyer) {
+    if (request) {
       await query(
         `INSERT INTO public.notifications (user_id, title, body, link)
          VALUES ($1,$2,$3,$4)`,
         [
-          buyer.buyer_id,
+          request.buyer_id,
           data.kind === "unavailable" ? "Réponse à votre demande" : "Un vendeur a répondu",
-          `${owned.name} a répondu (${data.kind === "partial" ? "partiel" : data.kind === "available" ? "disponible" : "indisponible"}) à « ${buyer.search_term} ».`,
+          `${owned.name} a répondu (${data.kind === "partial" ? "partiel" : data.kind === "available" ? "disponible" : "indisponible"}) à « ${request.search_term} ».`,
           "/carte",
         ],
       );
