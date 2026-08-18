@@ -63,6 +63,7 @@ import {
   type DemandSignal,
 } from "@/lib/vendor.functions";
 import { createWalletDeposit, confirmWalletDeposit } from "@/lib/payments.functions";
+import { transferWalletAllocation, type WalletAllocationBucket } from "@/lib/wallet.functions";
 
 export const Route = createFileRoute("/vendeur")({
   validateSearch: z.object({
@@ -126,6 +127,9 @@ function VendeurPage() {
 
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
+  const [allocationBucket, setAllocationBucket] = useState<WalletAllocationBucket>("pro_credit");
+  const [allocationAmount, setAllocationAmount] = useState("5000");
+  const [allocationBusy, setAllocationBusy] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
   const surfaceCache = useRef(
@@ -151,6 +155,7 @@ function VendeurPage() {
   const moveMobile = useServerFn(updateMobilePosition);
   const confirmDeposit = useServerFn(confirmWalletDeposit);
   const createDeposit = useServerFn(createWalletDeposit);
+  const transferAllocation = useServerFn(transferWalletAllocation);
 
   const reloadSurface = useCallback(
     async (facilityId: string, surface: "products" | "requests" | "coupons") => {
@@ -248,6 +253,48 @@ function VendeurPage() {
     } catch {
       toast.error("Impossible d’ouvrir la recharge FedaPay.");
       setTopUpBusy(false);
+    }
+  }
+
+  async function allocateWallet() {
+    const amount = Number(allocationAmount);
+    if (!Number.isInteger(amount) || amount < 1) {
+      toast.error("Indiquez un montant d’allocation valide.");
+      return;
+    }
+    if (!facility) {
+      toast.error("Aucune facility active n’est disponible.");
+      return;
+    }
+    setAllocationBusy(true);
+    try {
+      const result = await transferAllocation({
+        data: { facilityId: facility.id, bucket: allocationBucket, amount },
+      });
+      const balances = result.balances.map(
+        (balance: { bucket: string; availableAmount: number }) => ({
+          bucket: balance.bucket,
+          amount: balance.availableAmount,
+        }),
+      );
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              balances,
+              walletBalance:
+                balances.find(
+                  (balance: { bucket: string; amount: number }) => balance.bucket === "wallet",
+                )?.amount ?? 0,
+            }
+          : current,
+      );
+      setAllocationAmount("");
+      toast.success("Allocation interne effectuée depuis Omni Wallet.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Allocation impossible.");
+    } finally {
+      setAllocationBusy(false);
     }
   }
   const subscription = data?.subscription ?? null;
@@ -713,32 +760,70 @@ function VendeurPage() {
                     balances={data?.balances ?? []}
                     formatMoney={formatMoney}
                     topUpControl={
-                      <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
-                        <div className="min-w-32 flex-1 sm:flex-none">
-                          <Label htmlFor="omni-wallet-top-up" className="sr-only">
-                            Montant à recharger en FCFA
-                          </Label>
-                          <Input
-                            id="omni-wallet-top-up"
-                            inputMode="numeric"
-                            type="number"
-                            min="500"
-                            value={topUpAmount}
-                            onChange={(event) =>
-                              setTopUpAmount(event.target.value.replace(/\\D/g, ""))
-                            }
-                            className="h-9 text-base sm:w-32 sm:text-sm"
-                            aria-label="Montant à recharger en FCFA"
-                          />
+                      <div className="w-full space-y-3 sm:w-auto sm:min-w-[22rem]">
+                        <div className="flex w-full flex-wrap items-end gap-2">
+                          <div className="min-w-32 flex-1 sm:flex-none">
+                            <Label htmlFor="omni-wallet-top-up" className="sr-only">
+                              Montant à recharger en FCFA
+                            </Label>
+                            <Input
+                              id="omni-wallet-top-up"
+                              inputMode="numeric"
+                              type="number"
+                              min="500"
+                              value={topUpAmount}
+                              onChange={(event) =>
+                                setTopUpAmount(event.target.value.replace(/\\D/g, ""))
+                              }
+                              className="h-9 text-base sm:w-32 sm:text-sm"
+                              aria-label="Montant à recharger en FCFA"
+                            />
+                          </div>
+                          <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
+                            <CreditCard className="mr-1.5 h-4 w-4" />
+                            {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
+                          </Button>
                         </div>
-                        <Button size="sm" onClick={() => void startTopUp()} disabled={topUpBusy}>
-                          <CreditCard className="mr-1.5 h-4 w-4" />
-                          {topUpBusy ? "Ouverture FedaPay…" : "Payer par carte"}
-                        </Button>
-                        <p className="w-full text-[11px] text-muted-foreground sm:max-w-64">
-                          Le checkout FedaPay sécurisé affiche les moyens activés, notamment Visa et
-                          Mastercard lorsque la carte est disponible dans votre pays.
+                        <p className="text-[11px] text-muted-foreground">
+                          Recharge unique Omni Wallet via le checkout FedaPay sécurisé. Les
+                          paiements buyer-vendeur et retraits seller restent externes à la V1.
                         </p>
+                        <div className="space-y-2 rounded-xl border border-border/70 bg-background/55 p-2">
+                          <Label htmlFor="omni-wallet-allocation">Allouer depuis Omni Wallet</Label>
+                          <div className="flex flex-wrap gap-2">
+                            <select
+                              id="omni-wallet-allocation"
+                              value={allocationBucket}
+                              onChange={(event) =>
+                                setAllocationBucket(event.target.value as WalletAllocationBucket)
+                              }
+                              className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-2 text-sm"
+                            >
+                              <option value="pro_credit">Pro</option>
+                              <option value="ad_credit">Publicité</option>
+                              <option value="coupon_credit">Coupons</option>
+                            </select>
+                            <Input
+                              inputMode="numeric"
+                              type="number"
+                              min="1"
+                              value={allocationAmount}
+                              onChange={(event) =>
+                                setAllocationAmount(event.target.value.replace(/\\D/g, ""))
+                              }
+                              className="h-9 w-28 text-base sm:text-sm"
+                              aria-label="Montant à allouer depuis Omni Wallet"
+                            />
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void allocateWallet()}
+                              disabled={allocationBusy}
+                            >
+                              {allocationBusy ? "Allocation…" : "Allouer"}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     }
                   />
