@@ -47,3 +47,21 @@ Le hamburger seller ouvert en production ne montre plus les anciennes entrées d
 ## Menu buyer V1
 
 Le hamburger buyer de production expose exactement les actions secondaires prévues: `Transactions`, `Messages`, `Recherches enregistrées` et `Panier`, puis `Déconnexion`. Les entrées Agent, Publicité, Plan avancé, Administration et le switch de rôle ne sont pas présents dans le menu. Le globe reste visible assombri derrière la sheet, ce qui conserve le contexte map-first.
+
+## Reprise E2E seller
+
+La reprise de la route seller confirme que la surface Scanner QR revient à l’état `Prêt à scanner` sur un nouveau chargement, avec l’aperçu réservé monté et le champ manuel disponible. La validation manuelle d’un code QR généré par le buyer reste l’étape suivante pour tester le passage seller vers paiement externe; elle n’a pas encore été soumise dans cette session afin de séparer clairement l’observation UI de la mutation transactionnelle persistante.
+
+## Résultat de validation QR seller
+
+Après confirmation explicite, le code `5QLK3RD9` a été soumis dans le fallback manuel. La commande passe à `Validation…`, mais après une attente et un rafraîchissement de l’état navigateur, elle reste bloquée dans ce libellé. Le statut seller reste `Non confirmé`, la progression reste `1 / 3 acheteurs distincts`, et aucune transition vers `Paiement` n’est visible. Ceci constitue une anomalie de certification production à diagnostiquer avant de déclarer l’E2E complet vert.
+
+## QR vérifié et paiement externe
+
+Après un délai supplémentaire, la validation s’est résolue en `QR vérifié`. La surface seller affiche `Paiement à confirmer par l’acheteur`, `Étape 4/5`, le montant de 1 250 FCFA, la commission de 25 FCFA et le payout prévu de 1 225 FCFA. Elle précise que le code est autorisé pour cette facility et qu’aucun retrait vendeur n’est disponible en V1.
+
+La transition `seller_verified → payment_pending` est donc certifiée. La finalisation du paiement réel n’est pas exécutée dans cette session, car Omni V1 ne réalise pas de paiement acheteur in-app et le checkout FedaPay sert uniquement à recharger l’Omni Wallet.
+
+## PWA et routes publiques
+
+La production expose `/manifest.webmanifest` en HTTP 200 avec le type `application/manifest+json` et `/sw.js` en HTTP 200 avec le type JavaScript. Les variantes `/manifest.json` et `/service-worker.js` renvoient 404, ce qui est attendu puisque les noms actifs sont ceux de l’application. Les routes `/`, `/carte`, `/vendeur` et `/auth` renvoient toutes HTTP 200. Aucun fichier `.env`, secret ou credential n’est suivi par Git.
