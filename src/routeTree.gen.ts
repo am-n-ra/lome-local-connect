@@ -18,6 +18,7 @@ import { Route as CarteRouteImport } from './routes/carte'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
+import { Route as TransactionIdRouteImport } from './routes/transaction.$id'
 import { Route as TransactionQrRouteImport } from './routes/transaction.qr'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
@@ -71,6 +72,11 @@ const FicheIdRoute = FicheIdRouteImport.update({
   path: '/fiche/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransactionIdRoute = TransactionIdRouteImport.update({
+  id: '/transaction/$id',
+  path: '/transaction/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TransactionQrRoute = TransactionQrRouteImport.update({
   id: '/transaction/qr',
   path: '/transaction/qr',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
@@ -135,6 +142,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
@@ -154,6 +162,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/$id': typeof TransactionIdRoute
   '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
@@ -174,6 +183,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/$id'
     | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/$id'
     | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/$id'
     | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
@@ -229,6 +241,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
+  TransactionIdRoute: typeof TransactionIdRoute
   TransactionQrRoute: typeof TransactionQrRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/fiche/$id'
       fullPath: '/fiche/$id'
       preLoaderRoute: typeof FicheIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transaction/$id': {
+      id: '/transaction/$id'
+      path: '/transaction/$id'
+      fullPath: '/transaction/$id'
+      preLoaderRoute: typeof TransactionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transaction/qr': {
@@ -377,6 +397,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
+  TransactionIdRoute: TransactionIdRoute,
   TransactionQrRoute: TransactionQrRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
