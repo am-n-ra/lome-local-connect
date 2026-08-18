@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 import { CartePage } from "@/components/omni/CartePage";
 
 export const Route = createFileRoute("/carte")({
+  validateSearch: z.object({ transactionId: z.string().uuid().optional() }),
   head: () => ({
     meta: [
       { title: "Carte des commerces à Lomé — OmniView" },
@@ -14,5 +16,10 @@ export const Route = createFileRoute("/carte")({
       { property: "og:description", content: "Trouvez un produit disponible près de vous à Lomé." },
     ],
   }),
-  component: CartePage,
+  component: CarteRoute,
 });
+
+function CarteRoute() {
+  const { transactionId } = Route.useSearch();
+  return <CartePage {...(transactionId ? { initialTransactionId: transactionId } : {})} />;
+}

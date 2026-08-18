@@ -33,6 +33,7 @@ import {
   savePendingAvailabilitySearch,
   useAuth,
 } from "@/lib/auth";
+import { getTransactionTimeline } from "@/lib/checkout.functions";
 type RouteStep = { instruction: string; distance: number };
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
@@ -45,7 +46,7 @@ type LocationSnapshot = {
 };
 type ViewportBounds = { west: number; south: number; east: number; north: number; zoom: number };
 
-export function CartePage() {
+export function CartePage({ initialTransactionId }: { initialTransactionId?: string } = {}) {
   const navigate = useNavigate();
   const { market, formatMoney } = useMarket();
   const { user, loading: authLoading } = useAuth();
@@ -109,7 +110,30 @@ export function CartePage() {
   );
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
+  const fetchInitialTimeline = useServerFn(getTransactionTimeline);
   const hasCoverageSearch = Boolean(submittedQuery.trim() || category);
+
+  useEffect(() => {
+    if (!user || !initialTransactionId) return;
+    let active = true;
+    void fetchInitialTimeline({ data: { transactionId: initialTransactionId } })
+      .then((timeline) => {
+        if (!active) return;
+        setTransactionChat({
+          transactionId: timeline.transaction.id,
+          facilityId: timeline.transaction.facility_id,
+          facilityName: timeline.transaction.facility_name,
+          amount: timeline.transaction.amount,
+        });
+        setChatOpen(true);
+      })
+      .catch(() => {
+        if (active) toast.error("Cette transaction n’est pas accessible avec ce compte.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [fetchInitialTimeline, initialTransactionId, user]);
 
   useEffect(() => {
     if (!visibleViewport) return;

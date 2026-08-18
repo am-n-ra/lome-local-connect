@@ -15,7 +15,8 @@ import {
 import { useAuth } from "@/lib/auth";
 import {
   confirmProductReceived,
-  confirmTransactionPayment,
+  declareTransactionPayment,
+  selectTransactionPaymentPreference,
   createTransactionQr,
   getTransactionTimeline,
   type BuyerOrder,
@@ -52,7 +53,8 @@ export function ChatPanel({
   const post = useServerFn(sendMessage);
   const fetchTimeline = useServerFn(getTransactionTimeline);
   const generateQr = useServerFn(createTransactionQr);
-  const confirmPayment = useServerFn(confirmTransactionPayment);
+  const selectPayment = useServerFn(selectTransactionPaymentPreference);
+  const declarePaymentServer = useServerFn(declareTransactionPayment);
   const confirmReceived = useServerFn(confirmProductReceived);
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
@@ -244,9 +246,18 @@ export function ChatPanel({
                     generateQr({ data: { transactionId: transactionTimeline.transaction.id } }),
                   )
                 }
-                onConfirmPayment={() =>
+                onSelectPayment={(method) =>
                   void runTransactionAction(() =>
-                    confirmPayment({ data: { transactionId: transactionTimeline.transaction.id } }),
+                    selectPayment({
+                      data: { transactionId: transactionTimeline.transaction.id, method },
+                    }),
+                  )
+                }
+                onDeclarePayment={() =>
+                  void runTransactionAction(() =>
+                    declarePaymentServer({
+                      data: { transactionId: transactionTimeline.transaction.id },
+                    }),
                   )
                 }
                 onConfirmReceived={() =>

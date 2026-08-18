@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   confirmProductReceived,
-  confirmTransactionPayment,
+  declareTransactionPayment,
+  selectTransactionPaymentPreference,
   createCheckout,
   createTransactionQr,
   getTransactionTimeline,
@@ -37,7 +38,8 @@ export function OrdersPanel({
   const startCheckout = useServerFn(createCheckout);
   const startTransactionQr = useServerFn(createTransactionQr);
   const fetchTimeline = useServerFn(getTransactionTimeline);
-  const confirmPayment = useServerFn(confirmTransactionPayment);
+  const selectPayment = useServerFn(selectTransactionPaymentPreference);
+  const declarePaymentServer = useServerFn(declareTransactionPayment);
   const confirmReceived = useServerFn(confirmProductReceived);
   const fetchPending = useServerFn(listPendingConfirmations);
   const confirm = useServerFn(confirmCompletion);
@@ -102,15 +104,43 @@ export function OrdersPanel({
     }
   }
 
-  async function transition(txnId: string, action: "payment" | "received") {
+  async function choosePayment(
+    txnId: string,
+    method: "cash_on_delivery" | "tmoney" | "flooz" | "external_other",
+  ) {
     setBusy(txnId);
     try {
-      if (action === "payment") await confirmPayment({ data: { transactionId: txnId } });
-      else await confirmReceived({ data: { transactionId: txnId } });
+      await selectPayment({ data: { transactionId: txnId, method } });
       await refresh();
-      toast.success(action === "payment" ? "Paiement confirmé." : "Réception confirmée.");
+      toast.success("Mode de paiement enregistré.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Transition impossible.");
+      toast.error(error instanceof Error ? error.message : "Choix impossible.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function declarePayment(txnId: string) {
+    setBusy(txnId);
+    try {
+      await declarePaymentServer({ data: { transactionId: txnId } });
+      await refresh();
+      toast.success("Paiement déclaré. Le vendeur doit confirmer la réception.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Déclaration impossible.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function confirmReceivedTransition(txnId: string) {
+    setBusy(txnId);
+    try {
+      await confirmReceived({ data: { transactionId: txnId } });
+      await refresh();
+      toast.success("Réception confirmée.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Réception impossible.");
     } finally {
       setBusy(null);
     }
@@ -137,8 +167,8 @@ export function OrdersPanel({
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
-          side="right"
-          className="flex w-full flex-col gap-0 overflow-y-auto sm:max-w-md"
+          side="center"
+          className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),42rem)] flex-col gap-0 overflow-hidden p-0"
         >
           <SheetHeader>
             <SheetTitle>Mes demandes</SheetTitle>
@@ -195,8 +225,9 @@ export function OrdersPanel({
                   timeline={timeline}
                   busy={busy === order.id || busy === order.transaction_id}
                   onGenerateQr={() => void generate(order)}
-                  onConfirmPayment={() => void transition(order.transaction_id!, "payment")}
-                  onConfirmReceived={() => void transition(order.transaction_id!, "received")}
+                  onSelectPayment={(method) => void choosePayment(order.transaction_id!, method)}
+                  onDeclarePayment={() => void declarePayment(order.transaction_id!)}
+                  onConfirmReceived={() => void confirmReceivedTransition(order.transaction_id!)}
                   onRetry={() => void refresh()}
                 />
               );

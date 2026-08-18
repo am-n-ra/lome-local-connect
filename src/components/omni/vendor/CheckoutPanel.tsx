@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+  confirmTransactionPayment,
   getConfirmationProgress,
   listVendorTransactions,
   redeemCheckout,
+  startTransactionFulfillment,
   type VendorTransaction,
 } from "@/lib/checkout.functions";
 import { STATUS_LABEL } from "@/lib/omni";
@@ -19,6 +21,8 @@ import { useMarket } from "@/lib/market";
 export function CheckoutPanel({ facilityId }: { facilityId: string }) {
   const { formatMoney } = useMarket();
   const redeem = useServerFn(redeemCheckout);
+  const confirmPayment = useServerFn(confirmTransactionPayment);
+  const startFulfillment = useServerFn(startTransactionFulfillment);
   const fetchTransactions = useServerFn(listVendorTransactions);
   const fetchProgress = useServerFn(getConfirmationProgress);
   const [code, setCode] = useState("");
@@ -35,7 +39,9 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     required: number;
     status: string | null;
   }>({ buyers: 0, required: 3, status: null });
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
   const [lastValidated, setLastValidated] = useState<{
+    transactionId: string;
     amount: number;
     platformFee: number;
     payout: number;
@@ -164,6 +170,7 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
     try {
       const result = await redeem({ data: { facilityId, code: code.trim() } });
       setLastValidated({
+        transactionId: result.transactionId,
         amount: result.amount,
         platformFee: result.platformFee,
         payout: result.payout,
@@ -178,6 +185,32 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
       toast.error(error instanceof Error ? error.message : "Validation impossible.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function confirmSellerPayment(transactionId: string) {
+    setActionBusy(transactionId);
+    try {
+      await confirmPayment({ data: { transactionId } });
+      toast.success("Paiement seller confirmé. Vous pouvez lancer la remise.");
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Confirmation paiement impossible.");
+    } finally {
+      setActionBusy(null);
+    }
+  }
+
+  async function beginFulfillment(transactionId: string) {
+    setActionBusy(transactionId);
+    try {
+      await startFulfillment({ data: { transactionId } });
+      toast.success("Remise/expédition lancée. Le buyer peut confirmer la réception.");
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Démarrage impossible.");
+    } finally {
+      setActionBusy(null);
     }
   }
 
@@ -272,14 +305,15 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
                 QR vérifié
               </p>
               <h3 className="mt-1 font-display text-lg font-bold">
-                Paiement à confirmer par l’acheteur
+                Paiement et remise à suivre dans le thread
               </h3>
             </div>
             <Badge>Étape 4/5</Badge>
           </div>
           <p className="text-sm text-muted-foreground">
-            Le code est autorisé pour cette facility. Remettez le produit selon votre accord, puis
-            laissez l’acheteur confirmer le paiement et la réception dans son fil transactionnel.
+            Le code est autorisé pour cette facility. Le buyer choisit le mode de paiement dans son
+            thread ; vous confirmez ensuite la réception du paiement, puis le démarrage de la
+            remise.
           </p>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="rounded-xl bg-background/80 p-2">
@@ -338,11 +372,40 @@ export function CheckoutPanel({ facilityId }: { facilityId: string }) {
                   {formatMoney(t.platform_fee)}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="flex shrink-0 flex-col items-end gap-2 text-right">
                 <p className="font-semibold">{formatMoney(t.amount)}</p>
                 <Badge variant={t.status === "completed" ? "default" : "outline"}>
-                  {t.status === "completed" ? "Encaissée" : "En attente"}
+                  {t.status === "completed"
+                    ? "Terminée"
+                    : t.status === "fulfillment"
+                      ? "Remise en cours"
+                      : t.status === "paid"
+                        ? "Paiement confirmé"
+                        : t.status === "payment_pending"
+                          ? "Paiement à suivre"
+                          : t.status}
                 </Badge>
+                {t.status === "payment_pending" &&
+                t.payment_preference &&
+                (t.payment_preference === "cash_on_delivery" || t.buyer_payment_declared_at) ? (
+                  <Button
+                    size="sm"
+                    disabled={actionBusy === t.id}
+                    onClick={() => void confirmSellerPayment(t.id)}
+                  >
+                    {actionBusy === t.id ? "Confirmation…" : "Confirmer le paiement"}
+                  </Button>
+                ) : null}
+                {t.status === "paid" ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actionBusy === t.id}
+                    onClick={() => void beginFulfillment(t.id)}
+                  >
+                    {actionBusy === t.id ? "Mise à jour…" : "Lancer la remise"}
+                  </Button>
+                ) : null}
               </div>
             </li>
           ))}

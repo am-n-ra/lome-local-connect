@@ -6,6 +6,8 @@ describe("deriveTransactionUiState", () => {
     expect(deriveTransactionUiState("pending", false)).toEqual({
       currentStep: 1,
       canGenerateQr: true,
+      canChoosePayment: false,
+      canDeclarePayment: false,
       canConfirmPayment: false,
       canConfirmReceived: false,
     });
@@ -15,6 +17,8 @@ describe("deriveTransactionUiState", () => {
     expect(deriveTransactionUiState("qr_generated", true)).toEqual({
       currentStep: 2,
       canGenerateQr: false,
+      canChoosePayment: false,
+      canDeclarePayment: false,
       canConfirmPayment: false,
       canConfirmReceived: false,
     });
@@ -24,25 +28,37 @@ describe("deriveTransactionUiState", () => {
     expect(deriveTransactionUiState("qr_generated", false)).toEqual({
       currentStep: 1,
       canGenerateQr: true,
+      canChoosePayment: false,
+      canDeclarePayment: false,
       canConfirmPayment: false,
       canConfirmReceived: false,
     });
   });
 
-  it("allows the buyer to confirm payment only after seller verification", () => {
-    expect(deriveTransactionUiState("payment_pending", false)).toEqual({
+  it("requires a payment choice before the buyer can declare payment", () => {
+    expect(deriveTransactionUiState("payment_pending", false, null)).toMatchObject({
       currentStep: 3,
-      canGenerateQr: false,
-      canConfirmPayment: true,
+      canChoosePayment: true,
+      canDeclarePayment: false,
+      canConfirmPayment: false,
+      canConfirmReceived: false,
+    });
+    expect(deriveTransactionUiState("payment_pending", false, "tmoney")).toMatchObject({
+      currentStep: 3,
+      canChoosePayment: false,
+      canDeclarePayment: true,
+      canConfirmPayment: false,
       canConfirmReceived: false,
     });
   });
 
-  it("allows reception only after payment", () => {
-    expect(deriveTransactionUiState("paid", false)).toEqual({
+  it("allows reception only after seller starts fulfillment", () => {
+    expect(deriveTransactionUiState("paid", false)).toMatchObject({
       currentStep: 4,
-      canGenerateQr: false,
-      canConfirmPayment: false,
+      canConfirmReceived: false,
+    });
+    expect(deriveTransactionUiState("fulfillment", false)).toMatchObject({
+      currentStep: 4,
       canConfirmReceived: true,
     });
   });
@@ -52,6 +68,8 @@ describe("deriveTransactionUiState", () => {
     expect(deriveTransactionUiState("unknown", false)).toMatchObject({
       currentStep: 0,
       canGenerateQr: false,
+      canChoosePayment: false,
+      canDeclarePayment: false,
       canConfirmPayment: false,
       canConfirmReceived: false,
     });

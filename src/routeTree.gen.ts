@@ -18,6 +18,7 @@ import { Route as CarteRouteImport } from './routes/carte'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as VendeurRouteImport } from './routes/vendeur'
 import { Route as FicheIdRouteImport } from './routes/fiche.$id'
+import { Route as TransactionQrRouteImport } from './routes/transaction.qr'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiPublicFedapayWebhookRouteImport } from './routes/api/public/fedapay-webhook'
 import { Route as ApiPublicOpenapiDotjsonRouteImport } from './routes/api/public/openapi[.]json'
@@ -70,6 +71,11 @@ const FicheIdRoute = FicheIdRouteImport.update({
   path: '/fiche/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransactionQrRoute = TransactionQrRouteImport.update({
+  id: '/transaction/qr',
+  path: '/transaction/qr',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -111,6 +117,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/vendeur': typeof VendeurRoute
   '/fiche/$id': typeof FicheIdRoute
+  '/transaction/qr': typeof TransactionQrRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/public/fedapay-webhook': typeof ApiPublicFedapayWebhookRoute
   '/api/public/openapi.json': typeof ApiPublicOpenapiDotjsonRoute
@@ -165,6 +174,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/openapi.json'
@@ -182,6 +192,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/openapi.json'
@@ -199,6 +210,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/vendeur'
     | '/fiche/$id'
+    | '/transaction/qr'
     | '/api/auth/$'
     | '/api/public/fedapay-webhook'
     | '/api/public/openapi.json'
@@ -217,6 +229,7 @@ export interface RootRouteChildren {
   OnboardingRoute: typeof OnboardingRoute
   VendeurRoute: typeof VendeurRoute
   FicheIdRoute: typeof FicheIdRoute
+  TransactionQrRoute: typeof TransactionQrRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiPublicFedapayWebhookRoute: typeof ApiPublicFedapayWebhookRoute
   ApiPublicOpenapiDotjsonRoute: typeof ApiPublicOpenapiDotjsonRoute
@@ -289,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FicheIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transaction/qr': {
+      id: '/transaction/qr'
+      path: '/transaction/qr'
+      fullPath: '/transaction/qr'
+      preLoaderRoute: typeof TransactionQrRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingRoute: OnboardingRoute,
   VendeurRoute: VendeurRoute,
   FicheIdRoute: FicheIdRoute,
+  TransactionQrRoute: TransactionQrRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiPublicFedapayWebhookRoute: ApiPublicFedapayWebhookRoute,
   ApiPublicOpenapiDotjsonRoute: ApiPublicOpenapiDotjsonRoute,

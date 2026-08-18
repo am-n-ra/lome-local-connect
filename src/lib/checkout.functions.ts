@@ -44,6 +44,11 @@ export type TransactionTimeline = {
     status: string;
     amount: number;
     payment_mode: string;
+    payment_preference: string | null;
+    buyer_payment_declared_at: string | null;
+    seller_payment_confirmed_at: string | null;
+    fulfillment_started_at: string | null;
+    seller_contact: string | null;
     qr_token: string | null;
     qr_expires_at: string | null;
     intent_created_at: string | null;
@@ -60,7 +65,10 @@ export type VendorTransaction = {
   payout_amount: number;
   status: string;
   payment_mode: string;
+  payment_preference: string | null;
+  buyer_payment_declared_at: string | null;
   qr_authorised_at: string | null;
+  seller_payment_confirmed_at: string | null;
   completed_at: string | null;
   created_at: string;
   buyer_name: string | null;
@@ -582,6 +590,32 @@ export const createTransactionQr = createServerFn({ method: "POST" })
     return { code: updated!.qr_token, expiresAt: updated!.qr_expires_at };
   });
 
+export const resolveTransactionQr = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ token: z.string().min(4).max(64) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const row = await queryOne<{
+      id: string;
+      facility_id: string;
+      buyer_id: string | null;
+      owner_id: string | null;
+    }>(
+      `SELECT t.id, t.facility_id, t.buyer_id, f.owner_id
+       FROM public.transactions t
+       JOIN public.facilities f ON f.id = t.facility_id
+       WHERE t.qr_token = $1
+         AND t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment')
+         AND (t.buyer_id = $2 OR f.owner_id = $2)`,
+      [data.token.trim().toUpperCase(), context.userId],
+    );
+    if (!row) throw new Error("Ce lien QR n’est pas accessible avec ce compte.");
+    return {
+      transactionId: row.id,
+      facilityId: row.facility_id,
+      role: row.buyer_id === context.userId ? "buyer" : "seller",
+    } as const;
+  });
+
 /** Vendor scans or types the buyer code to close the sale. */
 export const redeemCheckout = createServerFn({ method: "POST" })
   .middleware([requireAuth])
@@ -643,7 +677,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
       facility_id: data.facilityId,
     });
     await recordTransactionEvent(txn.id, "payment_pending", context.userId, {
-      payment_mode: "cash",
+      payment_mode: txn.status,
     });
     if (txn.buyer_id) {
       await query(
@@ -673,6 +707,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
       [data.facilityId],
     );
     return {
+      transactionId: txn.id,
       amount: txn.amount,
       platformFee: txn.platform_fee,
       payout: txn.payout_amount,
@@ -686,10 +721,14 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const transaction = await queryOne<TransactionTimeline["transaction"]>(
       `SELECT t.id, t.facility_id, f.name AS facility_name, t.buyer_id, t.status, t.amount,
-              t.payment_mode, t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
+              t.payment_mode, t.payment_preference, t.buyer_payment_declared_at,
+              t.seller_payment_confirmed_at, t.fulfillment_started_at,
+              CASE WHEN t.status IN ('payment_pending','paid','fulfillment','completed')
+                   THEN f.phone ELSE NULL END AS seller_contact,
+              t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
        FROM public.transactions t
        JOIN public.facilities f ON f.id = t.facility_id
-       WHERE t.id = $1 AND t.buyer_id = $2`,
+       WHERE t.id = $1 AND (t.buyer_id = $2 OR f.owner_id = $2)`,
       [data.transactionId, context.userId],
     );
     if (!transaction) throw new Error("Transaction introuvable.");
@@ -701,27 +740,90 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
     return { transaction, events };
   });
 
-export const confirmTransactionPayment = createServerFn({ method: "POST" })
+export const selectTransactionPaymentPreference = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        transactionId: z.string().uuid(),
+        method: z.enum(["cash_on_delivery", "tmoney", "flooz", "external_other"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const txn = await queryOne<{ id: string; facility_id: string }>(
+      `UPDATE public.transactions
+       SET payment_preference = $2
+       WHERE id = $1 AND buyer_id = $3 AND status = 'payment_pending'
+       RETURNING id, facility_id`,
+      [data.transactionId, data.method, context.userId],
+    );
+    if (!txn) {
+      const existing = await queryOne<{ payment_preference: string | null; status: string }>(
+        "SELECT payment_preference, status FROM public.transactions WHERE id = $1 AND buyer_id = $2",
+        [data.transactionId, context.userId],
+      );
+      if (existing?.status === "payment_pending" && existing.payment_preference === data.method) {
+        const facility = await queryOne<{ phone: string | null }>(
+          "SELECT phone FROM public.facilities WHERE id = (SELECT facility_id FROM public.transactions WHERE id = $1)",
+          [data.transactionId],
+        );
+        return {
+          ok: true,
+          method: data.method,
+          sellerContact: data.method === "cash_on_delivery" ? null : (facility?.phone ?? null),
+        };
+      }
+      throw new Error("Le choix du paiement n’est plus disponible.");
+    }
+    await recordTransactionEvent(txn.id, "payment_preference_selected", context.userId, {
+      method: data.method,
+      remote: data.method !== "cash_on_delivery",
+    });
+    const facility = await queryOne<{
+      phone: string | null;
+      owner_id: string | null;
+      name: string;
+    }>("SELECT phone, owner_id, name FROM public.facilities WHERE id = $1", [txn.facility_id]);
+    if (facility?.owner_id) {
+      await query(
+        `INSERT INTO public.notifications (user_id, title, body, link)
+         VALUES ($1,$2,$3,$4)`,
+        [
+          facility.owner_id,
+          "Mode de paiement choisi",
+          `Le buyer a choisi ${data.method}.`,
+          `/vendeur?transactionId=${txn.id}`,
+        ],
+      );
+    }
+    return {
+      ok: true,
+      method: data.method,
+      sellerContact: data.method === "cash_on_delivery" ? null : (facility?.phone ?? null),
+    };
+  });
+
+export const declareTransactionPayment = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const txn = await queryOne<{ id: string; facility_id: string; amount: number }>(
-      `UPDATE public.transactions SET status = 'paid', paid_at = now()
+    const txn = await queryOne<{
+      id: string;
+      facility_id: string;
+      amount: number;
+      payment_preference: string;
+    }>(
+      `UPDATE public.transactions
+       SET buyer_payment_declared_at = now()
        WHERE id = $1 AND buyer_id = $2 AND status = 'payment_pending'
-       RETURNING id, facility_id, amount`,
+         AND payment_preference IS NOT NULL
+       RETURNING id, facility_id, amount, payment_preference`,
       [data.transactionId, context.userId],
     );
-    if (!txn) {
-      const existing = await queryOne<{ status: string }>(
-        "SELECT status FROM public.transactions WHERE id = $1 AND buyer_id = $2",
-        [data.transactionId, context.userId],
-      );
-      if (existing?.status === "paid" || existing?.status === "completed") {
-        return { ok: true, alreadyConfirmed: true };
-      }
-      throw new Error("Le paiement ne peut pas encore être confirmé.");
-    }
-    await recordTransactionEvent(txn.id, "payment_confirmed", context.userId, {
+    if (!txn) throw new Error("Choisissez d’abord un mode de paiement.");
+    await recordTransactionEvent(txn.id, "payment_declared", context.userId, {
+      method: txn.payment_preference,
       amount: txn.amount,
     });
     const owner = await queryOne<{ owner_id: string | null }>(
@@ -734,9 +836,80 @@ export const confirmTransactionPayment = createServerFn({ method: "POST" })
          VALUES ($1,$2,$3,$4)`,
         [
           owner.owner_id,
-          "Paiement confirmé",
-          "L'acheteur a confirmé le paiement de la transaction.",
-          "/vendeur",
+          "Paiement déclaré",
+          "Le buyer indique avoir effectué le paiement externe.",
+          `/vendeur?transactionId=${txn.id}`,
+        ],
+      );
+    }
+    return { ok: true };
+  });
+
+/** Seller-only source of truth for external payment receipt. */
+export const confirmTransactionPayment = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const txn = await queryOne<{
+      id: string;
+      buyer_id: string | null;
+      facility_id: string;
+      amount: number;
+      payment_preference: string | null;
+    }>(
+      `UPDATE public.transactions t
+       SET status = 'paid', paid_at = now(), seller_payment_confirmed_at = now()
+       FROM public.facilities f
+       WHERE t.id = $1 AND t.facility_id = f.id AND f.owner_id = $2
+         AND t.status = 'payment_pending'
+         AND (t.payment_preference = 'cash_on_delivery' OR t.buyer_payment_declared_at IS NOT NULL)
+       RETURNING t.id, t.buyer_id, t.facility_id, t.amount, t.payment_preference`,
+      [data.transactionId, context.userId],
+    );
+    if (!txn) throw new Error("Le paiement ne peut pas encore être confirmé.");
+    await recordTransactionEvent(txn.id, "payment_confirmed", context.userId, {
+      amount: txn.amount,
+      method: txn.payment_preference,
+      confirmed_by: "seller",
+    });
+    if (txn.buyer_id) {
+      await query(
+        `INSERT INTO public.notifications (user_id, title, body, link)
+         VALUES ($1,$2,$3,$4)`,
+        [
+          txn.buyer_id,
+          "Paiement reçu",
+          "Le vendeur a confirmé la réception du paiement.",
+          `/carte?transactionId=${txn.id}`,
+        ],
+      );
+    }
+    return { ok: true };
+  });
+
+export const startTransactionFulfillment = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const txn = await queryOne<{ id: string; buyer_id: string | null }>(
+      `UPDATE public.transactions t
+       SET status = 'fulfillment', fulfillment_started_at = now()
+       FROM public.facilities f
+       WHERE t.id = $1 AND t.facility_id = f.id AND f.owner_id = $2 AND t.status = 'paid'
+       RETURNING t.id, t.buyer_id`,
+      [data.transactionId, context.userId],
+    );
+    if (!txn) throw new Error("La remise ne peut pas encore être lancée.");
+    await recordTransactionEvent(txn.id, "fulfillment_started", context.userId);
+    if (txn.buyer_id) {
+      await query(
+        `INSERT INTO public.notifications (user_id, title, body, link)
+         VALUES ($1,$2,$3,$4)`,
+        [
+          txn.buyer_id,
+          "Colis en route",
+          "Le vendeur a confirmé la remise ou l’envoi.",
+          `/carte?transactionId=${txn.id}`,
         ],
       );
     }
@@ -754,7 +927,7 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
       payout_amount: number;
     }>(
       `UPDATE public.transactions SET status = 'completed', completed_at = now(), user_confirmed_at = now()
-       WHERE id = $1 AND buyer_id = $2 AND status IN ('paid','fulfillment')
+       WHERE id = $1 AND buyer_id = $2 AND status = 'fulfillment'
        RETURNING id, facility_id, cart_id, payout_amount`,
       [data.transactionId, context.userId],
     );
@@ -820,7 +993,9 @@ export const listVendorTransactions = createServerFn({ method: "GET" })
     if (!owns) throw new Error("Commerce introuvable ou non autorisé.");
     return query<VendorTransaction>(
       `SELECT t.id, t.amount, t.platform_fee, t.payout_amount, t.status, t.payment_mode,
-              t.qr_authorised_at, t.completed_at, t.created_at, p.name AS buyer_name
+              t.payment_preference, t.buyer_payment_declared_at,
+              t.qr_authorised_at, t.seller_payment_confirmed_at,
+              t.completed_at, t.created_at, p.name AS buyer_name
        FROM public.transactions t
        LEFT JOIN public.profiles p ON p.id = t.buyer_id
        WHERE t.facility_id = $1
