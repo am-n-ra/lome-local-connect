@@ -15,6 +15,7 @@ import {
 import { useAuth } from "@/lib/auth";
 import {
   confirmProductReceived,
+  submitTransactionRating,
   declareTransactionPayment,
   selectTransactionPaymentPreference,
   createTransactionQr,
@@ -56,6 +57,7 @@ export function ChatPanel({
   const selectPayment = useServerFn(selectTransactionPaymentPreference);
   const declarePaymentServer = useServerFn(declareTransactionPayment);
   const confirmReceived = useServerFn(confirmProductReceived);
+  const submitRatingServer = useServerFn(submitTransactionRating);
 
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [active, setActive] = useState<{
@@ -264,6 +266,17 @@ export function ChatPanel({
                   void runTransactionAction(() =>
                     confirmReceived({
                       data: { transactionId: transactionTimeline.transaction.id },
+                    }),
+                  )
+                }
+                onSubmitRating={(rating, comment) =>
+                  void runTransactionAction(() =>
+                    submitRatingServer({
+                      data: {
+                        transactionId: transactionTimeline.transaction.id,
+                        rating,
+                        comment,
+                      },
                     }),
                   )
                 }

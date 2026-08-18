@@ -60,6 +60,11 @@ describe("Omni V1 transaction contracts", () => {
     expect(canTransitionTransaction("pending", "payment_pending")).toBe(false);
     expect(canTransitionTransaction("qr_generated", "qr_verified")).toBe(true);
     expect(canTransitionTransaction("expired", "qr_generated")).toBe(true);
+    expect(canTransitionTransaction("fulfillment", "received")).toBe(true);
+    expect(canTransitionTransaction("fulfillment", "rating_pending")).toBe(true);
+    expect(canTransitionTransaction("fulfillment", "completed")).toBe(false);
+    expect(canTransitionTransaction("received", "rating_pending")).toBe(true);
+    expect(canTransitionTransaction("rating_pending", "completed")).toBe(true);
   });
 
   it("exposes one role-specific primary action at a time", () => {
@@ -78,6 +83,10 @@ describe("Omni V1 transaction contracts", () => {
     expect(deriveTransactionPrimaryAction("seller", "payment_pending", true)).toEqual({
       id: "confirm_payment",
       label: "Confirmer l’encaissement",
+    });
+    expect(deriveTransactionPrimaryAction("buyer", "rating_pending")).toEqual({
+      id: "rate_transaction",
+      label: "Noter la transaction",
     });
     expect(deriveTransactionPrimaryAction("buyer", "completed")).toBeNull();
   });

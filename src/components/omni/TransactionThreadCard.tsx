@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { AlertCircle, CheckCircle2, Clock3, Copy, QrCode, Share2 } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +65,7 @@ export function TransactionThreadCard({
   onSelectPayment,
   onDeclarePayment,
   onConfirmReceived,
+  onSubmitRating,
   onRetry,
 }: {
   order: BuyerOrder;
@@ -74,8 +76,11 @@ export function TransactionThreadCard({
   onSelectPayment?: (method: PaymentPreferenceMethod) => void;
   onDeclarePayment?: () => void;
   onConfirmReceived: () => void;
+  onSubmitRating?: (rating: number, comment: string) => void;
   onRetry?: () => void;
 }) {
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
   const transaction = timeline?.transaction;
   const qrToken = order.qr_token ?? transaction?.qr_token ?? null;
   const qrExpiry = order.qr_expires_at ?? transaction?.qr_expires_at ?? null;
@@ -267,6 +272,46 @@ export function TransactionThreadCard({
           <CheckCircle2 className="mr-2 h-4 w-4" />
           {busy ? "Confirmation…" : "Je confirme la réception"}
         </Button>
+      ) : null}
+
+      {(currentStatus === "received" || currentStatus === "rating_pending") && onSubmitRating ? (
+        <div className="space-y-3 rounded-2xl border border-primary/20 bg-primary/5 p-3">
+          <div>
+            <p className="font-semibold">Votre avis est la dernière étape</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Notez le vendeur pour terminer la transaction. Vous pouvez modifier le commentaire avant l’envoi.
+            </p>
+          </div>
+          <div className="flex items-center gap-1" aria-label="Choisir une note sur 5">
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-label={`Noter ${value} sur 5`}
+                aria-pressed={rating === value}
+                disabled={busy}
+                onClick={() => setRating(value)}
+                className={`rounded-lg p-1 text-2xl transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${value <= rating ? "text-amber-500" : "text-muted-foreground/40"}`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            placeholder="Un commentaire (facultatif)"
+            maxLength={600}
+            className="min-h-20 w-full resize-y rounded-xl border border-border bg-background px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          />
+          <Button
+            className="w-full"
+            disabled={busy || rating === 0}
+            onClick={() => onSubmitRating(rating, comment)}
+          >
+            {busy ? "Envoi de l’avis…" : "Publier l’avis et terminer"}
+          </Button>
+        </div>
       ) : null}
 
       <TransactionMessageThread

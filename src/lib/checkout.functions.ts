@@ -368,7 +368,7 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
     }>(
       `SELECT id, amount, status, qr_token, qr_expires_at FROM public.transactions
        WHERE buyer_id = $1 AND facility_id = $2 AND ($3::uuid IS NULL OR cart_id = $3)
-         AND status IN ('pending','qr_generated','qr_verified','payment_pending','paid','fulfillment')
+         AND status IN ('pending','qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending')
        ORDER BY created_at DESC LIMIT 1`,
       [context.userId, facilityId, cartId],
     );
@@ -662,7 +662,7 @@ export const resolveTransactionQr = createServerFn({ method: "GET" })
        FROM public.transactions t
        JOIN public.facilities f ON f.id = t.facility_id
        WHERE t.qr_token = $1
-         AND t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment')
+         AND t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending')
          AND (t.buyer_id = $2 OR f.owner_id = $2)`,
       [data.token.trim().toUpperCase(), context.userId],
     );
@@ -781,7 +781,7 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
       `SELECT t.id, t.facility_id, f.name AS facility_name, t.buyer_id, t.status, t.amount,
               t.payment_mode, t.payment_preference, t.buyer_payment_declared_at,
               t.seller_payment_confirmed_at, t.fulfillment_started_at,
-              CASE WHEN t.status IN ('payment_pending','paid','fulfillment','completed')
+              CASE WHEN t.status IN ('payment_pending','paid','fulfillment','received','rating_pending','completed')
                    THEN f.phone ELSE NULL END AS seller_contact,
               t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
        FROM public.transactions t
@@ -978,15 +978,11 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
-    const txn = await queryOne<{
-      id: string;
-      facility_id: string;
-      cart_id: string | null;
-      payout_amount: number;
-    }>(
-      `UPDATE public.transactions SET status = 'completed', completed_at = now(), user_confirmed_at = now()
+    const txn = await queryOne<{ id: string; facility_id: string; cart_id: string | null }>(
+      `UPDATE public.transactions
+       SET status = 'rating_pending', user_confirmed_at = now()
        WHERE id = $1 AND buyer_id = $2 AND status = 'fulfillment'
-       RETURNING id, facility_id, cart_id, payout_amount`,
+       RETURNING id, facility_id, cart_id`,
       [data.transactionId, context.userId],
     );
     if (!txn) {
@@ -994,13 +990,83 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
         "SELECT status FROM public.transactions WHERE id = $1 AND buyer_id = $2",
         [data.transactionId, context.userId],
       );
+      if (existing?.status === "rating_pending" || existing?.status === "received") {
+        return { ok: true, alreadyReceived: true };
+      }
       if (existing?.status === "completed") {
         return { ok: true, alreadyCompleted: true };
       }
       throw new Error("La réception ne peut pas encore être confirmée.");
     }
     await recordTransactionEvent(txn.id, "product_received", context.userId);
+    await recordTransactionEvent(txn.id, "received_confirmed", context.userId);
+    const owner = await queryOne<{ owner_id: string | null }>(
+      "SELECT owner_id FROM public.facilities WHERE id = $1",
+      [txn.facility_id],
+    );
+    if (owner?.owner_id) {
+      await query(
+        `INSERT INTO public.notifications (user_id, title, body, link)
+         VALUES ($1,$2,$3,$4)`,
+        [
+          owner.owner_id,
+          "Produit reçu",
+          "L'acheteur a confirmé la réception. La transaction attend son avis.",
+          `/vendeur?transactionId=${txn.id}`,
+        ],
+      );
+    }
+    return { ok: true, status: "rating_pending" as const };
+  });
+
+/** Buyer rating is the final gate before the transaction reaches completed. */
+export const submitTransactionRating = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        transactionId: z.string().uuid(),
+        rating: z.number().int().min(1).max(5),
+        comment: z.string().max(600).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const txn = await queryOne<{
+      id: string;
+      facility_id: string;
+      cart_id: string | null;
+      payout_amount: number;
+      owner_id: string | null;
+    }>(
+      `SELECT t.id, t.facility_id, t.cart_id, t.payout_amount, f.owner_id
+       FROM public.transactions t
+       JOIN public.facilities f ON f.id = t.facility_id
+       WHERE t.id = $1 AND t.buyer_id = $2 AND t.status = 'rating_pending'`,
+      [data.transactionId, context.userId],
+    );
+    if (!txn) throw new Error("La transaction attend d’abord la confirmation de réception.");
+
+    await query(
+      `INSERT INTO public.reviews (facility_id, buyer_id, transaction_id, rating, comment)
+       VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (transaction_id) DO UPDATE
+         SET rating = EXCLUDED.rating, comment = EXCLUDED.comment`,
+      [txn.facility_id, context.userId, txn.id, data.rating, data.comment?.trim() || null],
+    );
+    const completed = await queryOne<{ id: string }>(
+      `UPDATE public.transactions SET status = 'completed', completed_at = now()
+       WHERE id = $1 AND buyer_id = $2 AND status = 'rating_pending'
+       RETURNING id`,
+      [txn.id, context.userId],
+    );
+    if (!completed) throw new Error("La transaction a déjà été finalisée.");
+    await recordTransactionEvent(txn.id, "rating_submitted", context.userId, {
+      rating: data.rating,
+      comment: data.comment?.trim() || null,
+    });
     await recordTransactionEvent(txn.id, "completed", context.userId);
+
     const payoutAccountId = await ensureWalletAccount({ facilityId: txn.facility_id });
     await appendWalletEntry({
       accountId: payoutAccountId,
@@ -1019,25 +1085,22 @@ export const confirmProductReceived = createServerFn({ method: "POST" })
          SET payout_balance = public.subscriptions.payout_balance + EXCLUDED.payout_balance`,
       [txn.facility_id, txn.payout_amount],
     );
-    if (txn.cart_id)
+    if (txn.cart_id) {
       await query("UPDATE public.carts SET status = 'completed' WHERE id = $1", [txn.cart_id]);
-    const owner = await queryOne<{ owner_id: string | null }>(
-      "SELECT owner_id FROM public.facilities WHERE id = $1",
-      [txn.facility_id],
-    );
-    if (owner?.owner_id) {
+    }
+    if (txn.owner_id) {
       await query(
         `INSERT INTO public.notifications (user_id, title, body, link)
          VALUES ($1,$2,$3,$4)`,
         [
-          owner.owner_id,
-          "Produit reçu",
-          "L'acheteur a confirmé la réception du produit.",
+          txn.owner_id,
+          "Nouvel avis client",
+          `La transaction est terminée avec une note de ${data.rating}/5.`,
           `/vendeur?transactionId=${txn.id}`,
         ],
       );
     }
-    return { ok: true };
+    return { ok: true, status: "completed" as const };
   });
 
 export const listVendorTransactions = createServerFn({ method: "GET" })

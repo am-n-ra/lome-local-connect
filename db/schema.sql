@@ -237,7 +237,7 @@ CREATE TABLE public.transactions (
   status                     text NOT NULL DEFAULT 'pending'
                              CHECK (status IN (
                                'pending','qr_generated','qr_verified','payment_pending','paid',
-                               'fulfillment','user_confirmed','completed','cancelled','failed',
+                               'fulfillment','received','rating_pending','user_confirmed','completed','cancelled','failed',
                                'disputed','expired','refunded'
                              )),
   provider                   text,
@@ -259,13 +259,13 @@ CREATE TABLE public.transactions (
   fulfillment_started_at    timestamptz,
   completed_at               timestamptz,
   created_at                 timestamptz NOT NULL DEFAULT now(),
-  CHECK (payment_preference IS NULL OR status IN ('payment_pending','paid','fulfillment','completed')),
+  CHECK (payment_preference IS NULL OR status IN ('payment_pending','paid','fulfillment','received','rating_pending','completed')),
   CHECK (buyer_payment_declared_at IS NULL OR (
     payment_preference IS NOT NULL
-    AND status IN ('payment_pending','paid','fulfillment','completed')
+    AND status IN ('payment_pending','paid','fulfillment','received','rating_pending','completed')
   )),
-  CHECK (seller_payment_confirmed_at IS NULL OR status IN ('paid','fulfillment','completed')),
-  CHECK (fulfillment_started_at IS NULL OR status IN ('fulfillment','completed'))
+  CHECK (seller_payment_confirmed_at IS NULL OR status IN ('paid','fulfillment','received','rating_pending','completed')),
+  CHECK (fulfillment_started_at IS NULL OR status IN ('fulfillment','received','rating_pending','completed'))
 );
 CREATE UNIQUE INDEX transactions_provider_ref_key ON public.transactions (provider, provider_ref)
   WHERE provider_ref IS NOT NULL;
@@ -275,9 +275,9 @@ CREATE INDEX transactions_facility_idx ON public.transactions (facility_id, stat
 CREATE INDEX transactions_buyer_idx ON public.transactions (buyer_id, created_at DESC);
 CREATE INDEX transactions_payment_preference_idx
   ON public.transactions (payment_preference, status, created_at DESC);
-CREATE INDEX transactions_seller_payment_idx
-  ON public.transactions (facility_id, seller_payment_confirmed_at DESC)
+CREATE INDEX transactions_seller_payment_idx ON public.transactions (facility_id, seller_payment_confirmed_at DESC)
   WHERE seller_payment_confirmed_at IS NOT NULL;
+CREATE INDEX transactions_rating_pending_idx ON public.transactions (buyer_id, status, completed_at DESC);
 
 CREATE OR REPLACE FUNCTION public.omni_validate_transaction_transition()
 RETURNS trigger AS $$
@@ -291,7 +291,9 @@ BEGIN
   IF OLD.status = 'expired' AND NEW.status IN ('qr_generated', 'cancelled') THEN RETURN NEW; END IF;
   IF OLD.status = 'payment_pending' AND NEW.status IN ('paid', 'cancelled', 'failed') THEN RETURN NEW; END IF;
   IF OLD.status = 'paid' AND NEW.status IN ('fulfillment', 'cancelled', 'refunded') THEN RETURN NEW; END IF;
-  IF OLD.status = 'fulfillment' AND NEW.status IN ('completed', 'cancelled', 'disputed') THEN RETURN NEW; END IF;
+  IF OLD.status = 'fulfillment' AND NEW.status IN ('received', 'rating_pending', 'cancelled', 'disputed') THEN RETURN NEW; END IF;
+  IF OLD.status = 'received' AND NEW.status IN ('rating_pending', 'cancelled', 'disputed') THEN RETURN NEW; END IF;
+  IF OLD.status = 'rating_pending' AND NEW.status IN ('completed', 'disputed') THEN RETURN NEW; END IF;
   IF OLD.status = 'completed' AND NEW.status IN ('disputed', 'refunded') THEN RETURN NEW; END IF;
   IF NEW.status IN ('failed', 'cancelled', 'disputed', 'refunded') THEN RETURN NEW; END IF;
   RAISE EXCEPTION 'Illegal Omni transaction transition: % -> %', OLD.status, NEW.status
@@ -309,7 +311,7 @@ CREATE TABLE public.transaction_events (
   event_type     text NOT NULL CHECK (event_type IN (
     'intent_created','offer_confirmed','coupon_applied','qr_generated','seller_verified',
     'payment_pending','payment_preference_selected','payment_declared','payment_confirmed',
-    'fulfillment_started','product_received','completed','cancelled','expired','error'
+    'fulfillment_started','product_received','received_confirmed','rating_submitted','completed','cancelled','expired','error'
   )),
   actor_id       uuid REFERENCES public.profiles(id) ON DELETE SET NULL,
   metadata       jsonb NOT NULL DEFAULT '{}'::jsonb,

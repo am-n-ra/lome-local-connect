@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   confirmProductReceived,
+  submitTransactionRating,
   declareTransactionPayment,
   selectTransactionPaymentPreference,
   createCheckout,
@@ -41,6 +42,7 @@ export function OrdersPanel({
   const selectPayment = useServerFn(selectTransactionPaymentPreference);
   const declarePaymentServer = useServerFn(declareTransactionPayment);
   const confirmReceived = useServerFn(confirmProductReceived);
+  const submitRatingServer = useServerFn(submitTransactionRating);
   const fetchPending = useServerFn(listPendingConfirmations);
   const confirm = useServerFn(confirmCompletion);
   const rate = useServerFn(submitReview);
@@ -155,6 +157,19 @@ export function OrdersPanel({
     }
   }
 
+  async function submitRating(txnId: string, rating: number, comment: string) {
+    setBusy(txnId);
+    try {
+      await submitRatingServer({ data: { transactionId: txnId, rating, comment } });
+      await refresh();
+      toast.success("Merci pour votre avis. Transaction terminée.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Avis impossible à publier.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function confirmAndRate(txnId: string, rating: number) {
     setBusy(txnId);
     try {
@@ -247,6 +262,9 @@ export function OrdersPanel({
                       }
                     : {})}
                   onConfirmReceived={() => void confirmReceivedTransition(order.transaction_id!)}
+                  onSubmitRating={(rating, comment) =>
+                    void submitRating(order.transaction_id!, rating, comment)
+                  }
                   onRetry={() => void refresh()}
                 />
               );

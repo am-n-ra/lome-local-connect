@@ -63,6 +63,17 @@ describe("deriveTransactionUiState", () => {
     });
   });
 
+  it("moves from reception to the mandatory rating state without reopening receipt", () => {
+    expect(deriveTransactionUiState("received", false)).toMatchObject({
+      currentStep: 4,
+      canConfirmReceived: false,
+    });
+    expect(deriveTransactionUiState("rating_pending", false)).toMatchObject({
+      currentStep: 4,
+      canConfirmReceived: false,
+    });
+  });
+
   it("does not expose actions after completion or for unknown states", () => {
     expect(deriveTransactionUiState("completed", false).canConfirmReceived).toBe(false);
     expect(deriveTransactionUiState("unknown", false)).toMatchObject({

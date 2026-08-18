@@ -56,8 +56,8 @@ export const listPendingConfirmations = createServerFn({ method: "GET" })
               EXISTS (SELECT 1 FROM public.reviews rv WHERE rv.transaction_id = t.id) AS reviewed
        FROM public.transactions t
        JOIN public.facilities f ON f.id = t.facility_id
-       WHERE t.buyer_id = $1 AND t.status = 'completed'
-       ORDER BY t.completed_at DESC NULLS LAST LIMIT 20`,
+       WHERE t.buyer_id = $1 AND t.status IN ('received', 'rating_pending', 'completed')
+       ORDER BY COALESCE(t.completed_at, t.created_at) DESC LIMIT 20`,
       [context.userId],
     ),
   );
@@ -122,7 +122,7 @@ export const submitReview = createServerFn({ method: "POST" })
           txn.owner_id,
           "Nouvel avis client",
           `Vous avez reçu une note de ${data.rating}/5.`,
-          "/vendeur",
+          `/vendeur?transactionId=${data.transactionId}`,
         ],
       );
     }

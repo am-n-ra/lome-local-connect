@@ -55,6 +55,16 @@ export const STATUS_LABEL: Record<string, string> = {
   unconfirmed: "Non confirmé",
   certified: "Vérifié",
   confirmed: "Confirmé",
+  pending: "Intention créée",
+  qr_generated: "QR à vérifier",
+  qr_verified: "QR vérifié",
+  payment_pending: "Paiement à confirmer",
+  paid: "Paiement confirmé",
+  fulfillment: "Remise en cours",
+  received: "Réception confirmée",
+  rating_pending: "Avis buyer requis",
+  completed: "Terminée",
+  cancelled: "Annulée",
 };
 
 export const STATUS_COLOR: Record<string, string> = {

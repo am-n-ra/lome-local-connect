@@ -323,7 +323,9 @@ export function CheckoutPanel({
                 {focusedTransaction.buyer_name ?? "Client"}
               </h3>
             </div>
-            <Badge variant="outline">{focusedTransaction.status}</Badge>
+            <Badge variant="outline">
+              {STATUS_LABEL[focusedTransaction.status] ?? focusedTransaction.status}
+            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-xl bg-background/80 p-3">
@@ -444,15 +446,7 @@ export function CheckoutPanel({
               <div className="flex shrink-0 flex-col items-end gap-2 text-right">
                 <p className="font-semibold">{formatMoney(t.amount)}</p>
                 <Badge variant={t.status === "completed" ? "default" : "outline"}>
-                  {t.status === "completed"
-                    ? "Terminée"
-                    : t.status === "fulfillment"
-                      ? "Remise en cours"
-                      : t.status === "paid"
-                        ? "Paiement confirmé"
-                        : t.status === "payment_pending"
-                          ? "Paiement à suivre"
-                          : t.status}
+                  {STATUS_LABEL[t.status] ?? t.status}
                 </Badge>
                 {t.status === "payment_pending" &&
                 t.payment_preference &&

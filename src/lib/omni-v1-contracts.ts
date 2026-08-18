@@ -85,6 +85,8 @@ export const TRANSACTION_STATUSES = [
   "payment_pending",
   "paid",
   "fulfillment",
+  "received",
+  "rating_pending",
   "completed",
   "expired",
   "cancelled",
@@ -99,7 +101,9 @@ const TRANSACTION_TRANSITIONS: Record<TransactionStatus, readonly TransactionSta
   qr_verified: ["payment_pending", "cancelled"],
   payment_pending: ["paid", "cancelled"],
   paid: ["fulfillment"],
-  fulfillment: ["completed"],
+  fulfillment: ["received", "rating_pending"],
+  received: ["rating_pending"],
+  rating_pending: ["completed"],
   completed: [],
   expired: ["qr_generated", "cancelled"],
   cancelled: [],
@@ -120,6 +124,7 @@ export type TransactionEventType =
   | "payment_recorded"
   | "fulfillment_started"
   | "received_confirmed"
+  | "rating_submitted"
   | "completed"
   | "error";
 
@@ -131,7 +136,8 @@ export type TransactionActionId =
   | "declare_paid"
   | "confirm_payment"
   | "confirm_fulfillment"
-  | "confirm_received";
+  | "confirm_received"
+  | "rate_transaction";
 
 export type TransactionPrimaryAction = {
   id: TransactionActionId;
@@ -152,6 +158,9 @@ export function deriveTransactionPrimaryAction(
     }
     if (status === "fulfillment") {
       return { id: "confirm_received", label: "Je confirme la réception" };
+    }
+    if (status === "received" || status === "rating_pending") {
+      return { id: "rate_transaction", label: "Noter la transaction" };
     }
     return null;
   }

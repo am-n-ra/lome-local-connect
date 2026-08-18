@@ -5,6 +5,8 @@ export const TRANSACTION_STATUS_LABEL: Record<string, string> = {
   payment_pending: "Paiement à confirmer",
   paid: "Paiement confirmé",
   fulfillment: "Colis en route",
+  received: "Réception confirmée · avis requis",
+  rating_pending: "Avis à laisser",
   completed: "Transaction terminée",
   expired: "QR expiré",
   cancelled: "Transaction annulée",
@@ -53,6 +55,10 @@ export function deriveTransactionUiState(
       currentStep: 4,
       canConfirmReceived: true,
     };
+  }
+
+  if (status === "received" || status === "rating_pending") {
+    return { ...base, currentStep: 4 };
   }
 
   if (status === "paid") {
