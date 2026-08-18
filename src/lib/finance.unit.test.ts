@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Webhook } from "fedapay";
-import { normaliseStatus, verifyWebhookSignature } from "./fedapay.server";
+import {
+  normaliseStatus,
+  validateFedaPayDeposit,
+  verifyWebhookSignature,
+} from "./fedapay.server";
 import { WALLET_BUCKETS } from "./wallet.server";
 import { isValidTransactionCode, newTransactionCode } from "./qr";
 
@@ -39,6 +43,30 @@ describe("FedaPay webhook signature", () => {
       if (previous === undefined) delete process.env["FEDAPAY_WEBHOOK_SECRET"];
       else process.env["FEDAPAY_WEBHOOK_SECRET"] = previous;
     }
+  });
+});
+
+describe("FedaPay deposit validation", () => {
+  const approved = {
+    status: "approved",
+    amount: 5000,
+    currencyIso: "XOF",
+    depositId: "deposit-1",
+  } as const;
+
+  it("accepts the exact approved XOF deposit", () => {
+    expect(() => validateFedaPayDeposit("deposit-1", 5000, approved)).not.toThrow();
+  });
+
+  it.each([
+    ["amount", { amount: 4999 }],
+    ["currency", { currencyIso: "USD" }],
+    ["deposit metadata", { depositId: "deposit-2" }],
+    ["status", { status: "pending" }],
+  ])("rejects a provider %s mismatch", (_label, change) => {
+    expect(() =>
+      validateFedaPayDeposit("deposit-1", 5000, { ...approved, ...change }),
+    ).toThrow();
   });
 });
 

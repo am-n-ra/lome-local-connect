@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireStaff } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
+import { appendWalletEntry, ensureWalletAccount, listWalletBalances } from "./wallet.server";
 
 export type AdminFacilityRow = {
   id: string;
@@ -292,18 +293,25 @@ export const adjustWallet = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const updated = await queryOne<{ wallet_balance: number }>(
-      `INSERT INTO public.subscriptions (facility_id, wallet_balance)
-       VALUES ($1, GREATEST($2, 0))
-       ON CONFLICT (facility_id) DO UPDATE
-         SET wallet_balance = GREATEST(public.subscriptions.wallet_balance + $2, 0)
-       RETURNING wallet_balance`,
-      [data.facilityId, data.amount],
-    );
+    const accountId = await ensureWalletAccount({ facilityId: data.facilityId });
+    const entryId = await appendWalletEntry({
+      accountId,
+      bucket: "wallet",
+      amount: data.amount,
+      referenceType: "admin_adjustment",
+      referenceId: data.facilityId,
+      idempotencyKey: `admin:wallet-adjustment:${context.userId}:${crypto.randomUUID()}`,
+      actorUserId: context.userId,
+      source: "admin",
+      metadata: { reason: data.reason },
+    });
+    const balances = await listWalletBalances(accountId);
+    const balance = balances.find((row) => row.bucket === "wallet")?.availableAmount ?? 0;
     await writeAudit(context.userId, "wallet.adjust", "facility", data.facilityId, {
       amount: data.amount,
       reason: data.reason,
-      balance: updated?.wallet_balance ?? null,
+      entryId,
+      balance,
     });
-    return { balance: updated?.wallet_balance ?? 0 };
+    return { balance, entryId };
   });

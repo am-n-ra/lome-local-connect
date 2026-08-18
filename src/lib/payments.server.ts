@@ -86,7 +86,7 @@ export async function reconcileDeposit(
   }
 
   const remote = await fetchFedapayTransaction(deposit.provider_txn_id);
-  await creditDeposit(deposit.id, remote.status);
+  await creditDeposit(deposit.id, remote.status, remote);
 
   const fresh = await queryOne<DepositRow>("SELECT * FROM public.wallet_deposits WHERE id = $1", [
     depositId,

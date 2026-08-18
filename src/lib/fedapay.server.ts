@@ -81,13 +81,52 @@ export async function createFedapayCheckout(input: {
 }
 
 /** Reads a transaction back from FedaPay (used to confirm on return). */
+export type FedaPayTransactionSnapshot = {
+  status: string;
+  amount: number;
+  currencyIso: string | null;
+  depositId: string | null;
+};
+
 export async function fetchFedapayTransaction(
   transactionId: string,
-): Promise<{ status: string; amount: number }> {
-  const data = await fedapay<{ "v1/transaction": { status: string; amount: number } }>(
-    `/transactions/${transactionId}`,
-  );
-  return data["v1/transaction"];
+): Promise<FedaPayTransactionSnapshot> {
+  const data = await fedapay<{
+    "v1/transaction": {
+      status: string;
+      amount: number;
+      currency?: { iso?: string } | string | null;
+      custom_metadata?: { deposit_id?: string } | null;
+    };
+  }>(`/transactions/${transactionId}`);
+  const transaction = data["v1/transaction"];
+  const currency = transaction.currency;
+  return {
+    status: transaction.status,
+    amount: Number(transaction.amount),
+    currencyIso:
+      typeof currency === "string" ? currency.toUpperCase() : currency?.iso?.toUpperCase() ?? null,
+    depositId: transaction.custom_metadata?.deposit_id ?? null,
+  };
+}
+
+export function validateFedaPayDeposit(
+  depositId: string,
+  expectedAmount: number,
+  snapshot: FedaPayTransactionSnapshot,
+): void {
+  if (normaliseStatus(snapshot.status) !== "approved") {
+    throw new Error("Le dépôt FedaPay n’est pas confirmé par le prestataire.");
+  }
+  if (snapshot.amount !== expectedAmount) {
+    throw new Error("Le montant FedaPay ne correspond pas au dépôt Omni.");
+  }
+  if (snapshot.currencyIso !== "XOF") {
+    throw new Error("La devise FedaPay ne correspond pas au portefeuille Omni.");
+  }
+  if (snapshot.depositId && snapshot.depositId !== depositId) {
+    throw new Error("Le dépôt FedaPay ne correspond pas à cette recharge.");
+  }
 }
 
 const APPROVED = new Set(["approved", "transferred"]);
@@ -106,7 +145,11 @@ export function normaliseStatus(
  * Credits the wallet exactly once for an approved deposit.
  * Returns true when this call performed the credit.
  */
-export async function creditDeposit(depositId: string, providerStatus: string): Promise<boolean> {
+export async function creditDeposit(
+  depositId: string,
+  providerStatus: string,
+  providerSnapshot?: FedaPayTransactionSnapshot,
+): Promise<boolean> {
   const status = normaliseStatus(providerStatus);
   if (status !== "approved") {
     await query(
@@ -116,11 +159,23 @@ export async function creditDeposit(depositId: string, providerStatus: string): 
     return false;
   }
 
-  const pending = await queryOne<{ facility_id: string; amount: number }>(
-    `SELECT facility_id, amount FROM public.wallet_deposits WHERE id = $1 AND status = 'pending'`,
+  const pending = await queryOne<{
+    facility_id: string;
+    amount: number;
+    provider_txn_id: string | null;
+  }>(
+    `SELECT facility_id, amount, provider_txn_id
+     FROM public.wallet_deposits WHERE id = $1 AND status = 'pending'`,
     [depositId],
   );
   if (!pending) return false;
+  if (!pending.provider_txn_id && !providerSnapshot) {
+    throw new Error("Le dépôt FedaPay n’a pas d’identifiant prestataire.");
+  }
+
+  const snapshot =
+    providerSnapshot ?? (await fetchFedapayTransaction(pending.provider_txn_id!));
+  validateFedaPayDeposit(depositId, pending.amount, snapshot);
 
   // The ledger write is idempotent before the legacy status transition. If a process
   // crashes between these statements, a retry reuses the same ledger entry safely.
@@ -145,13 +200,15 @@ export async function creditDeposit(depositId: string, providerStatus: string): 
   );
   if (!claimed) return false;
 
+  await query(
+    `INSERT INTO public.subscriptions (facility_id)
+     VALUES ($1)
+     ON CONFLICT (facility_id) DO NOTHING`,
+    [claimed.facility_id],
+  );
   const current = await queryOne<{ pro_active_until: string | null }>(
-    `INSERT INTO public.subscriptions (facility_id, wallet_balance)
-     VALUES ($1, $2)
-     ON CONFLICT (facility_id) DO UPDATE
-       SET wallet_balance = public.subscriptions.wallet_balance + EXCLUDED.wallet_balance
-     RETURNING pro_active_until`,
-    [claimed.facility_id, claimed.amount],
+    `SELECT pro_active_until FROM public.subscriptions WHERE facility_id = $1`,
+    [claimed.facility_id],
   );
 
   // A qualifying deposit unlocks (or extends) the Pro tier for a month.

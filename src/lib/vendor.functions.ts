@@ -7,6 +7,11 @@ import { writeAudit } from "./neon-auth.server";
 import { campaignCostFor, extendedProUntil, FREE_PRODUCT_CAP, QUALIFYING_AMOUNT } from "./vendor";
 import { currentMonthKey, haversineKm } from "./omni";
 import { OMNI_CONFIG } from "./omni.config";
+import {
+  consumeWalletBucket,
+  ensureWalletAccount,
+  listWalletBalances,
+} from "./wallet.server";
 
 export type VendorFacility = {
   id: string;
@@ -152,6 +157,7 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
     }
 
     const facility = facilities[0]!;
+    const walletAccountId = await ensureWalletAccount({ facilityId: facility.id });
     const subscription = await ensureSubscription(facility.id);
 
     // Pro is monthly and must be re-earned: drop it when it lapsed without a
@@ -224,13 +230,8 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
          GROUP BY lower(search_term)
          ORDER BY hits DESC, last_seen DESC LIMIT 20`,
         ),
-        query<VendorBalance>(
-          `SELECT bucket, COALESCE(sum(amount), 0)::int AS amount
-         FROM public.balance_ledger
-         WHERE facility_id = $1
-         GROUP BY bucket
-         ORDER BY bucket`,
-          [facility.id],
+        listWalletBalances(walletAccountId).then((rows) =>
+          rows.map((row) => ({ bucket: row.bucket, amount: row.availableAmount })),
         ),
         queryOne<VendorUnlock>(
           `SELECT unlock_type, status, qualifying_count, required_count, expires_at
@@ -253,15 +254,17 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
       };
     });
 
+    const walletBalance = balances.find((row) => row.bucket === "wallet")?.amount ?? 0;
+    const effectiveWithWallet = { ...effective, wallet_balance: walletBalance };
     return {
       facilities,
-      subscription: effective,
+      subscription: effectiveWithWallet,
       products,
       campaigns,
       coupons,
       requests,
       demand,
-      walletBalance: effective.wallet_balance,
+      walletBalance,
       balances,
       unlock,
     };
@@ -287,15 +290,11 @@ export const getVendorShell = createServerFn({ method: "GET" })
       };
     }
     const facility = facilities[0]!;
+    const walletAccountId = await ensureWalletAccount({ facilityId: facility.id });
     const [subscription, balances, unlock, counts] = await Promise.all([
       ensureSubscription(facility.id),
-      query<VendorBalance>(
-        `SELECT s.bucket, s.available_amount::int AS amount
-         FROM public.wallet_balance_snapshots s
-         JOIN public.wallet_accounts a ON a.id = s.account_id
-         WHERE a.facility_id = $1 AND s.currency = 'XOF'
-         ORDER BY s.bucket`,
-        [facility.id],
+      listWalletBalances(walletAccountId).then((rows) =>
+        rows.map((row) => ({ bucket: row.bucket, amount: row.availableAmount })),
       ),
       queryOne<VendorUnlock>(
         `SELECT unlock_type, status, qualifying_count, required_count, expires_at
@@ -311,9 +310,10 @@ export const getVendorShell = createServerFn({ method: "GET" })
         [facility.id],
       ),
     ]);
+    const walletBalance = balances.find((row) => row.bucket === "wallet")?.amount ?? 0;
     return {
       facilities,
-      subscription,
+      subscription: { ...subscription, wallet_balance: walletBalance },
       balances,
       unlock,
       counts: counts ?? { products: 0, requests: 0, coupons: 0, campaigns: 0 },
@@ -764,9 +764,12 @@ export const createCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwner(context.userId, data.facilityId);
     const subscription = await ensureSubscription(data.facilityId);
+    const walletAccountId = await ensureWalletAccount({ facilityId: data.facilityId });
+    const walletBalances = await listWalletBalances(walletAccountId);
+    const walletBalance = walletBalances.find((row) => row.bucket === "wallet")?.availableAmount ?? 0;
     const cost = campaignCostFor(data.radiusKm, data.cityWide);
     if (cost <= 0) throw new Error("Choisissez un rayon ou la couverture ville entière.");
-    if (subscription.wallet_balance < cost) {
+    if (walletBalance < cost) {
       throw new Error("Solde insuffisant. Rechargez votre portefeuille.");
     }
 
@@ -796,24 +799,41 @@ export const createCampaign = createServerFn({ method: "POST" })
       ],
     );
 
-    const qualifies = cost >= QUALIFYING_AMOUNT;
-    await query(
-      `UPDATE public.subscriptions
-       SET wallet_balance = wallet_balance - $1,
-           tier = CASE WHEN $2 THEN 'pro' ELSE tier END,
-           pro_active_until = CASE WHEN $2 THEN $3::date ELSE pro_active_until END,
-           last_qualifying_action_month = CASE WHEN $2 THEN $4 ELSE last_qualifying_action_month END
-       WHERE facility_id = $5`,
-      [
-        cost,
-        qualifies,
-        extendedProUntil(subscription.pro_active_until),
-        currentMonthKey(),
-        data.facilityId,
-      ],
-    );
+    let ledgerEntryId: string;
+    try {
+      ledgerEntryId = await consumeWalletBucket({
+        accountId: walletAccountId,
+        bucket: "wallet",
+        amount: cost,
+        referenceType: "ad_campaign",
+        referenceId: campaign!.id,
+        idempotencyKey: `ad-campaign:${campaign!.id}`,
+        actorUserId: context.userId,
+        source: "seller_ad_campaign",
+        metadata: { facility_id: data.facilityId, duration_days: data.durationDays },
+      });
+    } catch (error) {
+      await query(
+        "UPDATE public.ad_campaigns SET campaign_active_until = now() WHERE id = $1",
+        [campaign!.id],
+      );
+      throw error;
+    }
 
-    await writeAudit(context.userId, "campaign.create", "ad_campaign", campaign!.id, { cost });
+    const qualifies = cost >= QUALIFYING_AMOUNT;
+    if (qualifies) {
+      await query(
+        `UPDATE public.subscriptions
+         SET tier = 'pro', pro_active_until = $1::date, last_qualifying_action_month = $2
+         WHERE facility_id = $3`,
+        [extendedProUntil(subscription.pro_active_until), currentMonthKey(), data.facilityId],
+      );
+    }
+
+    await writeAudit(context.userId, "campaign.create", "ad_campaign", campaign!.id, {
+      cost,
+      ledgerEntryId,
+    });
     return campaign!;
   });
 

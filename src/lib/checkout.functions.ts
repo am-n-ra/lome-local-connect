@@ -1117,13 +1117,6 @@ export const submitTransactionRating = createServerFn({ method: "POST" })
       source: "transaction",
       metadata: { transaction_id: txn.id },
     });
-    await query(
-      `INSERT INTO public.subscriptions (facility_id, payout_balance)
-       VALUES ($1, $2)
-       ON CONFLICT (facility_id) DO UPDATE
-         SET payout_balance = public.subscriptions.payout_balance + EXCLUDED.payout_balance`,
-      [txn.facility_id, txn.payout_amount],
-    );
     if (txn.cart_id) {
       await query("UPDATE public.carts SET status = 'completed' WHERE id = $1", [txn.cart_id]);
     }
