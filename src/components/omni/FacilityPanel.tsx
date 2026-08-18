@@ -399,7 +399,7 @@ export function FacilityPanel({
                   </Badge>
                   {offer?.state === "active" && (
                     <Badge variant="outline" className="border-primary text-primary">
-                      Coupon −{offer.discountValue}% · {offer.code}
+                      Coupon −{offer.discountValue}% · appliqué à la transaction
                     </Badge>
                   )}
                 </div>
