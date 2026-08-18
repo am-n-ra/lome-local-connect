@@ -55,3 +55,11 @@ La caméra QR devra encore être vérifiée sur appareil réel HTTPS. Les captur
 Après le déploiement du commit `2079761`, `/` affiche toujours le globe MapLibre central, le pill de reprise, les contrôles de carte, la recherche et les états de localisation sans erreur SSR. Le dock est plus compact et le bouton de paramètres reste séparé de la commande principale.
 
 `/vendeur` conserve la carte en arrière-plan, le statut online, les tabs Facility/Catalogue/Demandes/Scanner/Wallet/Coupons et les raccourcis. La surface reste à poursuivre vers une hiérarchie de mission active plus forte, mais aucune régression fonctionnelle visible n’a été introduite par la passe scanner.
+
+## Rebuild Atlas Glass — smoke production du checkpoint `74e306b`
+
+Le shell buyer de production conserve le globe MapLibre centré, les clusters/pins et les contrôles de carte. Le pill de reprise `2 transactions en cours` reste visible. Le dock est flottant au bas de la carte avec paramètres, état de localisation, fallback et recherche.
+
+Le shell seller conserve la carte derrière la surface, le header facility/status, les tabs métier, les compteurs, les raccourcis Voir les demandes/Ouvrir le scanner et le segment map-first. La réponse serveur affichée reste stable ; aucun crash SSR ou erreur de route n’a été observé.
+
+Le rendu de production montre encore un placeholder buyer historique (`Que cherchez-vous dans le monde ?`) et la console seller n’expose une mission dominante que lorsque les demandes live sont chargées. Ces deux points doivent être revalidés après invalidation du cache/deployment et font partie de la passe suivante, sans modifier MapLibre.

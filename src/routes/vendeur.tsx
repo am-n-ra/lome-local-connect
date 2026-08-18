@@ -944,6 +944,9 @@ function VendeurPage() {
                       </p>
                     </div>
                   </div>
+                  <div className="mt-4 omni-atlas-surface rounded-[1.6rem] p-4">
+                    <DemandPanel demand={data?.demand ?? []} facilityId={facility.id} mode="mission" />
+                  </div>
                   {overviewExpanded && (
                     <>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

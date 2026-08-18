@@ -16,10 +16,12 @@ export function DemandPanel({
   demand,
   facilityId,
   showLiveRequests = true,
+  mode = "full",
 }: {
   demand: DemandSignal[];
   facilityId: string;
   showLiveRequests?: boolean;
+  mode?: "full" | "mission";
 }) {
   const { market } = useMarket();
   const list = useServerFn(listDemandForFacility);
@@ -78,10 +80,11 @@ export function DemandPanel({
     <div className="space-y-5">
       {showLiveRequests && (
         <div className="space-y-3">
-          <h3 className="font-display text-lg font-bold">Demandes en direct</h3>
+          <h3 className="font-display text-lg font-bold">{mode === "mission" ? "Demande de disponibilité" : "Demandes en direct"}</h3>
           <p className="text-sm text-muted-foreground">
-            Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou
-            indisponible avec votre prix et la quantité exacte disponible.
+            {mode === "mission"
+              ? "Répondez maintenant avec le prix et la quantité réellement disponibles."
+              : "Des acheteurs proches diffusent leur besoin. Répondez disponible, partiel ou indisponible avec votre prix et la quantité exacte disponible."}
           </p>
           <ul className="space-y-3">
             {live.map((r, index) => (
@@ -210,7 +213,7 @@ export function DemandPanel({
         </div>
       )}
 
-      <div className="space-y-3">
+      {mode !== "mission" ? <div className="space-y-3">
         <h3 className="font-display text-lg font-bold">Tendances de recherche</h3>
         <div className="rounded-lg border border-border bg-secondary p-4 text-sm">
           Ce que les acheteurs autour de vous cherchent sans trouver. Ajoutez ces produits à votre
@@ -236,7 +239,7 @@ export function DemandPanel({
             </p>
           )}
         </ul>
-      </div>
+      </div> : null}
     </div>
   );
 }
