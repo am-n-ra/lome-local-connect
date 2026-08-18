@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@/lib/useServerFn";
-import { ArrowRightLeft, Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
+import { Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +51,7 @@ export function NavMenuSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="omni-glass flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col overflow-hidden rounded-t-[1.75rem] border-border/60 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-[var(--shadow-soft)] sm:rounded-[1.5rem]"
+        className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col overflow-hidden rounded-t-[1.75rem] border-[var(--atlas-glass-border)] p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:rounded-[1.75rem]"
       >
         <SheetHeader className="p-0 text-left">
           <SheetTitle className="flex items-center gap-2">
@@ -62,21 +62,9 @@ export function NavMenuSheet({
           </SheetDescription>
         </SheetHeader>
 
-        {user && onSwitchRole ? (
-          <section className="mt-5 shrink-0 rounded-2xl border border-primary/20 bg-primary/8 p-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">Rôle actif</p>
-            <p className="mt-1 text-sm font-semibold">
-              Vous êtes en mode {activeRole === "vendeur" ? "Vendeur" : "Acheteur"}
-            </p>
-            <Button className="mt-3 min-h-11 w-full" variant="outline" onClick={() => go(onSwitchRole)}>
-              <ArrowRightLeft className="mr-2 h-4 w-4" />
-              Passer en mode {activeRole === "vendeur" ? "Acheteur" : "Vendeur"}
-            </Button>
-          </section>
-        ) : null}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mt-5 rounded-2xl border border-border/70 bg-background/35 p-3">
+          <div className="mt-5 rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Navigation
           </p>
@@ -158,7 +146,7 @@ function MenuRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-border bg-background/70 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-secondary disabled:opacity-40"
+      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[1.1rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-white disabled:opacity-40"
     >
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="min-w-0 truncate">{label}</span>

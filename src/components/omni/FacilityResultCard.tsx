@@ -34,7 +34,7 @@ export function FacilityResultCard({
       aria-posinset={index + 1}
       onClick={() => onSelect(facility)}
       data-omni-result-card="true"
-      className="omni-glass group min-w-0 w-[min(20rem,calc(100vw-1.5rem))] shrink-0 snap-start rounded-[1.5rem] border border-foreground/10 bg-card/88 p-2.5 text-left shadow-[var(--shadow-soft)] transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-[0.99] md:p-3.5"
+      className="omni-atlas-surface group min-w-0 w-[min(20rem,calc(100vw-2rem))] max-w-full shrink-0 snap-start rounded-[1.5rem] p-2.5 text-left transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--atlas-orange)] active:scale-[0.99] md:p-3.5"
     >
       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
         {facility.cover_url || facility.matched_product_photo_url ? (
@@ -50,7 +50,7 @@ export function FacilityResultCard({
           </div>
         )}
       </div>
-      <div className="rounded-2xl bg-background/72 px-3 py-2.5">
+      <div className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/72 px-3 py-2.5">
         <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
           Produit recherché
         </p>
@@ -80,25 +80,25 @@ export function FacilityResultCard({
         </Badge>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px]">
-        <span className="rounded-full bg-background/72 px-2.5 py-1.5 font-semibold">
+        <span className="rounded-full bg-[var(--atlas-paper)]/72 px-2.5 py-1.5 font-semibold">
           {facility.min_price != null
             ? `Dès ${formatMoney(facility.min_price)}`
             : "Prix à confirmer"}
         </span>
-        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-right font-semibold">
+        <span className="rounded-full bg-[var(--atlas-paper)]/72 px-2.5 py-1.5 text-right font-semibold">
           {formatDistance(facility.distanceKm ?? null)}
         </span>
-        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-muted-foreground">
+        <span className="rounded-full bg-[var(--atlas-paper)]/72 px-2.5 py-1.5 text-muted-foreground">
           {facility.product_count} offre{facility.product_count > 1 ? "s" : ""}
         </span>
-        <span className="rounded-full bg-background/72 px-2.5 py-1.5 text-right text-primary">
+        <span className="rounded-full bg-[var(--atlas-paper)]/72 px-2.5 py-1.5 text-right text-primary">
           {facility.max_discount_percent > 0
             ? `${facility.max_discount_percent}% de réduction`
             : "Disponibilité à vérifier"}
         </span>
       </div>
       <div
-        className={`mt-3 grid min-h-11 place-items-center rounded-full px-3 py-2 text-center text-[11px] font-bold transition-colors ${isUnclaimed ? "bg-secondary text-foreground group-hover:bg-secondary/80" : "bg-primary text-primary-foreground group-hover:bg-primary/90"}`}
+        className={`mt-3 grid min-h-11 place-items-center rounded-full px-3 py-2 text-center text-[11px] font-bold transition-colors ${isUnclaimed ? "bg-[var(--atlas-paper-deep)] text-[var(--atlas-ink)] group-hover:bg-[var(--atlas-paper)]" : "bg-[var(--atlas-orange)] text-white group-hover:bg-[#e85c0a]"}`}
       >
         {isUnclaimed ? "Voir la fiche et réclamer" : "Voir et vérifier la disponibilité"}
       </div>

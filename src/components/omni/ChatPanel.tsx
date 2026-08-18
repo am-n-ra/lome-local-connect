@@ -181,9 +181,9 @@ export function ChatPanel({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
-        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
+        className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 rounded-t-[1.75rem] p-0 sm:rounded-[1.75rem]"
       >
-        <SheetHeader className="border-b border-border p-4">
+        <SheetHeader className="border-b border-[var(--atlas-glass-border)] p-4">
           <SheetTitle>{active ? active.name : "Messages"}</SheetTitle>
           {transactionContext && !transactionTimeline && (
             <div className="mt-2 rounded-xl bg-secondary/70 p-2 text-left text-xs">
@@ -223,7 +223,7 @@ export function ChatPanel({
                     name: t.facility_name,
                   })
                 }
-                className="omni-card w-full p-3 text-left"
+                className="omni-atlas-surface w-full rounded-[1.25rem] p-3 text-left transition-transform hover:-translate-y-0.5"
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="truncate font-semibold">{t.facility_name}</p>
@@ -286,7 +286,7 @@ export function ChatPanel({
                 onRetry={() => void refreshTransaction()}
               />
             ) : (
-              <p className="rounded-xl bg-muted/60 p-3 text-sm text-muted-foreground">
+              <p className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-3 text-sm text-muted-foreground">
                 Chargement du fil transactionnel…
               </p>
             )}
@@ -315,8 +315,8 @@ export function ChatPanel({
                   key={m.id}
                   className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
                     m.sender_role === "buyer"
-                      ? "ml-auto bg-primary text-primary-foreground"
-                      : "bg-secondary text-secondary-foreground"
+                      ? "ml-auto bg-[var(--atlas-orange)] text-white"
+                      : "bg-[var(--atlas-paper-deep)] text-[var(--atlas-ink)]"
                   }`}
                 >
                   {m.body}
@@ -324,7 +324,7 @@ export function ChatPanel({
               ))}
               <div ref={bottom} />
             </div>
-            <div className="flex items-center gap-2 border-t border-border p-3">
+            <div className="flex items-center gap-2 border-t border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
               <Input
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}

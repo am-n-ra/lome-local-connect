@@ -13,7 +13,7 @@ export function ResultRail({
 
   return (
     <div
-      className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-h-[calc(100dvh-var(--omni-dock-clearance,12rem)-0.75rem)] max-w-6xl"
+      className="pointer-events-none absolute inset-x-3 z-30 mx-auto max-h-[calc(100dvh-var(--omni-dock-clearance,12rem)-0.75rem)] max-w-6xl pb-[env(safe-area-inset-bottom)] md:inset-x-6"
       style={{ bottom: "max(0.75rem, var(--omni-dock-clearance, 12rem))" }}
       role="region"
       aria-label={`Résultats de recherche : ${facilities.length} facility${facilities.length === 1 ? "" : "s"}`}
@@ -21,7 +21,7 @@ export function ResultRail({
       data-omni-result-rail="true"
     >
       <div
-        className="pointer-events-auto flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center"
+        className="pointer-events-auto flex snap-x snap-mandatory gap-3 overflow-x-auto rounded-[1.75rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-glass)] p-2 pb-3 shadow-[var(--atlas-shadow)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center"
         tabIndex={0}
         aria-label="Panneau horizontal des facilities trouvées"
       >

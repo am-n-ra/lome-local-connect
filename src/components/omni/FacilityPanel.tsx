@@ -176,13 +176,13 @@ export function FacilityPanel({
   }
 
   return (
-    <div data-omni-facility-sheet="true" className="min-w-0 space-y-4">
+    <div data-omni-facility-sheet="true" className="omni-atlas-ink min-w-0 space-y-4">
       {facility.cover_url && (
         <img
           src={facility.cover_url}
           alt={`Vitrine de ${facility.name}`}
           loading="lazy"
-          className="aspect-[16/9] w-full rounded-[1.35rem] border border-border/70 object-cover shadow-[var(--shadow-soft)]"
+          className="aspect-[16/9] w-full rounded-[1.35rem] border border-[var(--atlas-glass-border)] object-cover shadow-[var(--atlas-shadow)]"
         />
       )}
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
@@ -217,7 +217,7 @@ export function FacilityPanel({
       )}
 
       {facility.status === "unclaimed" && (
-        <div className="omni-glass space-y-2 rounded-2xl border border-dashed border-primary/35 p-3">
+        <div className="omni-atlas-surface space-y-2 rounded-2xl border border-dashed border-primary/35 p-3">
           <p className="text-sm font-medium">Ce commerce n'est pas encore inscrit sur OmniView.</p>
           <p className="text-xs text-muted-foreground">
             Les horaires, produits et prix ne sont pas confirmés.
@@ -234,7 +234,7 @@ export function FacilityPanel({
           title="Vérifier avant d’acheter"
           description="Obtenez une réponse récente du vendeur avant de créer une intention d’achat."
         >
-          <Button className="min-h-11 w-full" onClick={onCheckAvailability}>
+          <Button className="min-h-12 w-full bg-[var(--atlas-orange)] text-white shadow-[0_14px_30px_-16px_rgba(245,108,16,0.9)] hover:bg-[#e85c0a]" onClick={onCheckAvailability}>
             <CheckCircle2 className="mr-1.5 h-4 w-4" />
             Vérifier la disponibilité
           </Button>
@@ -242,7 +242,7 @@ export function FacilityPanel({
       )}
 
       {isUnclaimed && (
-        <div className="omni-glass rounded-2xl border border-dashed border-primary/25 p-3 text-xs text-muted-foreground">
+        <div className="omni-atlas-surface rounded-2xl border border-dashed border-primary/25 p-3 text-xs text-muted-foreground">
           Cette fiche est issue d'une source publique. Les achats, itinéraires et contacts Omni
           seront disponibles après réclamation et vérification du commerce.
         </div>
@@ -282,7 +282,7 @@ export function FacilityPanel({
             </Button>
           </div>
           {!transactionAccessGranted && (onItinerary || facility.phone) ? (
-            <p className="rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
+            <p className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-3 text-xs text-muted-foreground">
               Le contact et l’itinéraire seront disponibles après votre intention d’achat dans la
               transaction.
             </p>
@@ -291,7 +291,7 @@ export function FacilityPanel({
       )}
 
       {demandOpen && (
-        <div className="omni-glass space-y-2 rounded-2xl p-3">
+        <div className="omni-atlas-surface space-y-2 rounded-2xl p-3">
           <p className="text-sm font-medium">Quel produit cherchez-vous et ne trouvez pas ?</p>
           <div className="grid gap-2 sm:flex">
             <Input
@@ -313,7 +313,7 @@ export function FacilityPanel({
           {coupons.map((c) => (
             <div
               key={c.id}
-              className="omni-glass flex min-w-0 items-center gap-2 rounded-2xl border border-dashed border-primary/35 p-2 text-sm"
+              className="omni-atlas-surface flex min-w-0 items-center gap-2 rounded-2xl border border-dashed border-primary/35 p-2 text-sm"
             >
               <Ticket className="h-4 w-4 text-primary" />
               <span className="font-mono font-bold">{c.code}</span>
@@ -335,7 +335,7 @@ export function FacilityPanel({
           return (
             <div
               key={p.id}
-              className="omni-glass grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl p-3 sm:flex sm:items-center"
+              className="omni-atlas-surface grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-3 rounded-2xl p-3 sm:flex sm:items-center"
             >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-secondary text-xl">
                 {p.photo_url ? (

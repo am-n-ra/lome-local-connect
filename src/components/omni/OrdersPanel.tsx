@@ -192,9 +192,9 @@ export function OrdersPanel({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
+          className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.75rem]"
         >
-          <SheetHeader>
+          <SheetHeader className="border-b border-[var(--atlas-glass-border)] p-4">
             <SheetTitle>Mes demandes</SheetTitle>
           </SheetHeader>
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -205,12 +205,12 @@ export function OrdersPanel({
             )}
 
             {user && pending.filter((p) => !p.reviewed).length > 0 && (
-              <div className="omni-card space-y-3 p-3">
+              <div className="omni-atlas-surface space-y-3 rounded-[1.25rem] p-3">
                 <p className="font-display font-bold">À confirmer</p>
                 {pending
                   .filter((p) => !p.reviewed)
                   .map((p) => (
-                    <div key={p.transaction_id} className="space-y-2 border-t border-border pt-2">
+                    <div key={p.transaction_id} className="space-y-2 border-t border-[var(--atlas-glass-border)] pt-2">
                       <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="font-medium">{p.facility_name}</span>
                         <span>{formatMoney(p.amount)}</span>
@@ -226,7 +226,7 @@ export function OrdersPanel({
                             aria-label={`Noter ${n} sur 5`}
                             disabled={busy === p.transaction_id}
                             onClick={() => void confirmAndRate(p.transaction_id, n)}
-                            className="text-gold transition-transform hover:scale-110"
+                            className="text-[var(--atlas-amber)] transition-transform hover:scale-110"
                           >
                             <Star className="h-6 w-6" />
                           </button>
