@@ -47,3 +47,17 @@ Après le commit de cohérence, la session seller actuellement ouverte affiche e
 ## Smoke buyer post-déploiement
 
 La landing buyer production conserve un chrome minimal avec menu unique, contrôles MapLibre, états de localisation en petites pills et un dock unique avec placeholder `Chercher un produit ou un commerce`, bouton paramètres, recherche vocale et CTA recherche. La capture read-only a été prise pendant le chargement du globe (`Chargement du globe MapLibre…`); elle ne permet donc pas de conclure sur les pins, mais confirme qu’aucune barre globale concurrente n’est visible au repos.
+
+## Corrections publiées dans cette passe
+
+La Transaction Room est désormais la surface unique de rating buyer; le bloc `À confirmer` redondant d’OrdersPanel a été supprimé. Une transaction `completed` avance au-delà des cinq étapes opérationnelles et affiche `Transaction terminée` au lieu de laisser `Réception` active. Les props de bascule de rôle mortes ont été retirées de NavMenuSheet/TopNav.
+
+Le flow availability distingue maintenant le footer de nouvelle demande de la comparaison des réponses : après chargement des réponses, il propose `Nouvelle vérification` et laisse chaque réponse disponible/partielle porter son propre CTA `Je veux payer ici`. La fiche facility n’affiche plus de code coupon personnalisé avant l’intention; elle affiche uniquement l’économie appliquée à la transaction.
+
+La Console seller synchronise son compteur avec les demandes live réellement chargées, affiche le contexte acheteur lorsqu’il existe et ne rend plus les surfaces seller inaccessibles `abonnement` et `parametres`. Le média produit est visible dans le formulaire principal avec aperçu; coupon et produit partagent maintenant le langage Atlas Glass, les cibles tactiles et les tailles d’input mobile.
+
+## Validation finale de cette passe
+
+`pnpm test`, `pnpm exec tsc --noEmit`, `pnpm build`, `pnpm check:client-boundary`, `git diff --check` et `node scripts/e2e/static-mobile-cert.mjs` sont passés. La suite conserve 59 tests verts, le contrôle mobile statique valide 10 garanties, et `prefers-reduced-motion` est présent dans le CSS. MapLibre, les pins, clusters, discovery OSM et contrats transactionnels n’ont pas été modifiés.
+
+Les limites restent explicites : le parcours E2E complet avec deux sessions authentifiées et une nouvelle transaction staging n’est pas exécuté faute d’environnement staging déclaré; la caméra demeure à essayer sur appareil HTTPS réel; les captures responsive précédentes ne remplacent pas une certification DOM exhaustive sur les cinq largeurs.
