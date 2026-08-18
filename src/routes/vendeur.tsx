@@ -873,38 +873,6 @@ function VendeurPage() {
                   />
                 </TabsContent>
 
-                <TabsContent value="abonnement" className="mt-5 space-y-4">
-                  <div className="omni-card space-y-3 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Plan Omni
-                    </p>
-                    <h2 className="font-display text-2xl font-bold">
-                      {pro ? "Pro actif" : "Plan gratuit"}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {pro
-                        ? `${daysLeft(subscription?.pro_active_until ?? null)} jour(s) restants sur votre accès Pro.`
-                        : `Le plan gratuit autorise jusqu'à ${FREE_PRODUCT_CAP} produits publiés. Utilisez le solde pour développer votre visibilité.`}
-                    </p>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="parametres" className="mt-5 space-y-4">
-                  <div className="omni-card space-y-3 p-5">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-                      Paramètres
-                    </p>
-                    <h2 className="font-display text-2xl font-bold">Configuration du commerce</h2>
-                    <p className="text-sm text-muted-foreground">
-                      Les réglages actuellement disponibles sont regroupés dans l&apos;aperçu
-                      opérationnel : horaires, position, statut en ligne et arrêt d&apos;urgence.
-                    </p>
-                    <Button variant="outline" onClick={() => setActiveTab("apercu")}>
-                      Ouvrir les réglages opérationnels
-                    </Button>
-                  </div>
-                </TabsContent>
-
                 <TabsContent value="apercu" className="mt-5 space-y-4">
                   <div className="omni-atlas-surface pointer-events-auto ml-auto max-w-2xl rounded-[1.6rem] p-5">
                     <div>
