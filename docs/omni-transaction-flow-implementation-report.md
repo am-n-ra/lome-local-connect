@@ -3,7 +3,7 @@
 **Auteur :** Manus AI  
 **Date :** 18 août 2026  
 **Branche certifiée :** `main`  
-**Dernier commit :** `708290d` — `feat(transaction): persist last room across navigation`
+**Dernier commit :** `6000f6f` — `docs(transaction): publish V1 certification report`
 
 ## Synthèse exécutive
 
