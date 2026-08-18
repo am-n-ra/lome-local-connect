@@ -1,14 +1,16 @@
 export type FacilityRow = {
   id: string;
   neighbourhood?: string | null;
-  owner_id: string | null;
+  /** Private ownership data is intentionally absent from public discovery responses. */
+  owner_id?: string | null;
   name: string;
   category: string;
   description: string | null;
   address: string | null;
   latitude: number;
   longitude: number;
-  phone: string | null;
+  /** Contact is loaded only through a transaction-authorized endpoint. */
+  phone?: string | null;
   status: string;
   is_online: boolean;
   type: string;

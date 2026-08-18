@@ -899,6 +899,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
                 })}
                 routingBusy={routingBusy}
                 onItinerary={() => void buildItinerary(selected)}
+                transactionAccessGranted={transactionChat?.facilityId === selected.id}
                 onCheckAvailability={() => openManualAvailability(selected)}
               />
             </div>

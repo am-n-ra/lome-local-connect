@@ -5,6 +5,7 @@ import { useServerFn } from "@/lib/useServerFn";
 import {
   claimFacility,
   getFacility,
+  getFacilityContact,
   listFavorites,
   recordWishlist,
   toggleFavorite as toggleFavoriteFn,
@@ -26,7 +27,7 @@ import { useMarket } from "@/lib/market";
 import { OmniActionBlock } from "@/components/omni/ui/OmniPrimitives";
 import { getProductOffer, type ProductOffer } from "@/lib/offers.functions";
 
-type Coupon = { id: string; code: string; description: string | null; discount_percent: number };
+type Coupon = { id: string; code: string | null; description: string | null; discount_percent: number };
 
 type Props = {
   facility: FacilityRow & { isPro?: boolean };
@@ -53,6 +54,8 @@ export function FacilityPanel({
   const [offers, setOffers] = useState<Record<string, ProductOffer>>({});
   const [favorite, setFavorite] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
+  const [contactPhone, setContactPhone] = useState<string | null>(null);
+  const [contactBusy, setContactBusy] = useState(false);
   const [demandOpen, setDemandOpen] = useState(false);
   const [demandTerm, setDemandTerm] = useState("");
   const [claiming, setClaiming] = useState(false);
@@ -64,6 +67,7 @@ export function FacilityPanel({
   const sendWishlist = useServerFn(recordWishlist);
   const claimFacilityRemote = useServerFn(claimFacility);
   const loadOffer = useServerFn(getProductOffer);
+  const loadContact = useServerFn(getFacilityContact);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +100,29 @@ export function FacilityPanel({
       active = false;
     };
   }, [facility.id, loadFacility, loadOffer, user]);
+
+  useEffect(() => {
+    if (!transactionAccessGranted || !user) {
+      setContactPhone(null);
+      setShowPhone(false);
+      return;
+    }
+    let active = true;
+    setContactBusy(true);
+    void loadContact({ data: { facilityId: facility.id } })
+      .then((result) => {
+        if (active) setContactPhone(result.phone);
+      })
+      .catch(() => {
+        if (active) setContactPhone(null);
+      })
+      .finally(() => {
+        if (active) setContactBusy(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [facility.id, loadContact, transactionAccessGranted, user]);
 
   useEffect(() => {
     if (!user) {
@@ -262,14 +289,15 @@ export function FacilityPanel({
                 {routingBusy ? "Calcul…" : "Itinéraire"}
               </Button>
             ) : null}
-            {transactionAccessGranted && facility.phone ? (
+            {transactionAccessGranted ? (
               <Button
                 className="min-h-10 min-w-0 flex-1"
                 variant="outline"
+                disabled={contactBusy || !contactPhone}
                 onClick={() => setShowPhone((v) => !v)}
               >
                 <Phone className="mr-1.5 h-4 w-4" />
-                {showPhone ? facility.phone : "Contacter"}
+                {contactBusy ? "Chargement…" : showPhone ? contactPhone : "Contacter"}
               </Button>
             ) : null}
             <Button
@@ -316,9 +344,9 @@ export function FacilityPanel({
               className="omni-atlas-surface flex min-w-0 items-center gap-2 rounded-2xl border border-dashed border-primary/35 p-2 text-sm"
             >
               <Ticket className="h-4 w-4 text-primary" />
-              <span className="font-mono font-bold">{c.code}</span>
+              {c.code ? <span className="font-mono font-bold">{c.code}</span> : <span className="font-semibold">Offre active</span>}
               <span className="text-muted-foreground">
-                −{c.discount_percent}% {c.description ? `· ${c.description}` : ""}
+                −{c.discount_percent}% {c.description ? `· ${c.description}` : "· code attribué lors de la transaction"}
               </span>
             </div>
           ))}

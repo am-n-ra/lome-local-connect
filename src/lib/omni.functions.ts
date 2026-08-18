@@ -14,12 +14,14 @@ export type MapFacility = {
   neighbourhood: string | null;
   latitude: number;
   longitude: number;
-  phone: string | null;
+  /** Contact is returned only by getFacilityContact after authorization. */
+  phone?: string | null;
   status: string;
   type: string;
   is_online: boolean;
   last_position_update: string | null;
-  owner_id: string | null;
+  /** Ownership is private and never returned by public discovery. */
+  owner_id?: string | null;
   product_count: number;
   min_price: number | null;
   max_discount_percent: number;
@@ -66,7 +68,8 @@ export type OfferRow = {
 
 export type PublicCouponRow = {
   id: string;
-  code: string;
+  /** Coupon codes are resolved server-side during an authorized transaction. */
+  code: string | null;
   description: string | null;
   discount_percent: number;
 };
@@ -99,8 +102,8 @@ export type NotificationRow = {
 
 const FACILITY_SELECT = `
   SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
-         f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
-         f.last_position_update, f.owner_id,
+         f.latitude, f.longitude, f.status, f.type, f.is_online,
+         f.last_position_update,
          m.url AS cover_url,
          COALESCE(p.cnt, 0)::int AS product_count,
 
@@ -299,8 +302,8 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
       params.push(data.limit);
       return query<MapFacility>(
         `SELECT f.id, f.name, f.category, f.description, f.address, f.neighbourhood,
-                f.latitude, f.longitude, f.phone, f.status, f.type, f.is_online,
-                f.last_position_update, f.owner_id,
+                f.latitude, f.longitude, f.status, f.type, f.is_online,
+                f.last_position_update,
                 NULL::text AS cover_url, 0::int AS product_count,
                 NULL::int AS min_price, 0::int AS max_discount_percent,
                 'free'::text AS tier, false AS sponsored
@@ -370,7 +373,11 @@ export const getFacility = createServerFn({ method: "GET" })
         [data.id],
       ),
       query<PublicCouponRow>(
-        `SELECT id, code, description, discount_percent FROM public.coupons WHERE facility_id = $1`,
+        `SELECT id, NULL::text AS code, description, discount_percent
+         FROM public.coupons
+         WHERE facility_id = $1 AND status = 'active'
+           AND active_from <= now()
+           AND (active_until IS NULL OR active_until > now())`,
         [data.id],
       ),
       query<FacilityMediaRow>(
@@ -388,6 +395,35 @@ export const getFacility = createServerFn({ method: "GET" })
       coupons: couponsResult.status === "fulfilled" ? couponsResult.value : [],
       media: mediaResult.status === "fulfilled" ? mediaResult.value : [],
     };
+  });
+
+/**
+ * Contact is intentionally separate from public facility discovery. A buyer can
+ * receive it only after creating an active purchase intent; the owner can always
+ * read their own facility contact.
+ */
+export const getFacilityContact = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) => z.object({ facilityId: z.string().uuid() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const row = await queryOne<{ phone: string | null }>(
+      `SELECT f.phone
+       FROM public.facilities f
+       WHERE f.id = $1
+         AND (
+           f.owner_id = $2
+           OR EXISTS (
+             SELECT 1
+             FROM public.transactions t
+             WHERE t.facility_id = f.id
+               AND t.buyer_id = $2
+               AND t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
+           )
+         )`,
+      [data.facilityId, context.userId],
+    );
+    if (!row) throw new Error("Le contact sera disponible après l’intention d’achat.");
+    return { phone: row.phone };
   });
 
 /** Buyer demand signal: "Je cherche ce produit". */
