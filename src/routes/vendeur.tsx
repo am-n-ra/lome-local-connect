@@ -758,13 +758,7 @@ function VendeurPage() {
                       count: liveDemandCount || data?.requests.length || data?.counts.requests || 0,
                     },
                     { value: "encaisser", label: "Scanner QR", shortLabel: "Scanner" },
-                    { value: "solde", label: "Omni Wallet", shortLabel: "Wallet" },
-                    {
-                      value: "coupons",
-                      label: "Coupons",
-                      shortLabel: "Coupons",
-                      count: data?.coupons.length || data?.counts.coupons || 0,
-                    },
+                    { value: "compte", label: "Compte", shortLabel: "Compte" },
                   ]}
                 />
 
@@ -798,6 +792,29 @@ function VendeurPage() {
                     </div>
                   </TabsContent>
                 )}
+
+                <TabsContent value="compte" className="mt-5 space-y-4">
+                  <section className="omni-atlas-surface space-y-3 rounded-[1.5rem] p-4">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                        Compte vendeur
+                      </p>
+                      <h2 className="mt-1 font-display text-xl font-bold">Gérez vos outils Omni</h2>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Le Wallet et les coupons restent accessibles ici sans encombrer vos actions
+                        opérationnelles quotidiennes.
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <Button type="button" variant="outline" onClick={() => setActiveTab("solde")}>
+                        Omni Wallet
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setActiveTab("coupons")}>
+                        Coupons{data?.coupons.length ? ` · ${data.coupons.length}` : ""}
+                      </Button>
+                    </div>
+                  </section>
+                </TabsContent>
 
                 <TabsContent value="solde" className="mt-5 space-y-4">
                   <BalanceSheet

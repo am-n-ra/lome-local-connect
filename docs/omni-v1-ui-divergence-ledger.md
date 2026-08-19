@@ -143,3 +143,9 @@ Phase 3 code validation passed: TypeScript, 64/64 unit tests across 10 files, pr
 The buyer ChatPanel now uses the shared `OmniSheet` while preserving its two modes: ordinary facility conversation with a sticky composer footer, and transaction context with the canonical `TransactionThreadCard` plus timeline polling. The transaction card now exposes stable `data-omni-transaction-room` and `data-omni-transaction-state` hooks, wraps event headers safely at narrow widths, and uses the French label `Paiement déclaré par l’acheteur`.
 
 Phase 4 validation for this bounded change passed: Prettier on the touched transaction files, TypeScript, 64/64 unit tests across 10 files. Existing server-function deprecation warnings remain non-blocking. Camera-device proof, seller transaction-room verification, and full authenticated browser replay remain separate acceptance work.
+
+## Phase 5 seller workspace checkpoint
+
+The seller primary action dock is now limited to five V1 actions: Facility overview, Catalogue, Demandes reçues, Scanner QR, and Compte. Omni Wallet and Coupons remain reachable from the new Compte surface and were not deleted or made inaccessible. The map-first shell, facility selector, online state, QR scanner, seller requests, product creation, coupon CRUD, Wallet recharge/allocation, and transaction operations remain in their existing routes and server boundaries.
+
+The formatter-only churn in `vendeur.tsx` was reverted before validation; the focused diff is 24 insertions and 7 deletions. TypeScript and the complete 64/64 unit suite pass. The production build/client-boundary gate must be rerun after this minimal diff before committing.
