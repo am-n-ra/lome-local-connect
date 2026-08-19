@@ -930,6 +930,7 @@ export const declareTransactionPayment = createServerFn({ method: "POST" })
        SET buyer_payment_declared_at = now()
        WHERE id = $1 AND buyer_id = $2 AND status = 'payment_pending'
          AND payment_preference IS NOT NULL
+         AND buyer_payment_declared_at IS NULL
        RETURNING id, facility_id, amount, payment_preference`,
       [data.transactionId, context.userId],
     );
