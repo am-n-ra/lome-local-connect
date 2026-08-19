@@ -62,20 +62,38 @@ The next exact action is to run the repository’s browser/mobile certification 
 - `docs/omni-v1-identity-audit.md`
   - Record the duplicate-profile/legacy-owner mismatch that blocks seller-role certification.
 - `docs/omni-v1-identity-repair-blocked.md`
-  - Record the L3 staging-boundary blocker and exact non-secret variables required to resume safely.
+  - Record the former L3 staging-boundary blocker; superseded for this test-only run by `ID-REPAIR-007`.
+- `docs/omni-v1-identity-repair-decision.md`
+  - Treat current application rows as test/demo data, preserve all profiles and Neon Auth users, and relink only explicit application identity references.
+- `scripts/audit-identity-scope.mjs`
+  - Confirm 37 application profiles, 35 distinct email hashes, 2 onboarded profiles and no raw email/ID output.
+- `scripts/snapshot-identity-surfaces.mjs`
+  - Snapshot 29 identity-bearing public tables to `/home/ubuntu/omni-backups/omni-identity-surfaces-20260819.json` with checksum `f4ba28f5…dedcad`.
+- `scripts/repair-demo-identity.mjs`
+  - Relink five facilities, one demand request and seventeen notifications to the canonical Neon Auth profile in one guarded transaction; preserve profiles, plans, amounts and ledger facts.
 - `docs/omni-v1-vercel-staging-access-audit.md`
   - Record the connected Vercel project, READY production deployment, no-runtime-error observation and absence of a proven staging target.
 - `docs/omni-v1-identity-mapping-preview.md`
   - Record the redacted candidate mapping and dependency inventory; no mutation is approved from this preview.
+- `docs/omni-v1-identity-repair-decision.md`
+  - Freeze the current test-dataset boundary and no-Neon-Auth-delete policy.
+- `scripts/audit-identity-scope.mjs`
+  - Redacted profile/auth/application count audit.
+- `scripts/audit-demo-identity-dependencies.mjs`
+  - Redacted duplicate-profile dependency audit.
+- `scripts/snapshot-identity-surfaces.mjs`
+  - Private read-only rollback snapshot helper.
+- `scripts/repair-demo-identity.mjs`
+  - Guarded, idempotent application-profile relink runner.
 
 ## Proof status
 
-The focused Slice A contract tests passed, the complete suite passed with 62 tests across 10 files, the production build passed, and the client-boundary check passed after the Pro entitlement UI/server correction. Targeted lint has no errors and retains two pre-existing Fast Refresh warnings in `SearchDock.tsx`; repository-wide lint did not complete within the bounded timeout. Local buyer browser observations and the seller-role authorization blocker are recorded in `docs/omni-v1-slice-a-browser-findings.md`; mobile, two-role staging E2E and production observations have not been run in this handoff. No production-readiness claim is allowed. Slice A remains `partial` until those proofs are recorded.
+The identity-scope audit and duplicate dependency audit passed in read-only mode. A private rollback snapshot covers 29 identity-bearing public tables. The guarded repair completed with one audit event and preserved all three application profiles, the current Neon Auth user, both user-plan rows, wallet ledger totals and transaction amounts; five facilities, one demand request and seventeen notifications moved to the canonical profile. Post-repair dependency audit shows zero legacy-owned facilities, zero legacy wallet actors and four canonical buyer transactions. The existing invariant checker reports zero current completed-without-review, zero active-without-intent-key, zero duplicate intent keys, zero duplicate coupon redemptions, zero approved deposits without ledger and zero wallet snapshot drift; it reports three legacy completed transactions without reviews, classified as pre-enforcement fixtures. Production browser proof shows the buyer globe, seller map-first shell, catalogue, scanner surface, Omni Wallet and coupons. Real camera permission/QR decode, two independent authenticated browser sessions and full transaction E2E remain unverified. Status remains `partial`; no production-readiness claim is allowed.
 
 ## Risks and blockers
 
-The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Connected Vercel confirms the Omni project and a READY production deployment with no grouped runtime errors in the inspected 24-hour window, but no separate staging target or Preview environment variables were proven. Seller certification is blocked by the duplicate-profile/legacy-owner mismatch documented in `docs/omni-v1-identity-audit.md`, and the approved staging repair remains blocked because no isolated staging marker, fixture IDs or staging database variable is configured. Do not add an insecure email fallback or mutate the configured database. Resume Phase 2 by executing the redacted mapping preview only after Phase 1 proves the staging inputs.
+The removed `confirm_offer` action has no remaining source references, the new imports compile, and the earlier complete suite/build/client-boundary proof remains valid. The current test-data repair intentionally did not delete Neon Auth users or application profiles and did not merge the duplicate `user_plans` rows. The installed `pg_dump` client could not snapshot the Neon 17.10 server because it is version 16.14; the Node snapshot helper is the rollback artifact instead. Vercel reports a READY production deployment and no grouped runtime errors in the inspected 24-hour window. The residual blockers are legacy completed transactions without reviews, lack of two independent auth sessions in the current browser, and unperformed real camera/QR decode and end-to-end payment-state proof. Do not claim the repair is production-ready until those proofs pass.
 
 ## Resume protocol
 
-Read this file, inspect the current Git diff, run the smallest focused tests, correct compile/test failures, update the Slice A acceptance matrix with evidence, then proceed to Slice B only when Slice A is `verified` or an explicit non-blocking limitation is recorded.
+Read this file, verify the current commit and the private snapshot checksum, run the redacted post-repair audits and invariant checker, then run the full tests/build. For any further data change, reuse the same repair run ID or open a new decision. Next product proof is two-role transaction E2E with camera/QR; do not broaden the UI scope before that evidence is recorded.

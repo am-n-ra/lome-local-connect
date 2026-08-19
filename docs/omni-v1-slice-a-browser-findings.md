@@ -40,3 +40,19 @@ The current authenticated browser session keeps an existing comparison request i
 ## Seller browser audit finding
 
 The local authenticated buyer session does not authorize the seller shell. `/vendeur` renders `Espace vendeur indisponible — UNAUTHORIZED` with only `Réessayer`. This prevents a valid seller visual audit in the current browser session and confirms that seller certification requires a separate seller-role fixture or authenticated session. Do not infer seller visual readiness from static source inspection alone.
+
+## Post-repair production observation
+
+The deployed production route `https://omni.sparkafrika.online/` loaded the MapLibre globe and authenticated buyer surface after the application-data repair. The session shows two resumable transactions and 14 notifications; browser location is blocked in this session, so no location claim was made. This proves route/map shell availability only, not seller certification or a complete transaction E2E.
+
+## Post-repair seller certification
+
+After relinking the five legacy facilities to the current Neon Auth profile, the deployed `/vendeur` route loaded successfully in the authenticated browser session. It displayed `Épicerie Adidogomé Plus`, the map-first seller shell, Facility/Catalogue/Demandes reçues/Scanner QR/Omni Wallet/Coupons surfaces, five products, two demands and two coupons. This resolves the previous `UNAUTHORIZED` shell blocker for the current demo identity. Full two-session transaction and camera proof remain separate acceptance items.
+
+## Seller catalogue and scanner surfaces
+
+The deployed seller Catalogue tab is reachable and shows a clear product creation form with name, price, quantity, media URL, publish action and five existing products. The Scanner QR tab is reachable and presents an explicit `Autoriser et démarrer la caméra` CTA, manual 8-character fallback, a visible dark camera viewport reserved for the feed, recent transaction states and the V1 boundary that Omni does not process in-app seller payments or withdrawals. Camera permission and actual QR decoding were not triggered in this read-only certification.
+
+## Seller wallet and coupon surfaces
+
+The deployed Omni Wallet surface now clearly states that there is one rechargeable wallet, with allocations to Pro, Publicité and Coupons; it shows a 42,000 FCFA wallet balance, zero allocated amount and no seller withdrawal or buyer-seller in-app payment in V1. The Coupons surface is reachable with a simple code/percentage/description form and two existing offers. No recharge, allocation, coupon creation or deletion was executed.
