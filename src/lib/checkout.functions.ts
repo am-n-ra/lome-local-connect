@@ -763,11 +763,27 @@ export const redeemCheckout = createServerFn({ method: "POST" })
     const authorised = await queryOne<{ id: string }>(
       `UPDATE public.transactions
        SET status = 'qr_verified', qr_authorised_at = now()
-       WHERE id = $1 AND status IN ('qr_generated', 'qr_verified')
+       WHERE id = $1 AND status = 'qr_generated'
        RETURNING id`,
       [txn.id],
     );
     if (!authorised) {
+      const current = await queryOne<{ status: string }>(
+        "SELECT status FROM public.transactions WHERE id = $1 AND facility_id = $2",
+        [txn.id, data.facilityId],
+      );
+      if (current?.status === "qr_verified") {
+        return {
+          transactionId: txn.id,
+          amount: txn.amount,
+          platformFee: txn.platform_fee,
+          payout: txn.payout_amount,
+          facilityStatus: (await queryOne<{ status: string }>(
+            "SELECT status FROM public.facilities WHERE id = $1",
+            [data.facilityId],
+          ))?.status ?? null,
+        };
+      }
       throw new Error("Ce code a déjà été vérifié ou n'est plus actif.");
     }
     await recordTransactionEvent(txn.id, "seller_verified", context.userId, {

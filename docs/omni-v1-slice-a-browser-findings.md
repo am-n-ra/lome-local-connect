@@ -140,3 +140,11 @@ The buyer restored `Lait en poudre 400 g`, submitted it, and the production stag
 ## Seller response notification
 
 The buyer notification panel showed `Un vendeur a répondu — Épicerie Adidogomé Plus a répondu (disponible) à « Lait en poudre 400 g »` at `19/08/2026 11:58:22`. Activating that notification navigated to `/carte`, where the MapLibre globe loaded, but the availability response panel was not automatically restored. This is a resume-flow usability gap; the notification itself proves the seller response was recorded.
+
+## Production notification-resume fix verified
+
+Deployment `dpl_7ywMAeg4pViCn7q5rSDJgQE2xo3h` (`READY`, production, commit `7154b9236095df20f8c5915b54d103609856bb7b`) opened the buyer route with the certified demand and response identifiers. The panel opened directly as `Reprendre votre demande`, resolved `Épicerie Adidogomé Plus`, showed `1 réponse(s)`, highlighted the available `3 200 FCFA · 1 unité(s)` response, and exposed `Je veux payer ici` without a Pro-gate or duplicate request.
+
+## Purchase intent and QR generated
+
+Selecting `Je veux payer ici` created the purchase intent with toast `Intention d'achat créée. Référence d6a19213.` and opened the transaction room for `Épicerie Adidogomé Plus`, total `3 200 FCFA`. The room showed `QR en attente de scan`, timeline states `Intention créée → Offre confirmée → QR généré`, an actual QR image, fallback code `MFD6DQXE`, and validity until `14:41`.
