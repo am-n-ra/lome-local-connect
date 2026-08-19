@@ -156,3 +156,19 @@ The first live seller validation on the pre-fix deployment transitioned the tran
 ## QR-to-payment entry gap and fix
 
 After seller QR verification, the buyer room correctly showed `Vendeur vérifié` and the next-action label `Choisir le mode de paiement`, but the four external payment buttons were absent because `deriveTransactionUiState` only enabled `canChoosePayment` at `payment_pending`, while the server transition starts from `qr_verified`. The bounded fix enables payment choice at `qr_verified` and keeps `payment_pending` responsible for the subsequent `J’ai payé` action. Local proof: focused transaction-state tests passed `8/8`, full suite passed `64/64`, production build passed, and client-boundary checks passed.
+
+## Payment preference and declaration verified
+
+Deployment `dpl_3TrN69bQhyyBSFzGnEJo3SpdaTMo` (`READY`, production, commit `3cf699e50106b76908feeb9e9d601899a74413db`) restored the QR-verified buyer room and visibly exposed all four external payment options: `Cash à la livraison`, `TMoney`, `Flooz`, and `Autre paiement externe`. The buyer selected `Cash à la livraison`; the room advanced to `Paiement à confirmer`, recorded `Mode de paiement choisi`, and exposed `J’ai payé`. After declaration, the UI recorded `Paiement déclaré par le buyer`; the Neon transaction row was `payment_pending`, `payment_preference=cash_on_delivery`, `buyer_payment_declared_at` populated, and the event sequence ended with `payment_preference_selected,payment_declared`. No in-app payment was processed.
+
+## Seller payment confirmation verified
+
+The canonical seller dashboard reopened the transaction as `Paiement à confirmer` with `Confirmer le paiement reçu`. Selecting it produced toast `Paiement seller confirmé. Vous pouvez lancer la remise.` and changed the room to `Paiement confirmé` with `Lancer la remise ou la livraison`. The authoritative transaction row is `paid`, with `seller_payment_confirmed_at` and `paid_at` populated; the event sequence now ends with `payment_confirmed`.
+
+## Buyer receipt confirmation verified
+
+The buyer transaction room restored the seller-started fulfillment as `Colis en route`, with progress `Paiement terminée → Réception active` and `Je confirme la réception`. Selecting it recorded `Marchandise reçue` and `Réception confirmée` at `13:02`, then exposed the final rating surface with five rating controls, optional comment, and `Publier l’avis et terminer`.
+
+## Rating submission defect and fix
+
+The buyer reached the final rating surface after receipt confirmation, but the first live submission failed with `there is no unique or exclusion constraint matching the ON CONFLICT specification`. The database has a partial unique index `reviews_transaction_unique` on `transaction_id WHERE transaction_id IS NOT NULL`; the SQL upsert incorrectly omitted that predicate. The bounded fix targets the existing partial index explicitly. Local proof after the change: full suite passed `64/64`, production build passed, and client-boundary checks passed.

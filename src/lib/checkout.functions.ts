@@ -1104,7 +1104,7 @@ export const submitTransactionRating = createServerFn({ method: "POST" })
     await query(
       `INSERT INTO public.reviews (facility_id, buyer_id, transaction_id, rating, comment)
        VALUES ($1,$2,$3,$4,$5)
-       ON CONFLICT (transaction_id) DO UPDATE
+       ON CONFLICT (transaction_id) WHERE transaction_id IS NOT NULL DO UPDATE
          SET rating = EXCLUDED.rating, comment = EXCLUDED.comment`,
       [txn.facility_id, context.userId, txn.id, data.rating, data.comment?.trim() || null],
     );
