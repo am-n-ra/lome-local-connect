@@ -7,7 +7,7 @@ import { listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/o
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
-import { FacilityPanel } from "@/components/omni/FacilityPanel";
+import { FacilitySheet } from "@/components/omni/FacilitySheet";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
 import { OrdersPanel } from "@/components/omni/OrdersPanel";
@@ -16,7 +16,7 @@ import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
 import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
-import { OmniResumeBar, OmniSheetSurface } from "@/components/omni/ui/OmniPrimitives";
+import { OmniResumeBar } from "@/components/omni/ui/OmniPrimitives";
 import { ResultRail } from "@/components/omni/ResultRail";
 
 import {
@@ -890,54 +890,22 @@ export function CartePage({
           />
         )}
 
-        {selected && (
-          <OmniSheetSurface className="omni-atlas-surface pointer-events-auto absolute bottom-0 left-1/2 top-auto z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1rem),34rem)] -translate-x-1/2 flex-col overflow-hidden rounded-t-[1.75rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:p-5">
-            <div className="mb-2 flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate({ to: "/fiche/$id", params: { id: selected.id } })}
-              >
-                Page complète
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Fermer"
-                onClick={() => setSelected(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
-              {selected.cover_url ? (
-                <img
-                  src={selected.cover_url}
-                  alt={`Aperçu de ${selected.name}`}
-                  loading="lazy"
-                  className="h-36 w-full object-cover"
-                />
-              ) : (
-                <div className="grid h-36 place-items-center bg-secondary/50 text-center text-xs font-semibold text-muted-foreground">
-                  Aucun média public disponible
-                </div>
-              )}
-            </div>
-            <div className="min-h-0 overflow-y-auto">
-              <FacilityPanel
-                facility={selected}
-                distanceKm={haversineKm(origin, {
-                  lat: selected.latitude,
-                  lng: selected.longitude,
-                })}
-                routingBusy={routingBusy}
-                onItinerary={() => void buildItinerary(selected)}
-                transactionAccessGranted={transactionChat?.facilityId === selected.id}
-                onCheckAvailability={() => openManualAvailability(selected)}
-              />
-            </div>
-          </OmniSheetSurface>
-        )}
+        <FacilitySheet
+          facility={selected}
+          origin={origin}
+          open={Boolean(selected)}
+          onOpenChange={(open) => {
+            if (!open) setSelected(null);
+          }}
+          routingBusy={routingBusy}
+          onItinerary={() => {
+            if (selected) void buildItinerary(selected);
+          }}
+          transactionAccessGranted={transactionChat?.facilityId === selected?.id}
+          onCheckAvailability={() => {
+            if (selected) openManualAvailability(selected);
+          }}
+        />
 
         {steps.length > 0 && (
           <div className="omni-atlas-surface pointer-events-auto absolute inset-x-3 bottom-3 max-h-48 overflow-y-auto rounded-2xl p-3 md:right-[460px] md:inset-x-auto md:left-3 md:w-96">

@@ -21,7 +21,7 @@ export function ResultRail({
       data-omni-result-rail="true"
     >
       <div
-        className="pointer-events-auto flex snap-x snap-mandatory gap-3 overflow-x-auto rounded-[1.75rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-glass)] p-2 pb-3 shadow-[var(--atlas-shadow)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-center"
+        className="pointer-events-auto flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-2 rounded-[1.75rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-glass)] p-2 pb-3 shadow-[var(--atlas-shadow)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:justify-start xl:justify-center"
         tabIndex={0}
         aria-label="Panneau horizontal des facilities trouvées"
       >

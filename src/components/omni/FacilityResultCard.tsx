@@ -34,7 +34,7 @@ export function FacilityResultCard({
       aria-posinset={index + 1}
       onClick={() => onSelect(facility)}
       data-omni-result-card="true"
-      className="omni-atlas-surface group min-w-0 w-[min(20rem,calc(100vw-2rem))] max-w-full shrink-0 snap-start rounded-[1.5rem] p-2.5 text-left transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--atlas-orange)] active:scale-[0.99] md:p-3.5"
+      className="omni-atlas-surface group min-w-0 w-[min(20rem,calc(100vw-3rem))] max-w-full shrink-0 snap-start rounded-[1.5rem] p-2.5 text-left transition-transform duration-200 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--atlas-orange)] active:scale-[0.99] md:p-3.5"
     >
       <div className="mb-3 overflow-hidden rounded-2xl bg-secondary/60">
         {facility.cover_url || facility.matched_product_photo_url ? (

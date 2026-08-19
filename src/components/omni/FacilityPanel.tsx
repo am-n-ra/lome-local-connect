@@ -27,14 +27,19 @@ import { useMarket } from "@/lib/market";
 import { OmniActionBlock } from "@/components/omni/ui/OmniPrimitives";
 import { getProductOffer, type ProductOffer } from "@/lib/offers.functions";
 
-type Coupon = { id: string; code: string | null; description: string | null; discount_percent: number };
+type Coupon = {
+  id: string;
+  code: string | null;
+  description: string | null;
+  discount_percent: number;
+};
 
 type Props = {
   facility: FacilityRow & { isPro?: boolean };
   distanceKm: number | null;
-  onItinerary?: () => void;
-  onCheckAvailability?: () => void;
-  routingBusy?: boolean;
+  onItinerary?: (() => void) | undefined;
+  onCheckAvailability?: (() => void) | undefined;
+  routingBusy?: boolean | undefined;
   /** Contact and route are transaction-only disclosures after buyer intent. */
   transactionAccessGranted?: boolean;
 };
@@ -261,7 +266,10 @@ export function FacilityPanel({
           title="Vérifier avant d’acheter"
           description="Obtenez une réponse récente du vendeur avant de créer une intention d’achat."
         >
-          <Button className="min-h-12 w-full bg-[var(--atlas-orange)] text-white shadow-[0_14px_30px_-16px_rgba(245,108,16,0.9)] hover:bg-[#e85c0a]" onClick={onCheckAvailability}>
+          <Button
+            className="min-h-12 w-full bg-[var(--atlas-orange)] text-white shadow-[0_14px_30px_-16px_rgba(245,108,16,0.9)] hover:bg-[#e85c0a]"
+            onClick={onCheckAvailability}
+          >
             <CheckCircle2 className="mr-1.5 h-4 w-4" />
             Vérifier la disponibilité
           </Button>
@@ -344,9 +352,14 @@ export function FacilityPanel({
               className="omni-atlas-surface flex min-w-0 items-center gap-2 rounded-2xl border border-dashed border-primary/35 p-2 text-sm"
             >
               <Ticket className="h-4 w-4 text-primary" />
-              {c.code ? <span className="font-mono font-bold">{c.code}</span> : <span className="font-semibold">Offre active</span>}
+              {c.code ? (
+                <span className="font-mono font-bold">{c.code}</span>
+              ) : (
+                <span className="font-semibold">Offre active</span>
+              )}
               <span className="text-muted-foreground">
-                −{c.discount_percent}% {c.description ? `· ${c.description}` : "· code attribué lors de la transaction"}
+                −{c.discount_percent}%{" "}
+                {c.description ? `· ${c.description}` : "· code attribué lors de la transaction"}
               </span>
             </div>
           ))}
@@ -354,10 +367,12 @@ export function FacilityPanel({
       )}
 
       <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold">Produits ({products.length})</p>
-            <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Offres visibles</span>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm font-semibold">Produits ({products.length})</p>
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+            Offres visibles
+          </span>
+        </div>
         {products.map((p) => {
           const offer = offers[p.id];
           return (

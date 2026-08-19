@@ -109,7 +109,8 @@ export function SearchDock({
   );
   const activeCount = activeFilterCount(filters);
   const hasExplicitStructuredValues = quantity !== 1 || filters.maxPrice !== null;
-  const controlsOpen = parametersOpen || hasExplicitStructuredValues;
+  // Structured quantity/budget controls stay collapsed by default; active values remain preserved.
+  const controlsOpen = parametersOpen;
   const isPrecise =
     locationStatus === "granted" &&
     locationAccuracy != null &&
@@ -308,15 +309,10 @@ export function SearchDock({
             onClick={() => setParametersOpen((open) => !open)}
             className="omni-glass grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
           >
-            {controlsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            {controlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
           {controlsOpen && (
             <div className="omni-atlas-surface min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
-              {hasExplicitStructuredValues && !parametersOpen && (
-                <p className="px-2 text-[11px] text-muted-foreground">
-                  Paramètres actifs. Ouvrez le chevron pour les modifier.
-                </p>
-              )}
               <div className="flex min-w-0 items-center gap-1 rounded-full bg-background/35 p-1">
                 <button
                   type="button"
@@ -459,7 +455,7 @@ export function SearchDock({
                     onClick={onVerifyAvailability}
                     className="rounded-full bg-primary px-4 py-2 text-[11px] font-bold text-primary-foreground shadow-[var(--shadow-soft)] transition-transform active:scale-[0.98]"
                   >
-                    Vérifier la disponibilité
+                    Comparer les disponibilités
                   </button>
                 )}
               </>

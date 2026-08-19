@@ -113,3 +113,27 @@ Phase 2 validation passed: `pnpm exec tsc --noEmit`, 64/64 unit tests across 10 
 [2]: ./omni-continuity-v1-source-of-truth.md "Omni continuity V1 source of truth"
 [3]: ./omni-v1-ui-phase0-audit.md "Prior implementation audit and surface classification"
 [4]: ./omni-build-acceptance-matrix.md "Omni build acceptance matrix"
+
+## Phase 3 browser checkpoint
+
+The local buyer route at `http://localhost:8084/` rendered a real MapLibre canvas with the OpenFreeMap/OpenMapTiles attribution and a visible geographic globe. The initial dock showed only the search field, voice/search actions, location context, and the refinement chevron; quantity and budget were not displayed by default. Opening the chevron exposed quantity, budget, categories, radius, open-now, discount, and sort controls without changing the map scene. The browser session had location blocked, and the UI displayed `Localisation bloquée` with `Réessayer` and `Explorer le marché approximatif`, which is truthful for this sandbox.
+
+The browser captures are supporting interaction evidence only; the complete viewport matrix and facility-result path remain open.
+
+The browser then entered `ciment` and pressed Enter from the buyer dock. The app navigated to `/auth?redirectTo=%2Fcarte%3FpendingSearch%3D1`, showing the French `Connexion`/`Créer un compte` gate and preserving the pending-search redirect. This confirms the shared search submit path reaches the intended auth boundary rather than creating a partial or unauthenticated availability request.
+
+The non-production demo credentials were submitted through the auth gate and the page entered `Connexion…`; no production account or data was involved. A follow-up browser observation is required to confirm whether the pending query is restored after authentication.
+
+The authenticated replay could not complete in the sandbox: after the demo login submission, the auth page showed an embedded `This page didn't load` response while remaining on the auth route. This is an external auth/session-environment blocker for this local browser run, not evidence that the buyer UI lost the pending query. The public map shell and protected auth boundary remain verified; authenticated result/facility interaction requires the previously established staging-auth session or an available auth provider.
+
+Returning to `/` and selecting `Explorer le marché approximatif` kept the real MapLibre globe visible and removed the retry action while retaining the explicit `Localisation bloquée` context. The sandbox did not return visible facility cards during this short wait, so public discovery density and FacilitySheet selection remain unproven in this browser run.
+
+After waiting for the approximate-market request, the globe continued rotating and no facility rail appeared in the sandbox viewport. Browser console inspection showed only the React DevTools informational message and no application error. This leaves facility-card rendering as an untested/possibly data-dependent path in this local environment rather than a confirmed UI failure.
+
+## Phase 3 implementation checkpoint
+
+The buyer selected-facility surface now uses the shared `FacilitySheet` rather than the route-owned inline `OmniSheetSurface`. The sheet preserves the searched facility, media/product content, trust boundary, itinerary action, post-intent contact disclosure, manual availability CTA, and full-page facility link while inheriting the shared close, scroll-body, and sticky-footer behavior.
+
+Search refinements are collapsed by default; opening the chevron reveals quantity, budget, category, radius, availability, discount, and sorting controls. Explicit values remain preserved without forcing the panel open. The result-level CTA now says `Comparer les disponibilités`, while facility cards retain the single-facility availability path. Narrow cards use a viewport-safe width and the horizontal rail keeps snap scrolling.
+
+Phase 3 code validation passed: TypeScript, 64/64 unit tests across 10 files, production build, client-boundary check, and diff check. The browser verified the MapLibre globe, collapsed/expanded refinement behavior, protected search auth redirect, and public approximate-location copy. Authenticated facility-result replay was blocked by the sandbox auth-provider page-load failure; no production or staging mutation was made.
