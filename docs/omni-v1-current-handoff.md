@@ -59,6 +59,8 @@ The next exact action is to run the repository’s browser/mobile certification 
   - Move seller QR verification to `qr_verified`.
   - Move buyer payment preference selection from `qr_verified` to `payment_pending`.
   - Align buyer/seller QR notifications and expose seller contact after intent/QR generation.
+- `docs/omni-v1-identity-audit.md`
+  - Record the duplicate-profile/legacy-owner mismatch that blocks seller-role certification.
 
 ## Proof status
 
@@ -66,7 +68,7 @@ The focused Slice A contract tests passed, the complete suite passed with 62 tes
 
 ## Risks and blockers
 
-The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Before advancing, obtain a staging fixture with distinct buyer and seller roles, verify the transaction flow against both sessions, then certify mobile camera/payment states. The current buyer session cannot authorize `/vendeur`. Keep production mutations and provider operations separate from certification.
+The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Seller certification is blocked by the duplicate-profile/legacy-owner mismatch documented in `docs/omni-v1-identity-audit.md`; do not add an insecure email fallback. Before advancing, repair the identity mapping in staging, obtain distinct buyer and seller sessions, verify the transaction flow against both, then certify mobile camera/payment states. Keep production mutations and provider operations separate from certification.
 
 ## Resume protocol
 
