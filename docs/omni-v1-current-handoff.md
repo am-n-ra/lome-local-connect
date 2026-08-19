@@ -7,10 +7,11 @@
 | Repository | `am-n-ra/lome-local-connect` |
 | Branch | `main` |
 | Certified source commit | `02910b1` — `fix(checkout): prevent duplicate payment-declaration events with atomic WHERE guard` |
+| UI refinement commits | `fa1ace4`, `b151a72`, `fb4e9ba`, `c41cc4c` — bounded shared sheets, buyer discovery, transaction room, seller dock, and touch targets |
 | Production deployment | `dpl_BetrRfbm1aLAsE9LqLvcTBNZdmUJ` — `READY` |
 | Staging Neon project | `old-unit-98112236` |
 | Staging Neon branch | `br-bitter-forest-a6e6nem5` |
-| Local validation | 10 test files, 64 tests, production build, and client-boundary check passed |
+| Local validation | 10 test files, 64 tests, production build, client-boundary check, live overflow audit, and touch-target audit passed |
 | Release decision | `partial` |
 
 ## Goal and authoritative position
@@ -19,7 +20,13 @@ The Omni V1 goal remains a production-ready buyer/seller transaction loop: map-f
 
 The A–E core is now materially certified in isolated staging. The fresh buyer/seller transaction completed through `completed`, the duplicate buyer payment declaration was replayed successfully without a duplicate event, the runtime authorization probes recorded explicit rejection paths, the concurrent duplicate-intent probe returned one transaction for both requests, the independent buyer recovery path was restored after sign-out and app restart, and the latest staging invariant run returned zero for all seven checks.
 
-The release is still **`partial`**, not `verified` or production-ready. A real HTTPS mobile camera preview/decode is not available in the sandbox, and a dedicated concurrent QR-verification fan-out has not been recorded. These are the smallest remaining certification gaps.
+The release is still **`partial`**, not `verified` or production-ready. A real HTTPS mobile camera preview/decode is not available in the sandbox, a dedicated concurrent QR-verification fan-out has not been recorded, and the authenticated result/facility browser replay was blocked by the local auth-provider page-load failure. These are proof limitations, not a reason to weaken the server-authoritative transaction contract.
+
+## UI perfection continuation
+
+This continuation followed the approved anti-loop method: one bounded source-of-truth reconciliation, then vertical slices with explicit acceptance gates. The shared OmniSheet foundation now owns the buyer cart, orders, wishlist, menu, facility, and chat overlays. Buyer discovery uses a shared facility sheet, optional refinements, product-first result cards, a viewport-safe horizontal rail, and a distinct grouped-availability CTA. The transaction room uses clearer French state labels, stable state hooks, responsive event rows, QR/payment/receipt/rating surfaces, and a sticky composer only for ordinary chat. The seller map-first workspace keeps Facility, Catalogue, Demandes, Scanner QR, and Compte as primary actions; Wallet and Coupons remain reachable from Compte. MapLibre GL v5 globe behavior and facility-pin logic were not changed.
+
+The browser evidence confirmed a real MapLibre globe, no document-level horizontal overflow at 1280×1100, collapsed-by-default buyer refinements, a protected search-to-auth redirect, and 44px custom map/search controls after the accessibility patch. The local auth provider failed to complete the demo authenticated replay, so result-card and facility-sheet interaction remain a browser proof gap in this environment.
 
 ## Certified transaction and proof
 
@@ -54,7 +61,7 @@ The production deployment metadata shows commit `02910b1` on `main` in a `READY`
 
 ## Worktree and change boundary
 
-The tracked worktree has no uncommitted changes. The only tracked source change for this certification slice is already committed in `02910b1`. Generated `.vercel/` output and several untracked audit scripts remain outside the commit boundary and were not staged. No passwords, database URLs, QR tokens, Neon Auth users, profiles, legacy transactions, or production records were deleted or rewritten.
+The UI refinement work is committed in `fa1ace4`, `b151a72`, `fb4e9ba`, and `c41cc4c`; the current handoff update will be committed separately. Generated `.vercel/` output and several untracked audit scripts remain outside the commit boundary and were not staged. No passwords, database URLs, QR tokens, Neon Auth users, profiles, legacy transactions, or production records were deleted or rewritten.
 
 ## Smallest next action
 
