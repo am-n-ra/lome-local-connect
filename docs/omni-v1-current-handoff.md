@@ -8,7 +8,7 @@
 | Branch | `main` |
 | Certified source commit | `02910b1` — `fix(checkout): prevent duplicate payment-declaration events with atomic WHERE guard` |
 | UI refinement commits | `fa1ace4`, `b151a72`, `fb4e9ba`, `c41cc4c` — bounded shared sheets, buyer discovery, transaction room, seller dock, and touch targets |
-| Production deployment | `dpl_BetrRfbm1aLAsE9LqLvcTBNZdmUJ` — `READY` |
+| Latest observed production deployment | `dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo` — `READY` for source commit `89b15c0` |
 | Staging Neon project | `old-unit-98112236` |
 | Staging Neon branch | `br-bitter-forest-a6e6nem5` |
 | Local validation | 10 test files, 64 tests, production build, client-boundary check, live overflow audit, and touch-target audit passed |
@@ -40,7 +40,7 @@ The runtime adversarial evidence is stored in `/home/ubuntu/omni-phase3-adversar
 
 The latest seven-check staging invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview`. This result was obtained after the concurrent duplicate-intent probe, not only before it.
 
-The production deployment metadata shows commit `02910b1` on `main` in a `READY` production deployment. The Vercel build log completed successfully. The selected 24-hour Vercel runtime-error query reported no runtime error clusters for the project. These observations establish deployment and current-window observability evidence; they do not convert the isolated staging proof into a full production transaction test.
+The latest observed production deployment metadata shows source commit `89b15c0` on `main` in a `READY` production deployment (`dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo`). The local Vercel build and client-boundary gates completed successfully, and the selected 24-hour Vercel runtime-error query reported no runtime error clusters for the project. These observations establish deployment and current-window observability evidence; they do not convert the isolated staging proof into a full production transaction test.
 
 ## Relevant artifacts
 

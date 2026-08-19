@@ -159,3 +159,7 @@ The target-size audit found several controls below the 44×44 touch target: MapL
 The Phase 6 correction raised custom MapLibre zoom/recenter buttons and SmartSearchBar voice/search/image buttons to 44px minimum touch targets using local classes only; the globe projection, controls, and search/Enter handlers were not changed. Validation passed: diff check, TypeScript, 64/64 unit tests, production build, and standalone client-boundary check (`43` JavaScript artifacts and `168` source files scanned).
 
 Post-patch browser measurement confirmed `Zoom avant`, `Zoom arrière`, `Explorer le marché approximatif` (map control), `Recherche vocale`, and `Lancer la recherche` are all 44×44. The separate 193×29 `Explorer le marché approximatif` chip is a context/action text chip and remains visually compact; it is not the map control itself.
+
+## Phase 7 deployment checkpoint
+
+After pushing `main`, Vercel created production deployment `dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo` for source commit `89b15c0`; the deployment state is `READY`. The selected 24-hour grouped runtime-error query returned no runtime errors. This confirms the new UI commits are deployed and not producing observed runtime-error clusters; it does not replace authenticated E2E or mobile-camera evidence.
