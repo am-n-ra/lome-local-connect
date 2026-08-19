@@ -103,3 +103,18 @@ The bounded certification fixes are committed to `main`: notification-driven dem
 ## Resume protocol
 
 Read this file and the certification evidence log, verify the current `main` commit and private snapshot checksum, run `pnpm test && pnpm build`, run `OMNI_E2E_ENFORCE_AFTER=2026-08-19T00:00:00Z node scripts/e2e/assert-invariants.mjs`, query recent production runtime errors, and preserve the current transaction fixture as completed. The next bounded slice is camera-capable HTTPS and adversarial authorization certification; do not broaden the UI scope or mutate legacy fixtures before those proofs are recorded.
+
+
+## Isolated staging A–E certification update — 2026-08-19
+
+The previously missing isolated staging boundary is now provisioned and was used for a complete sequential buyer/seller run. The staging target is the Neon project `old-unit-98112236`, branch `br-bitter-forest-a6e6nem5`, with dedicated staging Auth fixtures and guarded E2E seed data. No production database or production Auth user was mutated during this run.
+
+The staging path completed: MapLibre globe discovery, seeded product search, approximate-market fallback, manual single-facility availability, seller response with server-authoritative price and quantity, notification-driven buyer resume, purchase intent, QR generation, seller camera authorization attempt, manual QR fallback, QR verification, external Cash à la livraison selection, buyer payment declaration, seller payment confirmation, fulfillment, buyer receipt confirmation, five-star review, and final `completed` state.
+
+The authoritative completed staging audit recorded exactly one transaction, one QR token, twelve transaction events, one review, and one payout ledger entry. The final invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview` under the staging cutoff used for this run. The local suite passed `64/64`; production build and client-boundary checks passed.
+
+The sandbox camera attempt produced an explicit unavailable-camera state and preserved the manual fallback. It did not prove live camera preview or QR decoding on a real HTTPS mobile device. Buyer and seller were switched sequentially in one browser; two genuinely concurrent authenticated contexts were not proven.
+
+The adversarial source and unit review found one bounded idempotency gap in duplicate buyer payment declaration. `declareTransactionPayment` now returns an explicit idempotent success when the same buyer has already declared payment and the transaction remains in a valid downstream state, without recording another `payment_declared` event. The fix was validated by the full test suite and build; a fresh deployed-staging duplicate-request runtime proof remains open.
+
+**Current release status remains `partial`, not production-ready.** The remaining blockers are live HTTPS camera certification, independent concurrent buyer/seller context proof, and the runtime wrong-actor/expired/malformed/concurrent authorization matrix. The current staging happy-path proof is admissible and should not be confused with full L3 release certification.

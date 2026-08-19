@@ -933,7 +933,26 @@ export const declareTransactionPayment = createServerFn({ method: "POST" })
        RETURNING id, facility_id, amount, payment_preference`,
       [data.transactionId, context.userId],
     );
-    if (!txn) throw new Error("Choisissez d’abord un mode de paiement.");
+    if (!txn) {
+      const existing = await queryOne<{
+        status: string;
+        buyer_payment_declared_at: string | null;
+      }>(
+        `SELECT status, buyer_payment_declared_at
+         FROM public.transactions
+         WHERE id = $1 AND buyer_id = $2`,
+        [data.transactionId, context.userId],
+      );
+      if (
+        existing?.buyer_payment_declared_at &&
+        ["payment_pending", "paid", "fulfillment", "received", "rating_pending", "completed"].includes(
+          existing.status,
+        )
+      ) {
+        return { ok: true, alreadyDeclared: true };
+      }
+      throw new Error("Choisissez d’abord un mode de paiement.");
+    }
     await recordTransactionEvent(txn.id, "payment_declared", context.userId, {
       method: txn.payment_preference,
       amount: txn.amount,

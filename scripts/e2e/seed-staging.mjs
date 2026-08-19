@@ -23,14 +23,14 @@ const facilityRows = await sql`
     ('TG-LOME', ${ownerId}, 'Omni E2E Staging Seller', 'hardware',
      'Fixture transactionnelle staging — aucune vente réelle.', 'Zone staging Omni',
      'Lomé staging', 6.1725, 1.2314, 'confirmed', 'fixe', true, 'omni_e2e_staging', ${sourceRef})
-  ON CONFLICT (source, source_ref) DO UPDATE SET owner_id = EXCLUDED.owner_id
+  ON CONFLICT (source, source_ref) WHERE source_ref IS NOT NULL DO UPDATE SET owner_id = EXCLUDED.owner_id
   RETURNING id
 `;
 const facilityId = facilityRows[0]?.id;
 if (!facilityId) throw new Error("La facility E2E n’a pas été créée.");
 const existingProduct = await sql`
   SELECT id FROM public.products
-  WHERE facility_id = ${facilityId} AND name = 'Omni E2E Produit'
+  WHERE facility_id = ${facilityId} AND name = 'Omni E2E Produit' AND discount_percent >= 1
   ORDER BY created_at DESC LIMIT 1
 `;
 const productRows = existingProduct.length
@@ -38,9 +38,14 @@ const productRows = existingProduct.length
   : await sql`
       INSERT INTO public.products
         (facility_id, name, price, discount_percent, in_stock, status, quantity_available, omni_allocation_percent)
-      VALUES (${facilityId}, 'Omni E2E Produit', 1250, 0, true, 'active', 12, 100)
+      VALUES (${facilityId}, 'Omni E2E Produit', 1250, 10, true, 'active', 12, 100)
       RETURNING id
     `;
+await sql`
+  INSERT INTO public.coupons (facility_id, code, description, discount_percent)
+  VALUES (${facilityId}, 'E2E10', 'Coupon de certification staging', 10)
+  ON CONFLICT DO NOTHING
+`;
 await sql`
   INSERT INTO public.subscriptions (facility_id, tier)
   VALUES (${facilityId}, 'pro')

@@ -180,3 +180,21 @@ After the corrected rating deployment `dpl_2ZjNSs1w9YV8Pb9Pp8hM8D421vPo` reached
 ## Invariant checker semantics corrected
 
 The first invariant run returned zero current failures but exited non-zero because it treated the three explicitly preserved pre-enforcement legacy completed-without-review fixtures as failures. The checker now reports `legacyCompletedWithoutReview=3` in its checks while excluding that named legacy category from `failures`, as required by CERT-003. The corrected run returned `completedWithoutReview=0`, `activeWithoutIntentKey=0`, `duplicateActiveIntentKeys=0`, `duplicateCouponRedemptions=0`, `approvedDepositsWithoutLedger=0`, `walletSnapshotDrift=0`, `failures=[]`, `ok=true`.
+
+## Isolated staging cross-slice certification
+
+The isolated staging app ran locally on `http://staging.localhost:8085/` against the Omni Staging Neon branch only. The staging buyer authenticated successfully, searched `Omni E2E Produit`, used the approximate-market fallback because sandbox GPS was unavailable, and received the seeded `Omni E2E Staging Seller` facility card with the searched product, 1,250 FCFA price, 12 available units, and a 10% discount indicator.
+
+The buyer opened the facility-level availability flow, selected `Ce commerce`, and submitted a manual request. The UI stated that the manual request does not consume the grouped-verification quota. The staging database recorded `mode = manual`, `targeted_count = 1`, and `credit_cost = 0`. The seller later saw the request in the map-first seller operations surface and answered `Disponible` with price 1,250 FCFA and quantity 12.
+
+The buyer received a notification and activated it. The app navigated to a request-resume URL containing the request and response identifiers, opened `Reprendre votre demande`, displayed the seller response, and exposed `Je veux payer ici`. Selecting it created exactly one transaction and one QR state; no QR token is recorded in this document.
+
+The seller opened `Scanner QR`. The camera authorization action was triggered, and the sandbox reported `Caméra indisponible`. The UI preserved the dark scanner area and displayed `Scan indisponible — saisie manuelle disponible` with the manual eight-character fallback. Entering the buyer’s fallback code transitioned the transaction to `qr_verified`; the seller panel showed the expected 1,250 FCFA amount, 25 FCFA commission, and 1,225 FCFA expected payout.
+
+The buyer resumed the transaction thread, selected `Cash à la livraison`, and the transaction advanced to `payment_pending`. The buyer declared external payment, the seller received the notification, confirmed payment, and launched fulfillment. The buyer confirmed receipt, selected five stars without a comment, and published the review. The transaction room displayed the full named timeline and ended with `Transaction terminée`.
+
+The final staging audit recorded one transaction, one QR token, twelve transaction events, one review, and one payout ledger entry. The post-flow invariant query returned zero for all seven checks. The local suite passed 64/64 tests and the production build plus client-boundary check passed after the bounded duplicate-payment-declaration idempotency fix.
+
+## Remaining acceptance limitations
+
+The sandbox did not have a physical or virtual camera stream, so live QR preview and decode remain unproven. The two roles were switched sequentially in one browser origin rather than exercised concurrently in two independent browser contexts. Runtime negative authorization and concurrency calls remain separate follow-up evidence; source-level guards, unit tests, and the completed happy path are not a substitute for that final L3 matrix.
