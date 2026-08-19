@@ -149,3 +149,13 @@ Phase 4 validation for this bounded change passed: Prettier on the touched trans
 The seller primary action dock is now limited to five V1 actions: Facility overview, Catalogue, Demandes reçues, Scanner QR, and Compte. Omni Wallet and Coupons remain reachable from the new Compte surface and were not deleted or made inaccessible. The map-first shell, facility selector, online state, QR scanner, seller requests, product creation, coupon CRUD, Wallet recharge/allocation, and transaction operations remain in their existing routes and server boundaries.
 
 The formatter-only churn in `vendeur.tsx` was reverted before validation; the focused diff is 24 insertions and 7 deletions. TypeScript and the complete 64/64 unit suite pass. The production build/client-boundary gate must be rerun after this minimal diff before committing.
+
+## Phase 6 live accessibility checkpoint
+
+The live buyer map shell was measured in the browser at 1280×1100 CSS pixels: document `scrollWidth` equaled `clientWidth` (1280), so no document-level horizontal overflow was detected and no visible element exceeded the viewport bounds.
+
+The target-size audit found several controls below the 44×44 touch target: MapLibre zoom/location buttons at 40×40, the dock’s voice and search buttons at 34×34, and the location context chip at 193×29. The search input measured 566×20 inside its larger dock surface. These findings are actionable Phase 6 polish items; accessible names were present for the controls examined.
+
+The Phase 6 correction raised custom MapLibre zoom/recenter buttons and SmartSearchBar voice/search/image buttons to 44px minimum touch targets using local classes only; the globe projection, controls, and search/Enter handlers were not changed. Validation passed: diff check, TypeScript, 64/64 unit tests, production build, and standalone client-boundary check (`43` JavaScript artifacts and `168` source files scanned).
+
+Post-patch browser measurement confirmed `Zoom avant`, `Zoom arrière`, `Explorer le marché approximatif` (map control), `Recherche vocale`, and `Lancer la recherche` are all 44×44. The separate 193×29 `Explorer le marché approximatif` chip is a context/action text chip and remains visually compact; it is not the map control itself.

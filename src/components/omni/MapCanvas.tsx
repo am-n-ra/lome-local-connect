@@ -1179,7 +1179,7 @@ export function MapCanvas({
           type="button"
           aria-label="Zoom avant"
           onClick={() => zoomBy(1)}
-          className="grid h-10 w-10 place-items-center text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
+          className="grid h-11 w-11 place-items-center text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
         >
           +
         </button>
@@ -1187,7 +1187,7 @@ export function MapCanvas({
           type="button"
           aria-label="Zoom arrière"
           onClick={() => zoomBy(-1)}
-          className="grid h-10 w-10 place-items-center border-y border-border/70 text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
+          className="grid h-11 w-11 place-items-center border-y border-border/70 text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
         >
           −
         </button>
@@ -1200,7 +1200,7 @@ export function MapCanvas({
             userPosition ? "Recentrer sur ma position exacte" : "Explorer le marché approximatif"
           }
           onClick={recenterMap}
-          className="grid h-10 w-10 place-items-center text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
+          className="grid h-11 w-11 place-items-center text-lg font-bold transition-colors hover:bg-background/70 active:scale-95"
         >
           ◎
         </button>

@@ -255,7 +255,7 @@ export function SmartSearchBar({
             aria-label="Rechercher par image"
             disabled={busy || recording}
             onClick={() => fileRef.current?.click()}
-            className="shrink-0 rounded-full p-2 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground disabled:opacity-40"
+            className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-full p-2 text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground disabled:opacity-40"
           >
             <Camera className="h-[18px] w-[18px]" />
           </button>
@@ -286,7 +286,7 @@ export function SmartSearchBar({
           aria-label={recording ? "Arrêter la dictée" : "Recherche vocale"}
           disabled={busy}
           onClick={() => (recording ? void stopRef.current?.() : void startRecording())}
-          className={`shrink-0 rounded-full p-2 transition-colors disabled:opacity-40 ${
+          className={`grid min-h-11 min-w-11 shrink-0 place-items-center rounded-full p-2 transition-colors disabled:opacity-40 ${
             recording
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
@@ -307,7 +307,7 @@ export function SmartSearchBar({
           title="Lancer la recherche"
           disabled={busy || recording}
           onClick={submitSearch}
-          className="shrink-0 rounded-full bg-primary p-2 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+          className="grid min-h-11 min-w-11 shrink-0 place-items-center rounded-full bg-primary p-2 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
         >
           <Search className="h-[18px] w-[18px]" />
         </button>
@@ -342,7 +342,7 @@ export function SmartSearchBar({
             aria-label="Rechercher par image"
             disabled={busy || recording}
             onClick={() => fileRef.current?.click()}
-            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
+            className="grid min-h-11 min-w-11 place-items-center rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-40"
           >
             <Camera className="h-4 w-4" />
           </button>
@@ -352,7 +352,7 @@ export function SmartSearchBar({
           aria-label={recording ? "Arrêter la dictée" : "Recherche vocale"}
           disabled={busy}
           onClick={() => (recording ? void stopRef.current?.() : void startRecording())}
-          className={`rounded-full p-1.5 transition-colors disabled:opacity-40 ${
+          className={`grid min-h-11 min-w-11 place-items-center rounded-full p-1.5 transition-colors disabled:opacity-40 ${
             recording
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -372,7 +372,7 @@ export function SmartSearchBar({
           title="Lancer la recherche"
           disabled={busy || recording}
           onClick={submitSearch}
-          className="rounded-full bg-primary p-1.5 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
+          className="grid min-h-11 min-w-11 place-items-center rounded-full bg-primary p-1.5 text-primary-foreground transition-transform hover:scale-105 active:scale-95 disabled:opacity-40"
         >
           <Search className="h-4 w-4" />
         </button>
