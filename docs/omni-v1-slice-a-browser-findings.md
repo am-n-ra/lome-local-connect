@@ -172,3 +172,11 @@ The buyer transaction room restored the seller-started fulfillment as `Colis en 
 ## Rating submission defect and fix
 
 The buyer reached the final rating surface after receipt confirmation, but the first live submission failed with `there is no unique or exclusion constraint matching the ON CONFLICT specification`. The database has a partial unique index `reviews_transaction_unique` on `transaction_id WHERE transaction_id IS NOT NULL`; the SQL upsert incorrectly omitted that predicate. The bounded fix targets the existing partial index explicitly. Local proof after the change: full suite passed `64/64`, production build passed, and client-boundary checks passed.
+
+## Full transaction loop completed
+
+After the corrected rating deployment `dpl_2ZjNSs1w9YV8Pb9Pp8hM8D421vPo` reached READY, the buyer resubmitted the five-star review successfully. The room showed `Transaction terminée` and the final event sequence ended `received_confirmed → rating_submitted → completed`. The authoritative database check returned `completed`, rating `5`, the same transaction ID, all expected events, and exactly one `transaction_payout` ledger entry.
+
+## Invariant checker semantics corrected
+
+The first invariant run returned zero current failures but exited non-zero because it treated the three explicitly preserved pre-enforcement legacy completed-without-review fixtures as failures. The checker now reports `legacyCompletedWithoutReview=3` in its checks while excluding that named legacy category from `failures`, as required by CERT-003. The corrected run returned `completedWithoutReview=0`, `activeWithoutIntentKey=0`, `duplicateActiveIntentKeys=0`, `duplicateCouponRedemptions=0`, `approvedDepositsWithoutLedger=0`, `walletSnapshotDrift=0`, `failures=[]`, `ok=true`.

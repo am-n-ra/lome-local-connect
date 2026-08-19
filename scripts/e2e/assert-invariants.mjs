@@ -72,8 +72,10 @@ const checks = {
   `,
 };
 
+// Legacy completed rows are preserved fixtures under CERT-003. Report them for
+// visibility, but fail only on post-enforcement or active invariant violations.
 const failures = Object.entries(checks)
-  .filter(([, rows]) => Number(rows[0]?.count ?? 0) !== 0)
+  .filter(([name, rows]) => name !== "legacyCompletedWithoutReview" && Number(rows[0]?.count ?? 0) !== 0)
   .map(([name, rows]) => ({ name, count: Number(rows[0]?.count ?? 0) }));
 console.log(JSON.stringify({ checks, failures, ok: failures.length === 0 }, null, 2));
 if (failures.length > 0) process.exitCode = 1;
