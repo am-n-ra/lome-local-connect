@@ -12,7 +12,7 @@
 
 The field-ready V1 recovery plan is approved and its edited version is the source of truth at `/home/ubuntu/omni-ai-product-delivery-recovery-plan.md`. Gate 0 is complete as a read-only baseline audit. The four-axis matrix and three authoritative Omni V1 contracts have been created. Slice A has received bounded location/scene-contract corrections; Slice B has received a server-side Pro bulk enforcement correction.
 
-The next exact action is to run the repository’s typecheck, focused unit tests, build/client-boundary checks and browser/viewport certification. Do not begin a broad seller redesign until Slice A evidence is recorded.
+The next exact action is to run the repository’s browser/mobile certification and transaction integration checks. Do not begin a broad seller redesign until the buyer discovery and transaction slices have recorded their required evidence.
 
 ## Authoritative artifacts
 
@@ -55,6 +55,10 @@ The next exact action is to run the repository’s typecheck, focused unit tests
   - Keep the single-facility path available and preserve the three-step flow.
 - `docs/omni-v1-slice-a-browser-findings.md`
   - Record local MapLibre, search reveal, result-card, unclaimed-facility, close/back and availability-sheet observations.
+- `src/lib/checkout.functions.ts`
+  - Move seller QR verification to `qr_verified`.
+  - Move buyer payment preference selection from `qr_verified` to `payment_pending`.
+  - Align buyer/seller QR notifications and expose seller contact after intent/QR generation.
 
 ## Proof status
 
@@ -62,7 +66,7 @@ The focused Slice A contract tests passed, the complete suite passed with 62 tes
 
 ## Risks and blockers
 
-The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, and the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk. Before advancing, verify the browser permission/replay behavior, demand integration semantics and mobile layout. Keep production mutations and provider operations separate from certification.
+The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Before advancing, verify the transaction flow against a staging fixture with two authenticated roles, then certify mobile camera/payment states. Keep production mutations and provider operations separate from certification.
 
 ## Resume protocol
 

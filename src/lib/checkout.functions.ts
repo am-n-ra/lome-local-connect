@@ -412,8 +412,8 @@ export const createPurchaseIntent = createServerFn({ method: "POST" })
     if (existing) {
       const qrStillActive = Boolean(
         existing.qr_token &&
-          existing.qr_expires_at &&
-          new Date(existing.qr_expires_at).getTime() > Date.now(),
+        existing.qr_expires_at &&
+        new Date(existing.qr_expires_at).getTime() > Date.now(),
       );
       if (qrStillActive) {
         return {
@@ -747,9 +747,10 @@ export const redeemCheckout = createServerFn({ method: "POST" })
       platform_fee: number;
       payout_amount: number;
       status: string;
+      payment_mode: string;
       qr_expires_at: string | null;
     }>(
-      `SELECT id, buyer_id, cart_id, amount, platform_fee, payout_amount, status, qr_expires_at
+      `SELECT id, buyer_id, cart_id, amount, platform_fee, payout_amount, status, payment_mode, qr_expires_at
        FROM public.transactions WHERE qr_token = $1 AND facility_id = $2`,
       [code, data.facilityId],
     );
@@ -761,7 +762,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
 
     const authorised = await queryOne<{ id: string }>(
       `UPDATE public.transactions
-       SET status = 'payment_pending', qr_authorised_at = now()
+       SET status = 'qr_verified', qr_authorised_at = now()
        WHERE id = $1 AND status IN ('qr_generated', 'qr_verified')
        RETURNING id`,
       [txn.id],
@@ -771,9 +772,7 @@ export const redeemCheckout = createServerFn({ method: "POST" })
     }
     await recordTransactionEvent(txn.id, "seller_verified", context.userId, {
       facility_id: data.facilityId,
-    });
-    await recordTransactionEvent(txn.id, "payment_pending", context.userId, {
-      payment_mode: txn.status,
+      payment_mode: txn.payment_mode,
     });
     if (txn.buyer_id) {
       await query(
@@ -781,8 +780,8 @@ export const redeemCheckout = createServerFn({ method: "POST" })
          VALUES ($1, $2, $3, $4)`,
         [
           txn.buyer_id,
-          "Retrait vérifié",
-          "Le commerçant a vérifié votre QR. Confirmez le paiement puis la réception du produit.",
+          "QR vérifié",
+          "Le commerçant a vérifié votre QR. Choisissez maintenant votre mode de paiement.",
           `/transaction/${txn.id}`,
         ],
       );
@@ -792,8 +791,8 @@ export const redeemCheckout = createServerFn({ method: "POST" })
        VALUES ($1,$2,$3,$4)`,
       [
         context.userId,
-        "Retrait vérifié",
-        `Le QR a été vérifié. Le paiement reste à confirmer par l'acheteur. Commission prévue : ${await formatMoneyServer(data.facilityId, txn.platform_fee)}.`,
+        "QR vérifié",
+        `Le QR a été vérifié. Le buyer doit encore choisir son mode de paiement. Commission prévue : ${await formatMoneyServer(data.facilityId, txn.platform_fee)}.`,
         `/vendeur?transactionId=${txn.id}`,
       ],
     );
@@ -819,7 +818,7 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
       `SELECT t.id, t.facility_id, f.name AS facility_name, t.buyer_id, t.status, t.amount,
               t.payment_mode, t.payment_preference, t.buyer_payment_declared_at,
               t.seller_payment_confirmed_at, t.fulfillment_started_at,
-              CASE WHEN t.status IN ('payment_pending','paid','fulfillment','received','rating_pending','completed')
+              CASE WHEN t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
                    THEN f.phone ELSE NULL END AS seller_contact,
               CASE WHEN t.buyer_id = $2 THEN 'buyer' ELSE 'seller' END AS viewer_role,
               t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
@@ -850,8 +849,8 @@ export const selectTransactionPaymentPreference = createServerFn({ method: "POST
   .handler(async ({ data, context }) => {
     const txn = await queryOne<{ id: string; facility_id: string }>(
       `UPDATE public.transactions
-       SET payment_preference = $2
-       WHERE id = $1 AND buyer_id = $3 AND status = 'payment_pending'
+       SET payment_preference = $2, status = 'payment_pending'
+       WHERE id = $1 AND buyer_id = $3 AND status = 'qr_verified'
        RETURNING id, facility_id`,
       [data.transactionId, data.method, context.userId],
     );
