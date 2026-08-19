@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
-import { OMNI_CONFIG } from "./omni.config";
 import { enforceRateLimit } from "./rate-limit.server";
+import { MAX_AVAILABILITY_TARGETS } from "./omni-v1-contracts";
 
 export type DemandResponseRow = {
   id: string;
@@ -64,7 +64,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         longitude: z.number().min(-180).max(180).nullable().optional(),
         radiusKm: z.number().min(0.5).max(50).nullable().optional(),
         budgetMax: z.number().int().min(0).max(100_000_000).nullable().optional(),
-        targetFacilityIds: z.array(z.string().uuid()).max(12).default([]),
+        // Keep one bounded safety cap while allowing the complete visible result set for Pro bulk.
+        targetFacilityIds: z.array(z.string().uuid()).max(MAX_AVAILABILITY_TARGETS).default([]),
         mode: z.enum(["bulk", "manual"]).default("bulk"),
       })
       .parse(input),
@@ -93,7 +94,11 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     );
     const buyerPlan = plan?.plan === "pro" ? "pro" : "free";
     const isBuyerPro = buyerPlan === "pro";
-    const includedCredits = isBuyerPro ? Number.MAX_SAFE_INTEGER : OMNI_CONFIG.freeBuyerBulkLimit;
+    if (data.mode === "bulk" && !isBuyerPro) {
+      throw new Error(
+        "La vérification groupée est réservée au plan Pro. Le plan gratuit conserve la vérification facility par facility.",
+      );
+    }
     if (data.mode === "manual" && data.targetFacilityIds.length !== 1) {
       throw new Error("Une vérification manuelle doit cibler exactement un commerce.");
     }
@@ -123,7 +128,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
              SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $5 || '%'
            ))
          )
-       LIMIT 12`,
+         LIMIT ${MAX_AVAILABILITY_TARGETS}`,
       [
         data.targetFacilityIds,
         data.latitude ?? null,
@@ -136,16 +141,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     if (data.mode === "bulk" && targets.length === 0) {
       throw new Error("Aucun commerce éligible dans cette zone.");
     }
-    const creditCost = data.mode === "bulk" && !isBuyerPro ? Math.max(1, targets.length) : 0;
+    const creditCost = 0;
     const radiusKm = data.radiusKm ?? 10;
-    const remainingCredits = isBuyerPro
-      ? Number.MAX_SAFE_INTEGER
-      : Math.max(0, includedCredits - (plan?.requests_used ?? 0)) + (plan?.extra_credits ?? 0);
-    if (data.mode === "bulk" && !isBuyerPro && remainingCredits < creditCost) {
-      throw new Error(
-        `Le bulk availability nécessite le plan Pro ou des crédits suffisants : ${creditCost} crédit(s) requis, ${remainingCredits} disponible(s). Le plan gratuit conserve la vérification facility par facility.`,
-      );
-    }
 
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
@@ -164,17 +161,6 @@ export const createDemandRequest = createServerFn({ method: "POST" })
         data.mode,
       ],
     );
-
-    if (data.mode === "bulk" && !isBuyerPro) {
-      await query(
-        `UPDATE public.user_plans SET
-           requests_used = requests_used + LEAST($3, GREATEST(0, $2 - requests_used)),
-           extra_credits = GREATEST(0, extra_credits - GREATEST(0, $3 - GREATEST(0, $2 - requests_used))),
-           updated_at = now()
-         WHERE user_id = $1`,
-        [context.userId, includedCredits, creditCost],
-      );
-    }
 
     const owners = targets.filter((t) => t.owner_id).map((t) => ({ owner_id: t.owner_id! }));
     for (const o of owners) {

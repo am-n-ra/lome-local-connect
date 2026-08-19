@@ -27,6 +27,7 @@ import {
   LOCATION_APPROXIMATE_ACCURACY_METERS,
 } from "@/lib/omni";
 import { deriveOmniMotionState, deriveOmniSurfaceState } from "@/lib/omni-state";
+import { canRenderPersonalLocationMarker, classifyLocationAccuracy } from "@/lib/omni-v1-contracts";
 import { useMarket } from "@/lib/market";
 import {
   restorePendingAvailabilitySearch,
@@ -76,6 +77,10 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("pending");
   const [browserPermission, setBrowserPermission] = useState<BrowserPermissionStatus>("unknown");
   const [locationSnapshot, setLocationSnapshot] = useState<LocationSnapshot | null>(null);
+  // A restored session coordinate may inform approximate discovery, but it must
+  // never create a personal marker until this browser session receives a fresh
+  // geolocation callback.
+  const [hasFreshBrowserLocation, setHasFreshBrowserLocation] = useState(false);
   const locationRequestStartedRef = useRef(false);
   const locationRequestIdRef = useRef(0);
   const locationWatchIdRef = useRef<number | null>(null);
@@ -136,8 +141,11 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
           "rating_pending",
         ]);
         setActiveTransactionCount(
-          orders.filter((order) => Boolean(order.transaction_id) && activeStatuses.has(order.transaction_status ?? order.status))
-            .length,
+          orders.filter(
+            (order) =>
+              Boolean(order.transaction_id) &&
+              activeStatuses.has(order.transaction_status ?? order.status),
+          ).length,
         );
       } catch {
         if (active) setActiveTransactionCount(0);
@@ -254,6 +262,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
       };
       const previous = bestPositionRef.current;
       const isBetter =
+        !hasFreshBrowserLocation ||
         !previous ||
         (nextPosition.accuracy == null && previous.accuracy == null) ||
         (nextPosition.accuracy != null &&
@@ -265,6 +274,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
       setLocationSnapshot(snapshot);
       setSessionLocation(snapshot);
       setUserPos(nextPosition);
+      setHasFreshBrowserLocation(true);
       setBrowserPermission("granted");
       setLocationStatus("granted");
       try {
@@ -338,9 +348,10 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         startWatch();
         setLocationStatus(bestPositionRef.current ? "granted" : "pending");
       },
-      { enableHighAccuracy: false, maximumAge: 30000, timeout: 5000 },
+      // Never accept a cached network estimate as the fresh location proof.
+      { enableHighAccuracy: false, maximumAge: 0, timeout: 5000 },
     );
-  }, [fallbackCenter]);
+  }, [fallbackCenter, hasFreshBrowserLocation]);
 
   useEffect(() => {
     try {
@@ -470,6 +481,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
     setUserPos(null);
     setSessionLocation(null);
     setLocationSnapshot(null);
+    setHasFreshBrowserLocation(false);
     bestPositionRef.current = null;
     setLocationStatus("fallback");
     ensureFallbackViewport(true);
@@ -481,14 +493,18 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
   }
 
   const rawOrigin = userPos ?? sessionLocation;
-  const hasPreciseUserPosition = Boolean(
-    rawOrigin &&
-    rawOrigin.accuracy != null &&
-    rawOrigin.accuracy <= LOCATION_APPROXIMATE_ACCURACY_METERS,
+  const hasPreciseUserPosition = canRenderPersonalLocationMarker(
+    hasFreshBrowserLocation,
+    rawOrigin?.accuracy,
+    LOCATION_APPROXIMATE_ACCURACY_METERS,
   );
   const preciseUserPos = hasPreciseUserPosition ? rawOrigin : null;
   const approximateUserPos =
-    rawOrigin && rawOrigin.accuracy != null && !hasPreciseUserPosition ? rawOrigin : null;
+    rawOrigin &&
+    classifyLocationAccuracy(rawOrigin.accuracy, LOCATION_APPROXIMATE_ACCURACY_METERS) ===
+      "approximate"
+      ? rawOrigin
+      : null;
   const usableOrigin = rawOrigin ?? fallbackCenter;
   const origin = usableOrigin;
 
@@ -848,7 +864,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
             onQuantityChange={setQuantity}
             locationStatus={locationStatus}
             browserPermission={browserPermission}
-            locationAccuracy={userPos?.accuracy ?? null}
+            locationAccuracy={hasFreshBrowserLocation ? (userPos?.accuracy ?? null) : null}
             onRequestLocation={requestLocation}
             onUseMarketFallback={useMarketFallback}
             onRetryCoverage={retryCoverage}
@@ -856,9 +872,7 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         )}
 
         {selected && (
-          <OmniSheetSurface
-            className="omni-atlas-surface pointer-events-auto absolute bottom-0 left-1/2 top-auto z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1rem),34rem)] -translate-x-1/2 flex-col overflow-hidden rounded-t-[1.75rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:p-5"
-          >
+          <OmniSheetSurface className="omni-atlas-surface pointer-events-auto absolute bottom-0 left-1/2 top-auto z-40 flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1rem),34rem)] -translate-x-1/2 flex-col overflow-hidden rounded-t-[1.75rem] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:rounded-[1.75rem] sm:p-5">
             <div className="mb-2 flex justify-end gap-2">
               <Button
                 variant="ghost"

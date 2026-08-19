@@ -1,5 +1,8 @@
 export const OMNI_SURFACE_STATES = [
   "map",
+  "auth_required",
+  "onboarding",
+  "search_restored",
   "search_active",
   "search_results",
   "facility_selected",
@@ -14,6 +17,9 @@ export type OmniSurfaceState = (typeof OMNI_SURFACE_STATES)[number];
 
 export type OmniSurfaceStateInput = {
   hasSearch: boolean;
+  authRequired?: boolean;
+  onboarding?: boolean;
+  searchRestored?: boolean;
   hasResults: boolean;
   selectedFacility: boolean;
   availabilityOpen: boolean;
@@ -33,6 +39,9 @@ export function deriveOmniSurfaceState(input: OmniSurfaceStateInput): OmniSurfac
   if (input.transactionCompleted) return "completed";
   if (input.transactionOpen) return "transaction_chat";
   if (input.purchaseIntentOpen) return "purchase_intent";
+  if (input.authRequired) return "auth_required";
+  if (input.onboarding) return "onboarding";
+  if (input.searchRestored) return "search_restored";
   if (input.availabilityOpen && input.hasAvailabilityResults) return "availability_results";
   if (input.availabilityOpen) return "availability";
   if (input.selectedFacility) return "facility_selected";
@@ -43,6 +52,9 @@ export function deriveOmniSurfaceState(input: OmniSurfaceStateInput): OmniSurfac
 
 export const SURFACE_STATE_LABEL: Record<OmniSurfaceState, string> = {
   map: "Map",
+  auth_required: "Authentication required",
+  onboarding: "Onboarding",
+  search_restored: "Search restored",
   search_active: "Search active",
   search_results: "Search results",
   facility_selected: "Facility selected",

@@ -187,17 +187,19 @@ export function SearchDock({
   }
 
   const locationLabel =
-    locationStatus === "pending"
-      ? "Localisation en cours…"
-      : isPrecise
-        ? "Position précise"
-        : isApproximate
-          ? "Zone approximative"
-          : browserPermission === "denied"
-            ? "Localisation bloquée"
-            : locationStatus === "unavailable"
-              ? "Localisation indisponible"
-              : "Marché approximatif";
+    browserPermission === "prompt" && locationStatus === "pending"
+      ? "Autorisez votre position…"
+      : locationStatus === "pending"
+        ? "Localisation en cours…"
+        : isPrecise
+          ? "Position précise"
+          : isApproximate
+            ? "Zone approximative"
+            : browserPermission === "denied"
+              ? "Localisation bloquée"
+              : locationStatus === "unavailable"
+                ? "Localisation indisponible"
+                : "Marché approximatif";
 
   return (
     <div
@@ -396,6 +398,8 @@ export function SearchDock({
             </>
           )}
           <span
+            data-omni-browser-permission={browserPermission}
+            data-omni-location-band={isPrecise ? "precise" : isApproximate ? "approximate" : "none"}
             className={`omni-glass rounded-full px-3 py-1.5 text-[11px] font-semibold ${
               isPrecise
                 ? "text-primary"
@@ -481,10 +485,7 @@ export function SearchDock({
           </div>
         )}
 
-        <div
-          data-omni-dock-row="primary"
-          className="omni-atlas-surface rounded-[1.6rem] p-1.5"
-        >
+        <div data-omni-dock-row="primary" className="omni-atlas-surface rounded-[1.6rem] p-1.5">
           <SmartSearchBar
             layout="dock"
             value={query}

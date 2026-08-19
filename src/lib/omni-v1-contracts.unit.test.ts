@@ -3,7 +3,9 @@ import {
   MAX_AVAILABILITY_TARGETS,
   buildTransactionLink,
   canSubmitAvailabilityResponse,
+  canRenderPersonalLocationMarker,
   canTransitionTransaction,
+  classifyLocationAccuracy,
   canTransitionWalletRecharge,
   deriveTransactionPrimaryAction,
   deriveTransactionRoomAccess,
@@ -12,6 +14,21 @@ import {
   toSellerAvailabilityPayload,
   validateAvailabilityInput,
 } from "./omni-v1-contracts";
+
+describe("Omni V1 location contracts", () => {
+  it("distinguishes precise, approximate and unknown browser accuracy", () => {
+    expect(classifyLocationAccuracy(120)).toBe("precise");
+    expect(classifyLocationAccuracy(500)).toBe("precise");
+    expect(classifyLocationAccuracy(501)).toBe("approximate");
+    expect(classifyLocationAccuracy(null)).toBe("unknown");
+  });
+
+  it("does not render a personal marker from a stale session coordinate", () => {
+    expect(canRenderPersonalLocationMarker(false, 80)).toBe(false);
+    expect(canRenderPersonalLocationMarker(true, 80)).toBe(true);
+    expect(canRenderPersonalLocationMarker(true, 900)).toBe(false);
+  });
+});
 
 describe("Omni V1 availability contracts", () => {
   it("keeps single-target availability available when bulk is constrained", () => {
@@ -55,7 +72,7 @@ describe("Omni V1 availability contracts", () => {
 });
 
 describe("Omni V1 transaction contracts", () => {
-  it("requires explicit offer confirmation before QR and rejects illegal jumps", () => {
+  it("keeps immediate QR generation as the canonical path and rejects illegal jumps", () => {
     expect(canTransitionTransaction("pending", "qr_generated")).toBe(true);
     expect(canTransitionTransaction("pending", "payment_pending")).toBe(false);
     expect(canTransitionTransaction("qr_generated", "qr_verified")).toBe(true);
@@ -69,8 +86,8 @@ describe("Omni V1 transaction contracts", () => {
 
   it("exposes one role-specific primary action at a time", () => {
     expect(deriveTransactionPrimaryAction("buyer", "pending")).toEqual({
-      id: "confirm_offer",
-      label: "Confirmer l’offre",
+      id: "regenerate_qr",
+      label: "Générer le QR",
     });
     expect(deriveTransactionPrimaryAction("seller", "qr_generated")).toEqual({
       id: "verify_qr",
@@ -113,7 +130,9 @@ describe("Omni V1 transaction contracts", () => {
 describe("Omni V1 transaction room contracts", () => {
   it("keeps the map unchanged while deriving one resumable action per role", () => {
     expect(deriveTransactionRoomAction("buyer", "pending", { hasQr: true })).toBe("present_qr");
-    expect(deriveTransactionRoomAction("seller", "qr_generated", { hasQr: true })).toBe("verify_qr");
+    expect(deriveTransactionRoomAction("seller", "qr_generated", { hasQr: true })).toBe(
+      "verify_qr",
+    );
     expect(deriveTransactionRoomAction("buyer", "qr_verified")).toBe("choose_payment");
     expect(
       deriveTransactionRoomAction("buyer", "payment_pending", {
@@ -121,9 +140,9 @@ describe("Omni V1 transaction room contracts", () => {
         buyerPaymentDeclared: false,
       }),
     ).toBe("declare_paid");
-    expect(deriveTransactionRoomAction("seller", "payment_pending", { buyerPaymentDeclared: true })).toBe(
-      "confirm_payment",
-    );
+    expect(
+      deriveTransactionRoomAction("seller", "payment_pending", { buyerPaymentDeclared: true }),
+    ).toBe("confirm_payment");
     expect(deriveTransactionRoomAction("seller", "paid")).toBe("confirm_fulfillment");
     expect(deriveTransactionRoomAction("buyer", "received")).toBe("rate_transaction");
   });

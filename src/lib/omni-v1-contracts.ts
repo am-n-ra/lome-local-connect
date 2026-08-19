@@ -8,6 +8,26 @@ export const FACILITY_STATES = [
 
 export type FacilityState = (typeof FACILITY_STATES)[number];
 
+export type LocationAccuracyBand = "precise" | "approximate" | "unknown";
+
+export function classifyLocationAccuracy(
+  accuracy: number | null | undefined,
+  thresholdMeters = 500,
+): LocationAccuracyBand {
+  if (!Number.isFinite(accuracy) || (accuracy as number) <= 0) return "unknown";
+  return (accuracy as number) <= thresholdMeters ? "precise" : "approximate";
+}
+
+export function canRenderPersonalLocationMarker(
+  hasFreshBrowserCallback: boolean,
+  accuracy: number | null | undefined,
+  thresholdMeters = 500,
+): boolean {
+  return (
+    hasFreshBrowserCallback && classifyLocationAccuracy(accuracy, thresholdMeters) === "precise"
+  );
+}
+
 export const AVAILABILITY_STATUSES = [
   "sent",
   "awaiting_seller",
@@ -21,7 +41,9 @@ export const AVAILABILITY_STATUSES = [
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 export type AvailabilityMode = "single" | "bulk";
 
-export const MAX_AVAILABILITY_TARGETS = 12;
+// Pro bulk has no monthly credit decrement; keep a bounded per-request cap
+// for payload and provider safety while allowing the full visible result set.
+export const MAX_AVAILABILITY_TARGETS = 240;
 
 export type BuyerAvailabilityInput = {
   productQuery: string;
@@ -122,6 +144,7 @@ export type TransactionEventType =
   | "payment_preference_selected"
   | "payment_declared"
   | "payment_recorded"
+  | "payment_confirmed"
   | "fulfillment_started"
   | "received_confirmed"
   | "rating_submitted"
@@ -129,7 +152,6 @@ export type TransactionEventType =
   | "error";
 
 export type TransactionActionId =
-  | "confirm_offer"
   | "regenerate_qr"
   | "verify_qr"
   | "choose_payment"
@@ -150,7 +172,9 @@ export function deriveTransactionPrimaryAction(
   paymentDeclared = false,
 ): TransactionPrimaryAction | null {
   if (role === "buyer") {
-    if (status === "pending") return { id: "confirm_offer", label: "Confirmer l’offre" };
+    // New intents generate the QR atomically. A legacy pending record can only
+    // expose the bounded recovery action; it must not add a second offer step.
+    if (status === "pending") return { id: "regenerate_qr", label: "Générer le QR" };
     if (status === "expired") return { id: "regenerate_qr", label: "Générer un nouveau QR" };
     if (status === "qr_verified") return { id: "choose_payment", label: "Choisir le paiement" };
     if (status === "payment_pending" && !paymentDeclared) {
@@ -190,10 +214,7 @@ export function paymentPreference(method: PaymentPreferenceMethod): PaymentPrefe
   };
 }
 
-export type TransactionRoomStatus =
-  | TransactionStatus
-  | "received"
-  | "rating_pending";
+export type TransactionRoomStatus = TransactionStatus | "received" | "rating_pending";
 
 export type TransactionRoomAction =
   | "present_qr"
@@ -244,7 +265,12 @@ export function deriveTransactionRoomAction(
   if (role === "buyer") {
     if ((status === "pending" || status === "qr_generated") && hasQr) return "present_qr";
     if (status === "qr_verified" && !paymentChoice) return "choose_payment";
-    if (status === "payment_pending" && paymentChoice && paymentChoice !== "pay_on_delivery" && !buyerPaymentDeclared) {
+    if (
+      status === "payment_pending" &&
+      paymentChoice &&
+      paymentChoice !== "pay_on_delivery" &&
+      !buyerPaymentDeclared
+    ) {
       return "declare_paid";
     }
     if (status === "fulfillment") return "confirm_received";
@@ -262,8 +288,14 @@ export function deriveTransactionRoomAccess(
   hasIntent: boolean,
   status: TransactionRoomStatus,
 ): Pick<TransactionRoomSnapshot, "contactUnlocked" | "routeUnlocked" | "qrVerified"> {
-  const qrVerified = status === "qr_verified" || status === "payment_pending" || status === "paid" ||
-    status === "fulfillment" || status === "received" || status === "rating_pending" || status === "completed";
+  const qrVerified =
+    status === "qr_verified" ||
+    status === "payment_pending" ||
+    status === "paid" ||
+    status === "fulfillment" ||
+    status === "received" ||
+    status === "rating_pending" ||
+    status === "completed";
   return {
     // Contact and route are transaction-only data: they appear after intent,
     // never on a facility/result card before the buyer commits.

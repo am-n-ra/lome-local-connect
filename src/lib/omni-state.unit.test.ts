@@ -27,6 +27,18 @@ describe("Omni map motion state", () => {
 });
 
 describe("Omni surface state", () => {
+  it("represents the auth and replay states before ordinary search results", () => {
+    const base = {
+      hasSearch: true,
+      hasResults: false,
+      selectedFacility: false,
+      availabilityOpen: false,
+    };
+    expect(deriveOmniSurfaceState({ ...base, authRequired: true })).toBe("auth_required");
+    expect(deriveOmniSurfaceState({ ...base, onboarding: true })).toBe("onboarding");
+    expect(deriveOmniSurfaceState({ ...base, searchRestored: true })).toBe("search_restored");
+  });
+
   it("keeps search results visible after reveal completes", () => {
     expect(
       deriveOmniSurfaceState({
