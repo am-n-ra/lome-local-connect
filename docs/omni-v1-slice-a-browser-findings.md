@@ -56,3 +56,27 @@ The deployed seller Catalogue tab is reachable and shows a clear product creatio
 ## Seller wallet and coupon surfaces
 
 The deployed Omni Wallet surface now clearly states that there is one rechargeable wallet, with allocations to Pro, Publicité and Coupons; it shows a 42,000 FCFA wallet balance, zero allocated amount and no seller withdrawal or buyer-seller in-app payment in V1. The Coupons surface is reachable with a simple code/percentage/description form and two existing offers. No recharge, allocation, coupon creation or deletion was executed.
+
+## Certification buyer session
+
+A distinct authenticated account is now connected. Read-only database checks show its owner identity is separate from the canonical seller, exists in Neon Auth, has onboarding complete, owns an unconfirmed facility named `Test` with no products and has three pre-existing buyer transactions. The browser session reaches the buyer MapLibre globe and shows the buyer search dock plus three resumable transactions. It is suitable as the buyer session; the unconfirmed `Test` facility must not be used as the seller fixture.
+
+## Buyer discovery certification
+
+The distinct buyer session entered `Lait en poudre 400 g` and submitted the search. The production globe performed the staged reveal and returned one result with a visible `Vérifier la disponibilité` action while preserving the query in the dock. The map was shown at a country/region framing during the observation; result-to-availability selection is the next buyer proof step.
+
+## Buyer availability flow observation
+
+The result-level `Vérifier la disponibilité` action opens the `Demande groupée` three-step sheet (`Produit → Commerces → Contraintes`) even though only one facility result is visible. No request was submitted. This is a certification finding: the intended manual single-facility availability path must be located or the CTA/label must be clarified before the buyer can safely proceed to purchase intent.
+
+## Manual facility availability path
+
+After closing the bulk sheet and opening the facility card, the production facility panel exposes the distinct manual CTA `Vérifier la disponibilité` under `Vérifier avant d’acheter`. It also states that contact and itinerary remain unavailable until purchase intent and shows the two active coupons. This is the correct single-facility path for the certification run; the previous result-level CTA is the ambiguous bulk entry.
+
+## Single-facility availability progression
+
+The facility-specific sheet opens as `Disponibilité · flow buyer`, identifies Épicerie Adidogomé Plus, starts at `1/3 Produit` and advances to an active `Continuer` action after the product is confirmed. No availability request or purchase intent was submitted during this observation.
+
+## Availability plan-gate mismatch
+
+At step `2/3 Commerces`, the buyer selected `Ce commerce — Épicerie Adidogomé Plus`, but pressing `Continuer` produced the toast `La vérification groupée est réservée au plan Pro. Choisissez un seul commerce.` The same sheet states that the manual request does not consume bulk quota. This is a live logic/UI divergence: the selected single-facility path is being interpreted as visible-results bulk, so no request was submitted and no transaction was created.

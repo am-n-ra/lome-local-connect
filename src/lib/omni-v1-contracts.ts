@@ -40,6 +40,12 @@ export const AVAILABILITY_STATUSES = [
 
 export type AvailabilityStatus = (typeof AVAILABILITY_STATUSES)[number];
 export type AvailabilityMode = "single" | "bulk";
+export type AvailabilityPanelMode = "bulk" | "manual";
+export type AvailabilityPanelScope = "facility" | "visible";
+
+export function deriveAvailabilityPanelScope(mode: AvailabilityPanelMode): AvailabilityPanelScope {
+  return mode === "manual" ? "facility" : "visible";
+}
 
 // Pro bulk has no monthly credit decrement; keep a bounded per-request cap
 // for payload and provider safety while allowing the full visible result set.

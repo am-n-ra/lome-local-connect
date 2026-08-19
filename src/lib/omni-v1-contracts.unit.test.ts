@@ -4,6 +4,7 @@ import {
   buildTransactionLink,
   canSubmitAvailabilityResponse,
   canRenderPersonalLocationMarker,
+  deriveAvailabilityPanelScope,
   canTransitionTransaction,
   classifyLocationAccuracy,
   canTransitionWalletRecharge,
@@ -31,6 +32,11 @@ describe("Omni V1 location contracts", () => {
 });
 
 describe("Omni V1 availability contracts", () => {
+  it("keeps manual facility scope separate from visible-results bulk scope", () => {
+    expect(deriveAvailabilityPanelScope("manual")).toBe("facility");
+    expect(deriveAvailabilityPanelScope("bulk")).toBe("visible");
+  });
+
   it("keeps single-target availability available when bulk is constrained", () => {
     expect(
       validateAvailabilityInput({

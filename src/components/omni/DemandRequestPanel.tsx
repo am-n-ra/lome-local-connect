@@ -20,6 +20,7 @@ import { savePendingAvailabilitySearch, useAuth } from "@/lib/auth";
 import { createPurchaseIntent } from "@/lib/checkout.functions";
 import { OmniErrorState, OmniStepper } from "@/components/omni/ui/OmniPrimitives";
 import { AVAILABILITY_PROGRESS_LABELS } from "@/lib/transaction-progress";
+import { deriveAvailabilityPanelScope } from "@/lib/omni-v1-contracts";
 
 type Props = {
   open: boolean;
@@ -67,8 +68,8 @@ export function DemandRequestPanel({
   const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
   const [intentBusy, setIntentBusy] = useState<string | null>(null);
   const [step, setStep] = useState(0);
-  const [scope, setScope] = useState<"facility" | "visible">(
-    mode === "manual" ? "facility" : "visible",
+  const [scope, setScope] = useState<"facility" | "visible">(() =>
+    deriveAvailabilityPanelScope(mode),
   );
   const [loadError, setLoadError] = useState(false);
   const [entitlement, setEntitlement] = useState<BuyerAvailabilityEntitlement | null>(null);
@@ -104,6 +105,10 @@ export function DemandRequestPanel({
   useEffect(() => {
     if (initialTerm) setTerm(initialTerm);
   }, [initialTerm]);
+
+  useEffect(() => {
+    setScope(deriveAvailabilityPanelScope(mode));
+  }, [mode]);
 
   useEffect(() => {
     setQuantity(initialQuantity);
@@ -212,11 +217,12 @@ export function DemandRequestPanel({
   }
 
   const comparisonReady = requests.length > 0;
-  const resetFlow = () => {
+  function resetFlow() {
     setRequests([]);
     setResponses([]);
     setStep(0);
-  };
+    setScope(deriveAvailabilityPanelScope(mode));
+  }
 
   const actionFooter = user ? (
     <OmniActionFooter className="w-full border-0 bg-transparent p-0">
