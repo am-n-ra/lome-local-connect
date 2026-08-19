@@ -1,120 +1,61 @@
-# Omni V1 Current Handoff
+# Omni V1 — Current Handoff
 
-## Session
+## Session and release state
 
-- Project: `am-n-ra/lome-local-connect`
-- Branch: `main`
-- Baseline inherited: `823981b`
-- Date: 2026-08-19
-- Status: `partial`
+| Field | Current value |
+| --- | --- |
+| Repository | `am-n-ra/lome-local-connect` |
+| Branch | `main` |
+| Certified source commit | `02910b1` — `fix(checkout): prevent duplicate payment-declaration events with atomic WHERE guard` |
+| Production deployment | `dpl_BetrRfbm1aLAsE9LqLvcTBNZdmUJ` — `READY` |
+| Staging Neon project | `old-unit-98112236` |
+| Staging Neon branch | `br-bitter-forest-a6e6nem5` |
+| Local validation | 10 test files, 64 tests, production build, and client-boundary check passed |
+| Release decision | `partial` |
 
-## Goal and position
+## Goal and authoritative position
 
-The field-ready V1 recovery plan is approved and its edited version is the source of truth at `/home/ubuntu/omni-ai-product-delivery-recovery-plan.md`. Gate 0 is complete as a read-only baseline audit. The four-axis matrix and three authoritative Omni V1 contracts have been created. Slice A has received bounded location/scene-contract corrections; Slice B has received a server-side Pro bulk enforcement correction.
+The Omni V1 goal remains a production-ready buyer/seller transaction loop: map-first discovery, availability, purchase intent, QR verification, external payment declaration, seller confirmation, fulfillment, receipt, rating, and completion. The A–G recovery sequence remains authoritative, and this continuation did not expand into a broad redesign or into Slice F or Slice G.
 
-The next exact action is to run the repository’s browser/mobile certification and transaction integration checks. Do not begin a broad seller redesign until the buyer discovery and transaction slices have recorded their required evidence.
+The A–E core is now materially certified in isolated staging. The fresh buyer/seller transaction completed through `completed`, the duplicate buyer payment declaration was replayed successfully without a duplicate event, the runtime authorization probes recorded explicit rejection paths, the concurrent duplicate-intent probe returned one transaction for both requests, the independent buyer recovery path was restored after sign-out and app restart, and the latest staging invariant run returned zero for all seven checks.
 
-## Authoritative artifacts
+The release is still **`partial`**, not `verified` or production-ready. A real HTTPS mobile camera preview/decode is not available in the sandbox, and a dedicated concurrent QR-verification fan-out has not been recorded. These are the smallest remaining certification gaps.
 
-- `docs/omni-v1-field-brief.md` — version 1.0, decided.
-- `docs/omni-v1-flow-and-decision-contract.md` — version 1.0, decided.
-- `docs/omni-v1-product-interface-architecture-contract.md` — version 1.0, decided.
-- `docs/omni-v1-field-gap-matrix.md` — Gate 0 baseline, ready for contract freeze.
-- `docs/omni-v1-slice-a-acceptance-matrix.md` — Slice A, in progress.
-- `docs/omni-v1-slice-a-build-prompt.md` — bounded implementation prompt.
+## Certified transaction and proof
 
-## Code changes in this session
+The fresh staging transaction was created from the staged product and seller facility with a server-authoritative amount of 1,250 XOF and quantity 12. It completed through `qr_verified → payment_pending → paid → fulfillment → rating_pending → completed` using Cash à la livraison. The transaction timeline contains twelve expected events, including exactly one `payment_declared`, one `rating_submitted`, and one `completed` event. The final audit records one review and one payout ledger entry.
 
-- `src/components/omni/CartePage.tsx`
-  - Require a fresh browser callback before a personal precise marker can appear.
-  - Do not accept a cached `getCurrentPosition` coordinate as fresh proof (`maximumAge: 0`).
-  - Keep restored session location available for approximate discovery context.
-  - Expose the fresh-location accuracy to the dock only after a fresh callback.
-- `src/components/omni/SearchDock.tsx`
-  - Distinguish native permission prompt from generic locating state.
-  - Expose browser permission and location-band data attributes for certification.
-- `src/lib/omni-v1-contracts.ts`
-  - Add pure location accuracy and personal-marker helpers.
-  - Increase bounded target cap to 240 for the active Pro bulk contract.
-  - Remove the legacy second offer-confirmation action from the primary action contract; keep QR recovery for legacy pending records.
-  - Add `payment_confirmed` to the shared event vocabulary.
-- `src/lib/omni-v1-contracts.unit.test.ts`
-  - Add location accuracy and stale-session marker tests.
-  - Update immediate-QR legacy-pending action expectation.
-- `src/lib/omni-state.ts`
-  - Add `auth_required`, `onboarding`, and `search_restored` scene states.
-- `src/lib/omni-state.unit.test.ts`
-  - Add assertions for the new Slice A scene states.
-- `src/lib/demand.functions.ts`
-  - Enforce Pro-only bulk availability server-side.
-  - Allow a bounded 240-target visible result set.
-  - Remove Free bulk credit decrement for the active contract.
-  - Expose a read-only buyer entitlement endpoint for truthful plan-aware UI.
-- `src/components/omni/DemandRequestPanel.tsx`
-  - Disable and explain visible-result bulk for Free users.
-  - Keep the single-facility path available and preserve the three-step flow.
-- `docs/omni-v1-slice-a-browser-findings.md`
-  - Record local MapLibre, search reveal, result-card, unclaimed-facility, close/back and availability-sheet observations.
-- `src/lib/checkout.functions.ts`
-  - Move seller QR verification to `qr_verified`.
-  - Move buyer payment preference selection from `qr_verified` to `payment_pending`.
-  - Align buyer/seller QR notifications and expose seller contact after intent/QR generation.
-- `docs/omni-v1-identity-audit.md`
-  - Record the duplicate-profile/legacy-owner mismatch that blocks seller-role certification.
-- `docs/omni-v1-identity-repair-blocked.md`
-  - Record the former L3 staging-boundary blocker; superseded for this test-only run by `ID-REPAIR-007`.
-- `docs/omni-v1-identity-repair-decision.md`
-  - Treat current application rows as test/demo data, preserve all profiles and Neon Auth users, and relink only explicit application identity references.
-- `scripts/audit-identity-scope.mjs`
-  - Confirm 37 application profiles, 35 distinct email hashes, 2 onboarded profiles and no raw email/ID output.
-- `scripts/snapshot-identity-surfaces.mjs`
-  - Snapshot 29 identity-bearing public tables to `/home/ubuntu/omni-backups/omni-identity-surfaces-20260819.json` with checksum `f4ba28f5…dedcad`.
-- `scripts/repair-demo-identity.mjs`
-  - Relink five facilities, one demand request and seventeen notifications to the canonical Neon Auth profile in one guarded transaction; preserve profiles, plans, amounts and ledger facts.
-- `docs/omni-v1-vercel-staging-access-audit.md`
-  - Record the connected Vercel project, READY production deployment, no-runtime-error observation and absence of a proven staging target.
-- `docs/omni-v1-identity-mapping-preview.md`
-  - Record the redacted candidate mapping and dependency inventory; no mutation is approved from this preview.
-- `docs/omni-v1-identity-repair-decision.md`
-  - Freeze the current test-dataset boundary and no-Neon-Auth-delete policy.
-- `scripts/audit-identity-scope.mjs`
-  - Redacted profile/auth/application count audit.
-- `scripts/audit-demo-identity-dependencies.mjs`
-  - Redacted duplicate-profile dependency audit.
-- `scripts/snapshot-identity-surfaces.mjs`
-  - Private read-only rollback snapshot helper.
-- `scripts/repair-demo-identity.mjs`
-  - Guarded, idempotent application-profile relink runner.
-- `docs/omni-v1-transaction-certification-plan.md`
-  - Approved bounded L3 plan for buyer/seller transaction, QR, camera and mobile certification.
-- `docs/omni-v1-transaction-fixture-manifest.md`
-  - Redacted reusable certified seller/product/coupon fixture; distinct buyer identity was used sequentially for the certified loop, while independent concurrent contexts remain pending.
+The duplicate-payment proof is the principal new certification result. The buyer clicked `J’ai payé` twice on the same payment-pending transaction. The first request recorded the declaration; the replay returned the idempotent success path and recorded no second `payment_declared` event. The source fix is atomic because the update predicate requires `buyer_payment_declared_at IS NULL`, while the existing already-declared return path preserves a successful retry response.
 
-## Proof status
+The runtime adversarial evidence is stored in `/home/ubuntu/omni-phase3-adversarial-evidence.md`. Anonymous timeline access returned `UNAUTHORIZED`. A wrong non-owner seller could not read the fresh transaction and received `Transaction introuvable.`. Malformed QR input failed schema validation, unknown QR input returned an explicit inaccessible-account error, duplicate rating after completion was rejected before side effects, and two simultaneous identical purchase-intent requests returned the same transaction ID. The follow-up staging assertion found one active matching transaction and zero duplicate active-key groups.
 
-The identity-scope audit and duplicate dependency audit passed in read-only mode. A private rollback snapshot covers 29 identity-bearing public tables. The guarded repair preserved all three application profiles, the current Neon Auth user, both user-plan rows, wallet ledger totals and transaction amounts; five facilities, one demand request and seventeen notifications moved to the canonical profile. The certified production fixture completed the buyer-to-seller loop for `Lait en poudre 400 g` at `3 200 FCFA`: discovery, manual availability, seller response, notification resume, purchase intent, atomic QR generation, seller QR verification with manual fallback `MFD6DQXE`, external cash-on-delivery selection, buyer payment declaration, seller payment confirmation, fulfillment, buyer receipt confirmation, five-star rating and terminal completion. The authoritative row is `completed`, the review rating is `5`, the audit sequence ends `rating_submitted → completed`, and exactly one transaction payout ledger entry exists.
+## Invariants and deployment observability
 
-The invariant checker now reports current checks as passing while preserving `legacyCompletedWithoutReview=3` as informational evidence under CERT-003. Production runtime-error query returned no grouped errors in the inspected two-hour window. The final production deployment is READY as `dpl_2ZjNSs1w9YV8Pb9Pp8hM8D421vPo` for the rating fix, with the subsequent audit-script commit `bdf6c47` also READY and aliased to `omni.sparkafrika.online`. Status remains `partial`, not production-ready: the manual QR fallback is proven, but real camera preview/decode on an HTTPS device, independent concurrent buyer/seller browser contexts, and the planned negative authorization/concurrency matrix are not yet recorded.
+The latest seven-check staging invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview`. This result was obtained after the concurrent duplicate-intent probe, not only before it.
 
-## Risks and blockers
+The production deployment metadata shows commit `02910b1` on `main` in a `READY` production deployment. The Vercel build log completed successfully. The selected 24-hour Vercel runtime-error query reported no runtime error clusters for the project. These observations establish deployment and current-window observability evidence; they do not convert the isolated staging proof into a full production transaction test.
 
-The bounded certification fixes are committed to `main`: notification-driven demand resume, seller QR idempotency, buyer payment entry after QR verification, partial-index-safe rating upsert, and legacy-fixture-aware invariant reporting. The full local suite is `64/64`, production build and client-boundary checks pass. The current data repair intentionally did not delete Neon Auth users or application profiles, merge duplicate `user_plans` rows, rewrite legacy reviews, add in-app seller payments, or add seller withdrawals. The remaining release blockers are camera/device proof, a genuinely independent two-session browser/device observation, and explicit wrong-buyer/wrong-seller/expired/malformed/duplicate authorization tests. The three legacy completed-without-review rows remain preserved fixtures, not current invariant failures, and require a separate cleanup decision if ever addressed.
+## Relevant artifacts
 
-## Resume protocol
+| Artifact | Purpose |
+| --- | --- |
+| `docs/omni-v1-a-e-certification-crosswalk.md` | A–E slice status, evidence, and release decision |
+| `docs/omni-v1-slice-a-browser-findings.md` | Cumulative browser and map-first findings, including transaction-room recovery observations |
+| `docs/omni-v1-transaction-certification-plan.md` | Approved L3 certification plan and state transitions |
+| `docs/omni-v1-staging-certification-report.md` | Redacted baseline staging report |
+| `/home/ubuntu/omni-phase2-idempotency-proof-current.md` | Fresh duplicate-payment proof snapshot |
+| `/home/ubuntu/omni-phase3-adversarial-evidence.md` | Runtime adversarial matrix and concurrent duplicate-intent proof |
+| `/home/ubuntu/omni-phase4-evidence.md` | Independent-context recovery and camera fallback evidence |
+| `/home/ubuntu/.mcp/tool-results/2026-08-19_20-53-44.790656796_neon_run_sql_ec65a68d.json` | Final seven invariants after completion |
+| `/home/ubuntu/.mcp/tool-results/2026-08-19_21-16-22.529977790_neon_run_sql_82e00a2d.json` | Seven invariants after concurrent duplicate-intent probe |
+| `/home/ubuntu/.mcp/tool-results/2026-08-19_21-13-40.255266536_neon_run_sql_bf976b44.json` | One-active-row concurrent intent assertion |
+| `/home/ubuntu/.mcp/tool-results/2026-08-19_21-00-01.939191393_neon_run_sql_b6048cd3.json` | Final completed transaction assertion |
+| `/home/ubuntu/terminal_full_output/2026-08-19_21-00-52_757965_5191.txt` | Full local test/build output |
 
-Read this file and the certification evidence log, verify the current `main` commit and private snapshot checksum, run `pnpm test && pnpm build`, run `OMNI_E2E_ENFORCE_AFTER=2026-08-19T00:00:00Z node scripts/e2e/assert-invariants.mjs`, query recent production runtime errors, and preserve the current transaction fixture as completed. The next bounded slice is camera-capable HTTPS and adversarial authorization certification; do not broaden the UI scope or mutate legacy fixtures before those proofs are recorded.
+## Worktree and change boundary
 
+The tracked worktree has no uncommitted changes. The only tracked source change for this certification slice is already committed in `02910b1`. Generated `.vercel/` output and several untracked audit scripts remain outside the commit boundary and were not staged. No passwords, database URLs, QR tokens, Neon Auth users, profiles, legacy transactions, or production records were deleted or rewritten.
 
-## Isolated staging A–E certification update — 2026-08-19
+## Smallest next action
 
-The previously missing isolated staging boundary is now provisioned and was used for a complete sequential buyer/seller run. The staging target is the Neon project `old-unit-98112236`, branch `br-bitter-forest-a6e6nem5`, with dedicated staging Auth fixtures and guarded E2E seed data. No production database or production Auth user was mutated during this run.
-
-The staging path completed: MapLibre globe discovery, seeded product search, approximate-market fallback, manual single-facility availability, seller response with server-authoritative price and quantity, notification-driven buyer resume, purchase intent, QR generation, seller camera authorization attempt, manual QR fallback, QR verification, external Cash à la livraison selection, buyer payment declaration, seller payment confirmation, fulfillment, buyer receipt confirmation, five-star review, and final `completed` state.
-
-The authoritative completed staging audit recorded exactly one transaction, one QR token, twelve transaction events, one review, and one payout ledger entry. The final invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview` under the staging cutoff used for this run. The local suite passed `64/64`; production build and client-boundary checks passed.
-
-The sandbox camera attempt produced an explicit unavailable-camera state and preserved the manual fallback. It did not prove live camera preview or QR decoding on a real HTTPS mobile device. Buyer and seller were switched sequentially in one browser; two genuinely concurrent authenticated contexts were not proven.
-
-The adversarial source and unit review found one bounded idempotency gap in duplicate buyer payment declaration. `declareTransactionPayment` now returns an explicit idempotent success when the same buyer has already declared payment and the transaction remains in a valid downstream state, without recording another `payment_declared` event. The fix was validated by the full test suite and build; a fresh deployed-staging duplicate-request runtime proof remains open.
-
-**Current release status remains `partial`, not production-ready.** The remaining blockers are live HTTPS camera certification, independent concurrent buyer/seller context proof, and the runtime wrong-actor/expired/malformed/concurrent authorization matrix. The current staging happy-path proof is admissible and should not be confused with full L3 release certification.
+To reach `verified`, run one dedicated concurrent QR-verification replay against a fresh `qr_generated` staging transaction using two authenticated seller requests, then execute the live camera preview/decode proof on a real HTTPS mobile device or camera-capable browser. Until both artifacts exist, preserve the release status as `partial` and do not claim full production readiness.

@@ -147,11 +147,11 @@ Deployment `dpl_7ywMAeg4pViCn7q5rSDJgQE2xo3h` (`READY`, production, commit `7154
 
 ## Purchase intent and QR generated
 
-Selecting `Je veux payer ici` created the purchase intent with toast `Intention d'achat créée. Référence d6a19213.` and opened the transaction room for `Épicerie Adidogomé Plus`, total `3 200 FCFA`. The room showed `QR en attente de scan`, timeline states `Intention créée → Offre confirmée → QR généré`, an actual QR image, fallback code `MFD6DQXE`, and validity until `14:41`.
+Selecting `Je veux payer ici` created the purchase intent with toast `Intention d'achat créée. Référence d6a19213.` and opened the transaction room for `Épicerie Adidogomé Plus`, total `3 200 FCFA`. The room showed `QR en attente de scan`, timeline states `Intention créée → Offre confirmée → QR généré`, an actual QR image, manual fallback code (redacted), and validity until `14:41`.
 
 ## QR verification idempotency proof
 
-The first live seller validation on the pre-fix deployment transitioned the transaction to `qr_verified` but left the scanner spinner pending; the authoritative database state showed two `seller_verified` events, confirming the duplicate-event defect under repeated/slow submission. After commit `eb8c4ac` deployed READY, replaying `MFD6DQXE` on the same already-verified transaction returned the existing verified room state and the seller UI showed `QR vérifié` with payment/fulfillment controls. The post-replay database check remained `qr_verified | seller_verified_events=2 | total_events=5`, proving the hardened path added no third audit event or notification.
+The first live seller validation on the pre-fix deployment transitioned the transaction to `qr_verified` but left the scanner spinner pending; the authoritative database state showed two `seller_verified` events, confirming the duplicate-event defect under repeated/slow submission. After commit `eb8c4ac` deployed READY, replaying the redacted fallback code on the same already-verified transaction returned the existing verified room state and the seller UI showed `QR vérifié` with payment/fulfillment controls. The post-replay database check remained `qr_verified | seller_verified_events=2 | total_events=5`, proving the hardened path added no third audit event or notification.
 
 ## QR-to-payment entry gap and fix
 
@@ -195,6 +195,14 @@ The buyer resumed the transaction thread, selected `Cash à la livraison`, and t
 
 The final staging audit recorded one transaction, one QR token, twelve transaction events, one review, and one payout ledger entry. The post-flow invariant query returned zero for all seven checks. The local suite passed 64/64 tests and the production build plus client-boundary check passed after the bounded duplicate-payment-declaration idempotency fix.
 
+## Final staging certification update — duplicate-payment and runtime evidence
+
+The fresh isolated staging transaction completed the buyer/seller path with the named transaction states visible in the room. The buyer selected Cash à la livraison, declared payment twice, and the final timeline contained exactly one `Paiement déclaré par le buyer` event. The server amount remained 1,250 FCFA, the buyer completed receipt and five-star rating, and the room ended at `Transaction terminée` with twelve expected events, one review, and one payout ledger entry.
+
+The runtime adversarial pass recorded explicit rejection for anonymous timeline access (`UNAUTHORIZED`), a wrong non-owner seller transaction read (`Transaction introuvable.`), malformed QR input, unknown QR input, and a duplicate buyer rating after completion. A concurrent duplicate-intent probe sent two identical purchase-intent requests and both returned the same transaction identifier; the staging assertion found one active matching transaction and no duplicate active-key group. These runtime findings supplement, rather than replace, the source and unit coverage for the remaining state transitions.
+
+The independent-context recovery check signed the buyer out, restarted the local staging app, authenticated again, and restored the transaction room through the supported `transactionId` route. The map-first shell and transaction context were recovered without the original in-memory tab. The temporary empty-input validator experiment that made `Mes demandes` appear empty was reverted and is not part of the certified source.
+
 ## Remaining acceptance limitations
 
-The sandbox did not have a physical or virtual camera stream, so live QR preview and decode remain unproven. The two roles were switched sequentially in one browser origin rather than exercised concurrently in two independent browser contexts. Runtime negative authorization and concurrency calls remain separate follow-up evidence; source-level guards, unit tests, and the completed happy path are not a substitute for that final L3 matrix.
+The sandbox did not have a physical or virtual camera stream, so live QR preview and decode remain unproven. The current adversarial matrix has runtime evidence for anonymous access, wrong-user read/mutation rejection, malformed/unknown QR, duplicate payment declaration, duplicate rating, and concurrent duplicate intent. A dedicated concurrent QR-verification replay remains open. The final release state therefore remains `partial`, not production-ready, until the HTTPS camera/device proof and concurrent QR replay are recorded.
