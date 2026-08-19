@@ -63,6 +63,10 @@ The next exact action is to run the repository’s browser/mobile certification 
   - Record the duplicate-profile/legacy-owner mismatch that blocks seller-role certification.
 - `docs/omni-v1-identity-repair-blocked.md`
   - Record the L3 staging-boundary blocker and exact non-secret variables required to resume safely.
+- `docs/omni-v1-vercel-staging-access-audit.md`
+  - Record the connected Vercel project, READY production deployment, no-runtime-error observation and absence of a proven staging target.
+- `docs/omni-v1-identity-mapping-preview.md`
+  - Record the redacted candidate mapping and dependency inventory; no mutation is approved from this preview.
 
 ## Proof status
 
@@ -70,7 +74,7 @@ The focused Slice A contract tests passed, the complete suite passed with 62 tes
 
 ## Risks and blockers
 
-The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Seller certification is blocked by the duplicate-profile/legacy-owner mismatch documented in `docs/omni-v1-identity-audit.md`, and the approved staging repair is currently blocked because no isolated staging marker, fixture IDs or staging database variable is configured, as documented in `docs/omni-v1-identity-repair-blocked.md`. Do not add an insecure email fallback or mutate the configured database. Resume at Phase 1 only after the staging inputs are configured.
+The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Connected Vercel confirms the Omni project and a READY production deployment with no grouped runtime errors in the inspected 24-hour window, but no separate staging target or Preview environment variables were proven. Seller certification is blocked by the duplicate-profile/legacy-owner mismatch documented in `docs/omni-v1-identity-audit.md`, and the approved staging repair remains blocked because no isolated staging marker, fixture IDs or staging database variable is configured. Do not add an insecure email fallback or mutate the configured database. Resume Phase 2 by executing the redacted mapping preview only after Phase 1 proves the staging inputs.
 
 ## Resume protocol
 
