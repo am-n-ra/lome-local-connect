@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { BadgeCheck, Minus, Plus, Send, ShieldQuestion, Trash2 } from "lucide-react";
 import { checkAvailability, submitCart, submitCarts } from "@/lib/omni.functions";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { OmniSheet } from "@/components/omni/ui/OmniPrimitives";
 import { useAuth } from "@/lib/auth";
 import { useCart, type CartLine } from "@/lib/cart";
 import { freshnessLabel } from "@/lib/omni";
@@ -118,122 +118,114 @@ export function CartPanel({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.5rem]"
-      >
-        <SheetHeader>
-          <SheetTitle>Mon panier</SheetTitle>
-        </SheetHeader>
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
-          {cart.lines.length === 0 && (
-            <p className="text-sm text-muted-foreground">Votre panier est vide.</p>
-          )}
-          {Object.entries(groups).map(([facilityId, lines]) => {
-            const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
-            return (
-              <div key={facilityId} className="omni-card space-y-3 p-3">
-                <p className="font-display font-bold">{lines[0]?.facilityName}</p>
-                {lines.map((l) => (
-                  <div key={l.productId} className="flex items-center gap-2 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium">{l.name}</p>
-                      <p className="text-muted-foreground">{formatMoney(l.price)}</p>
-                      {availability[l.productId] && (
-                        <p
-                          className={`flex items-center gap-1 text-xs ${
-                            availability[l.productId]!.inStock ? "text-primary" : "text-destructive"
-                          }`}
-                        >
-                          {availability[l.productId]!.inStock ? (
-                            <BadgeCheck className="h-3 w-3" />
-                          ) : (
-                            <ShieldQuestion className="h-3 w-3" />
-                          )}
-                          {availability[l.productId]!.label}
-                        </p>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      aria-label="Diminuer"
-                      onClick={() => cart.setQuantity(l.productId, l.quantity - 1)}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-5 text-center font-semibold">{l.quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-7 w-7"
-                      aria-label="Augmenter"
-                      onClick={() => cart.setQuantity(l.productId, l.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7"
-                      aria-label="Retirer"
-                      onClick={() => cart.remove(l.productId)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+    <OmniSheet open={open} onOpenChange={onOpenChange} title="Mon panier">
+      <div className="space-y-5">
+        {cart.lines.length === 0 && (
+          <p className="text-sm text-muted-foreground">Votre panier est vide.</p>
+        )}
+        {Object.entries(groups).map(([facilityId, lines]) => {
+          const subtotal = lines.reduce((s, l) => s + l.price * l.quantity, 0);
+          return (
+            <div key={facilityId} className="omni-card space-y-3 p-3">
+              <p className="font-display font-bold">{lines[0]?.facilityName}</p>
+              {lines.map((l) => (
+                <div key={l.productId} className="flex items-center gap-2 text-sm">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{l.name}</p>
+                    <p className="text-muted-foreground">{formatMoney(l.price)}</p>
+                    {availability[l.productId] && (
+                      <p
+                        className={`flex items-center gap-1 text-xs ${
+                          availability[l.productId]!.inStock ? "text-primary" : "text-destructive"
+                        }`}
+                      >
+                        {availability[l.productId]!.inStock ? (
+                          <BadgeCheck className="h-3 w-3" />
+                        ) : (
+                          <ShieldQuestion className="h-3 w-3" />
+                        )}
+                        {availability[l.productId]!.label}
+                      </p>
+                    )}
                   </div>
-                ))}
-                <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
-                  <span>Sous-total</span>
-                  <span>{formatMoney(subtotal)}</span>
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2">
+
                   <Button
                     variant="outline"
-                    className="omni-glass w-full"
-                    disabled={checking === facilityId}
-                    onClick={() => void verify(facilityId, lines)}
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Diminuer"
+                    onClick={() => cart.setQuantity(l.productId, l.quantity - 1)}
                   >
-                    {checking === facilityId ? "Vérification…" : "Vérifier la disponibilité"}
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <span className="w-5 text-center font-semibold">{l.quantity}</span>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Augmenter"
+                    onClick={() => cart.setQuantity(l.productId, l.quantity + 1)}
+                  >
+                    <Plus className="h-3 w-3" />
                   </Button>
                   <Button
-                    className="w-full"
-                    disabled={sending === facilityId}
-                    onClick={() => void sendRequest(facilityId, lines)}
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    aria-label="Retirer"
+                    onClick={() => cart.remove(l.productId)}
                   >
-                    {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
+              ))}
+              <div className="flex items-center justify-between border-t border-border pt-2 text-sm font-semibold">
+                <span>Sous-total</span>
+                <span>{formatMoney(subtotal)}</span>
               </div>
-            );
-          })}
-          {cart.lines.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-base font-bold">
-                <span>Total</span>
-                <span>{formatMoney(cart.total)}</span>
-              </div>
-              {facilityIds.length > 1 && (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Button
+                  variant="outline"
+                  className="omni-glass w-full"
+                  disabled={checking === facilityId}
+                  onClick={() => void verify(facilityId, lines)}
+                >
+                  {checking === facilityId ? "Vérification…" : "Vérifier la disponibilité"}
+                </Button>
                 <Button
                   className="w-full"
-                  disabled={sendingAll || facilityIds.length > 5}
-                  onClick={() => void sendAll()}
+                  disabled={sending === facilityId}
+                  onClick={() => void sendRequest(facilityId, lines)}
                 >
-                  <Send className="mr-2 h-4 w-4" />
-                  {sendingAll ? "Envoi…" : `Envoyer aux ${facilityIds.length} vendeurs`}
+                  {sending === facilityId ? "Envoi…" : "Envoyer la demande"}
                 </Button>
-              )}
-              <p className="text-xs text-muted-foreground">
-                5 vendeurs maximum par envoi. Chaque demande expire automatiquement après 2 h sans
-                réponse.
-              </p>
+              </div>
             </div>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+          );
+        })}
+        {cart.lines.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-base font-bold">
+              <span>Total</span>
+              <span>{formatMoney(cart.total)}</span>
+            </div>
+            {facilityIds.length > 1 && (
+              <Button
+                className="w-full"
+                disabled={sendingAll || facilityIds.length > 5}
+                onClick={() => void sendAll()}
+              >
+                <Send className="mr-2 h-4 w-4" />
+                {sendingAll ? "Envoi…" : `Envoyer aux ${facilityIds.length} vendeurs`}
+              </Button>
+            )}
+            <p className="text-xs text-muted-foreground">
+              5 vendeurs maximum par envoi. Chaque demande expire automatiquement après 2 h sans
+              réponse.
+            </p>
+          </div>
+        )}
+      </div>
+    </OmniSheet>
   );
 }

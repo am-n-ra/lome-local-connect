@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useServerFn } from "@/lib/useServerFn";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { OmniSheet } from "@/components/omni/ui/OmniPrimitives";
 import {
   confirmProductReceived,
   submitTransactionRating,
@@ -158,56 +158,49 @@ export function OrdersPanel({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="bottom"
-          className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 overflow-hidden rounded-t-[1.75rem] p-0 sm:rounded-[1.75rem]"
-        >
-          <SheetHeader className="border-b border-[var(--atlas-glass-border)] p-4">
-            <SheetTitle>Mes demandes</SheetTitle>
-          </SheetHeader>
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-            {!user && (
-              <p className="text-sm text-muted-foreground">
-                Connectez-vous pour suivre vos demandes.
-              </p>
-            )}
+      <OmniSheet open={open} onOpenChange={onOpenChange} title="Mes demandes">
+        <div className="space-y-4">
+          {!user && (
+            <p className="text-sm text-muted-foreground">
+              Connectez-vous pour suivre vos demandes.
+            </p>
+          )}
 
-            {user && orders.length === 0 && (
-              <p className="text-sm text-muted-foreground">Aucune demande pour le moment.</p>
-            )}
-            {orders.map((order) => {
-              const timeline = order.transaction_id ? timelines[order.transaction_id] : undefined;
-              return (
-                <TransactionThreadCard
-                  key={order.id}
-                  order={order}
-                  timeline={timeline}
-                  busy={busy === order.id || busy === order.transaction_id}
-                  {...(order.transaction_id
-                    ? { onRegenerateQr: () => void regenerateQr(order.transaction_id!) }
-                    : {})}
-                  {...(order.source === "cart"
-                    ? { onCreateRoom: () => void createLegacyRoom(order) }
-                    : {})}
-                  {...(order.transaction_id
-                    ? {
-                        onSelectPayment: (method: "cash_on_delivery" | "tmoney" | "flooz" | "external_other") =>
-                          void choosePayment(order.transaction_id!, method),
-                        onDeclarePayment: () => void declarePayment(order.transaction_id!),
-                      }
-                    : {})}
-                  onConfirmReceived={() => void confirmReceivedTransition(order.transaction_id!)}
-                  onSubmitRating={(rating, comment) =>
-                    void submitRating(order.transaction_id!, rating, comment)
-                  }
-                  onRetry={() => void refresh()}
-                />
-              );
-            })}
-          </div>
-        </SheetContent>
-      </Sheet>
+          {user && orders.length === 0 && (
+            <p className="text-sm text-muted-foreground">Aucune demande pour le moment.</p>
+          )}
+          {orders.map((order) => {
+            const timeline = order.transaction_id ? timelines[order.transaction_id] : undefined;
+            return (
+              <TransactionThreadCard
+                key={order.id}
+                order={order}
+                timeline={timeline}
+                busy={busy === order.id || busy === order.transaction_id}
+                {...(order.transaction_id
+                  ? { onRegenerateQr: () => void regenerateQr(order.transaction_id!) }
+                  : {})}
+                {...(order.source === "cart"
+                  ? { onCreateRoom: () => void createLegacyRoom(order) }
+                  : {})}
+                {...(order.transaction_id
+                  ? {
+                      onSelectPayment: (
+                        method: "cash_on_delivery" | "tmoney" | "flooz" | "external_other",
+                      ) => void choosePayment(order.transaction_id!, method),
+                      onDeclarePayment: () => void declarePayment(order.transaction_id!),
+                    }
+                  : {})}
+                onConfirmReceived={() => void confirmReceivedTransition(order.transaction_id!)}
+                onSubmitRating={(rating, comment) =>
+                  void submitRating(order.transaction_id!, rating, comment)
+                }
+                onRetry={() => void refresh()}
+              />
+            );
+          })}
+        </div>
+      </OmniSheet>
     </>
   );
 }

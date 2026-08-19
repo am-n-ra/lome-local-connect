@@ -44,11 +44,17 @@ export function OmniSheet({
           <SheetTitle className="font-display text-xl">{title}</SheetTitle>
           {description ? <SheetDescription>{description}</SheetDescription> : null}
         </SheetHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4"
+          data-omni-sheet-body="true"
+        >
           {children}
         </div>
         {footer ? (
-          <SheetFooter className="omni-safe-bottom shrink-0 border-t border-border/70 bg-card/90 px-5 pb-3 pt-3 backdrop-blur-md">
+          <SheetFooter
+            className="omni-safe-bottom min-h-16 shrink-0 border-t border-border/70 bg-card/90 px-5 pb-3 pt-3 backdrop-blur-md"
+            data-omni-sheet-footer="true"
+          >
             {footer}
           </SheetFooter>
         ) : null}
@@ -110,7 +116,11 @@ export function OmniFlowSheet({
       {...(description ? { description } : {})}
       {...(footer ? { footer } : {})}
     >
-      {eyebrow ? <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p> : null}
+      {eyebrow ? (
+        <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
+          {eyebrow}
+        </p>
+      ) : null}
       {progress ? <div className="mb-4">{progress}</div> : null}
       {children}
     </OmniSheet>
@@ -143,7 +153,9 @@ export function OmniActionBlock({
     >
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
       <h3 className="mt-1 font-display text-lg font-bold tracking-tight">{title}</h3>
-      {description ? <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
+      {description ? (
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      ) : null}
       {children ? <div className="mt-4">{children}</div> : null}
     </section>
   );
@@ -167,9 +179,14 @@ export function OmniResumeBar({
       <span className="h-2 w-2 shrink-0 rounded-full bg-primary shadow-[0_0_0_4px_rgba(232,116,34,0.12)]" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-xs font-bold">{label}</span>
-        {detail ? <span className="block truncate text-[11px] text-muted-foreground">{detail}</span> : null}
+        {detail ? (
+          <span className="block truncate text-[11px] text-muted-foreground">{detail}</span>
+        ) : null}
       </span>
-      <ArrowRight className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+      <ArrowRight
+        className="h-4 w-4 shrink-0 text-primary transition-transform group-hover:translate-x-0.5"
+        aria-hidden="true"
+      />
     </button>
   );
 }
@@ -384,69 +401,69 @@ export function TransactionProgress({
         aria-label={ariaLabel}
         data-omni-progress="transaction"
       >
-      {normalized.map((step, index) => {
-        const status = step.status!;
-        const active = status === "active";
-        const icon = progressIcon(status);
-        return (
-          <li
-            key={`${step.label}-${index}`}
-            className="flex min-w-0 items-start gap-3 sm:flex-1 sm:flex-col sm:items-center sm:gap-1.5 sm:text-center"
-            aria-current={active ? "step" : undefined}
-            data-omni-progress-status={status}
-          >
-            <div className="flex min-w-0 flex-1 items-start gap-3 sm:w-full sm:flex-col sm:items-center sm:gap-1.5">
-              <span
-                className={cn(
-                  "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold ring-1 ring-inset transition-colors",
-                  status === "complete" && "bg-forest text-forest-foreground ring-forest/30",
-                  status === "active" && "bg-primary text-primary-foreground ring-primary/30",
-                  status === "upcoming" && "bg-muted text-muted-foreground ring-border",
-                  status === "blocked" && "bg-muted text-muted-foreground ring-border",
-                  status === "expired" && "bg-primary/15 text-primary ring-primary/35",
-                  status === "error" && "bg-destructive/12 text-destructive ring-destructive/35",
-                )}
-                aria-hidden="true"
-              >
-                {icon ?? (status === "blocked" ? "–" : index + 1)}
-              </span>
-              <span className="min-w-0 flex-1 sm:w-full">
+        {normalized.map((step, index) => {
+          const status = step.status!;
+          const active = status === "active";
+          const icon = progressIcon(status);
+          return (
+            <li
+              key={`${step.label}-${index}`}
+              className="flex min-w-0 items-start gap-3 sm:flex-1 sm:flex-col sm:items-center sm:gap-1.5 sm:text-center"
+              aria-current={active ? "step" : undefined}
+              data-omni-progress-status={status}
+            >
+              <div className="flex min-w-0 flex-1 items-start gap-3 sm:w-full sm:flex-col sm:items-center sm:gap-1.5">
                 <span
                   className={cn(
-                    "block break-words text-xs font-bold leading-tight",
-                    active ? "text-foreground" : "text-muted-foreground",
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-bold ring-1 ring-inset transition-colors",
+                    status === "complete" && "bg-forest text-forest-foreground ring-forest/30",
+                    status === "active" && "bg-primary text-primary-foreground ring-primary/30",
+                    status === "upcoming" && "bg-muted text-muted-foreground ring-border",
+                    status === "blocked" && "bg-muted text-muted-foreground ring-border",
+                    status === "expired" && "bg-primary/15 text-primary ring-primary/35",
+                    status === "error" && "bg-destructive/12 text-destructive ring-destructive/35",
                   )}
+                  aria-hidden="true"
                 >
-                  {step.label}
+                  {icon ?? (status === "blocked" ? "–" : index + 1)}
                 </span>
-                {step.description ? (
-                  <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
-                    {step.description}
+                <span className="min-w-0 flex-1 sm:w-full">
+                  <span
+                    className={cn(
+                      "block break-words text-xs font-bold leading-tight",
+                      active ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {step.label}
                   </span>
-                ) : null}
-                <span className="sr-only">
-                  {status === "complete"
-                    ? "terminée"
-                    : status === "active"
-                      ? "active"
-                      : status === "blocked"
-                        ? "bloquée"
-                        : status === "expired"
-                          ? "expirée"
-                          : status === "error"
-                            ? "en erreur"
-                            : "à venir"}
+                  {step.description ? (
+                    <span className="mt-0.5 block text-[10px] leading-tight text-muted-foreground">
+                      {step.description}
+                    </span>
+                  ) : null}
+                  <span className="sr-only">
+                    {status === "complete"
+                      ? "terminée"
+                      : status === "active"
+                        ? "active"
+                        : status === "blocked"
+                          ? "bloquée"
+                          : status === "expired"
+                            ? "expirée"
+                            : status === "error"
+                              ? "en erreur"
+                              : "à venir"}
+                  </span>
                 </span>
-              </span>
-            </div>
-            {index < normalized.length - 1 ? (
-              <ArrowRight
-                className="mt-2 hidden h-3.5 w-3.5 shrink-0 text-muted-foreground/45 sm:block"
-                aria-hidden="true"
-              />
-            ) : null}
-          </li>
-        );
+              </div>
+              {index < normalized.length - 1 ? (
+                <ArrowRight
+                  className="mt-2 hidden h-3.5 w-3.5 shrink-0 text-muted-foreground/45 sm:block"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </li>
+          );
         })}
       </ol>
       {finished ? (

@@ -31,8 +31,8 @@ type Props = {
   mode?: "bulk" | "manual";
   facilityName?: string | null;
   initialQuantity?: number;
-  resumeRequestId?: string;
-  resumeResponseId?: string;
+  resumeRequestId?: string | undefined;
+  resumeResponseId?: string | undefined;
   onTransactionCreated?: (context: {
     transactionId: string;
     facilityId: string;
@@ -78,7 +78,9 @@ export function DemandRequestPanel({
     deriveAvailabilityPanelScope(mode),
   );
   const [loadError, setLoadError] = useState(false);
-  const [resolvedFacilityName, setResolvedFacilityName] = useState<string | null>(facilityName ?? null);
+  const [resolvedFacilityName, setResolvedFacilityName] = useState<string | null>(
+    facilityName ?? null,
+  );
   const [entitlement, setEntitlement] = useState<BuyerAvailabilityEntitlement | null>(null);
   const selectedTargetFacilityIds =
     scope === "facility" ? targetFacilityIds.slice(0, 1) : targetFacilityIds;

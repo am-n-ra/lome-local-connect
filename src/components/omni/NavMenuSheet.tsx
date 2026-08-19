@@ -4,13 +4,7 @@ import { useServerFn } from "@/lib/useServerFn";
 import { Heart, ListChecks, LogIn, LogOut, ShoppingCart, MessageCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+import { OmniSheet } from "@/components/omni/ui/OmniPrimitives";
 import { BrandMark } from "@/components/omni/BrandMark";
 import { listNotifications, type NotificationRow } from "@/lib/omni.functions";
 import { useAuth } from "@/lib/auth";
@@ -44,23 +38,25 @@ export function NavMenuSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col overflow-hidden rounded-t-[1.75rem] border-[var(--atlas-glass-border)] p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] sm:rounded-[1.75rem]"
-      >
-        <SheetHeader className="p-0 text-left">
-          <SheetTitle className="flex items-center gap-2">
-            <BrandMark className="h-6 w-6" /> OmniView
-          </SheetTitle>
-          <SheetDescription className="text-xs">
-            {user?.email ?? "Vous n'êtes pas connecté."}
-          </SheetDescription>
-        </SheetHeader>
-
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="mt-5 rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
+    <OmniSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title="OmniView"
+      description={user?.email ?? "Vous n'êtes pas connecté."}
+      footer={
+        user ? (
+          <Button variant="outline" className="w-full" onClick={() => go(() => void signOut())}>
+            <LogOut className="mr-2 h-4 w-4" /> Déconnexion
+          </Button>
+        ) : (
+          <Button className="w-full" onClick={() => go(() => navigate({ to: "/auth" }))}>
+            <LogIn className="mr-2 h-4 w-4" /> Connexion
+          </Button>
+        )
+      }
+    >
+      <div>
+        <div className="mt-5 rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Navigation
           </p>
@@ -105,22 +101,8 @@ export function NavMenuSheet({
             )}
           </nav>
         </section>
-
-        </div>
-
-        <div className="mt-6 shrink-0">
-          {user ? (
-            <Button variant="outline" className="w-full" onClick={() => go(() => void signOut())}>
-              <LogOut className="mr-2 h-4 w-4" /> Déconnexion
-            </Button>
-          ) : (
-            <Button className="w-full" onClick={() => go(() => navigate({ to: "/auth" }))}>
-              <LogIn className="mr-2 h-4 w-4" /> Connexion
-            </Button>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
+      </div>
+    </OmniSheet>
   );
 }
 
