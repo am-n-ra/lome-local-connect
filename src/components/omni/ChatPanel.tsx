@@ -4,7 +4,7 @@ import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { OmniSheet } from "@/components/omni/ui/OmniPrimitives";
 import {
   listChatThreads,
   listMessages,
@@ -177,173 +177,181 @@ export function ChatPanel({
     }
   }
 
+  const messageFooter =
+    user && active && !transactionContext ? (
+      <div className="w-full space-y-2">
+        <div className="flex w-full items-center gap-2">
+          <Input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submit();
+            }}
+            placeholder="Votre message…"
+          />
+          <Button
+            size="icon"
+            aria-label="Envoyer le message"
+            disabled={busy || !draft.trim()}
+            onClick={() => void submit()}
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Vos coordonnées personnelles restent masquées : la discussion passe par OmniView.
+        </p>
+      </div>
+    ) : undefined;
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="bottom"
-        className="omni-atlas-surface flex max-h-[min(88dvh,48rem)] w-[min(calc(100vw-1.5rem),34rem)] flex-col gap-0 rounded-t-[1.75rem] p-0 sm:rounded-[1.75rem]"
-      >
-        <SheetHeader className="border-b border-[var(--atlas-glass-border)] p-4">
-          <SheetTitle>{active ? active.name : "Messages"}</SheetTitle>
-          {transactionContext && !transactionTimeline && (
-            <div className="mt-2 rounded-xl bg-secondary/70 p-2 text-left text-xs">
-              <div className="flex items-center justify-between gap-2 font-semibold">
-                <span>Conversation transactionnelle</span>
-                <span className="rounded-full bg-background px-2 py-0.5">
-                  {transactionContext.status}
-                </span>
-              </div>
-              <p className="mt-1 text-muted-foreground">
-                Total : {transactionContext.amountLabel}
-                {transactionContext.qrCode ? ` · QR ${transactionContext.qrCode}` : ""}
-              </p>
-            </div>
-          )}
-        </SheetHeader>
-
-        {!user && (
-          <p className="p-4 text-sm text-muted-foreground">
-            Connectez-vous pour discuter avec les commerçants.
+    <OmniSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={active ? active.name : "Messages"}
+      {...(messageFooter ? { footer: messageFooter } : {})}
+    >
+      {transactionContext && !transactionTimeline && (
+        <div className="mb-4 rounded-xl bg-secondary/70 p-2 text-left text-xs">
+          <div className="flex items-center justify-between gap-2 font-semibold">
+            <span>Conversation transactionnelle</span>
+            <span className="rounded-full bg-background px-2 py-0.5">
+              {transactionContext.status}
+            </span>
+          </div>
+          <p className="mt-1 text-muted-foreground">
+            Total : {transactionContext.amountLabel}
+            {transactionContext.qrCode ? ` · QR ${transactionContext.qrCode}` : ""}
           </p>
-        )}
+        </div>
+      )}
 
-        {user && !active && (
-          <div className="flex-1 space-y-2 overflow-y-auto p-4">
-            {threads.length === 0 && (
-              <p className="text-sm text-muted-foreground">Aucune conversation pour l'instant.</p>
-            )}
-            {threads.map((t) => (
-              <button
-                key={`${t.facility_id}-${t.buyer_id}`}
-                type="button"
-                onClick={() =>
-                  setActive({
-                    facilityId: t.facility_id,
-                    buyerId: t.buyer_id,
-                    name: t.facility_name,
-                  })
-                }
-                className="omni-atlas-surface w-full rounded-[1.25rem] p-3 text-left transition-transform hover:-translate-y-0.5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate font-semibold">{t.facility_name}</p>
-                  {t.unread > 0 && (
-                    <span className="rounded-full bg-primary px-2 text-xs text-primary-foreground">
-                      {t.unread}
-                    </span>
-                  )}
-                </div>
-                <p className="truncate text-sm text-muted-foreground">{t.last_body}</p>
-              </button>
-            ))}
-          </div>
-        )}
+      {!user && (
+        <p className="p-4 text-sm text-muted-foreground">
+          Connectez-vous pour discuter avec les commerçants.
+        </p>
+      )}
 
-        {user && active && transactionContext && (
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {transactionTimeline ? (
-              <TransactionThreadCard
-                order={toBuyerOrder(transactionTimeline)}
-                timeline={transactionTimeline}
-                busy={transactionBusy}
-                onRegenerateQr={() =>
-                  void runTransactionAction(() =>
-                    regenerateTransactionQr({ data: { transactionId: transactionTimeline.transaction.id } }),
-                  )
-                }
-                onSelectPayment={(method) =>
-                  void runTransactionAction(() =>
-                    selectPayment({
-                      data: { transactionId: transactionTimeline.transaction.id, method },
-                    }),
-                  )
-                }
-                onDeclarePayment={() =>
-                  void runTransactionAction(() =>
-                    declarePaymentServer({
-                      data: { transactionId: transactionTimeline.transaction.id },
-                    }),
-                  )
-                }
-                onConfirmReceived={() =>
-                  void runTransactionAction(() =>
-                    confirmReceived({
-                      data: { transactionId: transactionTimeline.transaction.id },
-                    }),
-                  )
-                }
-                onSubmitRating={(rating, comment) =>
-                  void runTransactionAction(() =>
-                    submitRatingServer({
-                      data: {
-                        transactionId: transactionTimeline.transaction.id,
-                        rating,
-                        comment,
-                      },
-                    }),
-                  )
-                }
-                onRetry={() => void refreshTransaction()}
-              />
-            ) : (
-              <p className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-3 text-sm text-muted-foreground">
-                Chargement du fil transactionnel…
-              </p>
-            )}
-          </div>
-        )}
+      {user && !active && (
+        <div className="flex-1 space-y-2 overflow-y-auto p-4">
+          {threads.length === 0 && (
+            <p className="text-sm text-muted-foreground">Aucune conversation pour l'instant.</p>
+          )}
+          {threads.map((t) => (
+            <button
+              key={`${t.facility_id}-${t.buyer_id}`}
+              type="button"
+              onClick={() =>
+                setActive({
+                  facilityId: t.facility_id,
+                  buyerId: t.buyer_id,
+                  name: t.facility_name,
+                })
+              }
+              className="omni-atlas-surface w-full rounded-[1.25rem] p-3 text-left transition-transform hover:-translate-y-0.5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="truncate font-semibold">{t.facility_name}</p>
+                {t.unread > 0 && (
+                  <span className="rounded-full bg-primary px-2 text-xs text-primary-foreground">
+                    {t.unread}
+                  </span>
+                )}
+              </div>
+              <p className="truncate text-sm text-muted-foreground">{t.last_body}</p>
+            </button>
+          ))}
+        </div>
+      )}
 
-        {user && active && !transactionContext && (
-          <>
-            <div className="flex-1 space-y-2 overflow-y-auto p-4">
-              {threads.length > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground underline"
-                  onClick={() => setActive(null)}
-                >
-                  ← Toutes les conversations
-                </button>
-              )}
-              {messages.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Écrivez au commerçant : disponibilité, taille, heure de retrait…
-                </p>
-              )}
-              {messages.map((m) => (
-                <div
-                  key={m.id}
-                  className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                    m.sender_role === "buyer"
-                      ? "ml-auto bg-[var(--atlas-orange)] text-white"
-                      : "bg-[var(--atlas-paper-deep)] text-[var(--atlas-ink)]"
-                  }`}
-                >
-                  {m.body}
-                </div>
-              ))}
-              <div ref={bottom} />
-            </div>
-            <div className="flex items-center gap-2 border-t border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/55 p-3">
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void submit();
-                }}
-                placeholder="Votre message…"
-              />
-              <Button size="icon" disabled={busy || !draft.trim()} onClick={() => void submit()}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="px-3 pb-3 text-[11px] text-muted-foreground">
-              Vos coordonnées personnelles restent masquées : la discussion passe par OmniView.
+      {user && active && transactionContext && (
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {transactionTimeline ? (
+            <TransactionThreadCard
+              order={toBuyerOrder(transactionTimeline)}
+              timeline={transactionTimeline}
+              busy={transactionBusy}
+              onRegenerateQr={() =>
+                void runTransactionAction(() =>
+                  regenerateTransactionQr({
+                    data: { transactionId: transactionTimeline.transaction.id },
+                  }),
+                )
+              }
+              onSelectPayment={(method) =>
+                void runTransactionAction(() =>
+                  selectPayment({
+                    data: { transactionId: transactionTimeline.transaction.id, method },
+                  }),
+                )
+              }
+              onDeclarePayment={() =>
+                void runTransactionAction(() =>
+                  declarePaymentServer({
+                    data: { transactionId: transactionTimeline.transaction.id },
+                  }),
+                )
+              }
+              onConfirmReceived={() =>
+                void runTransactionAction(() =>
+                  confirmReceived({
+                    data: { transactionId: transactionTimeline.transaction.id },
+                  }),
+                )
+              }
+              onSubmitRating={(rating, comment) =>
+                void runTransactionAction(() =>
+                  submitRatingServer({
+                    data: {
+                      transactionId: transactionTimeline.transaction.id,
+                      rating,
+                      comment,
+                    },
+                  }),
+                )
+              }
+              onRetry={() => void refreshTransaction()}
+            />
+          ) : (
+            <p className="rounded-[1.15rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 p-3 text-sm text-muted-foreground">
+              Chargement du fil transactionnel…
             </p>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+          )}
+        </div>
+      )}
+
+      {user && active && !transactionContext && (
+        <div className="space-y-2">
+          {threads.length > 0 && (
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline"
+              onClick={() => setActive(null)}
+            >
+              ← Toutes les conversations
+            </button>
+          )}
+          {messages.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Écrivez au commerçant : disponibilité, taille, heure de retrait…
+            </p>
+          )}
+          {messages.map((m) => (
+            <div
+              key={m.id}
+              className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                m.sender_role === "buyer"
+                  ? "ml-auto bg-[var(--atlas-orange)] text-white"
+                  : "bg-[var(--atlas-paper-deep)] text-[var(--atlas-ink)]"
+              }`}
+            >
+              {m.body}
+            </div>
+          ))}
+          <div ref={bottom} />
+        </div>
+      )}
+    </OmniSheet>
   );
 }
 

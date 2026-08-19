@@ -24,7 +24,7 @@ const EVENT_LABEL: Record<string, string> = {
   seller_verified: "Vendeur vérifié",
   payment_pending: "Paiement à choisir",
   payment_preference_selected: "Mode de paiement choisi",
-  payment_declared: "Paiement déclaré par le buyer",
+  payment_declared: "Paiement déclaré par l’acheteur",
   payment_confirmed: "Paiement reçu par le vendeur",
   fulfillment_started: "Colis en route",
   product_received: "Marchandise reçue",
@@ -101,7 +101,9 @@ export function TransactionThreadCard({
     paymentChoice:
       paymentPreference === "cash_on_delivery"
         ? "pay_on_delivery"
-        : paymentPreference === "tmoney" || paymentPreference === "flooz" || paymentPreference === "external_other"
+        : paymentPreference === "tmoney" ||
+            paymentPreference === "flooz" ||
+            paymentPreference === "external_other"
           ? "mobile_money"
           : null,
     buyerPaymentDeclared: Boolean(transaction?.buyer_payment_declared_at),
@@ -149,7 +151,11 @@ export function TransactionThreadCard({
   }
 
   return (
-    <div className="omni-atlas-surface min-w-0 space-y-4 rounded-[1.75rem] p-4 sm:p-5">
+    <div
+      className="omni-atlas-surface min-w-0 space-y-4 rounded-[1.75rem] p-4 sm:p-5"
+      data-omni-transaction-room="true"
+      data-omni-transaction-state={currentStatus}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-display text-lg font-bold">{order.facility_name}</p>
@@ -208,27 +214,27 @@ export function TransactionThreadCard({
           title="Montrez ce QR au vendeur"
           description="Le vendeur vérifie ce code avant que le choix de paiement externe ne soit disponible."
         >
-        <div className="rounded-[1.35rem] bg-white p-4 text-center text-[var(--atlas-ink)] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]">
-          <QRCodeSVG value={qrToken} size={156} level="M" includeMargin />
-          <p className="mt-2 font-mono text-lg font-bold tracking-widest">{qrToken}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {qrExpiry
-              ? `Valide jusqu'à ${new Date(qrExpiry).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
-              : "QR transactionnel actif"}
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void copyQr(qrToken, "Code QR copié.")}
-            >
-              <Copy className="mr-1.5 h-3.5 w-3.5" /> Copier le code
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => void shareQr()}>
-              <Share2 className="mr-1.5 h-3.5 w-3.5" /> Partager le lien
-            </Button>
+          <div className="rounded-[1.35rem] bg-white p-4 text-center text-[var(--atlas-ink)] shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]">
+            <QRCodeSVG value={qrToken} size={156} level="M" includeMargin />
+            <p className="mt-2 font-mono text-lg font-bold tracking-widest">{qrToken}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {qrExpiry
+                ? `Valide jusqu'à ${new Date(qrExpiry).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                : "QR transactionnel actif"}
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void copyQr(qrToken, "Code QR copié.")}
+              >
+                <Copy className="mr-1.5 h-3.5 w-3.5" /> Copier le code
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => void shareQr()}>
+                <Share2 className="mr-1.5 h-3.5 w-3.5" /> Partager le lien
+              </Button>
+            </div>
           </div>
-        </div>
         </OmniActionBlock>
       ) : null}
 
@@ -306,7 +312,8 @@ export function TransactionThreadCard({
           <div>
             <p className="font-semibold">Votre avis est la dernière étape</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Notez le vendeur pour terminer la transaction. Vous pouvez modifier le commentaire avant l’envoi.
+              Notez le vendeur pour terminer la transaction. Vous pouvez modifier le commentaire
+              avant l’envoi.
             </p>
           </div>
           <div className="flex items-center gap-1" aria-label="Choisir une note sur 5">
@@ -368,11 +375,14 @@ function TransactionEventRow({
           <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-start justify-between gap-2">
             <span className="font-semibold">
               {EVENT_LABEL[event.event_type] ?? event.event_type}
             </span>
-            <time className="shrink-0 text-muted-foreground" dateTime={event.created_at}>
+            <time
+              className="shrink-0 whitespace-nowrap text-muted-foreground"
+              dateTime={event.created_at}
+            >
               {new Date(event.created_at).toLocaleTimeString("fr-FR", {
                 hour: "2-digit",
                 minute: "2-digit",

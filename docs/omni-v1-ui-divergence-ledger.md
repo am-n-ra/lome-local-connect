@@ -137,3 +137,9 @@ The buyer selected-facility surface now uses the shared `FacilitySheet` rather t
 Search refinements are collapsed by default; opening the chevron reveals quantity, budget, category, radius, availability, discount, and sorting controls. Explicit values remain preserved without forcing the panel open. The result-level CTA now says `Comparer les disponibilités`, while facility cards retain the single-facility availability path. Narrow cards use a viewport-safe width and the horizontal rail keeps snap scrolling.
 
 Phase 3 code validation passed: TypeScript, 64/64 unit tests across 10 files, production build, client-boundary check, and diff check. The browser verified the MapLibre globe, collapsed/expanded refinement behavior, protected search auth redirect, and public approximate-location copy. Authenticated facility-result replay was blocked by the sandbox auth-provider page-load failure; no production or staging mutation was made.
+
+## Phase 4 transaction-surface checkpoint
+
+The buyer ChatPanel now uses the shared `OmniSheet` while preserving its two modes: ordinary facility conversation with a sticky composer footer, and transaction context with the canonical `TransactionThreadCard` plus timeline polling. The transaction card now exposes stable `data-omni-transaction-room` and `data-omni-transaction-state` hooks, wraps event headers safely at narrow widths, and uses the French label `Paiement déclaré par l’acheteur`.
+
+Phase 4 validation for this bounded change passed: Prettier on the touched transaction files, TypeScript, 64/64 unit tests across 10 files. Existing server-function deprecation warnings remain non-blocking. Camera-device proof, seller transaction-room verification, and full authenticated browser replay remain separate acceptance work.
