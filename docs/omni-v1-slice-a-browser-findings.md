@@ -28,3 +28,11 @@ Opening the first card preserved the map behind a centered responsive sheet and 
 Closing the facility sheet restored the same result cards, query and map context. Opening the result-level availability action produced a centered `Demande groupée` sheet with the query preserved, a three-step `Produit → Commerces → Contraintes` flow, and an explicit `Continuer` action. This confirms the overlay is map-backed and reversible.
 
 The sheet currently presents `Demande groupée` before proving the buyer plan in the visible copy. The server now rejects bulk for Free and permits it for Pro, so Slice B must add a truthful plan-aware UI state rather than relying on a generic server error. This is recorded as an open Slice B UI task, not a Slice A failure.
+
+## Post-entitlement refresh
+
+After the entitlement UI/server commit, the local comparison sheet closed cleanly and restored the same search result rail and query. The existing comparison state was retained by the session, so a fresh entitlement message was not visible until reopening a new availability flow. This is a test-harness state detail rather than a product failure; a clean fixture is still needed to certify the Free plan branch explicitly.
+
+## Entitlement fixture limitation
+
+The current authenticated browser session keeps an existing comparison request in the availability panel. The visible `Nouvelle vérification` control did not reset the server-backed comparison state immediately in this read-only session, so the Free/Pro explanatory copy at step 2 could not be isolated without a clean test account or fixture. This is a certification limitation, not evidence that the server gate is absent; the unit/build proof and source contract are already recorded.
