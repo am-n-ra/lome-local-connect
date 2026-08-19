@@ -80,3 +80,63 @@ The facility-specific sheet opens as `Disponibilité · flow buyer`, identifies 
 ## Availability plan-gate mismatch
 
 At step `2/3 Commerces`, the buyer selected `Ce commerce — Épicerie Adidogomé Plus`, but pressing `Continuer` produced the toast `La vérification groupée est réservée au plan Pro. Choisissez un seul commerce.` The same sheet states that the manual request does not consume bulk quota. This is a live logic/UI divergence: the selected single-facility path is being interpreted as visible-results bulk, so no request was submitted and no transaction was created.
+
+## Post-fix buyer search
+
+Deployment `dpl_4Q5p55DdxnNeFz6w7Ej8RaT5PoGA` for commit `56c61ff` reached `READY` and the buyer session loaded the map, preserved the query `Lait en poudre 400 g`, and returned one result. The corrected facility-specific path is ready to be reopened for a fresh step-2 scope check.
+
+## Post-fix facility-card access
+
+On the corrected deployment, the result-level bulk sheet still opens as expected, and the facility card remains exposed with the hint `Épicerie Adidogomé Plus. Facility vérifiée. 5 offres.` The certification can therefore enter the manual facility path by opening that card rather than submitting the bulk sheet.
+
+## Facility-card recovery after bulk sheet
+
+The facility card click is intercepted while the bulk sheet is open, but closing that sheet restores the card as a direct interactive element. The corrected certification path is therefore: close bulk sheet, open the facility card, then use its manual `Vérifier la disponibilité` action.
+
+## Manual sheet step 1 after corrected deployment
+
+The facility-specific sheet opens with `Disponibilité · flow buyer`, `1/3`, the product prefilled as `Lait en poudre 400 g`, and the facility-specific copy. The visible footer currently reads `Nouvelle vérification` rather than `Continuer`; no Pro-gate toast is present. The sheet uses an internal scrollable region, so further inspection is required before proceeding.
+
+## Manual sheet reset control
+
+The initial `Nouvelle vérification` footer was a restored-state reset control. Activating it did not change the facility-specific scope; it replaced the footer with the expected enabled `Continuer` control while preserving `Lait en poudre 400 g` and the `1/3 Produit` step.
+
+## Scope fix verified in production
+
+On the corrected deployment, the manual flow advanced from `1/3 Produit` to `2/3 Commerces` with `Ce commerce — Épicerie Adidogomé Plus` preselected. The sheet explicitly stated `La demande manuelle ne consomme pas le quota de vérifications groupées.` Pressing `Continuer` advanced to `3/3 Contraintes` without the prior Pro-gate toast. This verifies the facility scope fix in the live buyer UI.
+
+## Manual availability request submitted
+
+The corrected manual request submitted successfully with a green toast `Vérification lancée sur 1 commerce(s).` The sheet now shows `Lait en poudre 400 g`, `0 réponse(s) · 1 cible(s) · demande ciblée · en cours`, and the facility response area. Navigating to `/vendeur` in the current authenticated browser reached the seller shell and displayed the new pending `Lait en poudre 400 g` demand from `Kheir Lissi`, with price/quantity inputs and `Disponible`, `Partiel`, and `Indisponible` actions.
+
+## Seller identity boundary
+
+The browser menu identified the current session as `kheirlissi@icloud.com`, and `/vendeur` displayed that buyer identity's unconfirmed `Test` facility. This session was signed out before seller response certification; the canonical seller identity `demo@omni.tg` must be used for the certified facility `Épicerie Adidogomé Plus`. The buyer demand remains a valid fixture and was not deleted.
+
+## Canonical seller session restored
+
+After signing out the buyer identity and authenticating as `demo@omni.tg`, `/vendeur` loaded the certified `Épicerie Adidogomé Plus` facility with `Vérifié`, `Pro actif`, five products, two coupons, and the pending `Lait en poudre 400 g` demand from `Kheir Lissi`. The demand is correctly matched to the catalog at `3 200 FCFA · 1 disponible(s)` and exposes `Utiliser ce produit pour répondre` plus the response actions.
+
+## Seller response submitted
+
+The canonical seller used the matched product, which prefilled `Prix FCFA = 3200` and `Qté dispo = 1`, then selected `Disponible`. The production dashboard showed the confirmation toast `Réponse envoyée à l'acheteur.` The demand response is now available for buyer purchase-intent certification.
+
+## Seller session closed for buyer return
+
+The canonical seller dashboard now showed `Vous avez déjà répondu` for the new `Lait en poudre 400 g` demand. The seller session was signed out cleanly to return to the distinct buyer identity; no seller fixture or account data was removed.
+
+## Buyer session restored
+
+The buyer credentials authenticated successfully even though the auth page briefly remained on `Connexion…`; navigating to `/` restored the authenticated buyer shell with `3 transactions en cours`, one notification, and the real MapLibre globe. The pending availability response can be resumed from the buyer activity surface.
+
+## Buyer activity resume surface
+
+The buyer’s `Mes demandes` sheet reopened successfully and showed three resumable transaction threads, but the newly answered `Lait en poudre 400 g` availability request was not directly identifiable in that transaction list. The sheet was closed to reopen the original product search and availability panel, preserving all existing transaction fixtures.
+
+## Buyer search reopened after seller response
+
+The buyer restored `Lait en poudre 400 g`, submitted it, and the production staged reveal completed to `1 résultat` with the certified facility result. The buyer is ready to reopen the facility panel and inspect the new answered availability response.
+
+## Seller response notification
+
+The buyer notification panel showed `Un vendeur a répondu — Épicerie Adidogomé Plus a répondu (disponible) à « Lait en poudre 400 g »` at `19/08/2026 11:58:22`. Activating that notification navigated to `/carte`, where the MapLibre globe loaded, but the availability response panel was not automatically restored. This is a resume-flow usability gap; the notification itself proves the seller response was recorded.

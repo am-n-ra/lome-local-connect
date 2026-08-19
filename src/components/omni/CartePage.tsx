@@ -47,7 +47,17 @@ type LocationSnapshot = {
 };
 type ViewportBounds = { west: number; south: number; east: number; north: number; zoom: number };
 
-export function CartePage({ initialTransactionId }: { initialTransactionId?: string } = {}) {
+type CartePageProps = {
+  initialTransactionId?: string;
+  initialDemandRequestId?: string;
+  initialDemandResponseId?: string;
+};
+
+export function CartePage({
+  initialTransactionId,
+  initialDemandRequestId,
+  initialDemandResponseId,
+}: CartePageProps = {}) {
   const navigate = useNavigate();
   const { market, formatMoney } = useMarket();
   const { user, loading: authLoading } = useAuth();
@@ -166,6 +176,15 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
       JSON.stringify({ transactionId: transactionChat.transactionId, role: "buyer" }),
     );
   }, [transactionChat]);
+
+  useEffect(() => {
+    if (!user || !initialDemandRequestId) return;
+    setDemandMode("manual");
+    setDemandFacilityName(null);
+    setPendingTargetFacilityIds([]);
+    setPendingUserPos(null);
+    setDemandOpen(true);
+  }, [initialDemandRequestId, user]);
 
   useEffect(() => {
     if (!user || !initialTransactionId) return;
@@ -989,6 +1008,8 @@ export function CartePage({ initialTransactionId }: { initialTransactionId?: str
         mode={demandMode}
         facilityName={demandFacilityName}
         initialQuantity={quantity}
+        resumeRequestId={initialDemandRequestId}
+        resumeResponseId={initialDemandResponseId}
         onTransactionCreated={({ transactionId, facilityId, facilityName, amount }) => {
           setTransactionChat({ transactionId, facilityId, facilityName, amount });
           setActiveTransactionCount((count) => Math.max(1, count + 1));

@@ -353,6 +353,8 @@ export const respondToDemand = createServerFn({ method: "POST" })
       ],
     );
     if (inserted.length === 0) throw new Error("Vous avez déjà répondu à cette demande.");
+    const responseId = inserted[0]?.id;
+    if (!responseId) throw new Error("La réponse vendeur n’a pas pu être identifiée.");
 
     if (request) {
       await query(
@@ -362,7 +364,7 @@ export const respondToDemand = createServerFn({ method: "POST" })
           request.buyer_id,
           data.kind === "unavailable" ? "Réponse à votre demande" : "Un vendeur a répondu",
           `${owned.name} a répondu (${data.kind === "partial" ? "partiel" : data.kind === "available" ? "disponible" : "indisponible"}) à « ${request.search_term} ».`,
-          "/carte",
+          `/carte?requestId=${encodeURIComponent(data.requestId)}&responseId=${encodeURIComponent(responseId)}`,
         ],
       );
     }

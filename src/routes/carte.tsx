@@ -3,7 +3,11 @@ import { z } from "zod";
 import { CartePage } from "@/components/omni/CartePage";
 
 export const Route = createFileRoute("/carte")({
-  validateSearch: z.object({ transactionId: z.string().uuid().optional() }),
+  validateSearch: z.object({
+    transactionId: z.string().uuid().optional(),
+    requestId: z.string().uuid().optional(),
+    responseId: z.string().uuid().optional(),
+  }),
   head: () => ({
     meta: [
       { title: "Carte des commerces à Lomé — OmniView" },
@@ -20,6 +24,12 @@ export const Route = createFileRoute("/carte")({
 });
 
 function CarteRoute() {
-  const { transactionId } = Route.useSearch();
-  return <CartePage {...(transactionId ? { initialTransactionId: transactionId } : {})} />;
+  const { transactionId, requestId, responseId } = Route.useSearch();
+  return (
+    <CartePage
+      {...(transactionId ? { initialTransactionId: transactionId } : {})}
+      {...(requestId ? { initialDemandRequestId: requestId } : {})}
+      {...(responseId ? { initialDemandResponseId: responseId } : {})}
+    />
+  );
 }

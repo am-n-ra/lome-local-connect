@@ -31,6 +31,8 @@ type Props = {
   mode?: "bulk" | "manual";
   facilityName?: string | null;
   initialQuantity?: number;
+  resumeRequestId?: string;
+  resumeResponseId?: string;
   onTransactionCreated?: (context: {
     transactionId: string;
     facilityId: string;
@@ -49,6 +51,8 @@ export function DemandRequestPanel({
   mode = "bulk",
   facilityName,
   initialQuantity = 1,
+  resumeRequestId,
+  resumeResponseId,
   onTransactionCreated,
 }: Props) {
   const navigate = useNavigate();
@@ -67,11 +71,14 @@ export function DemandRequestPanel({
   const [requests, setRequests] = useState<DemandRequestRow[]>([]);
   const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
   const [intentBusy, setIntentBusy] = useState<string | null>(null);
-  const [step, setStep] = useState(0);
+  const resumeTarget = Boolean(resumeRequestId || resumeResponseId);
+  const [step, setStep] = useState(resumeTarget ? 2 : 0);
+  const [resuming, setResuming] = useState(resumeTarget);
   const [scope, setScope] = useState<"facility" | "visible">(() =>
     deriveAvailabilityPanelScope(mode),
   );
   const [loadError, setLoadError] = useState(false);
+  const [resolvedFacilityName, setResolvedFacilityName] = useState<string | null>(facilityName ?? null);
   const [entitlement, setEntitlement] = useState<BuyerAvailabilityEntitlement | null>(null);
   const selectedTargetFacilityIds =
     scope === "facility" ? targetFacilityIds.slice(0, 1) : targetFacilityIds;
@@ -83,13 +90,22 @@ export function DemandRequestPanel({
       const res = await list({});
       setRequests(res.requests);
       setResponses(res.responses);
+      const resumedRequest = resumeRequestId
+        ? res.requests.find((request) => request.id === resumeRequestId)
+        : undefined;
+      const resumedResponse = resumeResponseId
+        ? res.responses.find((response) => response.id === resumeResponseId)
+        : undefined;
+      if (resumedRequest) setTerm(resumedRequest.search_term);
+      if (resumedResponse?.facility_name) setResolvedFacilityName(resumedResponse.facility_name);
+      if (resumeTarget) setStep(2);
       setLoadError(false);
     } catch {
       setRequests([]);
       setResponses([]);
       setLoadError(true);
     }
-  }, [list, user]);
+  }, [list, resumeRequestId, resumeResponseId, resumeTarget, user]);
 
   useEffect(() => {
     if (open) void refresh();
@@ -103,8 +119,17 @@ export function DemandRequestPanel({
   }, [getEntitlement, mode, open, user]);
 
   useEffect(() => {
-    if (initialTerm) setTerm(initialTerm);
-  }, [initialTerm]);
+    if (initialTerm && !resumeTarget) setTerm(initialTerm);
+  }, [initialTerm, resumeTarget]);
+
+  useEffect(() => {
+    if (facilityName) setResolvedFacilityName(facilityName);
+  }, [facilityName]);
+
+  useEffect(() => {
+    setResuming(resumeTarget);
+    if (resumeTarget) setStep(2);
+  }, [resumeTarget]);
 
   useEffect(() => {
     setScope(deriveAvailabilityPanelScope(mode));
@@ -216,8 +241,14 @@ export function DemandRequestPanel({
     void broadcast();
   }
 
-  const comparisonReady = requests.length > 0;
+  const activeRequestId =
+    resumeRequestId ?? responses.find((response) => response.id === resumeResponseId)?.request_id;
+  const requestsForDisplay = activeRequestId
+    ? requests.filter((request) => request.id === activeRequestId)
+    : requests;
+  const comparisonReady = resuming || requests.length > 0;
   function resetFlow() {
+    setResuming(false);
     setRequests([]);
     setResponses([]);
     setStep(0);
@@ -260,8 +291,20 @@ export function DemandRequestPanel({
     <OmniFlowSheet
       open={open}
       onOpenChange={onOpenChange}
-      eyebrow={selectedMode === "manual" ? "Disponibilité · flow buyer" : "Demande groupée"}
-      title={selectedMode === "manual" ? "Vérifier la disponibilité" : "Demande groupée"}
+      eyebrow={
+        resuming
+          ? "Réponse vendeur · flow buyer"
+          : selectedMode === "manual"
+            ? "Disponibilité · flow buyer"
+            : "Demande groupée"
+      }
+      title={
+        resuming
+          ? "Reprendre votre demande"
+          : selectedMode === "manual"
+            ? "Vérifier la disponibilité"
+            : "Demande groupée"
+      }
       progress={
         <div>
           <div className="mb-2 text-right text-xs font-semibold text-muted-foreground">
@@ -274,9 +317,11 @@ export function DemandRequestPanel({
     >
       <div className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          {selectedMode === "manual"
-            ? `Vérifiez la disponibilité directement auprès de ${facilityName ?? "ce commerce"}.`
-            : "Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux qui l'ont vous répondent avec leur prix."}
+          {resuming
+            ? `Une réponse est disponible pour ${resolvedFacilityName ?? "votre demande"}. Choisissez si vous souhaitez poursuivre l'achat ici.`
+            : selectedMode === "manual"
+              ? `Vérifiez la disponibilité directement auprès ${resolvedFacilityName ?? "de ce commerce"}.`
+              : "Vous ne trouvez pas ? Diffusez votre besoin à tous les commerçants autour de vous : ceux qui l'ont vous répondent avec leur prix."}
         </p>
 
         {!user && (
@@ -407,7 +452,7 @@ export function DemandRequestPanel({
         {user &&
           step === 2 &&
           !loadError &&
-          requests.map((r) => {
+          requestsForDisplay.map((r) => {
             const answers = responses
               .filter((a) => a.request_id === r.id)
               .slice()
@@ -417,6 +462,9 @@ export function DemandRequestPanel({
                   (a.price ?? Number.POSITIVE_INFINITY) - (b.price ?? Number.POSITIVE_INFINITY),
               );
             const bestId =
+              (resumeResponseId && answers.some((answer) => answer.id === resumeResponseId)
+                ? resumeResponseId
+                : undefined) ??
               answers.find((a) => a.available || a.kind === "partial")?.id ??
               answers[0]?.id ??
               null;
