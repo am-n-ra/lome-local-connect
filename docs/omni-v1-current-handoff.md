@@ -49,10 +49,16 @@ The next exact action is to run the repository’s typecheck, focused unit tests
   - Enforce Pro-only bulk availability server-side.
   - Allow a bounded 240-target visible result set.
   - Remove Free bulk credit decrement for the active contract.
+  - Expose a read-only buyer entitlement endpoint for truthful plan-aware UI.
+- `src/components/omni/DemandRequestPanel.tsx`
+  - Disable and explain visible-result bulk for Free users.
+  - Keep the single-facility path available and preserve the three-step flow.
+- `docs/omni-v1-slice-a-browser-findings.md`
+  - Record local MapLibre, search reveal, result-card, unclaimed-facility, close/back and availability-sheet observations.
 
 ## Proof status
 
-The focused Slice A contract tests passed, the complete suite passed with 62 tests across 10 files, the production build passed, and the client-boundary check passed. Targeted lint has no errors and retains two pre-existing Fast Refresh warnings in `SearchDock.tsx`; repository-wide lint did not complete within the bounded timeout. Browser, mobile, staging E2E and production observations have not been run in this handoff. No production-readiness claim is allowed. Slice A remains `partial` until those proofs are recorded.
+The focused Slice A contract tests passed, the complete suite passed with 62 tests across 10 files, the production build passed, and the client-boundary check passed after the Pro entitlement UI/server correction. Targeted lint has no errors and retains two pre-existing Fast Refresh warnings in `SearchDock.tsx`; repository-wide lint did not complete within the bounded timeout. Local browser observations have been recorded in `docs/omni-v1-slice-a-browser-findings.md`; mobile, staging E2E and production observations have not been run in this handoff. No production-readiness claim is allowed. Slice A remains `partial` until those proofs are recorded.
 
 ## Risks and blockers
 

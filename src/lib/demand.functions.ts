@@ -229,6 +229,27 @@ export const closeDemandRequest = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export type BuyerAvailabilityEntitlement = {
+  plan: "free" | "pro";
+  bulkAllowed: boolean;
+  maxTargets: number;
+};
+
+export const getBuyerAvailabilityEntitlement = createServerFn({ method: "GET" })
+  .middleware([requireAuth])
+  .handler(async ({ context }) => {
+    const plan = await queryOne<{ plan: string }>(
+      "SELECT plan FROM public.user_plans WHERE user_id = $1",
+      [context.userId],
+    );
+    const isPro = plan?.plan === "pro";
+    return {
+      plan: isPro ? "pro" : "free",
+      bulkAllowed: isPro,
+      maxTargets: MAX_AVAILABILITY_TARGETS,
+    } satisfies BuyerAvailabilityEntitlement;
+  });
+
 /** Seller side: open requests near one of my facilities. */
 export const listDemandForFacility = createServerFn({ method: "GET" })
   .middleware([requireAuth])
