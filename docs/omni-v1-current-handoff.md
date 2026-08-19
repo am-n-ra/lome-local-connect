@@ -62,11 +62,11 @@ The next exact action is to run the repository’s browser/mobile certification 
 
 ## Proof status
 
-The focused Slice A contract tests passed, the complete suite passed with 62 tests across 10 files, the production build passed, and the client-boundary check passed after the Pro entitlement UI/server correction. Targeted lint has no errors and retains two pre-existing Fast Refresh warnings in `SearchDock.tsx`; repository-wide lint did not complete within the bounded timeout. Local browser observations have been recorded in `docs/omni-v1-slice-a-browser-findings.md`; mobile, staging E2E and production observations have not been run in this handoff. No production-readiness claim is allowed. Slice A remains `partial` until those proofs are recorded.
+The focused Slice A contract tests passed, the complete suite passed with 62 tests across 10 files, the production build passed, and the client-boundary check passed after the Pro entitlement UI/server correction. Targeted lint has no errors and retains two pre-existing Fast Refresh warnings in `SearchDock.tsx`; repository-wide lint did not complete within the bounded timeout. Local buyer browser observations and the seller-role authorization blocker are recorded in `docs/omni-v1-slice-a-browser-findings.md`; mobile, two-role staging E2E and production observations have not been run in this handoff. No production-readiness claim is allowed. Slice A remains `partial` until those proofs are recorded.
 
 ## Risks and blockers
 
-The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Before advancing, verify the transaction flow against a staging fixture with two authenticated roles, then certify mobile camera/payment states. Keep production mutations and provider operations separate from certification.
+The removed `confirm_offer` action has no remaining source references, the new imports compile, the complete suite and build pass, the demand function still writes the existing `credit_cost` column while enforcing Pro-only bulk, and the focused transaction contract tests/build pass after the QR-state correction. Before advancing, obtain a staging fixture with distinct buyer and seller roles, verify the transaction flow against both sessions, then certify mobile camera/payment states. The current buyer session cannot authorize `/vendeur`. Keep production mutations and provider operations separate from certification.
 
 ## Resume protocol
 

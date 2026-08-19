@@ -36,3 +36,7 @@ After the entitlement UI/server commit, the local comparison sheet closed cleanl
 ## Entitlement fixture limitation
 
 The current authenticated browser session keeps an existing comparison request in the availability panel. The visible `Nouvelle vérification` control did not reset the server-backed comparison state immediately in this read-only session, so the Free/Pro explanatory copy at step 2 could not be isolated without a clean test account or fixture. This is a certification limitation, not evidence that the server gate is absent; the unit/build proof and source contract are already recorded.
+
+## Seller browser audit finding
+
+The local authenticated buyer session does not authorize the seller shell. `/vendeur` renders `Espace vendeur indisponible — UNAUTHORIZED` with only `Réessayer`. This prevents a valid seller visual audit in the current browser session and confirms that seller certification requires a separate seller-role fixture or authenticated session. Do not infer seller visual readiness from static source inspection alone.
