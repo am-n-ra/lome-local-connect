@@ -71,7 +71,11 @@ export function deriveTransactionUiState(
     return { ...base, currentStep: 5 };
   }
 
-  if (qrActive || status === "qr_verified") {
+  if (status === "qr_verified") {
+    return { ...base, currentStep: 2, canChoosePayment: !paymentPreference };
+  }
+
+  if (qrActive) {
     return { ...base, currentStep: 2 };
   }
 

@@ -148,3 +148,11 @@ Deployment `dpl_7ywMAeg4pViCn7q5rSDJgQE2xo3h` (`READY`, production, commit `7154
 ## Purchase intent and QR generated
 
 Selecting `Je veux payer ici` created the purchase intent with toast `Intention d'achat créée. Référence d6a19213.` and opened the transaction room for `Épicerie Adidogomé Plus`, total `3 200 FCFA`. The room showed `QR en attente de scan`, timeline states `Intention créée → Offre confirmée → QR généré`, an actual QR image, fallback code `MFD6DQXE`, and validity until `14:41`.
+
+## QR verification idempotency proof
+
+The first live seller validation on the pre-fix deployment transitioned the transaction to `qr_verified` but left the scanner spinner pending; the authoritative database state showed two `seller_verified` events, confirming the duplicate-event defect under repeated/slow submission. After commit `eb8c4ac` deployed READY, replaying `MFD6DQXE` on the same already-verified transaction returned the existing verified room state and the seller UI showed `QR vérifié` with payment/fulfillment controls. The post-replay database check remained `qr_verified | seller_verified_events=2 | total_events=5`, proving the hardened path added no third audit event or notification.
+
+## QR-to-payment entry gap and fix
+
+After seller QR verification, the buyer room correctly showed `Vendeur vérifié` and the next-action label `Choisir le mode de paiement`, but the four external payment buttons were absent because `deriveTransactionUiState` only enabled `canChoosePayment` at `payment_pending`, while the server transition starts from `qr_verified`. The bounded fix enables payment choice at `qr_verified` and keeps `payment_pending` responsible for the subsequent `J’ai payé` action. Local proof: focused transaction-state tests passed `8/8`, full suite passed `64/64`, production build passed, and client-boundary checks passed.

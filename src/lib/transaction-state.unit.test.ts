@@ -35,6 +35,19 @@ describe("deriveTransactionUiState", () => {
     });
   });
 
+  it("lets the buyer choose external payment after seller QR verification", () => {
+    expect(deriveTransactionUiState("qr_verified", false, null)).toMatchObject({
+      currentStep: 2,
+      canChoosePayment: true,
+      canDeclarePayment: false,
+    });
+    expect(deriveTransactionUiState("qr_verified", false, "cash_on_delivery")).toMatchObject({
+      currentStep: 2,
+      canChoosePayment: false,
+      canDeclarePayment: false,
+    });
+  });
+
   it("requires a payment choice before the buyer can declare payment", () => {
     expect(deriveTransactionUiState("payment_pending", false, null)).toMatchObject({
       currentStep: 3,
