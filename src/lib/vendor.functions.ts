@@ -13,6 +13,15 @@ import {
   listWalletBalances,
 } from "./wallet.server";
 
+export type VendorCompany = {
+  id: string;
+  owner_id: string;
+  name: string;
+  legal_name: string | null;
+  country_code: string | null;
+  status: string;
+};
+
 export type VendorFacility = {
   id: string;
   name: string;
@@ -106,6 +115,7 @@ export type DemandSignal = { search_term: string; hits: number; last_seen: strin
 
 export type VendorShell = {
   facilities: VendorFacility[];
+  companies: VendorCompany[];
   subscription: VendorSubscription | null;
   balances: VendorBalance[];
   unlock: VendorUnlock | null;
@@ -296,9 +306,15 @@ export const getVendorShell = createServerFn({ method: "GET" })
        WHERE f.owner_id = $1 ORDER BY f.created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );
+    const companies = await query<VendorCompany>(
+      `SELECT id, owner_id, name, legal_name, country_code, status
+       FROM public.companies WHERE owner_id = $1 ORDER BY created_at ASC`,
+      [context.userId],
+    );
     if (facilities.length === 0) {
       return {
         facilities: [],
+        companies,
         subscription: null,
         balances: [],
         unlock: null,
@@ -329,6 +345,7 @@ export const getVendorShell = createServerFn({ method: "GET" })
     const walletBalance = balances.find((row) => row.bucket === "wallet")?.amount ?? 0;
     return {
       facilities,
+      companies,
       subscription: { ...subscription, wallet_balance: walletBalance },
       balances,
       unlock,
@@ -489,6 +506,36 @@ export const createFacility = createServerFn({ method: "POST" })
       claimed: Boolean(data.claimFacilityId),
     });
     return facility!;
+  });
+
+export const updateCompany = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        companyId: z.string().uuid(),
+        name: z.string().min(2).max(120),
+        legalName: z.string().max(160).nullable().optional(),
+        countryCode: z.string().max(3).nullable().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const updated = await queryOne<{ id: string }>(
+      `UPDATE public.companies
+       SET name = $1, legal_name = $2, country_code = $3, updated_at = now()
+       WHERE id = $4 AND owner_id = $5
+       RETURNING id`,
+      [
+        data.name.trim(),
+        data.legalName?.trim() || null,
+        data.countryCode?.trim().toUpperCase() || null,
+        data.companyId,
+        context.userId,
+      ],
+    );
+    if (!updated) throw new Error("Compagnie introuvable ou non autorisée.");
+    return { ok: true };
   });
 
 export const updateFacility = createServerFn({ method: "POST" })

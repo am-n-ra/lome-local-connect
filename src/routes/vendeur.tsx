@@ -56,9 +56,11 @@ import {
   getVendorProducts,
   getVendorRequests,
   getVendorShell,
+  updateCompany,
   updateFacility,
   updateMobilePosition,
   upsertProduct,
+  type VendorCompany,
   type VendorCoupon,
   type VendorFacility,
   type VendorProduct,
@@ -98,6 +100,7 @@ export const Route = createFileRoute("/vendeur")({
 
 type Dashboard = {
   facilities: VendorFacility[];
+  companies: VendorCompany[];
   subscription: VendorSubscription | null;
   products: VendorProduct[];
   coupons: VendorCoupon[];
@@ -137,6 +140,10 @@ function VendeurPage() {
   const [discoveryMinutes, setDiscoveryMinutes] = useState("120");
 
   const [saving, setSaving] = useState(false);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyLegalName, setCompanyLegalName] = useState("");
+  const [companyCountry, setCompanyCountry] = useState("");
 
   const [topUpAmount, setTopUpAmount] = useState("5000");
   const [topUpBusy, setTopUpBusy] = useState(false);
@@ -165,6 +172,7 @@ function VendeurPage() {
   const saveProduct = useServerFn(upsertProduct);
   const removeProductFn = useServerFn(deleteProduct);
   const confirmAll = useServerFn(confirmStock);
+  const patchCompany = useServerFn(updateCompany);
   const patchFacility = useServerFn(updateFacility);
   const moveMobile = useServerFn(updateMobilePosition);
   const confirmDeposit = useServerFn(confirmWalletDeposit);
@@ -201,6 +209,7 @@ function VendeurPage() {
         0;
       setData({
         facilities: shell.facilities,
+        companies: shell.companies,
         subscription: shell.subscription,
         products: [],
         coupons: [],
@@ -252,10 +261,45 @@ function VendeurPage() {
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
 
+  const company =
+    data?.companies.find((item) => item.id === facility?.company_id) ?? data?.companies[0] ?? null;
+
   useEffect(() => {
     if (!facility) return;
     setHours(facility.operating_hours ?? "");
   }, [facility?.id, facility?.operating_hours]);
+
+  useEffect(() => {
+    if (!company) return;
+    setCompanyName(company.name);
+    setCompanyLegalName(company.legal_name ?? "");
+    setCompanyCountry(company.country_code ?? "");
+  }, [company?.id, company?.name, company?.legal_name, company?.country_code]);
+
+  async function saveCompany() {
+    if (!company) return;
+    if (companyName.trim().length < 2) {
+      toast.error("Indiquez un nom de compagnie valide.");
+      return;
+    }
+    setCompanySaving(true);
+    try {
+      await patchCompany({
+        data: {
+          companyId: company.id,
+          name: companyName.trim(),
+          legalName: companyLegalName.trim() || null,
+          countryCode: companyCountry.trim().toUpperCase() || null,
+        },
+      });
+      await refresh();
+      toast.success("Identité de la compagnie enregistrée.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Compagnie non enregistrée.");
+    } finally {
+      setCompanySaving(false);
+    }
+  }
 
   async function startTopUp() {
     const amount = Number(topUpAmount);
@@ -843,14 +887,60 @@ function VendeurPage() {
                         opérationnelles quotidiennes.
                       </p>
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <Button type="button" variant="outline" onClick={() => setActiveTab("solde")}>
-                        Omni Wallet
-                      </Button>
-                      <Button type="button" variant="outline" onClick={() => setActiveTab("coupons")}>
-                        Coupons{data?.coupons.length ? ` · ${data.coupons.length}` : ""}
-                      </Button>
-                    </div>
+                                            <div className="grid gap-2 sm:grid-cols-2">
+                          <Button type="button" variant="outline" onClick={() => setActiveTab("solde")}>
+                            Omni Wallet
+                          </Button>
+                          <Button type="button" variant="outline" onClick={() => setActiveTab("coupons")}>
+                            Coupons{data?.coupons.length ? ` · ${data.coupons.length}` : ""}
+                          </Button>
+                        </div>
+                        {company ? (
+                          <div className="space-y-3 rounded-2xl border border-border/70 bg-background/55 p-3">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                                Identité compagnie
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                Cette identité regroupe vos facilities et reste distincte du portefeuille Omni.
+                              </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="vendor-company-name">Nom affiché</Label>
+                                <Input
+                                  id="vendor-company-name"
+                                  value={companyName}
+                                  onChange={(event) => setCompanyName(event.target.value)}
+                                  maxLength={120}
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="vendor-company-country">Pays</Label>
+                                <Input
+                                  id="vendor-company-country"
+                                  value={companyCountry}
+                                  onChange={(event) => setCompanyCountry(event.target.value.toUpperCase())}
+                                  maxLength={3}
+                                  placeholder="TG"
+                                />
+                              </div>
+                              <div className="space-y-1.5 sm:col-span-2">
+                                <Label htmlFor="vendor-company-legal-name">Nom légal (facultatif)</Label>
+                                <Input
+                                  id="vendor-company-legal-name"
+                                  value={companyLegalName}
+                                  onChange={(event) => setCompanyLegalName(event.target.value)}
+                                  maxLength={160}
+                                />
+                              </div>
+                            </div>
+                            <Button type="button" variant="outline" onClick={() => void saveCompany()} disabled={companySaving}>
+                              {companySaving ? "Enregistrement…" : "Enregistrer l’identité"}
+                            </Button>
+                          </div>
+                        ) : null}
+
                   </section>
                 </TabsContent>
 
