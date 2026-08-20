@@ -566,3 +566,51 @@
     padding-inline: 0.55rem;
   }
 }
+
+
+.omni-clean-flow-sheet,
+.omni-clean-transaction-room {
+  border: 1px solid rgba(255, 255, 255, 0.84);
+  background: color-mix(in oklab, var(--omni-paper-bright) 95%, transparent);
+  box-shadow: 0 28px 90px -42px rgba(44, 31, 21, 0.58);
+  backdrop-filter: blur(24px) saturate(145%);
+}
+
+.omni-clean-field {
+  display: block;
+  min-height: 3rem;
+  width: 100%;
+  border: 1px solid rgba(30, 28, 26, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.74);
+  padding: 0.75rem 0.9rem;
+  color: var(--omni-ink);
+  font-size: 1rem;
+  font-weight: 650;
+  outline: none;
+}
+
+.omni-clean-field:focus {
+  border-color: color-mix(in oklab, var(--omni-orange) 55%, white);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--omni-orange) 18%, transparent);
+}
+
+.omni-clean-transaction-room .clean-transaction-card > div {
+  border: 0;
+  border-radius: 1.5rem;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+
+.omni-clean-transaction-room [data-omni-transaction-stages="true"] {
+  border: 1px solid rgba(30, 28, 26, 0.06);
+  background: var(--omni-paper);
+}
+
+@media (max-width: 639px) {
+  .omni-clean-flow-sheet,
+  .omni-clean-transaction-room {
+    max-height: 94dvh;
+  }
+}

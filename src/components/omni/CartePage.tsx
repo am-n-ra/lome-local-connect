@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { CleanAvailabilitySheet } from "@/components/omni-clean/CleanAvailabilitySheet";
 import { CleanBuyerMapStage } from "@/components/omni-clean/CleanBuyerMapStage";
+import { CleanTransactionRoom } from "@/components/omni-clean/CleanTransactionRoom";
 import { FacilitySheet } from "@/components/omni/FacilitySheet";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
@@ -862,20 +863,10 @@ export function CartePage({
           }}
         />
         <OrdersPanel open={ordersOpen} onOpenChange={setOrdersOpen} />
-        <ChatPanel
+        <CleanTransactionRoom
           open={chatOpen}
           onOpenChange={setChatOpen}
-          facilityId={transactionChat?.facilityId}
-          facilityName={transactionChat?.facilityName}
-          transactionContext={
-            transactionChat
-              ? {
-                  transactionId: transactionChat.transactionId,
-                  status: "Intention créée",
-                  amountLabel: formatMoney(transactionChat.amount),
-                }
-              : undefined
-          }
+          context={transactionChat}
         />
       </>
     );
