@@ -7,6 +7,7 @@ import { formatDateFr, formatFcfa } from "@/lib/omni";
 import { useMarket } from "@/lib/market";
 import type { DemandSignal } from "@/lib/vendor.functions";
 import {
+  correctAutoResponse,
   listDemandForFacility,
   respondToDemand,
   type VendorDemandRequest,
@@ -26,12 +27,14 @@ export function DemandPanel({
   onLiveCountChange?: (count: number) => void;
 }) {
   const { market } = useMarket();
+  const correct = useServerFn(correctAutoResponse);
   const list = useServerFn(listDemandForFacility);
   const respond = useServerFn(respondToDemand);
   const [live, setLive] = useState<VendorDemandRequest[]>([]);
   const [prices, setPrices] = useState<Record<string, string>>({});
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [correctionBusy, setCorrectionBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -46,6 +49,35 @@ export function DemandPanel({
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  async function correctAnswer(
+    request: VendorDemandRequest,
+    kind: "available" | "partial" | "unavailable",
+  ) {
+    if (!request.response_id) return;
+    setCorrectionBusy(request.response_id);
+    try {
+      const rawPrice = prices[request.id];
+      const rawQuantity = quantities[request.id];
+      const price = rawPrice?.trim() ? Number(rawPrice) : request.response_price;
+      const quantity = rawQuantity?.trim() ? Number(rawQuantity) : request.response_quantity;
+      await correct({
+        data: {
+          responseId: request.response_id,
+          kind,
+          price: kind === "unavailable" ? null : Number.isFinite(price) ? Math.round(price) : null,
+          quantity:
+            kind === "unavailable" ? null : Number.isFinite(quantity) ? Math.max(0, Math.round(quantity)) : null,
+        },
+      });
+      toast.success("Réponse automatique corrigée et acheteur notifié.");
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Correction impossible.");
+    } finally {
+      setCorrectionBusy(null);
+    }
+  }
 
   async function answer(requestId: string, kind: "available" | "partial" | "unavailable") {
     setBusy(requestId);
@@ -163,7 +195,40 @@ export function DemandPanel({
                   </Button>
                 )}
                 {r.answered ? (
-                  <p className="mt-2 text-sm text-primary">Vous avez déjà répondu.</p>
+                  <div className="mt-3 space-y-2 rounded-xl border border-primary/20 bg-primary/8 p-3">
+                    <p className="text-sm font-semibold text-primary">
+                      {r.response_auto
+                        ? "Réponse automatique envoyée depuis votre stock Omni."
+                        : "Vous avez déjà répondu à cette demande."}
+                    </p>
+                    {r.response_auto && !r.response_corrected_at && r.response_id ? (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-10"
+                          disabled={correctionBusy === r.response_id}
+                          onClick={() => void correctAnswer(r, "partial")}
+                        >
+                          Corriger en partiel
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-10 text-destructive"
+                          disabled={correctionBusy === r.response_id}
+                          onClick={() => void correctAnswer(r, "unavailable")}
+                        >
+                          Corriger en indisponible
+                        </Button>
+                      </div>
+                    ) : null}
+                    {r.response_corrected_at ? (
+                      <p className="text-xs text-muted-foreground">Correction enregistrée et notifiée.</p>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Input

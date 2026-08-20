@@ -51,6 +51,14 @@ export type VendorDemandRequest = {
   matched_product_price: number | null;
   matched_product_quantity: number | null;
   matched_product_photo_url: string | null;
+  response_id: string | null;
+  response_kind: "available" | "partial" | "unavailable" | string | null;
+  response_available: boolean | null;
+  response_price: number | null;
+  response_quantity: number | null;
+  response_message: string | null;
+  response_auto: boolean;
+  response_corrected_at: string | null;
 };
 
 /** Mode B — one search broadcast to every nearby seller. */
@@ -228,10 +236,12 @@ export const correctAutoResponse = createServerFn({ method: "POST" })
        FROM public.demand_responses r
        JOIN public.facilities f ON f.id = r.facility_id
        JOIN public.demand_requests d ON d.id = r.request_id
-       WHERE r.id = $1 AND f.owner_id = $2`,
+       WHERE r.id = $1 AND f.owner_id = $2 AND r.auto = true AND r.corrected_at IS NULL`,
       [data.responseId, context.userId],
     );
-    if (!owned) throw new Error("Cette réponse ne vous appartient pas.");
+    if (!owned) {
+      throw new Error("Seules les réponses automatiques encore non corrigées peuvent être modifiées.");
+    }
 
     await query(
       `UPDATE public.demand_responses
@@ -350,12 +360,19 @@ export const listDemandForFacility = createServerFn({ method: "GET" })
               match.price AS matched_product_price,
               match.quantity_available AS matched_product_quantity,
               match.photo_url AS matched_product_photo_url,
-              EXISTS (
-                SELECT 1 FROM public.demand_responses r
-                WHERE r.request_id = d.id AND r.facility_id = $1
-              ) AS answered
+              r.id AS response_id,
+              r.kind AS response_kind,
+              r.available AS response_available,
+              r.price AS response_price,
+              r.quantity AS response_quantity,
+              r.message AS response_message,
+              COALESCE(r.auto, false) AS response_auto,
+              r.corrected_at AS response_corrected_at,
+              r.id IS NOT NULL AS answered
        FROM public.demand_requests d
        JOIN public.profiles p ON p.id = d.buyer_id
+       LEFT JOIN public.demand_responses r
+         ON r.request_id = d.id AND r.facility_id = $1
        LEFT JOIN LATERAL (
          SELECT pr.id, pr.name, pr.price, pr.quantity_available, pr.photo_url
          FROM public.products pr
