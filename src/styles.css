@@ -295,3 +295,274 @@
     max-width: min(calc(100vw - 1.5rem), 34rem);
   }
 }
+
+
+/* Omni clean-base UI — approved Gate 2 visual direction. */
+:root {
+  --omni-paper: #f4eee7;
+  --omni-paper-bright: #fffdfb;
+  --omni-ink: #1e1c1a;
+  --omni-ink-muted: #716a63;
+  --omni-orange: #f36a21;
+  --omni-orange-deep: #c94713;
+  --omni-orange-wash: #fff0e7;
+  --omni-ocean-soft: #afc9d1;
+  --omni-success: #2f8067;
+  --omni-warning: #b26a1b;
+  --omni-danger: #b94a44;
+  --omni-shadow-float: 0 20px 52px -28px rgba(44, 31, 21, 0.42);
+  --omni-shadow-sheet: 0 -18px 58px -34px rgba(44, 31, 21, 0.46);
+}
+
+.omni-clean-stage {
+  font-family: var(--font-sans);
+}
+
+.omni-clean-chip,
+.omni-clean-context-chip,
+.omni-clean-secondary-button,
+.omni-clean-primary-button,
+.omni-clean-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  color: var(--omni-ink);
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.omni-clean-chip,
+.omni-clean-context-chip {
+  background: color-mix(in oklab, var(--omni-paper-bright) 82%, transparent);
+  box-shadow: 0 10px 24px -18px rgba(44, 31, 21, 0.44);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.omni-clean-chip {
+  min-height: 2.75rem;
+}
+
+.omni-clean-context-chip {
+  min-height: 2.5rem;
+  border-radius: 999px;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.omni-clean-context-chip:disabled {
+  cursor: default;
+  opacity: 0.74;
+}
+
+.omni-clean-context-chip-active {
+  border-color: color-mix(in oklab, var(--omni-orange) 36%, white);
+  color: var(--omni-orange-deep);
+}
+
+.omni-clean-secondary-button,
+.omni-clean-primary-button {
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.omni-clean-secondary-button {
+  background: color-mix(in oklab, var(--omni-paper-bright) 86%, transparent);
+  box-shadow: 0 12px 28px -22px rgba(44, 31, 21, 0.5);
+}
+
+.omni-clean-primary-button {
+  border-color: transparent;
+  background: var(--omni-orange);
+  color: white;
+  box-shadow: 0 14px 28px -16px var(--omni-orange-deep);
+}
+
+.omni-clean-primary-button:hover,
+.omni-clean-primary-button:focus-visible {
+  background: var(--omni-orange-deep);
+}
+
+.omni-clean-secondary-button:hover,
+.omni-clean-secondary-button:focus-visible,
+.omni-clean-chip:hover,
+.omni-clean-context-chip:hover,
+.omni-clean-icon-button:hover {
+  border-color: color-mix(in oklab, var(--omni-orange) 36%, white);
+  background: var(--omni-paper-bright);
+}
+
+.omni-clean-icon-button {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--omni-paper-bright) 86%, transparent);
+  box-shadow: 0 12px 26px -20px rgba(44, 31, 21, 0.5);
+  backdrop-filter: blur(18px) saturate(145%);
+}
+
+.omni-clean-result-card,
+.omni-clean-selected-card {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background: color-mix(in oklab, var(--omni-paper-bright) 91%, transparent);
+  box-shadow: var(--omni-shadow-float);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.omni-clean-result-card {
+  min-height: 10rem;
+  border-radius: 1.5rem;
+  padding: 1rem;
+  transition:
+    transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
+    box-shadow 180ms ease,
+    border-color 180ms ease;
+}
+
+.omni-clean-result-card:hover,
+.omni-clean-result-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklab, var(--omni-orange) 42%, white);
+  box-shadow: 0 22px 48px -28px rgba(44, 31, 21, 0.55);
+}
+
+.omni-clean-selected-card {
+  border-radius: 1.75rem;
+  padding: 1.25rem;
+}
+
+@media (max-width: 639px) {
+  .omni-clean-result-card {
+    min-height: 9.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omni-clean-result-card,
+  .omni-clean-chip,
+  .omni-clean-context-chip,
+  .omni-clean-secondary-button,
+  .omni-clean-primary-button,
+  .omni-clean-icon-button {
+    transition: none;
+  }
+}
+
+
+.omni-clean-seller-panel {
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 1.75rem;
+  background: color-mix(in oklab, var(--omni-paper-bright) 91%, transparent);
+  padding: 1rem;
+  box-shadow: var(--omni-shadow-float);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.omni-clean-seller-nav {
+  display: flex;
+  max-width: 100%;
+  gap: 0.35rem;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: 1.25rem;
+  padding: 0.35rem;
+  background: color-mix(in oklab, var(--omni-paper-bright) 88%, transparent);
+  box-shadow: var(--omni-shadow-float);
+  backdrop-filter: blur(22px) saturate(145%);
+}
+
+.omni-clean-seller-nav-item {
+  display: inline-flex;
+  min-height: 2.9rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 0.95rem;
+  padding: 0.65rem 0.8rem;
+  color: var(--omni-ink-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.omni-clean-seller-nav-item:hover,
+.omni-clean-seller-nav-item:focus-visible,
+.omni-clean-seller-nav-item-active {
+  background: var(--omni-orange-wash);
+  color: var(--omni-orange-deep);
+}
+
+.omni-clean-seller-nav-item b {
+  display: inline-flex;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--omni-orange);
+  color: white;
+  font-size: 0.65rem;
+}
+
+.omni-clean-state-badge {
+  display: inline-flex;
+  min-height: 1.6rem;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--omni-orange-wash);
+  padding: 0.3rem 0.6rem;
+  color: var(--omni-orange-deep);
+  font-size: 0.65rem;
+  font-weight: 850;
+}
+
+.omni-clean-toggle {
+  position: relative;
+  display: inline-flex;
+  width: 2.75rem;
+  height: 1.65rem;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(30, 28, 26, 0.17);
+  padding: 0.2rem;
+  transition: background-color 160ms ease;
+}
+
+.omni-clean-toggle span {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 3px 10px -5px rgba(30, 28, 26, 0.8);
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.omni-clean-toggle-on {
+  background: var(--omni-success);
+}
+
+.omni-clean-toggle-on span {
+  transform: translateX(1.1rem);
+}
+
+@media (max-width: 639px) {
+  .omni-clean-seller-panel {
+    padding: 0.85rem;
+  }
+
+  .omni-clean-seller-nav-item {
+    min-width: 4.4rem;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-inline: 0.55rem;
+  }
+}

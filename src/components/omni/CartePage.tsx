@@ -8,6 +8,8 @@ import { saveBuyerDiscoveryLocation } from "@/lib/location.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
+import { CleanAvailabilitySheet } from "@/components/omni-clean/CleanAvailabilitySheet";
+import { CleanBuyerMapStage } from "@/components/omni-clean/CleanBuyerMapStage";
 import { FacilitySheet } from "@/components/omni/FacilitySheet";
 import { CartPanel } from "@/components/omni/CartPanel";
 import { WishlistPanel } from "@/components/omni/WishlistPanel";
@@ -52,12 +54,14 @@ type CartePageProps = {
   initialTransactionId?: string;
   initialDemandRequestId?: string;
   initialDemandResponseId?: string;
+  cleanUi?: boolean;
 };
 
 export function CartePage({
   initialTransactionId,
   initialDemandRequestId,
   initialDemandResponseId,
+  cleanUi = false,
 }: CartePageProps = {}) {
   const navigate = useNavigate();
   const { market, formatMoney } = useMarket();
@@ -797,6 +801,84 @@ export function CartePage({
     } finally {
       setRoutingBusy(false);
     }
+  }
+
+  if (cleanUi) {
+    return (
+      <>
+        <CleanBuyerMapStage
+          discoveryFacilities={discoveryResults}
+          results={results}
+          selected={selected}
+          userPosition={preciseUserPos}
+          approximatePosition={approximateUserPos}
+          marketCenter={usableOrigin}
+          marketZoom={market?.default_zoom ?? 12.2}
+          revealKey={searchRunKey}
+          fitPoints={fitPoints}
+          routeCoords={routeCoords}
+          query={query}
+          submittedQuery={submittedQuery}
+          hasActiveSearch={hasActiveSearch}
+          locationStatus={locationStatus}
+          browserPermission={browserPermission}
+          coverageStatus={coverageStatus}
+          activeTransactionCount={activeTransactionCount}
+          revealRunning={revealRunning}
+          isAuthenticated={Boolean(user)}
+          onQueryChange={setQuery}
+          onSearchSubmit={handleSearchSubmit}
+          onSelect={(facility) => {
+            setSelected(facility);
+            setRouteCoords(null);
+            setSteps([]);
+          }}
+          onClearSelection={() => setSelected(null)}
+          onCheckAvailability={openManualAvailability}
+          onOpenBulkAvailability={() => openDemandRequest()}
+          onOpenActivity={() => setOrdersOpen(true)}
+          onRequestLocation={requestLocation}
+          onUseMarketFallback={useMarketFallback}
+          onRetryCoverage={retryCoverage}
+          onViewportChange={setVisibleViewport}
+          onRevealStateChange={setRevealRunning}
+        />
+        <CleanAvailabilitySheet
+          open={demandOpen}
+          onOpenChange={setDemandOpen}
+          userPos={demandUserPos}
+          initialTerm={query}
+          targetFacilityIds={demandTargetFacilityIds}
+          mode={demandMode}
+          facilityName={demandFacilityName}
+          initialQuantity={quantity}
+          resumeRequestId={initialDemandRequestId}
+          resumeResponseId={initialDemandResponseId}
+          onTransactionCreated={({ transactionId, facilityId, facilityName, amount }) => {
+            setTransactionChat({ transactionId, facilityId, facilityName, amount });
+            setActiveTransactionCount((count) => Math.max(1, count + 1));
+            setDemandOpen(false);
+            setChatOpen(true);
+          }}
+        />
+        <OrdersPanel open={ordersOpen} onOpenChange={setOrdersOpen} />
+        <ChatPanel
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          facilityId={transactionChat?.facilityId}
+          facilityName={transactionChat?.facilityName}
+          transactionContext={
+            transactionChat
+              ? {
+                  transactionId: transactionChat.transactionId,
+                  status: "Intention créée",
+                  amountLabel: formatMoney(transactionChat.amount),
+                }
+              : undefined
+          }
+        />
+      </>
+    );
   }
 
   return (

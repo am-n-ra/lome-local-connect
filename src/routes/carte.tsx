@@ -27,6 +27,7 @@ function CarteRoute() {
   const { transactionId, requestId, responseId } = Route.useSearch();
   return (
     <CartePage
+      cleanUi
       {...(transactionId ? { initialTransactionId: transactionId } : {})}
       {...(requestId ? { initialDemandRequestId: requestId } : {})}
       {...(responseId ? { initialDemandResponseId: responseId } : {})}

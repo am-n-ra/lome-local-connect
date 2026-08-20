@@ -82,11 +82,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "OmniView — Trouvez ce que vous cherchez près de vous" },
+      { title: "Omni — Trouvez ce que vous cherchez près de vous" },
       {
         name: "description",
         content:
-          "OmniView montre en temps réel qui vend ce que vous cherchez près de vous, avec disponibilité et itinéraire.",
+          "Omni montre en temps réel qui vend ce que vous cherchez près de vous, avec disponibilité et itinéraire.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
