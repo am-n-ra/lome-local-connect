@@ -334,6 +334,9 @@ function AdminPage() {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold">{row.name}</p>
+                  <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                    {row.company_name ?? "Compagnie non renseignée"} · {row.company_status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}
+                  </p>
                   <p className="text-xs text-muted-foreground">
                     {categoryLabel(row.category)}
                     {row.neighbourhood ? ` · ${row.neighbourhood}` : ""}
@@ -343,6 +346,11 @@ function AdminPage() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{STATUS_LABEL[row.status] ?? row.status}</Badge>
+                  <Badge
+                    variant={row.status === "confirmed" ? "default" : row.status === "certified" ? "secondary" : "outline"}
+                  >
+                    {row.status === "confirmed" ? "Confiance confirmée · QR" : row.status === "certified" ? "Confiance certifiée" : "Confiance à établir"}
+                  </Badge>
                   <Badge variant="secondary">{row.source}</Badge>
                   {row.contacted_at && (
                     <Badge className="bg-forest/10 text-forest">
@@ -491,7 +499,8 @@ function AdminPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     « Confirmé » est mérité automatiquement après 3 transactions QR de clients
-                    distincts — jamais attribué à la main.
+                    distincts — jamais attribué à la main. La certification admin et la confirmation
+                    QR restent deux signaux distincts.
                   </p>
                 </div>
               )}

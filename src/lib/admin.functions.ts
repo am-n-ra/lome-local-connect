@@ -9,6 +9,9 @@ import { appendWalletEntry, ensureWalletAccount, listWalletBalances } from "./wa
 export type AdminFacilityRow = {
   id: string;
   name: string;
+  company_id: string | null;
+  company_name: string | null;
+  company_status: string | null;
   category: string;
   status: string;
   type: string;
@@ -97,10 +100,12 @@ export const listAdminFacilities = createServerFn({ method: "GET" })
     params.push(data.limit ?? 60);
 
     return query<AdminFacilityRow>(
-      `SELECT id, name, category, status, type, address, neighbourhood, phone,
-              latitude, longitude, source, owner_id, contacted_at, contact_outcome,
-              contact_notes, created_at
-       FROM public.facilities
+      `SELECT f.id, f.name, f.company_id, c.name AS company_name, c.status AS company_status,
+              f.category, f.status, f.type, f.address, f.neighbourhood, f.phone,
+              f.latitude, f.longitude, f.source, f.owner_id, f.contacted_at, f.contact_outcome,
+              f.contact_notes, f.created_at
+       FROM public.facilities f
+       LEFT JOIN public.companies c ON c.id = f.company_id
        WHERE ${clauses.join(" AND ")}
        ORDER BY (contacted_at IS NULL) DESC, created_at DESC
        LIMIT $${params.length}`,
