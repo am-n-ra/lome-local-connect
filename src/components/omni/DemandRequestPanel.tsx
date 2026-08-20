@@ -496,8 +496,8 @@ export function DemandRequestPanel({
                   )}
                 </div>
                 <p className="rounded-xl bg-muted/60 p-2 text-xs text-muted-foreground">
-                  {r.targeted_count} commerce(s) ciblé(s). Les réponses restent manuelles et
-                  apparaissent ici au fil de leur confirmation.
+                  {r.targeted_count} commerce(s) ciblé(s). Les réponses apparaissent ici au fil de leur
+                  confirmation, sans distinguer leur mode de traitement.
                 </p>
                 {answers.map((a) => (
                   <div
