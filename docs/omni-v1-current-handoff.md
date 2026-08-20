@@ -104,3 +104,10 @@ This checkpoint records **implementation progress**, not complete UI certificati
 The working tree still contains the pre-existing untracked `.vercel/` directory and audit/demo scripts outside the commit boundary. They were not staged, and no secrets, passwords, database URLs, QR tokens, Auth users, profiles, legacy transactions, or production records were deleted or rewritten.
 
 The smallest next proof action remains an authenticated responsive browser run at 320/375/390/768/1280 px for buyer and seller, followed by a real camera-capable HTTPS seller session. The implementation slice is now deployed, but the runtime evidence gates must still be recorded independently.
+
+
+## Final UI checkpoint deployment
+
+The follow-up documentation and menu touch-target checkpoint is deployed as `dpl_57VH2tiYgwW3FKyivx2ESk6sZmGp`, source commit `f2ef878`, with state `READY` and the production alias `https://omni.sparkafrika.online`. The preceding code-bearing UI deployment remains `dpl_8MB5eFpg264sDZRLJPtxYRbWmGho` for source commit `80af399`; the latest deployment adds documentation and the shared menu accessibility correction on top of that code.
+
+A final passive public-route smoke matrix against the production alias returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`. This is route/deployment evidence only. The complete authenticated responsive buyer/seller matrix, facility interaction replay, production city-consent replay, and live HTTPS camera proof remain open, so the release remains `partial`.
