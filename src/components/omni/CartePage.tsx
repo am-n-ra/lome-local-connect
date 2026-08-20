@@ -126,6 +126,7 @@ export function CartePage({
   const [coverageStatus, setCoverageStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
   );
+  const [discoveryScopeRevision, setDiscoveryScopeRevision] = useState(0);
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
   const persistDiscoveryLocation = useServerFn(saveBuyerDiscoveryLocation);
@@ -221,6 +222,7 @@ export function CartePage({
       Math.floor(visibleViewport.zoom),
       submittedQuery.trim(),
       category ?? "",
+      discoveryScopeRevision,
     ].join(":");
     if (viewportRequestKeyRef.current === key) return;
     viewportRequestKeyRef.current = key;
@@ -255,7 +257,14 @@ export function CartePage({
       active = false;
       window.clearTimeout(handle);
     };
-  }, [category, fetchFacilitiesInBounds, hasCoverageSearch, submittedQuery, visibleViewport]);
+  }, [
+    category,
+    discoveryScopeRevision,
+    fetchFacilitiesInBounds,
+    hasCoverageSearch,
+    submittedQuery,
+    visibleViewport,
+  ]);
 
   const requestLocation = useCallback(() => {
     if (!navigator.geolocation) {
@@ -314,10 +323,13 @@ export function CartePage({
               longitude: nextPosition.lng,
               accuracy: nextPosition.accuracy,
             },
-          }).catch(() => {
-            // Location persistence must never block map discovery or expose a raw coordinate error.
-            if (persistedLocationGridRef.current === gridKey) persistedLocationGridRef.current = null;
-          });
+          })
+            .then(() => setDiscoveryScopeRevision((revision) => revision + 1))
+            .catch(() => {
+              // Location persistence must never block map discovery or expose a raw coordinate error.
+              if (persistedLocationGridRef.current === gridKey) persistedLocationGridRef.current = null;
+            });
+
         }
       }
       if (import.meta.env.DEV) {
