@@ -176,16 +176,80 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       );
     }
 
+    // Automatic answers only when the facility is open AND the product has
+    // stock explicitly allocated to Omni. Everything else stays manual.
+    const { autoAnswerDemand } = await import("./availability.server");
+    const autoAnswered = await autoAnswerDemand({
+      requestId: row!.id,
+      buyerId: context.userId,
+      searchTerm: data.searchTerm,
+      quantity: data.quantity,
+      facilityIds: targets.map((t) => t.id),
+    });
+
     return {
       id: row!.id,
       notified: owners.length,
       targeted: targets.length,
-      aiAnswered: 0,
+      aiAnswered: autoAnswered,
       creditCost,
       buyerPlan,
       bulkUnlimited: isBuyerPro,
     };
   });
+
+/** Seller correction of an answer produced automatically in their name. */
+export const correctAutoResponse = createServerFn({ method: "POST" })
+  .middleware([requireAuth])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        responseId: z.string().uuid(),
+        kind: z.enum(["available", "partial", "unavailable"]),
+        quantity: z.number().int().min(0).max(999).nullable().optional(),
+        price: z.number().int().min(0).max(100_000_000).nullable().optional(),
+        message: z.string().max(400).optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const owned = await queryOne<{ id: string; buyer_id: string; facility_name: string }>(
+      `SELECT r.id, d.buyer_id, f.name AS facility_name
+       FROM public.demand_responses r
+       JOIN public.facilities f ON f.id = r.facility_id
+       JOIN public.demand_requests d ON d.id = r.request_id
+       WHERE r.id = $1 AND f.owner_id = $2`,
+      [data.responseId, context.userId],
+    );
+    if (!owned) throw new Error("Cette réponse ne vous appartient pas.");
+
+    await query(
+      `UPDATE public.demand_responses
+       SET kind = $2, available = $3, quantity = $4, price = COALESCE($5, price),
+           message = COALESCE($6, message), corrected_at = now()
+       WHERE id = $1`,
+      [
+        data.responseId,
+        data.kind,
+        data.kind !== "unavailable",
+        data.quantity ?? null,
+        data.price ?? null,
+        data.message?.trim() || null,
+      ],
+    );
+
+    await query(
+      `INSERT INTO public.notifications (user_id, title, body, link) VALUES ($1,$2,$3,$4)`,
+      [
+        owned.buyer_id,
+        "Réponse corrigée par le vendeur",
+        `${owned.facility_name} a corrigé sa réponse de disponibilité.`,
+        "/",
+      ],
+    );
+    return { ok: true };
+  });
+
 
 export const listMyDemandRequests = createServerFn({ method: "GET" })
   .middleware([requireAuth])
