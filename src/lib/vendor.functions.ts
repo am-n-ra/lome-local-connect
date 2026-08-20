@@ -42,6 +42,7 @@ export type VendorProduct = {
   status: string;
   quantity_available: number;
   omni_allocation_percent: number;
+  quantity_allocated_omni: number;
   photo_url: string | null;
   last_confirmed_at: string | null;
 };
@@ -184,6 +185,7 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
                 COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
                 COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
                 COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
+                COALESCE(quantity_allocated_omni, 0)::int AS quantity_allocated_omni,
                 photo_url, last_confirmed_at
          FROM public.products WHERE facility_id = $1 ORDER BY created_at DESC`,
           [facility.id],
@@ -330,6 +332,7 @@ export const getVendorProducts = createServerFn({ method: "GET" })
               COALESCE(status, CASE WHEN in_stock THEN 'active' ELSE 'sold_out' END) AS status,
               COALESCE(quantity_available, CASE WHEN in_stock THEN 1 ELSE 0 END)::int AS quantity_available,
               COALESCE(omni_allocation_percent, 100)::int AS omni_allocation_percent,
+              COALESCE(quantity_allocated_omni, 0)::int AS quantity_allocated_omni,
               photo_url, last_confirmed_at
        FROM public.products WHERE facility_id = $1 ORDER BY created_at DESC`,
       [data.facilityId],
@@ -488,6 +491,9 @@ export const updateFacility = createServerFn({ method: "POST" })
         isOnline: z.boolean().optional(),
         operatingHours: z.string().max(200).nullable().optional(),
         emergencyShutdown: z.boolean().optional(),
+        manualOpen: z.boolean().optional(),
+        discoveryMode: z.boolean().optional(),
+        discoveryMinutes: z.number().int().min(15).max(720).optional(),
         latitude: z.number().min(-90).max(90).optional(),
         longitude: z.number().min(-180).max(180).optional(),
       })
@@ -512,6 +518,17 @@ export const updateFacility = createServerFn({ method: "POST" })
     if (data.emergencyShutdown !== undefined) {
       push("emergency_shutdown", data.emergencyShutdown);
       if (data.emergencyShutdown) push("is_online", false);
+    }
+    if (data.manualOpen !== undefined) push("manual_open", data.manualOpen);
+    if (data.discoveryMode !== undefined) {
+      push("discovery_mode", data.discoveryMode);
+      if (data.discoveryMode) {
+        params.push(data.discoveryMinutes ?? 120);
+        sets.push(`discovery_until = now() + ($${params.length} || ' minutes')::interval`);
+        sets.push("last_position_update = now()");
+      } else {
+        sets.push("discovery_until = NULL");
+      }
     }
     if (data.latitude !== undefined) push("latitude", data.latitude);
     if (data.longitude !== undefined) {
@@ -541,6 +558,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
         status: z.enum(["draft", "active", "paused", "sold_out"]).optional(),
         quantityAvailable: z.number().int().min(0).max(1_000_000).optional(),
         omniAllocationPercent: z.number().int().min(0).max(100).optional(),
+        quantityAllocatedOmni: z.number().int().min(0).max(1_000_000).optional(),
         discountPercent: z.number().int().min(0).max(90).optional(),
         photoUrl: z.string().url().max(500).nullable().optional(),
         coupon: z
@@ -562,7 +580,8 @@ export const upsertProduct = createServerFn({ method: "POST" })
         `UPDATE public.products
          SET name = $1, price = $2, in_stock = $3, discount_percent = $4,
              photo_url = $5, last_confirmed_at = now(), status = $8,
-             quantity_available = $9, omni_allocation_percent = $10
+             quantity_available = $9, omni_allocation_percent = $10,
+             quantity_allocated_omni = LEAST($11, $9)
          WHERE id = $6 AND facility_id = $7
          RETURNING id`,
         [
@@ -576,6 +595,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
           data.status ?? (data.inStock ? "active" : "sold_out"),
           data.quantityAvailable ?? (data.inStock ? 1 : 0),
           data.omniAllocationPercent ?? 100,
+          data.quantityAllocatedOmni ?? 0,
         ],
       );
       if (!updated) throw new Error("Produit introuvable.");
@@ -618,8 +638,8 @@ export const upsertProduct = createServerFn({ method: "POST" })
     const created = await queryOne<{ id: string }>(
       `INSERT INTO public.products
          (facility_id, name, price, in_stock, discount_percent, photo_url, last_confirmed_at,
-          status, quantity_available, omni_allocation_percent)
-       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9)
+          status, quantity_available, omni_allocation_percent, quantity_allocated_omni)
+       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9, LEAST($10, $8))
        RETURNING id`,
       [
         data.facilityId,
@@ -631,6 +651,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
         data.status ?? (data.inStock ? "active" : "sold_out"),
         data.quantityAvailable ?? (data.inStock ? 1 : 0),
         data.omniAllocationPercent ?? 100,
+        data.quantityAllocatedOmni ?? 0,
       ],
     );
     if (data.coupon && created) {
