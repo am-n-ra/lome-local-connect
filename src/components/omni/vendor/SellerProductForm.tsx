@@ -68,10 +68,10 @@ export function SellerProductForm({
   return (
     <form data-omni-seller-form="product" className="omni-card space-y-5 border-foreground/10 bg-card/92 p-4 sm:p-5" onSubmit={(event) => void submit(event)}>
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Catalogue</p>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Catalogue · étape 1</p>
         <h3 className="mt-1 font-display text-xl font-bold">Publier un produit</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Commencez par ce que les acheteurs doivent voir : nom, prix et quantité disponible.
+          Commencez par les trois informations essentielles : nom, prix et quantité disponible. Les options avancées restent facultatives.
         </p>
       </div>
 
@@ -186,7 +186,7 @@ export function SellerProductForm({
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="vendor-product-allocation">Allocation interne Omni (%)</Label>
+                <Label htmlFor="vendor-product-allocation">Stock exposé à Omni (%)</Label>
                 <Input
                   id="vendor-product-allocation"
                   inputMode="numeric"
@@ -195,9 +195,10 @@ export function SellerProductForm({
                   max="100"
                   value={draft.allocation}
                   onChange={(event) => patch({ allocation: event.target.value })}
+                  aria-describedby="vendor-product-allocation-help"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Allocation interne, jamais un portefeuille séparé.
+                <p id="vendor-product-allocation-help" className="text-xs text-muted-foreground">
+                  Part du stock que les acheteurs peuvent vérifier sur Omni. Ce n’est pas un solde séparé.
                 </p>
               </div>
             </div>
@@ -208,8 +209,7 @@ export function SellerProductForm({
               <div className="flex items-start gap-2 rounded-xl bg-primary/8 p-3 text-sm">
                 <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                 <p className="text-muted-foreground">
-                  Le coupon est attaché à ce produit. La personnalisation par utilisateur sera
-                  ajoutée par le moteur d’offres sans changer ce formulaire basic.
+                  Le coupon est attaché à ce produit. Il s’agit d’une réduction simple et visible par l’acheteur lorsque l’offre est active.
                 </p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
