@@ -4,6 +4,7 @@ import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@/lib/useServerFn";
 import { listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
+import { saveBuyerDiscoveryLocation } from "@/lib/location.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
@@ -95,6 +96,7 @@ export function CartePage({
   const locationRequestIdRef = useRef(0);
   const locationWatchIdRef = useRef<number | null>(null);
   const locationWatchTimeoutRef = useRef<number | null>(null);
+  const persistedLocationGridRef = useRef<string | null>(null);
   const bestPositionRef = useRef<{
     lat: number;
     lng: number;
@@ -126,6 +128,7 @@ export function CartePage({
   );
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
+  const persistDiscoveryLocation = useServerFn(saveBuyerDiscoveryLocation);
   const fetchInitialTimeline = useServerFn(getTransactionTimeline);
   const fetchMyOrders = useServerFn(listMyOrders);
   const hasCoverageSearch = Boolean(submittedQuery.trim() || category);
@@ -301,6 +304,22 @@ export function CartePage({
       } catch {
         // Session storage can be unavailable in privacy-restricted contexts.
       }
+      if (user) {
+        const gridKey = `${nextPosition.lat.toFixed(3)}:${nextPosition.lng.toFixed(3)}`;
+        if (persistedLocationGridRef.current !== gridKey) {
+          persistedLocationGridRef.current = gridKey;
+          void persistDiscoveryLocation({
+            data: {
+              latitude: nextPosition.lat,
+              longitude: nextPosition.lng,
+              accuracy: nextPosition.accuracy,
+            },
+          }).catch(() => {
+            // Location persistence must never block map discovery or expose a raw coordinate error.
+            if (persistedLocationGridRef.current === gridKey) persistedLocationGridRef.current = null;
+          });
+        }
+      }
       if (import.meta.env.DEV) {
         console.info("[Omni location callback]", {
           ...snapshot,
@@ -370,7 +389,7 @@ export function CartePage({
       // Never accept a cached network estimate as the fresh location proof.
       { enableHighAccuracy: false, maximumAge: 0, timeout: 5000 },
     );
-  }, [fallbackCenter, hasFreshBrowserLocation]);
+  }, [fallbackCenter, hasFreshBrowserLocation, persistDiscoveryLocation, user]);
 
   useEffect(() => {
     try {

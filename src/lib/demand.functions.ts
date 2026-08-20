@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { enforceRateLimit } from "./rate-limit.server";
+import { applyFreeDiscoveryScope, getDiscoveryScope } from "./discovery-scope.server";
 import { MAX_AVAILABILITY_TARGETS } from "./omni-v1-contracts";
 
 export type DemandResponseRow = {
@@ -94,6 +95,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     );
     const buyerPlan = plan?.plan === "pro" ? "pro" : "free";
     const isBuyerPro = buyerPlan === "pro";
+    const discoveryScope = await getDiscoveryScope(context.userId);
     if (data.mode === "bulk" && !isBuyerPro) {
       throw new Error(
         "La vérification groupée est réservée au plan Pro. Le plan gratuit conserve la vérification facility par facility.",
@@ -103,7 +105,35 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       throw new Error("Une vérification manuelle doit cibler exactement un commerce.");
     }
 
-    // Bulk targets the map's active result IDs when present. Geographic limits are owned by search filters.
+    // Bulk targets the map's active result IDs when present. The same city scope
+    // is enforced here so a free buyer cannot bypass discovery through a direct call.
+    const targetParams: unknown[] = [
+      data.targetFacilityIds,
+      data.latitude ?? null,
+      data.longitude ?? null,
+      data.radiusKm ?? null,
+      data.searchTerm.trim(),
+    ];
+    const targetClauses = [
+      `(
+        (
+          cardinality($1::uuid[]) > 0 AND f.id = ANY($1::uuid[])
+        ) OR (
+          cardinality($1::uuid[]) = 0
+          AND ($2::float8 IS NULL OR $3::float8 IS NULL OR $4::float8 IS NULL OR (
+            6371 * acos(LEAST(1, GREATEST(-1,
+              cos(radians($2)) * cos(radians(f.latitude)) *
+              cos(radians(f.longitude) - radians($3)) +
+              sin(radians($2)) * sin(radians(f.latitude))
+            ))) <= $4
+          ))
+          AND (f.name ILIKE '%' || $5 || '%' OR f.category ILIKE '%' || $5 || '%' OR EXISTS (
+            SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $5 || '%'
+          ))
+        )
+      )`,
+    ];
+    applyFreeDiscoveryScope(targetClauses, targetParams, discoveryScope, true);
     const targets = await query<{
       id: string;
       owner_id: string | null;
@@ -113,29 +143,9 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       `SELECT f.id, f.owner_id, f.name, COALESCE(s.tier, 'free') AS seller_plan
        FROM public.facilities f
        LEFT JOIN public.subscriptions s ON s.facility_id = f.id
-       WHERE (
-           cardinality($1::uuid[]) > 0 AND f.id = ANY($1::uuid[])
-         ) OR (
-           cardinality($1::uuid[]) = 0
-           AND ($2::float8 IS NULL OR $3::float8 IS NULL OR $4::float8 IS NULL OR (
-             6371 * acos(LEAST(1, GREATEST(-1,
-               cos(radians($2)) * cos(radians(f.latitude)) *
-               cos(radians(f.longitude) - radians($3)) +
-               sin(radians($2)) * sin(radians(f.latitude))
-             ))) <= $4
-           ))
-           AND (f.name ILIKE '%' || $5 || '%' OR f.category ILIKE '%' || $5 || '%' OR EXISTS (
-             SELECT 1 FROM public.products p WHERE p.facility_id = f.id AND p.name ILIKE '%' || $5 || '%'
-           ))
-         )
-         LIMIT ${MAX_AVAILABILITY_TARGETS}`,
-      [
-        data.targetFacilityIds,
-        data.latitude ?? null,
-        data.longitude ?? null,
-        data.radiusKm ?? null,
-        data.searchTerm.trim(),
-      ],
+       WHERE ${targetClauses.join(" AND ")}
+       LIMIT ${MAX_AVAILABILITY_TARGETS}`,
+      targetParams,
     );
 
     if (data.mode === "bulk" && targets.length === 0) {

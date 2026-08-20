@@ -4,6 +4,7 @@ import { z } from "zod";
 import { optionalAuth, requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { enforceRateLimit, requestRateLimitSubject } from "./rate-limit.server";
+import { applyFreeDiscoveryScope, getDiscoveryScope } from "./discovery-scope.server";
 
 export type MapFacility = {
   id: string;
@@ -138,6 +139,7 @@ const FACILITY_SELECT = `
 
 /** Everything the buyer map needs, optionally filtered by search or category. */
 export const listFacilities = createServerFn({ method: "GET" })
+  .middleware([optionalAuth])
   .inputValidator((input: unknown) =>
     z
       .object({
@@ -148,8 +150,9 @@ export const listFacilities = createServerFn({ method: "GET" })
       })
       .parse(input ?? {}),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const requestSubject = await requestRateLimitSubject("discovery");
+    const scope = await getDiscoveryScope(context.userId);
     await enforceRateLimit({
       bucket: "public-discovery",
       subject: requestSubject,
@@ -167,6 +170,12 @@ export const listFacilities = createServerFn({ method: "GET" })
       clauses.unshift(`f.market_code = $${params.length}`);
     }
 
+    applyFreeDiscoveryScope(
+      clauses,
+      params,
+      scope,
+      Boolean(data.search?.trim() || (data.category && data.category !== "all")),
+    );
     if (data.category && data.category !== "all") {
       params.push(data.category);
       clauses.push(`f.category = $${params.length}`);
@@ -203,9 +212,12 @@ const coverageInput = z.object({
 
 /** Viewport-driven discovery across every market, with best-effort OSM back-fill. */
 export const listFacilitiesInBounds = createServerFn({ method: "GET" })
+  .middleware([optionalAuth])
   .inputValidator((input: unknown) => coverageInput.parse(input))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const requestSubject = await requestRateLimitSubject("bounds");
+    const scope = await getDiscoveryScope(context.userId);
+    const scopedSearch = Boolean(data.search?.trim() || (data.category && data.category !== "all"));
     await enforceRateLimit({
       bucket: "public-bounds-discovery",
       subject: requestSubject,
@@ -229,6 +241,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
         "COALESCE(f.emergency_shutdown, false) = false",
         "(f.is_online = true OR f.status = 'unclaimed')",
       ];
+      applyFreeDiscoveryScope(clauses, params, scope, scopedSearch);
       if (data.category && data.category !== "all") {
         params.push(data.category);
         clauses.push(`f.category = $${params.length}`);
@@ -305,6 +318,7 @@ export const listFacilitiesInBounds = createServerFn({ method: "GET" })
         crossesAntimeridian ? "(f.longitude >= $3 OR f.longitude <= $4)" : "f.longitude BETWEEN $3 AND $4",
         "(f.is_online = true OR f.status = 'unclaimed')",
       ];
+      applyFreeDiscoveryScope(clauses, params, scope, scopedSearch);
       if (data.category && data.category !== "all") {
         params.push(data.category);
         clauses.push(`f.category = $${params.length}`);
