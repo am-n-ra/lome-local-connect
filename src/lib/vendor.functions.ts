@@ -28,6 +28,9 @@ export type VendorFacility = {
   is_online: boolean;
   last_position_update: string | null;
   operating_hours: string | null;
+  manual_open: boolean;
+  discovery_mode: boolean;
+  discovery_until: string | null;
   emergency_shutdown: boolean;
   created_at: string;
 };
@@ -138,7 +141,8 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const facilities = await query<VendorFacility>(
       `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
-              phone, status, type, is_online, last_position_update, operating_hours, emergency_shutdown, created_at
+              phone, status, type, is_online, last_position_update, operating_hours,
+              manual_open, discovery_mode, discovery_until, emergency_shutdown, created_at
        FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );
@@ -278,7 +282,8 @@ export const getVendorShell = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<VendorShell> => {
     const facilities = await query<VendorFacility>(
       `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
-              phone, status, type, is_online, last_position_update, operating_hours, emergency_shutdown, created_at
+              phone, status, type, is_online, last_position_update, operating_hours,
+              manual_open, discovery_mode, discovery_until, emergency_shutdown, created_at
        FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );

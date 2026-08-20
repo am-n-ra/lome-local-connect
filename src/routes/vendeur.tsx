@@ -134,6 +134,7 @@ function VendeurPage() {
   }, [transactionId]);
   const [bonusOpen, setBonusOpen] = useState(false);
   const [hours, setHours] = useState("");
+  const [discoveryMinutes, setDiscoveryMinutes] = useState("120");
 
   const [saving, setSaving] = useState(false);
 
@@ -250,6 +251,11 @@ function VendeurPage() {
 
   const facility =
     data?.facilities.find((item) => item.id === activeFacilityId) ?? data?.facilities[0] ?? null;
+
+  useEffect(() => {
+    if (!facility) return;
+    setHours(facility.operating_hours ?? "");
+  }, [facility?.id, facility?.operating_hours]);
 
   async function startTopUp() {
     const amount = Number(topUpAmount);
@@ -496,6 +502,35 @@ function VendeurPage() {
       toast.success(next ? "Arrêt d'urgence activé." : "Arrêt d'urgence levé.");
     } catch {
       toast.error("Arrêt d'urgence non enregistré.");
+    }
+  }
+
+  async function toggleManualOpen(next: boolean) {
+    if (!facility) return;
+    try {
+      await patchFacility({ data: { facilityId: facility.id, manualOpen: next } });
+      await refresh();
+      toast.success(next ? "Réponses automatiques activées." : "Réponses automatiques suspendues.");
+    } catch {
+      toast.error("État de disponibilité non enregistré.");
+    }
+  }
+
+  async function toggleDiscovery(next: boolean) {
+    if (!facility) return;
+    const minutes = Number(discoveryMinutes);
+    if (!Number.isInteger(minutes) || minutes < 15 || minutes > 720) {
+      toast.error("Choisissez une durée Discovery entre 15 minutes et 12 heures.");
+      return;
+    }
+    try {
+      await patchFacility({
+        data: { facilityId: facility.id, discoveryMode: next, discoveryMinutes: minutes },
+      });
+      await refresh();
+      toast.success(next ? `Discovery activé pendant ${minutes} minutes.` : "Discovery désactivé.");
+    } catch {
+      toast.error("Mode Discovery non enregistré.");
     }
   }
 
@@ -1074,16 +1109,68 @@ function VendeurPage() {
                           Mettez à jour horaires, statut en ligne et arrêt d'urgence. Touchez la
                           carte pour corriger l'emplacement affiché aux acheteurs.
                         </p>
-                        <div className="mt-3 grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-[1fr_auto]">
-                          <Input
-                            value={hours}
-                            onChange={(e) => setHours(e.target.value)}
-                            placeholder="Horaires (ex. Lun-Sam 8h-19h)"
-                          />
-                          <Button variant="outline" onClick={() => void saveOperatingHours()}>
-                            Enregistrer horaires
-                          </Button>
-                          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+                        <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
+                          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                            <Input
+                              value={hours}
+                              onChange={(e) => setHours(e.target.value)}
+                              placeholder="Horaires (ex. Lun-Sam 8h-19h)"
+                              aria-label="Horaires d'ouverture"
+                            />
+                            <Button variant="outline" onClick={() => void saveOperatingHours()}>
+                              Enregistrer horaires
+                            </Button>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <label className="flex items-center justify-between gap-3 rounded-xl bg-background/55 px-3 py-2 text-sm">
+                              <span>
+                                <strong className="block">Disponibilité automatique</strong>
+                                <span className="text-xs text-muted-foreground">
+                                  {facility.manual_open ? "Ouverte aux réponses" : "Réponses suspendues"}
+                                </span>
+                              </span>
+                              <Switch
+                                checked={facility.manual_open}
+                                onCheckedChange={(v) => void toggleManualOpen(v)}
+                              />
+                            </label>
+                            <div className="rounded-xl bg-background/55 px-3 py-2 text-sm">
+                              <div className="flex items-center justify-between gap-3">
+                                <span>
+                                  <strong className="block">Mode Discovery</strong>
+                                  <span className="text-xs text-muted-foreground">
+                                    {facility.discovery_mode
+                                      ? facility.discovery_until
+                                        ? `Actif jusqu'à ${new Date(facility.discovery_until).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+                                        : "Actif"
+                                      : "Inactif"}
+                                  </span>
+                                </span>
+                                <Switch
+                                  checked={facility.discovery_mode}
+                                  onCheckedChange={(v) => void toggleDiscovery(v)}
+                                />
+                              </div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <Label htmlFor="vendor-discovery-duration" className="sr-only">
+                                  Durée Discovery en minutes
+                                </Label>
+                                <Input
+                                  id="vendor-discovery-duration"
+                                  inputMode="numeric"
+                                  type="number"
+                                  min={15}
+                                  max={720}
+                                  value={discoveryMinutes}
+                                  onChange={(event) => setDiscoveryMinutes(event.target.value.replace(/\\D/g, ""))}
+                                  className="h-8 text-sm"
+                                  aria-label="Durée Discovery en minutes"
+                                />
+                                <span className="shrink-0 text-xs text-muted-foreground">minutes</span>
+                              </div>
+                            </div>
+                          </div>
+                          <label className="flex items-center gap-2 text-sm">
                             <Switch
                               checked={facility.emergency_shutdown}
                               onCheckedChange={(v) => void toggleEmergencyShutdown(v)}
@@ -1144,8 +1231,8 @@ function VendeurPage() {
                         <div className="min-w-0">
                           <p className="truncate font-medium">{p.name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {formatMoney(p.price)} · Stock {p.quantity_available} · {p.status} ·{" "}
-                            {freshnessLabel(p.last_confirmed_at)}
+                            {formatMoney(p.price)} · Stock total {p.quantity_available} · Omni visible{" "}
+                            {p.quantity_allocated_omni} · {p.status} · {freshnessLabel(p.last_confirmed_at)}
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
