@@ -8,7 +8,7 @@
 | Branch | `main` |
 | Certified source commit | `02910b1` — `fix(checkout): prevent duplicate payment-declaration events with atomic WHERE guard` |
 | UI refinement commits | `fa1ace4`, `b151a72`, `fb4e9ba`, `c41cc4c` — bounded shared sheets, buyer discovery, transaction room, seller dock, and touch targets |
-| Latest observed production deployment | `dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo` — `READY` for source commit `89b15c0` |
+| Latest observed production deployment | `dpl_6pWpKLnP9FrQSUZw2epPTzb9fjMs` — `READY` for source commit `40797c4` |
 | Staging Neon project | `old-unit-98112236` |
 | Staging Neon branch | `br-bitter-forest-a6e6nem5` |
 | Local validation | 10 test files, 64 tests, production build, client-boundary check, live overflow audit, and touch-target audit passed |
@@ -20,7 +20,7 @@ The Omni V1 goal remains a production-ready buyer/seller transaction loop: map-f
 
 The A–E core is now materially certified in isolated staging. The fresh buyer/seller transaction completed through `completed`, the duplicate buyer payment declaration was replayed successfully without a duplicate event, the runtime authorization probes recorded explicit rejection paths, the concurrent duplicate-intent probe returned one transaction for both requests, the independent buyer recovery path was restored after sign-out and app restart, and the latest staging invariant run returned zero for all seven checks.
 
-The release is still **`partial`**, not `verified` or production-ready. A real HTTPS mobile camera preview/decode is not available in the sandbox, a dedicated concurrent QR-verification fan-out has not been recorded, and the authenticated result/facility browser replay was blocked by the local auth-provider page-load failure. These are proof limitations, not a reason to weaken the server-authoritative transaction contract.
+The release is still **`partial`**, not `verified` or production-ready. The dedicated concurrent QR-verification fan-out is now recorded and reconciled successfully in isolated staging, but a real HTTPS camera preview/decode is not available in the sandbox. The authenticated result/facility browser replay also remains incomplete because the local auth-provider/browser bridge failed during that UI proof attempt. These are proof limitations, not a reason to weaken the server-authoritative transaction contract.
 
 ## UI perfection continuation
 
@@ -38,9 +38,9 @@ The runtime adversarial evidence is stored in `/home/ubuntu/omni-phase3-adversar
 
 ## Invariants and deployment observability
 
-The latest seven-check staging invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview`. This result was obtained after the concurrent duplicate-intent probe, not only before it.
+The latest authoritative seven-check staging invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview`. A second post-fan-out run on 2026-08-20 also returned `ok=true` with zero for every check, using cutoff `2026-08-18T00:00:00Z`. The QR-specific reconciliation reported both proof transactions in `qr_verified`, exactly one `seller_verified` event for each, and no duplicate event groups.
 
-The latest observed production deployment metadata shows source commit `89b15c0` on `main` in a `READY` production deployment (`dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo`). The local Vercel build and client-boundary gates completed successfully, and the selected 24-hour Vercel runtime-error query reported no runtime error clusters for the project. These observations establish deployment and current-window observability evidence; they do not convert the isolated staging proof into a full production transaction test.
+The latest observed production deployment metadata shows source commit `40797c4` on `main` in a `READY` production deployment (`dpl_6pWpKLnP9FrQSUZw2epPTzb9fjMs`). The local Vercel build and client-boundary gates completed successfully, and the selected 24-hour Vercel runtime-error query reported no runtime error clusters for the project. These observations establish deployment and current-window observability evidence; they do not convert the isolated staging proof into a full production transaction test.
 
 ## Relevant artifacts
 
@@ -58,6 +58,15 @@ The latest observed production deployment metadata shows source commit `89b15c0`
 | `/home/ubuntu/.mcp/tool-results/2026-08-19_21-13-40.255266536_neon_run_sql_bf976b44.json` | One-active-row concurrent intent assertion |
 | `/home/ubuntu/.mcp/tool-results/2026-08-19_21-00-01.939191393_neon_run_sql_b6048cd3.json` | Final completed transaction assertion |
 | `/home/ubuntu/terminal_full_output/2026-08-19_21-00-52_757965_5191.txt` | Full local test/build output |
+| `/home/ubuntu/omni-qr-proof-evidence-2026-08-20.md` | Redacted single/concurrent QR proof, invariant, and cleanup record |
+
+## QR fan-out certification checkpoint
+
+The single QR replay used isolated transaction `6709e01c-3fee-41ff-a773-9b75a7186d5a`. The concurrent replay used fresh isolated transaction `4529349d-834a-41a2-be59-b39da23d9203`. Both requests in the concurrent fan-out returned the same successful server-function result envelope and transaction identity. The database state for the concurrent transaction was `qr_verified` with one total transaction event and exactly one `seller_verified` event, demonstrating the atomic state transition and idempotent already-verified retry path.
+
+The protected fixture was corrected from a 32-character token to an eight-character code because the current manual redeem contract accepts 4–24 characters while the application generator produces eight-character codes. This adjustment was isolated to staging fixture data and did not alter production code or production data.
+
+The temporary staging trusted origin was removed after proof, and the local staging app and JWKS server were stopped. No protected session, password, connection string, or raw QR token was committed.
 
 ## Worktree and change boundary
 
@@ -65,4 +74,4 @@ The UI refinement work is committed in `fa1ace4`, `b151a72`, `fb4e9ba`, and `c41
 
 ## Smallest next action
 
-To reach `verified`, run one dedicated concurrent QR-verification replay against a fresh `qr_generated` staging transaction using two authenticated seller requests, then execute the live camera preview/decode proof on a real HTTPS mobile device or camera-capable browser. Until both artifacts exist, preserve the release status as `partial` and do not claim full production readiness.
+To reach `verified`, execute and record the live camera preview/decode proof on a real HTTPS mobile device or camera-capable browser using an authorized seller session. The concurrent QR fan-out and post-fan-out seven-invariant evidence are complete. Until the camera artifact exists, preserve the release status as `partial` and do not claim full production readiness. The authenticated facility-card replay remains an explicit UI evidence follow-up, but it is separate from the remaining L3 release gate.
