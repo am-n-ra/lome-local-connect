@@ -124,7 +124,7 @@ function MenuRow({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[1.1rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-white disabled:opacity-40"
+      className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[1.1rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/70 px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
     >
       <span className="shrink-0 text-muted-foreground">{icon}</span>
       <span className="min-w-0 truncate">{label}</span>

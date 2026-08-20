@@ -217,3 +217,12 @@ Commit `fdd1c40` closes the implementation portion of G-002 without changing the
 The slice passed the full local validation gate: 11 test files and 69 tests, production build, client-boundary check, and `git diff --check`. It was pushed to `main` and deployed in Vercel production deployment `dpl_4vZvh3547vYcSdt453CtyGMvnWoh`, which is `READY` and serves `omni.sparkafrika.online`. This is implementation/deployment evidence, not authenticated seller UI proof; buyer notification delivery and a live seller replay remain to be observed.
 
 G-001, G-003, G-004, and G-005 remain open. G-001 is blocked by the My Browser HTTPS bridge timeout before camera interaction. G-003 still needs one consented production buyer replay to prove persisted city and consistent Free/Pro scope. G-004 and G-005 still need the authenticated 320/375/390/768/1280 buyer and seller matrix, including facility-card selection, back/close restoration, camera surface, and no-overflow evidence.
+
+
+## Phase 8 complete-UI continuation checkpoint — 2026-08-20
+
+The cumulative UI continuation added five bounded changes: buyer SearchDock touch-target and hierarchy refinement, result-rail summary and viewport-safe horizontal behavior, seller default map-first shell compaction, explicit transaction-room stage descriptions, truthful seller camera preview states, clearer seller product/coupon form copy, and buyer-facing wording that does not distinguish automatic from manual availability responses. The implementation commits are `d087b5f`, `52c3965`, `38bf00e`, `432074b`, and `80af399`.
+
+Local acceptance passed after the cumulative changes: `pnpm exec tsc --noEmit`, 11 test files / 69 tests, `pnpm build`, client-boundary check, and `git diff --check`. The latest Vercel production deployment is `dpl_8MB5eFpg264sDZRLJPtxYRbWmGho` for source commit `80af399`, with state `READY`. A read-only production smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`.
+
+These changes close implementation-level portions of `BUY-002`, `BUY-005`, `TXN-003`, `SELL-003`, and `TXN-002` but do not close their runtime proof requirements. The buyer and seller authenticated responsive matrix, facility-card selection/back restoration, real HTTPS camera preview/decode, production buyer city-consent replay, and authenticated transaction/scanner evidence remain open. The release remains `partial` and no production-ready claim is made from build or route smoke evidence alone.
