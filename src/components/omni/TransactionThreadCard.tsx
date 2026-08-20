@@ -14,7 +14,6 @@ import {
   type TransactionRoomStatus,
 } from "@/lib/omni-v1-contracts";
 import { deriveTransactionUiState, TRANSACTION_STATUS_LABEL } from "@/lib/transaction-state";
-import { TRANSACTION_PROGRESS_LABELS } from "@/lib/transaction-progress";
 
 const EVENT_LABEL: Record<string, string> = {
   intent_created: "Intention créée",
@@ -42,6 +41,14 @@ const ERROR_EVENTS = new Set([
   "coupon_rejected",
   "error",
 ]);
+
+const TRANSACTION_PROGRESS_STEPS = [
+  { label: "Intention", description: "Votre demande d’achat est créée" },
+  { label: "Offre", description: "Le vendeur confirme le produit et le prix" },
+  { label: "QR", description: "Présentez le code pour vérifier la transaction" },
+  { label: "Paiement", description: "Choisissez et déclarez votre paiement externe" },
+  { label: "Réception", description: "Recevez le produit, notez et terminez" },
+];
 
 const PAYMENT_METHODS: { value: PaymentPreferenceMethod; label: string; detail: string }[] = [
   {
@@ -166,8 +173,12 @@ export function TransactionThreadCard({
         <Badge variant="outline">{TRANSACTION_STATUS_LABEL[currentStatus] ?? currentStatus}</Badge>
       </div>
 
-      <div className="rounded-[1.25rem] bg-[var(--atlas-paper)]/60 p-3">
-        <TransactionProgress steps={[...TRANSACTION_PROGRESS_LABELS]} current={progress} />
+      <div
+        className="rounded-[1.25rem] bg-[var(--atlas-paper)]/60 p-3"
+        aria-label="Étapes de la transaction"
+        data-omni-transaction-stages="true"
+      >
+        <TransactionProgress steps={TRANSACTION_PROGRESS_STEPS} current={progress} />
       </div>
 
       <div className="grid gap-2 rounded-[1.25rem] border border-[var(--atlas-glass-border)] bg-[var(--atlas-paper)]/72 p-3 text-sm">
