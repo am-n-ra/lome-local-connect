@@ -16,6 +16,9 @@ import {
 export type VendorFacility = {
   id: string;
   name: string;
+  company_id: string | null;
+  company_name: string | null;
+  company_status: string | null;
   category: string;
   description: string | null;
   address: string | null;
@@ -140,10 +143,13 @@ export const getVendorDashboard = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
     const facilities = await query<VendorFacility>(
-      `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
-              phone, status, type, is_online, last_position_update, operating_hours,
-              manual_open, discovery_mode, discovery_until, emergency_shutdown, created_at
-       FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
+      `SELECT f.id, f.name, f.company_id, c.name AS company_name, c.status AS company_status,
+              f.category, f.description, f.address, f.neighbourhood, f.latitude, f.longitude,
+              f.phone, f.status, f.type, f.is_online, f.last_position_update, f.operating_hours,
+              f.manual_open, f.discovery_mode, f.discovery_until, f.emergency_shutdown, f.created_at
+       FROM public.facilities f
+       LEFT JOIN public.companies c ON c.id = f.company_id
+       WHERE f.owner_id = $1 ORDER BY f.created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );
     if (facilities.length === 0) {
@@ -281,10 +287,13 @@ export const getVendorShell = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }): Promise<VendorShell> => {
     const facilities = await query<VendorFacility>(
-      `SELECT id, name, category, description, address, neighbourhood, latitude, longitude,
-              phone, status, type, is_online, last_position_update, operating_hours,
-              manual_open, discovery_mode, discovery_until, emergency_shutdown, created_at
-       FROM public.facilities WHERE owner_id = $1 ORDER BY created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
+      `SELECT f.id, f.name, f.company_id, c.name AS company_name, c.status AS company_status,
+              f.category, f.description, f.address, f.neighbourhood, f.latitude, f.longitude,
+              f.phone, f.status, f.type, f.is_online, f.last_position_update, f.operating_hours,
+              f.manual_open, f.discovery_mode, f.discovery_until, f.emergency_shutdown, f.created_at
+       FROM public.facilities f
+       LEFT JOIN public.companies c ON c.id = f.company_id
+       WHERE f.owner_id = $1 ORDER BY f.created_at ASC LIMIT ${OMNI_CONFIG.sellerFreeFacilityLimit}`,
       [context.userId],
     );
     if (facilities.length === 0) {

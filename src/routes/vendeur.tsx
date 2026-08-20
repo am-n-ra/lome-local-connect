@@ -719,6 +719,9 @@ function VendeurPage() {
                       </OmniStatusBadge>
                       {pro && <Badge className="bg-gold text-gold-foreground">Pro actif</Badge>}
                     </div>
+                    <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                      {facility.company_name ?? "Compagnie non renseignée"} · {facility.company_status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}
+                    </p>
                     <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
                       La carte reste visible ; vos opérations apparaissent au-dessus du contexte
                       géospatial.
