@@ -243,7 +243,9 @@ export function CheckoutPanel({
               Valider une transaction sur place
             </h3>
           </div>
-          <Badge variant={scanning ? "default" : "outline"}>{cameraStatusLabel(cameraStatus)}</Badge>
+          <Badge variant={cameraStatus === "active" ? "default" : "outline"} data-omni-camera-status={cameraStatus}>
+            {cameraStatusLabel(cameraStatus)}
+          </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
           Demandez au client son code de transaction (QR ou 8 caractères) et vérifiez-le ici. Omni
@@ -255,14 +257,18 @@ export function CheckoutPanel({
             variant={scanning ? "secondary" : "outline"}
             className="w-full sm:w-auto"
             onClick={() => (scanning ? stopScanner() : void startScanner())}
-            disabled={busy}
+            disabled={busy || cameraStatus === "permission_pending"}
           >
             {scanning ? (
               <CameraOff className="mr-2 h-4 w-4" />
             ) : (
               <Camera className="mr-2 h-4 w-4" />
             )}
-            {scanning ? "Arrêter caméra" : "Autoriser et démarrer la caméra"}
+            {cameraStatus === "permission_pending"
+              ? "Autorisation en cours…"
+              : scanning
+                ? "Arrêter caméra"
+                : "Autoriser et démarrer la caméra"}
           </Button>
           <Input
             value={code}
@@ -288,10 +294,10 @@ export function CheckoutPanel({
             muted
             playsInline
             autoPlay
-            className={`absolute inset-0 h-full w-full object-cover ${scanning ? "opacity-100" : "opacity-0"}`}
+            className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-200 ${scanning || cameraStatus === "active" ? "opacity-100" : "opacity-0"}`}
             aria-label="Aperçu caméra QR"
           />
-          {scanning ? (
+          {cameraStatus === "active" ? (
             <>
               <div className="pointer-events-none absolute inset-8 rounded-2xl border-2 border-white/80 shadow-[0_0_0_999px_rgba(0,0,0,0.28)]" />
               <p className="absolute inset-x-0 bottom-2 text-center text-xs font-semibold text-white">
@@ -313,9 +319,18 @@ export function CheckoutPanel({
             </div>
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-          <span aria-live="polite">{cameraStatusLabel(cameraStatus)}</span>
-          {cameraError && <span>{cameraError}</span>}
+        <div className="space-y-2 text-xs text-muted-foreground" aria-live="polite">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className={cameraStatus === "active" ? "font-semibold text-forest" : undefined}>
+              {cameraStatusLabel(cameraStatus)}
+            </span>
+            {cameraStatus === "active" ? <span>Le flux reste actif pendant le cadrage.</span> : null}
+          </div>
+          {cameraError ? (
+            <div className="rounded-xl border border-primary/20 bg-primary/8 px-3 py-2 text-primary">
+              {cameraError}
+            </div>
+          ) : null}
         </div>
       </div>
 
