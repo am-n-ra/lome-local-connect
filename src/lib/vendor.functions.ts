@@ -541,6 +541,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
         status: z.enum(["draft", "active", "paused", "sold_out"]).optional(),
         quantityAvailable: z.number().int().min(0).max(1_000_000).optional(),
         omniAllocationPercent: z.number().int().min(0).max(100).optional(),
+        quantityAllocatedOmni: z.number().int().min(0).max(1_000_000).optional(),
         discountPercent: z.number().int().min(0).max(90).optional(),
         photoUrl: z.string().url().max(500).nullable().optional(),
         coupon: z
@@ -562,7 +563,8 @@ export const upsertProduct = createServerFn({ method: "POST" })
         `UPDATE public.products
          SET name = $1, price = $2, in_stock = $3, discount_percent = $4,
              photo_url = $5, last_confirmed_at = now(), status = $8,
-             quantity_available = $9, omni_allocation_percent = $10
+             quantity_available = $9, omni_allocation_percent = $10,
+             quantity_allocated_omni = LEAST($11, $9)
          WHERE id = $6 AND facility_id = $7
          RETURNING id`,
         [
@@ -576,6 +578,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
           data.status ?? (data.inStock ? "active" : "sold_out"),
           data.quantityAvailable ?? (data.inStock ? 1 : 0),
           data.omniAllocationPercent ?? 100,
+          data.quantityAllocatedOmni ?? 0,
         ],
       );
       if (!updated) throw new Error("Produit introuvable.");
@@ -618,8 +621,8 @@ export const upsertProduct = createServerFn({ method: "POST" })
     const created = await queryOne<{ id: string }>(
       `INSERT INTO public.products
          (facility_id, name, price, in_stock, discount_percent, photo_url, last_confirmed_at,
-          status, quantity_available, omni_allocation_percent)
-       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9)
+          status, quantity_available, omni_allocation_percent, quantity_allocated_omni)
+       VALUES ($1,$2,$3,$4,$5,$6, now(), $7, $8, $9, LEAST($10, $8))
        RETURNING id`,
       [
         data.facilityId,
@@ -631,6 +634,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
         data.status ?? (data.inStock ? "active" : "sold_out"),
         data.quantityAvailable ?? (data.inStock ? 1 : 0),
         data.omniAllocationPercent ?? 100,
+        data.quantityAllocatedOmni ?? 0,
       ],
     );
     if (data.coupon && created) {
