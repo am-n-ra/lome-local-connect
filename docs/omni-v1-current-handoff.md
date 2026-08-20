@@ -8,7 +8,7 @@
 | Branch | `main` |
 | Certified source commit | `fdd1c40` — `feat(seller): expose automatic response corrections` |
 | UI/backend continuation commits | `ac83869`, `a845c9c`, `a63cf58`, `f18e529`, `2131cd9`, `aaf1c0a`, `e0b979f`, `fdd1c40` — server-resolved location/free-city gating, buyer scope refresh, transaction contact unlock, seller Discovery/allocation controls, company settings, admin trust badges, and seller auto-response correction visibility |
-| Latest observed production deployment | `dpl_4vZvh3547vYcSdt453CtyGMvnWoh` — `READY` for source commit `fdd1c40` |
+| Latest observed production deployment | `dpl_FgwofaxrDBuhjHWfVFoe7W4CJ1ey` — `READY` for source commit `831dca9` (documentation-only follow-up; code slice remains from `fdd1c40`) |
 | Active Omni Neon project | `wild-moon-30984513` |
 | Active Omni Neon branch | `br-bitter-math-amrlbym6` (`production`) |
 | Isolated staging Neon project | `old-unit-98112236` |
@@ -42,7 +42,7 @@ The runtime adversarial evidence is stored in `/home/ubuntu/omni-phase3-adversar
 
 The latest authoritative seven-check staging invariant query returned zero for `completedWithoutReview`, `activeWithoutIntentKey`, `duplicateActiveIntentKeys`, `duplicateCouponRedemptions`, `approvedDepositsWithoutLedger`, `walletSnapshotDrift`, and `legacyCompletedWithoutReview`. A second post-fan-out run on 2026-08-20 also returned `ok=true` with zero for every check, using cutoff `2026-08-18T00:00:00Z`. The QR-specific reconciliation reported both proof transactions in `qr_verified`, exactly one `seller_verified` event for each, and no duplicate event groups.
 
-The latest observed production deployment metadata shows source commit `fdd1c40` on `main` in a `READY` production deployment (`dpl_4vZvh3547vYcSdt453CtyGMvnWoh`) serving the production aliases, including `omni.sparkafrika.online`. The final local validation passed with 11 test files and 69 tests, the production build, client-boundary check, and `git diff --check`. A passive public-route smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, and `/admin`. These observations establish deployment and route availability evidence; they do not convert server-only location resolution, isolated staging proof, or incomplete browser/device replay into full production transaction certification.
+The latest observed production deployment metadata shows source commit `831dca9` on `main` in a `READY` production deployment (`dpl_FgwofaxrDBuhjHWfVFoe7W4CJ1ey`) serving the production aliases, including `omni.sparkafrika.online`; this follow-up changed documentation only and includes the validated code from `fdd1c40`. The final local validation passed with 11 test files and 69 tests, the production build, client-boundary check, and `git diff --check`. A passive public-route smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, and `/admin`. These observations establish deployment and route availability evidence; they do not convert server-only location resolution, isolated staging proof, or incomplete browser/device replay into full production transaction certification.
 
 ## Relevant artifacts
 
@@ -62,7 +62,9 @@ The latest observed production deployment metadata shows source commit `fdd1c40`
 | `/home/ubuntu/terminal_full_output/2026-08-19_21-00-52_757965_5191.txt` | Full local test/build output |
 | `/home/ubuntu/omni-qr-proof-evidence-2026-08-20.md` | Redacted single/concurrent QR proof, invariant, and cleanup record |
 | `/home/ubuntu/omni-v1-final-validation-2026-08-20.md` | Final tests, public-route smoke matrix, production deployment, and read-only data reconciliation |
-| `/home/ubuntu/.mcp/tool-results/2026-08-20_11-57-09.124585206_vercel_get_deployment_5396296d.json` | READY production deployment metadata for commit `fdd1c40` |
+| `/home/ubuntu/.mcp/tool-results/2026-08-20_11-57-09.124585206_vercel_get_deployment_5396296d.json` | READY production deployment metadata for code commit `fdd1c40` |
+| `/home/ubuntu/.mcp/tool-results/2026-08-20_12-00-15.579380496_vercel_get_deployment_d1d84713.json` | READY production deployment metadata for documentation commit `831dca9` |
+| `/home/ubuntu/omni-v1-live-browser-check-2026-08-20.md` | Read-only production browser shell observation and current My Browser 504 blocker |
 
 ## QR fan-out certification checkpoint
 
@@ -87,6 +89,6 @@ The approved server-resolved buyer-location contract is now present in Migration
 
 The seller workspace now exposes manual open/closed availability, time-bounded Discovery mode, server-authoritative Omni-visible quantity, company identity settings, company/certification status, and correction controls for eligible automatic demand responses. The admin queue now displays company identity and trust badges that distinguish admin certification from earned QR confirmation. The buyer transaction room exposes seller contact after intent/QR creation while payment declaration and fulfilment actions remain server-state gated. No MapLibre GL v5 globe projection, facility-pin logic, external-payment model, one-wallet model, or seller-withdrawal prohibition was changed.
 
-Final validation passed on the `fdd1c40` source state: 11 test files and 69 tests, production build, client-boundary check, and diff check. Public smoke checks returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, and `/admin`. The `READY` production deployment is `dpl_4vZvh3547vYcSdt453CtyGMvnWoh`. Read-only reconciliation on the active Omni production branch found 2 companies, 7 company-linked facilities, 975 facilities with normalized city, zero products allocated above real stock, zero negative allocations, and zero persisted buyer discovery cities.
+Final validation passed on the `fdd1c40` code state and remains included in the latest `831dca9` deployment: 11 test files and 69 tests, production build, client-boundary check, and diff check. Public smoke checks returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, and `/admin`. The latest `READY` production deployment is `dpl_FgwofaxrDBuhjHWfVFoe7W4CJ1ey`; the code-bearing deployment for the slice is `dpl_4vZvh3547vYcSdt453CtyGMvnWoh`. Read-only reconciliation on the active Omni production branch found 2 companies, 7 company-linked facilities, 975 facilities with normalized city, zero products allocated above real stock, zero negative allocations, and zero persisted buyer discovery cities.
 
 The zero persisted buyer discovery-city count means the new consent/resolution path has not yet been exercised by a production buyer; it is not evidence that the schema or server gate is broken. A production-consent replay is required before claiming runtime-proven city-accurate free-plan enforcement. The seller auto-response correction slice is now implemented and deployed, but its authenticated seller UI replay and buyer-notification observation are still evidence work rather than a release gate closure. The release remains `partial` because live HTTPS camera preview/decode and the authenticated responsive buyer/seller browser matrix remain unproven.
