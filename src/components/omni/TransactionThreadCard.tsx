@@ -238,6 +238,22 @@ export function TransactionThreadCard({
         </OmniActionBlock>
       ) : null}
 
+      {transaction?.seller_contact ? (
+        <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm">
+          <p className="font-semibold">Contact vendeur déverrouillé</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Le contact est disponible après la création de votre intention d’achat. Le paiement reste
+            externe à Omni.
+          </p>
+          <a
+            className="mt-2 inline-block font-semibold text-primary underline underline-offset-2"
+            href={`tel:${transaction.seller_contact}`}
+          >
+            {transaction.seller_contact}
+          </a>
+        </div>
+      ) : null}
+
       <div className="space-y-2">
         <p className="flex items-center gap-2 text-sm font-semibold">
           <Clock3 className="h-4 w-4 text-primary" /> Fil transactionnel
@@ -287,11 +303,6 @@ export function TransactionThreadCard({
             {PAYMENT_METHODS.find((method) => method.value === paymentPreference)?.label ??
               paymentPreference}
           </p>
-          {transaction?.seller_contact && paymentPreference !== "cash_on_delivery" ? (
-            <p className="rounded-xl bg-card p-3 text-sm">
-              Contact paiement vendeur : <strong>{transaction.seller_contact}</strong>
-            </p>
-          ) : null}
           {uiState.canDeclarePayment && onDeclarePayment ? (
             <Button className="w-full" disabled={busy} onClick={onDeclarePayment}>
               {busy ? "Enregistrement…" : "J’ai payé"}
