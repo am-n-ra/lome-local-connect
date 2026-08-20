@@ -45,7 +45,12 @@ function gridKey(latitude: number, longitude: number): string {
 function pickCity(address: NominatimResponse["address"]): string | null {
   if (!address) return null;
   const candidate =
-    address.city ?? address.town ?? address.municipality ?? address.village ?? address.suburb ?? null;
+    address.city ??
+    address.town ??
+    address.municipality ??
+    address.village ??
+    address.suburb ??
+    null;
   const normalized = candidate?.trim();
   return normalized ? normalized.slice(0, 120) : null;
 }
@@ -61,7 +66,7 @@ async function resolveCity(latitude: number, longitude: number): Promise<CachedL
   if (cached) return cached;
 
   const endpoint =
-    process.env.OMNI_GEOCODER_URL ?? "https://nominatim.openstreetmap.org/reverse";
+    process.env["OMNI_GEOCODER_URL"] ?? "https://nominatim.openstreetmap.org/reverse";
   const url = new URL(endpoint);
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("addressdetails", "1");
@@ -90,7 +95,7 @@ async function resolveCity(latitude: number, longitude: number): Promise<CachedL
         Accept: "application/json",
         "Accept-Language": "fr,en",
         "User-Agent":
-          process.env.OMNI_GEOCODER_USER_AGENT ??
+          process.env["OMNI_GEOCODER_USER_AGENT"] ??
           "Omni/1.0 (https://omni.sparkafrika.online; location discovery)",
       },
       signal: controller.signal,

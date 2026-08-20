@@ -65,9 +65,18 @@ export function DemandPanel({
         data: {
           responseId: request.response_id,
           kind,
-          price: kind === "unavailable" ? null : Number.isFinite(price) ? Math.round(price) : null,
+          price:
+            kind === "unavailable"
+              ? null
+              : typeof price === "number" && Number.isFinite(price)
+                ? Math.round(price)
+                : null,
           quantity:
-            kind === "unavailable" ? null : Number.isFinite(quantity) ? Math.max(0, Math.round(quantity)) : null,
+            kind === "unavailable"
+              ? null
+              : typeof quantity === "number" && Number.isFinite(quantity)
+                ? Math.max(0, Math.round(quantity))
+                : null,
         },
       });
       toast.success("Réponse automatique corrigée et acheteur notifié.");

@@ -208,13 +208,14 @@ export function SearchDock({
       data-omni-dock="true"
       data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
       data-omni-stage="buyer"
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.9rem)] sm:px-5"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:px-5"
     >
       <div className="pointer-events-auto w-full max-w-[42rem] space-y-2.5">
         {controlsOpen && (
           <div
             data-omni-dock-row="structured"
             className="omni-atlas-surface grid grid-cols-1 gap-2 rounded-[1.25rem] p-2 sm:grid-cols-[1fr_1fr]"
+            aria-label="Paramètres de recherche"
           >
             <div className="rounded-2xl bg-background/72 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
@@ -231,7 +232,7 @@ export function SearchDock({
                   type="button"
                   aria-label="Diminuer la quantité"
                   onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </button>
@@ -252,7 +253,7 @@ export function SearchDock({
                   type="button"
                   aria-label="Augmenter la quantité"
                   onClick={() => onQuantityChange?.(quantity + 1)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>
@@ -301,13 +302,17 @@ export function SearchDock({
           </div>
         )}
 
-        <div data-omni-dock-row="discovery" className="flex items-center gap-2">
+        <div
+          data-omni-dock-row="discovery"
+          className="flex items-center gap-2"
+          aria-label="Contexte de recherche et localisation"
+        >
           <button
             type="button"
             aria-label={controlsOpen ? "Masquer les paramètres" : "Afficher les paramètres"}
             aria-expanded={controlsOpen}
             onClick={() => setParametersOpen((open) => !open)}
-            className="omni-glass grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95"
+            className="omni-glass grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             {controlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
@@ -318,7 +323,7 @@ export function SearchDock({
                   type="button"
                   aria-label="Catégories précédentes"
                   onClick={() => slide(-1)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </button>
@@ -331,7 +336,7 @@ export function SearchDock({
                       key={chip.label}
                       type="button"
                       onClick={() => onCategoryChange(chip.value)}
-                      className={`shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors ${
+                      className={`min-h-11 shrink-0 rounded-full px-3 py-2 text-[11px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                         category === chip.value
                           ? "bg-primary text-primary-foreground"
                           : "bg-background/65 text-foreground hover:bg-background"
@@ -345,7 +350,7 @@ export function SearchDock({
                   type="button"
                   aria-label="Catégories suivantes"
                   onClick={() => slide(1)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-full hover:bg-background/60"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-full hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </button>
@@ -580,7 +585,7 @@ function RefinementPanel({ filters, activeCount, onFiltersChange }: RefinementPa
               key={value}
               type="button"
               onClick={() => patchFilters({ sort: value })}
-              className={`rounded-full px-2 py-1.5 text-[11px] font-bold ${
+              className={`min-h-11 rounded-full px-3 py-2 text-[11px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 filters.sort === value
                   ? "bg-primary text-primary-foreground"
                   : "bg-secondary text-foreground"

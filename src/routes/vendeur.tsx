@@ -739,20 +739,23 @@ function VendeurPage() {
             onMapClick={updatePosition}
             className="h-full w-full"
           />
-          <div className="pointer-events-none absolute inset-0 bg-background/18" />
+          <div className="pointer-events-none absolute inset-0 bg-background/10" />
         </>
       }
       chrome={<TopNav activeRole="vendeur" minimalMapChrome />}
     >
-      <main className="pointer-events-none absolute inset-0 z-10 flex max-h-[100dvh] justify-center overflow-hidden px-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-[calc(env(safe-area-inset-top)+4.25rem)] sm:px-5">
-        <div className="omni-atlas-surface pointer-events-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col overflow-hidden rounded-[1.75rem]">
+      <main className="pointer-events-none absolute inset-0 z-10 flex max-h-[100dvh] items-start justify-center overflow-hidden px-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-[calc(env(safe-area-inset-top)+4.75rem)] sm:px-5 sm:pt-24">
+        <div
+          className={`omni-atlas-surface pointer-events-auto flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-[1.75rem] bg-[var(--atlas-glass)]/72 transition-[max-width] duration-200 ${activeTab === "apercu" ? "max-w-xl" : "max-w-6xl"}`}
+          data-omni-seller-surface={activeTab}
+        >
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 [scrollbar-width:thin] sm:p-4">
             <div className="mx-auto w-full max-w-5xl min-w-0">
               <section className="omni-atlas-surface rounded-[1.5rem] p-3 sm:p-4">
                 <div className="flex flex-wrap items-start gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
-                      Facility active · vue globe
+                      Espace vendeur · carte active
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <h1 className="truncate font-display text-2xl font-bold sm:text-3xl">
@@ -767,8 +770,7 @@ function VendeurPage() {
                       {facility.company_name ?? "Compagnie non renseignée"} · {facility.company_status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}
                     </p>
                     <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-                      La carte reste visible ; vos opérations apparaissent au-dessus du contexte
-                      géospatial.
+                      La carte reste le contexte principal ; cette surface regroupe uniquement les actions V1 nécessaires.
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
