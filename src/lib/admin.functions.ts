@@ -320,3 +320,85 @@ export const adjustWallet = createServerFn({ method: "POST" })
     });
     return { balance, entryId };
   });
+
+export type AdminCompanyRow = {
+  id: string;
+  name: string;
+  legal_name: string | null;
+  country_code: string | null;
+  status: string;
+  owner_name: string | null;
+  facilities_count: number;
+  certified_count: number;
+  created_at: string;
+};
+
+/** Certification happens at company level; facilities inherit the trust badge. */
+export const listAdminCompanies = createServerFn({ method: "GET" })
+  .middleware([requireStaff])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        status: z.enum(["all", "unverified", "pending", "certified", "rejected"]).default("all"),
+        search: z.string().trim().max(120).optional(),
+        limit: z.number().int().min(1).max(200).default(60),
+      })
+      .parse(input ?? {}),
+  )
+  .handler(async ({ data }) => {
+    const params: unknown[] = [];
+    const clauses: string[] = [];
+    if (data.status !== "all") {
+      params.push(data.status);
+      clauses.push(`c.status = $${params.length}`);
+    }
+    if (data.search) {
+      params.push(`%${data.search}%`);
+      clauses.push(`(c.name ILIKE $${params.length} OR c.legal_name ILIKE $${params.length})`);
+    }
+    params.push(data.limit);
+    return query<AdminCompanyRow>(
+      `SELECT c.id, c.name, c.legal_name, c.country_code, c.status,
+              p.name AS owner_name,
+              (SELECT count(*) FROM public.facilities f WHERE f.company_id = c.id)::int AS facilities_count,
+              (SELECT count(*) FROM public.facilities f
+                WHERE f.company_id = c.id AND f.status IN ('certified','confirmed'))::int AS certified_count,
+              c.created_at
+       FROM public.companies c
+       LEFT JOIN public.profiles p ON p.id = c.owner_id
+       ${clauses.length ? `WHERE ${clauses.join(" AND ")}` : ""}
+       ORDER BY (c.status = 'pending') DESC, c.created_at DESC
+       LIMIT $${params.length}`,
+      params,
+    );
+  });
+
+/** Certifying a company promotes its claimed facilities to the certified trust level. */
+export const setCompanyStatus = createServerFn({ method: "POST" })
+  .middleware([requireStaff])
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        companyId: z.string().uuid(),
+        status: z.enum(["unverified", "pending", "certified", "rejected"]),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await query(`UPDATE public.companies SET status = $2, updated_at = now() WHERE id = $1`, [
+      data.companyId,
+      data.status,
+    ]);
+    if (data.status === "certified") {
+      await query(
+        `UPDATE public.facilities
+         SET status = 'certified', verified_at = COALESCE(verified_at, now())
+         WHERE company_id = $1 AND status IN ('unconfirmed','unclaimed')`,
+        [data.companyId],
+      );
+    }
+    await writeAudit(context.userId, "company.status", "company", data.companyId, {
+      status: data.status,
+    });
+    return { ok: true };
+  });
