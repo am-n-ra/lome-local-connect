@@ -41,6 +41,7 @@ import { CleanProductForm } from "@/components/omni-clean/CleanProductForm";
 import { CleanWalletPanel } from "@/components/omni-clean/CleanWalletPanel";
 import { CleanSellerOnboarding } from "@/components/omni-clean/CleanSellerOnboarding";
 import { CleanSellerAccessGate } from "@/components/omni-clean/CleanSellerAccessGate";
+import { CleanScannerPanel } from "@/components/omni-clean/CleanScannerPanel";
 import {
   OmniErrorState,
   OmniResumeBar,
@@ -737,7 +738,7 @@ function VendeurPage() {
     ) : activeTab === "demandes" ? (
       <div className="space-y-6"><DemandPanel demand={data?.demand ?? []} facilityId={facility.id} onLiveCountChange={setLiveDemandCount} /><RequestsPanel facilityId={facility.id} requests={data?.requests ?? []} onRefresh={refreshRequests} /></div>
     ) : activeTab === "encaisser" ? (
-      <CheckoutPanel facilityId={facility.id} {...(transactionId ? { initialTransactionId: transactionId } : {})} />
+      <CleanScannerPanel facilityId={facility.id} {...(transactionId ? { initialTransactionId: transactionId } : {})} />
     ) : activeTab === "coupons" ? (
       <CouponsPanel facilityId={facility.id} coupons={data?.coupons ?? []} onRefresh={refreshCoupons} />
     ) : activeTab === "solde" ? (
