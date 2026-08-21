@@ -37,6 +37,8 @@ import { MediaManager } from "@/components/omni/MediaManager";
 import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { CleanSellerWorkspace } from "@/components/omni-clean/CleanSellerWorkspace";
+import { CleanProductForm } from "@/components/omni-clean/CleanProductForm";
+import { CleanWalletPanel } from "@/components/omni-clean/CleanWalletPanel";
 import {
   OmniErrorState,
   OmniResumeBar,
@@ -429,6 +431,7 @@ function VendeurPage() {
         status: draft.status,
         quantityAvailable: Math.round(quantityAvailable),
         omniAllocationPercent: Math.round(omniAllocationPercent),
+        discountPercent: Math.max(1, Math.min(90, Number(draft.couponPercent) || 1)),
         photoUrl: draft.photoUrl.trim() || null,
         coupon: draft.couponCode.trim()
           ? {
@@ -746,7 +749,7 @@ function VendeurPage() {
       </div>
     ) : activeTab === "produits" ? (
       <div className="space-y-4">
-        <SellerProductForm atProductCap={atProductCap} onSubmit={addProduct} />
+        <CleanProductForm atProductCap={atProductCap} onSubmit={addProduct} />
         <div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--omni-orange-deep)]">Catalogue</p><h2 className="font-display text-xl font-extrabold">Produits publiés</h2></div><button type="button" onClick={() => void confirmEverything()} className="omni-clean-secondary-button min-h-10">Tout confirmer</button></div>
         <div className="space-y-2">{products.map((product) => <div key={product.id} className="rounded-2xl border border-black/5 bg-white/70 p-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-extrabold">{product.name}</p><p className="text-xs font-semibold text-[var(--omni-ink-muted)]">{formatMoney(product.price)} · Stock total {product.quantity_available} · Omni visible {product.quantity_allocated_omni}</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => void confirmProduct(product)} className="omni-clean-secondary-button min-h-10 px-3">Confirmer</button><button type="button" onClick={() => void removeProduct(product)} className="omni-clean-secondary-button min-h-10 px-3">Supprimer</button></div></div></div>)}{products.length === 0 ? <p className="rounded-2xl bg-white/60 p-4 text-sm text-[var(--omni-ink-muted)]">Aucun produit pour l’instant.</p> : null}</div>
       </div>
@@ -757,7 +760,20 @@ function VendeurPage() {
     ) : activeTab === "coupons" ? (
       <CouponsPanel facilityId={facility.id} coupons={data?.coupons ?? []} onRefresh={refreshCoupons} />
     ) : activeTab === "solde" ? (
-      <BalanceSheet balances={data?.balances ?? []} formatMoney={formatMoney} topUpControl={<div className="flex flex-wrap gap-2"><Input inputMode="numeric" type="number" min="500" value={topUpAmount} onChange={(event) => setTopUpAmount(event.target.value.replace(/\\D/g, ""))} className="h-11 w-32" aria-label="Montant à recharger en FCFA" /><button type="button" onClick={() => void startTopUp()} disabled={topUpBusy} className="omni-clean-primary-button min-h-11">{topUpBusy ? "Ouverture…" : "Recharger via FedaPay"}</button></div>} />
+      <CleanWalletPanel
+        balances={data?.balances ?? []}
+        formatMoney={formatMoney}
+        topUpAmount={topUpAmount}
+        topUpBusy={topUpBusy}
+        allocationBucket={allocationBucket}
+        allocationAmount={allocationAmount}
+        allocationBusy={allocationBusy}
+        onTopUpAmountChange={setTopUpAmount}
+        onTopUp={() => void startTopUp()}
+        onAllocationBucketChange={setAllocationBucket}
+        onAllocationAmountChange={setAllocationAmount}
+        onAllocate={() => void allocateWallet()}
+      />
     ) : (
       <div className="space-y-4 rounded-2xl bg-white/55 p-4"><p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--omni-orange-deep)]">Compte</p><h2 className="font-display text-xl font-extrabold">Un seul Omni Wallet</h2><p className="text-sm leading-6 text-[var(--omni-ink-muted)]">Rechargez votre Omni Wallet pour les services de la plateforme. Il n’existe pas de retrait vendeur dans la V1.</p><div className="grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setActiveTab("solde")} className="omni-clean-secondary-button min-h-11"><CreditCard className="h-4 w-4" />Solde et recharge</button><button type="button" onClick={() => setActiveTab("coupons")} className="omni-clean-secondary-button min-h-11">Coupons · {data?.counts.coupons ?? 0}</button></div>{company ? <div className="rounded-2xl border border-black/5 bg-white/70 p-4"><p className="font-extrabold">{company.name}</p><p className="mt-1 text-xs font-semibold text-[var(--omni-ink-muted)]">{company.status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}</p></div> : null}</div>
     );
