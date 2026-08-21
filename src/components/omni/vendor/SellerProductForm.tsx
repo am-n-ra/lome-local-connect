@@ -13,6 +13,7 @@ export type SellerProductDraft = {
   quantity: string;
   photoUrl: string;
   allocation: string;
+  allocatedOmni: string;
   status: "draft" | "active" | "paused" | "sold_out";
   couponCode: string;
   couponDescription: string;
@@ -25,11 +26,13 @@ const INITIAL_DRAFT: SellerProductDraft = {
   quantity: "1",
   photoUrl: "",
   allocation: "100",
+  allocatedOmni: "0",
   status: "active",
   couponCode: "",
   couponDescription: "",
   couponPercent: "10",
 };
+
 
 export function SellerProductForm({
   atProductCap,
