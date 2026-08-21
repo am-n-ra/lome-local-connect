@@ -1,5 +1,6 @@
 import { Outlet, HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
+import mapLibreCss from "maplibre-gl/dist/maplibre-gl.css?url";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -12,7 +13,10 @@ export const Route = createRootRoute({
         content: "Omni V2 — nouvelle base de recherche géospatiale.",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: mapLibreCss },
+    ],
   }),
   shellComponent: RootShell,
   component: RootComponent,

@@ -36,6 +36,10 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
     let rotationFrame: number | undefined;
     let lastTimestamp = 0;
     let userInteracting = false;
+    let fallbackUsed = false;
+    let resizeObserver: ResizeObserver | undefined;
+    const localStyle = "/assets/omni-map-style.json";
+    const primaryStyle = "https://tiles.openfreemap.org/styles/liberty";
 
     const emitBounds = () => {
       if (!map || disposed) return;
@@ -51,10 +55,9 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
 
     const handleLoad = () => {
       if (!map || disposed) return;
-      // MapLibre applies globe reliably after the style has loaded. The
-      // constructor projection keeps the first frame correct; this call makes
-      // the runtime state explicit for style reloads and deployments.
+      // Both the hosted style and local fallback use the same globe contract; apply it only after the style is ready.
       map.setProjection({ type: "globe" });
+      map.resize();
       void syncMarkers(map, facilitiesRef.current);
       void syncUserMarker(map, userLocation);
       emitBounds();
@@ -67,7 +70,7 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
 
       map = new maplibre.Map({
         container: containerRef.current,
-        style: "/assets/omni-map-style.json",
+        style: primaryStyle,
         center: [0, 16],
         zoom: 1.1,
         pitch: 0,
@@ -75,8 +78,18 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
         attributionControl: false,
       });
       mapRef.current = map;
+      resizeObserver = new ResizeObserver(() => map?.resize());
+      resizeObserver.observe(containerRef.current);
       map.addControl(new maplibre.NavigationControl({ showCompass: true }), "bottom-left");
+      map.addControl(new maplibre.AttributionControl({ compact: true, customAttribution: "© OpenStreetMap contributors · © OpenMapTiles" }), "bottom-right");
       map.on("load", handleLoad);
+      map.on("error", () => {
+        // Keep the scene usable if an optional external tile source is added later.
+        if (!fallbackUsed && !map?.isStyleLoaded()) {
+          fallbackUsed = true;
+          map?.setStyle(localStyle);
+        }
+      });
       map.on("styledata", () => {
         if (map?.isStyleLoaded()) {
           void syncMarkers(map, facilitiesRef.current);
@@ -109,6 +122,7 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
     return () => {
       disposed = true;
       if (rotationFrame) window.cancelAnimationFrame(rotationFrame);
+      resizeObserver?.disconnect();
       if (map) {
         markersRefForMap(map).forEach((marker) => marker.remove());
         markerRegistry.delete(map);

@@ -116,7 +116,8 @@ function V2BuyerPage() {
     setState(products.length > 0 ? "catalogue_visible" : "catalogue_empty");
   }, [products.length]);
 
-  const visibleProducts = useMemo(() => filterPublicProducts(products, query), [products, query]);
+  // Discovery identifies the facility; it must not hide that facility's catalogue products.
+  const visibleProducts = useMemo(() => filterPublicProducts(products, ""), [products]);
   const resultSummary = useMemo(() => {
     if (state === "search_submitting" || state === "search_reveal") return "Recherche en cours";
     if (state === "empty_results") return "Aucun résultat";
