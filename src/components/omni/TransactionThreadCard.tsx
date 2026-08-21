@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { AlertCircle, CheckCircle2, Clock3, Copy, QrCode, Share2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock3, Copy, MapPinned, QrCode, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -249,19 +249,17 @@ export function TransactionThreadCard({
         </OmniActionBlock>
       ) : null}
 
-      {transaction?.seller_contact ? (
+      {transaction?.seller_contact || transaction?.facility_address ? (
         <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm">
-          <p className="font-semibold">Contact vendeur déverrouillé</p>
+          <p className="font-semibold">Contact et itinéraire déverrouillés</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Le contact est disponible après la création de votre intention d’achat. Le paiement reste
-            externe à Omni.
+            Ces informations sont accessibles après la création de votre intention d’achat. Le paiement reste externe à Omni.
           </p>
-          <a
-            className="mt-2 inline-block font-semibold text-primary underline underline-offset-2"
-            href={`tel:${transaction.seller_contact}`}
-          >
-            {transaction.seller_contact}
-          </a>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {transaction.seller_contact ? <a className="font-semibold text-primary underline underline-offset-2" href={`tel:${transaction.seller_contact}`}>{transaction.seller_contact}</a> : null}
+            {transaction.facility_latitude != null && transaction.facility_longitude != null ? <a className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-primary/25 px-3 font-semibold text-primary" href={`https://www.google.com/maps/dir/?api=1&destination=${transaction.facility_latitude},${transaction.facility_longitude}`} target="_blank" rel="noreferrer"><MapPinned className="h-4 w-4" />Itinéraire</a> : null}
+          </div>
+          {transaction.facility_address ? <p className="mt-2 text-xs text-muted-foreground">{transaction.facility_address}</p> : null}
         </div>
       ) : null}
 

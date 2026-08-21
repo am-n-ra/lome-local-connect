@@ -88,6 +88,7 @@ export function CleanAvailabilitySheet({
   const [requests, setRequests] = useState<DemandRequestRow[]>([]);
   const [responses, setResponses] = useState<(DemandResponseRow & { request_id: string })[]>([]);
   const [entitlement, setEntitlement] = useState<BuyerAvailabilityEntitlement | null>(null);
+  const [submittedRequestId, setSubmittedRequestId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
 
   const selectedTargetFacilityIds = useMemo(
@@ -115,6 +116,7 @@ export function CleanAvailabilitySheet({
     setQuantity(Math.max(1, initialQuantity));
     setScope(mode === "manual" ? "facility" : "visible");
     setStep(resumeRequestId || resumeResponseId ? 2 : 0);
+    setSubmittedRequestId(resumeRequestId ?? null);
     if (user) void refresh();
   }, [initialQuantity, initialTerm, mode, open, refresh, resumeRequestId, resumeResponseId, user]);
 
@@ -127,9 +129,11 @@ export function CleanAvailabilitySheet({
 
   const activeRequestId =
     resumeRequestId ?? responses.find((response) => response.id === resumeResponseId)?.request_id;
-  const displayRequests = activeRequestId
-    ? requests.filter((request) => request.id === activeRequestId)
-    : requests;
+  const currentRequestId = activeRequestId ?? submittedRequestId;
+  const hasSubmittedRequest = Boolean(currentRequestId || resumeRequestId || resumeResponseId);
+  const displayRequests = currentRequestId
+    ? requests.filter((request) => request.id === currentRequestId)
+    : [];
 
   function redirectToAuth() {
     savePendingAvailabilitySearch({
@@ -156,14 +160,14 @@ export function CleanAvailabilitySheet({
       setStep(0);
       return;
     }
-    if (scope === "visible" && entitlement?.bulkAllowed === false) {
+    if (scope === "visible" && entitlement?.bulkAllowed !== true) {
       toast.error("La vérification groupée est réservée au plan Pro.");
       setStep(1);
       return;
     }
     setBusy(true);
     try {
-      await create({
+      const created = await create({
         data: {
           searchTerm: term.trim(),
           quantity,
@@ -174,6 +178,7 @@ export function CleanAvailabilitySheet({
           mode: selectedMode,
         },
       });
+      setSubmittedRequestId(created.id);
       toast.success("Vérification lancée.");
       setStep(2);
       await refresh();
@@ -285,7 +290,29 @@ export function CleanAvailabilitySheet({
             </section>
           ) : null}
 
-          {user && step === 2 ? (
+          {user && step === 2 && !hasSubmittedRequest ? (
+            <section className="space-y-4">
+              <div className="rounded-[1.5rem] bg-[var(--omni-paper)] p-5">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--omni-orange-deep)]">Contraintes de votre demande</p>
+                <p className="mt-2 font-display text-xl font-extrabold">{term}</p>
+                <p className="mt-1 text-sm leading-6 text-[var(--omni-ink-muted)]">Ces paramètres restent privés et servent à classer les réponses. Ils ne sont pas transmis au vendeur.</p>
+              </div>
+              <label className="block rounded-[1.5rem] border border-black/5 bg-white/80 p-5">
+                <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--omni-ink-muted)]">Quantité</span>
+                <span className="mt-1 block text-sm font-semibold text-[var(--omni-ink-muted)]">Unités souhaitées</span>
+                <input className="omni-clean-field mt-3 text-base" inputMode="numeric" type="number" min={1} max={999} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(999, Number(event.target.value) || 1)))} aria-label="Quantité souhaitée" />
+              </label>
+              <div className="rounded-[1.5rem] border border-black/5 bg-white/80 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-[var(--omni-ink-muted)]">Budget maximum</p><p className="mt-1 text-sm font-semibold text-[var(--omni-ink-muted)]">Optionnel et privé</p></div>
+                  <label className="flex min-h-11 items-center gap-2 text-sm font-extrabold"><input type="checkbox" checked={unlimitedBudget} onChange={(event) => setUnlimitedBudget(event.target.checked)} className="h-5 w-5 accent-[var(--omni-orange)]" />Illimité</label>
+                </div>
+                {!unlimitedBudget ? <input className="omni-clean-field mt-3 text-base" inputMode="numeric" type="number" min={0} max={100000000} value={budgetMax} onChange={(event) => setBudgetMax(event.target.value.replace(/\D/g, ""))} placeholder="Montant maximum en FCFA" aria-label="Budget maximum en FCFA" /> : <p className="mt-3 rounded-xl bg-[var(--omni-paper)] p-3 text-sm font-bold text-[var(--omni-ink-muted)]">Omni peut comparer sans plafond de budget.</p>}
+              </div>
+            </section>
+          ) : null}
+
+          {user && step === 2 && hasSubmittedRequest ? (
             <section className="space-y-5">
               {!displayRequests.length ? (
                 <div className="rounded-[1.5rem] bg-[var(--omni-paper)] p-5">
@@ -329,11 +356,14 @@ export function CleanAvailabilitySheet({
         {user && step < 2 ? (
           <div className="flex gap-2 border-t border-black/5 px-5 py-4 sm:px-6">
             {step > 0 ? <button type="button" onClick={() => setStep((current) => current - 1)} className="omni-clean-secondary-button min-h-12 flex-1"><ArrowLeft className="h-4 w-4" />Retour</button> : null}
-            <button type="button" onClick={() => step < 2 ? (step === 1 ? setStep(2) : setStep(1)) : undefined} disabled={busy || (step === 0 && term.trim().length < 2)} className="omni-clean-primary-button min-h-12 flex-1">{busy ? "Vérification…" : step === 1 ? "Continuer" : "Continuer"}<ArrowRight className="h-4 w-4" /></button>
+            <button type="button" onClick={() => step === 1 ? setStep(2) : setStep(1)} disabled={busy || (step === 0 && term.trim().length < 2)} className="omni-clean-primary-button min-h-12 flex-1">Continuer<ArrowRight className="h-4 w-4" /></button>
           </div>
         ) : null}
-        {user && step === 2 && !displayRequests.length ? (
-          <div className="border-t border-black/5 px-5 py-4 sm:px-6"><button type="button" onClick={() => void submitRequest()} disabled={busy} className="omni-clean-primary-button min-h-12 w-full">{busy ? "Envoi…" : "Envoyer la demande"}</button></div>
+        {user && step === 2 && !hasSubmittedRequest ? (
+          <div className="flex gap-2 border-t border-black/5 px-5 py-4 sm:px-6">
+            <button type="button" onClick={() => setStep(1)} className="omni-clean-secondary-button min-h-12 flex-1"><ArrowLeft className="h-4 w-4" />Retour</button>
+            <button type="button" onClick={() => void submitRequest()} disabled={busy} className="omni-clean-primary-button min-h-12 flex-1">{busy ? "Envoi…" : "Envoyer la demande"}</button>
+          </div>
         ) : null}
       </div>
     </div>

@@ -43,12 +43,17 @@ export type TransactionTimeline = {
     buyer_id: string | null;
     status: string;
     amount: number;
+    search_term: string | null;
+    quantity: number;
     payment_mode: string;
     payment_preference: string | null;
     buyer_payment_declared_at: string | null;
     seller_payment_confirmed_at: string | null;
     fulfillment_started_at: string | null;
     seller_contact: string | null;
+    facility_address: string | null;
+    facility_latitude: number | null;
+    facility_longitude: number | null;
     qr_token: string | null;
     qr_expires_at: string | null;
     intent_created_at: string | null;
@@ -831,11 +836,20 @@ export const getTransactionTimeline = createServerFn({ method: "GET" })
   .inputValidator((input: unknown) => z.object({ transactionId: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const transaction = await queryOne<TransactionTimeline["transaction"]>(
-      `SELECT t.id, t.facility_id, f.name AS facility_name, t.buyer_id, t.status, t.amount,
+             `SELECT t.id, t.facility_id, f.name AS facility_name, t.buyer_id, t.status, t.amount,
+              t.intent_metadata->>'search_term' AS search_term,
+              COALESCE((t.intent_metadata->>'quantity')::int, 1) AS quantity,
               t.payment_mode, t.payment_preference, t.buyer_payment_declared_at,
+
               t.seller_payment_confirmed_at, t.fulfillment_started_at,
               CASE WHEN t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
                    THEN f.phone ELSE NULL END AS seller_contact,
+              CASE WHEN t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
+                   THEN f.address ELSE NULL END AS facility_address,
+              CASE WHEN t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
+                   THEN f.latitude ELSE NULL END AS facility_latitude,
+              CASE WHEN t.status IN ('qr_generated','qr_verified','payment_pending','paid','fulfillment','received','rating_pending','completed')
+                   THEN f.longitude ELSE NULL END AS facility_longitude,
               CASE WHEN t.buyer_id = $2 THEN 'buyer' ELSE 'seller' END AS viewer_role,
               t.qr_token, t.qr_expires_at, t.intent_created_at, t.paid_at, t.completed_at
        FROM public.transactions t

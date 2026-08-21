@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Activity, BadgeCheck, Box, ChevronRight, CircleDollarSign, CreditCard, MapPin, QrCode, Store, WalletCards } from "lucide-react";
-import { BrandMark } from "@/components/omni/BrandMark";
 import type { VendorFacility } from "@/lib/vendor.functions";
 import { cn } from "@/lib/utils";
 
@@ -59,22 +58,6 @@ export function CleanSellerWorkspace({
       <div className="absolute inset-0 z-0">{map}</div>
       <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(244,238,231,.88),rgba(244,238,231,.14)_20%,transparent_44%,rgba(244,238,231,.18))]" />
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[1440px] items-center justify-between">
-          <div className="pointer-events-auto flex items-center gap-3 rounded-full border border-white/75 bg-[color-mix(in_oklab,var(--omni-paper-bright)_86%,transparent)] px-2.5 py-2 shadow-[var(--omni-shadow-float)] backdrop-blur-xl">
-            <BrandMark className="h-8 w-8 rounded-[24%]" />
-            <div className="hidden sm:block">
-              <p className="font-display text-sm font-extrabold tracking-[-0.03em]">Omni seller</p>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--omni-ink-muted)]">Votre offre, visible.</p>
-            </div>
-          </div>
-          <div className="pointer-events-auto rounded-full border border-white/75 bg-[color-mix(in_oklab,var(--omni-paper-bright)_86%,transparent)] px-3 py-2 text-xs font-extrabold shadow-[var(--omni-shadow-float)] backdrop-blur-xl">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-[var(--omni-orange)]" aria-hidden="true" />
-            {pro ? "Pro actif" : "Omni seller"}
-          </div>
-        </div>
-      </header>
-
       <section className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="pointer-events-auto omni-clean-seller-panel w-full max-w-2xl self-center lg:self-end">
@@ -105,7 +88,7 @@ export function CleanSellerWorkspace({
               </div>
               <div className="rounded-2xl bg-[var(--omni-paper)] p-3">
                 <div className="flex items-center gap-2 text-[var(--omni-ink-muted)]"><BadgeCheck className="h-4 w-4" /><p className="text-[10px] font-extrabold uppercase tracking-[0.14em]">État de confiance</p></div>
-                <p className="mt-1 text-sm font-extrabold">{facility.status === "confirmed" ? "Confirmed · Pro éligible" : "Unconfirmed · listing limité"}</p>
+                <p className="mt-1 text-sm font-extrabold">{facility.status === "confirmed" ? (pro ? "Confirmed · Pro actif" : "Confirmed · Pro éligible") : "Unconfirmed · listing limité"}</p>
                 <p className="mt-1 text-[11px] font-semibold text-[var(--omni-ink-muted)]">{productsCount} produits · {requestsCount} demandes · {couponCount} coupons</p>
               </div>
             </div>
