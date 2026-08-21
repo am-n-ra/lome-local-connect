@@ -235,7 +235,7 @@ PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) are merged into 
 | Evidence item | Result | Interpretation |
 | --- | --- | --- |
 | Canonical main source | `2637ed5c`, merge of PR #49 | Clean-base scanner slice is on `main` |
-| Production deployment | `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN`, `READY`, source `2637ed5c` | Production deployment evidence passed |
+| Production deployment | Clean-base code deployment `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN`, `READY`, source `2637ed5c`; documentation deployment `dpl_Ap3JZ1dqj2UpWjF1Wv2xSUcfWxDB`, `READY`, source `112db39` | Production deployment evidence passed |
 | Public route smoke | `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, `/admin` all HTTP 200 | Public reachability passed |
 | Brand asset | `/assets/omni-logo-D2pwBZcD.png` HTTP 200, PNG | Canonical logo asset served |
 | PWA manifest | `/manifest.webmanifest` HTTP 200 | Manifest availability passed |

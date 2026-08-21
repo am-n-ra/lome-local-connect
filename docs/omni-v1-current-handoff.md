@@ -8,7 +8,7 @@
 | Branch | `main` |
 | Certified source commit | `2637ed5c` — merge of PR #49, `feat(ui): replace seller scanner surface` |
 | UI/backend continuation commits | Prior location/transaction/seller/company/admin commits plus clean-base PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) — buyer/seller clean-base surfaces, seller access/onboarding, and scanner replacement |
-| Latest observed production deployment | `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` — `READY` for source commit `2637ed5c`, production aliases include `omni.sparkafrika.online` |
+| Latest observed production deployment | `dpl_Ap3JZ1dqj2UpWjF1Wv2xSUcfWxDB` — `READY` for documentation commit `112db39`, production target; clean-base code-bearing deployment remains `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` |
 | Active Omni Neon project | `wild-moon-30984513` |
 | Active Omni Neon branch | `br-bitter-math-amrlbym6` (`production`) |
 | Isolated staging Neon project | `old-unit-98112236` |
@@ -117,7 +117,7 @@ A final passive public-route smoke matrix against the production alias returned 
 
 PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) are merged into `main`. The clean-base buyer and seller surfaces are now the primary production path: buyer map/search, availability, transaction room, seller access gate, certification-first onboarding, map-first seller workspace, Scanner QR, catalogue, and Omni Wallet. The scanner surface is replaced by `CleanScannerPanel`; the supplied Omni logo is used by the shell and PWA metadata. The remaining legacy seller components are retained only in the rollback branch of `vendeur.tsx` and are not the primary clean-base path.
 
-Vercel deployment `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` is `READY`, targets production, is sourced from verified GitHub commit `2637ed5c`, and serves `https://omni.sparkafrika.online` among its aliases. Public read-only checks on the production alias returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`; the canonical logo returned HTTP 200 as a PNG; the PWA manifest returned HTTP 200; and the production root exposed strict-transport-security.
+The clean-base code-bearing deployment `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` is `READY`, targets production, is sourced from verified GitHub commit `2637ed5c`, and serves `https://omni.sparkafrika.online` among its aliases. After this handoff update was pushed, Vercel created documentation deployment `dpl_Ap3JZ1dqj2UpWjF1Wv2xSUcfWxDB` with state `READY`, production target, and source commit `112db39`. Public read-only checks on the production alias returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`; the canonical logo returned HTTP 200 as a PNG; the PWA manifest returned HTTP 200; and the production root exposed strict-transport-security.
 
 The public seller gate was observed in the browser and showed the clean seller entry, certification-before-listing, and locked `$20` bonus. The follow-up post-load browser snapshot returned HTTP 504 in both available browser contexts. No seller credentials were entered, no camera permission was granted, no QR was decoded, no `redeemCheckout` mutation was performed, and no production or staging data was changed. These observations confirm public deployment and clean entry evidence only.
 
