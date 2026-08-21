@@ -53,6 +53,7 @@ type Props = {
   onSelect: (facility: BuyerFacility) => void;
   onClearSelection: () => void;
   onCheckAvailability: (facility: BuyerFacility) => void;
+  onClaim: (facility: BuyerFacility) => void;
   onOpenBulkAvailability: () => void;
   onOpenActivity: () => void;
   onRequestLocation: () => void;
@@ -144,6 +145,7 @@ export function CleanBuyerMapStage({
   onSelect,
   onClearSelection,
   onCheckAvailability,
+  onClaim,
   onOpenBulkAvailability,
   onOpenActivity,
   onRequestLocation,
@@ -309,7 +311,7 @@ export function CleanBuyerMapStage({
               )}
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 {selected.status === "unclaimed" ? (
-                  <button type="button" className="omni-clean-secondary-button min-h-12 flex-1">
+                  <button type="button" onClick={() => onClaim(selected)} className="omni-clean-secondary-button min-h-12 flex-1">
                     Revendiquer cette facilité
                   </button>
                 ) : (

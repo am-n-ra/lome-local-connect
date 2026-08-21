@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@/lib/useServerFn";
-import { listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
+import { claimFacility, listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { saveBuyerDiscoveryLocation } from "@/lib/location.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,6 +134,7 @@ export function CartePage({
   const [discoveryScopeRevision, setDiscoveryScopeRevision] = useState(0);
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
+  const claimFacilityRemote = useServerFn(claimFacility);
   const persistDiscoveryLocation = useServerFn(saveBuyerDiscoveryLocation);
   const fetchInitialTimeline = useServerFn(getTransactionTimeline);
   const fetchMyOrders = useServerFn(listMyOrders);
@@ -804,6 +805,21 @@ export function CartePage({
     }
   }
 
+  async function claimSelectedFacility(facility: MapFacility) {
+    if (!user) {
+      navigate({ to: "/auth", search: { next: "/carte" } });
+      return;
+    }
+    try {
+      await claimFacilityRemote({ data: { facilityId: facility.id } });
+      setSelected({ ...facility, status: "unconfirmed" });
+      toast.success("Facilité revendiquée. La certification peut maintenant commencer.");
+      await retryCoverage();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Revendication impossible.");
+    }
+  }
+
   if (cleanUi) {
     return (
       <>
@@ -836,6 +852,7 @@ export function CartePage({
           }}
           onClearSelection={() => setSelected(null)}
           onCheckAvailability={openManualAvailability}
+          onClaim={claimSelectedFacility}
           onOpenBulkAvailability={() => openDemandRequest()}
           onOpenActivity={() => setOrdersOpen(true)}
           onRequestLocation={requestLocation}

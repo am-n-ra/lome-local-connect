@@ -39,6 +39,7 @@ import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { CleanSellerWorkspace } from "@/components/omni-clean/CleanSellerWorkspace";
 import { CleanProductForm } from "@/components/omni-clean/CleanProductForm";
 import { CleanWalletPanel } from "@/components/omni-clean/CleanWalletPanel";
+import { CleanSellerOnboarding } from "@/components/omni-clean/CleanSellerOnboarding";
 import {
   OmniErrorState,
   OmniResumeBar,
@@ -725,7 +726,7 @@ function VendeurPage() {
     return (
       <>
         <TopNav activeRole="vendeur" minimalMapChrome />
-        <SellerOnboardingFlow center={fallbackCenter} saving={saving} onSubmit={submitOnboarding} />
+        <CleanSellerOnboarding center={fallbackCenter} saving={saving} onSubmit={submitOnboarding} />
       </>
     );
   }
