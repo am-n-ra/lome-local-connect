@@ -226,3 +226,25 @@ The cumulative UI continuation added five bounded changes: buyer SearchDock touc
 Local acceptance passed after the cumulative changes: `pnpm exec tsc --noEmit`, 11 test files / 69 tests, `pnpm build`, client-boundary check, and `git diff --check`. The latest Vercel production deployment is `dpl_8MB5eFpg264sDZRLJPtxYRbWmGho` for source commit `80af399`, with state `READY`. A read-only production smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`.
 
 These changes close implementation-level portions of `BUY-002`, `BUY-005`, `TXN-003`, `SELL-003`, and `TXN-002` but do not close their runtime proof requirements. The buyer and seller authenticated responsive matrix, facility-card selection/back restoration, real HTTPS camera preview/decode, production buyer city-consent replay, and authenticated transaction/scanner evidence remain open. The release remains `partial` and no production-ready claim is made from build or route smoke evidence alone.
+
+
+## 2026-08-21 clean-base implementation and deployment checkpoint
+
+PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) are merged into `main`. The approved clean-base implementation is now the primary buyer and seller route: buyer map/search, availability, transaction room, seller access gate, certification-first onboarding, map-first seller workspace, Scanner QR, catalogue, and Omni Wallet. `CleanScannerPanel` replaces the primary scanner surface. The legacy seller imports remain only for the rollback path and are not evidence that the legacy UI is the active production path.
+
+| Evidence item | Result | Interpretation |
+| --- | --- | --- |
+| Canonical main source | `2637ed5c`, merge of PR #49 | Clean-base scanner slice is on `main` |
+| Production deployment | `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN`, `READY`, source `2637ed5c` | Production deployment evidence passed |
+| Public route smoke | `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, `/admin` all HTTP 200 | Public reachability passed |
+| Brand asset | `/assets/omni-logo-D2pwBZcD.png` HTTP 200, PNG | Canonical logo asset served |
+| PWA manifest | `/manifest.webmanifest` HTTP 200 | Manifest availability passed |
+| HTTPS transport | Strict-Transport-Security present | Transport-header check passed |
+| Public seller gate | Clean access gate observed with certification-first copy and locked `$20` bonus | Unauthenticated seller entry passed |
+| Browser post-load stability | Post-load browser snapshot returned HTTP 504 in both available contexts | Environment limitation; not a code failure claim |
+
+The public evidence does not close `G-001`, `G-003`, `G-004`, or `G-005`. No seller credentials were entered, no camera permission was granted, no QR was decoded, no `redeemCheckout` mutation was executed, and no production or staging data was mutated during this checkpoint. The release therefore remains **`partial`**.
+
+`G-001` still requires an authorized seller session on a real HTTPS camera-capable browser: active preview after permission, real QR decode, successful protected redemption, exactly one `seller_verified` event, and replay-safe rejection. `G-003` still requires one consented production buyer replay proving persisted normalized `discovery_city` and Free/Pro scope. `G-004` and `G-005` still require the authenticated buyer/seller matrix at 320/375/390/768/1280 px, including result-card/facility selection, close/back restoration, and scanner viewport evidence.
+
+The supporting public evidence is recorded in `/home/ubuntu/omni-clean-scanner-delivery-2026-08-21.md` and `/home/ubuntu/omni-clean-scanner-browser-check-2026-08-21.md`; both remain outside the repository commit boundary.

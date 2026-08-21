@@ -6,9 +6,9 @@
 | --- | --- |
 | Repository | `am-n-ra/lome-local-connect` |
 | Branch | `main` |
-| Certified source commit | `fdd1c40` — `feat(seller): expose automatic response corrections` |
-| UI/backend continuation commits | `ac83869`, `a845c9c`, `a63cf58`, `f18e529`, `2131cd9`, `aaf1c0a`, `e0b979f`, `fdd1c40` — server-resolved location/free-city gating, buyer scope refresh, transaction contact unlock, seller Discovery/allocation controls, company settings, admin trust badges, and seller auto-response correction visibility |
-| Latest observed production deployment | `dpl_FgwofaxrDBuhjHWfVFoe7W4CJ1ey` — `READY` for source commit `831dca9` (documentation-only follow-up; code slice remains from `fdd1c40`) |
+| Certified source commit | `2637ed5c` — merge of PR #49, `feat(ui): replace seller scanner surface` |
+| UI/backend continuation commits | Prior location/transaction/seller/company/admin commits plus clean-base PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) — buyer/seller clean-base surfaces, seller access/onboarding, and scanner replacement |
+| Latest observed production deployment | `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` — `READY` for source commit `2637ed5c`, production aliases include `omni.sparkafrika.online` |
 | Active Omni Neon project | `wild-moon-30984513` |
 | Active Omni Neon branch | `br-bitter-math-amrlbym6` (`production`) |
 | Isolated staging Neon project | `old-unit-98112236` |
@@ -111,3 +111,16 @@ The smallest next proof action remains an authenticated responsive browser run a
 The follow-up documentation and menu touch-target checkpoint is deployed as `dpl_57VH2tiYgwW3FKyivx2ESk6sZmGp`, source commit `f2ef878`, with state `READY` and the production alias `https://omni.sparkafrika.online`. The preceding code-bearing UI deployment remains `dpl_8MB5eFpg264sDZRLJPtxYRbWmGho` for source commit `80af399`; the latest deployment adds documentation and the shared menu accessibility correction on top of that code.
 
 A final passive public-route smoke matrix against the production alias returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`. This is route/deployment evidence only. The complete authenticated responsive buyer/seller matrix, facility interaction replay, production city-consent replay, and live HTTPS camera proof remain open, so the release remains `partial`.
+
+
+## 2026-08-21 clean-base production checkpoint
+
+PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) are merged into `main`. The clean-base buyer and seller surfaces are now the primary production path: buyer map/search, availability, transaction room, seller access gate, certification-first onboarding, map-first seller workspace, Scanner QR, catalogue, and Omni Wallet. The scanner surface is replaced by `CleanScannerPanel`; the supplied Omni logo is used by the shell and PWA metadata. The remaining legacy seller components are retained only in the rollback branch of `vendeur.tsx` and are not the primary clean-base path.
+
+Vercel deployment `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN` is `READY`, targets production, is sourced from verified GitHub commit `2637ed5c`, and serves `https://omni.sparkafrika.online` among its aliases. Public read-only checks on the production alias returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`; the canonical logo returned HTTP 200 as a PNG; the PWA manifest returned HTTP 200; and the production root exposed strict-transport-security.
+
+The public seller gate was observed in the browser and showed the clean seller entry, certification-before-listing, and locked `$20` bonus. The follow-up post-load browser snapshot returned HTTP 504 in both available browser contexts. No seller credentials were entered, no camera permission was granted, no QR was decoded, no `redeemCheckout` mutation was performed, and no production or staging data was changed. These observations confirm public deployment and clean entry evidence only.
+
+The release decision remains **`partial`**. G-001 live HTTPS camera preview/decode and authenticated seller scanner replay remain open. G-003 still requires one consented production buyer replay proving persisted `discovery_city` and Free/Pro scope. G-004/G-005 still require the authenticated buyer/seller responsive matrix at 320/375/390/768/1280 px, including facility selection and exact back/close restoration. The existing isolated staging QR single-replay, concurrent fan-out, transaction, and seven-invariant evidence remains valid.
+
+The new public evidence is recorded in `/home/ubuntu/omni-clean-scanner-delivery-2026-08-21.md` and `/home/ubuntu/omni-clean-scanner-browser-check-2026-08-21.md`. These files remain outside the repository commit boundary.
