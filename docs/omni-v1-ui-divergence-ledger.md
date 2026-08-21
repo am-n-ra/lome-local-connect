@@ -298,3 +298,12 @@ The missing buyer screen sequence is now explicit and implemented: result card/p
 The selected catalog product is carried through auth context and persisted as `demand_requests.product_id` on request creation. Unclaimed facilities remain public-only and cannot receive controlled availability or purchase intent. The map/globe and one-chevron dock remain the same scene and camera-inert options surface.
 
 Commit `5f3bea9` is deployed and READY. Public route smoke is HTTP 200 across `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin`. Authenticated responsive click-through, real-device catalog/product/availability proof and complete transaction-room proof remain pending; release remains `partial`.
+
+
+## 2026-08-21 — All V1 flows and locked-decisions checkpoint
+
+The canonical master now includes §0.8.4, and `docs/one-shot/` now contains the all-flows catalog, brainstorm, flow state machines, data schema, build prompt, task backlog and locked-decisions inventory. The new contract explicitly separates facility-card selection, catalogue selection, availability, comparison, purchase intent, authorized transaction room/chat, QR verification, external payment, fulfilment, receipt and rating.
+
+The transaction UI remains a single role-aware room. Chat is transaction-scoped, contact/itinerary/QR fields are absent before intent authorization, seller confirmation is separate from buyer payment declaration, and the Omni Wallet is separate from buyer-seller external payment. The active transaction message thread now exposes deterministic DOM markers for authorized scope, loading/error/sending/ready states without changing the server authorization contract.
+
+Local evidence: 14 test files / 78 tests, strict TypeScript, production build, client-boundary check and `git diff --check` passed. Remaining evidence is external: authenticated buyer/seller flow, responsive matrix, live camera/QR preview and replay, production location consent and complete production transaction-loop proof. Release status remains `partial`.

@@ -4,10 +4,10 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6, §0.8.1, §0.8.2 and §0.8.3)
+> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6, §0.8.1, §0.8.2, §0.8.3 and §0.8.4)
 > **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md`, `docs/omni-ui-system.md` et les décisions UI/UX confirmées.
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
-> **Patch note :** §0.8.1 freezes the canonical map/menu package and §0.8.2 freezes the map/globe camera, reveal, viewport, boundary and location truth contracts. §0.8.3 now freezes the unified V1 UI, single-chevron buyer dock, catalog-first discovery and certification-only facility status transitions; post-verification operations remain outside this tranche.
+> **Patch note :** §0.8.1 freezes the canonical map/menu package; §0.8.2 freezes map/globe camera, reveal, viewport, boundary and location truth; §0.8.3 freezes unified V1 UI, the single-chevron buyer dock, catalog-first discovery and certification-only facility status transitions; §0.8.4 freezes the complete V1 flow inventory, transaction room/chat authority, QR/payment/fulfilment timeline, seller operational surfaces, Omni Wallet boundary and screen-by-screen locked decision catalog.
 
 ## 0. INSTRUCTION GÉNÉRALE
 
@@ -93,19 +93,19 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 
 | Facility auto-discovery via OSM/Overpass                                  | §20–22, §172 (bounded backfill)                       | **V1**                                                   | Bounded on-demand OSM/Overpass backfill is active for sparse high-zoom viewports. This is not a world-prepopulation job and does not imply that every country has boundary assets or facility density. |
 | Content indexing (articles/video/social)                                  | §7–10, §139–143                                       | **Deferred**                                             |                                                                                                                                                                                                 |
-| Availability (manual, single-facility)                                    | §37, §38                                              | **V1-Manual**                                            | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6.                                            |
-| Bulk availability, seller Auto/Semi-Auto modes                            | §39–41, §51                                           | **Deferred**                                             | Do this by hand 20–50 times (per your own stated plan) before automating.                                                                                                                       |
+| Availability (manual, single-facility)                                    | §37, §38                                              | **V1-Manual**                                            | The buyer-facing catalog-first "Check availability" action is real. The seller-side response may be manual; no Agent is implied. See §0.6.                                            |
+| Buyer Pro bulk availability; seller automated modes                  | §39–41, §51                                           | **V1 / Deferred by sub-capability**                      | Buyer Pro bulk availability is V1 and server-enforced; Seller Agent/automated modes remain deferred until manual volume proves the workflow.                                                                                                                       |
 | Purchase Intent, QR, transaction chat, transaction data model             | §56–60, §158 (transaction layer, per addendum §15–16) | **V1**                                                   | Core commercial proof. Payment can be external/manual; the record must be real.                                                                                                                 |
 | Coupons, promotions                                                       | §61–62                                                | **V1 (basic)**                                           | Percentage/fixed discount only. No buy-X-get-Y, no automated coupon engine.                                                                                                                     |
 | Seller Free/Pro plan limits (1 facility/5 products vs. unlimited)         | §23–24, §42–43                                        | **V1**                                                   | Plan enforcement is a monetization signal you're already testing — keep it.                                                                                                                     |
 | Buyer/Seller AI Agent, natural-language intent, automation modes          | §28–36, §44–50                                        | **Deferred**                                             | This is the automation of what §0.6 documents as manual today. Do not build the agent before the manual version has run enough volume to know what to automate.                                 |
 | Bulk import, AI schema matching                                           | §25–27                                                | **Deferred**                                             |                                                                                                                                                                                                 |
 | Digital products/subscriptions                                            | §63–64                                                | **Deferred**                                             |                                                                                                                                                                                                 |
-| Wallet, credits, ad credit, advertising system                            | §112–113, §123–125 (per this doc's numbering context) | **Deferred**                                             |                                                                                                                                                                                                 |
+| One Omni Wallet recharge and platform-credit consumption                            | §112–113, §123–125 (per this doc's numbering context) | **V1 / Deferred by sub-capability**                      | Recharge through FedaPay and server-confirmed platform spending are V1; seller withdrawals, buyer-seller payment rail and future advertising automation remain deferred.                                                                                 |
 | Offline mode, offline sync                                                | §53–55, §108                                          | **Deferred**                                             |                                                                                                                                                                                                 |
 | Mobile-native (GPS, camera, QR scan, voice)                               | §49–52, §84–86, §94–98                                | **Deferred — mobile V1 planned for Oct 1, web V1 first** |                                                                                                                                                                                                 |
 | Notifications (basic transactional only)                                  | §99, §161                                             | **V1 (basic)**                                           | Availability response, order status, QR. No promotional/ad notifications yet.                                                                                                                   |
-| Admin/verification queue, fraud system                                    | §110–112, §122, §125–127                              | **V1-Manual**                                            | You are the admin queue right now. Formal tooling deferred.                                                                                                                                     |
+| Admin/verification queue and audited status outcomes                                    | §110–112, §122, §125–127                              | **V1-Manual / V1 tooling**                               | Evidence review and audited outcomes are V1; advanced fraud automation remains deferred.                                                                                                                                     |
 | Global AI kill switch                                                     | §22 (per addendum)                                    | **N/A until an Agent exists**                            | Trivially true today since there is no automation to switch off. Build the toggle when §28–50 is built, not before.                                                                             |
 
 ## 0.5.4 What this means in practice
@@ -5040,3 +5040,138 @@ Le shell seller critique doit charger la facility active, sa position, son statu
 Les objectifs de performance seller sont : carte interactive en moins de 2,5 secondes sur connexion moyenne, ouverture d’une surface en moins de 200 ms sur cache chaud, absence de refetch global pour une mutation locale et parité d’interaction avec buyer à ±20 %. Ces objectifs sont validés aux viewports 360, 375, 768 et 1280 px, avec contrôle du focus mobile, du zoom automatique, des safe areas, de l’accessibilité clavier et du respect de `prefers-reduced-motion`.
 
 Le rapport détaillé de l’audit est conservé dans `docs/OMNI_UI_V2_PERFORMANCE_AUDIT.md`.
+
+
+## 0.8.4 Correction canonique — All V1 Flows, Transaction Room and Locked Decision Catalog (2026-08-21)
+
+Cette correction devient la référence d’exécution pour toutes les surfaces et tous les flows V1. Elle réconcilie les sections historiques, les corrections §0.8.1–§0.8.3 et le code actif. Elle ne promeut pas les capacités IA, native mobile, offline, global prepopulation, seller withdrawals, in-app buyer-seller payments, generic social chat or other deferred scope.
+
+### Identité, core loop and screen contract
+
+Omni is a map-first geospatial search engine. The one coherent loop is:
+
+```text
+MAP ARRIVAL
+  → SEARCH / DISCOVERY
+  → FACILITY DETAIL
+  → FACILITY CATALOGUE
+  → PRODUCT SELECTION
+  → AVAILABILITY SETUP
+  → AVAILABILITY RESPONSES / COMPARISON
+  → PURCHASE INTENT
+  → AUTHORIZED TRANSACTION ROOM
+  → QR VERIFICATION
+  → EXTERNAL PAYMENT DECLARATION
+  → SELLER PAYMENT CONFIRMATION
+  → FULFILMENT
+  → BUYER RECEIPT
+  → RATING
+  → COMPLETION / DATA FEEDBACK
+```
+
+Every surface is stateful over the same MapLibre scene. A card click selects a facility only. `Voir les produits` opens the facility catalogue. Product selection is the gateway to availability and must preserve a server-valid `productId`. Availability is the gateway to comparison. A successful purchase intent is the only gateway to private contact, itinerary, QR and authorized transaction chat.
+
+### All-flow scope gate
+
+| Capability | Status | Contract |
+|---|---|---|
+| Buyer map/globe, dock, pins, cards, facility detail, catalogue, product selection | **Build now** | One MapLibre scene, one Options chevron, public/source-backed facility data, real catalogue payload and explicit surface states. |
+| Manual facility availability and comparison | **Build now / Build-manual response** | Product-first request; Free single-facility; server checks; seller/manual response allowed. |
+| Buyer Pro bulk availability | **Build now** | Pro entitlement and target bounds enforced server-side; no client-only gate. |
+| Purchase intent and transaction room | **Build now** | Idempotent intent creates one authorized transaction context and opens/resumes the canonical room. |
+| Transaction chat | **Build now** | Only inside an authorized demand/offer/transaction; system timeline is authoritative; no generic inbox. |
+| QR creation and seller verification | **Build now / Build-manual fallback** | Server token, expiry, replay rejection, camera path when available, manual code fallback always available. |
+| External payment declaration and seller confirmation | **Build-manual** | Omni records the event and method; it does not process buyer-seller money. |
+| Pickup/delivery, buyer receipt and rating | **Build now / Build-manual operations** | Seller/buyer actions advance authorized states; rating follows receipt. |
+| Seller onboarding and certification review | **Build now / Build-manual review** | Request/evidence/admin outcome; only audited review changes facility status. |
+| Seller facility/catalogue/requests/scanner/coupon workspace | **Build now** | Facility-first map workspace; only functional V1 actions appear. |
+| Omni Wallet recharge and platform spending | **Build now / Build-manual payment settlement** | One recharge wallet; FedaPay recharge only; server-confirmed platform buckets; no withdrawal. |
+| AI agents, automated seller availability, native app, offline real-time transactions, global data prepopulation | **Deferred** | No placeholder controls or silent partial implementations. |
+
+### Transaction-room authority
+
+`CleanTransactionRoom` and its equivalent route are the canonical transaction surface. `ChatPanel` or any generic messaging surface cannot replace it for transaction actions. The room must show the product/facility context, amount before and after the server-calculated offer/coupon, status badge, named progress steps, event timeline, next action, QR state, payment method state, fulfilment state and rating state.
+
+The chat portion is a scoped thread, not an open social conversation. A participant may read/write only when the server proves membership in the demand/offer/transaction. System messages originate from persisted events, never from client-side status guesses. Closing the room does not cancel the transaction; reopening it through menu, notification, order list or deep link loads the same server timeline.
+
+### Canonical transaction state machine
+
+```text
+intent_draft
+  → [buyer confirms eligible response] → intent_creating
+  → [new idempotency key succeeds] → intent_created
+  → [same key replay] → existing_intent_reopened
+  → [stale response / invalid facility/product] → intent_rejected_with_comparison_recovery
+
+intent_created
+  → [server snapshots offer/coupon and creates QR] → qr_generated
+  → [QR expired] → qr_expired
+  → [buyer regenerates] → qr_generated
+  → [buyer closes room] → transaction_resumable
+
+qr_generated
+  → [seller camera/manual code valid] → qr_verified
+  → [wrong/malformed/replayed/expired code] → qr_rejected_with_retry
+  → [seller unavailable] → transaction_resumable
+
+qr_verified
+  → [buyer selects external method] → payment_pending
+  → [buyer changes choice] → payment_pending
+
+payment_pending
+  → [buyer declares external payment] → payment_declared
+  → [network timeout] → payment_status_lookup
+  → [seller confirms received] → paid
+  → [seller rejects/disputes] → payment_attention_required
+
+paid
+  → [seller starts pickup/delivery] → fulfillment
+  → [seller cancels with reason] → cancelled_with_audit
+
+fulfillment
+  → [buyer confirms received] → received
+  → [delivery problem] → fulfillment_attention_required
+
+received
+  → [buyer submits rating] → rating_pending
+  → [rating saved] → completed
+
+completed | cancelled | expired
+  → [room reopened] → read_only_terminal_timeline
+```
+
+### Chat and unlock matrix
+
+| State | Buyer contact | Itinerary | Private transaction chat | QR | Payment controls |
+|---|---|---|---|---|---|
+| Discovery/facility detail | Locked | Locked | Locked | None | None |
+| Availability pending/comparison | Locked | Locked | Locked or system-only request state | None | None |
+| Intent created | Unlocked according to authorized transaction payload | Unlocked | Authorized thread opens | Generated/visible to buyer | Not yet selectable until verification rule |
+| QR generated | Unlocked | Unlocked | Authorized | Visible and expiring | Waiting for seller verification |
+| QR verified | Unlocked | Unlocked | Authorized | Verified | External method selection |
+| Payment declared/paid | Unlocked | Unlocked | Authorized | Historical reference | Seller confirmation/fulfilment |
+| Fulfilment/received/completed | Unlocked | Unlocked | Authorized until terminal retention policy | Historical reference | Receipt/rating only |
+
+### QR and payment truth
+
+The server creates, expires and verifies the QR. The client may render or copy a server token but cannot mint validity. Camera permission must create a visible live preview state when available; `BarcodeDetector` and manual code entry use the same server verification function. Replay, wrong transaction, malformed token, expired token, permission denial, no camera and network timeout each have explicit UI states and preserve the room context.
+
+The allowed buyer-seller payment methods are external/manual: cash on delivery, TMoney, Flooz or another explicitly agreed external method. FedaPay is reserved for recharging the Omni Wallet, not for buyer-seller checkout. Seller payment confirmation is an auditable actor action. Omni never claims to have processed external money and never exposes seller withdrawal in V1.
+
+### Seller workspace and verification authority
+
+The seller workspace is map-first and facility-first. It owns seller facilities, facility state, products/catalogue, incoming availability requests, response correction, scanner, coupons, advertising where functional, wallet/recharge and valid account settings. It does not own buyer discovery state or generic chat.
+
+A facility click/creation starts a verification request. Evidence is drafted/submitted, then reviewed. Only the audited admin review function may output `certified`, `unconfirmed` or `rejected`. Pro payment, menu navigation, product creation or a raw claim click cannot change public facility status. `confirmed` requires the approved completed-sales rule; a status regression is audited and cannot silently preserve Pro access.
+
+### Wallet authority
+
+There is one rechargeable Omni Wallet, with server-confirmed ledger/bucket views for wallet availability and platform-only consumption such as Pro, advertising, coupon/ad credit and other enabled Omni features. A pending FedaPay deposit is not spendable until confirmation. Buyer-seller transaction money is not a wallet bucket and seller withdrawal is not a V1 action. UI labels must explain this distinction wherever a balance or recharge action appears.
+
+### Screen state requirement
+
+Every page, sheet and card must name its loading, ready, empty, unavailable, error, retry, cancelled, replay, expired and unauthorized states where those branches are meaningful. Each state must have one primary action, a preserved context and a source-of-truth statement. A disabled button is not an authority boundary; the database/server must enforce the rule.
+
+### Evidence boundary
+
+Local tests may prove pure state and type/build integrity. Public smoke may prove route availability. Authenticated browser sessions may prove context and actor access. A real camera-capable device is required to prove live preview, permission, decode and replay. Production E2E is required before claiming the transaction loop is production-ready. Until those proofs exist, the release status remains `partial`.

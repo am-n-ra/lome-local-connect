@@ -77,6 +77,9 @@ export function TransactionMessageThread({
     <section
       className="space-y-3 rounded-2xl border border-border p-3"
       aria-label="Messages transactionnels"
+      data-omni-transaction-chat="true"
+      data-omni-transaction-chat-authorized={String(Boolean(user && transactionId))}
+      data-omni-transaction-chat-state={loadError ? "error" : loading ? "loading" : busy ? "sending" : "ready"}
     >
       <div className="flex items-center justify-between gap-2">
         <div>
@@ -85,7 +88,7 @@ export function TransactionMessageThread({
             Les messages restent liés à cette transaction.
           </p>
         </div>
-        <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-semibold">Fil privé</span>
+        <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-semibold" data-omni-transaction-chat-scope="authorized-transaction">Fil privé · transaction autorisée</span>
       </div>
 
       {loadError ? (
@@ -128,6 +131,7 @@ export function TransactionMessageThread({
         </div>
       )}
 
+      <p className="sr-only" aria-live="polite">{busy ? "Envoi du message…" : loadError ? "Le fil doit être rechargé." : "Fil transactionnel prêt."}</p>
       <div className="flex items-center gap-2 border-t border-border pt-3">
         <Input
           value={draft}
@@ -138,7 +142,7 @@ export function TransactionMessageThread({
               void submit();
             }
           }}
-          placeholder="Écrire un message…"
+          placeholder={busy ? "Envoi en cours…" : "Écrire un message…"}
           aria-label="Message transactionnel"
           disabled={!user || busy}
         />

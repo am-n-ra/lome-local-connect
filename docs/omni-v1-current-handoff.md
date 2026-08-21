@@ -167,3 +167,12 @@ The buyer availability sheet now accepts a selected product, persists `productId
 Commit `5f3bea9` (`feat(ui): formalize buyer facility catalog and availability flow`) is deployed as Vercel deployment `dpl_DwLQAvTYpZ6TYTjQJ37oZ8kTuxhi`, state `READY`, production. Public HTTPS smoke returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin` on `https://omni.sparkafrika.online`. Local validation passed with 14 test files / 78 tests, strict TypeScript, production build, client-boundary check (47 JavaScript artifacts and 197 source files), and `git diff --check`.
 
 This is not full authenticated click-through proof. The real-device responsive matrix, authenticated facility/catalogue/availability replay, and complete transaction-room proof remain open. The package deliberately does not redesign post-verification seller operations. Release status remains `partial`.
+
+
+## 2026-08-21 — All V1 flows and locked-decisions package
+
+The canonical master now includes §0.8.4, which freezes the complete V1 flow inventory: buyer map/discovery → facility detail → catalogue → product selection → availability → comparison → purchase intent → authorized transaction room/chat → QR → external payment declaration → seller confirmation → fulfilment → buyer receipt → rating. It also freezes seller workspace ownership, verification authority, one Omni Wallet/FedaPay-recharge-only boundary, context restoration, PWA rules and explicit deferrals.
+
+The repository now contains `docs/one-shot/omni-catalog.md`, the all-flows brainstorm, flow specification, data schema, build prompt, task backlog and locked-decisions inventory. The bounded implementation correction adds deterministic authorized transaction-chat DOM markers while preserving the existing server authorization path. Local validation remains 14 test files / 78 tests, strict TypeScript, production build, client-boundary check and `git diff --check`.
+
+This checkpoint does not claim complete release clearance. Authenticated buyer/seller E2E, responsive matrix, real camera preview/decode/replay, production location-consent persistence and full transaction evidence remain external proof gates. Release status remains `partial`.
