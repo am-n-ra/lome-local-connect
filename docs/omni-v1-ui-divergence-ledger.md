@@ -265,3 +265,15 @@ The first Vercel deployment for `f258594` failed because `vendeur.tsx` reference
 Local release evidence for the combined main state: `pnpm build` passed, the client-boundary check scanned 46 JavaScript artifacts and 191 source files successfully, all 13 test files and 75 tests passed, and `git diff --check` passed. A passive HTTPS smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, and `/auth`.
 
 This checkpoint is **implementation and public-route evidence**, not complete release certification. The authenticated buyer/seller responsive matrix, real HTTPS camera preview and QR decode/replay, production buyer city-consent persistence, and authenticated transaction-loop proof remain open. The release remains `partial`; no production-ready claim is authorized from this checkpoint alone. The untracked `.vercel/` output and audit/demo scripts remain outside the commit boundary, and no secrets, proof harnesses, QR tokens, or database records were committed.
+
+## 2026-08-21 map/globe one-shot checkpoint
+
+The dedicated map/globe one-shot package is now converged from the canonical master and active code. The master patch is §0.8.2 and freezes the permanent MapLibre scene, horizontal resting rotation, explicit-search-only reveal, camera priority and cancellation, truthful exact/approximate/fallback location states, viewport/antimeridian/server-scope rules, black boundary emphasis, and the explicit limit that current boundary assets do not imply complete global coverage. The OSM scope gate now records bounded on-demand high-zoom backfill as V1 because that behavior is already active in `listFacilitiesInBounds`; world prepopulation remains out of scope.
+
+The implementation checkpoint is commit `b2ef062` (`feat(map): formalize globe camera and reveal contract`). It adds pure camera/reveal state helpers and focused tests, makes manual interaction cancel active reveal ownership and restore map layers, and exposes deterministic map/reveal DOM markers. MapLibre GL v5, OpenFreeMap, projection, pins, clusters, location persistence and transaction behavior were not replaced.
+
+One-shot artifacts are recorded outside the repository for this session: `omni-map-globe-audit-2026-08-21.md`, `omni-map-globe-brainstorm-2026-08-21.md`, `omni-map-globe-flow-spec-2026-08-21.md`, `omni-map-globe-data-schema-2026-08-21.md`, `omni-map-globe-build-prompt-2026-08-21.md`, `omni-map-globe-task-backlog-2026-08-21.md`, and `omni-map-globe-validation-2026-08-21.md`.
+
+Local proof passed with 14 test files / 78 tests, strict TypeScript, production build, client-boundary check (46 JavaScript artifacts and 193 source files), and `git diff --check`. Vercel deployment `dpl_8gsLi96bXhDzp4viZtkB9VXPXbcA` is `READY`, production-targeted, sourced from `b2ef062`; public HTTP 200 checks passed for `/`, `/carte`, `/vendeur`, `/onboarding` and `/auth`.
+
+The release remains **partial**. Real-device MapLibre paint/pin visibility, exact GPS consent and responsive authenticated overlay proof are still separate evidence gates; this checkpoint does not convert local or public route evidence into full production verification.
