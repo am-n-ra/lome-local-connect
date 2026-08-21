@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin.functions";
 import { getProductFunnelSummary, type ProductFunnelSummary } from "@/lib/analytics.functions";
 import { OpsPanel } from "@/components/omni/admin/OpsPanel";
+import { CompaniesPanel } from "@/components/omni/admin/CompaniesPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -171,6 +172,8 @@ function AdminPage() {
             Commerces pré-listés depuis OpenStreetMap, à contacter puis onboarder.
           </p>
         </header>
+
+        <CompaniesPanel />
 
         {isAdmin && (
           <section className="omni-card space-y-3 p-4">

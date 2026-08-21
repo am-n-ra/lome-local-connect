@@ -413,6 +413,7 @@ function VendeurPage() {
     const price = Number(draft.price);
     const quantityAvailable = Number(draft.quantity);
     const omniAllocationPercent = Number(draft.allocation);
+    const allocatedOmni = Number(draft.allocatedOmni || 0);
     if (
       draft.name.trim().length < 2 ||
       !Number.isFinite(price) ||
@@ -434,6 +435,9 @@ function VendeurPage() {
         status: draft.status,
         quantityAvailable: Math.round(quantityAvailable),
         omniAllocationPercent: Math.round(omniAllocationPercent),
+        quantityAllocatedOmni: Number.isFinite(allocatedOmni)
+          ? Math.max(0, Math.round(allocatedOmni))
+          : 0,
         discountPercent: Math.max(1, Math.min(90, Number(draft.couponPercent) || 1)),
         photoUrl: draft.photoUrl.trim() || null,
         coupon: draft.couponCode.trim()
@@ -461,6 +465,7 @@ function VendeurPage() {
           status: !product.in_stock ? "active" : "sold_out",
           quantityAvailable: !product.in_stock ? Math.max(1, product.quantity_available) : 0,
           omniAllocationPercent: product.omni_allocation_percent,
+          quantityAllocatedOmni: product.quantity_allocated_omni,
           discountPercent: product.discount_percent,
           photoUrl: product.photo_url,
         },
@@ -484,6 +489,7 @@ function VendeurPage() {
           status: product.status as "draft" | "active" | "paused" | "sold_out",
           quantityAvailable: product.quantity_available,
           omniAllocationPercent: product.omni_allocation_percent,
+          quantityAllocatedOmni: product.quantity_allocated_omni,
           discountPercent: product.discount_percent,
           photoUrl: product.photo_url,
         },

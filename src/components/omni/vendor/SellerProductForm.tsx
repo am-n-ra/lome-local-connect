@@ -13,6 +13,7 @@ export type SellerProductDraft = {
   quantity: string;
   photoUrl: string;
   allocation: string;
+  allocatedOmni: string;
   status: "draft" | "active" | "paused" | "sold_out";
   couponCode: string;
   couponDescription: string;
@@ -25,11 +26,13 @@ const INITIAL_DRAFT: SellerProductDraft = {
   quantity: "1",
   photoUrl: "",
   allocation: "100",
+  allocatedOmni: "0",
   status: "active",
   couponCode: "",
   couponDescription: "",
   couponPercent: "10",
 };
+
 
 export function SellerProductForm({
   atProductCap,
@@ -201,7 +204,25 @@ export function SellerProductForm({
                   Part du stock que les acheteurs peuvent vérifier sur Omni. Ce n’est pas un solde séparé.
                 </p>
               </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="vendor-product-allocated-omni">Stock alloué aux réponses automatiques</Label>
+                <Input
+                  id="vendor-product-allocated-omni"
+                  inputMode="numeric"
+                  type="number"
+                  min="0"
+                  value={draft.allocatedOmni}
+                  onChange={(event) => patch({ allocatedOmni: event.target.value })}
+                  aria-describedby="vendor-product-allocated-omni-help"
+                />
+                <p id="vendor-product-allocated-omni-help" className="text-xs text-muted-foreground">
+                  Quantité qu’Omni peut engager sans vous demander : une demande de disponibilité reçoit une réponse
+                  automatique uniquement si la facilité est ouverte et que ce stock est supérieur à 0. Il est borné par la
+                  quantité disponible.
+                </p>
+              </div>
             </div>
+
           </OmniDisclosure>
 
           <OmniDisclosure title="Coupon produit (facultatif)">
