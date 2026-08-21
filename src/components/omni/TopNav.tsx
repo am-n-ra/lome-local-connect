@@ -9,6 +9,8 @@ import { NavMenuSheet } from "@/components/omni/NavMenuSheet";
 import { NotificationsBell } from "@/components/omni/NotificationsBell";
 import { OmniMapChrome } from "@/components/omni/ui/OmniMapChrome";
 import { useCart } from "@/lib/cart";
+import type { MapContextSnapshot } from "@/lib/map-context";
+import type { OmniMenuAction } from "@/lib/omni-menu";
 
 type Props = {
   query?: string;
@@ -24,6 +26,9 @@ type Props = {
   hideSearch?: boolean;
   /** Map home chrome: only notifications and the hamburger float top-right. */
   minimalMapChrome?: boolean;
+  actions?: OmniMenuAction[];
+  contextSnapshot?: MapContextSnapshot | null;
+  onSwitchRole?: () => void;
 };
 
 export function TopNav({
@@ -38,6 +43,9 @@ export function TopNav({
   activeRole = "acheteur",
   hideSearch = false,
   minimalMapChrome = false,
+  actions = [],
+  contextSnapshot = null,
+  onSwitchRole,
 }: Props) {
   const navigate = useNavigate();
   const cart = useCart();
@@ -52,6 +60,11 @@ export function TopNav({
       onOpenWishlist={onOpenWishlist}
       onOpenOrders={onOpenOrders}
       onOpenChat={onOpenChat}
+      onOpenDemand={onOpenDemand}
+      actions={actions}
+      activeRole={activeRole}
+      contextSnapshot={contextSnapshot}
+      onSwitchRole={onSwitchRole}
     />
   );
 

@@ -38,6 +38,8 @@ import { OmniActionDock } from "@/components/omni/ui/OmniActionDock";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { CleanSellerWorkspace } from "@/components/omni-clean/CleanSellerWorkspace";
 import { CleanProductForm } from "@/components/omni-clean/CleanProductForm";
+import { CleanDemandPanel } from "@/components/omni-clean/CleanDemandPanel";
+import { CleanCouponPanel } from "@/components/omni-clean/CleanCouponPanel";
 import { CleanWalletPanel } from "@/components/omni-clean/CleanWalletPanel";
 import { CleanSellerOnboarding } from "@/components/omni-clean/CleanSellerOnboarding";
 import { CleanSellerAccessGate } from "@/components/omni-clean/CleanSellerAccessGate";
@@ -78,6 +80,8 @@ import {
 } from "@/lib/vendor.functions";
 import { createWalletDeposit, confirmWalletDeposit } from "@/lib/payments.functions";
 import { transferWalletAllocation, type WalletAllocationBucket } from "@/lib/wallet.functions";
+import { createMapContextSnapshot, saveMapContext } from "@/lib/map-context";
+import { createMenuAction, type OmniMenuAction } from "@/lib/omni-menu";
 
 export const Route = createFileRoute("/vendeur")({
   validateSearch: z.object({
@@ -269,6 +273,31 @@ function VendeurPage() {
 
   const company =
     data?.companies.find((item) => item.id === facility?.company_id) ?? data?.companies[0] ?? null;
+  const sellerContextSnapshot = useMemo(() => facility ? createMapContextSnapshot({
+    route: "/vendeur",
+    role: "vendeur",
+    query: "",
+    category: null,
+    filters: { radiusKm: 10, maxPrice: null, openOnly: false, discountOnly: false, sort: "rank" },
+    quantity: 1,
+    budget: null,
+    selectedFacilityId: facility.id,
+    viewport: null,
+    returnTo: "/vendeur",
+  }) : null, [facility?.id]);
+  const sellerMenuActions = useMemo<OmniMenuAction[]>(() => facility ? [
+    createMenuAction({ id: "seller-facility", label: "Facilité", description: "Statut, position et certification", icon: "⌂", surface: "facilite", roles: ["vendeur"], requiresAuth: true, onSelect: () => setActiveTab("apercu") }),
+    createMenuAction({ id: "seller-catalogue", label: "Catalogue", description: "Produits et allocation Omni", icon: "▦", surface: "catalogue", roles: ["vendeur"], requiresAuth: true, ...(data?.counts.products != null ? { badge: data.counts.products } : {}), onSelect: () => setActiveTab("produits") }),
+    createMenuAction({ id: "seller-demands", label: "Demandes reçues", description: "Répondre aux recherches buyer", icon: "⌕", surface: "demandes", roles: ["vendeur"], requiresAuth: true, badge: liveDemandCount || data?.counts.requests || 0, onSelect: () => setActiveTab("demandes") }),
+    createMenuAction({ id: "seller-scanner", label: "Scanner QR", description: "Vérifier une transaction", icon: "▣", surface: "scanner", roles: ["vendeur"], requiresAuth: true, onSelect: () => setActiveTab("encaisser") }),
+    createMenuAction({ id: "seller-coupons", label: "Coupons", description: "Offres réellement publiées", icon: "%", surface: "coupons", roles: ["vendeur"], requiresAuth: true, ...(data?.counts.coupons != null ? { badge: data.counts.coupons } : {}), onSelect: () => setActiveTab("coupons") }),
+    createMenuAction({ id: "seller-wallet", label: "Omni Wallet", description: "Recharge et crédits internes", icon: "₣", surface: "wallet", roles: ["vendeur"], requiresAuth: true, onSelect: () => setActiveTab("solde") }),
+    createMenuAction({ id: "seller-account", label: "Compte", description: "Compagnie et accès buyer", icon: "◎", surface: "compte", roles: ["vendeur"], requiresAuth: true, onSelect: () => setActiveTab("compte") }),
+  ] : [], [data?.counts.coupons, data?.counts.products, data?.counts.requests, facility?.id, liveDemandCount]);
+  const switchToBuyer = () => {
+    if (sellerContextSnapshot) saveMapContext(sellerContextSnapshot);
+    void navigate({ to: "/carte" });
+  };
 
   useEffect(() => {
     if (!facility) return;
@@ -742,11 +771,11 @@ function VendeurPage() {
         <div className="space-y-2">{products.map((product) => <div key={product.id} className="rounded-2xl border border-black/5 bg-white/70 p-3"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-extrabold">{product.name}</p><p className="text-xs font-semibold text-[var(--omni-ink-muted)]">{formatMoney(product.price)} · Stock total {product.quantity_available} · Omni visible {product.quantity_allocated_omni}</p></div><div className="flex items-center gap-2"><button type="button" onClick={() => void confirmProduct(product)} className="omni-clean-secondary-button min-h-10 px-3">Confirmer</button><button type="button" onClick={() => void removeProduct(product)} className="omni-clean-secondary-button min-h-10 px-3">Supprimer</button></div></div></div>)}{products.length === 0 ? <p className="rounded-2xl bg-white/60 p-4 text-sm text-[var(--omni-ink-muted)]">Aucun produit pour l’instant.</p> : null}</div>
       </div>
     ) : activeTab === "demandes" ? (
-      <div className="space-y-6"><DemandPanel demand={data?.demand ?? []} facilityId={facility.id} onLiveCountChange={setLiveDemandCount} /><RequestsPanel facilityId={facility.id} requests={data?.requests ?? []} onRefresh={refreshRequests} /></div>
+      <CleanDemandPanel demand={data?.demand ?? []} facilityId={facility.id} onLiveCountChange={setLiveDemandCount} />
     ) : activeTab === "encaisser" ? (
       <CleanScannerPanel facilityId={facility.id} {...(transactionId ? { initialTransactionId: transactionId } : {})} />
     ) : activeTab === "coupons" ? (
-      <CouponsPanel facilityId={facility.id} coupons={data?.coupons ?? []} onRefresh={refreshCoupons} />
+      <CleanCouponPanel facilityId={facility.id} coupons={data?.coupons ?? []} onRefresh={refreshCoupons} />
     ) : activeTab === "solde" ? (
       <CleanWalletPanel
         balances={data?.balances ?? []}
@@ -763,11 +792,20 @@ function VendeurPage() {
         onAllocate={() => void allocateWallet()}
       />
     ) : (
-      <div className="space-y-4 rounded-2xl bg-white/55 p-4"><p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--omni-orange-deep)]">Compte</p><h2 className="font-display text-xl font-extrabold">Un seul Omni Wallet</h2><p className="text-sm leading-6 text-[var(--omni-ink-muted)]">Rechargez votre Omni Wallet pour les services de la plateforme. Il n’existe pas de retrait vendeur dans la V1.</p><div className="grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setActiveTab("solde")} className="omni-clean-secondary-button min-h-11"><CreditCard className="h-4 w-4" />Solde et recharge</button><button type="button" onClick={() => setActiveTab("coupons")} className="omni-clean-secondary-button min-h-11">Coupons · {data?.counts.coupons ?? 0}</button></div>{company ? <div className="rounded-2xl border border-black/5 bg-white/70 p-4"><p className="font-extrabold">{company.name}</p><p className="mt-1 text-xs font-semibold text-[var(--omni-ink-muted)]">{company.status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}</p></div> : null}</div>
+      <div className="space-y-4 rounded-2xl bg-white/55 p-4"><p className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[var(--omni-orange-deep)]">Compte</p><h2 className="font-display text-xl font-extrabold">Votre espace Omni</h2><p className="text-sm leading-6 text-[var(--omni-ink-muted)]">Un seul Omni Wallet rechargeable pour les services de la plateforme. Les paiements buyer-vendeur restent externes et il n’existe pas de retrait vendeur en V1.</p><div className="grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setActiveTab("solde")} className="omni-clean-secondary-button min-h-11"><CreditCard className="h-4 w-4" />Solde et recharge</button><button type="button" onClick={() => setActiveTab("coupons")} className="omni-clean-secondary-button min-h-11">Coupons · {data?.counts.coupons ?? 0}</button></div>{company ? <div className="rounded-2xl border border-black/5 bg-white/70 p-4"><p className="font-extrabold">{company.name}</p><p className="mt-1 text-xs font-semibold text-[var(--omni-ink-muted)]">{company.status === "certified" ? "Compagnie certifiée" : "Compagnie en vérification"}</p></div> : null}<Link to="/carte" className="omni-clean-primary-button min-h-11 w-full">Passer à la recherche buyer</Link></div>
     );
 
     return (
-      <CleanSellerWorkspace
+      <>
+        <TopNav
+          activeRole="vendeur"
+          onOpenDemand={() => setActiveTab("demandes")}
+          actions={sellerMenuActions}
+          contextSnapshot={sellerContextSnapshot}
+          onSwitchRole={switchToBuyer}
+          minimalMapChrome
+        />
+        <CleanSellerWorkspace
         facility={facility}
         activeTab={activeTab}
         productsCount={products.length || data?.counts.products || 0}
@@ -780,7 +818,8 @@ function VendeurPage() {
         panel={cleanPanel}
         onTabChange={(tab) => setActiveTab(tab)}
         onToggleOnline={(next) => void toggleOnline(next)}
-      />
+        />
+      </>
     );
   }
 

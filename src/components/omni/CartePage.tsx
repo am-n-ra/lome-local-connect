@@ -40,6 +40,8 @@ import {
   useAuth,
 } from "@/lib/auth";
 import { getTransactionTimeline, listMyOrders } from "@/lib/checkout.functions";
+import { clearMapContext, createMapContextSnapshot, readMapContext, saveMapContext } from "@/lib/map-context";
+import { createMenuAction, type OmniMenuAction } from "@/lib/omni-menu";
 type RouteStep = { instruction: string; distance: number };
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
@@ -129,6 +131,8 @@ export function CartePage({
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
   const [pendingUserPos, setPendingUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [visibleViewport, setVisibleViewport] = useState<ViewportBounds | null>(null);
+  const mapContextRestoredRef = useRef(false);
+  const pendingSelectedFacilityIdRef = useRef<string | null>(null);
   const [coverageStatus, setCoverageStatus] = useState<"idle" | "loading" | "ready" | "error">(
     "idle",
   );
@@ -140,6 +144,50 @@ export function CartePage({
   const fetchInitialTimeline = useServerFn(getTransactionTimeline);
   const fetchMyOrders = useServerFn(listMyOrders);
   const hasCoverageSearch = Boolean(submittedQuery.trim() || category);
+  const buyerContextSnapshot = useMemo(() => createMapContextSnapshot({
+    route: "/carte",
+    role: "acheteur",
+    query,
+    category,
+    filters,
+    quantity,
+    budget: filters.maxPrice,
+    selectedFacilityId: selected?.id ?? null,
+    viewport: visibleViewport,
+    returnTo: "/carte",
+  }), [category, filters, quantity, query, selected?.id, visibleViewport]);
+  const buyerMenuActions = useMemo<OmniMenuAction[]>(() => [
+    createMenuAction({ id: "buyer-availability", label: "Disponibilités", description: "Vérifier une ou plusieurs facilities", icon: "⌕", surface: "disponibilites", roles: ["acheteur"], requiresAuth: false, onSelect: () => setDemandOpen(true) }),
+    createMenuAction({ id: "buyer-transactions", label: "Transactions", description: "Reprendre une transaction en cours", icon: "↺", surface: "transactions", roles: ["acheteur"], requiresAuth: true, badge: activeTransactionCount, onSelect: () => setOrdersOpen(true) }),
+    createMenuAction({ id: "buyer-messages", label: "Messages transactionnels", description: "Messages liés à une transaction autorisée", icon: "◇", surface: "messages", roles: ["acheteur"], requiresAuth: true, onSelect: () => setChatOpen(true) }),
+    createMenuAction({ id: "buyer-saved-searches", label: "Recherches enregistrées", description: "Retrouver vos recherches", icon: "♡", surface: "recherches", roles: ["acheteur"], requiresAuth: true, onSelect: () => setWishOpen(true) }),
+    createMenuAction({ id: "buyer-cart", label: "Panier", description: "Ouvrir votre panier", icon: "□", surface: "panier", roles: ["acheteur"], requiresAuth: false, onSelect: () => setCartOpen(true) }),
+  ], [activeTransactionCount]);
+  const switchToSeller = () => {
+    saveMapContext(buyerContextSnapshot);
+    if (!user) {
+      void navigate({ to: "/auth", search: { redirectTo: "/vendeur" } });
+      return;
+    }
+    void navigate({ to: "/vendeur" });
+  };
+
+  useEffect(() => {
+    if (authLoading || mapContextRestoredRef.current) return;
+    mapContextRestoredRef.current = true;
+    const snapshot = readMapContext();
+    if (!snapshot || snapshot.route !== "/carte" || snapshot.role !== "acheteur") return;
+    setQuery(snapshot.query);
+    setCategory(snapshot.category);
+    setFilters(snapshot.filters);
+    setQuantity(snapshot.quantity);
+    pendingSelectedFacilityIdRef.current = snapshot.selectedFacilityId;
+    if (snapshot.query.trim() || snapshot.category) {
+      setSubmittedQuery(snapshot.query);
+      setSearchRunKey(`restore:${snapshot.createdAt}`);
+    }
+    clearMapContext();
+  }, [authLoading]);
 
   useEffect(() => {
     if (!user) {
@@ -589,6 +637,14 @@ export function CartePage({
     });
   }, [facilities, origin, filters]);
 
+  useEffect(() => {
+    if (selected || !pendingSelectedFacilityIdRef.current) return;
+    const restoredFacility = [...results, ...discoveryFacilities].find((item) => item.id === pendingSelectedFacilityIdRef.current);
+    if (!restoredFacility) return;
+    setSelected(restoredFacility as MapFacility);
+    pendingSelectedFacilityIdRef.current = null;
+  }, [discoveryFacilities, results, selected]);
+
   // After each search or filter change, frame the user plus the nearest visible matches.
   const [fitPoints, setFitPoints] = useState<{ lat: number; lng: number }[] | null>(null);
   const hasActiveSearch =
@@ -857,6 +913,9 @@ export function CartePage({
           onOpenChat={() => setChatOpen(true)}
           onOpenDemand={() => setDemandOpen(true)}
           activeRole="acheteur"
+          actions={buyerMenuActions}
+          contextSnapshot={buyerContextSnapshot}
+          onSwitchRole={switchToSeller}
           hideSearch
           minimalMapChrome
         />

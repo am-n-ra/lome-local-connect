@@ -4,10 +4,10 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-16 (patched 2026-08-16 — see §0.5/§0.6)
-> **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md` et les décisions UI/UX confirmées.
+> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6 and §0.8.1)
+> **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md`, `docs/omni-ui-system.md` et les décisions UI/UX confirmées.
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
-> **Patch note :** duplicate section numbers (old §151, old §168, old §167 addendum) resolved — see renumbered §169–§172. New §0.5 (V1 Scope Gate) and §0.6 (Manual Operations Layer) added as the build contract; read these two sections before implementing anything else in this document.
+> **Patch note :** §0.8.1 corrects the stale pre-globe scope wording in §0.5.3 and freezes the canonical map/menu package: MapLibre globe remains V1; menu actions are functional-only; map/search context is preserved across menu, role and sheet transitions.
 
 ## 0. INSTRUCTION GÉNÉRALE
 
@@ -85,8 +85,8 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 
 | Area                                                                      | Sections                                              | Status                                                   | Note                                                                                                                                                                                            |
 | ------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Map (Mercator/static, single pin, zoom/pan/recenter)                      | §5, §16, §87 (basic only)                             | **V1**                                                   | No globe projection, no staged geographic reveal, no clustering engine. One city, one zoom range.                                                                                               |
-| Globe projection, staged reveal choreography, accuracy-banded geolocation | §16–17, §170, §171, §172                              | **Deferred**                                             | Excellent spec, wrong phase. Revisit once V1 loop is proven and you're funding multi-market expansion.                                                                                          |
+| MapLibre globe/map, projection, pins, clusters, viewport discovery and recenter | §5, §16–17, §87, §170–172                           | **V1**                                                   | Preserve the real MapLibre GL v5 globe, OpenFreeMap style, source-backed facilities, horizontal resting rotation, staged reveal after search, and honest exact/approximate location states. |
+| Map/menu chrome, functional navigation and role-preserving context         | §0.8.1, §16–17, Annex F–G                           | **V1**                                                   | One top-right notification/menu chrome, one map control group, one data-driven functional menu, explicit buyer/seller switch, no placeholder destinations, and no context loss. |
 | Search (text, structured quantity/budget)                                 | §12 (text only), §13, §14 (keyword+basic semantic)    | **V1**                                                   | No voice, image, or video search yet.                                                                                                                                                           |
 | Search by image/video, visual embeddings                                  | §11, §37 (visual pipeline)                            | **Deferred**                                             |                                                                                                                                                                                                 |
 | Facility object + states (Unclaimed → Claimed → Certified → Confirmed)    | §4, §5, §17 (this doc)                                | **V1**                                                   | States must exist in the data model even though certification is done by hand.                                                                                                                  |
@@ -4727,6 +4727,36 @@ Le bulk availability est une capacité du plan buyer Pro. Le serveur autorise le
 Le menu hamburger V1 ne montre que les actions réellement branchées. Les placeholders non interactifs de profil, paramètres, solde, plan et crédits et transactions ne doivent pas apparaître dans la navigation principale. Le seller workspace est facility-first : Facility, Produits, Demandes reçues, Scanner QR, Coupons et Publicité V1 constituent les surfaces principales.
 
 La création d’un produit seller peut créer simultanément un coupon produit. Le checkout vérifie l’offre assignée au buyer, calcule la remise, l’attache à la transaction et enregistre une redemption et un événement `consumed`. Une absence d’offre reste affichée honnêtement ; aucun code fictif ne doit être généré côté client.
+
+## 0.8.1 Correction canonique — Map + Menu Omni (2026-08-21)
+
+Cette correction complète les sections précédentes sans changer MapLibre GL v5, la projection globe/mercator, le fournisseur de tuiles, les pins, les clusters ou les contrats serveur. Elle corrige le drift observé entre le menu et la carte active.
+
+### Identité et composition
+
+Omni est un moteur de recherche géospatial map-first. Le canvas MapLibre est la scène permanente sur buyer et seller. Le menu est un command center contextuel pour les actions déjà branchées ; il n’est ni une page dashboard concurrente ni une liste de promesses futures. Le chrome map actif est minimal : notifications et hamburger sont séparés en haut à droite ; zoom, dézoom et recentrage restent dans leur groupe de contrôle dédié. Aucun contrôle de menu ou chevron ne peut couvrir les contrôles de carte.
+
+### Machine de la carte
+
+`idle_globe → [permission acceptée] → location_exact | [refus/timeout] → location_approximate_or_market_fallback → [recherche explicite] → search_reveal → result_framing → results_visible → [facility sélectionnée] → facility_sheet → [fermeture/back] → results_visible_with_same_context`.
+
+La carte reste interactive pendant l’idle et la recherche. La rotation horizontale s’arrête pendant une interaction, reprend uniquement dans l’état `idle_globe` et respecte `prefers-reduced-motion`. Une recherche seule peut déclencher la chorégraphie de reveal. Une position approximative n’est jamais libellée comme exacte. L’orchestrateur de route conserve query, catégorie, filtres, quantité, budget, facility sélectionnée, viewport et transaction de reprise.
+
+### Machine du menu
+
+`map_context → [hamburger] → menu_open → [action fonctionnelle] → destination_sheet_or_route_with_context → [close/back] → same_map_context`.
+
+Pour un utilisateur authentifié, `menu_open` expose le rôle courant et l’action `Changer d’espace`. Le changement snapshotte le contexte pris en charge, navigue vers l’équivalent buyer/seller et restaure ce contexte lorsque la route de destination le permet. Pour un visiteur, les actions publiques restent visibles ; une action protégée ouvre `/auth` avec l’intention et le contexte sérialisés sans perdre la recherche.
+
+Le menu est data-driven. Une entrée n’est rendue que si elle possède un callback ou une destination réelle fournie par la route courante. Les placeholders de profil, paramètres, solde, plan, crédits, transactions, chat ou activité ne sont jamais affichés comme disponibles sans surface fonctionnelle. Le menu utilise `OmniSheet`, bas sur mobile et centré sur desktop, avec corps scrollable, cibles de 44 px minimum, fermeture clavier/gesture et footer d’action uniquement lorsque nécessaire.
+
+### Menu buyer et seller
+
+Le buyer peut accéder aux surfaces réellement branchées : recherche/carte, disponibilités, transactions ou demandes, messages strictement transactionnels, recherches enregistrées et panier seulement si ces callbacks existent. Le seller expose facility, catalogue/produits, demandes reçues, scanner QR, coupons, Omni Wallet/compte et publicité uniquement lorsqu’une surface V1 fonctionnelle est fournie par la route. Le menu ne crée pas une seconde navigation opaque ; les feuilles et les onglets existants restent pilotés par le même état de route.
+
+### Critères de sortie
+
+Le package Map + Menu est conforme lorsque : (1) le globe et ses contrôles restent visibles autour des surfaces ; (2) l’ouverture/fermeture du menu ne recrée ni ne réinitialise la carte ; (3) chaque entrée visible est fonctionnelle ou protégée par une vraie route d’auth ; (4) le changement de rôle conserve le contexte pris en charge ; (5) la fermeture d’une fiche ou feuille restaure recherche, résultats et position ; (6) les viewports 320, 390, 768, 1024 et 1280 px n’ont ni débordement ni collision ; et (7) la preuve headless est distinguée de la preuve réelle MapLibre, GPS, caméra et session authentifiée.
 
 # ANNEXE NORMATIVE V1 — CERTIFICATION MOBILE, SELLER MAP-FIRST ET DATA COMPANY
 
