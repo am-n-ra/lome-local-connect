@@ -58,3 +58,22 @@ button { cursor: pointer; }
   .omni-dock__row { flex-direction: column; }
   .omni-dock button { min-height: 2.8rem; }
 }
+
+.omni-map-wrap, .omni-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.omni-map .maplibregl-canvas-container, .omni-map .maplibregl-canvas { width: 100%; height: 100%; }
+.omni-map-attribution { position: absolute; z-index: 2; left: .75rem; bottom: max(6.8rem, calc(env(safe-area-inset-bottom) + 5.5rem)); padding: .25rem .45rem; border-radius: .45rem; color: #604735; background: rgba(255,252,247,.72); font-size: .62rem; backdrop-filter: blur(8px); }
+.omni-map-controls { position: absolute; z-index: 2; left: 1rem; bottom: max(8rem, calc(env(safe-area-inset-bottom) + 7rem)); display: grid; gap: .45rem; }
+.omni-map-controls button { width: 2.45rem; height: 2.45rem; border: 1px solid rgba(255,255,255,.8); border-radius: .8rem; color: #2c211b; background: rgba(255,252,247,.86); box-shadow: 0 .5rem 1.2rem rgba(87,48,22,.14); font-size: 1.25rem; backdrop-filter: blur(12px); }
+.omni-link { border: 0; padding: 0; color: #c45c25; background: transparent; text-decoration: underline; }
+.omni-result-list { display: grid; gap: .55rem; }
+.omni-result { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .75rem; width: 100%; border: 1px solid #f0e0d3; border-radius: 1rem; padding: .75rem; color: #2c211b; background: #fffdf9; text-align: left; }
+.omni-result:hover, .omni-result:focus-visible { border-color: #e86f2b; outline: none; }
+.omni-result__dot { width: .7rem; height: .7rem; border-radius: 50%; background: #e86f2b; }
+.omni-result strong, .omni-result small { display: block; }
+.omni-result small { margin-top: .15rem; color: #876d5b; font-size: .75rem; }
+.omni-primary { width: 100%; border: 0; border-radius: .9rem; padding: .85rem 1rem; color: #fffaf4; background: #e86f2b; font-weight: 800; }
+
+@media (max-width: 680px) {
+  .omni-map-attribution { bottom: max(7rem, calc(env(safe-area-inset-bottom) + 6.2rem)); }
+  .omni-map-controls { bottom: max(11rem, calc(env(safe-area-inset-bottom) + 10rem)); left: .75rem; }
+}

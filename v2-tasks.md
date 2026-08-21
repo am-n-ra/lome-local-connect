@@ -52,7 +52,7 @@ Every implementation session must update status, owner, last evidence and blocke
 | Slice | Name | Parent gate | Dependencies | Status |
 |---|---|---|---|---|
 | V0 | Product kernel and proof harness | Kernel can run, authorize, audit and pass boundary checks | None | `partial` |
-| V1 | Map-first public discovery | Visitor can search and inspect source-backed facilities without losing map context | V0 | `todo` |
+| V1 | Map-first public discovery | Visitor can search and inspect source-backed facilities without losing map context | V0 | `partial` |
 | V2 | Catalogue-first availability | Buyer completes product, scope, constraints and response comparison | V1 | `todo` |
 | V3 | Facility verification and trust | Evidence submission and audited outcomes work without claim-by-click | V0, V1 | `todo` |
 | V4 | Seller map-first operations | Seller manages facility, catalogue, stock, requests and coupons | V2, V3 | `todo` |
@@ -124,6 +124,16 @@ Every implementation session must update status, owner, last evidence and blocke
 | V1-BUY-014 | BUY-014 | Preserve query, viewport, selection and result restoration | P0 | FND-002, BUY-013 | `todo` | — |
 
 **V1 subtasks:** Each row requires `-C/-D/-S/-U/-I/-P/-O`. Gate evidence: four-width visitor click-through, canvas/clustering/location assertions, Enter/button parity, empty/error recovery, no-overflow and public-data privacy negatives.
+
+### 4.3 V1 execution record
+
+**Outcome:** `partial`
+
+**Verified evidence:** `npm test -- --run` (4 tests passed), `npm run check:boundary` (clean), `npm run build` (passed), and `scripts/v1-map-certification.mjs` across 320/375/768/1280 px. Each width rendered a full-size MapLibre canvas, visible attribution, three deterministic public results and no horizontal overflow.
+
+**Implemented in this pass:** real MapLibre globe projection, OpenFreeMap Liberty primary style with local fallback, resize handling, idle rotation, camera interaction pause, zoom/recenter controls, deterministic source-backed fixtures, GeoJSON clustering, facility pin selection, public search Enter/button path, result sheet and facility detail sheet.
+
+**Remaining V1 proof/implementation gaps:** visible-bounds callbacks are emitted but not yet connected to a server discovery adapter; the search dataset is deterministic fixtures rather than the bounded OSM/Overpass operational adapter; approximate location semantics and explicit cancellation are not complete; geographic highlight is not implemented; the connected browser bridge remains unavailable for a live visual session. The V1 task must remain `partial` until these are closed.
 
 ## 5. V2 — Catalogue-first availability
 

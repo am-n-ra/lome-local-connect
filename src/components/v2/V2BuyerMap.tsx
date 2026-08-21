@@ -1,0 +1,54 @@
+import { useEffect, useRef } from "react";
+import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+type Facility = { id: string; name: string; category: string; lng: number; lat: number };
+type Props = { facilities: Facility[]; selectedId: string | null; onSelect: (facility: Facility) => void; onBoundsChange?: (bounds: [number, number, number, number]) => void; onLocationState?: (state: "requesting" | "exact" | "approximate" | "denied" | "timeout") => void };
+const REMOTE_STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const FALLBACK_STYLE = "/omni-local-style.json";
+const SOURCE = "omni-facilities";
+
+function collection(facilities: Facility[]) { return { type: "FeatureCollection" as const, features: facilities.map((f) => ({ type: "Feature" as const, geometry: { type: "Point" as const, coordinates: [f.lng, f.lat] }, properties: { id: f.id, name: f.name, category: f.category } })) }; }
+
+export function V2BuyerMap({ facilities, selectedId, onSelect, onBoundsChange, onLocationState }: Props) {
+  const container = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<Map | null>(null);
+  const facilitiesRef = useRef(facilities);
+  const rotating = useRef(true);
+  const fallback = useRef(false);
+  facilitiesRef.current = facilities;
+
+  useEffect(() => {
+    if (!container.current || mapRef.current) return;
+    const map = new Map({ container: container.current, style: REMOTE_STYLE, center: [1.22, 6.13], zoom: 1.35, attributionControl: { compact: true }, cooperativeGestures: true });
+    mapRef.current = map;
+    const pause = () => { rotating.current = false; };
+    const resume = () => { if (map.getZoom() < 2.2) rotating.current = true; };
+    map.on("mousedown", pause); map.on("touchstart", pause); map.on("wheel", pause); map.on("dragstart", pause); map.on("zoomstart", pause);
+    map.on("moveend", () => { const b = map.getBounds(); onBoundsChange?.([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()]); resume(); });
+    map.on("error", () => { if (!fallback.current) { fallback.current = true; map.setStyle(FALLBACK_STYLE); } });
+    map.on("load", () => {
+      map.setProjection({ type: "globe" });
+      map.resize();
+      if (!map.getSource(SOURCE)) {
+        map.addSource(SOURCE, { type: "geojson", data: collection(facilitiesRef.current), cluster: true, clusterMaxZoom: 5, clusterRadius: 48 });
+        map.addLayer({ id: "facility-clusters", type: "circle", source: SOURCE, filter: ["has", "point_count"], paint: { "circle-color": "#e86f2b", "circle-radius": ["step", ["get", "point_count"], 18, 10, 23, 30, 29], "circle-stroke-color": "#fffaf4", "circle-stroke-width": 2 } });
+        map.addLayer({ id: "facility-cluster-count", type: "symbol", source: SOURCE, filter: ["has", "point_count"], layout: { "text-field": "{point_count_abbreviated}", "text-size": 12 }, paint: { "text-color": "#fffaf4" } });
+        map.addLayer({ id: "facility-pins", type: "circle", source: SOURCE, filter: ["!", ["has", "point_count"]], paint: { "circle-color": "#2c211b", "circle-radius": 7, "circle-stroke-color": "#fffaf4", "circle-stroke-width": 2 } });
+        map.on("click", "facility-clusters", (event: MapLayerMouseEvent) => { const feature = event.features?.[0] as MapGeoJSONFeature | undefined; const clusterId = feature?.properties?.cluster_id; if (!feature || clusterId === undefined) return; const source = map.getSource(SOURCE) as GeoJSONSource; source.getClusterExpansionZoom(clusterId).then((zoom) => { map.easeTo({ center: (feature.geometry as { type: "Point"; coordinates: number[] }).coordinates as [number, number], zoom }); }).catch(() => undefined); });
+        map.on("click", "facility-pins", (event: MapLayerMouseEvent) => { const id = String(event.features?.[0]?.properties?.id ?? ""); const facility = facilitiesRef.current.find((f) => f.id === id); if (facility) { pause(); onSelect(facility); map.easeTo({ center: [facility.lng, facility.lat], zoom: Math.max(map.getZoom(), 5) }); } });
+        for (const layer of ["facility-clusters", "facility-pins"]) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
+      }
+      onBoundsChange?.([map.getBounds().getWest(), map.getBounds().getSouth(), map.getBounds().getEast(), map.getBounds().getNorth()]);
+      const rotate = () => { if (rotating.current && !map.isMoving()) map.easeTo({ center: [map.getCenter().lng + 0.035, map.getCenter().lat], duration: 1200, essential: true }); window.setTimeout(rotate, 1400); };
+      window.setTimeout(rotate, 1400);
+    });
+    const observer = new ResizeObserver(() => map.resize()); observer.observe(container.current);
+    return () => { observer.disconnect(); map.remove(); mapRef.current = null; };
+  }, [onBoundsChange, onSelect]);
+
+  useEffect(() => { const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined; source?.setData(collection(facilities)); }, [facilities]);
+  useEffect(() => { const map = mapRef.current; if (map?.getLayer("facility-pins")) map.setPaintProperty("facility-pins", "circle-color", ["case", ["==", ["get", "id"], selectedId ?? ""], "#e86f2b", "#2c211b"]); }, [selectedId]);
+  const locate = () => { onLocationState?.("requesting"); if (!navigator.geolocation) return onLocationState?.("denied"); navigator.geolocation.getCurrentPosition((p) => { onLocationState?.("exact"); mapRef.current?.easeTo({ center: [p.coords.longitude, p.coords.latitude], zoom: 7, duration: 900 }); }, (e) => onLocationState?.(e.code === 3 ? "timeout" : "denied"), { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }); };
+  return <div className="omni-map-wrap"><div ref={container} className="omni-map" aria-label="Omni discovery globe" /><div className="omni-map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div><div className="omni-map-controls" aria-label="Map controls"><button type="button" aria-label="Locate me" onClick={locate}>⌖</button><button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()}>+</button><button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()}>−</button></div></div>;
+}

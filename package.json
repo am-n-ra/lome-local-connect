@@ -13,15 +13,18 @@
   "dependencies": {
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
+    "maplibre-gl": "^6.5.0",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",
     "vite": "latest"
   },
   "devDependencies": {
+    "@types/geojson": "^7946.0.16",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "jsdom": "latest",
+    "playwright": "^1.62.1",
     "vitest": "latest"
   }
 }
