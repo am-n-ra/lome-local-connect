@@ -1,21 +1,24 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { V2Shell } from "../components/v2/V2Shell";
 
-export const Route = createFileRoute("/")({ component: V2Landing });
+export const Route = createFileRoute("/")({ component: V2FoundationPage });
 
-function V2Landing() {
+function V2FoundationPage() {
   return (
-    <main className="v2-shell">
-      <section className="v2-card" aria-labelledby="v2-title">
-        <p className="v2-kicker">OMNI / V2 REBUILD</p>
-        <h1 id="v2-title">Nouvelle base en préparation.</h1>
-        <p>
-          Cette branche est une base propre et isolée pour reconstruire Omni. La version actuelle
-          reste disponible sur la branche <code>main</code> et son déploiement de production.
-        </p>
-        <div className="v2-status" role="status">
-          V2 clean-slate · aucune fonctionnalité V1 active
+    <V2Shell
+      chrome={<span className="v2-chrome-label">Omni V2 · foundation</span>}
+      dock={
+        <div className="v2-dock-placeholder">
+          <span className="v2-dock-dot" aria-hidden="true" />
+          <span>La recherche arrive dans la slice S1</span>
         </div>
-      </section>
-    </main>
+      }
+      sheet={
+        <div className="v2-sheet-placeholder">
+          <strong>Socle V2 actif</strong>
+          <span>La carte, le dock et les feuilles partagent déjà leur surface.</span>
+        </div>
+      }
+    />
   );
 }
