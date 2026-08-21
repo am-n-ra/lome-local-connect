@@ -18,7 +18,8 @@ import { OrdersPanel } from "@/components/omni/OrdersPanel";
 import { ChatPanel } from "@/components/omni/ChatPanel";
 import { DemandRequestPanel } from "@/components/omni/DemandRequestPanel";
 import { TopNav } from "@/components/omni/TopNav";
-import { SearchDock, DEFAULT_FILTERS, type MapFilters } from "@/components/omni/SearchDock";
+import { SearchDock } from "@/components/omni/SearchDock";
+import { DEFAULT_FILTERS, type MapFilters } from "@/lib/search-dock-contract";
 import { OmniMapShell } from "@/components/omni/ui/OmniMapShell";
 import { OmniResumeBar } from "@/components/omni/ui/OmniPrimitives";
 import { ResultRail } from "@/components/omni/ResultRail";
@@ -730,6 +731,32 @@ export function CartePage({
     window.history.replaceState(null, "", "/carte");
   }, [authLoading, user]);
 
+  function handleCategoryChange(value: string | null) {
+    if (!value) {
+      setCategory(null);
+      return;
+    }
+    if (authLoading) return;
+    if (!user) {
+      savePendingAvailabilitySearch({
+        term: "",
+        category: value,
+        filters,
+        targetFacilityIds: [],
+        location: preciseUserPos,
+        locationSource: hasPreciseUserPosition ? ("browser" as const) : ("market_fallback" as const),
+        quantity,
+        demandOpen: false,
+        mode: "search",
+      });
+      navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
+      return;
+    }
+    setCategory(value);
+    setSubmittedQuery("");
+    setSearchRunKey(`${Date.now()}:category:${value}`);
+  }
+
   function handleSearchSubmit() {
     if (!query.trim() && !category) {
       toast.info("Saisissez un produit, un service ou choisissez une catégorie.");
@@ -823,6 +850,16 @@ export function CartePage({
   if (cleanUi) {
     return (
       <>
+        <TopNav
+          onOpenCart={() => setCartOpen(true)}
+          onOpenWishlist={() => setWishOpen(true)}
+          onOpenOrders={() => setOrdersOpen(true)}
+          onOpenChat={() => setChatOpen(true)}
+          onOpenDemand={() => setDemandOpen(true)}
+          activeRole="acheteur"
+          hideSearch
+          minimalMapChrome
+        />
         <CleanBuyerMapStage
           discoveryFacilities={discoveryResults}
           results={results}
@@ -836,6 +873,9 @@ export function CartePage({
           routeCoords={routeCoords}
           query={query}
           submittedQuery={submittedQuery}
+          category={category}
+          filters={filters}
+          quantity={quantity}
           hasActiveSearch={hasActiveSearch}
           locationStatus={locationStatus}
           browserPermission={browserPermission}
@@ -844,6 +884,9 @@ export function CartePage({
           revealRunning={revealRunning}
           isAuthenticated={Boolean(user)}
           onQueryChange={setQuery}
+          onCategoryChange={handleCategoryChange}
+          onFiltersChange={setFilters}
+          onQuantityChange={setQuantity}
           onSearchSubmit={handleSearchSubmit}
           onSelect={(facility) => {
             setSelected(facility);

@@ -20,32 +20,11 @@ import { categoryLabel, CATEGORIES, LOCATION_APPROXIMATE_ACCURACY_METERS } from 
 import { useMarket } from "@/lib/market";
 import { recordProductEvent } from "@/lib/analytics.functions";
 import { getAnalyticsSessionId, hasAnalyticsConsent } from "@/lib/analytics-browser";
+import { deriveSearchDockActionMode, isSubmitWithinGuard, shouldShowStructuredRow } from "@/lib/search-dock-state";
+import { DEFAULT_FILTERS, activeFilterCount, type MapFilters } from "@/lib/search-dock-contract";
 
-export type MapFilters = {
-  radiusKm: number;
-  maxPrice: number | null;
-  openOnly: boolean;
-  discountOnly: boolean;
-  sort: "distance" | "price" | "rank";
-};
-
-export const DEFAULT_FILTERS: MapFilters = {
-  radiusKm: 10,
-  maxPrice: null,
-  openOnly: false,
-  discountOnly: false,
-  sort: "rank",
-};
-
-export function activeFilterCount(filters: MapFilters): number {
-  return [
-    filters.radiusKm !== DEFAULT_FILTERS.radiusKm,
-    filters.maxPrice !== null,
-    filters.openOnly,
-    filters.discountOnly,
-    filters.sort !== DEFAULT_FILTERS.sort,
-  ].filter(Boolean).length;
-}
+export { DEFAULT_FILTERS, activeFilterCount } from "@/lib/search-dock-contract";
+export type { MapFilters } from "@/lib/search-dock-contract";
 
 type Props = {
   query: string;
@@ -102,15 +81,22 @@ export function SearchDock({
   const sendEvent = useServerFn(recordProductEvent);
   const dockRef = useRef<HTMLDivElement>(null);
   const railRef = useRef<HTMLDivElement>(null);
-  const [parametersOpen, setParametersOpen] = useState(false);
+  const lastSubmitAtRef = useRef(0);
+  const [refinementOpen, setRefinementOpen] = useState(false);
+  const [structuredOpen, setStructuredOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(String(quantity));
   const [budgetDraft, setBudgetDraft] = useState(
     filters.maxPrice == null ? "" : String(filters.maxPrice),
   );
   const activeCount = activeFilterCount(filters);
   const hasExplicitStructuredValues = quantity !== 1 || filters.maxPrice !== null;
-  // Structured quantity/budget controls stay collapsed by default; active values remain preserved.
-  const controlsOpen = parametersOpen;
+  // Untouched defaults stay quiet in idle; explicitly entered values remain visible through the active flow.
+  const structuredRowOpen = shouldShowStructuredRow(structuredOpen, quantity, filters.maxPrice);
+  const actionMode = deriveSearchDockActionMode({
+    activeSearch,
+    resultCount,
+    coverageStatus,
+  });
   const isPrecise =
     locationStatus === "granted" &&
     locationAccuracy != null &&
@@ -132,6 +118,7 @@ export function SearchDock({
     const parsed = Number.parseInt(quantityDraft, 10);
     const next = Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
     setQuantityDraft(String(next));
+    setStructuredOpen(true);
     onQuantityChange?.(next);
   }
 
@@ -139,6 +126,7 @@ export function SearchDock({
     const parsed = Number.parseInt(budgetDraft, 10);
     const next = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     setBudgetDraft(next == null ? "" : String(next));
+    setStructuredOpen(true);
     onFiltersChange({ ...filters, maxPrice: next });
   }
 
@@ -168,6 +156,9 @@ export function SearchDock({
   }
 
   async function handleSubmit() {
+    const now = Date.now();
+    if (isSubmitWithinGuard(now, lastSubmitAtRef.current)) return;
+    lastSubmitAtRef.current = now;
     onSubmit?.();
     if (hasAnalyticsConsent()) {
       void sendEvent({
@@ -206,12 +197,12 @@ export function SearchDock({
     <div
       ref={dockRef}
       data-omni-dock="true"
-      data-omni-dock-mode={activeSearch ? (resultCount > 0 ? "results" : "request") : "idle"}
+      data-omni-dock-mode={actionMode}
       data-omni-stage="buyer"
       className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:px-5"
     >
       <div className="pointer-events-auto w-full max-w-[42rem] space-y-2.5">
-        {controlsOpen && (
+        {structuredRowOpen && (
           <div
             data-omni-dock-row="structured"
             className="omni-atlas-surface grid grid-cols-1 gap-2 rounded-[1.25rem] p-2 sm:grid-cols-[1fr_1fr]"
@@ -231,7 +222,10 @@ export function SearchDock({
                 <button
                   type="button"
                   aria-label="Diminuer la quantité"
-                  onClick={() => onQuantityChange?.(Math.max(1, quantity - 1))}
+                  onClick={() => {
+                    setStructuredOpen(true);
+                    onQuantityChange?.(Math.max(1, quantity - 1));
+                  }}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <Minus className="h-3.5 w-3.5" />
@@ -241,7 +235,10 @@ export function SearchDock({
                   inputMode="numeric"
                   min={1}
                   value={quantityDraft}
-                  onChange={(event) => setQuantityDraft(event.target.value.replace(/\D/g, ""))}
+                  onChange={(event) => {
+                    setStructuredOpen(true);
+                    setQuantityDraft(event.target.value.replace(/\D/g, ""));
+                  }}
                   onBlur={commitQuantity}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitQuantity();
@@ -252,7 +249,10 @@ export function SearchDock({
                 <button
                   type="button"
                   aria-label="Augmenter la quantité"
-                  onClick={() => onQuantityChange?.(quantity + 1)}
+                  onClick={() => {
+                    setStructuredOpen(true);
+                    onQuantityChange?.(quantity + 1);
+                  }}
                   className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -271,6 +271,7 @@ export function SearchDock({
                   type="button"
                   aria-pressed={filters.maxPrice === null}
                   onClick={() => {
+                    setStructuredOpen(true);
                     setBudgetDraft("");
                     onFiltersChange({ ...filters, maxPrice: null });
                   }}
@@ -286,7 +287,10 @@ export function SearchDock({
                   min={0}
                   value={budgetDraft}
                   placeholder="Montant"
-                  onChange={(event) => setBudgetDraft(event.target.value.replace(/\D/g, ""))}
+                  onChange={(event) => {
+                    setStructuredOpen(true);
+                    setBudgetDraft(event.target.value.replace(/\D/g, ""));
+                  }}
                   onBlur={commitBudget}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") commitBudget();
@@ -304,20 +308,38 @@ export function SearchDock({
 
         <div
           data-omni-dock-row="discovery"
-          className="flex items-center gap-2"
-          aria-label="Contexte de recherche et localisation"
+          className="flex min-w-0 flex-wrap items-center gap-2"
+          aria-label="Découverte et affinage"
         >
-          <button
-            type="button"
-            aria-label={controlsOpen ? "Masquer les paramètres" : "Afficher les paramètres"}
-            aria-expanded={controlsOpen}
-            onClick={() => setParametersOpen((open) => !open)}
-            className="omni-glass grid h-11 w-11 shrink-0 place-items-center rounded-full text-muted-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            {controlsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-          {controlsOpen && (
-            <div className="omni-atlas-surface min-w-0 flex-1 space-y-2 rounded-[1.35rem] p-2">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+            <button
+              type="button"
+              aria-label={refinementOpen ? "Fermer les options d’affinage" : "Ouvrir les options d’affinage"}
+              aria-expanded={refinementOpen}
+              onClick={() => setRefinementOpen((open) => !open)}
+              className="omni-glass inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              {refinementOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              Affiner
+              {activeCount > 0 ? <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] text-primary-foreground">{activeCount}</span> : null}
+            </button>
+            {!hasExplicitStructuredValues ? (
+              <button
+                type="button"
+                aria-label={structuredOpen ? "Masquer les paramètres" : "Afficher les paramètres"}
+                aria-expanded={structuredOpen}
+                onClick={() => setStructuredOpen((open) => !open)}
+                className="omni-glass inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-[11px] font-bold text-foreground transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                {structuredOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                Paramètres
+              </button>
+            ) : (
+              <span className="omni-glass inline-flex min-h-11 items-center rounded-full px-3 text-[11px] font-bold text-primary">Paramètres actifs</span>
+            )}
+          </div>
+          {refinementOpen && (
+            <div className="omni-atlas-surface max-h-[min(42dvh,22rem)] min-w-full space-y-2 overflow-y-auto rounded-[1.35rem] p-2 sm:min-w-[22rem]">
               <div className="flex min-w-0 items-center gap-1 rounded-full bg-background/35 p-1">
                 <button
                   type="button"
@@ -447,7 +469,16 @@ export function SearchDock({
           )}
         </div>
 
-        {activeSearch && (
+        {actionMode === "loading" && (
+          <div data-omni-dock-row="action" className="flex justify-center gap-2">
+            <span className="omni-glass rounded-full px-3 py-2 text-[11px] font-semibold text-muted-foreground">
+              <LoaderCircle className="mr-1.5 inline-block h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+              Recherche en cours…
+            </span>
+          </div>
+        )}
+
+        {(actionMode === "results" || actionMode === "request") && (
           <div data-omni-dock-row="action" className="flex justify-center gap-2">
             {resultCount > 0 ? (
               <>
