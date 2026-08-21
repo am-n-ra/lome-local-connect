@@ -1,0 +1,12 @@
+{
+  "version": 8,
+  "name": "Omni Warm Globe",
+  "sources": {
+    "omni-world": {"type":"geojson","data":"/assets/omni-world.geojson"}
+  },
+  "layers": [
+    {"id":"water","type":"background","paint":{"background-color":"#b9d9e8"}},
+    {"id":"land","type":"fill","source":"omni-world","paint":{"fill-color":"#fff9f3","fill-opacity":0.97}},
+    {"id":"coastline","type":"line","source":"omni-world","paint":{"line-color":"#e7bda5","line-width":["interpolate",["linear"],["zoom"],0,0.45,4,1.2,8,2],"line-opacity":0.9}}
+  ]
+}

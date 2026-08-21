@@ -67,7 +67,7 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
 
       map = new maplibre.Map({
         container: containerRef.current,
-        style: "https://demotiles.maplibre.org/style.json",
+        style: "/assets/omni-map-style.json",
         center: [0, 16],
         zoom: 1.1,
         pitch: 0,
