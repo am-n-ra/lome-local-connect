@@ -50,5 +50,5 @@ function TransactionRoute() {
   }, [id, loadTimeline, loading, navigate, user]);
 
   if (seller) return null;
-  return <CartePage initialTransactionId={id} />;
+  return <CartePage initialTransactionId={id} cleanUi />;
 }
