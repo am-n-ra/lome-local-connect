@@ -28,6 +28,10 @@ Availability checks, seller onboarding, claiming, certification, transaction int
 
 Every state must have visible feedback and recoverable action. Search input must not cause mobile viewport jumps. The Options control must open a real sheet/popover, not only update a sentence.
 
+## Brand and visual source
+
+Use the supplied logo at `public/assets/omni-logo.png` and the canonical tokens and layout rules in `docs/v2-omni-design-system.md`. Do not introduce a second palette, dark-dashboard treatment or ad hoc spacing system.
+
 ## Required composition
 
 The persistent scene must remain the visual focus. The top chrome must include Omni identity, location state and map controls without covering the map. The dock must contain one search field, clear submit state, result context, a single Options chevron and a small status line. The sheet must be a deliberate responsive surface with a result header, cards, detail identity, media, catalogue toolbar and selection summary.

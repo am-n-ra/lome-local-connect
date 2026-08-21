@@ -139,7 +139,7 @@ function V2BuyerPage() {
   return (
     <V2Shell
       scene={<V2BuyerMap facilities={facilities} userLocation={userLocation} onBoundsChange={setBounds} />}
-      chrome={<div className="v2-top-chrome"><span className="v2-chrome-label">Omni</span><button type="button" className="v2-location-button" onClick={locate} disabled={state === "locating"}>{state === "locating" ? "Localisation…" : "Recentrer"}</button></div>}
+      chrome={<div className="v2-top-chrome"><div className="v2-brand-lockup"><img src="/assets/omni-logo.png" alt="" /><span>Omni</span><small>Découverte locale</small></div><div className="v2-utility-cluster"><span className={`v2-location-status is-${userLocation ? userLocation.accuracy : "off"}`}>{state === "locating" ? "Localisation…" : userLocation ? userLocation.accuracy === "exact" ? "Position exacte" : "Position approximative" : "Explorer librement"}</span><button type="button" className="v2-location-button" onClick={locate} disabled={state === "locating"}>{state === "locating" ? "…" : "Me localiser"}</button></div></div>}
       dock={<form className="v2-search-dock" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}>
         <label className="v2-search-label" htmlFor="v2-search">Rechercher sur la carte</label>
         <div className="v2-search-row"><input id="v2-search" value={query} onFocus={() => setState("search_input")} onChange={(event) => setQuery(event.target.value)} placeholder="Que cherchez-vous ?" autoComplete="off" /><button type="submit" disabled={state === "search_submitting" || state === "search_reveal"}>{state === "search_submitting" || state === "search_reveal" ? "…" : "Rechercher"}</button></div>

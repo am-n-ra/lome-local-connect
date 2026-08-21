@@ -1,8 +1,8 @@
 # Omni V2 — MASTER
 
-> **Canonical version:** 2026-08-21 / 1.0.0
+> **Canonical version:** 2026-08-21 / 1.1.0
 >
-> **Patch note:** Establishes the V2 product master and makes `v2-flow.md` the authoritative state and transition contract; the prior V2 PRD is retained as a derived snapshot.
+> **Patch note:** Establishes the V2 product master and makes `v2-flow.md` the authoritative state and transition contract; the prior V2 PRD is retained as a derived snapshot. Adds the supplied Omni logo and the warm ivory/orange visual identity as the canonical S1/S2 presentation system.
 >
 > **Status:** Approved baseline for clean-slate implementation planning
 
@@ -11,6 +11,8 @@
 Omni is a global geospatial supply-and-demand search engine whose primary interface is a live MapLibre globe/map. A visitor searches for a need, discovers source-backed facilities, inspects a facility and its catalogue, verifies availability, compares real responses, creates an authorized purchase intent, uses a server-bound QR transaction room, records external payment and fulfilment, confirms receipt and rates the outcome. Omni is not primarily a marketplace grid, generic chat application, directory, decorative globe, buyer-seller payment processor or seller withdrawal product.
 
 The facility is the core supply object. The catalogue bridges a facility and buyer demand. The map remains mounted as the scene while sheets and cards present temporary stateful surfaces above it.
+
+The supplied Omni logo is the canonical brand mark. S1/S2 use its warm ivory, pale peach and orange language: the globe remains the visual field, while chrome, dock, sheets, cards and controls use a consistent warm glass system with stable spacing and explicit non-overlap zones. The complete token contract is documented in [`docs/v2-omni-design-system.md`](./docs/v2-omni-design-system.md).
 
 ## 0.5 Scope gate
 
