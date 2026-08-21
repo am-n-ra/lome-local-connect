@@ -1,5 +1,6 @@
-import { useReducer, useState } from "react";
+import { useMemo, useReducer, useState } from "react";
 import { initialSurfaceState, reduceSurface } from "../../core/surface-state";
+import { discoverInBounds, type DiscoveryBounds } from "../../lib/public-discovery";
 import { OmniSheet } from "./OmniSheet";
 import { V2BuyerMap } from "./V2BuyerMap";
 
@@ -15,23 +16,19 @@ const FACILITIES: Facility[] = [
 
 export function V2Shell() {
   const [surface, dispatch] = useReducer(reduceSurface, initialSurfaceState);
-  const [facilities, setFacilities] = useState(FACILITIES);
+  const [bounds, setBounds] = useState<DiscoveryBounds | null>(null);
   const [selected, setSelected] = useState<Facility | null>(null);
-  const [location, setLocation] = useState<"idle" | "requesting" | "exact" | "denied" | "timeout">("idle");
-  const showSheet = surface.active !== "map";
-  const submitSearch = () => {
-    const query = surface.query.trim().toLowerCase();
-    setFacilities(query ? FACILITIES.filter((facility) => `${facility.name} ${facility.category}`.toLowerCase().includes(query)) : FACILITIES);
-    dispatch({ type: "open", surface: "result", returnSurface: "dock" });
-  };
+  const [location, setLocation] = useState<"idle" | "requesting" | "exact" | "approximate" | "denied" | "timeout">("idle");
+  const visibleFacilities = useMemo(() => discoverInBounds(FACILITIES, bounds, surface.active === "result" ? surface.query : ""), [bounds, surface.active, surface.query]);
+  const submitSearch = () => dispatch({ type: "open", surface: "result", returnSurface: "dock" });
   const selectFacility = (facility: Facility) => { setSelected(facility); dispatch({ type: "select-facility", facilityId: facility.id }); };
 
   return (
     <main className="omni-shell">
-      <section className="omni-map-scene" aria-label="Persistent map scene"><V2BuyerMap facilities={facilities} selectedId={selected?.id ?? null} onSelect={selectFacility} onLocationState={(state) => setLocation(state === "approximate" ? "idle" : state)} /></section>
+      <section className="omni-map-scene" aria-label="Persistent map scene"><V2BuyerMap facilities={visibleFacilities} selectedId={selected?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} onLocationState={setLocation} /></section>
       <header className="omni-chrome"><div className="omni-brand"><span className="omni-brand__mark">O</span><strong>Omni</strong><span>Find what is available nearby</span></div><nav aria-label="Primary actions"><button type="button" onClick={() => dispatch({ type: "open", surface: "dock" })}>Search</button><button type="button" onClick={() => dispatch({ type: "open", surface: "map" })}>Menu</button></nav></header>
-      <section className="omni-dock" aria-label="Search dock"><p className="omni-eyebrow">PUBLIC DISCOVERY · {location === "requesting" ? "LOCATING…" : location === "exact" ? "LOCATION FOUND" : "EXPLORE THE GLOBE"}</p><div className="omni-dock__row"><input aria-label="Search facilities or products" value={surface.query} onChange={(event) => dispatch({ type: "set-query", query: event.target.value })} onKeyDown={(event) => { if (event.key === "Enter") submitSearch(); }} placeholder="What are you looking for?" /><button type="button" onClick={submitSearch}>Search</button></div><small>{facilities.length} public facilities in this discovery set · <button className="omni-link" type="button" onClick={() => document.querySelector<HTMLButtonElement>(".omni-map-controls button")?.click()}>Use my location</button></small></section>
-      {showSheet && <div className="omni-sheet-slot"><OmniSheet title={surface.active === "result" ? `${facilities.length} places found` : selected?.name ?? surface.active} onClose={() => dispatch({ type: "close" })} onBack={() => dispatch({ type: "back" })} footer={<button type="button" onClick={() => dispatch({ type: "close" })}>Return to map</button>}><div className="omni-result-list">{surface.active === "result" && facilities.map((facility) => <button className="omni-result" key={facility.id} type="button" onClick={() => selectFacility(facility)}><span className="omni-result__dot" /><span><strong>{facility.name}</strong><small>{facility.category} · {facility.lat.toFixed(2)}, {facility.lng.toFixed(2)}</small></span><span aria-hidden="true">›</span></button>)}{surface.active === "facility" && selected && <><p className="omni-eyebrow">PUBLIC FACILITY</p><h3>{selected.name}</h3><p>{selected.category} discovery point. Public information only; claiming and transaction actions are reserved for later verified flows.</p><button type="button" className="omni-primary" onClick={() => dispatch({ type: "open", surface: "catalogue", returnSurface: "facility" })}>View public catalogue</button></>}{surface.active !== "result" && surface.active !== "facility" && <p>This V1 surface is ready for the next catalogue slice.</p>}</div></OmniSheet></div>}
+      <section className="omni-dock" aria-label="Search dock"><p className="omni-eyebrow">PUBLIC DISCOVERY · {location === "requesting" ? "LOCATING…" : location === "exact" ? "LOCATION FOUND" : location === "approximate" ? "APPROXIMATE LOCATION" : "EXPLORE THE GLOBE"}</p><div className="omni-dock__row"><input aria-label="Search facilities or products" value={surface.query} onChange={(event) => dispatch({ type: "set-query", query: event.target.value })} onKeyDown={(event) => { if (event.key === "Enter") submitSearch(); }} placeholder="What are you looking for?" /><button type="button" onClick={submitSearch}>Search</button></div><small>{visibleFacilities.length} public facilities in this view · <button className="omni-link" type="button" onClick={() => document.querySelector<HTMLButtonElement>(".omni-map-controls button")?.click()}>Use my location</button></small></section>
+      {surface.active !== "map" && <div className="omni-sheet-slot"><OmniSheet title={surface.active === "result" ? `${visibleFacilities.length} places found` : selected?.name ?? surface.active} onClose={() => dispatch({ type: "close" })} onBack={() => dispatch({ type: "back" })} footer={<button type="button" onClick={() => dispatch({ type: "close" })}>Return to map</button>}><div className="omni-result-list">{surface.active === "result" && visibleFacilities.map((facility) => <button className="omni-result" key={facility.id} type="button" onClick={() => selectFacility(facility)}><span className="omni-result__dot" /><span><strong>{facility.name}</strong><small>{facility.category} · {facility.lat.toFixed(2)}, {facility.lng.toFixed(2)}</small></span><span aria-hidden="true">›</span></button>)}{surface.active === "result" && visibleFacilities.length === 0 && <p className="omni-muted">No public facilities match this view yet. Move the globe or broaden the search.</p>}{surface.active === "facility" && selected && <><p className="omni-eyebrow">PUBLIC FACILITY</p><h3>{selected.name}</h3><p>{selected.category} discovery point. Public information only; claiming and transaction actions are reserved for later verified flows.</p><button type="button" className="omni-primary" onClick={() => dispatch({ type: "open", surface: "catalogue", returnSurface: "facility" })}>View public catalogue</button></>}{surface.active !== "result" && surface.active !== "facility" && <p>This V1 surface is ready for the next catalogue slice.</p>}</div></OmniSheet></div>}
     </main>
   );
 }
