@@ -286,3 +286,8 @@ The pre-verification authority debt was corrected as an additive vertical slice.
 Migration `037_preverification_ui_contract.sql` was isolated and validated before application. Migration ID `8f53f726-5e8c-4215-ba59-359600efc0ec` was applied to the active Omni branch `br-bitter-math-amrlbym6`; temporary validation branch `br-tiny-bird-aml38q03` was deleted after completion. Active-branch schema verification passed for both verification tables, `demand_requests.product_id`, and the related indexes.
 
 The map/globe projection and existing MapLibre v5 scene remain unchanged. Pin and cluster palette refinements are bounded to status/focus semantics; no claim is made that real-device rendering, exact GPS consent, authenticated responsive layout, camera/QR replay, or the full post-verification transaction loop has been proven. Status remains `partial`.
+
+## 2026-08-21 full UI and pre-verification deployment checkpoint
+Commit `7bc7344` is deployed to production as Vercel deployment `dpl_4iuJ1oGfJKJeDD2tAgaje7JmoxVY`, state `READY`. Public HTTPS smoke returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin` on `https://omni.sparkafrika.online`.
+
+The checkpoint certifies source/build/public-route availability, not the complete UI or transaction loop. Authenticated responsive buyer/seller evidence, live HTTPS camera preview and QR replay, exact location consent, and post-intent transaction proof remain open. Release status remains `partial`.
