@@ -233,3 +233,205 @@ a {
   from { transform: rotate(-24deg) scaleX(0.42); }
   to { transform: rotate(336deg) scaleX(0.42); }
 }
+
+.v2-map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.v2-top-chrome {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  pointer-events: auto;
+}
+
+.v2-location-button,
+.v2-search-dock button,
+.v2-result-card,
+.v2-facility-detail {
+  border: 0;
+  cursor: pointer;
+}
+
+.v2-location-button {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  color: #dbe5f6;
+  background: rgba(13, 21, 34, 0.72);
+  font-size: 0.75rem;
+  pointer-events: auto;
+}
+
+.v2-location-button:disabled,
+.v2-search-dock button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.v2-search-dock {
+  display: grid;
+  gap: 0.6rem;
+  width: min(100%, 38rem);
+  padding: 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.25rem;
+  background: rgba(13, 21, 34, 0.86);
+  box-shadow: 0 1.4rem 4rem rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(20px);
+  pointer-events: auto;
+}
+
+.v2-search-label {
+  color: #98a8c1;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+
+.v2-search-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.v2-search-row input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.8rem;
+  outline: none;
+  padding: 0.8rem 0.9rem;
+  color: #f3f6fc;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 1rem;
+}
+
+.v2-search-row input:focus {
+  border-color: rgba(140, 169, 255, 0.78);
+  box-shadow: 0 0 0 3px rgba(140, 169, 255, 0.16);
+}
+
+.v2-search-row button {
+  padding: 0 0.9rem;
+  border-radius: 0.8rem;
+  color: #101827;
+  background: #dbe7ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.v2-options-button {
+  justify-self: start;
+  padding: 0.1rem 0;
+  color: #aebdde;
+  background: transparent;
+  font-size: 0.75rem;
+  pointer-events: auto;
+}
+
+.v2-search-status {
+  min-height: 1.1rem;
+  margin: 0;
+  color: #97a7bf;
+  font-size: 0.73rem;
+}
+
+.v2-result-sheet {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 30rem);
+  max-height: min(32vh, 18rem);
+  overflow: auto;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 1.1rem;
+  background: rgba(13, 21, 34, 0.84);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+  pointer-events: auto;
+}
+
+.v2-result-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: #e7eefb;
+  font-size: 0.8rem;
+}
+
+.v2-result-heading span {
+  color: #8797b0;
+  font-size: 0.7rem;
+}
+
+.v2-result-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.v2-result-card,
+.v2-facility-detail {
+  display: grid;
+  gap: 0.25rem;
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.85rem;
+  color: #e4ebf7;
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+}
+
+.v2-result-card:hover,
+.v2-result-card:focus-visible,
+.v2-facility-detail:hover,
+.v2-facility-detail:focus-visible {
+  border-color: rgba(140, 169, 255, 0.6);
+  outline: none;
+  background: rgba(140, 169, 255, 0.1);
+}
+
+.v2-result-card strong,
+.v2-facility-detail strong {
+  font-size: 0.92rem;
+}
+
+.v2-result-card > span:not(.v2-facility-category),
+.v2-facility-detail > span:not(.v2-facility-category),
+.v2-facility-detail small,
+.v2-empty-result {
+  color: #9aa9bf;
+  font-size: 0.73rem;
+}
+
+.v2-facility-category {
+  color: #9db7ff;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.v2-facility-pin {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid #f4f7fb;
+  border-radius: 50% 50% 50% 0;
+  background: #121b2b;
+  box-shadow: 0 0 0 3px rgba(18, 27, 43, 0.28), 0 0.4rem 0.9rem rgba(0, 0, 0, 0.32);
+  transform: rotate(-45deg);
+}
+
+@media (max-width: 480px) {
+  .v2-search-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+
+  .v2-search-row button {
+    padding-inline: 0.75rem;
+  }
+
+  .v2-result-sheet {
+    max-height: 28vh;
+  }
+}
