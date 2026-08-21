@@ -291,3 +291,10 @@ The map/globe projection and existing MapLibre v5 scene remain unchanged. Pin an
 Commit `7bc7344` is deployed to production as Vercel deployment `dpl_4iuJ1oGfJKJeDD2tAgaje7JmoxVY`, state `READY`. Public HTTPS smoke returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin` on `https://omni.sparkafrika.online`.
 
 The checkpoint certifies source/build/public-route availability, not the complete UI or transaction loop. Authenticated responsive buyer/seller evidence, live HTTPS camera preview and QR replay, exact location consent, and post-intent transaction proof remain open. Release status remains `partial`.
+
+## 2026-08-21 buyer discovery-to-availability one-shot checkpoint
+The missing buyer screen sequence is now explicit and implemented: result card/pin selects a facility; facility detail exposes `Voir les produits`; a dedicated catalogue highlights the matched product; product selection opens availability without retyping; availability uses named stages `Produit`, `Portée`, `Contraintes`, `Réponses`; comparison orders available/partial/unavailable answers; and only an eligible response exposes `Je veux acheter cette offre`.
+
+The selected catalog product is carried through auth context and persisted as `demand_requests.product_id` on request creation. Unclaimed facilities remain public-only and cannot receive controlled availability or purchase intent. The map/globe and one-chevron dock remain the same scene and camera-inert options surface.
+
+Commit `5f3bea9` is deployed and READY. Public route smoke is HTTP 200 across `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin`. Authenticated responsive click-through, real-device catalog/product/availability proof and complete transaction-room proof remain pending; release remains `partial`.
