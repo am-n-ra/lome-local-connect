@@ -40,6 +40,7 @@ import { CleanSellerWorkspace } from "@/components/omni-clean/CleanSellerWorkspa
 import { CleanProductForm } from "@/components/omni-clean/CleanProductForm";
 import { CleanWalletPanel } from "@/components/omni-clean/CleanWalletPanel";
 import { CleanSellerOnboarding } from "@/components/omni-clean/CleanSellerOnboarding";
+import { CleanSellerAccessGate } from "@/components/omni-clean/CleanSellerAccessGate";
 import {
   OmniErrorState,
   OmniResumeBar,
@@ -693,23 +694,7 @@ function VendeurPage() {
   }
 
   if (!user) {
-    return (
-      <div className="min-h-[100dvh] bg-background">
-        <TopNav activeRole="vendeur" minimalMapChrome />
-        <div className="mx-auto max-w-md px-4 py-20 text-center">
-          <Store className="mx-auto h-10 w-10 text-primary" />
-          <h1 className="mt-4 font-display text-2xl font-bold">Connectez-vous pour vendre</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Créez votre compte vendeur et recevez 10 000 FCFA offerts.
-          </p>
-          <Button asChild className="mt-6">
-            <Link to="/auth" search={{ next: "/vendeur" }}>
-              Se connecter
-            </Link>
-          </Button>
-        </div>
-      </div>
-    );
+    return <CleanSellerAccessGate />;
   }
 
   if (loadError) {
@@ -723,12 +708,7 @@ function VendeurPage() {
   }
 
   if (!facility) {
-    return (
-      <>
-        <TopNav activeRole="vendeur" minimalMapChrome />
-        <CleanSellerOnboarding center={fallbackCenter} saving={saving} onSubmit={submitOnboarding} />
-      </>
-    );
+    return <CleanSellerOnboarding center={fallbackCenter} saving={saving} onSubmit={submitOnboarding} />;
   }
 
   const useCleanSellerUi = !import.meta.env["VITE_DISABLE_CLEAN_SELLER_UI"];
