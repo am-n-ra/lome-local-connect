@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { CATEGORIES } from "@/lib/omni";
 import { cn } from "@/lib/utils";
 import { DEFAULT_FILTERS, type MapFilters } from "@/lib/search-dock-contract";
-import { deriveSearchDockActionMode, isSubmitWithinGuard, shouldShowStructuredRow } from "@/lib/search-dock-state";
+import { deriveSearchDockActionMode, isSubmitWithinGuard } from "@/lib/search-dock-state";
 
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
@@ -77,12 +77,10 @@ export function CleanBuyerSearchDock({
 }: Props) {
   const railRef = useRef<HTMLDivElement | null>(null);
   const submitAtRef = useRef(0);
-  const [refinementOpen, setRefinementOpen] = useState(false);
-  const [structuredOpen, setStructuredOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [quantityDraft, setQuantityDraft] = useState(String(quantity));
   const [budgetDraft, setBudgetDraft] = useState(filters.maxPrice == null ? "" : String(filters.maxPrice));
-  const explicitStructuredValues = quantity !== 1 || filters.maxPrice !== null;
-  const structuredRowOpen = shouldShowStructuredRow(structuredOpen, quantity, filters.maxPrice);
+  const structuredRowOpen = optionsOpen;
   const actionMode = deriveSearchDockActionMode({ activeSearch: hasActiveSearch, resultCount, coverageStatus });
   const activeFilterCount = [
     filters.radiusKm !== DEFAULT_FILTERS.radiusKm,
@@ -109,7 +107,7 @@ export function CleanBuyerSearchDock({
   function commitQuantity() {
     const next = Math.max(1, Number.parseInt(quantityDraft, 10) || 1);
     setQuantityDraft(String(next));
-    setStructuredOpen(true);
+    setOptionsOpen(true);
     onQuantityChange(next);
   }
 
@@ -117,7 +115,7 @@ export function CleanBuyerSearchDock({
     const parsed = Number.parseInt(budgetDraft, 10);
     const next = Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     setBudgetDraft(next == null ? "" : String(next));
-    setStructuredOpen(true);
+    setOptionsOpen(true);
     onFiltersChange({ ...filters, maxPrice: next });
   }
 
@@ -157,37 +155,32 @@ export function CleanBuyerSearchDock({
                 <span className="text-[10px] text-[var(--omni-ink-muted)]">unités</span>
               </div>
               <div className="mt-1.5 flex items-center gap-2">
-                <button type="button" aria-label="Diminuer la quantité" onClick={() => { setStructuredOpen(true); onQuantityChange(Math.max(1, quantity - 1)); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/75 text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><Minus className="h-3.5 w-3.5" /></button>
-                <Input id="clean-quantity" inputMode="numeric" min={1} value={quantityDraft} onChange={(event) => { setStructuredOpen(true); setQuantityDraft(event.target.value.replace(/\D/g, "")); }} onBlur={commitQuantity} onKeyDown={(event) => { if (event.key === "Enter") commitQuantity(); }} className="h-10 min-w-0 flex-1 border-0 bg-white/70 text-center text-base font-bold shadow-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]" aria-label="Quantité souhaitée" />
-                <button type="button" aria-label="Augmenter la quantité" onClick={() => { setStructuredOpen(true); onQuantityChange(quantity + 1); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/75 text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><Plus className="h-3.5 w-3.5" /></button>
+                <button type="button" aria-label="Diminuer la quantité" onClick={() => { setOptionsOpen(true); onQuantityChange(Math.max(1, quantity - 1)); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/75 text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><Minus className="h-3.5 w-3.5" /></button>
+                <Input id="clean-quantity" inputMode="numeric" min={1} value={quantityDraft} onChange={(event) => { setOptionsOpen(true); setQuantityDraft(event.target.value.replace(/\D/g, "")); }} onBlur={commitQuantity} onKeyDown={(event) => { if (event.key === "Enter") commitQuantity(); }} className="h-10 min-w-0 flex-1 border-0 bg-white/70 text-center text-base font-bold shadow-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]" aria-label="Quantité souhaitée" />
+                <button type="button" aria-label="Augmenter la quantité" onClick={() => { setOptionsOpen(true); onQuantityChange(quantity + 1); }} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white/75 text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><Plus className="h-3.5 w-3.5" /></button>
               </div>
             </div>
             <div className="rounded-2xl bg-[var(--omni-paper)]/70 px-3 py-2.5">
               <div className="flex items-center justify-between gap-2">
                 <Label htmlFor="clean-budget" className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--omni-ink-muted)]">Budget maximum</Label>
-                <button type="button" aria-pressed={filters.maxPrice === null} onClick={() => { setStructuredOpen(true); setBudgetDraft(""); onFiltersChange({ ...filters, maxPrice: null }); }} className={cn("rounded-full px-2 py-1 text-[10px] font-extrabold", filters.maxPrice === null ? "bg-[var(--omni-ink)] text-white" : "bg-white/80 text-[var(--omni-ink)]")}>Illimité</button>
+                <button type="button" aria-pressed={filters.maxPrice === null} onClick={() => { setOptionsOpen(true); setBudgetDraft(""); onFiltersChange({ ...filters, maxPrice: null }); }} className={cn("rounded-full px-2 py-1 text-[10px] font-extrabold", filters.maxPrice === null ? "bg-[var(--omni-ink)] text-white" : "bg-white/80 text-[var(--omni-ink)]")}>Illimité</button>
               </div>
               <div className="mt-1.5 flex items-center gap-2">
-                <Input id="clean-budget" inputMode="numeric" min={0} value={budgetDraft} placeholder="Montant" onChange={(event) => { setStructuredOpen(true); setBudgetDraft(event.target.value.replace(/\D/g, "")); }} onBlur={commitBudget} onKeyDown={(event) => { if (event.key === "Enter") commitBudget(); }} className="h-10 min-w-0 flex-1 border-0 bg-white/70 text-base font-bold shadow-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]" aria-label="Budget maximum" />
+                <Input id="clean-budget" inputMode="numeric" min={0} value={budgetDraft} placeholder="Montant" onChange={(event) => { setOptionsOpen(true); setBudgetDraft(event.target.value.replace(/\D/g, "")); }} onBlur={commitBudget} onKeyDown={(event) => { if (event.key === "Enter") commitBudget(); }} className="h-10 min-w-0 flex-1 border-0 bg-white/70 text-base font-bold shadow-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]" aria-label="Budget maximum" />
                 <span className="shrink-0 text-xs text-[var(--omni-ink-muted)]">{formatMoney(filters.maxPrice)}</span>
               </div>
             </div>
           </div>
         ) : null}
 
-        <div data-omni-dock-row="discovery" className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Découverte et affinage">
-          <button type="button" aria-expanded={refinementOpen} aria-label={refinementOpen ? "Fermer les options d’affinage" : "Ouvrir les options d’affinage"} onClick={() => setRefinementOpen((open) => !open)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_88%,transparent)] px-3 text-[11px] font-extrabold text-[var(--omni-ink)] shadow-[var(--omni-shadow-float)] backdrop-blur-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]">
-            {refinementOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            Affiner
-            {activeFilterCount > 0 ? <span className="rounded-full bg-[var(--omni-orange)] px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount}</span> : null}
+        <div data-omni-dock-row="discovery" className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Découverte et options">
+          <button type="button" aria-expanded={optionsOpen} aria-controls="omni-buyer-options" aria-label={optionsOpen ? "Fermer les options" : "Ouvrir les options"} onClick={() => setOptionsOpen((open) => !open)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_88%,transparent)] px-3 text-[11px] font-extrabold text-[var(--omni-ink)] shadow-[var(--omni-shadow-float)] backdrop-blur-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]">
+            {optionsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            Options
+            {activeFilterCount + (quantity !== 1 ? 1 : 0) + (filters.maxPrice !== null ? 1 : 0) > 0 ? <span className="rounded-full bg-[var(--omni-orange)] px-1.5 py-0.5 text-[10px] text-white">{activeFilterCount + (quantity !== 1 ? 1 : 0) + (filters.maxPrice !== null ? 1 : 0)}</span> : null}
           </button>
-          {!explicitStructuredValues ? (
-            <button type="button" aria-expanded={structuredOpen} aria-label={structuredOpen ? "Masquer les paramètres" : "Afficher les paramètres"} onClick={() => setStructuredOpen((open) => !open)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_88%,transparent)] px-3 text-[11px] font-extrabold text-[var(--omni-ink)] shadow-[var(--omni-shadow-float)] backdrop-blur-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]">
-              {structuredOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />} Paramètres
-            </button>
-          ) : <span className="inline-flex min-h-11 items-center rounded-full border border-[var(--omni-orange)]/30 bg-[var(--omni-orange-wash)] px-3 text-[11px] font-extrabold text-[var(--omni-orange-deep)]">Paramètres actifs</span>}
-          {refinementOpen ? (
-            <div data-omni-refinement="true" className="min-w-full max-h-[min(42dvh,22rem)] space-y-3 overflow-y-auto rounded-[1.35rem] border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_94%,transparent)] p-3 shadow-[var(--omni-shadow-float)] backdrop-blur-2xl sm:min-w-[22rem]">
+          {optionsOpen ? (
+            <div id="omni-buyer-options" data-omni-options="true" className="min-w-full max-h-[min(42dvh,22rem)] space-y-3 overflow-y-auto rounded-[1.35rem] border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_94%,transparent)] p-3 shadow-[var(--omni-shadow-float)] backdrop-blur-2xl sm:min-w-[22rem]">
               <div className="flex min-w-0 items-center gap-1 rounded-full bg-[var(--omni-paper)]/70 p-1">
                 <button type="button" aria-label="Catégories précédentes" onClick={() => slide(-1)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><ChevronLeft className="h-4 w-4" /></button>
                 <div ref={railRef} className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

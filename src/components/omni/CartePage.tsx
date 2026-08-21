@@ -3,12 +3,13 @@ import { useNavigate } from "@tanstack/react-router";
 import { Volume2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@/lib/useServerFn";
-import { claimFacility, listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
+import { listFacilitiesInBounds, type MapFacility as ApiFacility } from "@/lib/omni.functions";
 import { saveBuyerDiscoveryLocation } from "@/lib/location.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { CleanAvailabilitySheet } from "@/components/omni-clean/CleanAvailabilitySheet";
+import { CleanVerificationRequestSheet } from "@/components/omni-clean/CleanVerificationRequestSheet";
 import { CleanBuyerMapStage } from "@/components/omni-clean/CleanBuyerMapStage";
 import { CleanTransactionRoom } from "@/components/omni-clean/CleanTransactionRoom";
 import { FacilitySheet } from "@/components/omni/FacilitySheet";
@@ -126,6 +127,7 @@ export function CartePage({
   } | null>(null);
   const [activeTransactionCount, setActiveTransactionCount] = useState(0);
   const [demandOpen, setDemandOpen] = useState(false);
+  const [verificationFacility, setVerificationFacility] = useState<MapFacility | null>(null);
   const [demandMode, setDemandMode] = useState<"bulk" | "manual">("bulk");
   const [demandFacilityName, setDemandFacilityName] = useState<string | null>(null);
   const [pendingTargetFacilityIds, setPendingTargetFacilityIds] = useState<string[] | null>(null);
@@ -139,7 +141,6 @@ export function CartePage({
   const [discoveryScopeRevision, setDiscoveryScopeRevision] = useState(0);
   const viewportRequestKeyRef = useRef<string | null>(null);
   const fetchFacilitiesInBounds = useServerFn(listFacilitiesInBounds);
-  const claimFacilityRemote = useServerFn(claimFacility);
   const persistDiscoveryLocation = useServerFn(saveBuyerDiscoveryLocation);
   const fetchInitialTimeline = useServerFn(getTransactionTimeline);
   const fetchMyOrders = useServerFn(listMyOrders);
@@ -888,19 +889,9 @@ export function CartePage({
     }
   }
 
-  async function claimSelectedFacility(facility: MapFacility) {
-    if (!user) {
-      navigate({ to: "/auth", search: { next: "/carte" } });
-      return;
-    }
-    try {
-      await claimFacilityRemote({ data: { facilityId: facility.id } });
-      setSelected({ ...facility, status: "unconfirmed" });
-      toast.success("Facilité revendiquée. La certification peut maintenant commencer.");
-      await retryCoverage();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Revendication impossible.");
-    }
+  function openVerificationRequest(facility: MapFacility) {
+    if (!user) saveMapContext(buyerContextSnapshot);
+    setVerificationFacility(facility);
   }
 
   if (cleanUi) {
@@ -954,7 +945,7 @@ export function CartePage({
           }}
           onClearSelection={() => setSelected(null)}
           onCheckAvailability={openManualAvailability}
-          onClaim={claimSelectedFacility}
+          onClaim={openVerificationRequest}
           onOpenBulkAvailability={() => openDemandRequest()}
           onOpenActivity={() => setOrdersOpen(true)}
           onRequestLocation={requestLocation}
@@ -962,6 +953,14 @@ export function CartePage({
           onRetryCoverage={retryCoverage}
           onViewportChange={setVisibleViewport}
           onRevealStateChange={setRevealRunning}
+        />
+        <CleanVerificationRequestSheet
+          open={Boolean(verificationFacility)}
+          facilityId={verificationFacility?.id ?? null}
+          facilityName={verificationFacility?.name ?? null}
+          onOpenChange={(open) => {
+            if (!open) setVerificationFacility(null);
+          }}
         />
         <CleanAvailabilitySheet
           open={demandOpen}

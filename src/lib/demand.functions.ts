@@ -22,6 +22,7 @@ export type DemandResponseRow = {
 export type DemandRequestRow = {
   id: string;
   search_term: string;
+  product_id: string | null;
   quantity: number;
   radius_km: number | null;
   status: string;
@@ -39,6 +40,7 @@ export type DemandRequestRow = {
 export type VendorDemandRequest = {
   id: string;
   search_term: string;
+  product_id: string | null;
   quantity: number;
   mode: "bulk" | "manual" | string;
   created_at: string;
@@ -68,6 +70,7 @@ export const createDemandRequest = createServerFn({ method: "POST" })
     z
       .object({
         searchTerm: z.string().min(2).max(120),
+        productId: z.string().uuid().nullable().optional(),
         quantity: z.number().int().min(1).max(999).default(1),
         latitude: z.number().min(-90).max(90).nullable().optional(),
         longitude: z.number().min(-180).max(180).nullable().optional(),
@@ -113,10 +116,34 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       throw new Error("Une vérification manuelle doit cibler exactement un commerce.");
     }
 
+    let targetFacilityIds = data.targetFacilityIds;
+    if (data.productId) {
+      const product = await queryOne<{
+        id: string;
+        facility_id: string;
+        status: string;
+        in_stock: boolean;
+        quantity_available: number;
+      }>(
+        `SELECT p.id, p.facility_id, p.status, p.in_stock, p.quantity_available
+         FROM public.products p
+         JOIN public.facilities f ON f.id = p.facility_id
+         WHERE p.id = $1 AND f.status <> 'unclaimed'`,
+        [data.productId],
+      );
+      if (!product || product.status !== "active" || !product.in_stock || product.quantity_available < data.quantity) {
+        throw new Error("Ce produit du catalogue n'est plus disponible pour cette demande.");
+      }
+      if (targetFacilityIds.length > 0 && !targetFacilityIds.includes(product.facility_id)) {
+        throw new Error("Le produit sélectionné ne correspond pas à la facilité ciblée.");
+      }
+      targetFacilityIds = [product.facility_id];
+    }
+
     // Bulk targets the map's active result IDs when present. The same city scope
     // is enforced here so a free buyer cannot bypass discovery through a direct call.
     const targetParams: unknown[] = [
-      data.targetFacilityIds,
+      targetFacilityIds,
       data.latitude ?? null,
       data.longitude ?? null,
       data.radiusKm ?? null,
@@ -151,7 +178,8 @@ export const createDemandRequest = createServerFn({ method: "POST" })
       `SELECT f.id, f.owner_id, f.name, COALESCE(s.tier, 'free') AS seller_plan
        FROM public.facilities f
        LEFT JOIN public.subscriptions s ON s.facility_id = f.id
-       WHERE ${targetClauses.join(" AND ")}
+       WHERE f.status <> 'unclaimed'
+         AND ${targetClauses.join(" AND ")}
        LIMIT ${MAX_AVAILABILITY_TARGETS}`,
       targetParams,
     );
@@ -164,11 +192,12 @@ export const createDemandRequest = createServerFn({ method: "POST" })
 
     const row = await queryOne<{ id: string }>(
       `INSERT INTO public.demand_requests
-         (buyer_id, search_term, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, mode, ai_summary, ai_recommended_facility_id, ai_summary_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,NULL,NULL,NULL) RETURNING id`,
+         (buyer_id, search_term, product_id, quantity, latitude, longitude, radius_km, budget_max, targeted_count, credit_cost, mode, ai_summary, ai_recommended_facility_id, ai_summary_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NULL,NULL,NULL) RETURNING id`,
       [
         context.userId,
         data.searchTerm.trim(),
+        data.productId ?? null,
         data.quantity,
         data.latitude ?? null,
         data.longitude ?? null,
@@ -275,7 +304,7 @@ export const listMyDemandRequests = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async ({ context }) => {
     const requests = await query<DemandRequestRow>(
-      `SELECT d.id, d.search_term, d.quantity, d.radius_km::float8 AS radius_km, d.status,
+      `SELECT d.id, d.search_term, d.product_id, d.quantity, d.radius_km::float8 AS radius_km, d.status,
               d.expires_at, d.created_at, d.targeted_count, d.mode, d.ai_summary, d.ai_recommended_facility_id,
               rf.name AS ai_recommended_facility_name, COALESCE(d.credit_cost, d.targeted_count, 1)::int AS credit_cost,
               (SELECT count(*)::int FROM public.demand_responses r WHERE r.request_id = d.id)
@@ -346,7 +375,7 @@ export const listDemandForFacility = createServerFn({ method: "GET" })
     if (!facility) throw new Error("Ce commerce ne vous appartient pas.");
 
     return query<VendorDemandRequest>(
-      `SELECT d.id, d.search_term, d.quantity, d.mode, d.created_at, d.expires_at,
+      `SELECT d.id, d.search_term, d.product_id, d.quantity, d.mode, d.created_at, d.expires_at,
               p.name AS buyer_name,
               CASE WHEN d.latitude IS NULL THEN NULL ELSE
                 6371 * acos(LEAST(1, GREATEST(-1,

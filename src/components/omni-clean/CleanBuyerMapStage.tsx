@@ -183,7 +183,8 @@ export function CleanBuyerMapStage({
                       </span>
                       <ArrowRight className="h-4 w-4 text-[var(--omni-ink-muted)] transition-transform group-hover:translate-x-0.5" />
                     </div>
-                    <p className="mt-3 line-clamp-1 font-display text-lg font-extrabold tracking-[-0.03em]">{facility.name}</p>
+                    <p className="mt-3 line-clamp-1 font-display text-lg font-extrabold tracking-[-0.03em]">{facility.matched_product_name ?? "Offre à découvrir"}</p>
+                    <p className="mt-1 line-clamp-1 text-sm font-bold text-[var(--omni-ink)]">{facility.name}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-[var(--omni-ink-muted)]">
                       <span>{statusLabel(facility.status)}</span>
                       <span aria-hidden="true">·</span>
@@ -224,7 +225,7 @@ export function CleanBuyerMapStage({
               {selected.address || selected.neighbourhood ? <p className="mt-3 text-xs font-semibold text-[var(--omni-ink-muted)]">{selected.address ?? selected.neighbourhood}</p> : null}
               {selected.status === "unclaimed" ? (
                 <div className="mt-4 rounded-2xl bg-[var(--omni-paper)] px-3 py-3 text-sm leading-5 text-[var(--omni-ink-muted)]">
-                  Cette fiche provient de données publiques. La disponibilité, le contact privé et l’achat Omni ne sont pas disponibles.
+                  Cette fiche provient de données publiques. La disponibilité, le contact privé et l’achat Omni ne sont pas disponibles. Une demande de vérification crée un dossier ; elle ne revendique pas la facilité.
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl bg-[var(--omni-paper)] px-3 py-3 text-sm leading-5 text-[var(--omni-ink-muted)]">
@@ -234,7 +235,7 @@ export function CleanBuyerMapStage({
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 {selected.status === "unclaimed" ? (
                   <button type="button" onClick={() => onClaim(selected)} className="omni-clean-secondary-button min-h-12 flex-1">
-                    Revendiquer cette facilité
+                    Demander une vérification
                   </button>
                 ) : (
                   <button type="button" onClick={() => onCheckAvailability(selected)} className="omni-clean-primary-button min-h-12 flex-1">

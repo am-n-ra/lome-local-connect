@@ -4,10 +4,10 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6, §0.8.1 and §0.8.2)
+> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6, §0.8.1, §0.8.2 and §0.8.3)
 > **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md`, `docs/omni-ui-system.md` et les décisions UI/UX confirmées.
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
-> **Patch note :** §0.8.1 corrects the stale pre-globe scope wording in §0.5.3 and freezes the canonical map/menu package. §0.8.2 now freezes the map/globe camera, reveal, viewport, boundary and location truth contracts; it does not replace MapLibre or imply global boundary coverage that is not loaded.
+> **Patch note :** §0.8.1 freezes the canonical map/menu package and §0.8.2 freezes the map/globe camera, reveal, viewport, boundary and location truth contracts. §0.8.3 now freezes the unified V1 UI, single-chevron buyer dock, catalog-first discovery and certification-only facility status transitions; post-verification operations remain outside this tranche.
 
 ## 0. INSTRUCTION GÉNÉRALE
 
@@ -89,7 +89,8 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 | Map/menu chrome, functional navigation and role-preserving context         | §0.8.1, §16–17, Annex F–G                           | **V1**                                                   | One top-right notification/menu chrome, one map control group, one data-driven functional menu, explicit buyer/seller switch, no placeholder destinations, and no context loss. |
 | Search (text, structured quantity/budget)                                 | §12 (text only), §13, §14 (keyword+basic semantic)    | **V1**                                                   | No voice, image, or video search yet.                                                                                                                                                           |
 | Search by image/video, visual embeddings                                  | §11, §37 (visual pipeline)                            | **Deferred**                                             |                                                                                                                                                                                                 |
-| Facility object + states (Unclaimed → Claimed → Certified → Confirmed)    | §4, §5, §17 (this doc)                                | **V1**                                                   | States must exist in the data model even though certification is done by hand.                                                                                                                  |
+| Facility object + states (Unclaimed → Certified/Unconfirmed → Confirmed) + claim request workflow | §4, §5, §17, §0.8.3 | **V1** | `claim_requested` is a separate request workflow; a click never changes facility status. Only an admin certification outcome sets `certified` or `unconfirmed`; three completed sales can later produce `confirmed`. |
+
 | Facility auto-discovery via OSM/Overpass                                  | §20–22, §172 (bounded backfill)                       | **V1**                                                   | Bounded on-demand OSM/Overpass backfill is active for sparse high-zoom viewports. This is not a world-prepopulation job and does not imply that every country has boundary assets or facility density. |
 | Content indexing (articles/video/social)                                  | §7–10, §139–143                                       | **Deferred**                                             |                                                                                                                                                                                                 |
 | Availability (manual, single-facility)                                    | §37, §38                                              | **V1-Manual**                                            | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6.                                            |
@@ -123,13 +124,13 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 
 Per the document's own rule — _"Tout ce que l'Agent peut faire doit déjà exister comme action manuelle dans Omni"_ — the manual layer is not a stopgap to be embarrassed about. It is the design research for the agent. Every manual step performed here should be logged with enough detail that a future automation pass can read this section and know exactly what tool the agent needs.
 
-## 0.6.2 Seller onboarding (manual implementation of §81, §104, §106)
+## 0.6.2 Seller onboarding and owner request (manual implementation of §81, §104, §106)
 
-Performed by field agents. A field agent visits or contacts a business, collects: name, category, location (GPS pin or address), contact info, and initial product list (photographed or manually noted). This is entered into Omni on the business's behalf. No self-serve seller onboarding flow is required for V1 — the field agent _is_ the onboarding flow.
+Field agents may still onboard businesses manually by collecting name, category, location, contact information and an initial product list. V1 also exposes a self-serve **pre-verification request** from an unclaimed facility. This request is not a claim mutation and is not post-verification seller onboarding: it creates a request/evidence workflow only. The facility remains `unclaimed` until an admin records a certification outcome.
 
 ## 0.6.3 Facility certification (manual implementation of §5.5, §110–112)
 
-There is no automated KYC/document-verification pipeline. Certification today means: a person on the team has physically visited or directly confirmed the business exists at the stated location and is operated by the person claiming it. This satisfies the `CERTIFIED` state honestly — it is manual evidence, not automated evidence, but it is real evidence. Record who certified, when, and how (visit / phone confirmation / referral) against the facility record, so the future admin queue (§110) can distinguish manually-certified facilities from automatically-certified ones without re-verifying them.
+There is no automated KYC/document-verification pipeline. Certification today means a person on the team has reviewed evidence that the claimant is connected to the identity/company/facility/product or service. The admin outcome is explicit: `certified` when the evidence passes the required trust threshold, or `unconfirmed` when Omni allows limited operation while retaining visible uncertainty. A pending or rejected request never changes an `unclaimed` facility to either status. Record reviewer, time, evidence references and reason against the request and facility so the future admin queue can distinguish manually-reviewed outcomes from automated ones.
 
 ## 0.6.4 Availability matching (manual implementation of §37–38, per addendum §13)
 
@@ -341,18 +342,22 @@ Implement explicit facility lifecycle states.
 ```text
 DISCOVERED
  ↓
-UNCLAIMED
- ↓
-CLAIM_REQUESTED
- ↓
-UNCONFIRMED
- ↓
-CERTIFIED
- ↓
+UNCLAIMED  ───────────────────────────────┐
+  │                                       │
+  └─ claim_request: pending → in_review ──┤
+                                          │
+                    admin outcome ───────┘
+                       ├─ CERTIFIED
+                       ├─ UNCONFIRMED
+                       └─ REJECTED → UNCLAIMED
+
+CERTIFIED or UNCONFIRMED
+  + 3 completed/verified sales
+  ↓
 CONFIRMED
 ```
 
-The exact state must be visible internally and represented appropriately in UI.
+`claim_request` is a separate workflow object and is never a value of `facilities.status`. The facility remains `unclaimed` while a request is pending, in review, changes requested or rejected. A user click, authentication, evidence upload or company association cannot promote the facility. Only the admin review outcome can set `certified` or `unconfirmed`.
 
 ---
 
@@ -402,19 +407,15 @@ Users may:
 
 ---
 
-## 5.3 CLAIM REQUESTED
+## 5.3 CLAIM REQUESTED (workflow state, not facility status)
 
-Someone has requested ownership.
-
-Verification process begins.
+Someone has requested verification of an unclaimed facility. Omni creates an idempotent request linked to the claimant and facility, then collects identity, relationship, facility and product/service evidence. The facility remains `unclaimed` while the request is pending, in review, changes requested or rejected. The map and card show public discovery plus a pending verification state, never ownership or controlled availability.
 
 ---
 
 ## 5.4 UNCONFIRMED
 
-The facility has been claimed/activated but has not yet reached Omni's confidence threshold.
-
-It can begin operating but remains visibly unconfirmed.
+An admin has approved a certification request with an `unconfirmed` outcome. This is a real facility status, not the result of pressing claim, creating an account or submitting evidence. It remains visibly unconfirmed and is subject to the operational limits defined in later V1 flows.
 
 ---
 
@@ -4840,6 +4841,73 @@ La position brute peut servir transitoirement à la caméra et à la résolution
 ### Critères de sortie
 
 Le package map/globe est conforme lorsque : (1) `/` et `/carte` ouvrent la vraie scène MapLibre sans flat fallback; (2) l’arrivée ne zoom pas automatiquement; (3) la rotation est horizontale, pausée par interaction et réduite par préférence système; (4) une recherche explicite seule démarre la révélation; (5) pins, clusters et résultats sont source-backed et réapparaissent après reveal/erreur/cancel; (6) la priorité de caméra empêche les zooms concurrents; (7) un highlight noir n’apparaît que pour une boundary correspondante; (8) exact/approximate/fallback restent distingués; (9) viewport, scope et backfill restent serveur-authoritative; (10) fermeture/back restaure le même contexte; et (11) les preuves headless sont séparées des preuves réelles de paint MapLibre, GPS, caméra et session authentifiée.
+
+## 0.8.3 Correction canonique — Full V1 UI + Buyer Discovery + Pre-Verification (2026-08-21)
+
+Cette correction regroupe l’interface buyer V1 et le parcours de pré-vérification sans redessiner les opérations post-certification. Elle complète §0.8.1 et §0.8.2. MapLibre GL v5, OpenFreeMap, la projection globe/mercator, les pins source-backed, les clusters, la boundary loader, la découverte viewport et la frontière de confidentialité de localisation restent inchangés.
+
+### Identité UI unique
+
+Le buyer ouvre sur une scène MapLibre pleine hauteur. La carte/globe est la surface permanente; les surfaces `FLOAT` et `SHEET` s’y posent sans recréer le canvas. La hiérarchie est : globe/carte, chrome minimal en haut à droite, contrôles map à gauche, dock buyer en bas, puis résultats/fiche au-dessus du dock. Aucun ancien header global, second système de navigation ou panneau latéral concurrent ne doit revenir sur la route active.
+
+### Dock buyer canonique — un seul chevron
+
+Le dock contient une ligne de recherche principale et un seul chevron **Options**. Catégories, rayon, ouvert maintenant, réductions, tri, quantité, budget, location mode, `Autour de moi` et actions de retry vivent derrière ce chevron. `Affiner` et `Paramètres` ne sont pas deux contrôles concurrents. L’ouverture des options ne change pas la caméra; seules une soumission de recherche explicite ou `Autour de moi` créent une intention caméra.
+
+La quantité et le budget restent silencieux par défaut, sont éditables, acceptent un budget illimité et ne déclenchent aucune vue différente pendant la saisie. Les champs mobiles utilisent `text-base` et les cibles au moins 44 px. Le dock conserve le focus du champ et ne provoque pas d’auto-zoom mobile.
+
+### Globe, localisation et découverte immédiate
+
+L’arrivée ne lance aucun progressive zoom. Le globe peut tourner horizontalement au repos, sauf préférence de mouvement réduit ou interaction. Une position exacte fraîche peut afficher un marqueur bleu sans déplacer automatiquement la caméra; une position approximative/fallback utilise un marqueur neutre et un libellé honnête.
+
+`Autour de moi` est une action explicite derrière le chevron. Elle cadre le viewport local autour d’une position exacte, approximative ou d’un marché fallback autorisé, sans inventer une recherche, sans lancer la boundary reveal et sans transformer le contexte approximatif en GPS exact. Une recherche soumise lance seule la révélation `Monde → Approche → Zone → Résultats`.
+
+### Pins, clusters et highlights
+
+À l’échelle globe/région, les clusters sont la représentation principale; à l’échelle locale les pins individuels apparaissent lorsque la densité reste bornée. Un clic sur cluster utilise l’expansion native/bounds et ne saute pas vers une ville arbitraire. Un pin n’est jamais une preuve d’inventaire, de propriété ou de disponibilité.
+
+Les états sont multimodaux: `unclaimed` neutre/pâle avec contour encre, `unconfirmed` accent orange avec anneau neutre, `certified` accent de vérification orange sur pin encre, `confirmed` cœur vert avec contour encre, selected halo encre + focus orange, position exacte bleue, contexte approximatif amber/slate. Orange est réservé aux actions et à la progression; noir/near-black au highlight géographique et aux actions fortes; vert/ambre/rouge portent les états. La boundary noire n’est active que pour une cible et un asset correspondants. Aucun highlight n’est produit pour l’arrivée, `Autour de moi`, la sélection ou l’ouverture d’un menu.
+
+### Cards et catalogue
+
+Les cards sont product-first: média et nom du produit/service correspondant, prix/quantité/réduction, nom de la facility, distance, statut de confiance, puis CTA. Une facility `unclaimed` affiche uniquement les informations publiques et `Demander une vérification`; elle n’expose ni contact privé, ni itinéraire, ni availability contrôlée, ni intention d’achat.
+
+Quand `matched_product_id` existe, le flow disponibilité ouvre ce produit préselectionné et le buyer n’a pas à retaper son nom. `Changer de produit` peut ouvrir un catalogue actif. Le texte libre est un fallback explicite `Je ne trouve pas ce que je cherche`, pas l’entrée par défaut lorsqu’un match catalogue existe. Le serveur revalide facility, product, statut actif et stock avant de créer une demande.
+
+### Claim request et certification autoritaire
+
+Le bouton public est **Demander une vérification**. Il ne s’agit pas d’une mutation de claim et il ne change jamais `facilities.status`. Une requête idempotente crée ou retrouve un `claim_request` pour le couple claimant/facility. Le facility reste `unclaimed` durant `pending`, `evidence_draft`, `in_review`, `changes_requested` et `rejected`.
+
+```text
+unclaimed + no_request
+  → [Demander une vérification] → auth_required | request_pending
+  → [identity/relationship evidence] → evidence_identity
+  → [facility evidence] → evidence_facility
+  → [product/service proof] → evidence_offer
+  → [submit] → in_review; facility remains unclaimed
+  → [admin changes] → changes_requested → resubmit → in_review
+  → [admin approve certified] → facility = certified
+  → [admin approve unconfirmed] → facility = unconfirmed
+  → [admin reject] → facility = unclaimed; request = rejected
+```
+
+Toute transition autoritaire enregistre actor, timestamp, evidence snapshot, reason, outcome et audit event dans une transaction contrôlée côté serveur. Un admin ne doit pas utiliser une mutation générique qui contourne cette revue. La certification d’une compagnie ne promeut pas automatiquement les facilities `unclaimed`; chaque facility possède sa propre preuve et son propre outcome.
+
+### Scope de cette tranche
+
+| Capability | Status | Contract |
+|---|---|---|
+| Buyer map-first visual system, one-chevron dock, responsive overlays | **V1** | One scene, one dock, one options surface, no duplicate nav or overlay collision. |
+| Globe arrival, local-focus `Autour de moi`, clusters, pins, highlights and cards | **V1** | Source-backed, density-driven, explicit camera intents and semantic visual states. |
+| Catalog-first buyer availability entry | **V1** | Matched catalog item is preselected; free text is an explicit fallback. |
+| Public unclaimed facility discovery | **V1** | View public data; no controlled availability/contact/purchase. |
+| Claim request and certification evidence wizard | **V1-Manual** | Request/evidence UI and server record; admin review remains manual. |
+| Admin outcome `certified` or `unconfirmed` | **V1-Manual** | Only certification review changes facility status; every outcome audited. |
+| Post-verification catalogue, availability responses, QR/payment, wallet, ads and confirmed-sales bonus | **Deferred in this tranche** | Later package consumes the outcome; no redesign or new unlock here. |
+
+### Critères de sortie
+
+Le package est conforme lorsque : (1) le buyer ne voit qu’un seul chevron d’options; (2) l’arrivée reste sur le globe sans auto-zoom; (3) `Autour de moi` est explicite et distinct de la recherche; (4) clusters/pins/highlights suivent les règles de densité et de confiance; (5) cards mettent le produit du catalogue avant la facility; (6) un match catalogue évite la saisie manuelle du nom; (7) unclaimed n’expose aucun action contrôlée; (8) claim crée seulement une requête; (9) seul l’admin certification outcome change le status en `certified` ou `unconfirmed`; (10) rejection/changes/retry/duplicate sont recoverable; (11) mobile 320/390/768/1024/1280 px reste sans overflow; et (12) le scope post-verification reste hors implémentation.
 
 # ANNEXE NORMATIVE V1 — CERTIFICATION MOBILE, SELLER MAP-FIRST ET DATA COMPANY
 

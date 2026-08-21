@@ -5,6 +5,7 @@ import { optionalAuth, requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { enforceRateLimit, requestRateLimitSubject } from "./rate-limit.server";
 import { applyFreeDiscoveryScope, getDiscoveryScope } from "./discovery-scope.server";
+import { createOrGetFacilityClaimRequest } from "./preverification.functions";
 
 export type MapFacility = {
   id: string;
@@ -763,7 +764,7 @@ export const deleteWishlist = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** "Est-ce votre commerce ?" — claims an unclaimed OSM listing. */
+/** Deprecated compatibility name: creates a verification request; it never claims or promotes a facility. */
 export const claimFacility = createServerFn({ method: "POST" })
   .middleware([requireAuth])
   .inputValidator((input: unknown) =>
@@ -780,27 +781,20 @@ export const claimFacility = createServerFn({ method: "POST" })
       subject: context.userId,
       limit: 5,
       windowSeconds: 3600,
-      message: "Trop de demandes de revendication. Réessayez plus tard.",
+      message: "Trop de demandes de vérification. Réessayez plus tard.",
     });
-    const facility = await queryOne<{ id: string; status: string; owner_id: string | null }>(
-      "SELECT id, status, owner_id FROM public.facilities WHERE id = $1",
-      [data.facilityId],
-    );
-    if (!facility) throw new Error("Commerce introuvable.");
-    if (facility.owner_id) throw new Error("Ce commerce a déjà un propriétaire.");
-    if (facility.status !== "unclaimed") throw new Error("Ce commerce n'est pas réclamable.");
-
-    await query(
-      `UPDATE public.facilities
-       SET owner_id = $2, status = 'unconfirmed', claimed_at = now(),
-           phone = COALESCE($3, phone)
-       WHERE id = $1 AND owner_id IS NULL`,
-      [data.facilityId, context.userId, data.phone?.trim() || null],
-    );
-    await query(
-      `INSERT INTO public.subscriptions (facility_id) VALUES ($1)
-       ON CONFLICT (facility_id) DO NOTHING`,
-      [data.facilityId],
-    );
-    return { ok: true };
+    const request = await createOrGetFacilityClaimRequest({
+      facilityId: data.facilityId,
+      claimantId: context.userId,
+      claimantName: "Utilisateur Omni",
+      claimantPhone: data.phone ?? null,
+      relationship: "owner",
+      companyId: null,
+    });
+    return {
+      ok: true,
+      requestId: request.id,
+      requestStatus: request.status,
+      facilityStatus: request.facility_status ?? "unclaimed",
+    };
   });

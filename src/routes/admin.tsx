@@ -8,7 +8,6 @@ import {
   listAdminFacilities,
   listNeighbourhoods,
   markContacted,
-  setFacilityStatus,
   updateAdminFacility,
   type AdminFacilityRow,
   type AdminStats,
@@ -16,6 +15,7 @@ import {
 import { getProductFunnelSummary, type ProductFunnelSummary } from "@/lib/analytics.functions";
 import { OpsPanel } from "@/components/omni/admin/OpsPanel";
 import { CompaniesPanel } from "@/components/omni/admin/CompaniesPanel";
+import { VerificationReviewPanel } from "@/components/omni/admin/VerificationReviewPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -78,7 +78,6 @@ function AdminPage() {
   const fetchRows = useServerFn(listAdminFacilities);
   const fetchHoods = useServerFn(listNeighbourhoods);
   const contactFn = useServerFn(markContacted);
-  const statusFn = useServerFn(setFacilityStatus);
   const editFn = useServerFn(updateAdminFacility);
 
   const reload = useCallback(async () => {
@@ -276,6 +275,8 @@ function AdminPage() {
           )}
         </section>
 
+        <VerificationReviewPanel />
+
         <div className="omni-card grid gap-3 p-3 md:grid-cols-5">
           <Input
             placeholder="Nom, adresse, téléphone"
@@ -466,33 +467,10 @@ function AdminPage() {
                     ))}
                   </div>
 
+                  <div className="rounded-xl bg-muted/50 p-3 text-xs text-muted-foreground">
+                    Les statuts « Certifiée » et « Non confirmée » sont décidés uniquement dans la file de demandes de vérification ci-dessus, avec preuves, raison et journal d’audit.
+                  </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      disabled={busy || openRow.status === "certified"}
-                      onClick={() =>
-                        void act(
-                          () => statusFn({ data: { facilityId: openRow.id, status: "certified" } }),
-                          "Commerce vérifié",
-                        )
-                      }
-                    >
-                      Marquer vérifié
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={busy || openRow.status === "unconfirmed"}
-                      onClick={() =>
-                        void act(
-                          () =>
-                            statusFn({ data: { facilityId: openRow.id, status: "unconfirmed" } }),
-                          "Statut mis à jour",
-                        )
-                      }
-                    >
-                      Remettre en non confirmé
-                    </Button>
                     <a
                       className="text-sm text-primary underline"
                       href={`/carte?facility=${openRow.id}`}

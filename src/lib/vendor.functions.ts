@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireAuth } from "./auth-middleware.server";
 import { query, queryOne } from "./db.server";
 import { writeAudit } from "./neon-auth.server";
+import { createOrGetFacilityClaimRequest } from "./preverification.functions";
 import { campaignCostFor, extendedProUntil, FREE_PRODUCT_CAP, QUALIFYING_AMOUNT } from "./vendor";
 import { currentMonthKey, haversineKm } from "./omni";
 import { OMNI_CONFIG } from "./omni.config";
@@ -451,18 +452,22 @@ export const createFacility = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     let facility: VendorFacility | null;
+    const claimant = await queryOne<{ name: string | null; email: string | null }>(
+      "SELECT name, email FROM public.profiles WHERE id = $1",
+      [context.userId],
+    );
+    const claimantName = claimant?.name?.trim() || claimant?.email?.trim() || "Propriétaire Omni";
 
     if (data.claimFacilityId) {
-      // Claiming an imported (unclaimed) listing.
+      // Request verification of an imported listing; do not assign ownership or promote status.
       facility = await queryOne<VendorFacility>(
         `UPDATE public.facilities
-         SET owner_id = $1, name = $2, category = $3, description = $4, address = $5,
-             neighbourhood = $6, phone = $7, type = $8, latitude = $9, longitude = $10,
-             status = 'unconfirmed', claimed_at = now()
-         WHERE id = $11 AND owner_id IS NULL AND status = 'unclaimed'
+         SET name = $1, category = $2, description = $3, address = $4,
+             neighbourhood = $5, phone = $6, type = $7, latitude = $8, longitude = $9,
+             updated_at = now()
+         WHERE id = $10 AND owner_id IS NULL AND status = 'unclaimed'
          RETURNING *`,
         [
-          context.userId,
           data.name,
           data.category,
           data.description ?? null,
@@ -475,16 +480,16 @@ export const createFacility = createServerFn({ method: "POST" })
           data.claimFacilityId,
         ],
       );
-      if (!facility) throw new Error("Cette fiche a déjà été réclamée.");
+      if (!facility) throw new Error("Cette fiche n'est plus disponible pour une vérification.");
     } else {
+      // New candidates remain public/unclaimed until staff review is complete.
       facility = await queryOne<VendorFacility>(
         `INSERT INTO public.facilities
            (owner_id, name, category, description, address, neighbourhood, phone, type,
-            latitude, longitude, status, claimed_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'unconfirmed', now())
+            latitude, longitude, status)
+         VALUES (NULL,$1,$2,$3,$4,$5,$6,$7,$8,$9,'unclaimed')
          RETURNING *`,
         [
-          context.userId,
           data.name,
           data.category,
           data.description ?? null,
@@ -497,15 +502,24 @@ export const createFacility = createServerFn({ method: "POST" })
         ],
       );
     }
+    if (!facility) throw new Error("Impossible de créer la demande de vérification.");
 
-    await ensureSubscription(facility!.id);
+    const request = await createOrGetFacilityClaimRequest({
+      facilityId: facility.id,
+      claimantId: context.userId,
+      claimantName,
+      claimantPhone: data.phone ?? null,
+      relationship: "owner",
+      companyId: null,
+    });
     await query("UPDATE public.profiles SET onboarding_done = true WHERE id = $1", [
       context.userId,
     ]);
-    await writeAudit(context.userId, "facility.create", "facility", facility!.id, {
-      claimed: Boolean(data.claimFacilityId),
+    await writeAudit(context.userId, "facility.verification_request.created", "facility_claim_request", request.id, {
+      facilityId: facility.id,
+      createdFromClaim: Boolean(data.claimFacilityId),
     });
-    return facility!;
+    return { ...facility, verification_request_id: request.id, verification_status: request.status };
   });
 
 export const updateCompany = createServerFn({ method: "POST" })

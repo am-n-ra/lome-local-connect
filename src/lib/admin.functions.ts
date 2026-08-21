@@ -160,15 +160,21 @@ export const setFacilityStatus = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    if (data.status !== "unclaimed") {
+      throw new Error(
+        "Les statuts certifiée et non confirmée doivent provenir d'une revue de certification auditée.",
+      );
+    }
     await query(
       `UPDATE public.facilities
-       SET status = $2,
-           verified_at = CASE WHEN $2 = 'certified' THEN now() ELSE verified_at END
+       SET status = 'unclaimed', owner_id = NULL, claimed_at = NULL,
+           updated_at = now()
        WHERE id = $1`,
-      [data.facilityId, data.status],
+      [data.facilityId],
     );
-    await writeAudit(context.userId, "facility.status", "facility", data.facilityId, {
-      status: data.status,
+    await writeAudit(context.userId, "facility.status.repair", "facility", data.facilityId, {
+      status: "unclaimed",
+      reason: "manual_admin_repair",
     });
     return { ok: true };
   });
@@ -389,14 +395,8 @@ export const setCompanyStatus = createServerFn({ method: "POST" })
       data.companyId,
       data.status,
     ]);
-    if (data.status === "certified") {
-      await query(
-        `UPDATE public.facilities
-         SET status = 'certified', verified_at = COALESCE(verified_at, now())
-         WHERE company_id = $1 AND status IN ('unconfirmed','unclaimed')`,
-        [data.companyId],
-      );
-    }
+    // Company certification is supporting evidence only. Facility status changes
+    // require a facility-specific verification request and audited review outcome.
     await writeAudit(context.userId, "company.status", "company", data.companyId, {
       status: data.status,
     });
