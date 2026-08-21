@@ -435,3 +435,28 @@ a {
     max-height: 28vh;
   }
 }
+
+.v2-detail-card { display: grid; gap: 0; overflow: hidden; padding: 0; }
+.v2-facility-media { width: 100%; height: 9rem; object-fit: cover; display: block; }
+.v2-detail-copy { display: grid; gap: .45rem; padding: 1rem; }
+.v2-detail-copy h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.02em; }
+.v2-detail-copy p { margin: 0; color: #9aa6b2; line-height: 1.45; }
+.v2-secondary-action { width: fit-content; margin-top: .35rem; border: 0; background: transparent; color: #d9e7ff; padding: .25rem 0; cursor: pointer; }
+.v2-primary-action { width: 100%; border: 0; border-radius: 999px; padding: .8rem 1rem; background: #eef4ff; color: #111827; font-weight: 700; cursor: pointer; }
+.v2-detail-loading { padding: 1.2rem; border: 1px solid rgba(255,255,255,.12); border-radius: 1rem; color: #9aa6b2; }
+.v2-catalogue { display: grid; gap: .65rem; }
+.v2-catalogue-heading { display: flex; justify-content: space-between; align-items: center; padding: .2rem .15rem; color: #9aa6b2; }
+.v2-product-card { display: grid; grid-template-columns: 4.8rem 1fr; gap: .75rem; align-items: center; text-align: left; padding: .55rem; border: 1px solid rgba(255,255,255,.12); border-radius: 1rem; background: rgba(255,255,255,.05); color: inherit; cursor: pointer; }
+.v2-product-card:hover, .v2-product-card.is-selected { border-color: rgba(238,244,255,.8); background: rgba(238,244,255,.1); }
+.v2-product-card img { width: 4.8rem; height: 4.8rem; border-radius: .7rem; object-fit: cover; background: #273141; }
+.v2-product-card span { display: grid; gap: .2rem; min-width: 0; }
+.v2-product-card strong { color: #f7f9fc; }
+.v2-product-card small { color: #9aa6b2; line-height: 1.25; }
+.v2-selection-note { display: grid; gap: .25rem; padding: .75rem; border-radius: .9rem; background: rgba(154, 213, 177, .12); border: 1px solid rgba(154, 213, 177, .35); color: #d9f4e1; }
+.v2-selection-note span { color: #b9d5c2; font-size: .86rem; }
+@media (max-width: 560px) {
+  .v2-detail-copy { padding: .85rem; }
+  .v2-facility-media { height: 7rem; }
+  .v2-product-card { grid-template-columns: 4.25rem 1fr; }
+  .v2-product-card img { width: 4.25rem; height: 4.25rem; }
+}
