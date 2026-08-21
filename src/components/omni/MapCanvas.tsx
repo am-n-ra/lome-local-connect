@@ -19,6 +19,14 @@ import { shouldCancelReveal, type CameraMode, type RevealInterruptReason } from 
 export type MapFacility = FacilityRow & {
   isPro?: boolean;
   mobile_presence?: boolean;
+  product_count?: number;
+  min_price?: number | null;
+  max_discount_percent?: number | null;
+  matched_product_id?: string | null;
+  matched_product_name?: string | null;
+  matched_product_price?: number | null;
+  matched_product_quantity?: number | null;
+  matched_product_photo_url?: string | null;
 };
 
 type Props = {

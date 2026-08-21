@@ -28,6 +28,8 @@ type Props = {
   mode?: CleanAvailabilityMode;
   facilityName?: string | null;
   initialQuantity?: number;
+  selectedProduct?: SelectedProduct | null;
+  onChangeProduct?: () => void;
   resumeRequestId?: string | undefined;
   resumeResponseId?: string | undefined;
   onTransactionCreated?: (context: {
@@ -39,6 +41,7 @@ type Props = {
 };
 
 type Scope = "facility" | "visible";
+type SelectedProduct = { facilityId: string; productId: string; name: string; price: number | null; quantityAvailable: number | null };
 
 function rankResponse(answer: { available: boolean; kind: string }) {
   if (answer.kind === "partial") return 1;
@@ -65,6 +68,8 @@ export function CleanAvailabilitySheet({
   mode = "bulk",
   facilityName,
   initialQuantity = 1,
+  selectedProduct = null,
+  onChangeProduct,
   resumeRequestId,
   resumeResponseId,
   onTransactionCreated,
@@ -112,13 +117,13 @@ export function CleanAvailabilitySheet({
 
   useEffect(() => {
     if (!open) return;
-    setTerm(initialTerm);
+    setTerm(selectedProduct?.name ?? initialTerm);
     setQuantity(Math.max(1, initialQuantity));
     setScope(mode === "manual" ? "facility" : "visible");
     setStep(resumeRequestId || resumeResponseId ? 2 : 0);
     setSubmittedRequestId(resumeRequestId ?? null);
     if (user) void refresh();
-  }, [initialQuantity, initialTerm, mode, open, refresh, resumeRequestId, resumeResponseId, user]);
+  }, [initialQuantity, initialTerm, mode, open, refresh, resumeRequestId, resumeResponseId, selectedProduct?.name, user]);
 
   useEffect(() => {
     if (!open || !user || mode === "manual") return;
@@ -146,6 +151,7 @@ export function CleanAvailabilitySheet({
       quantity,
       demandOpen: true,
       demandMode: selectedMode,
+      selectedProduct,
     });
     navigate({ to: "/auth", search: { redirectTo: "/carte?pendingSearch=1" } });
   }
@@ -155,8 +161,9 @@ export function CleanAvailabilitySheet({
       redirectToAuth();
       return;
     }
-    if (term.trim().length < 2) {
-      toast.error("Indiquez au moins deux caractères pour le produit ou service.");
+    const effectiveTerm = selectedProduct?.name ?? term.trim();
+    if (effectiveTerm.length < 2) {
+      toast.error("Sélectionnez un produit ou indiquez au moins deux caractères.");
       setStep(0);
       return;
     }
@@ -169,7 +176,8 @@ export function CleanAvailabilitySheet({
     try {
       const created = await create({
         data: {
-          searchTerm: term.trim(),
+          searchTerm: effectiveTerm,
+          productId: selectedProduct?.productId ?? null,
           quantity,
           latitude: userPos?.lat ?? null,
           longitude: userPos?.lng ?? null,
@@ -262,11 +270,22 @@ export function CleanAvailabilitySheet({
           ) : null}
 
           {user && step === 0 ? (
-            <section className="space-y-4">
+              <section className="space-y-4">
               <div className="rounded-[1.5rem] bg-[var(--omni-paper)] p-5">
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--omni-orange-deep)]">Produit ou service</p>
-                <p className="mt-2 text-sm leading-6 text-[var(--omni-ink-muted)]">Nous vérifions ce qui peut réellement être disponible maintenant.</p>
-                <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Ex. : chaises de bureau" className="omni-clean-field mt-4" autoFocus />
+                {selectedProduct ? (
+                  <div className="mt-4 rounded-[1.25rem] border border-[var(--omni-orange)] bg-[var(--omni-orange-wash)] p-4">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-[var(--omni-orange-deep)]">Correspond à votre recherche</p>
+                    <p className="mt-2 font-display text-xl font-extrabold">{selectedProduct.name}</p>
+                    <p className="mt-1 text-sm font-semibold text-[var(--omni-ink-muted)]">Produit du catalogue sélectionné · {facilityName ?? "facilité ciblée"}</p>
+                    {onChangeProduct ? <button type="button" onClick={onChangeProduct} className="omni-clean-secondary-button mt-4 min-h-10 w-full">Changer de produit</button> : null}
+                  </div>
+                ) : (
+                  <>
+                    <p className="mt-2 text-sm leading-6 text-[var(--omni-ink-muted)]">Nous vérifions ce qui peut réellement être disponible maintenant.</p>
+                    <input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Ex. : chaises de bureau" className="omni-clean-field mt-4" autoFocus />
+                  </>
+                )}
               </div>
               {facilityName ? <div className="rounded-[1.25rem] border border-black/5 bg-white/70 p-4 text-sm font-bold">Chez {facilityName}</div> : null}
             </section>

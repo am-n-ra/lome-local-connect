@@ -21,6 +21,13 @@ export type PendingAvailabilitySearch = {
   mode?: "search" | "availability";
   demandMode?: "bulk" | "manual";
   demandFacilityName?: string | null;
+  selectedProduct?: {
+    facilityId: string;
+    productId: string;
+    name: string;
+    price: number | null;
+    quantityAvailable: number | null;
+  } | null;
   quantity?: number;
 };
 

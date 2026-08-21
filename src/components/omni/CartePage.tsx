@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { CleanAvailabilitySheet } from "@/components/omni-clean/CleanAvailabilitySheet";
+import { CleanBuyerCatalogSheet } from "@/components/omni-clean/CleanBuyerCatalogSheet";
 import { CleanVerificationRequestSheet } from "@/components/omni-clean/CleanVerificationRequestSheet";
 import { CleanBuyerMapStage } from "@/components/omni-clean/CleanBuyerMapStage";
 import { CleanTransactionRoom } from "@/components/omni-clean/CleanTransactionRoom";
@@ -54,6 +55,7 @@ type LocationSnapshot = {
   requestId: number;
 };
 type ViewportBounds = { west: number; south: number; east: number; north: number; zoom: number };
+type BuyerSelectedProduct = { facilityId: string; productId: string; name: string; price: number | null; quantityAvailable: number | null };
 
 type CartePageProps = {
   initialTransactionId?: string;
@@ -88,6 +90,8 @@ export function CartePage({
   const [revealRunning, setRevealRunning] = useState(false);
 
   const [selected, setSelected] = useState<MapFacility | null>(null);
+  const [catalogFacility, setCatalogFacility] = useState<MapFacility | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<BuyerSelectedProduct | null>(null);
   const [userPos, setUserPos] = useState<{
     lat: number;
     lng: number;
@@ -720,6 +724,7 @@ export function CartePage({
   function handOffAvailabilitySearch(
     mode: "bulk" | "manual" = "bulk",
     facility?: MapFacility | null,
+    product?: BuyerSelectedProduct | null,
   ) {
     const payload = {
       term: submittedQuery,
@@ -733,6 +738,7 @@ export function CartePage({
       mode: "availability" as const,
       demandMode: mode,
       demandFacilityName: facility?.name ?? null,
+      selectedProduct: product ?? selectedProduct,
     };
     savePendingAvailabilitySearch(payload);
     const redirectTo = `/carte?pendingSearch=1`;
@@ -756,10 +762,18 @@ export function CartePage({
     setDemandOpen(true);
   }
 
-  function openManualAvailability(facility: MapFacility) {
+  function openManualAvailability(facility: MapFacility, product?: BuyerSelectedProduct | null) {
     if (authLoading) return;
+    const nextProduct = product ?? (facility.matched_product_id && facility.matched_product_name ? {
+      facilityId: facility.id,
+      productId: facility.matched_product_id,
+      name: facility.matched_product_name,
+      price: facility.matched_product_price ?? null,
+      quantityAvailable: facility.matched_product_quantity ?? null,
+    } : null);
+    setSelectedProduct(nextProduct);
     if (!user) {
-      handOffAvailabilitySearch("manual", facility);
+      handOffAvailabilitySearch("manual", facility, nextProduct);
       return;
     }
     setDemandMode("manual");
@@ -767,6 +781,17 @@ export function CartePage({
     setPendingTargetFacilityIds([facility.id]);
     setPendingUserPos(preciseUserPos);
     setDemandOpen(true);
+  }
+
+  function openFacilityCatalog(facility: MapFacility) {
+    setCatalogFacility(facility);
+  }
+
+  function handleCatalogProduct(product: BuyerSelectedProduct) {
+    setSelectedProduct(product);
+    setCatalogFacility(null);
+    const facility = selected && selected.id === product.facilityId ? selected : catalogFacility;
+    if (facility) openManualAvailability(facility, product);
   }
 
   useEffect(() => {
@@ -782,6 +807,7 @@ export function CartePage({
     setQuantity(pending.quantity ?? 1);
     setDemandMode(pending.demandMode ?? "bulk");
     setDemandFacilityName(pending.demandFacilityName ?? null);
+    setSelectedProduct(pending.selectedProduct ?? null);
     setDemandOpen(pending.demandOpen);
     setSearchRunKey(`restored:${Date.now()}:${pending.term}`);
     toast.success("Recherche restaurée. Vous pouvez lancer la vérification.");
@@ -945,6 +971,7 @@ export function CartePage({
           }}
           onClearSelection={() => setSelected(null)}
           onCheckAvailability={openManualAvailability}
+          onOpenCatalog={openFacilityCatalog}
           onClaim={openVerificationRequest}
           onOpenBulkAvailability={() => openDemandRequest()}
           onOpenActivity={() => setOrdersOpen(true)}
@@ -953,6 +980,16 @@ export function CartePage({
           onRetryCoverage={retryCoverage}
           onViewportChange={setVisibleViewport}
           onRevealStateChange={setRevealRunning}
+        />
+        <CleanBuyerCatalogSheet
+          open={Boolean(catalogFacility)}
+          facilityId={catalogFacility?.id ?? null}
+          facilityName={catalogFacility?.name ?? null}
+          matchedProductId={catalogFacility?.matched_product_id ?? null}
+          onOpenChange={(open) => {
+            if (!open) setCatalogFacility(null);
+          }}
+          onSelectProduct={handleCatalogProduct}
         />
         <CleanVerificationRequestSheet
           open={Boolean(verificationFacility)}
@@ -971,6 +1008,11 @@ export function CartePage({
           mode={demandMode}
           facilityName={demandFacilityName}
           initialQuantity={quantity}
+          selectedProduct={selectedProduct}
+          onChangeProduct={() => {
+            if (selected) setCatalogFacility(selected);
+            setDemandOpen(false);
+          }}
           resumeRequestId={initialDemandRequestId}
           resumeResponseId={initialDemandResponseId}
           onTransactionCreated={({ transactionId, facilityId, facilityName, amount }) => {

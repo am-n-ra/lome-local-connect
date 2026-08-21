@@ -4874,6 +4874,43 @@ Les cards sont product-first: média et nom du produit/service correspondant, pr
 
 Quand `matched_product_id` existe, le flow disponibilité ouvre ce produit préselectionné et le buyer n’a pas à retaper son nom. `Changer de produit` peut ouvrir un catalogue actif. Le texte libre est un fallback explicite `Je ne trouve pas ce que je cherche`, pas l’entrée par défaut lorsqu’un match catalogue existe. Le serveur revalide facility, product, statut actif et stock avant de créer une demande.
 
+### Séquence canonique des écrans buyer
+
+Le clic sur une card ou un pin produit exactement `FACILITY_SELECTED`: la facility est sélectionnée, le focus de carte est borné et une fiche facility s’ouvre. Cette action ne crée ni demande, ni claim, ni intention d’achat et ne débloque aucun contact privé. La fiche contient média, nom de facility, adresse publique, statut de confiance, produit correspondant lorsqu’il existe, nombre de produits, et les actions autorisées par le statut. Elle propose `Voir les produits` comme accès explicite au catalogue et `Vérifier la disponibilité` seulement lorsqu’un produit correspondant ou un produit choisi est connu.
+
+`Voir les produits` ouvre `CATALOG_READY` dans une OmniSheet dédiée, et non un champ texte caché dans la demande de disponibilité. Le produit qui correspond à la recherche est placé en tête et marqué `Correspond à votre recherche`. Chaque ligne expose média, nom, prix, réduction, quantité éligible et sélection. Le clic sur une ligne crée `PRODUCT_SELECTED` avec `facilityId`, `productId` et un snapshot d’affichage. Si le catalogue est vide, l’écran montre un état vide et le fallback explicite `Je ne trouve pas ce que je cherche`; si le catalogue n’est pas vide, la saisie libre n’est jamais l’entrée principale.
+
+`Vérifier la disponibilité` ouvre `AVAILABILITY_SETUP` avec le produit sélectionné visible et non retapé. La sheet possède quatre étapes nommées `Produit`, `Portée`, `Contraintes`, `Réponses`. La portée `Cette facilité` est le chemin manuel Free; `Plusieurs facilités visibles` est réservé à Pro et utilise le même adapter server-authoritative avec plusieurs cibles. Quantité et budget restent éditables, privés et inertes pour la caméra. Une demande manuelle porte exactement une facility; le serveur rejette une facility `unclaimed`, un produit inactif, un produit périmé, un stock insuffisant ou un bypass d’entitlement.
+
+Après soumission, `AVAILABILITY_RESULTS` affiche les réponses dans l’ordre disponible, partiel, indisponible puis prix. Chaque réponse affiche facility, produit sélectionné, statut, quantité, prix, fraîcheur et message vendeur. `Je veux acheter cette offre` n’est visible que pour une réponse eligible et ouvre `PURCHASE_INTENT_CONFIRM`. Avant confirmation server-side de l’intention, contact, itinéraire, QR, chat privé et transaction ne figurent pas dans le payload ni dans l’UI. Une intention idempotente confirmée ouvre ensuite le transaction room autorisé; un replay réouvre la transaction existante au lieu d’en créer une seconde.
+
+```text
+RESULT_SET
+  → [click card/pin] → FACILITY_SELECTED
+FACILITY_SELECTED
+  → [Voir les produits] → CATALOG_LOADING → CATALOG_READY | CATALOG_EMPTY | CATALOG_ERROR
+FACILITY_SELECTED
+  → [Vérifier disponibilité avec matched_product_id] → PRODUCT_SELECTED → AVAILABILITY_SETUP
+CATALOG_READY
+  → [select product] → PRODUCT_SELECTED
+PRODUCT_SELECTED
+  → [Vérifier disponibilité] → AVAILABILITY_SETUP
+AVAILABILITY_SETUP
+  → [scope + constraints confirm] → AVAILABILITY_SUBMITTING
+AVAILABILITY_SUBMITTING
+  → [accepted or idempotent replay] → AVAILABILITY_RESULTS
+  → [stale/invalid/unclaimed/entitlement failure] → AVAILABILITY_RECOVERABLE_ERROR
+AVAILABILITY_RESULTS
+  → [select eligible response] → PURCHASE_INTENT_CONFIRM
+PURCHASE_INTENT_CONFIRM
+  → [confirm] → INTENT_CREATING
+INTENT_CREATING
+  → [created] → TRANSACTION_ROOM
+  → [replay] → EXISTING_TRANSACTION_ROOM
+```
+
+La fermeture de toute sheet restaure la surface précédente, la card sélectionnée, le query, le produit, quantité, budget et viewport. Une erreur, timeout, ressource expirée ou réponse vide possède un état visible et un retry; aucune erreur ne renvoie silencieusement le buyer à la landing.
+
 ### Claim request et certification autoritaire
 
 Le bouton public est **Demander une vérification**. Il ne s’agit pas d’une mutation de claim et il ne change jamais `facilities.status`. Une requête idempotente crée ou retrouve un `claim_request` pour le couple claimant/facility. Le facility reste `unclaimed` durant `pending`, `evidence_draft`, `in_review`, `changes_requested` et `rejected`.

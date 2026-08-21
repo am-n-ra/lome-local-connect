@@ -52,6 +52,7 @@ type Props = {
   onSelect: (facility: BuyerFacility) => void;
   onClearSelection: () => void;
   onCheckAvailability: (facility: BuyerFacility) => void;
+  onOpenCatalog: (facility: BuyerFacility) => void;
   onClaim: (facility: BuyerFacility) => void;
   onOpenBulkAvailability: () => void;
   onOpenActivity: () => void;
@@ -118,6 +119,7 @@ export function CleanBuyerMapStage({
   onSelect,
   onClearSelection,
   onCheckAvailability,
+  onOpenCatalog,
   onClaim,
   onOpenBulkAvailability,
   onOpenActivity,
@@ -233,6 +235,11 @@ export function CleanBuyerMapStage({
                 </div>
               )}
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                {(selected.product_count ?? 0) > 0 ? (
+                  <button type="button" onClick={() => onOpenCatalog(selected)} className="omni-clean-secondary-button min-h-12 flex-1">
+                    Voir les produits
+                  </button>
+                ) : null}
                 {selected.status === "unclaimed" ? (
                   <button type="button" onClick={() => onClaim(selected)} className="omni-clean-secondary-button min-h-12 flex-1">
                     Demander une vérification
