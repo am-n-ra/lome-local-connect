@@ -77,3 +77,14 @@ button { cursor: pointer; }
   .omni-map-attribution { bottom: max(7rem, calc(env(safe-area-inset-bottom) + 6.2rem)); }
   .omni-map-controls { bottom: max(11rem, calc(env(safe-area-inset-bottom) + 10rem)); left: .75rem; }
 }
+
+.omni-dock__meta { display: flex; justify-content: space-between; align-items: center; gap: .75rem; margin-top: .6rem; }
+.omni-options { display: grid; gap: .65rem; margin-top: .7rem; padding-top: .7rem; border-top: 1px solid #f0e0d3; }
+.omni-options label { display: grid; grid-template-columns: 1fr minmax(7rem, 11rem); align-items: center; gap: .75rem; color: #604735; font-size: .8rem; }
+.omni-options input, .omni-options select { min-width: 0; border: 1px solid #ead3c3; border-radius: .65rem; padding: .45rem .55rem; color: #2c211b; background: #fffdf9; }
+.omni-options p { margin: 0; color: #876d5b; font-size: .72rem; line-height: 1.35; }
+.omni-recovery { display: flex; align-items: center; justify-content: space-between; gap: .75rem; border-radius: .7rem; padding: .55rem .65rem; color: #7b421e; background: #fff1e6; font-size: .72rem; }
+.omni-recovery button { border: 0; border-radius: .55rem; padding: .35rem .55rem; color: #fffaf4; background: #c45c25; font-weight: 700; }
+.omni-empty { border: 1px dashed #dfbfa8; border-radius: 1rem; padding: 1rem; color: #604735; background: #fffaf4; }
+.omni-empty p { color: #876d5b; font-size: .82rem; line-height: 1.4; }
+.omni-empty button { border: 0; border-radius: .7rem; padding: .6rem .8rem; color: #fffaf4; background: #e86f2b; font-weight: 700; }

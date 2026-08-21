@@ -90,38 +90,38 @@ Every implementation session must update status, owner, last evidence and blocke
 
 ## 4. V1 — Map-first public discovery
 
-**Slice status:** `todo` · **Gate status:** `todo` · **Owner:** unassigned
+**Slice status:** `partial` · **Gate status:** `partial` · **Owner:** unassigned
 
 | Task ID | Feature | Parent task | Priority | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|
 | V1-MAP-001 | MAP-001 | Integrate real MapLibre globe, camera, resize and provider/fallback contract | P0 | V0 | `verified` | MapLibre canvas geometry proof |
 | V1-MAP-002 | MAP-002 | Implement idle globe rotation and pause/resume ownership | P1 | MAP-001 | `verified` | Map interaction pause logic |
-| V1-MAP-003 | MAP-003 | Implement camera ownership arbitration | P1 | MAP-001 | `todo` | — |
-| V1-MAP-004 | MAP-004 | Implement debounced visible-bounds discovery and antimeridian handling | P0 | MAP-001, FND-005 | `partial` | Bounds adapter + antimeridian unit tests; debounce pending |
-| V1-MAP-005 | MAP-005 | Implement bounded OSM/Overpass adapter and manual recovery runbook | P2 | MAP-004 | `manual` | — |
-| V1-MAP-006 | MAP-006 | Normalize and render source-backed facility read model | P0 | MAP-004 | `todo` | — |
+| V1-MAP-003 | MAP-003 | Implement camera ownership arbitration | P1 | MAP-001 | `verified` | User interaction pauses idle rotation |
+| V1-MAP-004 | MAP-004 | Implement debounced visible-bounds discovery and antimeridian handling | P0 | MAP-001, FND-005 | `verified` | Debounced bounds adapter + antimeridian test |
+| V1-MAP-005 | MAP-005 | Implement bounded OSM/Overpass adapter and manual recovery runbook | P2 | MAP-004 | `partial` | Overpass mirrors, timeout and local fallback implemented; runbook pending |
+| V1-MAP-006 | MAP-006 | Normalize and render source-backed facility read model | P0 | MAP-004 | `verified` | Typed public read model and pins |
 | V1-MAP-007 | MAP-007 | Implement low-zoom clusters and local individual pins | P1 | MAP-006 | `verified` | MapLibre cluster layers |
 | V1-MAP-008 | MAP-008 | Implement selected-pin focus and restoration | P1 | MAP-006 | `verified` | Pin click and ease-to proof |
-| V1-MAP-009 | MAP-009 | Implement exact, approximate, denied, timeout and fallback location states | P1 | MAP-001 | `partial` | Exact/approximate/denied/timeout states; cancel pending |
+| V1-MAP-009 | MAP-009 | Implement exact, approximate, denied, timeout and fallback location states | P1 | MAP-001 | `verified` | Exact/approximate/denied/timeout/cancel states |
 | V1-MAP-010 | MAP-010 | Enforce truthful exact/approximate marker semantics | P0 | MAP-009 | `verified` | Accuracy threshold changes zoom/state |
-| V1-MAP-011 | MAP-011 | Implement explicit recenter loading/failure/cancel flow | P1 | MAP-009 | `todo` | — |
+| V1-MAP-011 | MAP-011 | Implement explicit recenter loading/failure/cancel flow | P1 | MAP-009 | `verified` | Requesting, timeout, denied and cancel control |
 | V1-MAP-012 | MAP-012 | Implement non-overlapping zoom/recenter/rotation controls | P1 | FND-003, MAP-001 | `verified` | Four-width geometry proof |
-| V1-MAP-013 | MAP-013 | Implement evidence-backed geographic highlight only | P2 | MAP-006 | `todo` | — |
+| V1-MAP-013 | MAP-013 | Implement evidence-backed geographic highlight only | P2 | MAP-006 | `verified` | Selected facility halo only; no unverified area highlight |
 | V1-MAP-014 | MAP-014 | Implement visible provider attribution above overlays | P1 | MAP-001 | `verified` | Attribution visible at four widths |
 | V1-BUY-001 | BUY-001 | Implement visitor public arrival and discovery explanation | P0 | FND-002, MAP-001 | `verified` | Public discovery shell |
-| V1-BUY-002 | BUY-002 | Implement one search row and one Options chevron | P0 | FND-003, BUY-001 | `partial` | Search row done; Options chevron pending |
+| V1-BUY-002 | BUY-002 | Implement one search row and one Options chevron | P0 | FND-003, BUY-001 | `verified` | One search row with Options disclosure |
 | V1-BUY-003 | BUY-003 | Connect catalogue-aware intent and typed product matches | P1 | BUY-002, V2 data contract | `todo` | — |
-| V1-BUY-004 | BUY-004 | Implement Options category/filter/constraint surface | P1 | BUY-002 | `todo` | — |
-| V1-BUY-005 | BUY-005 | Implement relevant, editable quantity | P1 | BUY-004 | `todo` | — |
-| V1-BUY-006 | BUY-006 | Implement unlimited/manual budget without view switching | P1 | BUY-004 | `todo` | — |
+| V1-BUY-004 | BUY-004 | Implement Options category/filter/constraint surface | P1 | BUY-002 | `verified` | Category, quantity and budget controls remain in dock |
+| V1-BUY-005 | BUY-005 | Implement relevant, editable quantity | P1 | BUY-004 | `verified` | Non-default editable quantity in Options |
+| V1-BUY-006 | BUY-006 | Implement unlimited/manual budget without view switching | P1 | BUY-004 | `verified` | Unlimited/manual budget in Options |
 | V1-BUY-007 | BUY-007 | Unify Enter and button guarded submission | P0 | BUY-002 | `verified` | Playwright Enter/button path |
-| V1-BUY-008 | BUY-008 | Implement search submitting/reveal/cancel states | P0 | BUY-007, MAP-004 | `partial` | Reveal path done; loading/cancel pending |
+| V1-BUY-008 | BUY-008 | Implement search submitting/reveal/cancel states | P0 | BUY-007, MAP-004 | `verified` | Loading and cancel states |
 | V1-BUY-009 | BUY-009 | Implement honest empty discovery state | P1 | BUY-008 | `verified` | Empty result copy |
-| V1-BUY-010 | BUY-010 | Implement search timeout/network/server recovery | P1 | BUY-008 | `todo` | — |
-| V1-BUY-011 | BUY-011 | Implement responsive cards/rail with no horizontal trap | P0 | BUY-008 | `partial` | No overflow proof; rail/card final treatment pending |
+| V1-BUY-010 | BUY-010 | Implement search timeout/network/server recovery | P1 | BUY-008 | `partial` | Overpass timeout fallback and retry control; automated failure proof pending |
+| V1-BUY-011 | BUY-011 | Implement responsive cards/rail with no horizontal trap | P0 | BUY-008 | `verified` | Four-width no-overflow proof |
 | V1-BUY-012 | BUY-012 | Implement product-first result card with media and trust data | P1 | MAP-006, BUY-008 | `todo` | — |
 | V1-BUY-013 | BUY-013 | Enforce facility-only selection with negative tests | P0 | BUY-012 | `todo` | — |
-| V1-BUY-014 | BUY-014 | Preserve query, viewport, selection and result restoration | P0 | FND-002, BUY-013 | `todo` | — |
+| V1-BUY-014 | BUY-014 | Preserve query, viewport, selection and result restoration | P0 | FND-002, BUY-013 | `partial` | Back restores result surface/query; viewport proof pending |
 
 **V1 subtasks:** Each row requires `-C/-D/-S/-U/-I/-P/-O`. Gate evidence: four-width visitor click-through, canvas/clustering/location assertions, Enter/button parity, empty/error recovery, no-overflow and public-data privacy negatives.
 
@@ -133,7 +133,7 @@ Every implementation session must update status, owner, last evidence and blocke
 
 **Implemented in this pass:** real MapLibre globe projection, OpenFreeMap Liberty primary style with local fallback, resize handling, idle rotation, camera interaction pause, zoom/recenter controls, deterministic source-backed fixtures, GeoJSON clustering, facility pin selection, public search Enter/button path, bounds-aware local discovery, approximate-location thresholding, result sheet and facility detail sheet.
 
-**Remaining V1 proof/implementation gaps:** discovery currently uses a bounded local read model rather than the operational OSM/Overpass adapter; bounds updates are wired to the local adapter but debounce and server recovery are pending; explicit location cancellation, Options chevron, search loading/cancel states, query/viewport restoration and geographic highlight remain open; the connected browser bridge remains unavailable for a live visual session. The V1 task remains `partial` until these are closed.
+**Remaining V1 proof/implementation gaps:** the operational Overpass adapter now exists with timeout, mirror fallback and local recovery, but its manual runbook and automated failure proof remain open; bounds updates are debounced and connected to the bounded adapter; explicit catalogue-aware product matching remains a V2 dependency and full viewport restoration still needs dedicated proof; the connected browser bridge remains unavailable for a live visual session. The V1 task remains `partial` until these are closed.
 
 ## 5. V2 — Catalogue-first availability
 

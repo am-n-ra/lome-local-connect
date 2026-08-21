@@ -40,7 +40,7 @@ export type SurfaceAction =
   | { type: "back" }
   | { type: "set-query"; query: string }
   | { type: "set-async"; async: AsyncStatus; error?: string | null }
-  | { type: "select-facility"; facilityId: string }
+  | { type: "select-facility"; facilityId: string; returnSurface?: SurfaceKind }
   | { type: "select-product"; productId: string }
   | { type: "set-actor"; actor: Actor };
 
@@ -62,7 +62,7 @@ export function reduceSurface(state: SurfaceState, action: SurfaceAction): Surfa
     case "set-async":
       return { ...state, async: action.async, error: action.error ?? null };
     case "select-facility":
-      return { ...state, selectedFacilityId: action.facilityId, active: "facility", returnSurface: "map" };
+      return { ...state, selectedFacilityId: action.facilityId, active: "facility", returnSurface: action.returnSurface ?? "map" };
     case "select-product":
       return { ...state, selectedProductId: action.productId, active: "catalogue", returnSurface: "facility" };
     case "set-actor":
