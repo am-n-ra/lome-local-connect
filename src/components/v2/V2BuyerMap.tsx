@@ -1,20 +1,24 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DiscoveryBounds, PublicFacility } from "../../contracts/discovery";
 
 type V2BuyerMapProps = {
   facilities: PublicFacility[];
   onBoundsChange: (bounds: DiscoveryBounds) => void;
+  userLocation?: { latitude: number; longitude: number; accuracy: "exact" | "approximate" } | null;
 };
 
 type MapInstance = import("maplibre-gl").Map;
 type MarkerInstance = import("maplibre-gl").Marker;
 
-export function V2BuyerMap({ facilities, onBoundsChange }: V2BuyerMapProps) {
+export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: V2BuyerMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const callbackRef = useRef(onBoundsChange);
   const facilitiesRef = useRef(facilities);
   const mapRef = useRef<MapInstance | null>(null);
   const markersRef = useRef<MarkerInstance[]>([]);
+  const userMarkerRef = useRef<MarkerInstance | null>(null);
+  const autoRotateRef = useRef(true);
+  const [autoRotate, setAutoRotate] = useState(true);
 
   useEffect(() => {
     callbackRef.current = onBoundsChange;
@@ -87,7 +91,7 @@ export function V2BuyerMap({ facilities, onBoundsChange }: V2BuyerMapProps) {
         if (disposed || !map) return;
         const elapsed = lastTimestamp ? timestamp - lastTimestamp : 0;
         lastTimestamp = timestamp;
-        if (!userInteracting && !map.isMoving()) {
+        if (autoRotateRef.current && !userInteracting && !map.isMoving()) {
           const center = map.getCenter();
           map.setCenter([center.lng + elapsed * 0.0018, center.lat]);
         }
@@ -111,7 +115,40 @@ export function V2BuyerMap({ facilities, onBoundsChange }: V2BuyerMapProps) {
     };
   }, []);
 
-  return <div ref={containerRef} className="v2-map-canvas" aria-label="Globe Omni V2" />;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !userLocation || !map.isStyleLoaded()) return;
+    void import("maplibre-gl").then(({ Marker }) => {
+      userMarkerRef.current?.remove();
+      const element = document.createElement("div");
+      element.className = `v2-user-location-pin is-${userLocation.accuracy}`;
+      element.setAttribute("aria-label", userLocation.accuracy === "exact" ? "Votre position exacte" : "Votre position approximative");
+      userMarkerRef.current = new Marker({ element }).setLngLat([userLocation.longitude, userLocation.latitude]).addTo(map);
+    });
+    return () => {
+      userMarkerRef.current?.remove();
+      userMarkerRef.current = null;
+    };
+  }, [userLocation]);
+
+  const recenter = () => {
+    const map = mapRef.current;
+    if (map && userLocation) map.easeTo({ center: [userLocation.longitude, userLocation.latitude], zoom: Math.max(map.getZoom(), 8), duration: 700 });
+  };
+  const toggleRotation = () => {
+    autoRotateRef.current = !autoRotateRef.current;
+    setAutoRotate(autoRotateRef.current);
+  };
+
+  return <div className="v2-map-wrap">
+    <div ref={containerRef} className="v2-map-canvas" aria-label="Globe Omni V2" />
+    <div className="v2-map-controls" aria-label="Contrôles de la carte">
+      <button type="button" onClick={recenter} disabled={!userLocation} aria-label="Recentrer sur ma position">⌖</button>
+      <button type="button" onClick={toggleRotation} aria-label={autoRotate ? "Mettre la rotation en pause" : "Reprendre la rotation"}>{autoRotate ? "Ⅱ" : "▶"}</button>
+      <button type="button" onClick={() => mapRef.current?.zoomIn()} aria-label="Zoom avant">+</button>
+      <button type="button" onClick={() => mapRef.current?.zoomOut()} aria-label="Zoom arrière">−</button>
+    </div>
+  </div>;
 }
 
 async function syncMarkers(map: MapInstance, facilities: PublicFacility[]) {

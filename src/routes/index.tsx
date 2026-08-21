@@ -37,6 +37,8 @@ function V2BuyerPage() {
   const [detail, setDetail] = useState<PublicFacilityDetail | null>(null);
   const [products, setProducts] = useState<PublicProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<PublicProduct | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; accuracy: "exact" | "approximate" } | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [locationMessage, setLocationMessage] = useState("Explorez le globe ou recherchez ce dont vous avez besoin.");
 
   const locate = useCallback(() => {
@@ -49,10 +51,13 @@ function V2BuyerPage() {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const accuracy = position.coords.accuracy;
-        setLocationMessage(accuracy <= 250 ? "Position récente disponible. Vous pouvez rechercher autour de vous." : "Position approximative disponible. Vous pouvez la préciser ou explorer manuellement.");
+        const nextAccuracy = accuracy <= 250 ? "exact" : "approximate";
+        setUserLocation({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: nextAccuracy });
+        setLocationMessage(accuracy <= 250 ? "Position exacte disponible. Le point bleu indique votre position." : "Position approximative disponible. Le halo indique une position à préciser.");
         setState(accuracy <= 250 ? "location_exact" : "location_approximate");
       },
       () => {
+        setUserLocation(null);
         setLocationMessage("La position n’a pas été accordée. Le globe reste entièrement exploratoire.");
         setState("fallback_market");
       },
@@ -133,12 +138,16 @@ function V2BuyerPage() {
 
   return (
     <V2Shell
-      scene={<V2BuyerMap facilities={facilities} onBoundsChange={setBounds} />}
+      scene={<V2BuyerMap facilities={facilities} userLocation={userLocation} onBoundsChange={setBounds} />}
       chrome={<div className="v2-top-chrome"><span className="v2-chrome-label">Omni</span><button type="button" className="v2-location-button" onClick={locate} disabled={state === "locating"}>{state === "locating" ? "Localisation…" : "Recentrer"}</button></div>}
       dock={<form className="v2-search-dock" onSubmit={(event) => { event.preventDefault(); void runSearch(); }}>
         <label className="v2-search-label" htmlFor="v2-search">Rechercher sur la carte</label>
         <div className="v2-search-row"><input id="v2-search" value={query} onFocus={() => setState("search_input")} onChange={(event) => setQuery(event.target.value)} placeholder="Que cherchez-vous ?" autoComplete="off" /><button type="submit" disabled={state === "search_submitting" || state === "search_reveal"}>{state === "search_submitting" || state === "search_reveal" ? "…" : "Rechercher"}</button></div>
-        <button type="button" className="v2-options-button" onClick={() => setLocationMessage("Options disponibles dans la prochaine étape.")}>Options <span aria-hidden="true">⌄</span></button>
+        <div className="v2-dock-actions">
+          {query && <button type="button" className="v2-clear-button" onClick={() => { setQuery(""); setState("search_input"); }}>Effacer</button>}
+          <button type="button" className="v2-options-button" aria-expanded={optionsOpen} onClick={() => setOptionsOpen((open) => !open)}>Options <span aria-hidden="true">⌄</span></button>
+        </div>
+        {optionsOpen && <div className="v2-options-popover" role="dialog" aria-label="Options de recherche"><strong>Affiner la découverte</strong><span>Zone : cadre visible de la carte</span><span>Localisation : {userLocation ? userLocation.accuracy === "exact" ? "exacte" : "approximative" : "non partagée"}</span><button type="button" onClick={() => { setOptionsOpen(false); locate(); }}>Demander ma position</button><button type="button" onClick={() => setOptionsOpen(false)}>Fermer</button></div>}
         <p className="v2-search-status" role="status">{locationMessage}</p>
       </form>}
       sheet={<div className="v2-result-sheet">

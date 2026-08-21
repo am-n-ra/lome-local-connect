@@ -460,3 +460,22 @@ a {
   .v2-product-card { grid-template-columns: 4.25rem 1fr; }
   .v2-product-card img { width: 4.25rem; height: 4.25rem; }
 }
+
+.v2-map-wrap { position: absolute; inset: 0; }
+.v2-map-controls { position: absolute; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); display: grid; gap: .4rem; pointer-events: auto; }
+.v2-map-controls button { width: 2.35rem; height: 2.35rem; border: 1px solid rgba(255,255,255,.16); border-radius: .75rem; color: #edf3ff; background: rgba(13,21,34,.78); box-shadow: 0 .6rem 1.5rem rgba(0,0,0,.2); backdrop-filter: blur(14px); cursor: pointer; }
+.v2-map-controls button:hover, .v2-map-controls button:focus-visible { border-color: rgba(220,232,255,.8); outline: none; background: rgba(33,48,73,.9); }
+.v2-map-controls button:disabled { cursor: not-allowed; opacity: .48; }
+.v2-user-location-pin { width: 1rem; height: 1rem; border: 3px solid #fff; border-radius: 50%; background: #3184ff; box-shadow: 0 0 0 .35rem rgba(49,132,255,.28), 0 0 1.2rem rgba(49,132,255,.8); }
+.v2-user-location-pin.is-approximate { background: #80a9ff; box-shadow: 0 0 0 .7rem rgba(128,169,255,.2), 0 0 1.2rem rgba(128,169,255,.6); }
+.v2-dock-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.v2-clear-button, .v2-options-button { padding: .15rem 0; border: 0; color: #aebdde; background: transparent; font-size: .75rem; cursor: pointer; }
+.v2-clear-button { color: #d0d9eb; }
+.v2-options-popover { display: grid; gap: .5rem; padding: .85rem; border: 1px solid rgba(255,255,255,.14); border-radius: .9rem; color: #dfe8f7; background: rgba(18,29,46,.96); box-shadow: 0 1rem 3rem rgba(0,0,0,.3); }
+.v2-options-popover span { color: #9aa9bf; font-size: .75rem; }
+.v2-options-popover button { justify-self: start; padding: .45rem .65rem; border: 1px solid rgba(255,255,255,.15); border-radius: .65rem; color: #dfe8f7; background: rgba(255,255,255,.06); cursor: pointer; }
+.v2-options-popover button:hover, .v2-options-popover button:focus-visible { border-color: rgba(220,232,255,.7); outline: none; }
+@media (max-width: 560px) {
+  .v2-map-controls { right: .65rem; bottom: calc(max(.65rem, env(safe-area-inset-bottom)) + 5rem); }
+  .v2-map-controls button { width: 2.15rem; height: 2.15rem; }
+}
