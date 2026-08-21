@@ -56,6 +56,7 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
       // the runtime state explicit for style reloads and deployments.
       map.setProjection({ type: "globe" });
       void syncMarkers(map, facilitiesRef.current);
+      void syncUserMarker(map, userLocation);
       emitBounds();
     };
 
@@ -77,7 +78,10 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
       map.addControl(new maplibre.NavigationControl({ showCompass: true }), "bottom-left");
       map.on("load", handleLoad);
       map.on("styledata", () => {
-        if (map?.isStyleLoaded()) void syncMarkers(map, facilitiesRef.current);
+        if (map?.isStyleLoaded()) {
+          void syncMarkers(map, facilitiesRef.current);
+          void syncUserMarker(map, userLocation);
+        }
       });
       map.on("moveend", emitBounds);
       map.on("dragstart", () => { userInteracting = true; });
@@ -108,6 +112,8 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
       if (map) {
         markersRefForMap(map).forEach((marker) => marker.remove());
         markerRegistry.delete(map);
+        userMarkerRegistry.get(map)?.remove();
+        userMarkerRegistry.delete(map);
       }
       markersRef.current = [];
       map?.remove();
@@ -118,13 +124,7 @@ export function V2BuyerMap({ facilities, onBoundsChange, userLocation = null }: 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !userLocation || !map.isStyleLoaded()) return;
-    void import("maplibre-gl").then(({ Marker }) => {
-      userMarkerRef.current?.remove();
-      const element = document.createElement("div");
-      element.className = `v2-user-location-pin is-${userLocation.accuracy}`;
-      element.setAttribute("aria-label", userLocation.accuracy === "exact" ? "Votre position exacte" : "Votre position approximative");
-      userMarkerRef.current = new Marker({ element }).setLngLat([userLocation.longitude, userLocation.latitude]).addTo(map);
-    });
+    void syncUserMarker(map, userLocation);
     return () => {
       userMarkerRef.current?.remove();
       userMarkerRef.current = null;
@@ -167,7 +167,18 @@ async function syncMarkers(map: MapInstance, facilities: PublicFacility[]) {
   markersRefForMap(map).splice(0, markersRefForMap(map).length, ...nextMarkers);
 }
 
+async function syncUserMarker(map: MapInstance, userLocation: { latitude: number; longitude: number; accuracy: "exact" | "approximate" } | null) {
+  if (!userLocation) return;
+  const { Marker } = await import("maplibre-gl");
+  userMarkerRegistry.get(map)?.remove();
+  const element = document.createElement("div");
+  element.className = `v2-user-location-pin is-${userLocation.accuracy}`;
+  element.setAttribute("aria-label", userLocation.accuracy === "exact" ? "Votre position exacte" : "Votre position approximative");
+  userMarkerRegistry.set(map, new Marker({ element }).setLngLat([userLocation.longitude, userLocation.latitude]).addTo(map));
+}
+
 const markerRegistry = new WeakMap<MapInstance, MarkerInstance[]>();
+const userMarkerRegistry = new WeakMap<MapInstance, MarkerInstance>();
 function markersRefForMap(map: MapInstance) {
   const existing = markerRegistry.get(map);
   if (existing) return existing;
