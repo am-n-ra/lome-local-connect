@@ -4,10 +4,10 @@
 >
 > Ce document définit la vision produit, les flows, l’interface UI/UX, les règles buyer/seller, la carte, la recherche, la disponibilité, la transaction, les plans, l’IA, les données et les critères d’acceptation d’Omni. Toute nouvelle décision produit ou UI doit être intégrée ici avant son implémentation. Les brainstormings et rapports historiques sont informatifs tant qu’ils ne sont pas explicitement intégrés à ce document.
 >
-> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6 and §0.8.1)
+> **Version canonique :** 2026-08-21 (patched 2026-08-21 — see §0.5, §0.6, §0.8.1 and §0.8.2)
 > **Documents intégrés :** `docs/OMNI_MASTER.md`, `docs/omni-product-interface-spec.md`, `docs/omni-ui-system.md` et les décisions UI/UX confirmées.
 > **Pattern confirmé :** les panneaux horizontaux défilables des facilities sont conservés comme composant officiel de découverte, avec règles responsive, clavier, chargement et sélection décrites dans les sections carte et résultats.
-> **Patch note :** §0.8.1 corrects the stale pre-globe scope wording in §0.5.3 and freezes the canonical map/menu package: MapLibre globe remains V1; menu actions are functional-only; map/search context is preserved across menu, role and sheet transitions.
+> **Patch note :** §0.8.1 corrects the stale pre-globe scope wording in §0.5.3 and freezes the canonical map/menu package. §0.8.2 now freezes the map/globe camera, reveal, viewport, boundary and location truth contracts; it does not replace MapLibre or imply global boundary coverage that is not loaded.
 
 ## 0. INSTRUCTION GÉNÉRALE
 
@@ -90,7 +90,7 @@ Status legend: **V1** = build now, production quality. **V1-Manual** = the capab
 | Search (text, structured quantity/budget)                                 | §12 (text only), §13, §14 (keyword+basic semantic)    | **V1**                                                   | No voice, image, or video search yet.                                                                                                                                                           |
 | Search by image/video, visual embeddings                                  | §11, §37 (visual pipeline)                            | **Deferred**                                             |                                                                                                                                                                                                 |
 | Facility object + states (Unclaimed → Claimed → Certified → Confirmed)    | §4, §5, §17 (this doc)                                | **V1**                                                   | States must exist in the data model even though certification is done by hand.                                                                                                                  |
-| Facility auto-discovery via OSM/Overpass                                  | §20–22, §172 (backfill)                               | **Deferred**                                             | You don't have enough facility density yet to need automated backfill; your field agents are the discovery mechanism. Revisit once agent-driven onboarding saturates and you need to fill gaps. |
+| Facility auto-discovery via OSM/Overpass                                  | §20–22, §172 (bounded backfill)                       | **V1**                                                   | Bounded on-demand OSM/Overpass backfill is active for sparse high-zoom viewports. This is not a world-prepopulation job and does not imply that every country has boundary assets or facility density. |
 | Content indexing (articles/video/social)                                  | §7–10, §139–143                                       | **Deferred**                                             |                                                                                                                                                                                                 |
 | Availability (manual, single-facility)                                    | §37, §38                                              | **V1-Manual**                                            | The buyer-facing "Check availability" action is real. The seller-side response is currently produced by a human (you), not a Seller Agent. See §0.6.                                            |
 | Bulk availability, seller Auto/Semi-Auto modes                            | §39–41, §51                                           | **Deferred**                                             | Do this by hand 20–50 times (per your own stated plan) before automating.                                                                                                                       |
@@ -4757,6 +4757,89 @@ Le buyer peut accéder aux surfaces réellement branchées : recherche/carte, di
 ### Critères de sortie
 
 Le package Map + Menu est conforme lorsque : (1) le globe et ses contrôles restent visibles autour des surfaces ; (2) l’ouverture/fermeture du menu ne recrée ni ne réinitialise la carte ; (3) chaque entrée visible est fonctionnelle ou protégée par une vraie route d’auth ; (4) le changement de rôle conserve le contexte pris en charge ; (5) la fermeture d’une fiche ou feuille restaure recherche, résultats et position ; (6) les viewports 320, 390, 768, 1024 et 1280 px n’ont ni débordement ni collision ; et (7) la preuve headless est distinguée de la preuve réelle MapLibre, GPS, caméra et session authentifiée.
+
+## 0.8.2 Correction canonique — Map + Globe Omni (2026-08-21)
+
+Cette correction complète §0.8.1 et les sections historiques §16–§20. Elle transforme les intentions de la carte en contrat d’exécution sans changer MapLibre GL v5, la projection globe/mercator, OpenFreeMap, les pins, les clusters, les routes transactionnelles ou les règles de confidentialité de localisation.
+
+### Identité et scène permanente
+
+Omni est un moteur de recherche géospatial map-first. La carte MapLibre est la scène permanente sur buyer et seller : le globe est visible à l’arrivée, la carte locale apparaît lorsque le zoom ou la recherche le justifie, et les sheets/cartes/menus se superposent sans recréer le canvas. Le globe n’est ni une animation décorative ni une carte plate de secours. Aucune donnée ou pin ne peut être inventé côté client.
+
+### Scope gate map/globe
+
+| Capability | Status | Contract |
+|---|---|---|
+| Globe MapLibre vivant, projection globe/mercator, style vectoriel OpenFreeMap | **V1** | Une instance MapLibre réelle, avec retry explicite et aucun fallback raster/flat. |
+| Rotation horizontale au repos | **V1** | Mouvement positif de longitude, pause sur interaction, reprise seulement à l’état `resting_globe`, respect de `prefers-reduced-motion`. |
+| Recherche explicite et révélation graduée | **V1** | Aucun zoom automatique à l’arrivée. Enter, bouton, catégorie, recherche restaurée ou retry autorisé peuvent démarrer une révélation annulable. |
+| Pins source-backed, clusters et découverte par viewport | **V1** | Payload borné, bounds serveur, unclaimed visible mais honnête, scope Free/Pro serveur-authoritative, antimeridian explicite. |
+| Localisation exacte/approximative/fallback | **V1** | États distincts, marqueur exact uniquement avec fix navigateur fraîche et bande de précision acceptable, persistance profile limitée à ville/pays/source/temps. |
+| Boundaries et highlight noir | **V1** | Assets chargés à la demande; highlight seulement si la cible correspond à l’asset; absence d’asset = révélation sans faux highlight. |
+| Backfill OSM/Overpass à la demande | **V1** | Best effort sur viewport sparse et zoom local; aucune promesse de prépopulation mondiale immédiate. |
+| Global boundary coverage complète | **Deferred** | Le contrat de caméra est global, mais les assets pays/région/ville sont graduels. Reconsidérer lorsque les données géographiques et l’observabilité de couverture sont disponibles. |
+| 3D media discovery, feed spatial, narration IA, offline tiles, second renderer | **Deferred** | Destination documentée dans les sections historiques; aucune implémentation ou stub dans cette tranche. |
+
+### Machine de la carte
+
+```text
+idle_globe
+  → [permission acceptée] → location_exact | location_approximate
+  → [refus/timeout/unsupported] → fallback_market | location_unavailable
+  → [drag/zoom/rotate/recenter] → manual_navigation
+  → [recherche explicite/catégorie/recherche restaurée/retry] → search_reveal
+
+search_reveal
+  → [reveal complète + résultats stabilisés] → result_framing
+  → [interaction manuelle] → manual_navigation_with_pending_results
+  → [nouvelle recherche] → search_reveal (ancien token annulé)
+  → [échec boundary/style/coverage] → reveal_degraded
+
+result_framing
+  → [pins/cards rendus] → results_visible
+  → [zéro résultat] → empty_results
+
+results_visible
+  → [sélection pin/card] → facility_selected
+  → [nouvelle recherche/filtre] → search_reveal
+  → [fermeture sheet/menu] → same_map_context
+
+facility_selected
+  → [fermeture/back] → results_visible_with_same_context
+  → [availability/claim] → functional_surface
+  → [menu/role/auth] → context_preserved_route
+```
+
+### Priorité de caméra et annulation
+
+La caméra suit une seule priorité : `manual interaction > selected facility focus > active search reveal > result framing > idle rotation`. Toute intention reçoit un token monotone. Une interaction manuelle, une nouvelle recherche, une sélection, un unmount ou une erreur provider invalide le token antérieur, arrête les timers et flights, restaure la visibilité valide des couches et ne laisse jamais la carte invisible.
+
+Changer la quantité, le budget ou le texte en cours de saisie ne déclenche pas de caméra. Une recherche ne cadre que lorsque l’utilisateur l’a soumise ou lorsqu’une recherche explicitement restaurée reprend. Si l’utilisateur interrompt une révélation, la carte conserve sa caméra manuelle; les résultats peuvent encore arriver, mais la route ne vole pas la caméra à nouveau.
+
+### Révélation et boundaries
+
+La révélation utilisateur peut afficher `Monde`, `Approche`, `Zone` et `Résultats`. Elle peut traverser les bandes de zoom continent/pays/région/ville, mais ne doit pas imprimer des noms de pays par défaut. Le highlight actif est noir/near-black et ne s’applique qu’à une feature dont le nom et le niveau correspondent à la cible. Les assets actuellement disponibles pour Afrique, Togo, Maritime, communes et quartiers de Lomé sont valides pour ces cibles uniquement. Pour toute autre géographie, la caméra continue honnêtement sans faux highlight; l’absence d’asset n’est pas une erreur bloquante de découverte.
+
+### Truth table de visibilité
+
+| Situation | Pins de facilities | Marqueur utilisateur | Labels géographiques | Action caméra |
+|---|---|---|---|---|
+| Arrivée idle globe | sparse source-backed/clusters si disponibles | absent ou contexte approximatif distinct | supprimés à l’échelle globe | rotation horizontale autorisée |
+| Recherche en reveal | temporairement masqués | selon état de localisation | boundaries chargées à la demande | reveal annulable |
+| Résultats stabilisés | visibles après source + settle | exact ou approximatif selon preuve | visibles seulement au zoom local | framing seulement si non interrompu |
+| Facility sélectionnée | source visible, feature selected | inchangé | inchangés | focus unique |
+| Zéro résultat | aucun pin fabriqué | inchangé | état local honnête | cadre stable, retry/refine |
+| Erreur coverage/style | dernière source valide ou aucun pin | inchangé | pas de faux highlight | retry, pas de flat substitute |
+
+### Viewport et trust boundary
+
+Le navigateur envoie uniquement un snapshot borné `{west, south, east, north, zoom, search, category, includeUnclaimed, limit}` via l’adapter de découverte. Le serveur valide les bornes, rate-limit les requêtes, applique le scope Free/Pro, traite l’antimeridian, garde les unclaimed autorisées, décore les produits correspondants et peut lancer un backfill OSM best-effort sur les zones locales sparse. Le navigateur ne charge jamais le dataset mondial et ne peut pas élargir son scope en modifiant le payload.
+
+La position brute peut servir transitoirement à la caméra et à la résolution de ville. Le profile persiste uniquement `discovery_city`, `discovery_country_code`, `discovery_source` et `discovery_updated_at`; les snapshots de contexte ne contiennent jamais coordonnées GPS brutes, tokens, QR, chat privé ou secrets de paiement.
+
+### Critères de sortie
+
+Le package map/globe est conforme lorsque : (1) `/` et `/carte` ouvrent la vraie scène MapLibre sans flat fallback; (2) l’arrivée ne zoom pas automatiquement; (3) la rotation est horizontale, pausée par interaction et réduite par préférence système; (4) une recherche explicite seule démarre la révélation; (5) pins, clusters et résultats sont source-backed et réapparaissent après reveal/erreur/cancel; (6) la priorité de caméra empêche les zooms concurrents; (7) un highlight noir n’apparaît que pour une boundary correspondante; (8) exact/approximate/fallback restent distingués; (9) viewport, scope et backfill restent serveur-authoritative; (10) fermeture/back restaure le même contexte; et (11) les preuves headless sont séparées des preuves réelles de paint MapLibre, GPS, caméra et session authentifiée.
 
 # ANNEXE NORMATIVE V1 — CERTIFICATION MOBILE, SELLER MAP-FIRST ET DATA COMPANY
 

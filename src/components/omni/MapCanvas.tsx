@@ -14,14 +14,12 @@ import {
   loadBoundariesForZoom,
   resetBoundaryState,
 } from "@/lib/boundaries/loader";
+import { shouldCancelReveal, type CameraMode, type RevealInterruptReason } from "@/lib/map-globe-state";
 
 export type MapFacility = FacilityRow & {
   isPro?: boolean;
   mobile_presence?: boolean;
 };
-
-type CameraMode =
-  "resting_globe" | "manual_navigation" | "search_reveal" | "result_framing" | "selected_facility";
 
 type Props = {
   facilities: MapFacility[];
@@ -709,13 +707,27 @@ export function MapCanvas({
     };
     const handleMoveEnd = () => emitViewport("moveend");
 
+    const cancelActiveReveal = (reason: RevealInterruptReason) => {
+      if (!revealRunningRef.current || !shouldCancelReveal(reason)) return;
+      revealTokenRef.current += 1;
+      if (revealTimerRef.current != null) window.clearTimeout(revealTimerRef.current);
+      if (revealPauseTimerRef.current != null) window.clearTimeout(revealPauseTimerRef.current);
+      map.stop();
+      revealRunningRef.current = false;
+      cameraModeRef.current = "manual_navigation";
+      setFacilitiesVisibility(map, showFacilitiesRef.current);
+      setRevealRunning(false);
+      onRevealStateChange?.(false);
+      setRevealLabel(null);
+      debugMapEvent(map, "search-reveal-cancelled", { reason });
+    };
+
     const pauseForInteraction = () => {
       stopRotation();
       if (rotationResumeRef.current != null) window.clearTimeout(rotationResumeRef.current);
       rotationResumeRef.current = null;
-      if (cameraModeRef.current !== "search_reveal" && cameraModeRef.current !== "result_framing") {
-        cameraModeRef.current = "manual_navigation";
-      }
+      cancelActiveReveal("manual_interaction");
+      cameraModeRef.current = "manual_navigation";
     };
 
     const reapplyOmniState = () => {
@@ -1168,6 +1180,8 @@ export function MapCanvas({
     <div
       className={`${className ?? "h-full w-full"} relative overflow-hidden`}
       style={{ backgroundColor: "#fbfaf7" }}
+      data-omni-map-status={mapStatus}
+      data-omni-reveal={revealRunning ? "running" : "idle"}
     >
       <div
         ref={containerRef}
