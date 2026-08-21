@@ -413,6 +413,7 @@ function VendeurPage() {
     const price = Number(draft.price);
     const quantityAvailable = Number(draft.quantity);
     const omniAllocationPercent = Number(draft.allocation);
+    const allocatedOmni = Number(draft.allocatedOmni || 0);
     if (
       draft.name.trim().length < 2 ||
       !Number.isFinite(price) ||
@@ -434,6 +435,9 @@ function VendeurPage() {
         status: draft.status,
         quantityAvailable: Math.round(quantityAvailable),
         omniAllocationPercent: Math.round(omniAllocationPercent),
+        quantityAllocatedOmni: Number.isFinite(allocatedOmni)
+          ? Math.max(0, Math.round(allocatedOmni))
+          : 0,
         discountPercent: Math.max(1, Math.min(90, Number(draft.couponPercent) || 1)),
         photoUrl: draft.photoUrl.trim() || null,
         coupon: draft.couponCode.trim()
