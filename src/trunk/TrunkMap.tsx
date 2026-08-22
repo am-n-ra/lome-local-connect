@@ -156,8 +156,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     if (map.getLayer('omni-selected-halo')) map.setFilter('omni-selected-halo', ['==', ['get', 'id'], selectedId ?? '']);
   }, [selectedId]);
 
+  const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return (
-    <div className="map-stage">
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'}>
       <div ref={container} className="map-canvas" aria-label="Omni discovery globe" />
       <div className="map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Loading the globe…' : mapStatus === 'fallback' ? 'Map tiles are in fallback mode' : 'Live map'}</div>

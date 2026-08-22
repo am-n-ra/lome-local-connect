@@ -22,6 +22,7 @@ for (const width of widths) {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console:${message.text()}`); });
   page.on('response', (response) => { if (response.url().includes('/api/v2/')) apiResponses.push(`${response.status()} ${response.url().split('/api/v2/')[1]}`); });
   page.on('pageerror', (error) => errors.push(`page:${error.message}`));
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => {
     const text = document.querySelector('.map-caption')?.textContent ?? '';
@@ -36,6 +37,8 @@ for (const width of widths) {
   const hamburger = await page.getByRole('button', { name: 'Open Omni menu' }).count();
   const mapControls = await page.locator('.map-controls').count();
   const mapStatus = await page.locator('.map-status').innerText();
+  const reducedMotion = await page.locator('.map-stage').getAttribute('data-motion');
+  if (reducedMotion !== 'reduced') throw new Error(`Reduced-motion mode was not honored at ${width}px`);
   const caption = await page.locator('.map-caption').innerText();
   const facilityLabels = await page.getByText(/Cotonou Fresh Hub|Mènontin Home Bakery|Zongo Mobile Market/).count();
   const canvasCount = await page.locator('.map-canvas canvas').count();
@@ -136,7 +139,7 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
 await browser.close();
