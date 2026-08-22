@@ -1,0 +1,10 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/v2/[...path].ts": {
+      "maxDuration": 30
+    }
+  }
+}
