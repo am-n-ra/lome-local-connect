@@ -87,7 +87,7 @@ Use [`v2-roots.md`](./v2-roots.md) and [`v2-flow.md`](./v2-flow.md). Implement o
 8. fixture factory with visitor, buyer, seller, admin, unclaimed, certified/unconfirmed, Pro, confirmed, stale, unavailable, wallet and QR cases;
 9. migration forward checks, preservation statement and recovery procedure.
 
-**Root System proof:** schema/constraint tests, authorization matrix, client-boundary check, idempotency/audit check, secret scan, map/route privacy review, camera-context recovery contract, recovery contract review and a runnable empty product shell.
+**Root System proof:** [`v2-root-system-proof.md`](./v2-root-system-proof.md) must record schema/constraint tests, authorization matrix, client-boundary check, idempotency/audit check, secret scan, map/route privacy review, camera-context recovery contract, recovery contract review and a runnable empty product shell. Documentation alone leaves the gate in `review`.
 
 ## 7. Phase 3 — Trunk: buyer core
 

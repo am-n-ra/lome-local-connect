@@ -84,12 +84,12 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `todo` | Boundary check |
+| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | Root contract; runtime boundary check still required |
 | ROOT-002 | Link Neon Auth identity to idempotent Omni account provisioning | ROOT-001 | `todo` | Auth/duplicate-account test |
-| ROOT-003 | Define domain ownership and persistence model | ROOT-001 | `todo` | Schema review |
-| ROOT-004 | Add facility, trust, catalogue and availability contracts | ROOT-003 | `todo` | State/constraint tests |
-| ROOT-005 | Add wallet, entitlement, transaction, QR and fulfilment contracts | ROOT-003 | `todo` | Ledger/state tests |
-| ROOT-006 | Add audit events, correlation IDs and mutation idempotency | ROOT-001 | `todo` | Duplicate/audit proof |
+| ROOT-003 | Define domain ownership and persistence model | ROOT-001 | `review` | Domain table and Root proof ledger; schema/ownership tests still required |
+| ROOT-004 | Add facility, trust, catalogue and availability contracts | ROOT-003 | `review` | Root/Flow contracts; state and constraint tests still required |
+| ROOT-005 | Add wallet, entitlement, transaction, QR and fulfilment contracts | ROOT-003 | `review` | Root/Flow contracts; ledger and state tests still required |
+| ROOT-006 | Add audit events, correlation IDs and mutation idempotency | ROOT-001 | `review` | Root contract; duplicate and audit proof still required |
 | ROOT-007 | Define bounded public-source adapter and recovery procedure | ROOT-003 | `manual` | Operator runbook |
 | ROOT-008 | Define private media/evidence storage boundary | ROOT-003 | `todo` | Access-control test |
 | ROOT-009 | Preserve Auth identities and legacy records during additive migration | ROOT-003 | `todo` | Migration forward/preservation checks |
