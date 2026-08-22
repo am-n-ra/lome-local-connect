@@ -12,7 +12,17 @@ Every feature is a complete vertical slice at the depth its structure requires. 
 
 Statuses are `todo`, `ready`, `in_progress`, `blocked`, `review`, `verified`, `done`, `partial`, `deferred` and `manual`.
 
-## 2. Product foundation
+## 2. Species maquette and product foundation
+
+| ID | Feature | Parent phase | Initial status |
+|---|---|---|---|
+| SPEC-001 | Reference-faithful Canva buyer arrival frame | Species | `review` |
+| SPEC-002 | Locked visual DNA: type, color, spacing, material and motion | Species | `review` |
+| SPEC-003 | Complete S01–S17 screen/state maquette | Species | `review` |
+| SPEC-004 | Responsive and accessibility inheritance matrix | Species | `review` |
+| SPEC-005 | Nested mini-species decision register | Species | `todo` |
+
+### Product foundation
 
 | ID | Feature | Parent phase | Initial status |
 |---|---|---|---|

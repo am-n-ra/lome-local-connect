@@ -65,11 +65,11 @@ Use [`v2-seed.md`](./v2-seed.md) as the authority. Verify the map-first search-e
 
 ## 5. Phase 1 — Species
 
-**Outcome:** a visual and interaction blueprint that prevents the UI from being improvised during logic implementation.
+**Outcome:** an approved visual maquette and interaction blueprint that prevents the UI from being improvised during logic implementation.
 
 Use [`v2-species.md`](./v2-species.md) as the authority. First reproduce the supplied Canva reference frame: pale spatial map, upper-left Acheter/Vendre switch, small upper-right account/credit indicator, right-side plus/location controls, one floating search pill, full-width rounded white bottom sheet, centered grab handle, Proche de vous/Voir tout row, one complete facility/product card, partial next card and one dark-green availability CTA. Only after this frame is faithful may responsive extensions add states without changing its hierarchy.
 
-**Species proof:** approved reference-faithful arrival frame plus wireframe/state compositions for search, results, facility, catalogue, availability, comparison, Auth, transaction and seller workspace; design tokens and a 320/375/768/1280 proof matrix proving that extensions inherit the frame rather than replacing it with a dashboard.
+**Species proof:** the complete static maquette and S01–S17 state inventory in [`docs/maquette/omni-species-maquette.md`](./docs/maquette/omni-species-maquette.md), including the reference-faithful arrival frame, search, options, facility/catalogue, availability, comparison, Auth, transaction, seller, wallet and recovery compositions; approved design tokens; and a 320/375/768/1280 proof matrix proving that extensions inherit the frame rather than replacing it with a dashboard.
 
 ## 6. Phase 2 — Root System
 

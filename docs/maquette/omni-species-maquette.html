@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omni Species — Visual Maquette</title>
+  <style>
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; color: #21483e; background: #f4f5f2; --ink:#21483e; --muted:#92a29b; --forest:#1f5848; --mint:#d9f4e6; --peach:#f9e5d8; --coral:#e99373; --line:#e7eee9; }
+    * { box-sizing: border-box; }
+    body { margin:0; background: radial-gradient(circle at 50% -10%, #fff 0, #f4f5f2 48%, #ecefeb 100%); }
+    .board { width:min(1440px,100%); margin:auto; padding:48px 32px 80px; }
+    .board-header { display:flex; justify-content:space-between; gap:24px; align-items:end; margin-bottom:32px; }
+    .board-header h1 { margin:4px 0 0; font-size:clamp(28px,4vw,52px); letter-spacing:-.07em; }
+    .board-header p { max-width:480px; margin:0; color:var(--muted); font-size:13px; line-height:1.55; }
+    .eyebrow { color:#87a096; font-size:9px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:28px; align-items:start; }
+    .artboard { display:grid; gap:12px; }
+    .artboard h2 { margin:0; font-size:14px; letter-spacing:-.03em; }
+    .artboard p { margin:0; color:var(--muted); font-size:10px; line-height:1.45; }
+    .phone { position:relative; width:280px; height:570px; margin:auto; overflow:hidden; border:1px solid #d7dfda; border-radius:36px; background:#edf1ee; box-shadow:0 22px 55px rgba(42,72,63,.16); }
+    .phone::before { position:absolute; z-index:8; top:8px; left:50%; width:68px; height:5px; transform:translateX(-50%); border-radius:999px; background:#20463d; opacity:.9; content:""; }
+    .map { position:absolute; inset:0; overflow:hidden; background:#edf1ee; }
+    .map::before { position:absolute; inset:0; opacity:.55; background-image:radial-gradient(rgba(78,110,99,.22) .7px,transparent .7px); background-size:8px 8px; content:""; }
+    .map::after { position:absolute; inset:0; opacity:.32; background:linear-gradient(140deg,transparent 0 22%,rgba(255,255,255,.9) 22.2% 22.7%,transparent 23% 44%,rgba(210,222,216,.8) 44.2% 44.8%,transparent 45% 67%,rgba(255,255,255,.95) 67.2% 67.8%,transparent 68%); content:""; }
+    .map-land { position:absolute; width:360px; height:260px; top:130px; left:-35px; border:1px solid rgba(192,209,200,.5); border-radius:46% 54% 39% 61%; background:rgba(220,229,223,.5); transform:rotate(-17deg); }
+    .map-land.two { width:180px; height:145px; top:256px; left:115px; opacity:.64; transform:rotate(18deg); }
+    .top { position:absolute; z-index:5; top:27px; left:18px; right:18px; display:flex; justify-content:space-between; align-items:center; }
+    .roles { display:flex; gap:2px; padding:3px; border-radius:999px; background:rgba(255,255,255,.78); box-shadow:0 7px 18px rgba(49,78,69,.1); }
+    .roles span { padding:7px 11px; border-radius:999px; color:var(--ink); font-size:9px; font-weight:900; }
+    .roles .active { color:#fff; background:var(--forest); }
+    .orb { display:grid; width:29px; height:29px; place-items:center; border-radius:50%; color:#9b7d36; background:#f6d96f; font-size:8px; font-weight:900; box-shadow:0 7px 16px rgba(49,78,69,.1); }
+    .controls { position:absolute; z-index:5; top:86px; right:17px; display:grid; gap:8px; }
+    .control { display:grid; width:34px; height:34px; place-items:center; border-radius:12px; color:var(--ink); background:rgba(255,255,255,.86); box-shadow:0 8px 17px rgba(49,78,69,.13); font-size:19px; }
+    .control.loc { color:var(--forest); font-size:16px; }
+    .marker { position:absolute; z-index:4; top:174px; left:50%; display:grid; justify-items:center; gap:7px; transform:translateX(-50%); }
+    .marker-dot { display:grid; width:16px; height:16px; place-items:center; border:2px solid #df9677; border-radius:50%; background:#fff; box-shadow:0 0 0 5px rgba(233,147,115,.12); }
+    .marker-label { padding:5px 8px; border-radius:7px; color:var(--ink); background:rgba(255,255,255,.88); font-size:7px; font-weight:900; letter-spacing:.06em; }
+    .search { position:absolute; z-index:6; right:17px; bottom:220px; left:17px; display:flex; align-items:center; gap:8px; min-height:38px; padding:0 9px 0 12px; border:1px solid rgba(255,255,255,.95); border-radius:999px; background:#fff; box-shadow:0 12px 24px rgba(45,72,65,.14); color:#94aaa1; font-size:9px; }
+    .search .chev { display:grid; width:27px; height:27px; place-items:center; margin-left:auto; border-radius:50%; color:var(--ink); background:#f0f5f1; font-size:14px; }
+    .sheet { position:absolute; z-index:5; right:0; bottom:0; left:0; min-height:232px; padding:0 16px 17px; border-radius:27px 27px 0 0; background:#fff; box-shadow:0 -8px 26px rgba(45,72,65,.1); }
+    .handle { width:43px; height:4px; margin:9px auto 12px; border-radius:999px; background:#d7e2dc; }
+    .sheet-title { display:flex; justify-content:space-between; align-items:end; gap:12px; }
+    .sheet-title h3 { margin:0; color:var(--ink); font-size:16px; letter-spacing:-.06em; }
+    .sheet-title a { color:var(--coral); font-size:8px; font-weight:900; }
+    .rail { display:flex; gap:9px; overflow:hidden; margin-top:12px; }
+    .card { flex:0 0 218px; padding:9px; border:1px solid #eef2ef; border-radius:17px; background:#fbfdfb; box-shadow:0 7px 17px rgba(45,72,65,.06); }
+    .card-head { display:flex; align-items:start; gap:8px; min-height:66px; }
+    .card-icon { display:grid; width:31px; height:31px; place-items:center; flex:none; border-radius:11px; color:#db855f; background:var(--peach); font-size:15px; }
+    .card-copy { display:grid; min-width:0; gap:4px; }
+    .status { width:max-content; padding:3px 6px; border-radius:999px; color:#27815d; background:var(--mint); font-size:6px; font-weight:900; letter-spacing:.08em; }
+    .card strong { overflow:hidden; color:var(--ink); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+    .card small { overflow:hidden; color:var(--muted); font-size:7px; text-overflow:ellipsis; white-space:nowrap; }
+    .cta { display:grid; min-height:30px; place-items:center; border-radius:11px; color:#fff; background:var(--forest); font-size:8px; font-weight:900; }
+    .second .card { flex-basis:180px; opacity:.48; }
+    .expanded .search { bottom:221px; border-radius:17px; align-items:start; min-height:60px; padding-top:11px; }
+    .expanded .search-text { color:var(--ink); }
+    .options { position:absolute; z-index:7; right:17px; bottom:289px; left:17px; padding:12px; border-radius:17px; background:#fff; box-shadow:0 15px 34px rgba(45,72,65,.15); }
+    .options h4 { margin:0 0 8px; font-size:11px; }
+    .filter { display:flex; justify-content:space-between; padding:8px 0; border-top:1px solid var(--line); color:var(--muted); font-size:8px; }
+    .detail .sheet, .availability .sheet, .auth .sheet, .seller .sheet { min-height:302px; }
+    .detail .search, .availability .search, .auth .search, .seller .search { display:none; }
+    .detail-head { display:flex; align-items:start; gap:9px; margin-top:4px; }
+    .detail-head .card-icon { width:39px; height:39px; }
+    .detail-head strong { display:block; font-size:16px; letter-spacing:-.05em; }
+    .detail-head small { display:block; margin-top:4px; color:var(--muted); font-size:8px; }
+    .trust { display:inline-flex; margin-top:10px; padding:5px 8px; border-radius:999px; color:#27815d; background:var(--mint); font-size:7px; font-weight:900; }
+    .catalogue { display:grid; gap:6px; margin-top:11px; }
+    .catalogue-row { display:flex; align-items:center; gap:7px; padding:8px; border:1px solid var(--line); border-radius:11px; font-size:8px; }
+    .catalogue-row span:last-child { display:grid; gap:2px; }
+    .catalogue-row small { color:var(--muted); font-size:7px; }
+    .detail .cta, .availability .cta, .auth .cta, .seller .cta { margin-top:11px; min-height:34px; }
+    .availability .sheet { min-height:340px; }
+    .stepper { display:flex; align-items:center; gap:4px; margin:10px 0; color:var(--muted); font-size:7px; font-weight:900; }
+    .stepper b { color:var(--forest); }
+    .stepper i { height:1px; flex:1; background:#dfebe4; }
+    .selected-product { display:flex; align-items:center; gap:8px; margin-top:10px; padding:9px; border-radius:12px; background:#f0f8f4; font-size:9px; }
+    .selected-product small { display:block; margin-top:3px; color:var(--muted); font-size:7px; }
+    .auth .sheet { min-height:285px; }
+    .auth .sheet h3 { margin:4px 0 0; font-size:17px; letter-spacing:-.06em; }
+    .input { height:31px; margin-top:7px; border:1px solid var(--line); border-radius:10px; padding:9px; color:#adbbb5; font-size:8px; }
+    .seller .sheet { min-height:330px; }
+    .seller-toggle { display:flex; gap:5px; margin-top:8px; color:var(--muted); font-size:8px; }
+    .seller-toggle b { color:var(--forest); }
+    .seller-grid { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:12px; }
+    .metric { padding:9px; border-radius:12px; background:#f0f8f4; }
+    .metric small { display:block; color:var(--muted); font-size:7px; }
+    .metric strong { display:block; margin-top:4px; font-size:15px; letter-spacing:-.06em; }
+    .annotation { display:grid; gap:4px; padding:11px 13px; border:1px solid #e5eee8; border-radius:13px; background:rgba(255,255,255,.6); }
+    .annotation strong { font-size:11px; }
+    .annotation span { color:var(--muted); font-size:9px; line-height:1.45; }
+    @media(max-width:700px){ .board{padding:30px 16px 60px}.board-header{display:grid}.grid{grid-template-columns:1fr 1fr;gap:24px 12px}.phone{width:100%;height:auto;aspect-ratio:280/570}.annotation{grid-column:1/-1} }
+    @media(max-width:450px){ .grid{grid-template-columns:1fr}.phone{width:280px;height:570px} }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <header class="board-header">
+      <div><span class="eyebrow">Omni · Species 002</span><h1>Voir avant de bouger.</h1></div>
+      <p>Maquette visuelle de référence. Le premier écran est la composition Canva fournie : map pâle et spatiale, switch Acheter/Vendre, orbite J5, contrôles à droite, search pill, sheet blanche et carte proche de vous.</p>
+    </header>
+    <section class="grid">
+      <article class="artboard"><div><span class="eyebrow">Buyer · 01</span><h2>Arrival / référence exacte</h2><p>La seule composition autorisée pour le premier frame.</p></div><div class="phone"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="marker"><div class="marker-dot"></div><div class="marker-label">BOULANGERIE BIO</div></div><div class="search"><span>⌕</span><span>Rechercher un commerce, un produit…</span><span class="chev">⌄</span></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><h3>Proche de vous</h3><a>Voir tout</a></div><div class="rail"><div class="card"><div class="card-head"><div class="card-icon">◔</div><div class="card-copy"><span class="status">● DISPONIBLE</span><strong>Le Fournil d'Or</strong><small>Boulangerie &amp; Pâtisserie · 450m</small></div></div><div class="cta">Vérifier la disponibilité</div></div><div class="card second"><div class="card-head"><div class="card-icon">M</div><div class="card-copy"><span class="status">● DISPONIBLE</span><strong>Marché local</strong><small>Produits frais · 800m</small></div></div></div></div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Buyer · 02</span><h2>Search / options</h2><p>La pill s’ouvre sans déplacer la map ni fabriquer une deuxième barre.</p></div><div class="phone expanded"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="marker"><div class="marker-dot"></div><div class="marker-label">BOULANGERIE BIO</div></div><div class="options"><h4>Options de recherche</h4><div class="filter"><span>Catégorie</span><b>Toutes</b></div><div class="filter"><span>Quantité</span><b>1</b></div><div class="filter"><span>Budget</span><b>Sans plafond</b></div></div><div class="search"><span>⌕</span><span class="search-text">pain complet</span><span class="chev">⌃</span></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><h3>Résultats</h3><a>Effacer</a></div><div class="rail"><div class="card"><div class="card-head"><div class="card-icon">◔</div><div class="card-copy"><span class="status">● CATALOGUE</span><strong>Le Fournil d'Or</strong><small>1 offre · lieu certifié</small></div></div><div class="cta">Voir le catalogue</div></div></div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Buyer · 03</span><h2>Facility / catalogue</h2><p>La même sheet porte l’identité, la confiance puis les offres.</p></div><div class="phone detail"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><a>← Carte</a><a>×</a></div><div class="detail-head"><div class="card-icon">◔</div><div><strong>Le Fournil d'Or</strong><small>Boulangerie &amp; Pâtisserie · Cotonou</small></div></div><span class="trust">✓ Vendeur certifié</span><div class="catalogue"><div class="catalogue-row"><div class="card-icon">▧</div><span><b>Pain complet</b><small>Four du jour · 2,50 $ / pain</small></span></div><div class="catalogue-row"><div class="card-icon">▧</div><span><b>Croissant</b><small>Viennoiserie · 1,50 $ / unité</small></span></div></div><div class="cta">Vérifier la disponibilité →</div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Buyer · 04</span><h2>Availability / 4 étapes</h2><p>Produit → Portée → Contraintes → Réponses. Rien n’est réservé.</p></div><div class="phone availability"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><a>← Retour</a><a>×</a></div><span class="eyebrow">Vérifier la disponibilité</span><h3 style="margin:0;font-size:17px;letter-spacing:-.06em">Le Fournil d'Or</h3><div class="stepper"><b>01 Produit</b><i></i><span>02 Portée</span><i></i><span>03 Contraintes</span><i></i><span>04 Réponses</span></div><div class="selected-product"><div class="card-icon">▧</div><div><b>Pain complet</b><small>Sélectionné dans le catalogue</small></div></div><div class="filter" style="margin-top:9px;border-top:0"><span>Quantité</span><b>2 pains</b></div><div class="filter"><span>Budget</span><b>Sans plafond</b></div><div class="cta">Envoyer la demande</div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Access · 05</span><h2>Auth / unlock</h2><p>La carte publique reste visible ; le compte déverrouille recherche et disponibilité.</p></div><div class="phone auth"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><span class="eyebrow">Compte Omni</span><a>×</a></div><h3>Recherchez avec certitude</h3><p style="margin:7px 0;color:var(--muted);font-size:8px;line-height:1.45">La carte publique reste ouverte. Votre compte débloque la recherche catalogue et la disponibilité.</p><div class="input">vous@exemple.com</div><div class="input">Mot de passe</div><div class="cta">Se connecter</div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Seller · 06</span><h2>Vendre / workspace</h2><p>Le vendeur reste dans la même géographie et ouvre ses opérations en sheets.</p></div><div class="phone seller"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span>Acheter</span><span class="active">Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><div><span class="eyebrow">Espace vendeur</span><h3>Votre réseau</h3></div><a>Compte</a></div><div class="seller-toggle"><b>Résumé</b><span>Demandes</span><span>Catalogue</span></div><div class="seller-grid"><div class="metric"><small>Facilités</small><strong>01</strong></div><div class="metric"><small>Demandes actives</small><strong>03</strong></div><div class="metric"><small>Offres publiées</small><strong>05</strong></div><div class="metric"><small>Statut</small><strong>✓</strong></div></div><div class="cta">Ouvrir la facilité</div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">Transaction · 07</span><h2>Room / reprise</h2><p>Après l’intention, la timeline et le QR deviennent la surface de handoff.</p></div><div class="phone detail"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><div><span class="eyebrow">Transaction · étape 02</span><h3>Votre achat</h3></div><a>×</a></div><div class="selected-product"><div class="card-icon">QR</div><div><b>Pain complet · ×2</b><small>Le Fournil d'Or · intention créée</small></div></div><div class="catalogue"><div class="catalogue-row"><div class="card-icon">01</div><span><b>Confirmation vendeur</b><small>En attente de validation</small></span></div><div class="catalogue-row"><div class="card-icon">02</div><span><b>Paiement externe</b><small>Cash · Mobile Money · à choisir</small></span></div></div><div class="cta">Afficher le QR de vérification</div></div></div></article>
+      <article class="artboard"><div><span class="eyebrow">States · 08</span><h2>Empty / error / recovery</h2><p>Chaque surface a un état honnête, une action et une reprise.</p></div><div class="phone detail"><div class="map"><div class="map-land"></div><div class="map-land two"></div></div><div class="top"><div class="roles"><span class="active">Acheter</span><span>Vendre</span></div><div class="orb">J5</div></div><div class="controls"><div class="control">＋</div><div class="control loc">◎</div></div><div class="sheet"><div class="handle"></div><div class="sheet-title"><span class="eyebrow">Récupération</span><a>×</a></div><div class="annotation" style="margin-top:12px"><strong>Votre demande est conservée</strong><span>La connexion a été interrompue. Vous pouvez reprendre sans recréer l’action.</span><div class="cta">Reprendre la demande</div></div><div class="annotation" style="margin-top:8px"><strong>Aucune offre dans cette vue</strong><span>Déplacez la carte ou modifiez votre besoin.</span></div></div></div></article>
+    </section>
+  </main>
+</body>
+</html>

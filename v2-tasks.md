@@ -45,9 +45,9 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | Unit | Nature Way phase | Dependency | Status |
 |---|---|---|---|
 | SEED | Seed and PRD | None | `ready` |
-| SPECIES | Design blueprint | SEED | `ready` |
-| ROOTS | Root System | SEED, SPECIES | `ready` |
-| TRUNK | Buyer map → availability core | ROOTS | `todo` |
+| SPECIES | Design blueprint and complete maquette | SEED | `in_progress` |
+| ROOTS | Root System | SEED, SPECIES | `blocked` |
+| TRUNK | Buyer map → availability core | ROOTS | `blocked` |
 | HEARTWOOD | Harden buyer trunk | TRUNK | `todo` |
 | BRANCH-A | Trust and facility verification | HEARTWOOD | `todo` |
 | BRANCH-B | Seller map-first operations | BRANCH-A, TRUNK | `todo` |
@@ -66,10 +66,10 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | RESET-001 | Freeze current prototype commit, deployment and known gaps as reference | None | `ready` | Reference record |
 | SEED-001 | Reconcile and approve product identity, promise, actors and core journey | RESET-001 | `ready` | Owner approval in `v2-seed.md` |
 | SEED-002 | Approve build-now, manual and deferred scope | SEED-001 | `ready` | Scope gate |
-| SPECIES-001 | Approve map-first mobile and desktop composition from supplied artistic reference | SEED-001 | `ready` | Blueprint approval |
-| SPECIES-002 | Approve color, type, spacing, material, motion and status semantics | SPECIES-001 | `ready` | Token/contrast review |
-| SPECIES-003 | Approve screen/state compositions and surface ownership | SPECIES-001 | `ready` | Arrival-to-transaction wireframe set |
-| SPECIES-004 | Approve 320/375/768/1280 responsive and accessibility proof matrix | SPECIES-002 | `ready` | Proof matrix |
+| SPECIES-001 | Reproduce the supplied Canva buyer arrival frame as the exact reference composition | SEED-001 | `review` | S01 arrival frame in complete maquette |
+| SPECIES-002 | Lock color, type, spacing, material, motion and status semantics | SPECIES-001 | `review` | Token/contrast review |
+| SPECIES-003 | Create and review the S01–S17 screen/state maquette and surface ownership | SPECIES-001 | `review` | Complete static maquette and state contract |
+| SPECIES-004 | Approve 320/375/768/1280 responsive and accessibility inheritance matrix | SPECIES-002 | `review` | Responsive proof matrix |
 
 ## 4. Root System
 

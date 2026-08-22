@@ -1,10 +1,12 @@
 # Omni V2 — Species Design Blueprint
 
 **Document ID:** `OMNI-V2-SPECIES-002`
-**Status:** Reference-faithful blueprint for approval before Trunk implementation
+**Status:** Blueprint and maquette contract pending owner approval before Root System or Trunk implementation
 **Method:** Nature Way — Phase 1, Species
 **Parent:** [`v2-seed.md`](./v2-seed.md)
 **Reference asset:** [`docs/references/omni-species-reference.jpeg`](./docs/references/omni-species-reference.jpeg)
+**Complete maquette:** [`docs/maquette/omni-species-maquette.html`](./docs/maquette/omni-species-maquette.html)
+**Maquette contract:** [`docs/maquette/omni-species-maquette.md`](./docs/maquette/omni-species-maquette.md)
 
 > **Species decision:** The supplied Canva image is not a loose mood board. It is the visual reference frame for Omni’s first buyer surface. The implementation must reproduce its composition, hierarchy, proportions and restraint before adding responsive extensions or business-state surfaces.
 
@@ -200,16 +202,23 @@ The role switch, account indicator, plus control, location control, search input
 
 Touch targets remain comfortably reachable. The card rail supports keyboard scrolling and does not trap focus. Status changes announce loading, empty, error, locked, permission, success and recovery states. Contrast must remain valid over both the live map and the fallback treatment; translucency is never the only contrast mechanism.
 
-## 13. Species gate
+## 13. Complete maquette gate
+
+The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus search, options, facility/catalogue, availability, Auth, seller, transaction and recovery compositions. The companion contract enumerates S01–S17 and the required loading, ready, empty, error, locked, success, pending and recovery states.
+
+No implementation may introduce an alternative layout because a state is technically more complex. It must inherit the arrival species or receive an explicitly approved mini-species.
+
+## 14. Species gate
 
 The Species is ready for Root System/Trunk implementation only when the owner confirms:
 
 1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
-2. the role switch is upper-left, the compact map controls are right-aligned, the search is one floating pill and the sheet is the primary contextual surface;
-3. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
-4. the map remains real geographic context with a quiet pale treatment and no fabricated data;
-5. seller and buyer use the same spatial language without introducing a generic dashboard;
-6. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
-7. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
+2. the complete maquette and S01–S17 state inventory are approved as the visual reference DNA;
+3. the role switch is upper-left, the compact map controls are right-aligned, the search is one floating pill and the sheet is the primary contextual surface;
+4. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
+5. the map remains real geographic context with a quiet pale treatment and no fabricated data;
+6. seller and buyer use the same spatial language without introducing a generic dashboard;
+7. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
+8. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.

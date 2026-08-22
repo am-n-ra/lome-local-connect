@@ -1,7 +1,7 @@
 # Omni V2 — Nature Way Architecture Reset Record
 
 **Document ID:** `OMNI-V2-RESET-001`
-**Status:** Architecture rewrite complete; Species correction pending owner approval; implementation not started
+**Status:** Species maquette required; implementation frozen pending owner approval
 **Method:** Nature Way
 **Date:** 2026-08-22
 
@@ -14,7 +14,7 @@ This record marks the transition from accumulated prototype patching to a Seed-d
 The product must now be read in this order:
 
 1. [`v2-seed.md`](./v2-seed.md) — product identity, laws, scope and success.
-2. [`v2-species.md`](./v2-species.md) — reference-faithful Canva composition, visual language, wireframes, surface ownership and responsive interaction blueprint.
+2. [`v2-species.md`](./v2-species.md) — reference-faithful Canva composition plus complete maquette, visual language, wireframes, surface ownership and responsive interaction blueprint.
 3. [`v2-roots.md`](./v2-roots.md) — domain ownership, persistence, API, security, invariants, recovery and migration.
 4. [`v2-flow.md`](./v2-flow.md) — actor-owned state machines, transitions, locks and terminal outcomes.
 5. [`v2-plan.md`](./v2-plan.md) — dependency-ordered growth sequence.
@@ -27,7 +27,7 @@ The former PRD and interface architecture paths remain as derived compatibility 
 
 The existing V2 branch and its public buyer proof are retained as historical reference. They may supply reusable MapLibre, adapter, test or deployment techniques only after a new unit passes the current Species, Root System and Flow contracts.
 
-The current prototype does not close the new Trunk or Heartwood gates. Its screenshots, fixtures and public UI evidence must not be used to claim that authenticated availability, seller trust, wallet, transaction, QR or fulfilment is production-ready.
+The current prototype does not close the Species maquette gate, new Trunk or Heartwood gates. Its screenshots, fixtures and public UI evidence must not be used to claim that authenticated availability, seller trust, wallet, transaction, QR or fulfilment is production-ready.
 
 ## 4. Preservation boundary
 
@@ -47,14 +47,14 @@ map arrival
 → response comparison
 ```
 
-Before code begins, the owner must approve the Seed, Species and Root System gates. The first Trunk must then be implemented as a complete vertical slice with real or explicitly bounded data, server authority, UI, Auth boundary, recovery states and proof.
+Before code begins, the owner must approve the Seed, the complete Species maquette and the Root System gate. The first Trunk must then be implemented as a complete vertical slice with real or explicitly bounded data, server authority, UI, Auth boundary, recovery states and proof.
 
 ## 6. Current outcome
 
 | Area | Outcome |
 |---|---|
 | Seed rewrite | Complete for review |
-| Species blueprint | Corrected for review; reproduces the supplied Canva composition and derives responsive extensions from it |
+| Species blueprint | Complete maquette created for review; implementation remains frozen until approval |
 | Root System rewrite | Complete for review |
 | Flow/state rewrite | Complete for review |
 | Feature inventory | Regenerated |
@@ -67,4 +67,4 @@ Before code begins, the owner must approve the Seed, Species and Root System gat
 
 ## 7. Acceptance decision required
 
-The owner’s next decision is whether to approve the rewritten Seed, the corrected Canva-faithful Species and the Root System as the new build authority. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
+The owner’s next decision is whether to approve the rewritten Seed and complete Species maquette. Root System and Trunk implementation remain blocked until that approval. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
