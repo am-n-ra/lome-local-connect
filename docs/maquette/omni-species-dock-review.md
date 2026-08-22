@@ -8,3 +8,7 @@ The rendered maquette now presents four explicit dock states in the first row: m
 The second row retains the supplied reference composition as the buyer nearby-result frame. The remaining rows extend that same sheet, card, and map language through facility/catalogue, availability, Auth, seller, transaction and recovery states.
 
 This is a visual review of the static maquette, not proof of the application code. The implementation remains frozen at the Species gate until the corrected dock contract is approved.
+
+## Final spacing correction
+
+The regenerated render was inspected after changing `.separated-phone .search` from the overlapping position to `bottom: 242px` and removing the pseudo-surface that visually occupied the same zone as the dock. In the nearby-result frame, the dock now sits above the sheet with a visible separation; the grid/sheet begins below its own boundary. The map-only, focused and Options states remain separate and do not introduce a result surface beneath the dock.
