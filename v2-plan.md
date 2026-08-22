@@ -104,7 +104,7 @@ Use [`v2-roots.md`](./v2-roots.md) and [`v2-flow.md`](./v2-flow.md). Implement o
 | `TRUNK-AVAILABILITY` | User completes Product → Scope → Constraints → Responses | Auth restoration, scope/constraint validation, freshness, non-reservation and response recovery |
 | `TRUNK-COMPARISON` | User can distinguish eligible options without premature contact or intent | Ordered response proof, stale/expired states and intent/contact locks |
 
-These units are nested Trunk work, not permission to build isolated UI pieces. The Trunk gate passes only when the complete chain is usable in production-like conditions.
+These units are nested Trunk work, not permission to build isolated UI pieces. The exact entry boundary, non-goals, invariants, context preservation and proof requirements are defined in [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md). The Trunk gate passes only when the complete chain is usable in production-like conditions.
 
 ### 7.2 Trunk acceptance path
 

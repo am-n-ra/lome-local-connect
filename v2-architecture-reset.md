@@ -55,11 +55,13 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 |---|---|
 | Seed rewrite | Complete for review |
 | Species blueprint | Complete maquette direction accepted to advance; map modes and return states are included |
-| Root System rewrite | Complete for review, including map context and protected route boundary |
+| Root System rewrite | Contract complete for review; proof ledger records local checks and remaining runtime gaps |
 | Flow/state rewrite | Complete for review |
 | Feature inventory | Regenerated |
 | Implementation plan | Regenerated |
 | Task backlog | Regenerated |
+| Root proof ledger | Created; Root gate remains `review` until runtime evidence is accepted |
+| Buyer Trunk entry boundary | Created; implementation remains blocked pending Root approval |
 | Code implementation | Not changed in this architecture pass |
 | Database migration | Not changed in this architecture pass |
 | Deployment | Not changed in this architecture pass |
@@ -67,4 +69,4 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 
 ## 7. Acceptance decision required
 
-The owner’s next decision is whether to approve the Root System contract. The Seed and Species direction have been advanced, but Root System and Trunk implementation remain blocked until the Root contract, migration boundary, security model, map context authority and recovery rules are accepted. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
+The owner’s next decision is whether to approve the Root System contract and its proof ledger. The Seed and Species direction have been advanced. Root is materially specified, but Trunk implementation remains blocked until the remaining runtime evidence is accepted or explicitly assigned as `manual`, `partial`, `blocked` or `deferred`. If approved, implementation begins only with the bounded buyer Trunk entry boundary. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
