@@ -8,10 +8,17 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check:boundary": "node scripts/check-client-boundary.mjs"
+    "check:boundary": "node scripts/check-client-boundary.mjs",
+    "server": "tsx server/index.ts",
+    "build:server": "tsc --noEmit",
+    "dev:full": "npm run build && npm run server"
   },
   "dependencies": {
+    "@neondatabase/auth": "^0.5.0-beta",
+    "@neondatabase/neon-js": "^0.7.0-beta",
+    "@neondatabase/serverless": "^1.1.0",
     "@vitejs/plugin-react": "latest",
+    "jose": "^6.2.10",
     "lucide-react": "latest",
     "maplibre-gl": "^6.5.0",
     "react": "latest",
@@ -21,10 +28,12 @@
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.2.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "jsdom": "latest",
     "playwright": "^1.62.1",
+    "tsx": "^4.23.12",
     "vitest": "latest"
   }
 }
