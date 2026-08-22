@@ -165,6 +165,17 @@ The facility sheet transitions into a catalogue surface without abandoning the m
 
 When `Vendre` is authorized, the same map-first species remains. The selected owned facility occupies the spatial center. Seller operations appear in contextual sheets and cards, not a generic left-hand admin dashboard. Product and coupon forms use the same card density and one primary action as the buyer card.
 
+### 8.7 Intermediate navigation and account states
+
+The maquette must include the surfaces that appear between major screens. These are not optional implementation details because they define how a user discovers and resumes the product.
+
+- **Global Menu:** opened from the top-right menu action while the map remains visible behind it. It contains only real routes or operations: Rechercher, Mes demandes, Transactions, role context and Compte. It must not list unavailable dashboard features.
+- **Guest Account Sheet:** opened from the compact account/credit indicator. It explains that public exploration is available, while catalogue search, availability and private actions require an account. It offers `Créer votre compte`, `Se connecter` and `Continuer sur la carte`.
+- **Authenticated Account Sheet:** shows the account identity, the one Omni Wallet summary, active requests/transactions and preferences/security. It remains a contextual sheet over the map, not a replacement dashboard.
+- **Context Resume Menu:** when a request or transaction is pending, the menu exposes the resumable action with its facility/product context, state and next action. It must not recreate or duplicate the operation.
+
+Opening Menu or Account pauses map motion, preserves viewport/query/selection, traps focus within the sheet only while open, and restores focus to the triggering control on close. `Escape`, back and the close action have the same safe return result. Every menu row has a destination or typed operation; no dead row is allowed. Guest and authenticated menus are separate states, and seller entries appear only when the account is authorized for seller context.
+
 ## 9. Material, color and typography tokens
 
 | Token | Initial direction | Reference use |
@@ -196,7 +207,7 @@ Cards and the sheet may use a short ease-in transition to explain emergence, but
 | 768px | Full map remains dominant; centered bounded sheet/rail preserves mobile anatomy; no left dashboard rail |
 | 1280px | Full map remains dominant; bounded centered sheet or compact bottom surface preserves the reference hierarchy; detail may be bounded, never a dashboard replacement |
 
-At every width, preserve independent safe areas for top controls, right controls, marker label, search pill and sheet. No horizontal page overflow is allowed. The sheet footer, if present, remains above the device gesture area and keyboard.
+At every width, preserve independent safe areas for top controls, menu action, account indicator, right controls, marker label, search dock, Options surface and sheet. No horizontal page overflow is allowed. The sheet footer, if present, remains above the device gesture area and keyboard. Menu and account sheets must never cover the role switch or the right-side map controls unless the state explicitly owns and visually dims them.
 
 ## 12. Accessibility and interaction contract
 
@@ -206,7 +217,7 @@ Touch targets remain comfortably reachable. The card rail supports keyboard scro
 
 ## 13. Complete maquette gate
 
-The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus search, options, facility/catalogue, availability, Auth, seller, transaction and recovery compositions. The companion contract enumerates S01–S17 and the required loading, ready, empty, error, locked, success, pending and recovery states.
+The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus dock states, search, options, facility/catalogue, availability, Auth, global Menu, guest Account, authenticated Account, context Resume, seller, transaction and recovery compositions. The companion contract enumerates S00–S21 and the required loading, ready, empty, error, locked, success, pending and recovery states.
 
 No implementation may introduce an alternative layout because a state is technically more complex. It must inherit the arrival species or receive an explicitly approved mini-species.
 
@@ -215,13 +226,14 @@ No implementation may introduce an alternative layout because a state is technic
 The Species is ready for Root System/Trunk implementation only when the owner confirms:
 
 1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
-2. the complete maquette and S01–S17 state inventory are approved as the visual reference DNA;
+2. the complete maquette and S00–S21 state inventory, including Menu and Account intermediate surfaces, are approved as the visual reference DNA;
 3. the role switch is upper-left, the compact map controls are right-aligned, the map-only search is a bottom dock and the result-state dock occupies a separate band above the sheet/grid;
 4. the dock has a right-aligned search action and a distinct Options/chevron control that never replaces submit;
 5. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
 6. the map remains real geographic context with a quiet pale treatment and no fabricated data;
 7. seller and buyer use the same spatial language without introducing a generic dashboard;
-8. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
-9. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
+8. search, catalogue, availability, Menu, Account and transaction states extend the same species instead of creating unrelated screens;
+9. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap;
+10. every visible menu/account action has a real destination or typed operation and a safe return path.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.

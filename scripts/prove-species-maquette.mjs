@@ -27,6 +27,12 @@ for (const width of widths) {
       focusedOptions: box('.expanded.separated-phone .options'),
       controls: box('.expanded.separated-phone .controls'),
       topbar: box('.expanded.separated-phone .top'),
+      menuPanel: box('.menu-panel'),
+      accountPanel: box('.account-panel'),
+      intermediateControls: box('.intermediate-phone .controls'),
+      intermediateTopbar: box('.intermediate-phone .top'),
+      menuCount: document.querySelectorAll('.menu-panel').length,
+      accountCount: document.querySelectorAll('.account-panel').length,
       source: Boolean(document.querySelector('.reference-panel img')),
       sections: [...document.querySelectorAll('.section-label')].map((node) => node.textContent.trim()),
     };
@@ -36,12 +42,18 @@ for (const width of widths) {
     focusedDockOptions: !intersects(state.focusedDock, state.focusedOptions),
     optionsControls: !intersects(state.focusedOptions, state.controls),
     optionsTopbar: !intersects(state.focusedOptions, state.topbar),
+    menuTopbar: !intersects(state.menuPanel, state.intermediateTopbar),
+    menuControls: !intersects(state.menuPanel, state.intermediateControls),
+    accountTopbar: !intersects(state.accountPanel, state.intermediateTopbar),
+    accountControls: !intersects(state.accountPanel, state.intermediateControls),
+    intermediateSurfaces: state.menuCount >= 2 && state.accountCount >= 2,
     sourceVisible: state.source,
-    allSectionsVisible: state.sections.length >= 2,
+    allSectionsVisible: state.sections.length >= 3,
   };
   Object.entries(checks).forEach(([name, passed]) => { if (!passed && name !== 'sourceVisible' && name !== 'allSectionsVisible') failures.push(`${width}:${name}`); });
-  if (!state.source) failures.push(`${width}:sourceVisible`);
-  if (!state.sections || state.sections.length < 2) failures.push(`${width}:allSectionsVisible`);
+  if (!checks.sourceVisible) failures.push(`${width}:sourceVisible`);
+  if (!checks.allSectionsVisible) failures.push(`${width}:allSectionsVisible`);
+
   console.log(JSON.stringify({ width, state, checks }));
   await page.close();
 }

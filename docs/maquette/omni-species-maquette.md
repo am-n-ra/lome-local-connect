@@ -51,7 +51,7 @@ The device border shown in the source image is a presentation frame only. The ap
 
 ## 4. Screen and state inventory
 
-Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern. S00 and S01 distinguish the map-only dock from the result-state composition shown in the supplied reference.
+Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern. S00 and S01 distinguish the map-only dock from the result-state composition shown in the supplied reference. S18–S21 make the intermediate navigation and account surfaces explicit.
 
 | ID | Surface/state | Visual composition | User can do | Required truth |
 |---|---|---|---|---|
@@ -73,10 +73,14 @@ Every row is part of the Species maquette. A unit inherits the arrival frame unl
 | S15 | Trust/certification | Same sheet family with evidence checklist and admin outcome | Submit/resume evidence, read outcome | Claim creates verification request; admin certification produces unconfirmed |
 | S16 | Wallet/Pro | Same sheet/card language; no second rechargeable wallet visual | Recharge Omni Wallet, allocate platform credit, view facility entitlement | Wallet is account-level and platform-only in V1 |
 | S17 | Empty/error/recovery | Same sheet and map; honest copy and one next action | Retry, cancel, resume or return | Never show success copy for missing data or failed persistence |
+| S18 | Global Menu | Bottom sheet over the preserved map; role context, Rechercher, Mes demandes, Transactions, Vendre/Compte and close | Open a real destination, switch authorized context, close and return | No dead menu row; guest entries remain public-safe |
+| S19 | Guest Account | Account sheet from the J5 orb; explanation, Create account, Sign in and Continue on map | Start Auth or return to map | Public exploration remains available; protected actions remain locked |
+| S20 | Authenticated Account | Account sheet from J5; identity, Omni Wallet summary, active requests/transactions, preferences and role switch | Open account-owned surfaces, switch authorized role, close and return | One wallet only; no invented balance or permission |
+| S21 | Context Resume | Menu sheet with pending request/transaction context, next action and safe return | Resume, inspect transactions, return to map | Resume reuses the original operation and never duplicates it |
 
 ## 5. State coverage for each substantial surface
 
-The maquette does not only show happy paths. Every S01–S17 surface must have a designed state for the applicable entries below before its implementation gate closes.
+The maquette does not only show happy paths. Every S00–S21 surface must have a designed state for the applicable entries below before its implementation gate closes.
 
 | State | Visual requirement | Interaction requirement |
 |---|---|---|
@@ -124,12 +128,14 @@ The comparison card may inherit the sheet, typography, radius, spacing, status p
 
 The dock gate closes only when the maquette proves all four dock states: map-only bottom dock, result-state separated dock, focused dock with right-side submit, and options surface opening upward from the dock without entering the result grid. The dock and the result grid must be separate layout siblings with a measured gap at every required width.
 
+The intermediate-surface gate closes only when the maquette shows the Menu opened from the top-right action, the Account sheet opened from J5 for a visitor and authenticated user, the role-aware menu difference, the context-resume item and the safe return path for each. No sheet may hide the navigation owner without a visible close/back rule.
+
 ## 10. Species gate
 
 Species is not approved merely because the first screen looks attractive. The gate closes only when:
 
 1. the supplied Canva frame is reproduced as S01;
-2. S01–S17 have a written composition and applicable state coverage;
+2. S00–S21 have a written composition and applicable state coverage, including Menu, Account and context resume;
 3. the complete static maquette is available for review;
 4. design tokens, surface ownership and responsive inheritance are explicit;
 5. every new visual pattern has an owner and a mini-species decision;
