@@ -4,7 +4,7 @@
 **Method:** Nature Way — Phase 2, Root System
 **Status:** `review`
 **Parent:** [`v2-roots.md`](./v2-roots.md)
-**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-root-schema-review.md`](./v2-root-schema-review.md), [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`v2-root-qr-evidence.md`](./v2-root-qr-evidence.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
+**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-root-schema-review.md`](./v2-root-schema-review.md), [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`v2-root-qr-evidence.md`](./v2-root-qr-evidence.md), [`v2-root-closure-register.md`](./v2-root-closure-register.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
 
 ## Purpose
 
@@ -54,4 +54,4 @@ The Root System cannot move to Trunk merely because this document exists. The fo
 
 **Decision:** keep Trunk implementation blocked until the acceptance evidence above is either produced or explicitly marked `manual`, `partial`, `blocked` or `deferred` with an owner and recovery path.
 
-The Root System is materially specified, including the new map contract, but it is not yet runtime-verified. This is an intentional gate, not a failure: it prevents a visually complete maquette or historical prototype from being mistaken for a complete production foundation.
+The Root System is materially specified, including the new map contract, but it is not yet runtime-verified. The assigned blockers and their owners are recorded in [`v2-root-closure-register.md`](./v2-root-closure-register.md). This is an intentional gate, not a failure: it prevents a visually complete maquette or historical prototype from being mistaken for a complete production foundation.

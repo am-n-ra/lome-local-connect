@@ -82,6 +82,9 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 
 ## 4. Root System
 
+The active Root closure register is [`v2-root-closure-register.md`](./v2-root-closure-register.md). It assigns owners and stop conditions for Auth, migration preservation, ownership, wallet integrity, QR concurrency, route privacy, browser recovery and fixtures. Trunk remains blocked until these items are closed or explicitly accepted as manual/blocked/deferred.
+
+
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
 | ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | Build, Vercel bundling, `check:boundary`, public API 200, protected API 401, branch JWKS reachability and fail-closed malformed-token tests pass; connected-browser inspection hit HTTP 504 |
