@@ -153,7 +153,7 @@ RETURNS trigger
 LANGUAGE plpgsql
 AS $$
 BEGIN
-  RAISE EXCEPTION '% is append-only' USING ERRCODE = '55000';
+  RAISE EXCEPTION '% is append-only', TG_TABLE_NAME USING ERRCODE = '55000';
 END;
 $$;
 
