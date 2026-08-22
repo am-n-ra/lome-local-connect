@@ -68,7 +68,8 @@ for (const width of widths) {
       viewportWidth: window.innerWidth,
     };
   });
-  if (Object.values(measure.overlaps).some(Boolean)) throw new Error(`Base overlay collision at ${width}px: ${JSON.stringify(measure.overlaps)}`);
+  const baseGeometry = await measure();
+  if (Object.values(baseGeometry.overlaps).some(Boolean)) throw new Error(`Base overlay collision at ${width}px: ${JSON.stringify(baseGeometry.overlaps)}`);
 
   const optionsButton = page.getByRole('button', { name: 'Open search options' });
   const optionsButtonCount = await optionsButton.count();
@@ -122,7 +123,7 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAuth, menu, menuActions, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: measure.bodyWidth, viewportWidth: measure.viewportWidth, overlaps: measure.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAuth, menu, menuActions, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
 await browser.close();

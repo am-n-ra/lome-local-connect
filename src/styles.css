@@ -83,11 +83,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(239, 126, 66
 .map-canvas .maplibregl-ctrl-attrib { display: none; }
 .map-error { top: 19%; left: 50%; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); transform: translateX(-50%); padding: 10px 12px 10px 15px; border: 1px solid rgba(255,255,255,.75); border-radius: 12px; color: #6c3c2a; background: rgba(255, 242, 234, .9); box-shadow: var(--shadow); backdrop-filter: blur(16px); font-size: 12px; }
 .map-error button, .secondary-button { border: 1px solid rgba(239, 126, 66, .3); border-radius: 999px; padding: 8px 12px; color: var(--orange-deep); background: rgba(255, 255, 255, .64); font-size: 11px; font-weight: 700; }
-.map-controls { left: clamp(14px, 3vw, 42px); bottom: max(172px, calc(env(safe-area-inset-bottom) + 166px)); display: grid; gap: 8px; }
+.map-controls { left: clamp(14px, 3vw, 42px); bottom: max(198px, calc(var(--safe-bottom) + 190px)); display: grid; gap: 8px; }
 .map-controls button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255, 255, 255, .76); border-radius: 12px; color: var(--ink); background: rgba(255, 251, 247, .7); box-shadow: 0 12px 28px rgba(52, 35, 24, .14); backdrop-filter: blur(16px); font-size: 20px; transition: transform .16s var(--ease), background .16s var(--ease); }
 .map-controls button:hover { background: rgba(255, 251, 247, .94); transform: translateY(-1px); }
 
-.result-rail { left: 50%; bottom: max(112px, calc(env(safe-area-inset-bottom) + 106px)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: min(780px, calc(100% - 28px)); transform: translateX(-50%); }
+.result-rail { left: 50%; bottom: max(140px, calc(var(--safe-bottom) + 132px)); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: min(780px, calc(100% - 28px)); transform: translateX(-50%); }
 .facility-teaser { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; min-width: 0; padding: 10px; border: 1px solid rgba(255, 255, 255, .8); border-radius: 15px; color: var(--ink); background: rgba(255, 251, 247, .86); box-shadow: 0 14px 35px rgba(52, 35, 24, .15); backdrop-filter: blur(18px); text-align: left; transition: transform .16s var(--ease), background .16s var(--ease); }
 .facility-teaser:hover { background: rgba(255, 251, 247, .98); transform: translateY(-2px); }
 .options-is-open .result-rail { display: none; }
@@ -240,11 +240,11 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(239, 126, 66
   .brand small { display: none; }
   .signin-button { min-height: 35px; padding: 0 11px; }
   .map-caption { top: 198px; left: 12px; }
-  .map-controls { bottom: max(166px, calc(env(safe-area-inset-bottom) + 160px)); left: 12px; }
+  .map-controls { bottom: max(198px, calc(var(--safe-bottom) + 190px)); left: 12px; }
   .map-controls button { width: 34px; height: 34px; }
   .map-status { top: 198px; right: 12px; bottom: auto; }
   .map-attribution { display: block; top: 254px; left: 12px; right: 12px; bottom: auto; max-width: none; }
-  .result-rail { bottom: max(112px, calc(env(safe-area-inset-bottom) + 106px)); width: calc(100% - 20px); gap: 5px; }
+  .result-rail { bottom: max(140px, calc(var(--safe-bottom) + 132px)); width: calc(100% - 20px); gap: 5px; }
   .facility-teaser { grid-template-columns: auto 1fr; gap: 6px; padding: 7px; border-radius: 13px; }
   .teaser-pin { width: 23px; height: 23px; border-radius: 8px; }
   .teaser-copy strong { font-size: 9px; }
