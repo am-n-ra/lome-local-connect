@@ -1,4 +1,4 @@
-import { handleApi } from '../../../src/server/http';
+import { handleApi } from '../../src/server/http';
 
 export default async function handler(req: any, res: any) {
   const protocol = String(req.headers?.['x-forwarded-proto'] ?? 'https');
