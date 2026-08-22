@@ -2,10 +2,10 @@ import { createRemoteJWKSet, jwtVerify } from 'jose';
 import type { IncomingHttpHeaders } from 'node:http';
 
 let keySet: ReturnType<typeof createRemoteJWKSet> | null = null;
+const DEFAULT_NEON_AUTH_JWKS_URL = 'https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json';
 
 function remoteKeys() {
-  const url = process.env.NEON_AUTH_JWKS_URL;
-  if (!url) throw new Error('NEON_AUTH_JWKS_URL is not configured for the server runtime.');
+  const url = (process.env.NEON_AUTH_JWKS_URL ?? DEFAULT_NEON_AUTH_JWKS_URL).trim();
   keySet ??= createRemoteJWKSet(new URL(url));
   return keySet;
 }

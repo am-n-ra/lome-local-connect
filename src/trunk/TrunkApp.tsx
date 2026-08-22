@@ -222,7 +222,7 @@ export function TrunkApp() {
   const mainClass = `trunk-app${optionsOpen ? ' options-is-open' : ''}${menuOpen ? ' menu-is-open' : ''}`;
 
   return (
-    <main className={mainClass}>
+    <main className={mainClass} data-auth={authClient ? 'configured' : 'missing'}>
       <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} />
       <div className="map-vignette" aria-hidden="true" />
 
@@ -246,11 +246,6 @@ export function TrunkApp() {
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Reset map search</button>
       </aside>}
 
-      <div className="map-caption" aria-live="polite">
-        <span className="caption-icon"><MapPin size={15} /></span>
-        <span><strong>{committedQuery ? `Results for “${committedQuery}”` : 'The world around you'}</strong><small>{mapState === 'loading' ? 'Updating the live map…' : mapState === 'empty' ? 'No facilities in this view yet' : `${facilities.length} public places in view`}</small></span>
-      </div>
-
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={() => setBounds((current) => current ? [...current] as [number, number, number, number] : undefined)}>Retry</button></div>}
 
       {panel === 'none' && facilities.length > 0 && <aside className="result-rail" aria-label="Facilities in view">{facilities.slice(0, 3).map((facility) => <button className="facility-teaser" type="button" key={facility.id} onClick={() => selectFacility(facility)}><span className="teaser-pin"><MapPin size={14} /></span><span className="teaser-copy"><strong>{facility.name}</strong><small>{facility.category} · {facility.productCount ? `${facility.productCount} live offer${facility.productCount === 1 ? '' : 's'}` : 'public place'}</small></span><span className={`teaser-trust ${facility.trust}`}>{facility.trust === 'unclaimed' ? 'Public' : facility.trust === 'confirmed' ? 'Confirmed' : 'Certified'}</span></button>)}</aside>}
@@ -264,7 +259,7 @@ export function TrunkApp() {
             <button type="submit">Search</button>
           </div>
           <div className="dock-search-meta">
-            <span><Sparkles size={13} /> {sessionUser ? 'Search the visible map' : 'Explore publicly; sign in to search'}</span>
+            <span className="dock-context" aria-live="polite"><Sparkles size={13} /> {committedQuery ? `Results for “${committedQuery}”` : mapState === 'loading' ? 'Updating the live map…' : mapState === 'empty' ? 'No public places in this view' : `${facilities.length} public places in view`}</span>
             <button className="dock-more" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Close search options' : 'Open search options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><span>Options</span><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
           </div>
         </form>

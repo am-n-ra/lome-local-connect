@@ -21,7 +21,7 @@ const REMOTE_STYLE: StyleSpecification = {
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-saturation': -1, 'raster-contrast': 0.12, 'raster-brightness-min': 0.18, 'raster-brightness-max': 0.96, 'raster-opacity': 0.96 } }],
 };
 const FALLBACK_STYLE = '/omni-local-style.json';
 const SOURCE = 'omni-v2-facilities';
@@ -42,9 +42,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
+  const rotationTimer = useRef<number | null>(null);
   const fallbackUsed = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'fallback'>('loading');
+  const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
+  const [zoom, setZoom] = useState(1.35);
+  const [centerLongitude, setCenterLongitude] = useState(1.22);
   facilitiesRef.current = facilities;
 
   useEffect(() => {
@@ -63,11 +67,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       minZoom: 1,
       maxZoom: 18,
       attributionControl: false,
-      cooperativeGestures: true,
+      cooperativeGestures: false,
     });
     mapRef.current = map;
-    const pause = () => { rotating.current = false; };
-    const resume = () => { if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && map.getZoom() < 2.4) rotating.current = true; };
+    const pause = () => { rotating.current = false; setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused'); };
+    const resume = () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { rotating.current = false; setRotationState('reduced'); return; }
+      if (map.getZoom() < 2.4) { rotating.current = true; setRotationState('idle'); }
+    };
     const emitBounds = () => {
       const bounds = map.getBounds();
       const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
@@ -81,9 +88,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     map.on('wheel', pause);
     map.on('dragstart', pause);
     map.on('zoomstart', pause);
-    map.on('moveend', resume);
+    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); resume(); });
     map.on('dragend', emitBounds);
-    map.on('zoomend', emitBounds);
+    map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); });
     map.on('error', () => {
       if (fallbackUsed.current) return;
       fallbackUsed.current = true;
@@ -101,22 +108,27 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     map.on('load', () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       setMapStatus('ready');
+      setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'idle');
       map.setProjection({ type: 'globe' });
+      setZoom(map.getZoom());
       map.resize();
       addLayers(map);
       emitBounds();
       const rotate = () => {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { rotating.current = false; setRotationState('reduced'); return; }
         if (rotating.current && !map.isMoving()) {
-          map.easeTo({ center: [map.getCenter().lng + 0.04, map.getCenter().lat], duration: 1200, essential: true });
+          const nextLongitude = map.getCenter().lng + 0.04;
+          setRotationState('rotating');
+          setCenterLongitude(nextLongitude);
+          map.easeTo({ center: [nextLongitude, map.getCenter().lat], duration: 1200, essential: false });
         }
-        window.setTimeout(rotate, 1400);
+        rotationTimer.current = window.setTimeout(rotate, 1400);
       };
-      window.setTimeout(rotate, 1400);
+      rotationTimer.current = window.setTimeout(rotate, 1400);
     });
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container.current);
-    return () => { if (fallbackTimer !== null) window.clearTimeout(fallbackTimer); observer.disconnect(); map.remove(); mapRef.current = null; };
+    return () => { if (fallbackTimer !== null) window.clearTimeout(fallbackTimer); if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current); observer.disconnect(); map.remove(); mapRef.current = null; };
 
     function addLayers(target: Map) {
       if (target.getSource(SOURCE)) return;
@@ -158,7 +170,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState}>
       <div ref={container} className="map-canvas" aria-label="Omni discovery globe" />
       <div className="map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Loading the globe…' : mapStatus === 'fallback' ? 'Map tiles are in fallback mode' : 'Live map'}</div>

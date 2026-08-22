@@ -25,26 +25,29 @@ for (const width of widths) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => {
-    const text = document.querySelector('.map-caption')?.textContent ?? '';
-    return /public places in view|No facilities in this view yet|temporarily unavailable/i.test(text);
+    const text = document.querySelector('.dock-context')?.textContent ?? '';
+    return /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(text);
   }, undefined, { timeout: 90000 });
   await page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
   await page.screenshot({ path: `/tmp/omni-v2-proof/trunk-${width}.png`, fullPage: true });
 
-  const initial = await page.locator('text=The world around you').count();
+  const initial = await page.locator('.dock-context').count();
   const searchInput = await page.getByLabel('Search nearby products and services').count();
   const dock = await page.locator('.search-dock').count();
   const hamburger = await page.getByRole('button', { name: 'Open Omni menu' }).count();
   const mapControls = await page.locator('.map-controls').count();
-  const mapStatus = await page.locator('.map-status').innerText();
+  const context = await page.locator('.dock-context').innerText();
+  const basemap = await page.locator('.map-stage').getAttribute('data-basemap');
+  const zoomEnabled = await page.locator('.map-stage').getAttribute('data-zoom-enabled');
+  const authConfigured = await page.locator('.trunk-app').getAttribute('data-auth');
+  const zoomBefore = Number(await page.locator('.map-stage').getAttribute('data-zoom'));
   const reducedMotion = await page.locator('.map-stage').getAttribute('data-motion');
   if (reducedMotion !== 'reduced') throw new Error(`Reduced-motion mode was not honored at ${width}px`);
-  const caption = await page.locator('.map-caption').innerText();
   const facilityLabels = await page.getByText(/Cotonou Fresh Hub|Mènontin Home Bakery|Zongo Mobile Market/).count();
   const canvasCount = await page.locator('.map-canvas canvas').count();
 
   const measure = async () => page.evaluate(() => {
-    const selectors = ['.result-rail', '.dock-wrap', '.dock', '.search-dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.map-caption', '.topbar', '.options-popover', '.menu-popover'];
+    const selectors = ['.result-rail', '.dock-wrap', '.dock', '.search-dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.topbar', '.options-popover', '.menu-popover'];
     const rects = Object.fromEntries(selectors.map((selector) => [selector, (() => {
       const node = document.querySelector(selector);
       if (!node) return null;
@@ -72,6 +75,20 @@ for (const width of widths) {
     };
   });
   const baseGeometry = await measure();
+  if (basemap !== 'monochrome' || zoomEnabled !== 'true') throw new Error(`Map mode contract missing at ${width}px`);
+  const authState = authConfigured ?? 'unknown';
+  await page.getByRole('button', { name: 'Zoom in' }).click();
+  await page.waitForFunction((before) => Number(document.querySelector('.map-stage')?.getAttribute('data-zoom')) > before, zoomBefore, { timeout: 5000 });
+  const zoomIn = Number(await page.locator('.map-stage').getAttribute('data-zoom'));
+  await page.getByRole('button', { name: 'Zoom out' }).click();
+  await page.waitForFunction((before) => Number(document.querySelector('.map-stage')?.getAttribute('data-zoom')) < before, zoomIn, { timeout: 5000 });
+  const zoomOut = Number(await page.locator('.map-stage').getAttribute('data-zoom'));
+  if (!(zoomIn > zoomBefore && zoomOut < zoomIn)) throw new Error(`Zoom controls did not change camera at ${width}px`);
+  await page.mouse.move(width / 2, 360);
+  await page.mouse.wheel(0, -240);
+  await page.waitForFunction((before) => Number(document.querySelector('.map-stage')?.getAttribute('data-zoom')) > before, zoomOut, { timeout: 5000 });
+  const wheelZoom = Number(await page.locator('.map-stage').getAttribute('data-zoom'));
+  if (!(wheelZoom > zoomOut)) throw new Error(`Direct wheel zoom did not change camera at ${width}px`);
   if (Object.values(baseGeometry.overlaps).some(Boolean)) throw new Error(`Base overlay collision at ${width}px: ${JSON.stringify(baseGeometry.overlaps)}`);
   const searchInputNode = page.getByLabel('Search nearby products and services');
   await searchInputNode.focus();
@@ -139,8 +156,22 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, basemap, zoomEnabled, zoomBefore, zoomIn, zoomOut, authState, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
+const motionPage = await browser.newPage({ viewport: { width: 768, height: 800 }, deviceScaleFactor: 1 });
+await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
+await motionPage.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
+await motionPage.waitForFunction(() => /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
+const initialLongitude = Number(await motionPage.locator('.map-stage').getAttribute('data-center-lng'));
+await motionPage.waitForTimeout(3600);
+const finalLongitude = Number(await motionPage.locator('.map-stage').getAttribute('data-center-lng'));
+const rotationState = await motionPage.locator('.map-stage').getAttribute('data-rotation');
+if (Math.abs(finalLongitude - initialLongitude) < 0.01) throw new Error(`Idle globe did not rotate: ${initialLongitude} -> ${finalLongitude}`);
+await motionPage.getByRole('button', { name: 'Zoom in' }).click();
+const pausedRotation = await motionPage.locator('.map-stage').getAttribute('data-rotation');
+if (pausedRotation !== 'paused' && pausedRotation !== 'idle') throw new Error(`Map interaction did not pause rotation: ${pausedRotation}`);
+await motionPage.close();
 await browser.close();
+results.push({ type: 'idle-rotation', viewportWidth: 768, reducedMotion: 'no-preference', initialLongitude, finalLongitude, rotationState, pausedRotation });
 console.log(JSON.stringify(results, null, 2));
