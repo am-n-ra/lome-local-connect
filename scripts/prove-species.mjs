@@ -9,8 +9,17 @@ for (const width of widths) {
   const errors = [];
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console:${message.text()}`); });
   page.on('pageerror', (error) => errors.push(`page:${error.message}`));
+  if (process.env.BOUNDED_FIXTURES === '1') {
+    const facilities = [
+      { id: '11111111-1111-4111-8111-111111111111', name: "Le Fournil d'Or", category: 'Boulangerie & Pâtisserie', address: 'Cotonou', latitude: 6.37, longitude: 2.43, trust: 'unconfirmed', plan: 'free', productCount: 1 },
+      { id: '22222222-2222-4222-8222-222222222222', name: 'Cotonou Fresh Hub', category: 'Fresh produce', address: 'Cotonou', latitude: 6.39, longitude: 2.41, trust: 'unclaimed', plan: 'free', productCount: 0 },
+    ];
+    await page.route('**/api/v2/public/facilities**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, correlationId: 'species-proof', data: facilities }) }));
+    await page.route('**/api/v2/facilities/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, correlationId: 'species-proof', data: { ...facilities[0], products: [{ id: '33333333-3333-4333-8333-333333333333', facilityId: facilities[0].id, name: 'Pain complet', description: 'Four du jour', category: 'Boulangerie', unit: 'pain', priceMinor: 250, currency: 'USD', availableQuantity: null, couponLabel: 'Offre locale' }] } }) }));
+  }
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForSelector('.nearby-sheet', { timeout: 15000 });
+  if (process.env.BOUNDED_FIXTURES === '1') await page.waitForSelector('.nearby-card', { timeout: 15000 });
   await page.waitForTimeout(1600);
   const state = await page.evaluate(() => {
     const rect = (selector) => {
@@ -39,6 +48,12 @@ for (const width of widths) {
     };
   });
   state.errors = errors;
+  if (process.env.BOUNDED_FIXTURES === '1') await page.screenshot({ path: `/tmp/omni-species-initial-${width}.png`, fullPage: false });
+  if (process.env.BOUNDED_FIXTURES === '1') {
+    await page.locator('.nearby-card .card-cta').first().click();
+    await page.waitForSelector('.facility-sheet', { timeout: 15000 });
+    await page.waitForSelector('.catalogue-list', { timeout: 15000 });
+  }
   await page.screenshot({ path: `/tmp/omni-species-${width}.png`, fullPage: false });
   results.push(state);
   await page.close();

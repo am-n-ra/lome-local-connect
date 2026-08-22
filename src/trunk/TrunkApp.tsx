@@ -189,11 +189,7 @@ export function TrunkApp() {
       setAvailabilityStep(1);
       setAvailability(null);
       setRequestState('idle');
-      if (!sessionUser) {
-        openAuth('sign-in', 'availability');
-      } else {
-        setPanel('availability');
-      }
+      if (sessionUser) setPanel('availability');
     }
   };
 
