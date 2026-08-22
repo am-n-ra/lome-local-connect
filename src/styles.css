@@ -70,9 +70,9 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(239, 126, 66
 .map-caption span:last-child { display: grid; gap: 2px; }
 .map-caption strong { font-size: 11px; }
 .map-caption small { color: var(--muted); font-size: 10px; }
-.map-status, .map-attribution { bottom: max(124px, calc(env(safe-area-inset-bottom) + 118px)); color: rgba(54, 43, 36, .62); font-size: 10px; }
-.map-status { right: 18px; padding: 5px 8px; border-radius: 7px; background: rgba(255, 251, 247, .53); backdrop-filter: blur(10px); }
-.map-attribution { left: 14px; font-size: 9px; }
+.map-status, .map-attribution { top: 230px; bottom: auto; color: rgba(54, 43, 36, .62); font-size: 10px; }
+.map-status { right: 14px; padding: 5px 8px; border-radius: 7px; background: rgba(255, 251, 247, .53); backdrop-filter: blur(10px); }
+.map-attribution { left: 14px; max-width: 240px; font-size: 9px; }
 .map-canvas .maplibregl-ctrl-attrib { display: none; }
 .map-error { top: 19%; left: 50%; display: flex; align-items: center; gap: 12px; max-width: calc(100% - 32px); transform: translateX(-50%); padding: 10px 12px 10px 15px; border: 1px solid rgba(255,255,255,.75); border-radius: 12px; color: #6c3c2a; background: rgba(255, 242, 234, .9); box-shadow: var(--shadow); backdrop-filter: blur(16px); font-size: 12px; }
 .map-error button, .secondary-button { border: 1px solid rgba(239, 126, 66, .3); border-radius: 999px; padding: 8px 12px; color: var(--orange-deep); background: rgba(255, 255, 255, .64); font-size: 11px; font-weight: 700; }
@@ -229,8 +229,8 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(239, 126, 66
   .map-caption { top: 198px; left: 12px; }
   .map-controls { bottom: max(166px, calc(env(safe-area-inset-bottom) + 160px)); left: 12px; }
   .map-controls button { width: 34px; height: 34px; }
-  .map-status { right: 12px; bottom: max(114px, calc(env(safe-area-inset-bottom) + 110px)); }
-  .map-attribution { display: block; left: 10px; bottom: max(93px, calc(env(safe-area-inset-bottom) + 87px)); max-width: 160px; }
+  .map-status { top: 198px; right: 12px; bottom: auto; }
+  .map-attribution { display: block; top: 254px; left: 12px; right: 12px; bottom: auto; max-width: none; }
   .result-rail { bottom: max(112px, calc(env(safe-area-inset-bottom) + 106px)); width: calc(100% - 20px); gap: 5px; }
   .facility-teaser { grid-template-columns: auto 1fr; gap: 6px; padding: 7px; border-radius: 13px; }
   .teaser-pin { width: 23px; height: 23px; border-radius: 8px; }
