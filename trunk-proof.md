@@ -52,3 +52,12 @@ The Trunk is **partial, not production-ready**. Authenticated availability creat
 The proof script was updated to target the current-Neon bounded fixtures and then run against `https://omniviewer.vercel.app`. At 320, 375, 768 and 1280 px, every run reported `Live map`, rendered one MapLibre canvas, exposed the accessible search input and Omni actions navigation, showed all three current public facilities, opened the `Cotonou Fresh Hub` detail sheet, rendered its `Tomatoes` catalogue item, and opened the account gate from `Verify availability`. The measured body width matched the viewport exactly at 320/320, 375/375, 768/768 and 1280/1280. Each run returned HTTP 200 for public discovery and facility detail and recorded no console or page errors.
 
 This closes the current-Neon proof for public discovery, map rendering, facility detail, catalogue visibility, responsive containment and unauthenticated protected-action gating. It does not close authenticated availability creation, duplicate idempotency replay or Heartwood recovery hardening.
+
+
+## Canonical-domain UI hardening — 2026-08-22
+
+A visual audit of `https://omni.sparkafrika.online` found and corrected two concrete overlay defects: the mobile result rail was intersecting the dock, and duplicate MapLibre/custom attribution controls were competing with the rail and caption. The final V2 map disables the duplicate generated attribution control, reserves a dedicated metadata band, keeps the attribution visible through one custom element, and maintains a measured gap between rail, dock and dock status.
+
+The final overlap-aware Playwright proof ran against the canonical domain at 320, 375, 768 and 1280 px. Every width rendered the live MapLibre canvas, accessible search, Omni dock, three current-Neon public facilities, `Cotonou Fresh Hub` detail, its `Tomatoes` catalogue item and the account gate from `Verify availability`. Body width matched viewport width at all four breakpoints, every tested overlap flag was false, public/detail API calls returned HTTP 200 and no console/page errors were recorded. The corrected proof harness now waits for a discovery state rather than relying on a fixed cold-start delay.
+
+This UI pass is **verified for the public buyer Trunk scope**, not a full release. Neon Auth remains intentionally limited to the canonical trusted domain, and the authenticated availability write, idempotency replay and Heartwood recovery gate still require a working Neon Auth runtime configuration and sign-in session.
