@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Crosshair, Minus, Plus } from 'lucide-react';
 import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
@@ -160,9 +161,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       <div className="map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Loading the globe…' : mapStatus === 'fallback' ? 'Map tiles are in fallback mode' : 'Live map'}</div>
       <div className="map-controls" aria-label="Map controls">
-        <button type="button" aria-label="Locate me" onClick={() => navigator.geolocation?.getCurrentPosition((position) => mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: 7, duration: 850 }))}>⌖</button>
-        <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()}>+</button>
-        <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()}>−</button>
+        <button type="button" aria-label="Locate me" onClick={() => navigator.geolocation?.getCurrentPosition((position) => mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: 7, duration: 850 }))}><Crosshair size={16} /></button>
+        <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()}><Plus size={16} /></button>
+        <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()}><Minus size={16} /></button>
       </div>
     </div>
   );

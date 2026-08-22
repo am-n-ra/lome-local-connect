@@ -1,15 +1,14 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckCircle2, ChevronDown, Clock3, Crosshair, LogIn, LogOut, MapPin, Minus, PackageSearch, Plus, Search, ShieldCheck, SlidersHorizontal, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, ChevronDown, Clock3, LogIn, LogOut, MapPin, Minus, Plus, PackageSearch, Search, ShieldCheck, Sparkles, Menu, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { getFacilityDetail, listPublicFacilities, requestAvailability } from './api';
 import { TrunkMap } from './TrunkMap';
-import type { AvailabilityResult, FacilityDetail, PublicFacility } from './types';
+import type { AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions } from './types';
 
-const fallbackCenter: [number, number] = [1.22, 6.13];
+const emptySearchOptions: SearchOptions = { category: '' };
 
 type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'submitted';
 type AuthMode = 'sign-in' | 'sign-up';
-
 type SessionUser = { id: string; email: string | null; name: string | null };
 
 function currency(minor: number, code: string) {
@@ -48,12 +47,20 @@ export function TrunkApp() {
   const [authError, setAuthError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
+  const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
 
   const selectedProduct = useMemo(() => selectedFacility?.products.find((product) => product.id === selectedProductId) ?? null, [selectedFacility, selectedProductId]);
+  const categoryOptions = useMemo(() => {
+    const categories = new Set(facilities.map((facility) => facility.category).filter(Boolean));
+    if (draftOptions.category) categories.add(draftOptions.category);
+    return ['', ...Array.from(categories).sort()];
+  }, [draftOptions.category, facilities]);
 
   useEffect(() => {
     let active = true;
-    if (!authClient) return;
+    if (!authClient) return undefined;
     authClient.getSession().then((result) => {
       const data = result.data as { user?: { id?: string; email?: string | null; name?: string | null } } | null | undefined;
       if (active && data?.user?.id) setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
@@ -64,7 +71,7 @@ export function TrunkApp() {
   useEffect(() => {
     let active = true;
     setMapState('loading');
-    listPublicFacilities(bounds).then((result) => {
+    listPublicFacilities(bounds, committedQuery || undefined, appliedOptions).then((result) => {
       if (!active) return;
       if (result.ok) {
         setFacilities(result.data ?? []);
@@ -75,28 +82,47 @@ export function TrunkApp() {
       }
     }).catch(() => { if (active) { setMapState('error'); setError('Public discovery is temporarily unavailable.'); } });
     return () => { active = false; };
-  }, [bounds]);
+  }, [appliedOptions, bounds, committedQuery]);
 
-  const openAuth = (mode: AuthMode = 'sign-in') => { setAuthMode(mode); setAuthError(''); setPanel('auth'); };
+  const openAuth = (mode: AuthMode = 'sign-in') => { setAuthMode(mode); setAuthError(''); setMenuOpen(false); setOptionsOpen(false); setPanel('auth'); };
 
   const beginSearch = (event?: FormEvent) => {
     event?.preventDefault();
     if (!sessionUser) { openAuth('sign-in'); return; }
+    setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
+    setOptionsOpen(false);
+    setMenuOpen(false);
     setError('');
   };
 
-  useEffect(() => {
-    if (!sessionUser || !committedQuery) return;
-    let active = true;
-    setMapState('loading');
-    listPublicFacilities(bounds, committedQuery).then((result) => {
-      if (!active) return;
-      if (result.ok) { setFacilities(result.data ?? []); setMapState(result.data?.length ? 'ready' : 'empty'); }
-      else { setMapState('error'); setError(result.error?.message ?? 'Search is temporarily unavailable.'); }
-    }).catch(() => { if (active) { setMapState('error'); setError('Search is temporarily unavailable.'); } });
-    return () => { active = false; };
-  }, [committedQuery, bounds, sessionUser]);
+  const applyOptions = () => {
+    if (!sessionUser) { openAuth('sign-in'); return; }
+    setAppliedOptions(draftOptions);
+    setCommittedQuery(query.trim());
+    setOptionsOpen(false);
+    setError('');
+  };
+
+  const clearOptions = () => {
+    setDraftOptions(emptySearchOptions);
+    setQuantity(1);
+    setBudgetMode('unlimited');
+    setBudget('');
+  };
+
+  const resetSearch = () => {
+    setQuery('');
+    setCommittedQuery('');
+    setDraftOptions(emptySearchOptions);
+    setAppliedOptions(emptySearchOptions);
+    setQuantity(1);
+    setBudgetMode('unlimited');
+    setBudget('');
+    setBounds(undefined);
+    setOptionsOpen(false);
+    setMenuOpen(false);
+  };
 
   const selectFacility = async (facility: PublicFacility) => {
     setPanel('facility');
@@ -114,8 +140,7 @@ export function TrunkApp() {
     if (!selectedFacility?.products.length) return;
     setAvailabilityStep(1);
     setSelectedProductId(selectedFacility.products[0].id);
-    setQuantity(1);
-    setBudget('');
+    setQuantity(Math.max(1, quantity));
     setAvailability(null);
     setRequestState('idle');
     setPanel('availability');
@@ -159,6 +184,7 @@ export function TrunkApp() {
       const data = session.data as { user?: { id?: string; email?: string | null; name?: string | null } } | null | undefined;
       if (!data?.user?.id) throw new Error('Auth succeeded but no active session was returned.');
       setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
+      setAppliedOptions(draftOptions);
       setAuthState('idle');
       setPanel('none');
       if (query.trim()) setCommittedQuery(query.trim());
@@ -173,10 +199,16 @@ export function TrunkApp() {
     setSessionUser(null);
     setCommittedQuery('');
     setQuery('');
+    setAppliedOptions(emptySearchOptions);
+    setDraftOptions(emptySearchOptions);
+    setMenuOpen(false);
   };
 
+  const openMenu = () => { setMenuOpen((open) => !open); setOptionsOpen(false); };
+  const mainClass = `trunk-app${optionsOpen ? ' options-is-open' : ''}${menuOpen ? ' menu-is-open' : ''}`;
+
   return (
-    <main className="trunk-app">
+    <main className={mainClass}>
       <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} />
       <div className="map-vignette" aria-hidden="true" />
 
@@ -187,21 +219,18 @@ export function TrunkApp() {
         </a>
         <div className="topbar-actions">
           <span className="live-chip"><span /> live discovery</span>
-          {sessionUser ? (
-            <button className="account-chip" type="button" onClick={signOut} title="Sign out"><span>{(sessionUser.name ?? sessionUser.email ?? 'O').slice(0, 1).toUpperCase()}</span><LogOut size={15} /></button>
-          ) : <button className="signin-button" type="button" onClick={() => openAuth('sign-in')}><LogIn size={15} /> Sign in</button>}
+          <button className="menu-button" type="button" aria-label={menuOpen ? 'Close Omni menu' : 'Open Omni menu'} aria-expanded={menuOpen} aria-controls="omni-menu" onClick={openMenu}>
+            {menuOpen ? <X size={19} /> : <Menu size={19} />}
+          </button>
         </div>
       </header>
 
-      <section className="search-zone" aria-label="Omni search">
-        <div className="search-kicker"><Sparkles size={14} /> Find it before you move</div>
-        <form className="search-pill" onSubmit={beginSearch}>
-          <Search size={20} />
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What do you need nearby?" aria-label="Search nearby products and services" />
-          <button type="submit">Search</button>
-        </form>
-        <p className="search-hint">Explore public places freely. <button type="button" onClick={() => sessionUser ? setOptionsOpen((open) => !open) : openAuth('sign-in')}>{sessionUser ? 'Tune your search' : 'Create your account to search'}</button></p>
-      </section>
+      {menuOpen && <aside id="omni-menu" className="menu-popover" role="menu" aria-label="Omni menu">
+        <div className="menu-head"><div><span className="eyebrow">Omni navigation</span><strong>{sessionUser ? 'Your search workspace' : 'Explore before you move'}</strong></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X size={16} /></button></div>
+        <p>{sessionUser ? 'Your account is ready for availability checks.' : 'Explore public places freely. Sign in when you want search and availability certainty.'}</p>
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Sign in or create account</button> : <button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Sign out</button>}
+        <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Reset map search</button>
+      </aside>}
 
       <div className="map-caption" aria-live="polite">
         <span className="caption-icon"><MapPin size={15} /></span>
@@ -210,17 +239,21 @@ export function TrunkApp() {
 
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={() => setBounds((current) => current ? [...current] as [number, number, number, number] : undefined)}>Retry</button></div>}
 
-      {optionsOpen && <div className="options-popover"><div><strong>Search options</strong><button type="button" onClick={() => setOptionsOpen(false)} aria-label="Close options"><X size={16} /></button></div><p>Search requests use your account and stay scoped to the facilities visible in the map.</p><button type="button" className="secondary-button" onClick={() => { setOptionsOpen(false); setCommittedQuery(query.trim()); }}>Apply current query</button></div>}
-
       {panel === 'none' && facilities.length > 0 && <aside className="result-rail" aria-label="Facilities in view">{facilities.slice(0, 3).map((facility) => <button className="facility-teaser" type="button" key={facility.id} onClick={() => selectFacility(facility)}><span className="teaser-pin"><MapPin size={14} /></span><span className="teaser-copy"><strong>{facility.name}</strong><small>{facility.category} · {facility.productCount ? `${facility.productCount} live offer${facility.productCount === 1 ? '' : 's'}` : 'public place'}</small></span><span className={`teaser-trust ${facility.trust}`}>{facility.trust === 'unclaimed' ? 'Public' : facility.trust === 'confirmed' ? 'Confirmed' : 'Certified'}</span></button>)}</aside>}
 
       <div className="dock-wrap">
-        <nav className="dock" aria-label="Omni actions">
-          <button type="button" className="dock-action" onClick={() => setBounds(undefined)}><Crosshair size={17} /> <span>Recenter</span></button>
-          <div className="dock-divider" />
-          <button type="button" className="dock-action" onClick={() => { setQuery(''); setCommittedQuery(''); setBounds(undefined); }}><span className="dock-dot" /> <span>Explore map</span></button>
-          <button type="button" className="dock-more" aria-expanded={optionsOpen} onClick={() => setOptionsOpen((open) => !open)}><ChevronDown size={18} /></button>
-        </nav>
+        {optionsOpen && <SearchOptionsPopover category={draftOptions.category} categoryOptions={categoryOptions} setCategory={(category) => setDraftOptions({ category })} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} onClear={clearOptions} onApply={applyOptions} onClose={() => setOptionsOpen(false)} />}
+        <form className="dock search-dock" aria-label="Omni search dock" onSubmit={beginSearch}>
+          <div className="dock-search-row">
+            <Search size={18} aria-hidden="true" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="What do you need nearby?" aria-label="Search nearby products and services" />
+            <button type="submit">Search</button>
+          </div>
+          <div className="dock-search-meta">
+            <span><Sparkles size={13} /> {sessionUser ? 'Search the visible map' : 'Explore publicly; sign in to search'}</span>
+            <button className="dock-more" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Close search options' : 'Open search options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><span>Options</span><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
+          </div>
+        </form>
         <div className="dock-status">{sessionUser ? 'Account ready for availability checks' : 'Public exploration · account required to verify'}</div>
       </div>
 
@@ -231,6 +264,10 @@ export function TrunkApp() {
       {panel === 'submitted' && availability && <SubmittedSheet facility={selectedFacility} productName={selectedProduct?.name ?? 'Selected product'} result={availability} onClose={() => setPanel('none')} onBack={() => setPanel('facility')} />}
     </main>
   );
+}
+
+function SearchOptionsPopover(props: { category: string; categoryOptions: string[]; setCategory: (value: string) => void; quantity: number; setQuantity: (value: number) => void; budgetMode: 'unlimited' | 'maximum'; setBudgetMode: (value: 'unlimited' | 'maximum') => void; budget: string; setBudget: (value: string) => void; onClear: () => void; onApply: () => void; onClose: () => void }) {
+  return <section id="search-options" className="options-popover" role="region" aria-label="Search options"><div className="options-head"><div><span className="eyebrow">Refine your view</span><strong>Search options</strong></div><button type="button" onClick={props.onClose} aria-label="Close search options"><X size={16} /></button></div><p className="options-lede">Filters apply to the visible map. Quantity and budget are carried into the availability request.</p><label className="option-field">Category<select value={props.category} onChange={(event) => props.setCategory(event.target.value)}><option value="">All categories</option>{props.categoryOptions.filter(Boolean).map((category) => <option key={category} value={category}>{category}</option>)}</select></label><div className="option-grid"><label className="option-field">Request quantity<input type="number" min="1" step="1" value={props.quantity} onChange={(event) => props.setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label><div className="option-field"><span>Budget</span><div className="option-toggle"><button type="button" className={props.budgetMode === 'unlimited' ? 'active' : ''} onClick={() => props.setBudgetMode('unlimited')}>Unlimited</button><button type="button" className={props.budgetMode === 'maximum' ? 'active' : ''} onClick={() => props.setBudgetMode('maximum')}>Maximum</button></div></div></div>{props.budgetMode === 'maximum' && <label className="option-field">Maximum amount<input type="number" min="0" step="0.01" value={props.budget} onChange={(event) => props.setBudget(event.target.value)} placeholder="0.00" /></label>}<div className="options-actions"><button className="text-button" type="button" onClick={props.onClear}>Clear</button><button className="primary-button" type="button" onClick={props.onApply}>Apply options</button></div></section>;
 }
 
 function AuthSheet(props: { mode: AuthMode; setMode: (mode: AuthMode) => void; email: string; setEmail: (value: string) => void; password: string; setPassword: (value: string) => void; name: string; setName: (value: string) => void; state: 'idle' | 'loading' | 'error'; error: string; onSubmit: (event: FormEvent) => void; onClose: () => void }) {

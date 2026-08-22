@@ -1,5 +1,9 @@
 export type PublicTrust = 'unclaimed' | 'certified' | 'unconfirmed' | 'confirmed';
 
+export interface SearchOptions {
+  category: string;
+}
+
 export interface PublicFacility {
   id: string;
   name: string;

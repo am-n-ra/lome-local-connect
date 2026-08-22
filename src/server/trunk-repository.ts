@@ -52,10 +52,11 @@ const toProduct = (row: Record<string, unknown>): PublicProduct => ({
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
-    async listPublicFacilities(bounds?: [number, number, number, number], query?: string): Promise<PublicFacility[]> {
+    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? '';
+        const categoryText = category?.trim() ?? '';
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
@@ -66,7 +67,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             on p.facility_id = f.id and p.publication_state = 'published'
           where f.longitude between ${west} and ${east}
             and f.latitude between ${south} and ${north}
-            and (${queryText} = '' or f.name ilike '%' || ${queryText} || '%' or coalesce(f.category, '') ilike '%' || ${queryText} || '%')
+            and (${queryText} = ''
+              or f.name ilike '%' || ${queryText} || '%'
+              or coalesce(f.category, '') ilike '%' || ${queryText} || '%'
+              or exists (
+                select 1 from v2_products matched
+                where matched.facility_id = f.id
+                  and matched.publication_state = 'published'
+                  and (matched.name ilike '%' || ${queryText} || '%' or coalesce(matched.category, '') ilike '%' || ${queryText} || '%')
+              ))
+            and (${categoryText} = '' or coalesce(f.category, '') = ${categoryText})
           group by f.id
           order by f.trust_state = 'unclaimed', f.name
           limit 250

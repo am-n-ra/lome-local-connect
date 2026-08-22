@@ -60,10 +60,11 @@ var toProduct = (row) => ({
 });
 function createTrunkRepository(sql = database()) {
   return {
-    async listPublicFacilities(bounds, query) {
+    async listPublicFacilities(bounds, query, category) {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? "";
+        const categoryText = category?.trim() ?? "";
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
@@ -74,7 +75,16 @@ function createTrunkRepository(sql = database()) {
             on p.facility_id = f.id and p.publication_state = 'published'
           where f.longitude between ${west} and ${east}
             and f.latitude between ${south} and ${north}
-            and (${queryText} = '' or f.name ilike '%' || ${queryText} || '%' or coalesce(f.category, '') ilike '%' || ${queryText} || '%')
+            and (${queryText} = ''
+              or f.name ilike '%' || ${queryText} || '%'
+              or coalesce(f.category, '') ilike '%' || ${queryText} || '%'
+              or exists (
+                select 1 from v2_products matched
+                where matched.facility_id = f.id
+                  and matched.publication_state = 'published'
+                  and (matched.name ilike '%' || ${queryText} || '%' or coalesce(matched.category, '') ilike '%' || ${queryText} || '%')
+              ))
+            and (${categoryText} = '' or coalesce(f.category, '') = ${categoryText})
           group by f.id
           order by f.trust_state = 'unclaimed', f.name
           limit 250
@@ -193,7 +203,8 @@ async function handleApi(req, res, pathname, url) {
     if (req.method === "GET" && pathname === "/api/v2/public/facilities") {
       const hasBounds = ["west", "south", "east", "north"].every((key) => url.searchParams.has(key));
       const bounds = hasBounds ? [numberParam(url, "west", -180), numberParam(url, "south", -90), numberParam(url, "east", 180), numberParam(url, "north", 90)] : void 0;
-      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get("q") ?? void 0);
+      const category = url.searchParams.get("category")?.trim() || void 0;
+      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get("q") ?? void 0, category);
       json(res, 200, { ok: true, correlationId, data: facilities });
       return true;
     }

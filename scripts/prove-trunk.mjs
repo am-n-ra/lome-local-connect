@@ -7,6 +7,14 @@ const browser = await chromium.launch({ headless: true });
 await mkdir('/tmp/omni-v2-proof', { recursive: true });
 const results = [];
 
+const rectangle = (node) => {
+  if (!node) return null;
+  const rect = node.getBoundingClientRect();
+  return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+};
+
+const overlap = (a, b) => Boolean(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
+
 for (const width of widths) {
   const page = await browser.newPage({ viewport: { width, height: 800 }, deviceScaleFactor: 1 });
   const errors = [];
@@ -21,21 +29,25 @@ for (const width of widths) {
   }, undefined, { timeout: 90000 });
   await page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
   await page.screenshot({ path: `/tmp/omni-v2-proof/trunk-${width}.png`, fullPage: true });
+
   const initial = await page.locator('text=The world around you').count();
-  const search = await page.getByLabel('Search nearby products and services').count();
-  const dock = await page.getByRole('navigation', { name: 'Omni actions' }).count();
+  const searchInput = await page.getByLabel('Search nearby products and services').count();
+  const dock = await page.locator('.search-dock').count();
+  const hamburger = await page.getByRole('button', { name: 'Open Omni menu' }).count();
+  const mapControls = await page.locator('.map-controls').count();
   const mapStatus = await page.locator('.map-status').innerText();
   const caption = await page.locator('.map-caption').innerText();
   const facilityLabels = await page.getByText(/Cotonou Fresh Hub|Mènontin Home Bakery|Zongo Mobile Market/).count();
   const canvasCount = await page.locator('.map-canvas canvas').count();
-  const layout = await page.evaluate(() => {
-    const selectors = ['.result-rail', '.dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.map-caption', '.search-zone', '.topbar'];
-    const rects = Object.fromEntries(selectors.map((selector) => {
+
+  const measure = async () => page.evaluate(() => {
+    const selectors = ['.result-rail', '.dock-wrap', '.dock', '.search-dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.map-caption', '.topbar', '.options-popover', '.menu-popover'];
+    const rects = Object.fromEntries(selectors.map((selector) => [selector, (() => {
       const node = document.querySelector(selector);
-      if (!node) return [selector, null];
+      if (!node) return null;
       const rect = node.getBoundingClientRect();
-      return [selector, { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height }];
-    }));
+      return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, width: rect.width, height: rect.height };
+    })()]));
     const overlap = (a, b) => Boolean(a && b && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top);
     return {
       rects,
@@ -47,17 +59,52 @@ for (const width of widths) {
         dockAttribution: overlap(rects['.dock'], rects['.map-attribution']),
         railGeneratedAttribution: overlap(rects['.result-rail'], rects['.maplibregl-ctrl-attrib']),
         dockGeneratedAttribution: overlap(rects['.dock'], rects['.maplibregl-ctrl-attrib']),
+        optionsDock: overlap(rects['.options-popover'], rects['.dock']),
+        optionsControls: overlap(rects['.options-popover'], rects['.map-controls']),
+        menuDock: overlap(rects['.menu-popover'], rects['.dock']),
+        menuControls: overlap(rects['.menu-popover'], rects['.map-controls']),
       },
       bodyWidth: document.body.scrollWidth,
       viewportWidth: window.innerWidth,
     };
   });
-  if (Object.values(layout.overlaps).some(Boolean)) {
-    throw new Error(`Overlay collision at ${width}px: ${JSON.stringify(layout.overlaps)}`);
+  if (Object.values(measure.overlaps).some(Boolean)) throw new Error(`Base overlay collision at ${width}px: ${JSON.stringify(measure.overlaps)}`);
+
+  const optionsButton = page.getByRole('button', { name: 'Open search options' });
+  const optionsButtonCount = await optionsButton.count();
+  let options = 0;
+  let optionsCategory = 0;
+  let optionsQuantity = 0;
+  let optionsGeometry = null;
+  let optionsAuth = 0;
+  if (optionsButtonCount) {
+    await optionsButton.click();
+    options = await page.getByRole('region', { name: 'Search options' }).count();
+    optionsCategory = await page.locator('.options-popover select').count();
+    optionsQuantity = await page.getByLabel('Request quantity').count();
+    optionsGeometry = await measure();
+    if (Object.values(optionsGeometry.overlaps).some(Boolean)) throw new Error(`Options overlay collision at ${width}px: ${JSON.stringify(optionsGeometry.overlaps)}`);
+    await page.getByRole('button', { name: 'Apply options' }).click();
+    optionsAuth = await page.getByRole('dialog', { name: /Search with certainty|Start seeing before you move/ }).count();
+    await page.getByRole('button', { name: 'Close' }).click();
   }
-  await page.getByRole('button', { name: /Create your account to search/ }).click();
+
+  let menu = 0;
+  let menuActions = 0;
+  const menuButton = page.getByRole('button', { name: 'Open Omni menu' });
+  if (await menuButton.count()) {
+    await menuButton.click();
+    menu = await page.getByRole('menu', { name: 'Omni menu' }).count();
+    menuActions = await page.getByRole('menuitem').count();
+    const menuGeometry = await measure();
+    if (Object.values(menuGeometry.overlaps).some(Boolean)) throw new Error(`Menu overlay collision at ${width}px: ${JSON.stringify(menuGeometry.overlaps)}`);
+    await page.getByRole('button', { name: 'Close Omni menu' }).click();
+  }
+
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
   const auth = await page.getByRole('dialog', { name: /Search with certainty|Start seeing before you move/ }).count();
   await page.getByRole('button', { name: 'Close' }).click();
+
   const facilityCard = page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first();
   const facilityCardCount = await facilityCard.count();
   let detail = 0;
@@ -75,7 +122,7 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, search, dock, auth, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: layout.bodyWidth, viewportWidth: layout.viewportWidth, overlaps: layout.overlaps, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAuth, menu, menuActions, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: measure.bodyWidth, viewportWidth: measure.viewportWidth, overlaps: measure.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
 await browser.close();

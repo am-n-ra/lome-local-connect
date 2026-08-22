@@ -135,6 +135,23 @@ Every implementation session must update status, owner, last evidence and blocke
 
 **Remaining V1 proof/implementation gaps:** the operational Overpass adapter now exists with timeout, mirror fallback and local recovery, but its manual runbook and automated failure proof remain open; bounds updates are debounced and connected to the bounded adapter; explicit catalogue-aware product matching remains a V2 dependency and full viewport restoration still needs dedicated proof; the connected browser bridge remains unavailable for a live visual session. The V1 task remains `partial` until these are closed.
 
+## 4.4 Approved search-dock ring — 2026-08-22
+
+**Slice status:** `in_progress` · **Gate status:** `todo` · **Owner:** Manus AI
+
+This ring narrows the current buyer Trunk into a map-first search engine. Its authoritative contract is [`v2-search-dock-interface.md`](./v2-search-dock-interface.md). The current code already has a single dock, one chevron and the verified map/result composition; the options contract, typed menu ownership, context restoration and complete collision proof remain the implementation target.
+
+| Task ID | Feature | Parent task | Priority | Dependencies | Status | Evidence / blocker |
+|---|---|---|---|---|---|---|
+| V1-SEARCH-001 | SD-001 | Reconcile and approve search-dock interface contract | P0 | V1 | `in_progress` | `v2-search-dock-interface.md` added; filter API support still to reconcile |
+| V1-SEARCH-002 | SD-002 | Implement shared map-first safe-area layer model | P0 | SD-001, FND-003 | `ready` | Explicit top, left-control, metadata, rail, options and dock zones |
+| V1-SEARCH-003 | SD-003 | Implement real options chevron with supported filter contract | P0 | SD-001, MAP-004 | `ready` | Current public API is query+bounds; extra filters require typed contract or explicit deferment |
+| V1-SEARCH-004 | SD-004 | Implement typed top-right hamburger menu | P1 | SD-002, FND-004 | `ready` | Only current V2 actions may be exposed; no dead prototype routes |
+| V1-SEARCH-005 | SD-005 | Integrate rail/options/dock collision and context recovery | P0 | SD-002, SD-003, BUY-014 | `ready` | Preserve query, options, viewport, facility and product context |
+| V1-SEARCH-006 | SD-006 | Prove responsive, accessibility and reduced-motion behavior | P0 | SD-003, SD-004, SD-005 | `todo` | Required 320/375/768/1280 geometry and keyboard/touch evidence |
+
+**Search-dock subtasks:** Each row requires `-C/-D/-S/-U/-I/-P/-O`; the ring gate requires real options behavior, no dead menu actions, no overlay collisions, context preservation, accessibility proof and canonical-domain screenshots.
+
 ## 5. V2 — Catalogue-first availability
 
 **Slice status:** `partial` · **Gate status:** `partial` · **Owner:** unassigned

@@ -1,4 +1,4 @@
-import type { ApiResult, AvailabilityResult, FacilityDetail, PublicFacility } from './types';
+import type { SearchOptions, ApiResult, AvailabilityResult, FacilityDetail, PublicFacility } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -17,10 +17,11 @@ async function fetchWithRecovery(input: RequestInfo | URL, init?: RequestInit): 
   return response;
 }
 
-export async function listPublicFacilities(bounds?: [number, number, number, number], query?: string): Promise<ApiResult<PublicFacility[]>> {
+export async function listPublicFacilities(bounds?: [number, number, number, number], query?: string, options?: SearchOptions): Promise<ApiResult<PublicFacility[]>> {
   const params = new URLSearchParams();
   if (bounds) ['west', 'south', 'east', 'north'].forEach((key, index) => params.set(key, String(bounds[index])));
   if (query?.trim()) params.set('q', query.trim());
+  if (options?.category) params.set('category', options.category);
   const response = await fetchWithRecovery(`/api/v2/public/facilities?${params.toString()}`, { headers: { Accept: 'application/json' } });
   return parse<PublicFacility[]>(response);
 }

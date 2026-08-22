@@ -50,7 +50,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const bounds = hasBounds
         ? [numberParam(url, 'west', -180), numberParam(url, 'south', -90), numberParam(url, 'east', 180), numberParam(url, 'north', 90)] as [number, number, number, number]
         : undefined;
-      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get('q') ?? undefined);
+      const category = url.searchParams.get('category')?.trim() || undefined;
+      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get('q') ?? undefined, category);
       json(res, 200, { ok: true, correlationId, data: facilities });
       return true;
     }
