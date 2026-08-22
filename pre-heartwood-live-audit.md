@@ -26,3 +26,11 @@ No Neon Auth identities, historical tables, legacy rows or Roots invariants may 
 At 320 px, the floating caption is gone from the left control area. The map controls are isolated on the left, the result rail is above the dock, and the dock now displays `3 public places in view`. Direct zoom buttons are visible. The live screenshot still shows a pale square around the top-left logo mark; this appears to be baked into the RGB logo asset rather than introduced by a CSS background and requires a transparent asset treatment or a carefully isolated replacement.
 
 At 1280 px, the grayscale OSM map is visible with the white land / gray water direction, Omni orange pins, separated left controls, facility rail and bottom dock. The top-right menu/live chip are clear. Attribution remains in the upper metadata band. The desktop screenshot shows no caption/control collision and the map remains dominant.
+
+## Final screenshot findings after the second correction pass
+
+At 320 px, the top-left pin-and-eye mark is now shown without the rectangular white asset background. The globe is visibly rendered in a restrained gray/white treatment, the map controls are separate on the left, and the dock owns the `3 public places in view` context. The `+` and `−` controls are visibly reachable.
+
+At 1280 px, the same transparent logo treatment and grayscale globe scale cleanly to desktop. The globe is dominant, the left map-control stack is isolated, facility rail and search dock are separate, and the metadata remains above the map interaction zones.
+
+The final proof artifact reports `data-basemap=monochrome`, `data-zoom-enabled=true`, zoom transitions from 1.35 to 2.35 and back to 1.00, and normal-motion center longitude changes from 1.22 to 1.30 before interaction pauses rotation.

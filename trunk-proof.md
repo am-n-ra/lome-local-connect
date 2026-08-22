@@ -81,3 +81,22 @@ Commit `71bf386` added deterministic keyboard ownership and commit `7fa8ac3` mad
 The final run reported `reducedMotion: reduced`, `optionsAfterEscape: 0` and `menuAfterEscape: 0` at every width. All base-state and options-open overlap flags were false, body width equalled viewport width at every breakpoint, public/detail calls returned HTTP 200 and no console/page errors were recorded. The final raw run is `/tmp/omni-search-dock-proof-final-3.json` for this session; the reproducible harness is `scripts/prove-trunk.mjs`.
 
 This closes the **approved search-dock UI ring**. The overall Omni V2 release remains partial because authenticated availability creation, idempotency replay, seller workspace, transaction room, QR verification and Heartwood recovery are still separate gates.
+
+
+## Pre-Heartwood buyer correction — 2026-08-22
+
+The buyer correction slice was deployed to and verified on the canonical domain `https://omni.sparkafrika.online` using the Git-linked Vercel deployment for commit `200ec172c51a317f09dfb01df203f2423a2ea78a`.
+
+The floating `The world around you / 3 public places in view` caption was removed from the map-control zone. Discovery context is now owned by the dock (`3 public places in view`), while map status and attribution occupy a separate upper metadata band. The rail, dock, map controls, menu and metadata remain distinct safe-area layers.
+
+The remote OSM raster style and local fallback style now use a grayscale direction. Omni orange/charcoal facility markers remain visually distinct from the basemap. The top-left header uses a transparent pin-and-eye mark without the previous rectangular background.
+
+Zoom was verified through the visible `+` and `−` controls and through direct pointer wheel input. The proof observed zoom values `1.35 → 2.35 → 1.00` and then a further increase from direct wheel input. MapLibre cooperative gesture blocking is disabled so desktop wheel and mobile map gestures are not prevented by a gesture hint.
+
+Idle globe rotation is now lifecycle-managed and observable. In a normal-motion browser at 768 px, the map center longitude changed from `1.22` to `1.30` within the proof window, and a zoom interaction changed the state to `paused`. In reduced-motion mode, the map reports `data-motion="reduced"` and does not run the idle rotation loop.
+
+The client Auth adapter now prefers `VITE_NEON_AUTH_URL` and has a current-branch public Neon Auth fallback. The server verifier continues to prefer `NEON_AUTH_JWKS_URL` and has the corresponding current-branch public JWKS fallback. The live proof reports `authState="configured"`, opens the Auth sheet, and preserves the unauthenticated availability gate. This proves runtime configuration reachability only; it does not prove real sign-in, authenticated availability creation or idempotent replay.
+
+The final Playwright proof passed at 320, 375, 768 and 1280 CSS pixels. Each width rendered a live MapLibre canvas, one dock, one menu and one left control group; showed three current-Neon public facilities; opened the `Cotonou Fresh Hub` detail/catalogue; and reached the Auth gate. Body width matched viewport width, all measured base/options/menu overlap flags were false, public/detail calls returned HTTP 200 and no console/page errors were recorded.
+
+This pre-Heartwood buyer correction slice is **verified**. Omni V2 as a whole remains **partial and not production-ready** until real authenticated writes, idempotency replay, seller QR verification, transaction recovery and remaining Heartwood slices are proven.
