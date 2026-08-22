@@ -4,6 +4,8 @@ import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEven
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 
+type LocationState = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+
 type Props = {
   facilities: PublicFacility[];
   selectedId: string | null;
@@ -49,7 +51,26 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [zoom, setZoom] = useState(1.35);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
+  const [locationState, setLocationState] = useState<LocationState>('idle');
   facilitiesRef.current = facilities;
+
+  const requestLocation = () => {
+    if (!navigator.geolocation) { setLocationState('unavailable'); return; }
+    setLocationState('requesting');
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocationState('granted');
+        mapRef.current?.stop();
+        rotating.current = false;
+        mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: 7, duration: 650, essential: true });
+      },
+      (error) => setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable'),
+      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
+    );
+  };
+
+  const zoomIn = () => { const map = mapRef.current; if (!map) return; map.stop(); rotating.current = false; setRotationState('paused'); map.zoomIn({ duration: 0 }); };
+  const zoomOut = () => { const map = mapRef.current; if (!map) return; map.stop(); rotating.current = false; setRotationState('paused'); map.zoomOut({ duration: 0 }); };
 
   useEffect(() => {
     const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 3500);
@@ -170,14 +191,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState}>
       <div ref={container} className="map-canvas" aria-label="Omni discovery globe" />
       <div className="map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Loading the globe…' : mapStatus === 'fallback' ? 'Map tiles are in fallback mode' : 'Live map'}</div>
+      <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="Location permission">
+        <span className="location-prompt-icon"><Crosshair size={15} /></span>
+        <span className="location-prompt-copy"><strong>{locationState === 'requesting' ? 'Finding your position…' : locationState === 'granted' ? 'Map centered on you' : locationState === 'denied' ? 'Location is off' : locationState === 'unavailable' ? 'Location unavailable' : 'Search near you'}</strong><small>{locationState === 'denied' ? 'Allow location in browser settings, then try again.' : locationState === 'unavailable' ? 'You can still explore the public map.' : locationState === 'granted' ? 'Nearby discovery is now centered.' : 'Use your location for nearby discovery.'}</small></span>
+        {(locationState === 'idle' || locationState === 'denied') && <button type="button" onClick={requestLocation}>{locationState === 'denied' ? 'Try again' : 'Use my location'}</button>}
+      </div>
       <div className="map-controls" aria-label="Map controls">
-        <button type="button" aria-label="Locate me" onClick={() => navigator.geolocation?.getCurrentPosition((position) => mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: 7, duration: 850 }))}><Crosshair size={16} /></button>
-        <button type="button" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()}><Plus size={16} /></button>
-        <button type="button" aria-label="Zoom out" onClick={() => mapRef.current?.zoomOut()}><Minus size={16} /></button>
+        <button type="button" aria-label="Locate me" onClick={requestLocation}><Crosshair size={16} /></button>
+        <button type="button" aria-label="Zoom in" onClick={zoomIn}><Plus size={16} /></button>
+        <button type="button" aria-label="Zoom out" onClick={zoomOut}><Minus size={16} /></button>
       </div>
     </div>
   );

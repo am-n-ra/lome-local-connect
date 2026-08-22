@@ -40,6 +40,9 @@ for (const width of widths) {
   const context = await page.locator('.dock-context').innerText();
   const basemap = await page.locator('.map-stage').getAttribute('data-basemap');
   const zoomEnabled = await page.locator('.map-stage').getAttribute('data-zoom-enabled');
+  const locationState = await page.locator('.map-stage').getAttribute('data-location');
+  const locationPrompt = await page.getByRole('group', { name: 'Location permission' }).count();
+  const locationAction = await page.getByRole('button', { name: 'Use my location' }).count();
   const authConfigured = await page.locator('.trunk-app').getAttribute('data-auth');
   const zoomBefore = Number(await page.locator('.map-stage').getAttribute('data-zoom'));
   const reducedMotion = await page.locator('.map-stage').getAttribute('data-motion');
@@ -48,7 +51,7 @@ for (const width of widths) {
   const canvasCount = await page.locator('.map-canvas canvas').count();
 
   const measure = async () => page.evaluate(() => {
-    const selectors = ['.result-rail', '.dock-wrap', '.dock', '.search-dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.topbar', '.options-popover', '.menu-popover'];
+    const selectors = ['.result-rail', '.dock-wrap', '.dock', '.search-dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.location-prompt', '.topbar', '.options-popover', '.menu-popover'];
     const rects = Object.fromEntries(selectors.map((selector) => [selector, (() => {
       const node = document.querySelector(selector);
       if (!node) return null;
@@ -70,6 +73,10 @@ for (const width of widths) {
         optionsControls: overlap(rects['.options-popover'], rects['.map-controls']),
         menuDock: overlap(rects['.menu-popover'], rects['.dock']),
         menuControls: overlap(rects['.menu-popover'], rects['.map-controls']),
+        railControls: overlap(rects['.result-rail'], rects['.map-controls']),
+        locationRail: overlap(rects['.location-prompt'], rects['.result-rail']),
+        locationControls: overlap(rects['.location-prompt'], rects['.map-controls']),
+        locationDock: overlap(rects['.location-prompt'], rects['.dock']),
       },
       bodyWidth: document.body.scrollWidth,
       viewportWidth: window.innerWidth,
@@ -157,9 +164,20 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, basemap, zoomEnabled, zoomBefore, zoomIn, zoomOut, authState, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, context, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, basemap, zoomEnabled, zoomBefore, zoomIn, zoomOut, authState, auth, locationState, locationPrompt, locationAction, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, context, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
+const locationContext = await browser.newContext({ viewport: { width: 375, height: 800 }, deviceScaleFactor: 1, permissions: ['geolocation'], geolocation: { latitude: 6.13, longitude: 1.22 } });
+const locationPage = await locationContext.newPage();
+await locationPage.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
+await locationPage.waitForFunction(() => /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
+await locationPage.getByRole('button', { name: 'Use my location' }).click();
+await locationPage.waitForFunction(() => document.querySelector('.map-stage')?.getAttribute('data-location') === 'granted', undefined, { timeout: 10000 });
+const locationZoom = Number(await locationPage.locator('.map-stage').getAttribute('data-zoom'));
+if (locationZoom < 6) throw new Error(`Granted location did not center the map at a useful zoom: ${locationZoom}`);
+await locationContext.close();
+results.push({ type: 'location-permission', viewportWidth: 375, state: 'granted', zoom: locationZoom, locationButton: true });
+
 const motionPage = await browser.newPage({ viewport: { width: 768, height: 800 }, deviceScaleFactor: 1 });
 await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
 await motionPage.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
