@@ -173,7 +173,15 @@ export function CleanBuyerSearchDock({
           </div>
         ) : null}
 
-        <div data-omni-dock-row="discovery" className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Découverte et options">
+        <div data-omni-dock-row="discovery" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-1 rounded-[1.35rem] border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_92%,transparent)] p-1 shadow-[var(--omni-shadow-float)] backdrop-blur-2xl" aria-label="Catégories et options">
+          <button type="button" aria-label="Catégories précédentes" onClick={() => slide(-1)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><ChevronLeft className="h-4 w-4" /></button>
+          <div ref={railRef} className="flex min-w-0 snap-x gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {CATEGORY_CHIPS.map((chip) => <button key={chip.label} type="button" onClick={() => onCategoryChange(chip.value)} className={cn("min-h-11 shrink-0 snap-start rounded-full px-3 py-2 text-[11px] font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]", category === chip.value ? "bg-[var(--omni-ink)] text-[var(--omni-paper-bright)]" : "bg-[var(--omni-paper)] text-[var(--omni-ink)]")}>{chip.label}</button>)}
+          </div>
+          <button type="button" aria-label="Catégories suivantes" onClick={() => slide(1)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-[var(--omni-ink)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><ChevronRight className="h-4 w-4" /></button>
+        </div>
+
+        <div className="flex min-w-0 items-center gap-2" aria-label="Découverte et options">
           <button type="button" aria-expanded={optionsOpen} aria-controls="omni-buyer-options" aria-label={optionsOpen ? "Fermer les options" : "Ouvrir les options"} onClick={() => setOptionsOpen((open) => !open)} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_88%,transparent)] px-3 text-[11px] font-extrabold text-[var(--omni-ink)] shadow-[var(--omni-shadow-float)] backdrop-blur-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]">
             {optionsOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
             Options
@@ -181,13 +189,6 @@ export function CleanBuyerSearchDock({
           </button>
           {optionsOpen ? (
             <div id="omni-buyer-options" data-omni-options="true" className="min-w-full max-h-[min(42dvh,22rem)] space-y-3 overflow-y-auto rounded-[1.35rem] border border-white/80 bg-[color-mix(in_oklab,var(--omni-paper-bright)_94%,transparent)] p-3 shadow-[var(--omni-shadow-float)] backdrop-blur-2xl sm:min-w-[22rem]">
-              <div className="flex min-w-0 items-center gap-1 rounded-full bg-[var(--omni-paper)]/70 p-1">
-                <button type="button" aria-label="Catégories précédentes" onClick={() => slide(-1)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><ChevronLeft className="h-4 w-4" /></button>
-                <div ref={railRef} className="flex min-w-0 gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                  {CATEGORY_CHIPS.map((chip) => <button key={chip.label} type="button" onClick={() => onCategoryChange(chip.value)} className={cn("min-h-11 shrink-0 rounded-full px-3 py-2 text-[11px] font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]", category === chip.value ? "bg-[var(--omni-ink)] text-white" : "bg-white/75 text-[var(--omni-ink)]")}>{chip.label}</button>)}
-                </div>
-                <button type="button" aria-label="Catégories suivantes" onClick={() => slide(1)} className="grid h-11 w-11 shrink-0 place-items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--omni-orange)]"><ChevronRight className="h-4 w-4" /></button>
-              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between"><Label className="text-xs font-bold">Rayon</Label><span className="text-xs text-[var(--omni-ink-muted)]">{filters.radiusKm >= 50 ? "Monde" : `${filters.radiusKm} km`}</span></div>
                 <Slider min={1} max={50} step={1} value={[filters.radiusKm]} onValueChange={([value]) => onFiltersChange({ ...filters, radiusKm: value ?? 10 })} />

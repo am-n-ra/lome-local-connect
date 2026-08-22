@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { ShoppingBag, Store } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/omni/BrandMark";
@@ -71,7 +71,22 @@ export function TopNav({
   if (minimalMapChrome) {
     return (
       <>
-        <OmniMapChrome onMenuOpen={() => setMenuOpen(true)} menuBadge={menuBadge} />
+        <OmniMapChrome
+          onMenuOpen={() => setMenuOpen(true)}
+          menuBadge={menuBadge}
+          left={
+            <div className="omni-glass flex items-center gap-1 rounded-full p-1" aria-label="Rôle actif">
+              <Button className="h-9 rounded-full bg-[var(--omni-ink)] px-3 text-[var(--omni-paper-bright)] hover:bg-[var(--omni-ink)]" aria-current={activeRole === "acheteur" ? "page" : undefined}>
+                <ShoppingBag className="h-4 w-4" />
+                <span className="hidden text-xs font-bold min-[360px]:inline">Acheter</span>
+              </Button>
+              <Button variant="ghost" className="h-9 rounded-full px-3 text-[var(--omni-ink)]" onClick={onSwitchRole}>
+                <Store className="h-4 w-4" />
+                <span className="hidden text-xs font-bold min-[360px]:inline">Vendre</span>
+              </Button>
+            </div>
+          }
+        />
         {menu}
       </>
     );

@@ -1,4 +1,5 @@
-import { ArrowRight, MapPin, X } from "lucide-react";
+import { ArrowRight, MapPin, Navigation, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { OmniResumeBar } from "@/components/omni/ui/OmniPrimitives";
 import { CleanBuyerSearchDock } from "@/components/omni-clean/CleanBuyerSearchDock";
@@ -157,7 +158,18 @@ export function CleanBuyerMapStage({
         />
       </div>
 
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(244,238,231,.86)_0%,rgba(244,238,231,.16)_18%,transparent_42%,rgba(244,238,231,.1)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--omni-paper)_70%,transparent)_0%,transparent_23%,transparent_72%,color-mix(in_oklab,var(--omni-ink)_10%,transparent)_100%)]" />
+
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        aria-label="Me localiser"
+        onClick={onRequestLocation}
+        className="omni-clean-icon-button absolute right-4 top-[calc(env(safe-area-inset-top)+5rem)] z-20 h-12 w-12 border-0 text-[var(--omni-ink)]"
+      >
+        <Navigation className="h-5 w-5" />
+      </Button>
 
       {revealRunning ? (
         <div className="pointer-events-none absolute left-1/2 top-[24%] z-20 -translate-x-1/2 rounded-full border border-white/75 bg-[color-mix(in_oklab,var(--omni-paper-bright)_78%,transparent)] px-4 py-2 text-xs font-bold text-[var(--omni-ink)] shadow-[var(--omni-shadow-float)] backdrop-blur-xl">
@@ -165,27 +177,37 @@ export function CleanBuyerMapStage({
         </div>
       ) : null}
 
-      <section className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-[1440px] flex-col gap-3">
+      <section className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:px-5 lg:px-8">
+        <div className="mx-auto flex max-w-[1440px] flex-col gap-2.5">
           {activeTransactionCount > 0 && !selected ? <div className="pointer-events-auto mx-auto w-full max-w-3xl"><OmniResumeBar label={`${activeTransactionCount} transaction${activeTransactionCount > 1 ? "s" : ""} en cours`} detail="Reprendre votre activité sans perdre la recherche" onClick={onOpenActivity} /></div> : null}
 
-          {!selected && hasActiveSearch && !revealRunning && results.length > 0 ? (
-            <div className="pointer-events-auto -mx-3 overflow-x-auto px-3 pb-1 sm:mx-0 sm:px-0" aria-label="Résultats de recherche">
-              <div className="flex min-w-0 gap-3 sm:grid sm:grid-cols-2 lg:max-w-4xl lg:grid-cols-3">
-                {results.slice(0, 8).map((facility) => (
-                  <button
+          {!selected && !revealRunning && (hasActiveSearch ? results : discoveryFacilities).length > 0 ? (
+            <div className="omni-buyer-bottom-sheet pointer-events-auto -mx-2 px-4 pb-4 pt-2 sm:mx-auto sm:w-full sm:max-w-4xl sm:px-5" aria-label={hasActiveSearch ? "Résultats de recherche" : "Offres à proximité"}>
+              <div className="mb-3 flex justify-center"><span className="omni-buyer-grabber" /></div>
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase text-[var(--omni-orange-deep)]">{hasActiveSearch ? `${results.length} résultat${results.length > 1 ? "s" : ""}` : "Découverte locale"}</p>
+                  <h2 className="truncate font-display text-xl font-bold text-[var(--omni-ink)]">{hasActiveSearch ? `Pour « ${submittedQuery || "votre recherche"} »` : "Proche de vous"}</h2>
+                </div>
+                {hasActiveSearch ? <Button variant="ghost" className="h-11 shrink-0 rounded-full px-3 text-xs font-bold text-[var(--omni-orange-deep)]" onClick={onOpenBulkAvailability}>Tout vérifier</Button> : null}
+              </div>
+              <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex min-w-0 gap-3">
+                {(hasActiveSearch ? results : discoveryFacilities).slice(0, 8).map((facility) => (
+                  <Button
                     key={facility.id}
                     type="button"
+                    variant="ghost"
                     onClick={() => onSelect(facility)}
-                    className="omni-clean-result-card group min-w-[min(78vw,19rem)] text-left sm:min-w-0"
+                    className="omni-clean-result-card group h-auto min-w-[min(78vw,18rem)] max-w-[18rem] flex-col items-stretch justify-start whitespace-normal text-left"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="rounded-full bg-[var(--omni-orange-wash)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--omni-orange-deep)]">
-                        {facility.status === "unclaimed" ? "Données publiques" : "Préqualifiée"}
+                      <span className="rounded-full bg-[var(--omni-orange-wash)] px-2.5 py-1 text-[10px] font-extrabold uppercase text-[var(--omni-orange-deep)]">
+                        {facility.status === "unclaimed" ? "À vérifier" : facility.is_online ? "Ouvert" : "Référencé"}
                       </span>
                       <ArrowRight className="h-4 w-4 text-[var(--omni-ink-muted)] transition-transform group-hover:translate-x-0.5" />
                     </div>
-                    <p className="mt-3 line-clamp-1 font-display text-lg font-extrabold tracking-[-0.03em]">{facility.matched_product_name ?? "Offre à découvrir"}</p>
+                    <p className="mt-3 line-clamp-1 font-display text-lg font-extrabold">{facility.matched_product_name ?? facility.name}</p>
                     <p className="mt-1 line-clamp-1 text-sm font-bold text-[var(--omni-ink)]">{facility.name}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold text-[var(--omni-ink-muted)]">
                       <span>{statusLabel(facility.status)}</span>
@@ -196,22 +218,26 @@ export function CleanBuyerMapStage({
                     {formatMoney(facility.min_price) ? (
                       <p className="mt-3 text-sm font-extrabold text-[var(--omni-ink)]">À partir de {formatMoney(facility.min_price)}</p>
                     ) : null}
-                  </button>
+                    <span className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--omni-ink)] px-3 text-xs font-bold text-[var(--omni-gold)]">Voir l’offre</span>
+                  </Button>
                 ))}
+              </div>
               </div>
             </div>
           ) : null}
 
           {selected ? (
             <article className="pointer-events-auto omni-clean-selected-card relative w-full max-w-xl self-center lg:mr-0 lg:max-w-md lg:self-end" aria-label={`Détails de ${selected.name}`}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={onClearSelection}
                 aria-label="Fermer la fiche de la facilité"
                 className="omni-clean-icon-button absolute right-3 top-3 z-10 h-10 w-10 bg-white/80"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </Button>
               <div className="flex items-start gap-3 pr-12">
                 {selectedMedia ? <img src={selectedMedia} alt="" className="h-16 w-16 shrink-0 rounded-2xl object-cover" /> : <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[var(--omni-orange-wash)] text-[var(--omni-orange-deep)]"><MapPin className="h-5 w-5" /></div>}
                 <div className="min-w-0">
