@@ -137,18 +137,18 @@ Every implementation session must update status, owner, last evidence and blocke
 
 ## 5. V2 — Catalogue-first availability
 
-**Slice status:** `todo` · **Gate status:** `todo` · **Owner:** unassigned
+**Slice status:** `partial` · **Gate status:** `partial` · **Owner:** unassigned
 
 | Task ID | Feature | Parent task | Priority | Dependencies | Status | Evidence / blocker |
 |---|---|---|---|---|---|---|
-| V2-CAT-001 | CAT-001 | Build public facility detail sheet | P0 | V1 | `todo` | — |
+| V2-CAT-001 | CAT-001 | Build public facility detail sheet | P0 | V1 | `verified` | Facility sheet with public data and map return |
 | V2-CAT-002 | CAT-002 | Map status-specific facility actions and locks | P0 | CAT-001 | `todo` | — |
-| V2-CAT-003 | CAT-003 | Load active facility products with async states | P0 | CAT-001 | `todo` | — |
+| V2-CAT-003 | CAT-003 | Load active facility products with async states | P0 | CAT-001 | `partial` | Typed catalogue read model; async error states pending |
 | V2-CAT-004 | CAT-004 | Prioritize matched product with stable identity | P1 | CAT-003 | `todo` | — |
 | V2-CAT-005 | CAT-005 | Render media, price, offer and quantity eligibility | P1 | CAT-003 | `todo` | — |
 | V2-CAT-006 | CAT-006 | Implement empty, sold-out, closed and unavailable catalogue states | P1 | CAT-003 | `todo` | — |
-| V2-CAT-007 | CAT-007 | Implement typed ProductSelection without demand/reservation | P0 | CAT-003 | `todo` | — |
-| V2-CAT-008 | CAT-008 | Implement Produit → Portée → Contraintes → Réponses state machine | P0 | CAT-007 | `todo` | — |
+| V2-CAT-007 | CAT-007 | Implement typed ProductSelection without demand/reservation | P0 | CAT-003 | `verified` | Facility-scoped product selection |
+| V2-CAT-008 | CAT-008 | Implement Produit → Portée → Contraintes → Réponses state machine | P0 | CAT-007 | `partial` | Product handoff to availability surface; response state pending |
 | V2-CAT-009 | CAT-009 | Enforce Free single-facility availability scope | P0 | CAT-008 | `todo` | — |
 | V2-CAT-010 | CAT-010 | Enforce Pro bounded visible-facility scope and Free alternative | P1 | CAT-008, V5 | `todo` | — |
 | V2-CAT-011 | CAT-011 | Implement quantity and unlimited/private budget constraints | P1 | CAT-008 | `todo` | — |
