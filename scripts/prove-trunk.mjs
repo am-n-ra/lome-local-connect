@@ -70,6 +70,9 @@ for (const width of widths) {
   });
   const baseGeometry = await measure();
   if (Object.values(baseGeometry.overlaps).some(Boolean)) throw new Error(`Base overlay collision at ${width}px: ${JSON.stringify(baseGeometry.overlaps)}`);
+  const searchInputNode = page.getByLabel('Search nearby products and services');
+  await searchInputNode.focus();
+  if (await page.evaluate(() => document.activeElement?.getAttribute('aria-label')) !== 'Search nearby products and services') throw new Error(`Search focus was not retained at ${width}px`);
 
   const optionsButton = page.getByRole('button', { name: 'Open search options' });
   const optionsButtonCount = await optionsButton.count();
@@ -77,14 +80,20 @@ for (const width of widths) {
   let optionsCategory = 0;
   let optionsQuantity = 0;
   let optionsGeometry = null;
+  let optionsAfterEscape = 0;
   let optionsAuth = 0;
   if (optionsButtonCount) {
-    await optionsButton.click();
+    await optionsButton.focus();
+    await page.keyboard.press('Enter');
     options = await page.getByRole('region', { name: 'Search options' }).count();
     optionsCategory = await page.locator('.options-popover select').count();
     optionsQuantity = await page.getByLabel('Request quantity').count();
     optionsGeometry = await measure();
     if (Object.values(optionsGeometry.overlaps).some(Boolean)) throw new Error(`Options overlay collision at ${width}px: ${JSON.stringify(optionsGeometry.overlaps)}`);
+    await page.keyboard.press('Escape');
+    optionsAfterEscape = await page.getByRole('region', { name: 'Search options' }).count();
+    if (optionsAfterEscape !== 0) throw new Error(`Options Escape ownership failed at ${width}px`);
+    await optionsButton.click();
     await page.getByRole('button', { name: 'Apply options' }).click();
     optionsAuth = await page.getByRole('dialog', { name: /Search with certainty|Start seeing before you move/ }).count();
     await page.getByRole('button', { name: 'Close' }).click();
@@ -93,13 +102,17 @@ for (const width of widths) {
   let menu = 0;
   let menuActions = 0;
   const menuButton = page.getByRole('button', { name: 'Open Omni menu' });
+  let menuAfterEscape = 0;
   if (await menuButton.count()) {
-    await menuButton.click();
+    await menuButton.focus();
+    await page.keyboard.press('Enter');
     menu = await page.getByRole('menu', { name: 'Omni menu' }).count();
     menuActions = await page.getByRole('menuitem').count();
     const menuGeometry = await measure();
     if (Object.values(menuGeometry.overlaps).some(Boolean)) throw new Error(`Menu overlay collision at ${width}px: ${JSON.stringify(menuGeometry.overlaps)}`);
-    await page.getByRole('button', { name: 'Close Omni menu' }).click();
+    await page.keyboard.press('Escape');
+    menuAfterEscape = await page.getByRole('menu', { name: 'Omni menu' }).count();
+    if (menuAfterEscape !== 0) throw new Error(`Menu Escape ownership failed at ${width}px`);
   }
 
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -123,7 +136,7 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAuth, menu, menuActions, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
 await browser.close();

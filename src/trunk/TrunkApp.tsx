@@ -59,6 +59,20 @@ export function TrunkApp() {
   }, [draftOptions.category, facilities]);
 
   useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (panel !== 'none') {
+        setPanel((current) => current === 'availability' ? 'facility' : 'none');
+        return;
+      }
+      if (optionsOpen) { setOptionsOpen(false); return; }
+      if (menuOpen) setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen, optionsOpen, panel]);
+
+  useEffect(() => {
     let active = true;
     if (!authClient) return undefined;
     authClient.getSession().then((result) => {

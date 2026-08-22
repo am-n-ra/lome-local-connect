@@ -67,7 +67,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     });
     mapRef.current = map;
     const pause = () => { rotating.current = false; };
-    const resume = () => { if (map.getZoom() < 2.4) rotating.current = true; };
+    const resume = () => { if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches && map.getZoom() < 2.4) rotating.current = true; };
     const emitBounds = () => {
       const bounds = map.getBounds();
       const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
@@ -106,6 +106,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       addLayers(map);
       emitBounds();
       const rotate = () => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
         if (rotating.current && !map.isMoving()) {
           map.easeTo({ center: [map.getCenter().lng + 0.04, map.getCenter().lat], duration: 1200, essential: true });
         }
