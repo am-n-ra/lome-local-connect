@@ -60,8 +60,8 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 | Feature inventory | Regenerated |
 | Implementation plan | Regenerated |
 | Task backlog | Regenerated |
-| Root proof ledger | Updated with 29 local tests, 35 preserved Auth users, 26 V2 tables/125 constraints and public/protected API smoke; Root gate remains `review` |
-| Root live evidence | Read-only isolated-branch and canonical-domain evidence recorded; Authenticated mutation and migration-forward proof remain open |
+| Root proof ledger | Updated with 30 local tests, 35 preserved Auth users, 26 V2 tables/125 constraints, public/protected API smoke, branch JWKS reachability and public-stock boundary proof; Root gate remains `review` |
+| Root live evidence | Read-only isolated-branch, canonical-domain and Auth/JWKS evidence recorded; authenticated bearer/provisioning and migration-forward proof remain open |
 | Buyer Trunk entry boundary | Created; implementation remains blocked pending Root approval |
 | Code implementation | Not changed in this architecture pass |
 | Database migration | Not changed in this architecture pass |
