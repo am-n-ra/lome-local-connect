@@ -95,6 +95,7 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | ROOT-009 | Preserve Auth identities and legacy records during additive migration | ROOT-003 | `todo` | Migration forward/preservation checks |
 | ROOT-010 | Build labelled fixture factory across actors and failure states | ROOT-004, ROOT-005 | `todo` | Fixture-scope proof |
 | ROOT-011 | Define analytics schema, consent and retention boundary | ROOT-006 | `todo` | Privacy/schema review |
+| ROOT-012 | Define map context, pin/cluster, route authorization and camera recovery boundary | ROOT-001, ROOT-004 | `review` | MapContextSnapshot, public-marker semantics, protected getRoute and restoration rules |
 
 ## 5. Buyer Trunk
 

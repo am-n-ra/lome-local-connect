@@ -83,10 +83,11 @@ Use [`v2-roots.md`](./v2-roots.md) and [`v2-flow.md`](./v2-flow.md). Implement o
 4. database constraints and server checks for trust, stock, slots, wallet, coupon, intent and QR invariants;
 5. idempotency keys, correlation IDs and append-only audit/ledger foundations;
 6. public-data source adapter timeout/fallback/recovery boundary;
-7. fixture factory with visitor, buyer, seller, admin, unclaimed, certified/unconfirmed, Pro, confirmed, stale, unavailable, wallet and QR cases;
-8. migration forward checks, preservation statement and recovery procedure.
+7. map context snapshot, globe/local modes, pin/cluster semantics, trust-marker boundaries, protected route authorization and camera/context restoration;
+8. fixture factory with visitor, buyer, seller, admin, unclaimed, certified/unconfirmed, Pro, confirmed, stale, unavailable, wallet and QR cases;
+9. migration forward checks, preservation statement and recovery procedure.
 
-**Root System proof:** schema/constraint tests, authorization matrix, client-boundary check, idempotency/audit check, secret scan, recovery contract review and a runnable empty product shell.
+**Root System proof:** schema/constraint tests, authorization matrix, client-boundary check, idempotency/audit check, secret scan, map/route privacy review, camera-context recovery contract, recovery contract review and a runnable empty product shell.
 
 ## 7. Phase 3 — Trunk: buyer core
 

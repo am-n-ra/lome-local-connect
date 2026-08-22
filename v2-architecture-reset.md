@@ -1,7 +1,7 @@
 # Omni V2 — Nature Way Architecture Reset Record
 
 **Document ID:** `OMNI-V2-RESET-001`
-**Status:** Species maquette required; implementation frozen pending owner approval
+**Status:** Species direction accepted to advance; Root System review required; implementation remains frozen pending Root approval
 **Method:** Nature Way
 **Date:** 2026-08-22
 
@@ -27,7 +27,7 @@ The former PRD and interface architecture paths remain as derived compatibility 
 
 The existing V2 branch and its public buyer proof are retained as historical reference. They may supply reusable MapLibre, adapter, test or deployment techniques only after a new unit passes the current Species, Root System and Flow contracts.
 
-The current prototype does not close the Species maquette gate, new Trunk or Heartwood gates. Its screenshots, fixtures and public UI evidence must not be used to claim that authenticated availability, seller trust, wallet, transaction, QR or fulfilment is production-ready.
+The current prototype does not close the new Trunk or Heartwood gates. Its screenshots, fixtures and public UI evidence must not be used to claim that authenticated availability, seller trust, wallet, transaction, QR or fulfilment is production-ready. The approved Species now includes explicit globe, local fullscreen map, cluster, trust-marker, facility-focus, protected-route and recovery states.
 
 ## 4. Preservation boundary
 
@@ -54,8 +54,8 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 | Area | Outcome |
 |---|---|
 | Seed rewrite | Complete for review |
-| Species blueprint | Complete maquette created for review; implementation remains frozen until approval |
-| Root System rewrite | Complete for review |
+| Species blueprint | Complete maquette direction accepted to advance; map modes and return states are included |
+| Root System rewrite | Complete for review, including map context and protected route boundary |
 | Flow/state rewrite | Complete for review |
 | Feature inventory | Regenerated |
 | Implementation plan | Regenerated |
@@ -67,4 +67,4 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 
 ## 7. Acceptance decision required
 
-The owner’s next decision is whether to approve the rewritten Seed and complete Species maquette. Root System and Trunk implementation remain blocked until that approval. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
+The owner’s next decision is whether to approve the Root System contract. The Seed and Species direction have been advanced, but Root System and Trunk implementation remain blocked until the Root contract, migration boundary, security model, map context authority and recovery rules are accepted. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.

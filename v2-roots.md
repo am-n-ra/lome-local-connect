@@ -69,6 +69,7 @@ The browser imports only typed client contracts and presentation state. Server m
 | Facilities | Facility identity, location, public profile and lifecycle | Wallet funds or buyer intent |
 | Trust | Evidence, review outcomes and confirmation history | Paid capacity or product publication alone |
 | Discovery | Public sources, bounds, ranking, freshness and fallback | Certification or inventory proof |
+| Map context | Client camera mode, bounds, query/filters, selected facility and reversible view context | Source truth, trust, stock, authorization or transaction state |
 | Catalogue | Products, media, price, publication and Omni allocation | Later availability truth or reservation |
 | Availability | Requests, responses, freshness and scope | Stock reservation or purchase intent |
 | Entitlements | Facility Pro, catalogue limits, slots and feature permissions | Trust badge creation or money movement |
@@ -90,6 +91,7 @@ Each domain exposes a typed contract, server operation, UI state set, proof fixt
 | Purchase intent and transaction facts | Idempotent server operation and immutable snapshot |
 | QR validity | Server-issued hashed token, expiry and replay state |
 | External payment | Buyer declaration and seller acknowledgement; Omni does not move the funds |
+| Route/itinerary | Authorized route provider result or explicitly labelled manual directions after intent | Public discovery, trust, stock or pre-intent private location |
 | Fulfilment/receipt/rating | Actor-authorized transaction transitions |
 | Wallet balance | Confirmed recharge and append-only server ledger |
 | Analytics | Consent-aware, minimized and pseudonymous event pipeline |
@@ -144,6 +146,7 @@ Every migration must ship with a forward check, invariant check, rollback or rec
 - `public_sources`: provider, reference, ingestion status, attribution and freshness.
 - `facility_source_refs`: source-to-facility relation, deduplication key and review status.
 - `discovery_runs`: viewport, source, outcome, count, duration, error class and operator recovery state.
+- `facility_status_history`: facility, prior/current trust status, reason, actor, evidence/review reference and timestamp.
 - `availability_requests`: buyer, selected product/facility scope, quantity, budget mode/value, context, state, correlation ID and expiry.
 - `availability_responses`: request, seller/automation actor, status, quantity, price/offer snapshot, freshness, correction metadata and audit linkage.
 
@@ -193,6 +196,30 @@ Enforce invariants with database constraints where possible, server-side checks 
 
 ## 8. API contract
 
+### 8.1 Map and discovery contract
+
+The map presentation is client-owned visual state backed by server-owned discovery facts. The browser may hold and restore a `MapContextSnapshot`, but it may not promote a pin, cluster, camera label or cached result into a business fact.
+
+```ts
+type MapContextSnapshot = {
+  mode: "idle_globe" | "local_map" | "cluster_selected" | "facility_focus" | "route_visible" | "map_recovery";
+  center: { lng: number; lat: number };
+  zoom: number;
+  bounds?: { west: number; south: number; east: number; north: number };
+  query?: string;
+  filters?: Record<string, string | number | boolean | null>;
+  selectedFacilityId?: string;
+  selectedProductId?: string;
+  availabilityRequestId?: string;
+  intentId?: string;
+  transactionId?: string;
+};
+```
+
+`discover` returns source-backed facilities, clusters, freshness, attribution/status and a recoverable source outcome. It does not return private contact data, precise seller-only location, stock guarantees or transaction permissions. A cluster is a density result at a zoom/bounds; expanding it requests a new bounded discovery read. A facility marker carries only an authoritative facility ID and public status. The selected marker is presentation state, not authorization.
+
+`getRoute` is a protected read. It requires transaction membership, confirmed intent and a permitted location policy. A route response must identify its provider or manual status, freshness, destination policy and failure state; it must never expose a private precise location to a visitor or pre-intent buyer.
+
 Every API response uses one envelope:
 
 ```ts
@@ -203,6 +230,7 @@ Every API response uses one envelope:
   error?: {
     code: "AUTH_REQUIRED" | "FORBIDDEN" | "NOT_FOUND" | "INVALID_INPUT" |
       "STALE_STATE" | "ENTITLEMENT_REQUIRED" | "SOURCE_UNAVAILABLE" |
+      "ROUTE_NOT_AUTHORIZED" | "ROUTE_UNAVAILABLE" |
       "CONFLICT" | "EXPIRED" | "REPLAYED" | "INTERNAL_RECOVERABLE";
     message: string;
     fieldErrors?: Record<string, string>;
@@ -218,6 +246,7 @@ Mutations accept an idempotency key whenever duplicate submission is possible. T
 | `discover(bounds, query, filters)` | Public source access; account for tracked catalogue search | Bounded facilities/clusters, freshness, source status and recovery state |
 | `getFacility(facilityId)` | Public fields by visitor; protected fields only after transition | Facility profile and permitted actions |
 | `getCatalogue(facilityId)` | Public active catalogue policy | Facility-scoped offers and eligibility |
+| `getRoute(transactionId)` | Authorized transaction member after confirmed intent | Provider/manual route result, freshness and recoverable error |
 | `createAvailability(request)` | Authenticated buyer | Request ID, scope, limits and persisted state |
 | `respondAvailability(requestId)` | Authorized seller or approved automation | Response snapshot and audit event |
 | `submitVerification(facilityId, evidence)` | Authorized claimant | Versioned evidence request |
@@ -240,7 +269,7 @@ Visitors read public data only. Buyers act on their own availability requests, i
 
 ## 10. Recovery and consistency
 
-Persist enough context to recover after refresh, reconnect, close, back navigation or session interruption. Protected context includes actor, map viewport, query, filters, selected facility, selected product, availability request, comparison selection, intent ID and transaction ID.
+Persist enough context to recover after refresh, reconnect, close, back navigation or session interruption. Protected context includes actor, map mode, map viewport/center/zoom/bounds, query, filters, selected facility, selected product, availability request, comparison selection, intent ID and transaction ID. The client may preserve this snapshot locally for safe UI restoration; the server remains authoritative for every business state.
 
 Define recovery for:
 
@@ -252,6 +281,7 @@ Define recovery for:
 - unavailable product/facility: preserve safe context and explain the next action;
 - offline mutation: block or queue only when the contract explicitly supports it; never show false completion;
 - failed source import: show last safe result or labelled fallback plus operator recovery;
+- unavailable route provider: show a labelled unavailable/manual-directions state without exposing unauthorized precise location;
 - failed admin review: preserve a reviewable request and evidence history.
 
 ## 11. Observability and privacy
