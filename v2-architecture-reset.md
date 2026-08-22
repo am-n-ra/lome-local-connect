@@ -55,12 +55,13 @@ Before code begins, the owner must approve the Seed, the complete Species maquet
 |---|---|
 | Seed rewrite | Complete for review |
 | Species blueprint | Complete maquette direction accepted to advance; map modes and return states are included |
-| Root System rewrite | Contract complete for review; proof ledger records local checks and remaining runtime gaps |
+| Root System rewrite | Contract complete for review; proof ledger now includes local, read-only Neon and canonical API evidence plus remaining runtime gaps |
 | Flow/state rewrite | Complete for review |
 | Feature inventory | Regenerated |
 | Implementation plan | Regenerated |
 | Task backlog | Regenerated |
-| Root proof ledger | Created; Root gate remains `review` until runtime evidence is accepted |
+| Root proof ledger | Updated with 29 local tests, 35 preserved Auth users, 26 V2 tables/125 constraints and public/protected API smoke; Root gate remains `review` |
+| Root live evidence | Read-only isolated-branch and canonical-domain evidence recorded; Authenticated mutation and migration-forward proof remain open |
 | Buyer Trunk entry boundary | Created; implementation remains blocked pending Root approval |
 | Code implementation | Not changed in this architecture pass |
 | Database migration | Not changed in this architecture pass |

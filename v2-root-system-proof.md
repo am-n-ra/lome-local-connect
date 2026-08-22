@@ -4,7 +4,7 @@
 **Method:** Nature Way — Phase 2, Root System
 **Status:** `review`
 **Parent:** [`v2-roots.md`](./v2-roots.md)
-**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-root-schema-review.md`](./v2-root-schema-review.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
+**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-root-schema-review.md`](./v2-root-schema-review.md), [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
 
 ## Purpose
 
@@ -14,13 +14,13 @@ This ledger records whether the Root System contract is documented, implemented,
 
 | Root area | Contract status | Runtime evidence | Gate status | Remaining proof |
 |---|---|---|---|---|
-| Browser/server boundary | Defined in Root System | Current TypeScript/Vite build and client-boundary grep are clean; server integration remains separately gated | `review` | Re-run against the clean Trunk seam and browser bundle inspection |
-| Neon Auth identity linking | Defined as idempotent and identity-preserving | Existing production branch has preserved identities; real session path is not re-proven here | `review` | Live sign-in, bearer verification and duplicate-provisioning proof |
+| Browser/server boundary | Defined in Root System | TypeScript/Vite build, Vercel bundling, `check:boundary` and canonical public/protected API smoke pass; connected-browser inspection returned HTTP 504 | `review` | Re-run browser bundle/interaction inspection when bridge responds |
+| Neon Auth identity linking | Defined as idempotent and identity-preserving | Read-only isolated-branch check reports 35 `neon_auth.user` rows and 0 V2 accounts; canonical unauthenticated POST returns HTTP 401; no bearer/provisioning session was proven | `review` | Live sign-in, bearer verification and duplicate-provisioning proof |
 | Domain ownership | Defined for Identity, Capacity, Company, Facility, Trust, Discovery, Map Context, Catalogue, Availability, Entitlements, Wallet, Transactions, Communications and Operations | Root/domain invariant tests and static schema review pass; database ownership enforcement gaps are recorded | `review` | Close same-account ownership and scope/FK gaps with server/schema proof |
-| Persistence and migration | Additive, namespaced and preservation-first | Migration 001/002 were read-only reviewed; no migration executed in this ring and no identity/data change was made | `review` | Authorized forward check, preserved-row check and rollback/recovery record |
-| Public discovery and map facts | Pins/clusters/source status separated from stock and trust | Public-discovery tests pass locally; map contract is documented and fixtures remain bounded | `review` | Map/API contract integration and source-failure proof |
+| Persistence and migration | Additive, namespaced and preservation-first | Read-only branch catalog reports 26 public `v2_` tables, 125 constraints and legacy public tables coexisting; migration 001/002 were reviewed but not executed | `review` | Authorized forward check, preserved-row comparison and rollback/recovery record |
+| Public discovery and map facts | Pins/clusters/source status separated from stock and trust | Canonical `GET /api/v2/public/facilities` returns HTTP 200 with 3 bounded facilities; local marker tests prove no stock signal | `review` | Map/API contract integration and source-failure proof |
 | Trust and certification | Claim, evidence, admin review, unconfirmed and confirmed transitions defined | No new certification implementation in this ring | `review` | Positive/negative transition tests and admin audit evidence |
-| Catalogue and availability | Facility-scoped catalogue and non-reserving availability defined | Catalogue/discovery/domain tests plus server-side availability-selection and forged-response tests pass locally; live Authenticated persistence and recovery remain open | `review` | Wire validators into the live API transaction and prove stale/error/retry/recovery |
+| Catalogue and availability | Facility-scoped catalogue and non-reserving availability defined | Canonical facility detail returns HTTP 200 with one published catalogue item; unauthenticated availability returns HTTP 401; authenticated persistence remains open | `review` | Wire validators into the live API transaction and prove stale/error/retry/recovery |
 | Wallet and entitlements | One rechargeable Omni Wallet, append-only ledger, facility-scoped Pro and locked bonus defined | No live recharge or ledger mutation executed in this ring | `review` | Ledger invariant, replay, failed recharge and non-withdrawal proof |
 | Intent and transaction | Immutable snapshot, server transition, protected room and resumability defined | No new transaction implementation in this ring | `review` | Duplicate intent, authorization and state-transition proof |
 | QR and external payment | Hashed expiring server token, replay-safe verification and declaration-only external payment defined | No live QR/payment proof in this ring | `review` | QR mismatch/expiry/replay and actor-forgery proof |
@@ -30,7 +30,11 @@ This ledger records whether the Root System contract is documented, implemented,
 
 ## Validation checkpoint
 
-The current repository checks pass: 7 Vitest files, 29 tests, TypeScript/Vite production build, Vercel function bundling and `check:boundary` (`Client boundary: clean`). The focused Root additions prove map-context round-trip/tamper rejection, public marker semantics, protected-route policy, published catalogue selection and forged availability-response rejection. The static schema review is recorded in [`v2-root-schema-review.md`](./v2-root-schema-review.md). These checks validate the local foundation; they do not prove live Auth, production persistence, route provider authorization, QR replay or payment behavior.
+The current repository checks pass: 7 Vitest files, 29 tests, TypeScript/Vite production build, Vercel function bundling and `check:boundary` (`Client boundary: clean`). The focused Root additions prove map-context round-trip/tamper rejection, public marker semantics, protected-route policy, published catalogue selection and forged availability-response rejection. Canonical smoke probes prove public discovery HTTP 200, facility detail HTTP 200 and unauthenticated availability HTTP 401. The static schema review is recorded in [`v2-root-schema-review.md`](./v2-root-schema-review.md); read-only Neon evidence is recorded in [`v2-root-live-evidence.md`](./v2-root-live-evidence.md) and canonical API evidence in [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md). These checks validate the local and read-only persistence foundation; they do not prove live Auth, migration execution, authenticated availability persistence, route provider authorization, QR replay or payment behavior.
+
+## Live proof limitations
+
+The canonical-domain browser navigation was attempted with the connected browser, but the browser bridge returned HTTP 504 before viewport/session inspection. This is recorded as an inspection blocker, not as a product success or failure. No login, form submission, mutation or credential handling was performed.
 
 ## Required Root exit evidence
 

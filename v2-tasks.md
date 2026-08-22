@@ -84,18 +84,18 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | TypeScript/Vite build and `check:boundary` pass; production/runtime seam remains open |
-| ROOT-002 | Link Neon Auth identity to idempotent Omni account provisioning | ROOT-001 | `todo` | Auth/duplicate-account test |
-| ROOT-003 | Define domain ownership and persistence model | ROOT-001 | `review` | Domain invariant tests pass; live schema/ownership preservation review remains open |
-| ROOT-004 | Add facility, trust, catalogue and availability contracts | ROOT-003 | `review` | 29-test suite covers catalogue selection and forged availability inputs; live authenticated persistence and recovery remain open |
+| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | Build, Vercel bundling, `check:boundary`, public API 200 and protected API 401 pass; connected-browser inspection hit HTTP 504 |
+| ROOT-002 | Link Neon Auth identity to idempotent Omni account provisioning | ROOT-001 | `todo` | 35 Auth users observed and 0 V2 accounts on isolated branch; live bearer/provisioning proof still required |
+| ROOT-003 | Define domain ownership and persistence model | ROOT-001 | `review` | Static review plus isolated-branch catalog of 26 V2 tables/125 constraints; ownership enforcement gaps remain |
+| ROOT-004 | Add facility, trust, catalogue and availability contracts | ROOT-003 | `review` | 29-test suite plus canonical facility detail HTTP 200; authenticated persistence and public stock semantics remain open |
 | ROOT-005 | Add wallet, entitlement, transaction, QR and fulfilment contracts | ROOT-003 | `review` | Root/Flow contracts; ledger and state tests still required |
 | ROOT-006 | Add audit events, correlation IDs and mutation idempotency | ROOT-001 | `review` | 7 test files/29 tests pass, including duplicate and audit helpers; database concurrency proof remains open |
 | ROOT-007 | Define bounded public-source adapter and recovery procedure | ROOT-003 | `manual` | Operator runbook |
 | ROOT-008 | Define private media/evidence storage boundary | ROOT-003 | `todo` | Access-control test |
-| ROOT-009 | Preserve Auth identities and legacy records during additive migration | ROOT-003 | `todo` | Migration forward/preservation checks |
+| ROOT-009 | Preserve Auth identities and legacy records during additive migration | ROOT-003 | `todo` | Read-only coexistence evidence recorded; forward migration and preserved-row comparison still required |
 | ROOT-010 | Build labelled fixture factory across actors and failure states | ROOT-004, ROOT-005 | `todo` | Fixture-scope proof |
 | ROOT-011 | Define analytics schema, consent and retention boundary | ROOT-006 | `todo` | Privacy/schema review |
-| ROOT-012 | Define map context, pin/cluster, route authorization and camera recovery boundary | ROOT-001, ROOT-004 | `review` | MapContextSnapshot serializer/restorer, public-marker semantics and protected-route negative/positive tests pass; provider/HTTP route seam remains open |
+| ROOT-012 | Define map context, pin/cluster, route authorization and camera recovery boundary | ROOT-001, ROOT-004 | `review` | MapContextSnapshot restoration, public-marker semantics and protected-route policy tests pass; live route/provider and browser recovery remain open |
 
 ## 5. Buyer Trunk
 
