@@ -53,13 +53,14 @@ The following visual decisions are locked for the first buyer species:
 2. The initial mobile top row contains a compact `Acheter / Vendre` segmented switch at the upper left and a small circular account/credit indicator at the upper right.
 3. The initial map controls are a compact vertical group on the right side, with `+` above the location/recenter control. They are not a left rail.
 4. A single facility marker and a small uppercase place/category label may sit in the quiet central map field.
-5. The search control is a single white rounded pill floating immediately above the bottom sheet. It is not a full-width navigation bar and does not create a second search surface.
-6. The bottom sheet is white, rounded at the top corners, full-width on mobile and visually heavier than the search pill.
-7. The sheet starts with a centered grab handle, the heading `Proche de vous`, a small `Voir tout` action and a horizontal card rail.
-8. The first card is a compact facility/product card with an icon, a status pill, facility name, category/distance metadata and one dark-green `Vérifier la disponibilité` action.
-9. A partial next card remains visible at the right edge to communicate horizontal continuation without adding a carousel toolbar.
-10. The visual language is warm white, pale grey, muted green, deep forest green, small mint status accents and a restrained orange/coral map-marker accent.
-11. The initial state is quiet and sparse. It does not show a dashboard sidebar, a second dock, a large explanatory caption, multiple floating chips, a visible filter grid or a collection of unrelated actions.
+5. The search control is a single bottom dock. In the map-only state it rests inside the bottom safe area. When the nearby result grid/sheet is visible, it moves into a separate dock band above that surface with a measured gap; it never overlaps the grid, cards, sheet or map controls.
+6. The dock contains the search field, one separately discoverable Options/chevron control and a clearly right-aligned dark-green search action. The search action is the submit affordance; the chevron opens parameters and never replaces the search action.
+7. The bottom result sheet is white, rounded at the top corners, full-width on mobile and visually heavier than the dock.
+8. The sheet starts with a centered grab handle, the heading `Proche de vous`, a small `Voir tout` action and a horizontal card rail.
+9. The first card is a compact facility/product card with an icon, a status pill, facility name, category/distance metadata and one dark-green `Vérifier la disponibilité` action.
+10. A partial next card remains visible at the right edge to communicate horizontal continuation without adding a carousel toolbar.
+11. The visual language is warm white, pale grey, muted green, deep forest green, small mint status accents and a restrained orange/coral map-marker accent.
+12. The initial state is quiet and sparse. It does not show a dashboard sidebar, an overlapping dock/grid, a large explanatory caption, multiple floating chips, a visible filter grid or a collection of unrelated actions.
 
 These are Species rules. Seed product invariants, Flow state transitions and Root System authority remain unchanged.
 
@@ -74,8 +75,9 @@ Use normalized proportions so the reference remains stable across supported phon
 | Account/credit indicator | 84–94% viewport width, upper-right safe area | Small circular indicator; no large profile panel |
 | Map controls | 84–94% viewport width, around 18–34% viewport height | Right-aligned, vertically stacked, compact and reachable |
 | Facility marker/label | Around 35–65% viewport width and 28–43% viewport height | Quietly centered; never behind search or sheet |
-| Search pill | 7–93% viewport width; bottom edge 1–3% above sheet | One row, rounded, soft shadow, 44–52px high on mobile |
-| Sheet top | 59–63% viewport height in arrival | Full-width with 28–32px top corner radius |
+| Bottom dock | 7–93% viewport width; inside bottom safe area when map-only | One row, search field plus distinct options and right submit button |
+| Dock with sheet | Same width; 8–16px above sheet/grid | Dedicated band; never overlaps the sheet, cards or controls |
+| Sheet top | 59–63% viewport height in arrival | Full-width with 28–32px top corner radius; dock occupies its own band above it |
 | Sheet handle | Centered, 40–56px wide, 3–5px high | Visible but subtle |
 | Nearby heading row | 7–93% viewport width, 6–14% below sheet top | Heading left, `Voir tout` right |
 | Card rail | 7–100% viewport width, below heading | First card fully readable; next card partially visible |
@@ -111,13 +113,13 @@ The reference places map controls on the right, not the left. The initial visibl
 
 Controls pause idle movement and never overlap the search pill, facility label or sheet. They remain accessible at 320px.
 
-## 6. Search pill
+## 6. Search dock
 
-The arrival search is one floating pill immediately above the sheet. Its placeholder follows the reference: `Rechercher un commerce, un produit…`. The pill includes a small search icon and one coherent input row.
+The arrival search is one bottom dock. Its placeholder follows the reference: `Rechercher un commerce, un produit…`. The dock includes a search icon, one coherent input row, a distinct Options/chevron affordance and a clearly right-aligned `Rechercher` action.
 
-The closed arrival state does not display a second search bar, filter chips, a large caption or a separate desktop dock. When the user focuses or expands the pill, the single Options affordance may appear inside that same control or its directly attached state. It must not create a competing panel or move the map unexpectedly.
+In the map-only state, the dock is anchored to the bottom safe area. When the nearby result grid/sheet appears, the dock is repositioned into a dedicated band above it with a visible 8–16px gap. The dock and grid are separate siblings in the layout; neither is allowed to cover the other. Options open upward from the dock into the map field or another reserved safe region, never inside the result grid.
 
-The input is large enough to type without browser zoom. Search focus does not pan or zoom the map. Pressing Enter and activating the visible action use the same guarded path.
+The closed state does not display a second search bar, filter chips, a large explanatory caption or a desktop-only dock. Search focus does not pan or zoom the map. Pressing Enter and activating the right-side `Rechercher` button use the same guarded path. The chevron only opens or closes parameters and is never the submit action.
 
 ## 7. Bottom sheet and card rail
 
@@ -214,11 +216,12 @@ The Species is ready for Root System/Trunk implementation only when the owner co
 
 1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
 2. the complete maquette and S01–S17 state inventory are approved as the visual reference DNA;
-3. the role switch is upper-left, the compact map controls are right-aligned, the search is one floating pill and the sheet is the primary contextual surface;
-4. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
-5. the map remains real geographic context with a quiet pale treatment and no fabricated data;
-6. seller and buyer use the same spatial language without introducing a generic dashboard;
-7. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
-8. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
+3. the role switch is upper-left, the compact map controls are right-aligned, the map-only search is a bottom dock and the result-state dock occupies a separate band above the sheet/grid;
+4. the dock has a right-aligned search action and a distinct Options/chevron control that never replaces submit;
+5. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
+6. the map remains real geographic context with a quiet pale treatment and no fabricated data;
+7. seller and buyer use the same spatial language without introducing a generic dashboard;
+8. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
+9. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.

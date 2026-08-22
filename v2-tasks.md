@@ -70,6 +70,7 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | SPECIES-002 | Lock color, type, spacing, material, motion and status semantics | SPECIES-001 | `review` | Token/contrast review |
 | SPECIES-003 | Create and review the S01–S17 screen/state maquette and surface ownership | SPECIES-001 | `review` | Complete static maquette and state contract |
 | SPECIES-004 | Approve 320/375/768/1280 responsive and accessibility inheritance matrix | SPECIES-002 | `review` | Responsive proof matrix |
+| SPECIES-005 | Approve map-only bottom dock, separated result dock, focused submit dock and upward Options surface | SPECIES-003 | `review` | Dock maquette and no-overlap measurements |
 
 ## 4. Root System
 

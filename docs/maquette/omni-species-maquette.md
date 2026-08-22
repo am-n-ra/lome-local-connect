@@ -24,14 +24,15 @@ upper-left: compact Acheter / Vendre segmented switch
 upper-right: small circular J5/account indicator
 right side: compact + and location controls
 center map field: quiet marker and uppercase place label
-above sheet: one white search pill with one chevron
-bottom: white rounded sheet with centered handle
+map-only state: one bottom search dock in the bottom safe area
+result state: the same dock in its own band above the lower grid/sheet
+bottom result surface: white rounded sheet with centered handle
 sheet heading: Proche de vous + Voir tout
 sheet body: one complete card + partial next card
 card action: one dark-green Vérifier la disponibilité CTA
 ```
 
-The device border shown in the source image is a presentation frame only. The application itself fills the available viewport and keeps the same internal proportions. The initial state is sparse; it does not add a logo wordmark, live-discovery chip, caption, left control rail, second search bar, filter grid, table or unrelated action.
+The device border shown in the source image is a presentation frame only. The application itself fills the available viewport and keeps the same internal proportions. The reference image depicts the result state, where the search dock is visibly separated above the lower grid. The default map-only state places the dock at the bottom; it moves upward only when the lower result surface is present. The initial state is sparse; it does not add a logo wordmark, live-discovery chip, caption, left control rail, second search bar, filter grid, table or unrelated action.
 
 ## 3. Locked visual DNA
 
@@ -50,14 +51,15 @@ The device border shown in the source image is a presentation frame only. The ap
 
 ## 4. Screen and state inventory
 
-Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern.
+Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern. S00 and S01 distinguish the map-only dock from the result-state composition shown in the supplied reference.
 
 | ID | Surface/state | Visual composition | User can do | Required truth |
 |---|---|---|---|---|
-| S01 | Buyer arrival | Exact reference frame | Explore map, open search, use location, open card | Public pin is not stock or trust proof |
-| S02 | Search focused | Same map, same top controls, search pill expands only enough for input and one chevron | Enter a need, open/close Options | Focus never pans or zooms the map |
-| S03 | Search options | One attached white options surface above the pill; no second dock | Choose category, quantity and budget; apply or clear | Options affect a typed search contract, not hidden server state |
-| S04 | Nearby results | Same sheet, heading becomes result context, horizontal rail preserves one full and one partial card | Scroll rail, open facility, view all | Card status distinguishes catalogue/source/availability |
+| S00 | Buyer map-only | Full map with bottom-anchored dock and no lower result grid | Explore map, open search, use location | Public pin is not stock or trust proof |
+| S01 | Buyer nearby result | Exact supplied reference composition with dock in a separate band above the lower sheet/grid | Scroll cards, open facility, view all | Public pin is not stock or trust proof |
+| S02 | Search focused | Same map and top controls; bottom dock expands only enough for input, separate chevron and right-side search action | Enter a need, submit or open/close Options | Focus never pans or zooms the map |
+| S03 | Search options | One attached white options surface opens upward from the dock; the dock remains below and the result grid remains absent or below a reserved gap | Choose category, quantity and budget; apply or clear | Options affect a typed search contract, not hidden server state |
+| S04 | Nearby results | Dock occupies its own band above the white result sheet/grid; heading and horizontal rail preserve one full and one partial card | Scroll rail, open facility, view all | Card status distinguishes catalogue/source/availability |
 | S05 | Facility detail | Same sheet material, back-to-map action, facility identity, trust badge and catalogue rows | Read public detail, inspect catalogue, start verification | Claim is not certification; private contact remains locked |
 | S06 | Catalogue selection | Facility sheet becomes catalogue selection without abandoning map | Select an existing facility-scoped product | Buyer never retypes a product that already exists in catalogue |
 | S07 | Availability steps | Four-step rhythm: Produit → Portée → Contraintes → Réponses | Choose product, confirm scope, set quantity/budget, send request | Availability is evidence request, not reservation or purchase intent |
@@ -89,18 +91,24 @@ The maquette does not only show happy paths. Every S01–S17 surface must have a
 
 ## 6. Responsive inheritance
 
-The mobile frame is the source composition. Responsive layouts must preserve its hierarchy, not reinterpret it as a desktop dashboard.
+The mobile frame is the source composition. Responsive layouts must preserve its hierarchy, not reinterpret it as a desktop dashboard. The dock is a first-class layout region, not an absolutely positioned decoration: the grid/sheet receives its own space, and the dock is placed before it with a measurable gap whenever both are visible.
 
 | Viewport | Inherited composition |
 |---|---|
-| 320px | Full map; compact role switch; right controls; one search pill; full-width sheet; one readable card and safe partial next card |
-| 375px | Same composition with more card breathing room and slightly more next-card visibility |
+| 320px | Full map; compact role switch; right controls; bottom dock in map-only; separated dock band above full-width result sheet; one readable card and safe partial next card |
+| 375px | Same composition with more card breathing room and slightly more next-card visibility; dock/grid gap remains explicit |
 | 768px | Full map remains dominant; sheet is bounded and centered; mobile anatomy is retained |
 | 1280px | Full map remains dominant; bounded centered sheet/rail retains search-above-sheet relationship; no side dashboard |
 
-At every width, keep independent safe zones for top controls, map controls, marker label, search pill, sheet handle, sheet body and sheet footer. Keyboard focus, touch targets, reduced motion and no horizontal overflow are part of visual acceptance.
+At every width, keep independent safe zones for top controls, map controls, marker label, bottom dock, Options surface, sheet handle, sheet body and sheet footer. Keyboard focus, touch targets, reduced motion and no horizontal overflow are part of visual acceptance. The dock/grid gap is measured, not left to visual coincidence.
 
-## 7. Visual inheritance and recursion
+## 7. Dock interaction contract
+
+The dock has four explicit modes. `Map-only` anchors the dock to the bottom safe area. `Result` places the same dock in a separate band above the result sheet/grid. `Focused` expands the input without moving the map and keeps a visible right-side submit action. `Options` opens one attached surface upward from the dock; it never becomes part of the result grid and never creates a second search bar.
+
+The result grid and dock are separate layout siblings. Reserve the dock band before measuring the sheet/grid. The minimum visible gap is 8px on narrow mobile and 12–16px at wider widths. If the available viewport cannot fit both, reduce card visibility or collapse the grid before allowing overlap.
+
+## 8. Visual inheritance and recursion
 
 A nested feature inherits Species by default. It creates a mini-species only when it introduces a genuinely new surface or interaction pattern. The mini-species must show the parent composition, the new pattern, the states it adds and the exact reason inheritance is insufficient.
 
@@ -112,7 +120,11 @@ product > buyer > availability > responses > comparison card > select response
 
 The comparison card may inherit the sheet, typography, radius, spacing, status pills and action treatment. It needs a mini-species only if comparison introduces a visual pattern that does not exist in the approved maquette.
 
-## 8. Species gate
+## 9. Dock-specific Species gate
+
+The dock gate closes only when the maquette proves all four dock states: map-only bottom dock, result-state separated dock, focused dock with right-side submit, and options surface opening upward from the dock without entering the result grid. The dock and the result grid must be separate layout siblings with a measured gap at every required width.
+
+## 10. Species gate
 
 Species is not approved merely because the first screen looks attractive. The gate closes only when:
 
