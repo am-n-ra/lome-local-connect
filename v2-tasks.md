@@ -383,3 +383,21 @@ The first execution batch is V0. Create issues or work items from `V0-FND-001` t
 [3]: ./v2-feature-list.md "Omni V2 complete feature inventory"
 
 [4]: ./v2-plan.md "Omni V2 implementation plan"
+
+
+## 4.6 Buyer usability correction ring — 2026-08-22
+
+**Slice status:** `verified` · **Gate status:** `verified` · **Owner:** Manus AI
+
+This ring closes the next buyer Trunk usability blockers without changing facility pin semantics, Neon Auth identities, historical tables or the Roots schema. The authoritative contract is [`v2-buyer-usability-contract.md`](./v2-buyer-usability-contract.md), with live findings in [`pre-heartwood-live-audit.md`](./pre-heartwood-live-audit.md).
+
+| Task ID | Feature | Parent task | Priority | Dependencies | Status | Evidence / blocker |
+|---|---|---|---|---|---|---|
+| V1-BUY-015 | BUY-015 | Make visible zoom buttons and direct map gestures change camera reliably | P0 | MAP-012 | `verified` | Commit `62aeac2`; Playwright observed `1.35 → 2.35 → 1.00` plus direct wheel zoom |
+| V1-BUY-016 | BUY-016 | Add explicit location permission request with denied/unavailable recovery | P0 | MAP-009, MAP-011 | `verified` | `idle/requesting/granted/denied/unavailable` contract; controlled granted-location proof centered at zoom 7 |
+| V1-BUY-017 | BUY-017 | Recompose facility cards into a mobile-safe rail and desktop compact rail | P0 | BUY-011, MAP-012 | `verified` | 320 px rail x=58–308, controls x=12–46; no rail/control, rail/dock or location collisions |
+| V1-BUY-018 | BUY-018 | Preserve map-first composition while moving discovery context into the dock | P1 | BUY-015, BUY-017 | `verified` | Caption removed from control zone; dock owns live count; canonical screenshots |
+
+**Ring evidence:** `npm test -- --reporter=dot` (19 tests passed), `npm run check:boundary` (clean), `npm run build` (passed), `scripts/probe-buyer-usability.mjs`, and `scripts/prove-trunk.mjs` against `https://omni.sparkafrika.online` at 320/375/768/1280 px. The final proof found one location action at all widths, three facilities in the settled rail, direct zoom and control zoom transitions, controlled granted-location centering, no body overflow, no console/page errors and no safe-area collision flags.
+
+**Remaining scope:** real user permission interaction and authenticated availability writes remain protected session gates. This ring is buyer public-surface verified, not a full V2 release gate.

@@ -34,3 +34,11 @@ At 320 px, the top-left pin-and-eye mark is now shown without the rectangular wh
 At 1280 px, the same transparent logo treatment and grayscale globe scale cleanly to desktop. The globe is dominant, the left map-control stack is isolated, facility rail and search dock are separate, and the metadata remains above the map interaction zones.
 
 The final proof artifact reports `data-basemap=monochrome`, `data-zoom-enabled=true`, zoom transitions from 1.35 to 2.35 and back to 1.00, and normal-motion center longitude changes from 1.22 to 1.30 before interaction pauses rotation.
+
+## Buyer zoom, location and facility-rail correction — final visual findings
+
+At 320 px, the new `Search near you / Use my location` prompt is visible in its own upper-left band. Facility cards now form a readable contained vertical stack beginning at x=58, leaving the x=12–46 map-control stack unobstructed and ending above the search dock. The three cards retain names, offer/category summaries and trust badges. The `+` and `−` controls remain visibly reachable.
+
+At 1280 px, the location prompt occupies a compact upper-left surface without competing with the metadata band, and the three facility cards form a wider horizontal rail above the dock. The map remains dominant and the left control group stays isolated.
+
+The settled post-deploy probe measured three cards at both 320 and 768 widths. At 320 px the rail was x=58–308 and y=503–652 while controls were x=12–46 and y=476–594; at 768 px the rail was x=90–678 and y=602–652 while controls were x=23–61 and y=464–594. All rail/control, rail/dock, location/control, location/rail and location/dock collision flags were false. Initial geolocation state was `prompt`, confirming the browser permission is requested from an explicit user action rather than silently on page load.

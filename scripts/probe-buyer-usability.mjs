@@ -12,7 +12,7 @@ for (const width of widths) {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console:${message.text()}`); });
   page.on('pageerror', (error) => errors.push(`page:${error.message}`));
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
-  await page.waitForFunction(() => /public places in view|No public places in this view|Updating the live map/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
+  await page.waitForFunction(() => /public places in view|No public places in this view/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
   const permissionBefore = await page.evaluate(async () => {
     try { return (await navigator.permissions.query({ name: 'geolocation' })).state; } catch { return 'unsupported'; }
   });

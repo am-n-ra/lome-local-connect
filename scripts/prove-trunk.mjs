@@ -26,7 +26,7 @@ for (const width of widths) {
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => {
     const text = document.querySelector('.dock-context')?.textContent ?? '';
-    return /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(text);
+    return /public places in view|No public places in this view/i.test(text);
   }, undefined, { timeout: 90000 });
   await page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
   await page.screenshot({ path: `/tmp/omni-v2-proof/trunk-${width}.png`, fullPage: true });
@@ -170,9 +170,10 @@ for (const width of widths) {
 const locationContext = await browser.newContext({ viewport: { width: 375, height: 800 }, deviceScaleFactor: 1, permissions: ['geolocation'], geolocation: { latitude: 6.13, longitude: 1.22 } });
 const locationPage = await locationContext.newPage();
 await locationPage.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
-await locationPage.waitForFunction(() => /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
+await locationPage.waitForFunction(() => /public places in view|No public places in this view/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
 await locationPage.getByRole('button', { name: 'Use my location' }).click();
 await locationPage.waitForFunction(() => document.querySelector('.map-stage')?.getAttribute('data-location') === 'granted', undefined, { timeout: 10000 });
+await locationPage.waitForFunction(() => Number(document.querySelector('.map-stage')?.getAttribute('data-zoom')) >= 6, undefined, { timeout: 10000 });
 const locationZoom = Number(await locationPage.locator('.map-stage').getAttribute('data-zoom'));
 if (locationZoom < 6) throw new Error(`Granted location did not center the map at a useful zoom: ${locationZoom}`);
 await locationContext.close();
@@ -181,7 +182,7 @@ results.push({ type: 'location-permission', viewportWidth: 375, state: 'granted'
 const motionPage = await browser.newPage({ viewport: { width: 768, height: 800 }, deviceScaleFactor: 1 });
 await motionPage.emulateMedia({ reducedMotion: 'no-preference' });
 await motionPage.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
-await motionPage.waitForFunction(() => /public places in view|No public places in this view|Updating the live map|temporarily unavailable/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
+await motionPage.waitForFunction(() => /public places in view|No public places in this view/i.test(document.querySelector('.dock-context')?.textContent ?? ''), undefined, { timeout: 90000 });
 const initialLongitude = Number(await motionPage.locator('.map-stage').getAttribute('data-center-lng'));
 await motionPage.waitForTimeout(3600);
 const finalLongitude = Number(await motionPage.locator('.map-stage').getAttribute('data-center-lng'));
