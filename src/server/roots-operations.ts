@@ -12,6 +12,8 @@ import type {
   QrVerificationInput,
   QrVerificationResult,
   TransactionMembership,
+  TransactionState,
+  TransactionTransitionResult,
   WalletLedgerEntry,
 } from '../domain/contracts';
 import {
@@ -180,6 +182,36 @@ export function createIdempotentIntent(
   };
   repository.saveIntent(snapshot, idempotencyKey);
   return ok(correlationId, snapshot);
+}
+
+const TRANSACTION_TRANSITIONS: readonly { from: TransactionState; to: TransactionState; actorRole: 'buyer' | 'seller' | 'system' }[] = [
+  { from: 'intent_created', to: 'qr_ready', actorRole: 'system' },
+  { from: 'qr_ready', to: 'qr_verified', actorRole: 'seller' },
+  { from: 'qr_verified', to: 'payment_declared', actorRole: 'buyer' },
+  { from: 'payment_declared', to: 'payment_confirmed', actorRole: 'seller' },
+  { from: 'payment_confirmed', to: 'fulfilment_pending', actorRole: 'seller' },
+  { from: 'fulfilment_pending', to: 'fulfilled', actorRole: 'seller' },
+  { from: 'fulfilled', to: 'received', actorRole: 'buyer' },
+  { from: 'received', to: 'rated', actorRole: 'buyer' },
+  { from: 'rated', to: 'closed', actorRole: 'system' },
+];
+
+export function authorizeTransactionTransition(
+  actor: ActorContext,
+  membership: TransactionMembership | null,
+  transactionId: string,
+  from: TransactionState,
+  to: TransactionState,
+  correlationId: string,
+): ApiEnvelope<TransactionTransitionResult> {
+  if (actor.suspended) return failure(correlationId, 'FORBIDDEN', 'Account is suspended.');
+  const transition = TRANSACTION_TRANSITIONS.find((candidate) => candidate.from === from && candidate.to === to);
+  if (!transition || transition.actorRole === 'system') return failure(correlationId, 'STALE_STATE', 'Transaction cannot make this state transition.');
+  if (!actor.roles.includes(transition.actorRole)) return failure(correlationId, 'FORBIDDEN', 'Actor role cannot make this transition.');
+  if (!membership || membership.transactionId !== transactionId || membership.accountId !== actor.accountId || membership.role !== transition.actorRole) {
+    return failure(correlationId, 'FORBIDDEN', 'Actor is not authorized for this transaction transition.');
+  }
+  return ok(correlationId, { allowed: true, transactionId, from, to, actorRole: transition.actorRole });
 }
 
 export function verifyQrAttempt(

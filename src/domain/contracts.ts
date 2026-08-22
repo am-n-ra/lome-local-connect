@@ -177,6 +177,20 @@ export interface QrTokenRecord {
   replayCount: number;
 }
 
+export interface TransactionStateTransition {
+  from: TransactionState;
+  to: TransactionState;
+  actorRole: AccountRole | 'system';
+}
+
+export interface TransactionTransitionResult {
+  allowed: true;
+  transactionId: string;
+  from: TransactionState;
+  to: TransactionState;
+  actorRole: AccountRole;
+}
+
 export interface TransactionMembership {
   transactionId: string;
   accountId: string;

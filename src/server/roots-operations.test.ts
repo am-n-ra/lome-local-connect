@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ActorContext, AvailabilityRequest, AvailabilityResponse, Facility, FacilitySlot, PurchaseIntentSnapshot, QrTokenRecord, TransactionMembership, WalletLedgerEntry } from '../domain/contracts';
-import { createIdempotentIntent, recordQualifyingSale, validateAvailabilitySelection, validateOfferPublication, validateSlotPurchase, verifyQrAttempt } from './roots-operations';
+import { authorizeTransactionTransition, createIdempotentIntent, recordQualifyingSale, validateAvailabilitySelection, validateOfferPublication, validateSlotPurchase, verifyQrAttempt } from './roots-operations';
 
 const seller: ActorContext = { accountId: 'seller-1', roles: ['seller'], suspended: false };
 const buyer: ActorContext = { accountId: 'buyer-1', roles: ['buyer'], suspended: false };
@@ -52,6 +52,19 @@ describe('Roots server operations', () => {
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'product-1', facilityId: 'other-facility', quantity: 2, budgetMode: 'unlimited', budgetMinor: null }, 'c-0b').error?.code).toBe('NOT_FOUND');
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'missing-product', facilityId: 'facility-1', quantity: 2, budgetMode: 'unlimited', budgetMinor: null }, 'c-0c').error?.code).toBe('NOT_FOUND');
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'product-1', facilityId: 'facility-1', quantity: 2, budgetMode: 'maximum', budgetMinor: null }, 'c-0d').error?.code).toBe('INVALID_INPUT');
+  });
+
+  it('authorizes only the documented buyer and seller transaction transitions', () => {
+    const sellerMembership: TransactionMembership = { transactionId: 'transaction-1', accountId: 'seller-1', role: 'seller' };
+    const buyerMembership: TransactionMembership = { transactionId: 'transaction-1', accountId: 'buyer-1', role: 'buyer' };
+    expect(authorizeTransactionTransition(seller, sellerMembership, 'transaction-1', 'qr_ready', 'qr_verified', 'c-state-1').data?.to).toBe('qr_verified');
+    expect(authorizeTransactionTransition(buyer, buyerMembership, 'transaction-1', 'qr_verified', 'payment_declared', 'c-state-2').data?.to).toBe('payment_declared');
+    expect(authorizeTransactionTransition(seller, sellerMembership, 'transaction-1', 'payment_declared', 'payment_confirmed', 'c-state-3').ok).toBe(true);
+    expect(authorizeTransactionTransition(buyer, buyerMembership, 'transaction-1', 'fulfilled', 'received', 'c-state-4').ok).toBe(true);
+    expect(authorizeTransactionTransition(buyer, buyerMembership, 'transaction-1', 'qr_ready', 'fulfilled', 'c-state-5').error?.code).toBe('STALE_STATE');
+    expect(authorizeTransactionTransition(buyer, sellerMembership, 'transaction-1', 'qr_ready', 'qr_verified', 'c-state-6').error?.code).toBe('FORBIDDEN');
+    expect(authorizeTransactionTransition(seller, null, 'transaction-1', 'payment_declared', 'payment_confirmed', 'c-state-7').error?.code).toBe('FORBIDDEN');
+    expect(authorizeTransactionTransition(seller, sellerMembership, 'transaction-1', 'rated', 'closed', 'c-state-8').error?.code).toBe('STALE_STATE');
   });
 
   it('proves QR verification is seller-member-only, matching, expiring and replay-safe by policy', () => {
