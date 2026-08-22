@@ -12,7 +12,7 @@ The read-only Neon Auth configuration for the isolated V2 branch reports Better 
 
 ## JWKS reachability
 
-The branch-specific JWKS endpoint responded with valid JSON containing one public key. Non-secret metadata was `kty=OKP`, `alg=EdDSA`, with a populated key ID. This establishes that the server-side `jose` verifier has a reachable key-discovery endpoint for the isolated branch.
+The branch-specific JWKS endpoint responded with valid JSON containing one public key. Non-secret metadata was `kty=OKP`, `alg=EdDSA`, with a populated key ID. This establishes that the server-side `jose` verifier has a reachable key-discovery endpoint for the isolated branch. The server Auth adapter now fails closed for malformed or unverifiable bearer credentials instead of allowing an invalid token to surface as an internal error; focused tests cover empty/non-Bearer credentials and malformed JWT input.
 
 ## Preservation context
 
@@ -20,8 +20,8 @@ The separate read-only database check reported 35 rows in `neon_auth.user` and 0
 
 ## Open proof
 
-No bearer token was available for a real authenticated request. Therefore this artifact does not prove JWT signature acceptance, issuer/audience policy, authenticated availability creation, idempotent first-login V2 account provisioning, role derivation or duplicate-account prevention. The connected browser navigation also returned an HTTP 504 before session inspection. A future authenticated proof must use a real authorized test session or an explicitly owned fixture identity, and must record only non-secret outcome data.
+No valid bearer token was available for a real authenticated request. Therefore this artifact does not prove JWT signature acceptance for a real Neon Auth token, issuer/audience policy, authenticated availability creation, idempotent first-login V2 account provisioning, role derivation or duplicate-account prevention. The connected browser navigation also returned an HTTP 504 before session inspection. A future authenticated proof must use a real authorized test session or an explicitly owned fixture identity, and must record only non-secret outcome data.
 
 ## Nature Way decision
 
-Auth configuration and JWKS reachability are **partially evidenced**. Root remains `review`; Trunk remains blocked until authenticated bearer verification and account-provisioning behavior are proven or explicitly assigned as a manual test with an owner and recovery path.
+Auth configuration, JWKS reachability and fail-closed malformed-token handling are **partially evidenced**. Root remains `review`; Trunk remains blocked until authenticated bearer verification and account-provisioning behavior are proven or explicitly assigned as a manual test with an owner and recovery path.

@@ -84,12 +84,12 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | Build, Vercel bundling, `check:boundary`, public API 200, protected API 401 and branch JWKS reachability pass; connected-browser inspection hit HTTP 504 |
-| ROOT-002 | Link Neon Auth identity to idempotent Omni account provisioning | ROOT-001 | `todo` | 35 Auth users and 0 V2 accounts observed; canonical trusted origin and branch JWKS configured/reachable; live bearer/provisioning proof still required |
+| ROOT-001 | Establish clean browser/server boundary and typed result/error envelope | SEED, SPECIES | `review` | Build, Vercel bundling, `check:boundary`, public API 200, protected API 401, branch JWKS reachability and fail-closed malformed-token tests pass; connected-browser inspection hit HTTP 504 |
+| ROOT-002 | Link Neon Auth identity to idempotent Omni account provisioning | ROOT-001 | `todo` | 35 Auth users and 0 V2 accounts observed; canonical trusted origin and branch JWKS configured/reachable; malformed credentials fail closed in tests; live bearer/provisioning proof still required |
 | ROOT-003 | Define domain ownership and persistence model | ROOT-001 | `review` | Static review plus isolated-branch catalog of 26 V2 tables/125 constraints; ownership enforcement gaps remain |
 | ROOT-004 | Add facility, trust, catalogue and availability contracts | ROOT-003 | `review` | 30-test suite plus canonical facility detail HTTP 200; branch serializer/SQL scan proves no public stock field, but authenticated persistence and post-deploy verification remain open |
 | ROOT-005 | Add wallet, entitlement, transaction, QR and fulfilment contracts | ROOT-003 | `review` | Root/Flow contracts plus QR policy tests cover seller membership, match, expiry and replay denials; ledger, state and atomic QR mutation tests remain required |
-| ROOT-006 | Add audit events, correlation IDs and mutation idempotency | ROOT-001 | `review` | 8 test files/31 tests pass, including duplicate, audit, public-boundary and QR policy helpers; database concurrency proof remains open |
+| ROOT-006 | Add audit events, correlation IDs and mutation idempotency | ROOT-001 | `review` | 9 test files/33 tests pass, including duplicate, audit, public-boundary, QR policy and Auth-boundary helpers; database concurrency proof remains open |
 | ROOT-007 | Define bounded public-source adapter and recovery procedure | ROOT-003 | `manual` | Operator runbook |
 | ROOT-008 | Define private media/evidence storage boundary | ROOT-003 | `todo` | Access-control test |
 | ROOT-009 | Preserve Auth identities and legacy records during additive migration | ROOT-003 | `todo` | Read-only coexistence evidence recorded; forward migration and preserved-row comparison still required |

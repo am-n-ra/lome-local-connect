@@ -10,11 +10,20 @@ function remoteKeys() {
   return keySet;
 }
 
-export async function getAuthUserId(headers: IncomingHttpHeaders): Promise<string | null> {
+export function getBearerToken(headers: IncomingHttpHeaders): string | null {
   const authorization = headers.authorization;
   if (!authorization?.startsWith('Bearer ')) return null;
   const token = authorization.slice('Bearer '.length).trim();
+  return token || null;
+}
+
+export async function getAuthUserId(headers: IncomingHttpHeaders): Promise<string | null> {
+  const token = getBearerToken(headers);
   if (!token) return null;
-  const { payload } = await jwtVerify(token, remoteKeys());
-  return typeof payload.sub === 'string' && payload.sub.length > 0 ? payload.sub : null;
+  try {
+    const { payload } = await jwtVerify(token, remoteKeys());
+    return typeof payload.sub === 'string' && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
 }

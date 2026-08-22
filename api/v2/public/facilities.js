@@ -7,13 +7,21 @@ function remoteKeys() {
   keySet ??= createRemoteJWKSet(new URL(url));
   return keySet;
 }
-async function getAuthUserId(headers) {
+function getBearerToken(headers) {
   const authorization = headers.authorization;
   if (!authorization?.startsWith("Bearer ")) return null;
   const token = authorization.slice("Bearer ".length).trim();
+  return token || null;
+}
+async function getAuthUserId(headers) {
+  const token = getBearerToken(headers);
   if (!token) return null;
-  const { payload } = await jwtVerify(token, remoteKeys());
-  return typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+  try {
+    const { payload } = await jwtVerify(token, remoteKeys());
+    return typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
 }
 
 // src/server/trunk-repository.ts
