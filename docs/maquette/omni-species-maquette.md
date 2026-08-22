@@ -51,7 +51,7 @@ The device border shown in the source image is a presentation frame only. The ap
 
 ## 4. Screen and state inventory
 
-Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern. S00 and S01 distinguish the map-only dock from the result-state composition shown in the supplied reference. S18–S21 make the intermediate navigation and account surfaces explicit.
+Every row is part of the Species maquette. A unit inherits the arrival frame unless the row explicitly adds a new surface pattern. S00 and S01 distinguish the map-only dock from the result-state composition shown in the supplied reference. S18–S21 make the intermediate navigation and account surfaces explicit. S28–S34 make the map itself and its return behavior explicit.
 
 | ID | Surface/state | Visual composition | User can do | Required truth |
 |---|---|---|---|---|
@@ -83,10 +83,17 @@ Every row is part of the Species maquette. A unit inherits the arrival frame unl
 | S25 | Contact/Itinerary Unlocked | Transaction sheet with permitted seller contact, itinerary/action and transaction context | Contact seller, open itinerary, return to timeline | These actions are visible only after server-confirmed intent |
 | S26 | Transaction Room | Single transaction sheet with timeline, scoped chat, QR and external payment choices | Continue handoff, declare payment, resume later | Room owns the state machine; chat cannot advance it |
 | S27 | Fulfilment/Rating | Transaction completion sheet with payment/fulfilment, receipt confirmation and rating | Confirm receipt, rate, recover from dispute/expiry | Completion follows seller/buyer state transitions |
+| S28 | Idle Globe | Full map/world context with sparse pins or clusters, quiet marker density and slow idle motion | Observe, manually explore, open J5 or search | Rotation is interruptible; public pins are not supply |
+| S29 | Local Fullscreen Map | Full local geographic context with stable camera, right controls and bottom dock | Explore nearby map, search, select cluster or pin | Location is explicit; camera never silently becomes precise |
+| S30 | Cluster Selected | Selected cluster count and framed map context, with no availability badge | Expand cluster or zoom to members | Cluster count communicates density only |
+| S31 | Facility Trust Markers | Map legend/status treatment for unclaimed, certified/unconfirmed and confirmed facilities | Inspect status and select a facility | Status is authoritative and does not imply stock or permission |
+| S32 | Facility Focus | Selected pin/halo/label with prior result context recoverable | Open public detail or return to map | Selection never unlocks contact, itinerary or transaction |
+| S33 | Route Visible | Honest route/itinerary layer to the permitted facility with transaction sheet | View route, return to room or close route | Route is available only after server-confirmed intent |
+| S34 | Map Recovery / Return | Restored camera, query, selection and concise recovery copy | Retry, resume, back or return to map | Recovery never discards context or duplicates an operation |
 
 ## 5. State coverage for each substantial surface
 
-The maquette does not only show happy paths. Every S00–S27 surface must have a designed state for the applicable entries below before its implementation gate closes.
+The maquette does not only show happy paths. Every S00–S34 surface must have a designed state for the applicable entries below before its implementation gate closes.
 
 | State | Visual requirement | Interaction requirement |
 |---|---|---|
@@ -141,7 +148,7 @@ The intermediate-surface gate closes only when the maquette shows the account/na
 Species is not approved merely because the first screen looks attractive. The gate closes only when:
 
 1. the supplied Canva frame is reproduced as S01;
-2. S00–S27 have a written composition and applicable state coverage, including account-owned navigation, Account, context resume and post-availability states;
+2. S00–S34 have a written composition and applicable state coverage, including account-owned navigation, post-availability states and map-owned states;
 3. the complete static maquette is available for review;
 4. design tokens, surface ownership and responsive inheritance are explicit;
 5. every new visual pattern has an owner and a mini-species decision;

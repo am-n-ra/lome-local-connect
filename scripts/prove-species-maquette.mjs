@@ -35,6 +35,10 @@ for (const width of widths) {
       accountCount: document.querySelectorAll('.account-panel').length,
       postintentCount: document.querySelectorAll('.postintent-phone').length,
       postintentOverflow: [...document.querySelectorAll('.postintent-phone .sheet')].some((node) => node.scrollHeight > node.clientHeight + 1),
+      mapmodeCount: document.querySelectorAll('.mapmode-phone').length,
+      globeVisible: Boolean(document.querySelector('.globe-mode .globe-disc')),
+      routeSheet: box('.route-sheet'),
+      routeControls: box('.route-mode .controls'),
       source: Boolean(document.querySelector('.reference-panel img')),
       sections: [...document.querySelectorAll('.section-label')].map((node) => node.textContent.trim()),
     };
@@ -50,8 +54,10 @@ for (const width of widths) {
     accountControls: !intersects(state.accountPanel, state.intermediateControls),
     intermediateSurfaces: state.menuCount >= 2 && state.accountCount >= 2,
     postintentSurfaces: state.postintentCount >= 6 && !state.postintentOverflow,
+    mapmodeSurfaces: state.mapmodeCount >= 7 && state.globeVisible,
+    routeControls: !intersects(state.routeSheet, state.routeControls),
     sourceVisible: state.source,
-    allSectionsVisible: state.sections.length >= 4,
+    allSectionsVisible: state.sections.length >= 5,
   };
   Object.entries(checks).forEach(([name, passed]) => { if (!passed && name !== 'sourceVisible' && name !== 'allSectionsVisible') failures.push(`${width}:${name}`); });
   if (!checks.sourceVisible) failures.push(`${width}:sourceVisible`);

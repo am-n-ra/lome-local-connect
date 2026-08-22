@@ -95,25 +95,47 @@ Public pins remain source-backed and stable. Use a small warm marker/halo for th
 
 The map must never become a flat decorative panel. If external tiles fail, show an honest, graceful fallback with the same spatial composition; do not fabricate roads, facilities or availability.
 
-## 5. Top controls
+## 5. Map modes and map-owned surfaces
 
-### 5.1 Buyer/seller switch
+The map is not a decorative background behind the sheets. It is a first-class Species surface and must be represented by distinct maquettes before implementation.
+
+| State | Map presentation | Visible facilities | Allowed transition |
+|---|---|---|---|
+| `idle_globe` | Full viewport, sparse globe/world context, slow interruptible idle rotation | Source-backed pins or clusters at global/low zoom | Manual explore, explicit location, search, J5 account |
+| `local_map` | Full viewport local geographic context, stable camera after explicit reveal | Public source-backed pins and density-appropriate clusters | Select cluster, select pin, search, back to globe |
+| `cluster_selected` | Local map with selected cluster emphasis and camera framing | Cluster count/members, no invented availability | Expand/zoom to local map or choose a member facility |
+| `facility_focus` | Local map with one restrained selected-pin highlight and label | Selected facility plus nearby context | Open public detail or return to prior map context |
+| `trust_markers` | Same map with a visible legend or readable status treatment | Neutral unclaimed, explicit certified/unconfirmed and confirmed markers | Select facility; never directly unlock private actions |
+| `route_visible` | Local map with an honest route/itinerary layer to the permitted facility | Selected facility and route endpoint | Open transaction room, close route to transaction context |
+| `map_recovery` | Prior map camera restored with concise recovery copy | Previously visible source-backed context | Retry, resume or return to the safe prior state |
+
+The supplied Canva frame remains the visual reference for the surface material, top controls, quiet map field and dock/sheet relationship. These map modes extend its language rather than replacing it. In `idle_globe`, the visual field is intentionally sparse and the map may rotate slowly only when no active interaction owns the camera. In `local_map`, the map fills the viewport and the camera changes only through explicit location, manual exploration or a permitted search reveal. Sheets remain contextual overlays with their own reserved bands.
+
+Clusters communicate density and zoom affordance, never supply. A cluster may show a count or expand into its members; it must not show a fake availability number. A public pin communicates geographic presence only. Marker treatment may distinguish `unclaimed`, `certified/unconfirmed` and `confirmed` only when the status is authoritative and a legend or accessible label makes the meaning clear. It must never imply inventory, price, trust beyond the status, or seller permission. The selected marker can receive a warm halo and label while the prior camera and result context remain recoverable.
+
+The route/itinerary layer is a protected post-intent surface. It appears only after `intent_created` is confirmed by the server and the buyer is authorized to access the seller’s permitted location. It is not shown on a public facility, on an availability response or during intent review. Closing it returns to the transaction room without revoking the intent.
+
+Every map state has a reversible owner. Back, Escape, close and sheet dismissal restore the previous camera mode, center, zoom, query, filters, selected facility, selected product and active request/intent/transaction IDs. No transition silently jumps to precise personal location or discards unfinished work.
+
+## 6. Top controls
+
+### 6.1 Buyer/seller switch
 
 The initial role/context control is a single segmented pill at the upper left. It visually resembles the reference: the active segment is deep forest green with light text, and the inactive segment is warm white or translucent with dark text. In the buyer species, `Acheter` is active and `Vendre` is available only when the authenticated account is authorized for seller context.
 
 This switch changes role context; it does not bypass Auth, facility ownership or permissions. For a visitor, tapping `Vendre` opens the explicit account/authorization gate while preserving the public map.
 
-### 5.2 Account or credit indicator
+### 6.2 Account or credit indicator
 
 The upper-right circular indicator is intentionally small. It may show an account state, compact credit/entitlement indicator such as `J5`, or a notification state when that state is real. It must not become an unexplained wallet claim or a decorative badge. Tapping it opens a real account/context surface.
 
-### 5.3 Map controls
+### 6.3 Map controls
 
 The reference places map controls on the right, not the left. The initial visible group contains a circular `+` control and a circular location/recenter control with consistent size, spacing, translucency and shadow. Zoom-out remains available through a safe expanded control or direct gesture without adding a third crowded button to the initial frame unless the approved design extension explicitly requires it.
 
 Controls pause idle movement and never overlap the search pill, facility label or sheet. They remain accessible at 320px.
 
-## 6. Search dock
+## 7. Search dock
 
 The arrival search is one bottom dock. Its placeholder follows the reference: `Rechercher un commerce, un produit…`. The dock includes a search icon, one coherent input row, a distinct Options/chevron affordance and a clearly right-aligned `Rechercher` action.
 
@@ -121,7 +143,7 @@ In the map-only state, the dock is anchored to the bottom safe area. When the ne
 
 The closed state does not display a second search bar, filter chips, a large explanatory caption or a desktop-only dock. Search focus does not pan or zoom the map. Pressing Enter and activating the right-side `Rechercher` button use the same guarded path. The chevron only opens or closes parameters and is never the submit action.
 
-## 7. Bottom sheet and card rail
+## 8. Bottom sheet and card rail
 
 The sheet is the reference’s primary contextual surface. It has a white or nearly opaque warm-white base, soft shadow, 28–32px top radii and a centered grab handle. Its initial height is approximately 38–42% of a phone viewport.
 
@@ -139,33 +161,33 @@ The CTA opens the catalogue/product selection and availability path only when th
 
 The rail must restore its scroll position and selected facility context after opening detail and returning. On desktop, keep the rail inside the bounded sheet; do not replace it with a dense data table.
 
-## 8. State compositions
+## 9. State compositions
 
-### 8.1 Arrival state
+### 9.1 Arrival state
 
 The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. No permission prompt appears automatically. Location is explicit and cancellable.
 
-### 8.2 Search expanded state
+### 9.2 Search expanded state
 
 The search pill grows only enough to show the active input and its one Options affordance. The sheet may compress or scroll, but the map remains visible. Options are presented as a single attached contextual state, not a second dashboard.
 
-### 8.3 Nearby/results state
+### 9.3 Nearby/results state
 
 `Voir tout` expands the rail or sheet to show result cards. The original search pill remains the anchor. Cards preserve the same card anatomy and use status/source labels that distinguish public presence, catalogue match and availability evidence.
 
-### 8.4 Facility state
+### 9.4 Facility state
 
 Selecting the first card or a pin highlights the facility and opens a detail sheet using the same white surface and handle. The result rail remains recoverable. Public identity, source, trust state, public hours and catalogue entry are visible; contact, itinerary, chat and QR remain locked.
 
-### 8.5 Catalogue and availability states
+### 9.5 Catalogue and availability states
 
 The facility sheet transitions into a catalogue surface without abandoning the map composition. Product selection appears before the availability steps. The visible progress language is `Produit → Portée → Contraintes → Réponses`. Each state retains the same sheet material, heading rhythm, footer reachability and one primary next action.
 
-### 8.6 Seller state
+### 9.6 Seller state
 
 When `Vendre` is authorized, the same map-first species remains. The selected owned facility occupies the spatial center. Seller operations appear in contextual sheets and cards, not a generic left-hand admin dashboard. Product and coupon forms use the same card density and one primary action as the buyer card.
 
-### 8.7 Account-owned navigation and account states
+### 9.7 Account-owned navigation and account states
 
 The compact J5/account icon is the **only** navigation entry in the Species. There is no separate hamburger menu. Pressing J5 opens one account/navigation sheet while the map remains mounted behind it. The sheet contents vary by visitor/authenticated state, pending context and authorized role.
 
@@ -176,7 +198,7 @@ The compact J5/account icon is the **only** navigation entry in the Species. The
 
 Opening J5 pauses map motion, preserves viewport/query/selection, traps focus within the sheet only while open, and restores focus to the triggering control on close. `Escape`, back and the close action have the same safe return result. Every row has a destination or typed operation; no dead row is allowed. Guest, authenticated and seller-authorized account sheets are separate states.
 
-### 8.8 Post-availability and purchase surfaces
+### 9.8 Post-availability and purchase surfaces
 
 The availability request is not the end of the buyer journey and must not be represented as a single generic screen. The Species must show the sequence below as distinct surfaces:
 
@@ -189,7 +211,7 @@ The availability request is not the end of the buyer journey and must not be rep
 
 The contact/itinerary transition requires an explicit `intent_created` server state; a client click, availability response or visual selection cannot unlock it. Each surface reserves independent space for the map, top controls, account navigation, dock, sheet header, body and footer. The sheet may grow or scroll, but it may not cover the J5 control or right-side map controls without an explicit, dimmed ownership state.
 
-## 9. Material, color and typography tokens
+## 10. Material, color and typography tokens
 
 | Token | Initial direction | Reference use |
 |---|---|---|
@@ -205,13 +227,13 @@ The contact/itinerary transition requires an explicit `intent_created` server st
 
 Use one readable sans-serif family, medium/semibold headings and regular supporting metadata. The heading is compact and assertive; the supporting text is quiet. Avoid all-caps except for small status pills and map labels.
 
-## 10. Motion
+## 11. Motion
 
 The first frame is calm. Idle globe/map movement is slow and interruptible. It must stop when the user touches the map, focuses search, opens the sheet, selects a facility, requests location or enters any active flow. Reduced-motion mode disables continuous movement and unnecessary sheet animation.
 
 Cards and the sheet may use a short ease-in transition to explain emergence, but do not animate every label, marker or status. Motion must never hide a state transition, delay an action or imply that data has become authoritative.
 
-## 11. Responsive rules
+## 12. Responsive rules
 
 | Viewport | Required composition |
 |---|---|
@@ -222,32 +244,33 @@ Cards and the sheet may use a short ease-in transition to explain emergence, but
 
 At every width, preserve independent safe areas for top controls, menu action, account indicator, right controls, marker label, search dock, Options surface and sheet. No horizontal page overflow is allowed. The sheet footer, if present, remains above the device gesture area and keyboard. Menu and account sheets must never cover the role switch or the right-side map controls unless the state explicitly owns and visually dims them.
 
-## 12. Accessibility and interaction contract
+## 13. Accessibility and interaction contract
 
 The role switch, account indicator, plus control, location control, search input, Options affordance, `Voir tout`, card rail and primary CTA have accessible names and visible focus. The active role is announced. Sheet opening moves focus intentionally; close, back and Escape restore the prior owner.
 
 Touch targets remain comfortably reachable. The card rail supports keyboard scrolling and does not trap focus. Status changes announce loading, empty, error, locked, permission, success and recovery states. Contrast must remain valid over both the live map and the fallback treatment; translucency is never the only contrast mechanism.
 
-## 13. Complete maquette gate
+## 14. Complete maquette gate
 
-The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus dock states, search, options, facility/catalogue, availability, Auth, account-owned navigation, guest Account, authenticated Account, context Resume, comparison, intent review, intent created, contact/itinerary unlock, transaction, seller and recovery compositions. The companion contract enumerates S00–S27 and the required loading, ready, empty, error, locked, success, pending and recovery states.
+The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus dock states, search, options, map modes, pins/clusters, facility trust markers, route/itinerary, facility/catalogue, availability, Auth, account-owned navigation, guest Account, authenticated Account, context Resume, comparison, intent review, intent created, contact/itinerary unlock, transaction, seller and recovery compositions. The companion contract enumerates S00–S34 and the required loading, ready, empty, error, locked, success, pending and recovery states.
 
 No implementation may introduce an alternative layout because a state is technically more complex. It must inherit the arrival species or receive an explicitly approved mini-species.
 
-## 14. Species gate
+## 15. Species gate
 
 The Species is ready for Root System/Trunk implementation only when the owner confirms:
 
 1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
-2. the complete maquette and S00–S27 state inventory, including account-owned navigation, Account intermediate surfaces and post-availability purchase surfaces, are approved as the visual reference DNA;
+2. the complete maquette and S00–S34 state inventory, including map modes, pin/cluster semantics, trust markers, account-owned navigation, Account intermediate surfaces and post-availability purchase surfaces, are approved as the visual reference DNA;
 3. the role switch is upper-left, the compact map controls are right-aligned, the map-only search is a bottom dock and the result-state dock occupies a separate band above the sheet/grid;
 4. the dock has a right-aligned search action and a distinct Options/chevron control that never replaces submit;
 5. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
 6. the map remains real geographic context with a quiet pale treatment and no fabricated data;
 7. seller and buyer use the same spatial language without introducing a generic dashboard;
-8. search, catalogue, availability, account-owned navigation, Account, comparison, intent, contact/itinerary and transaction states extend the same species instead of creating unrelated screens;
+8. globe, local map, clusters, facility focus, trust markers, search, catalogue, availability, account-owned navigation, Account, comparison, intent, contact/itinerary, route and transaction states extend the same species instead of creating unrelated screens;
 9. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap;
 10. every visible account/navigation action has a real destination or typed operation and a safe return path;
-11. contact and itinerary are visibly locked before intent and visibly unlocked only from the server-confirmed transaction state.
+11. contact and itinerary are visibly locked before intent and visibly unlocked only from the server-confirmed transaction state;
+12. map transitions, pin/cluster semantics, trust markers, route visibility and Back/Escape restoration are represented in the maquette and do not invent supply truth.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.

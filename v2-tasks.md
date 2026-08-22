@@ -76,6 +76,9 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | SPECIES-008 | Approve comparison and intent-review surfaces with contact/itinerary locked | SPECIES-003 | `review` | Response comparison, coupon snapshot and locked-state proof |
 | SPECIES-009 | Approve intent-created and contact/itinerary-unlocked surfaces | SPECIES-008 | `review` | Server-confirmed intent boundary and permitted contact actions |
 | SPECIES-010 | Approve transaction room, QR, external payment, fulfilment and rating surfaces | SPECIES-009 | `review` | Timeline, QR/payment and completion/recovery maquette |
+| SPECIES-011 | Approve idle globe and local fullscreen map states | SPECIES-001 | `review` | Globe/local maquette and camera ownership rules |
+| SPECIES-012 | Approve cluster, pin and facility trust-marker semantics | SPECIES-011 | `review` | Density, unclaimed/unconfirmed/confirmed legend and no-supply implication proof |
+| SPECIES-013 | Approve selected facility focus, protected route and map recovery states | SPECIES-012 | `review` | Route-after-intent and Back/Escape context restoration maquette |
 
 ## 4. Root System
 

@@ -92,8 +92,32 @@ idle_globe
 
 idle_globe
   → manual_exploration
+  → local_map
   → search_input
   → public_facility
+
+local_map
+  → cluster_selected
+  → public_facility
+  → search_input
+  → idle_globe
+
+cluster_selected
+  → local_map
+  → public_facility
+
+facility_selected
+  → facility_detail
+  → local_map
+
+transaction_intent_confirmed
+  → route_visible
+  → transaction_room
+
+route_visible
+  → transaction_room
+  → facility_detail
+  → prior_safe_state
 
 locating
   → cancelled
@@ -116,6 +140,12 @@ manual interaction > selected facility > active search reveal > result framing >
 Pan, zoom, keyboard focus, search reveal, location and selected-facility focus pause or override rotation. Reduced motion disables continuous rotation. A personal marker appears only for a fresh acceptable browser position; approximate context is never labelled exact.
 
 Visible bounds are sent through an abortable server request. The adapter handles antimeridian crossing, source status, deduplication, timeout and bounded fallback. Public pins represent source-backed facilities, not current inventory.
+
+Map presentation has four explicit modes. `idle_globe` is the resting, slowly rotating global context with sparse source-backed pins or clusters. `local_map` is the fullscreen geographic context after explicit location, manual exploration or a search reveal; it keeps the same top controls and bottom dock but may show more source-backed facilities. `facility_focus` highlights one selected facility while preserving the prior camera and result context. `route_visible` displays an honest route/itinerary only after a server-confirmed purchase intent unlocks the permitted seller location; it is not available from a public pin or facility card.
+
+Pin and cluster semantics are separate from supply truth. A cluster communicates multiple source-backed facilities at the current zoom and expands or zooms into its members. A public facility pin communicates geographic presence only. Unclaimed facilities use a neutral source marker; certified/unconfirmed facilities may carry an explicit trust status; confirmed facilities may carry the approved confirmed status. None of these markers may imply stock, price, availability or seller permission. Selected pins use a restrained highlight and a visible label, then return to the prior map state when detail closes.
+
+The map itself is always full-screen and dominant. Sheets and transaction surfaces are overlays with reserved safe areas, not replacements for the map. Globe-to-local transitions must be explicit or caused by a permitted search reveal, must preserve the previous context for Back/Escape/close, and must never silently jump to a precise personal location without user permission.
 
 ## 6. Search flow
 
@@ -171,7 +201,7 @@ A result card shows matched product/service first where applicable, media, facil
 
 Public facility detail shows public identity, media, source/status, location/address, public hours, matched offer and product count. Contact details, itinerary and private seller information remain hidden until the authorized intent transition.
 
-Closing detail restores the prior result context. Back, Escape and sheet close never silently erase the query, viewport or selection.
+Closing detail restores the prior result context. Back, Escape and sheet close never silently erase the query, viewport or selection. Back from local map returns to the prior camera mode; Back from a selected pin restores local map; Back from route returns to the transaction room without revoking intent; Back from transaction returns to the account-owned resume context. Every restoration records query, filters, camera center/zoom, selected facility, selected product, availability request and transaction/intent IDs where they exist.
 
 ## 8. Catalogue and product selection
 
