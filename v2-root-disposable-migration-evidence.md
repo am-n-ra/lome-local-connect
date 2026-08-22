@@ -32,3 +32,22 @@ This proves that the draft guardrails are syntactically executable and discovera
 ## Nature Way decision
 
 Migration 003 is **partially evidenced** on an isolated disposable branch. Root remains `review`. The buyer Trunk remains blocked until representative negative/positive database behavior, preservation comparison, authenticated bearer/provisioning, atomic QR concurrency and recovery evidence are closed or explicitly assigned.
+
+## Representative behavior checks
+
+Labeled disposable fixtures were inserted only on the expiring proof branch and exercised within one transaction. The following negative and positive checks passed:
+
+| Check | Result |
+|---|---|
+| Mismatched facility/company owner insert | Denied with `23514` |
+| Product facility outside availability scope | Denied with `23514` |
+| Response facility outside request scope | Denied with `23514` |
+| Purchase intent for a different buyer | Denied with `23514` |
+| Wallet ledger update | Denied with `55000` append-only error |
+| Wallet ledger delete | Denied with `55000` append-only error |
+| QR first verification | Returned `true`; `verified_at` set and replay count became 1 |
+| QR second verification | Returned `false`; replay count remained 1 |
+
+The fixture transaction was isolated to the disposable branch and used fixed IDs/labels beginning with `root-proof-fixture`. No production/default-branch row was touched.
+
+These checks prove representative single-transaction behavior for the installed guardrails. They do not prove concurrent QR scanner behavior, role permissions of the deployed database user, preserved-row comparison across migration history, or production application.
