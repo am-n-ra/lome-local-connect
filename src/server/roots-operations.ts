@@ -8,6 +8,10 @@ import type {
   AvailabilityResponse,
   CatalogProduct,
   PurchaseIntentSnapshot,
+  QrTokenRecord,
+  QrVerificationInput,
+  QrVerificationResult,
+  TransactionMembership,
   WalletLedgerEntry,
 } from '../domain/contracts';
 import {
@@ -176,6 +180,34 @@ export function createIdempotentIntent(
   };
   repository.saveIntent(snapshot, idempotencyKey);
   return ok(correlationId, snapshot);
+}
+
+export function verifyQrAttempt(
+  actor: ActorContext,
+  membership: TransactionMembership | null,
+  token: QrTokenRecord,
+  input: QrVerificationInput,
+  correlationId: string,
+): ApiEnvelope<QrVerificationResult> {
+  if (actor.suspended) return failure(correlationId, 'FORBIDDEN', 'Account is suspended.');
+  if (!actor.roles.includes('seller')) return failure(correlationId, 'FORBIDDEN', 'Seller role required.');
+  if (!membership || membership.role !== 'seller' || membership.accountId !== actor.accountId || membership.transactionId !== input.transactionId) {
+    return failure(correlationId, 'FORBIDDEN', 'Seller is not a member of this transaction.');
+  }
+  if (token.transactionId !== input.transactionId || !input.presentedTokenHash || input.presentedTokenHash !== token.tokenHash) {
+    return failure(correlationId, 'INVALID_INPUT', 'QR code does not match this transaction.');
+  }
+  const now = Date.parse(input.now);
+  const expiresAt = Date.parse(token.expiresAt);
+  if (!Number.isFinite(now) || !Number.isFinite(expiresAt)) return failure(correlationId, 'INVALID_INPUT', 'QR verification time is invalid.');
+  if (now >= expiresAt) return failure(correlationId, 'EXPIRED', 'QR code has expired.');
+  if (token.verifiedAt !== null || token.replayCount > 0) return failure(correlationId, 'REPLAYED', 'QR code has already been verified.');
+  return ok(correlationId, {
+    accepted: true,
+    transactionId: input.transactionId,
+    verifiedAt: input.now,
+    nextReplayCount: token.replayCount + 1,
+  });
 }
 
 export function canProgressToConfirmed(facility: Facility): boolean {

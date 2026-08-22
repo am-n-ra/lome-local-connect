@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { ActorContext, AvailabilityRequest, AvailabilityResponse, Facility, FacilitySlot, PurchaseIntentSnapshot, WalletLedgerEntry } from '../domain/contracts';
-import { createIdempotentIntent, recordQualifyingSale, validateAvailabilitySelection, validateOfferPublication, validateSlotPurchase } from './roots-operations';
+import type { ActorContext, AvailabilityRequest, AvailabilityResponse, Facility, FacilitySlot, PurchaseIntentSnapshot, QrTokenRecord, TransactionMembership, WalletLedgerEntry } from '../domain/contracts';
+import { createIdempotentIntent, recordQualifyingSale, validateAvailabilitySelection, validateOfferPublication, validateSlotPurchase, verifyQrAttempt } from './roots-operations';
 
 const seller: ActorContext = { accountId: 'seller-1', roles: ['seller'], suspended: false };
 const buyer: ActorContext = { accountId: 'buyer-1', roles: ['buyer'], suspended: false };
@@ -52,6 +52,19 @@ describe('Roots server operations', () => {
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'product-1', facilityId: 'other-facility', quantity: 2, budgetMode: 'unlimited', budgetMinor: null }, 'c-0b').error?.code).toBe('NOT_FOUND');
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'missing-product', facilityId: 'facility-1', quantity: 2, budgetMode: 'unlimited', budgetMinor: null }, 'c-0c').error?.code).toBe('NOT_FOUND');
     expect(validateAvailabilitySelection(buyer, repo, { productId: 'product-1', facilityId: 'facility-1', quantity: 2, budgetMode: 'maximum', budgetMinor: null }, 'c-0d').error?.code).toBe('INVALID_INPUT');
+  });
+
+  it('proves QR verification is seller-member-only, matching, expiring and replay-safe by policy', () => {
+    const token: QrTokenRecord = { transactionId: 'transaction-1', tokenHash: 'hash-1', expiresAt: '2026-08-22T01:00:00.000Z', verifiedAt: null, replayCount: 0 };
+    const membership: TransactionMembership = { transactionId: 'transaction-1', accountId: 'seller-1', role: 'seller' };
+    const base = { transactionId: 'transaction-1', presentedTokenHash: 'hash-1', now: '2026-08-22T00:30:00.000Z' };
+    expect(verifyQrAttempt(seller, membership, token, base, 'c-qr-1').data?.accepted).toBe(true);
+    expect(verifyQrAttempt(buyer, membership, token, base, 'c-qr-2').error?.code).toBe('FORBIDDEN');
+    expect(verifyQrAttempt({ ...seller, accountId: 'other-seller' }, membership, token, base, 'c-qr-3').error?.code).toBe('FORBIDDEN');
+    expect(verifyQrAttempt(seller, membership, token, { ...base, presentedTokenHash: 'wrong' }, 'c-qr-4').error?.code).toBe('INVALID_INPUT');
+    expect(verifyQrAttempt(seller, membership, token, { ...base, now: '2026-08-22T01:00:00.000Z' }, 'c-qr-5').error?.code).toBe('EXPIRED');
+    expect(verifyQrAttempt(seller, membership, { ...token, verifiedAt: '2026-08-22T00:10:00.000Z' }, base, 'c-qr-6').error?.code).toBe('REPLAYED');
+    expect(verifyQrAttempt(seller, { ...membership, transactionId: 'transaction-other' }, token, base, 'c-qr-7').error?.code).toBe('FORBIDDEN');
   });
 
   it('enforces facility ownership and Free catalogue capacity', () => {

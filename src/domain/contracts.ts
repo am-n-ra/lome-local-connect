@@ -176,3 +176,22 @@ export interface QrTokenRecord {
   verifiedAt: string | null;
   replayCount: number;
 }
+
+export interface TransactionMembership {
+  transactionId: string;
+  accountId: string;
+  role: 'buyer' | 'seller';
+}
+
+export interface QrVerificationInput {
+  transactionId: string;
+  presentedTokenHash: string;
+  now: string;
+}
+
+export interface QrVerificationResult {
+  accepted: true;
+  transactionId: string;
+  verifiedAt: string;
+  nextReplayCount: number;
+}
