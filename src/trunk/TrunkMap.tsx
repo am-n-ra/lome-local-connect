@@ -23,7 +23,7 @@ const REMOTE_STYLE: StyleSpecification = {
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-saturation': -1, 'raster-contrast': 0.12, 'raster-brightness-min': 0.18, 'raster-brightness-max': 0.96, 'raster-opacity': 0.96 } }],
+  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-saturation': -1, 'raster-contrast': 0.08, 'raster-brightness-min': 0.24, 'raster-brightness-max': 0.98, 'raster-opacity': 0.9 } }],
 };
 const FALLBACK_STYLE = '/omni-local-style.json';
 const SOURCE = 'omni-v2-facilities';
@@ -52,10 +52,20 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const [zoom, setZoom] = useState(1.35);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
+  const [zoomExpanded, setZoomExpanded] = useState(false);
   facilitiesRef.current = facilities;
 
+  const pauseMotion = () => {
+    rotating.current = false;
+    setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused');
+  };
+
   const requestLocation = () => {
-    if (!navigator.geolocation) { setLocationState('unavailable'); return; }
+    pauseMotion();
+    if (!navigator.geolocation) {
+      setLocationState('unavailable');
+      return;
+    }
     setLocationState('requesting');
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -69,8 +79,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     );
   };
 
-  const zoomIn = () => { const map = mapRef.current; if (!map) return; map.stop(); rotating.current = false; setRotationState('paused'); map.zoomIn({ duration: 0 }); };
-  const zoomOut = () => { const map = mapRef.current; if (!map) return; map.stop(); rotating.current = false; setRotationState('paused'); map.zoomOut({ duration: 0 }); };
+  const zoomIn = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    pauseMotion();
+    map.zoomIn({ duration: 0 });
+  };
+
+  const zoomOut = () => {
+    const map = mapRef.current;
+    if (!map) return;
+    pauseMotion();
+    map.zoomOut({ duration: 0 });
+  };
 
   useEffect(() => {
     const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 3500);
@@ -91,10 +112,17 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       cooperativeGestures: false,
     });
     mapRef.current = map;
-    const pause = () => { rotating.current = false; setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused'); };
+
     const resume = () => {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { rotating.current = false; setRotationState('reduced'); return; }
-      if (map.getZoom() < 2.4) { rotating.current = true; setRotationState('idle'); }
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        rotating.current = false;
+        setRotationState('reduced');
+        return;
+      }
+      if (map.getZoom() < 2.4) {
+        rotating.current = true;
+        setRotationState('idle');
+      }
     };
     const emitBounds = () => {
       const bounds = map.getBounds();
@@ -104,11 +132,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       lastBoundsKey.current = key;
       onBoundsChange?.(next);
     };
-    map.on('mousedown', pause);
-    map.on('touchstart', pause);
-    map.on('wheel', pause);
-    map.on('dragstart', pause);
-    map.on('zoomstart', pause);
+
+    map.on('mousedown', pauseMotion);
+    map.on('touchstart', pauseMotion);
+    map.on('wheel', pauseMotion);
+    map.on('dragstart', pauseMotion);
+    map.on('zoomstart', pauseMotion);
     map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); resume(); });
     map.on('dragend', emitBounds);
     map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); });
@@ -135,8 +164,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       map.resize();
       addLayers(map);
       emitBounds();
+
       const rotate = () => {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { rotating.current = false; setRotationState('reduced'); return; }
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          rotating.current = false;
+          setRotationState('reduced');
+          return;
+        }
         if (rotating.current && !map.isMoving()) {
           const nextLongitude = map.getCenter().lng + 0.04;
           setRotationState('rotating');
@@ -147,28 +181,39 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       };
       rotationTimer.current = window.setTimeout(rotate, 1400);
     });
+
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(container.current);
-    return () => { if (fallbackTimer !== null) window.clearTimeout(fallbackTimer); if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current); observer.disconnect(); map.remove(); mapRef.current = null; };
+    return () => {
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
+      observer.disconnect();
+      map.remove();
+      mapRef.current = null;
+    };
 
     function addLayers(target: Map) {
       if (target.getSource(SOURCE)) return;
       target.addSource(SOURCE, { type: 'geojson', data: featureCollection(facilitiesRef.current), cluster: true, clusterMaxZoom: 6, clusterRadius: 48 });
-      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#ec7c42', 'circle-radius': ['step', ['get', 'point_count'], 18, 10, 23, 30, 29], 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2, 'circle-opacity': 0.94 } });
-      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 12 }, paint: { 'text-color': '#fffaf4' } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2b211c', 'circle-radius': 7, 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2 } });
-      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#ec7c42', 'circle-radius': 19, 'circle-opacity': 0.22, 'circle-stroke-color': '#ec7c42', 'circle-stroke-width': 1.5 } });
+      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#ed8a60', 'circle-radius': ['step', ['get', 'point_count'], 17, 10, 22, 30, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.86 } });
+      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11 }, paint: { 'text-color': '#ffffff' } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 5.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
+      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0.2, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
         if (!feature || clusterId === undefined) return;
         const source = target.getSource(SOURCE) as GeoJSONSource;
-        source.getClusterExpansionZoom(Number(clusterId)).then((zoom) => target.easeTo({ center: (feature.geometry as { type: 'Point'; coordinates: number[] }).coordinates as [number, number], zoom })).catch(() => undefined);
+        source.getClusterExpansionZoom(Number(clusterId)).then((nextZoom) => target.easeTo({ center: (feature.geometry as { type: 'Point'; coordinates: number[] }).coordinates as [number, number], zoom: nextZoom })).catch(() => undefined);
       });
       target.on('click', 'omni-pins', (event: MapLayerMouseEvent) => {
         const id = String(event.features?.[0]?.properties?.id ?? '');
         const facility = facilitiesRef.current.find((item) => item.id === id);
-        if (facility) { pause(); onSelect(facility); target.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(target.getZoom(), 5.2), duration: 700 }); }
+        if (facility) {
+          pauseMotion();
+          onSelect(facility);
+          target.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(target.getZoom(), 5.2), duration: 700 });
+        }
       });
       for (const layer of ['omni-clusters', 'omni-pins']) {
         target.on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });
@@ -185,25 +230,34 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', ['case', ['==', ['get', 'id'], selectedId ?? ''], '#ec7c42', '#2b211c']);
+    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', ['case', ['==', ['get', 'id'], selectedId ?? ''], '#e97c54', '#2c5b50']);
     if (map.getLayer('omni-selected-halo')) map.setFilter('omni-selected-halo', ['==', ['get', 'id'], selectedId ?? '']);
   }, [selectedId]);
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const locationCopy = locationState === 'requesting'
+    ? { title: 'Localisation en cours…', detail: 'La carte va se recentrer sur vous.' }
+    : locationState === 'granted'
+      ? { title: 'Carte centrée sur vous', detail: 'La découverte proche est maintenant contextualisée.' }
+      : locationState === 'denied'
+        ? { title: 'Localisation désactivée', detail: 'Autorisez-la dans votre navigateur ou continuez à explorer.' }
+        : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
+
   return (
     <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState}>
-      <div ref={container} className="map-canvas" aria-label="Omni discovery globe" />
-      <div className="map-attribution">© OpenStreetMap contributors · © OpenMapTiles</div>
-      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Loading the globe…' : mapStatus === 'fallback' ? 'Map tiles are in fallback mode' : 'Live map'}</div>
-      <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="Location permission">
+      <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
+      <div className="map-texture" aria-hidden="true" />
+      <div className="map-attribution">© OpenStreetMap contributors</div>
+      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'fallback' ? 'Carte en mode de secours' : 'Carte active'}</div>
+      {locationState !== 'idle' && <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="État de la localisation">
         <span className="location-prompt-icon"><Crosshair size={15} /></span>
-        <span className="location-prompt-copy"><strong>{locationState === 'requesting' ? 'Finding your position…' : locationState === 'granted' ? 'Map centered on you' : locationState === 'denied' ? 'Location is off' : locationState === 'unavailable' ? 'Location unavailable' : 'Search near you'}</strong><small>{locationState === 'denied' ? 'Allow location in browser settings, then try again.' : locationState === 'unavailable' ? 'You can still explore the public map.' : locationState === 'granted' ? 'Nearby discovery is now centered.' : 'Use your location for nearby discovery.'}</small></span>
-        {(locationState === 'idle' || locationState === 'denied') && <button type="button" onClick={requestLocation}>{locationState === 'denied' ? 'Try again' : 'Use my location'}</button>}
-      </div>
-      <div className="map-controls" aria-label="Map controls">
-        <button type="button" aria-label="Locate me" onClick={requestLocation}><Crosshair size={16} /></button>
-        <button type="button" aria-label="Zoom in" onClick={zoomIn}><Plus size={16} /></button>
-        <button type="button" aria-label="Zoom out" onClick={zoomOut}><Minus size={16} /></button>
+        <span className="location-prompt-copy"><strong>{locationCopy.title}</strong><small>{locationCopy.detail}</small></span>
+        {(locationState === 'denied' || locationState === 'unavailable') && <button type="button" onClick={requestLocation}>Réessayer</button>}
+      </div>}
+      <div className="map-controls" aria-label="Contrôles de carte">
+        {zoomExpanded && <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>}
+        <button className="zoom-in-control" type="button" aria-label="Zoom avant" aria-expanded={zoomExpanded} aria-controls="zoom-out-control" onClick={() => { zoomIn(); setZoomExpanded(true); }}><Plus size={17} /></button>
+        <button className="location-control" type="button" aria-label="Utiliser ma localisation" onClick={requestLocation}><Crosshair size={16} /></button>
       </div>
     </div>
   );
