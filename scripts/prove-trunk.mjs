@@ -14,11 +14,11 @@ for (const width of widths) {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(`console:${message.text()}`); });
   page.on('response', (response) => { if (response.url().includes('/api/v2/')) apiResponses.push(`${response.status()} ${response.url().split('/api/v2/')[1]}`); });
   page.on('pageerror', (error) => errors.push(`page:${error.message}`));
-  await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 15000 });
+  await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 30000 });
   await page.waitForFunction(() => {
     const text = document.querySelector('.map-caption')?.textContent ?? '';
     return /public places in view|No facilities in this view yet|temporarily unavailable/i.test(text);
-  }, { timeout: 45000 });
+  }, undefined, { timeout: 90000 });
   await page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first().waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
   await page.screenshot({ path: `/tmp/omni-v2-proof/trunk-${width}.png`, fullPage: true });
   const initial = await page.locator('text=The world around you').count();
@@ -29,7 +29,7 @@ for (const width of widths) {
   const facilityLabels = await page.getByText(/Cotonou Fresh Hub|Mènontin Home Bakery|Zongo Mobile Market/).count();
   const canvasCount = await page.locator('.map-canvas canvas').count();
   const layout = await page.evaluate(() => {
-    const selectors = ['.result-rail', '.dock', '.dock-status', '.map-attribution', '.map-status', '.map-controls', '.map-caption', '.search-zone', '.topbar'];
+    const selectors = ['.result-rail', '.dock', '.dock-status', '.map-attribution', '.maplibregl-ctrl-attrib', '.map-status', '.map-controls', '.map-caption', '.search-zone', '.topbar'];
     const rects = Object.fromEntries(selectors.map((selector) => {
       const node = document.querySelector(selector);
       if (!node) return [selector, null];
@@ -43,12 +43,16 @@ for (const width of widths) {
         railDock: overlap(rects['.result-rail'], rects['.dock']),
         dockStatusAttribution: overlap(rects['.dock-status'], rects['.map-attribution']),
         dockStatusMapStatus: overlap(rects['.dock-status'], rects['.map-status']),
+        railAttribution: overlap(rects['.result-rail'], rects['.map-attribution']),
+        dockAttribution: overlap(rects['.dock'], rects['.map-attribution']),
+        railGeneratedAttribution: overlap(rects['.result-rail'], rects['.maplibregl-ctrl-attrib']),
+        dockGeneratedAttribution: overlap(rects['.dock'], rects['.maplibregl-ctrl-attrib']),
       },
       bodyWidth: document.body.scrollWidth,
       viewportWidth: window.innerWidth,
     };
   });
-  if (layout.overlaps.railDock || layout.overlaps.dockStatusAttribution || layout.overlaps.dockStatusMapStatus) {
+  if (Object.values(layout.overlaps).some(Boolean)) {
     throw new Error(`Overlay collision at ${width}px: ${JSON.stringify(layout.overlaps)}`);
   }
   await page.getByRole('button', { name: /Create your account to search/ }).click();

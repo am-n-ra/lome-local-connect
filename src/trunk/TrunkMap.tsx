@@ -61,7 +61,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       zoom: 1.35,
       minZoom: 1,
       maxZoom: 18,
-      attributionControl: { compact: true },
+      attributionControl: false,
       cooperativeGestures: true,
     });
     mapRef.current = map;
