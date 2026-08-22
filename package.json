@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:vercel-functions && tsc -b && vite build",
+    "build:vercel-functions": "node scripts/build-vercel-functions.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundary": "node scripts/check-client-boundary.mjs",
