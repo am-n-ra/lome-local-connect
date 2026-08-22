@@ -20,3 +20,9 @@ The connected browser viewport inspection then returned HTTP 504 from the browse
 ## Non-negotiable preservation
 
 No Neon Auth identities, historical tables, legacy rows or Roots invariants may be deleted or modified as part of this correction slice.
+
+## Updated screenshot findings after the first correction pass
+
+At 320 px, the floating caption is gone from the left control area. The map controls are isolated on the left, the result rail is above the dock, and the dock now displays `3 public places in view`. Direct zoom buttons are visible. The live screenshot still shows a pale square around the top-left logo mark; this appears to be baked into the RGB logo asset rather than introduced by a CSS background and requires a transparent asset treatment or a carefully isolated replacement.
+
+At 1280 px, the grayscale OSM map is visible with the white land / gray water direction, Omni orange pins, separated left controls, facility rail and bottom dock. The top-right menu/live chip are clear. Attribution remains in the upper metadata band. The desktop screenshot shows no caption/control collision and the map remains dominant.

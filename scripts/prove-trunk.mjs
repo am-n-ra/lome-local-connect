@@ -36,6 +36,7 @@ for (const width of widths) {
   const dock = await page.locator('.search-dock').count();
   const hamburger = await page.getByRole('button', { name: 'Open Omni menu' }).count();
   const mapControls = await page.locator('.map-controls').count();
+  const mapStatus = await page.locator('.map-status').innerText();
   const context = await page.locator('.dock-context').innerText();
   const basemap = await page.locator('.map-stage').getAttribute('data-basemap');
   const zoomEnabled = await page.locator('.map-stage').getAttribute('data-zoom-enabled');
@@ -156,7 +157,7 @@ for (const width of widths) {
       await page.getByRole('button', { name: 'Close' }).click();
     }
   }
-  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, basemap, zoomEnabled, zoomBefore, zoomIn, zoomOut, authState, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, caption, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
+  results.push({ width, initial, searchInput, dock, hamburger, mapControls, reducedMotion, basemap, zoomEnabled, zoomBefore, zoomIn, zoomOut, authState, auth, options, optionsCategory, optionsQuantity, optionsAfterEscape, optionsAuth, menu, menuActions, menuAfterEscape, facilityCardCount, detail, catalogue, availabilityAuth, mapStatus, context, facilityLabels, canvasCount, bodyWidth: baseGeometry.bodyWidth, viewportWidth: baseGeometry.viewportWidth, overlaps: baseGeometry.overlaps, optionsOverlaps: optionsGeometry?.overlaps ?? null, apiResponses, errors });
   await page.close();
 }
 const motionPage = await browser.newPage({ viewport: { width: 768, height: 800 }, deviceScaleFactor: 1 });

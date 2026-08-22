@@ -228,7 +228,7 @@ export function TrunkApp() {
 
       <header className="topbar">
         <a className="brand" href="/" aria-label="Omni home">
-          <img src="/omni-logo.png" alt="" />
+          <img src="/omni-logo-transparent.png" alt="" />
           <span><strong>omni</strong><small>see before you move</small></span>
         </a>
         <div className="topbar-actions">
