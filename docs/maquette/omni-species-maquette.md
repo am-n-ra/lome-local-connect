@@ -73,14 +73,20 @@ Every row is part of the Species maquette. A unit inherits the arrival frame unl
 | S15 | Trust/certification | Same sheet family with evidence checklist and admin outcome | Submit/resume evidence, read outcome | Claim creates verification request; admin certification produces unconfirmed |
 | S16 | Wallet/Pro | Same sheet/card language; no second rechargeable wallet visual | Recharge Omni Wallet, allocate platform credit, view facility entitlement | Wallet is account-level and platform-only in V1 |
 | S17 | Empty/error/recovery | Same sheet and map; honest copy and one next action | Retry, cancel, resume or return | Never show success copy for missing data or failed persistence |
-| S18 | Global Menu | Bottom sheet over the preserved map; role context, Rechercher, Mes demandes, Transactions, Vendre/Compte and close | Open a real destination, switch authorized context, close and return | No dead menu row; guest entries remain public-safe |
-| S19 | Guest Account | Account sheet from the J5 orb; explanation, Create account, Sign in and Continue on map | Start Auth or return to map | Public exploration remains available; protected actions remain locked |
-| S20 | Authenticated Account | Account sheet from J5; identity, Omni Wallet summary, active requests/transactions, preferences and role switch | Open account-owned surfaces, switch authorized role, close and return | One wallet only; no invented balance or permission |
-| S21 | Context Resume | Menu sheet with pending request/transaction context, next action and safe return | Resume, inspect transactions, return to map | Resume reuses the original operation and never duplicates it |
+| S18 | Account Navigation | J5-owned bottom sheet over the preserved map; role context, Rechercher, Mes demandes, Transactions, Vendre/Compte and close | Open a real destination, switch authorized context, close and return | No dead row; visitor entries remain public-safe |
+| S19 | Guest Account | Account sheet opened from J5; explanation, Create account, Sign in and Continue on map | Start Auth or return to map | Public exploration remains available; protected actions remain locked |
+| S20 | Authenticated Account | Account sheet opened from J5; identity, Omni Wallet summary, active requests/transactions, preferences and role switch | Open account-owned surfaces, switch authorized role, close and return | One wallet only; no invented balance or permission |
+| S21 | Account Resume | J5 account sheet with pending request/transaction context, next action and safe return | Resume, inspect transactions, return to map | Resume reuses the original operation and never duplicates it |
+| S22 | Comparison | Response sheet with facility, distance, freshness, price/offer and locked contact/itinerary actions | Compare eligible responses and select one | Only eligible server response can expose intent |
+| S23 | Intent Review | Purchase-intent sheet with selected facility/product, quantity, coupon/offer, total and locked contact/itinerary note | Review immutable snapshot and confirm intent | Review does not unlock private data or create a transaction until confirmed |
+| S24 | Intent Created | Server-confirmed transition sheet showing intent ID/state, selected offer and next transaction action | Open the transaction room or return safely | Intent is persisted once and is resumable |
+| S25 | Contact/Itinerary Unlocked | Transaction sheet with permitted seller contact, itinerary/action and transaction context | Contact seller, open itinerary, return to timeline | These actions are visible only after server-confirmed intent |
+| S26 | Transaction Room | Single transaction sheet with timeline, scoped chat, QR and external payment choices | Continue handoff, declare payment, resume later | Room owns the state machine; chat cannot advance it |
+| S27 | Fulfilment/Rating | Transaction completion sheet with payment/fulfilment, receipt confirmation and rating | Confirm receipt, rate, recover from dispute/expiry | Completion follows seller/buyer state transitions |
 
 ## 5. State coverage for each substantial surface
 
-The maquette does not only show happy paths. Every S00–S21 surface must have a designed state for the applicable entries below before its implementation gate closes.
+The maquette does not only show happy paths. Every S00–S27 surface must have a designed state for the applicable entries below before its implementation gate closes.
 
 | State | Visual requirement | Interaction requirement |
 |---|---|---|
@@ -128,14 +134,14 @@ The comparison card may inherit the sheet, typography, radius, spacing, status p
 
 The dock gate closes only when the maquette proves all four dock states: map-only bottom dock, result-state separated dock, focused dock with right-side submit, and options surface opening upward from the dock without entering the result grid. The dock and the result grid must be separate layout siblings with a measured gap at every required width.
 
-The intermediate-surface gate closes only when the maquette shows the Menu opened from the top-right action, the Account sheet opened from J5 for a visitor and authenticated user, the role-aware menu difference, the context-resume item and the safe return path for each. No sheet may hide the navigation owner without a visible close/back rule.
+The intermediate-surface gate closes only when the maquette shows the account/navigation sheet opened from J5 for a visitor and authenticated user, the role-aware entries, the pending context resume item and the safe return path for each. The post-availability gate also requires Comparison, Intent Review, Intent Created, Contact/Itinerary Unlocked, Transaction Room and Fulfilment/Rating states. No sheet may hide its navigation owner without a visible close/back rule.
 
 ## 10. Species gate
 
 Species is not approved merely because the first screen looks attractive. The gate closes only when:
 
 1. the supplied Canva frame is reproduced as S01;
-2. S00–S21 have a written composition and applicable state coverage, including Menu, Account and context resume;
+2. S00–S27 have a written composition and applicable state coverage, including account-owned navigation, Account, context resume and post-availability states;
 3. the complete static maquette is available for review;
 4. design tokens, surface ownership and responsive inheritance are explicit;
 5. every new visual pattern has an owner and a mini-species decision;

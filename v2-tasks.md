@@ -68,11 +68,14 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | SEED-002 | Approve build-now, manual and deferred scope | SEED-001 | `ready` | Scope gate |
 | SPECIES-001 | Reproduce the supplied Canva buyer arrival frame as the exact reference composition | SEED-001 | `review` | S01 arrival frame in complete maquette |
 | SPECIES-002 | Lock color, type, spacing, material, motion and status semantics | SPECIES-001 | `review` | Token/contrast review |
-| SPECIES-003 | Create and review the S00–S21 screen/state maquette and surface ownership | SPECIES-001 | `review` | Complete static maquette and state contract |
+| SPECIES-003 | Create and review the S00–S27 screen/state maquette and surface ownership | SPECIES-001 | `review` | Complete static maquette and state contract |
 | SPECIES-004 | Approve 320/375/768/1280 responsive and accessibility inheritance matrix | SPECIES-002 | `review` | Responsive proof matrix |
 | SPECIES-005 | Approve map-only bottom dock, separated result dock, focused submit dock and upward Options surface | SPECIES-003 | `review` | Dock maquette and no-overlap measurements |
-| SPECIES-006 | Approve Global Menu and role-aware intermediate navigation surface | SPECIES-003 | `review` | Menu opened/closed states and real-action inventory |
+| SPECIES-006 | Approve J5-owned account navigation and role-aware intermediate surface | SPECIES-003 | `review` | Account navigation opened/closed states and real-action inventory |
 | SPECIES-007 | Approve guest Account, authenticated Account and context Resume surfaces | SPECIES-003 | `review` | Account sheets, preserved context and safe return paths |
+| SPECIES-008 | Approve comparison and intent-review surfaces with contact/itinerary locked | SPECIES-003 | `review` | Response comparison, coupon snapshot and locked-state proof |
+| SPECIES-009 | Approve intent-created and contact/itinerary-unlocked surfaces | SPECIES-008 | `review` | Server-confirmed intent boundary and permitted contact actions |
+| SPECIES-010 | Approve transaction room, QR, external payment, fulfilment and rating surfaces | SPECIES-009 | `review` | Timeline, QR/payment and completion/recovery maquette |
 
 ## 4. Root System
 

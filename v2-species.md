@@ -165,16 +165,29 @@ The facility sheet transitions into a catalogue surface without abandoning the m
 
 When `Vendre` is authorized, the same map-first species remains. The selected owned facility occupies the spatial center. Seller operations appear in contextual sheets and cards, not a generic left-hand admin dashboard. Product and coupon forms use the same card density and one primary action as the buyer card.
 
-### 8.7 Intermediate navigation and account states
+### 8.7 Account-owned navigation and account states
 
-The maquette must include the surfaces that appear between major screens. These are not optional implementation details because they define how a user discovers and resumes the product.
+The compact J5/account icon is the **only** navigation entry in the Species. There is no separate hamburger menu. Pressing J5 opens one account/navigation sheet while the map remains mounted behind it. The sheet contents vary by visitor/authenticated state, pending context and authorized role.
 
-- **Global Menu:** opened from the top-right menu action while the map remains visible behind it. It contains only real routes or operations: Rechercher, Mes demandes, Transactions, role context and Compte. It must not list unavailable dashboard features.
-- **Guest Account Sheet:** opened from the compact account/credit indicator. It explains that public exploration is available, while catalogue search, availability and private actions require an account. It offers `Créer votre compte`, `Se connecter` and `Continuer sur la carte`.
-- **Authenticated Account Sheet:** shows the account identity, the one Omni Wallet summary, active requests/transactions and preferences/security. It remains a contextual sheet over the map, not a replacement dashboard.
-- **Context Resume Menu:** when a request or transaction is pending, the menu exposes the resumable action with its facility/product context, state and next action. It must not recreate or duplicate the operation.
+- **Guest Account Sheet:** explains that public exploration is available, while catalogue search, availability and private actions require an account. It offers `Créer votre compte`, `Se connecter` and `Continuer sur la carte`.
+- **Authenticated Account Sheet:** shows the account identity, the one Omni Wallet summary, active requests/transactions, preferences/security and an authorized `Passer en mode Vendre` action.
+- **Account Navigation Sheet:** contains only real destinations: Rechercher, Mes demandes, Transactions, role context and Compte. It must not list unavailable dashboard features.
+- **Context Resume Sheet:** when a request or transaction is pending, J5 exposes the facility/product context, current state and next action. It reuses the original operation and never recreates it.
 
-Opening Menu or Account pauses map motion, preserves viewport/query/selection, traps focus within the sheet only while open, and restores focus to the triggering control on close. `Escape`, back and the close action have the same safe return result. Every menu row has a destination or typed operation; no dead row is allowed. Guest and authenticated menus are separate states, and seller entries appear only when the account is authorized for seller context.
+Opening J5 pauses map motion, preserves viewport/query/selection, traps focus within the sheet only while open, and restores focus to the triggering control on close. `Escape`, back and the close action have the same safe return result. Every row has a destination or typed operation; no dead row is allowed. Guest, authenticated and seller-authorized account sheets are separate states.
+
+### 8.8 Post-availability and purchase surfaces
+
+The availability request is not the end of the buyer journey and must not be represented as a single generic screen. The Species must show the sequence below as distinct surfaces:
+
+1. **Comparison:** eligible seller responses are compared while contact, itinerary, chat and QR remain visibly locked.
+2. **Intent review:** the buyer reviews the selected facility, catalogue product, quantity, authoritative price, applicable Omni coupon/offer, freshness and fulfilment context. A locked contact/itinerary note explains that these unlock only after intent creation.
+3. **Intent created:** the server-confirmed purchase intent becomes the transition into the transaction room. The immutable snapshot and next step are visible.
+4. **Contact and itinerary unlocked:** the transaction sheet reveals only now the seller’s permitted contact details, itinerary/action and transaction context. These actions are never available on public facility cards or before intent.
+5. **Transaction room:** a single contextual sheet owns the timeline, scoped chat, QR action, external payment choice/declaration and actor-specific next action. The map stays mounted, and the buyer can leave and return through J5.
+6. **Completion/recovery:** payment declaration, seller confirmation, fulfilment, buyer receipt, rating, expiry, cancellation and recovery each have explicit visual states.
+
+The contact/itinerary transition requires an explicit `intent_created` server state; a client click, availability response or visual selection cannot unlock it. Each surface reserves independent space for the map, top controls, account navigation, dock, sheet header, body and footer. The sheet may grow or scroll, but it may not cover the J5 control or right-side map controls without an explicit, dimmed ownership state.
 
 ## 9. Material, color and typography tokens
 
@@ -217,7 +230,7 @@ Touch targets remain comfortably reachable. The card rail supports keyboard scro
 
 ## 13. Complete maquette gate
 
-The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus dock states, search, options, facility/catalogue, availability, Auth, global Menu, guest Account, authenticated Account, context Resume, seller, transaction and recovery compositions. The companion contract enumerates S00–S21 and the required loading, ready, empty, error, locked, success, pending and recovery states.
+The written Species rules are not sufficient on their own. The complete maquette must be reviewed as the visual reference DNA for the Trunk and Branches. It includes the exact buyer arrival frame plus dock states, search, options, facility/catalogue, availability, Auth, account-owned navigation, guest Account, authenticated Account, context Resume, comparison, intent review, intent created, contact/itinerary unlock, transaction, seller and recovery compositions. The companion contract enumerates S00–S27 and the required loading, ready, empty, error, locked, success, pending and recovery states.
 
 No implementation may introduce an alternative layout because a state is technically more complex. It must inherit the arrival species or receive an explicitly approved mini-species.
 
@@ -226,14 +239,15 @@ No implementation may introduce an alternative layout because a state is technic
 The Species is ready for Root System/Trunk implementation only when the owner confirms:
 
 1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
-2. the complete maquette and S00–S21 state inventory, including Menu and Account intermediate surfaces, are approved as the visual reference DNA;
+2. the complete maquette and S00–S27 state inventory, including account-owned navigation, Account intermediate surfaces and post-availability purchase surfaces, are approved as the visual reference DNA;
 3. the role switch is upper-left, the compact map controls are right-aligned, the map-only search is a bottom dock and the result-state dock occupies a separate band above the sheet/grid;
 4. the dock has a right-aligned search action and a distinct Options/chevron control that never replaces submit;
 5. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
 6. the map remains real geographic context with a quiet pale treatment and no fabricated data;
 7. seller and buyer use the same spatial language without introducing a generic dashboard;
-8. search, catalogue, availability, Menu, Account and transaction states extend the same species instead of creating unrelated screens;
+8. search, catalogue, availability, account-owned navigation, Account, comparison, intent, contact/itinerary and transaction states extend the same species instead of creating unrelated screens;
 9. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap;
-10. every visible menu/account action has a real destination or typed operation and a safe return path.
+10. every visible account/navigation action has a real destination or typed operation and a safe return path;
+11. contact and itinerary are visibly locked before intent and visibly unlocked only from the server-confirmed transaction state.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.

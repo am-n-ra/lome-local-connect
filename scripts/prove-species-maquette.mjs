@@ -33,6 +33,8 @@ for (const width of widths) {
       intermediateTopbar: box('.intermediate-phone .top'),
       menuCount: document.querySelectorAll('.menu-panel').length,
       accountCount: document.querySelectorAll('.account-panel').length,
+      postintentCount: document.querySelectorAll('.postintent-phone').length,
+      postintentOverflow: [...document.querySelectorAll('.postintent-phone .sheet')].some((node) => node.scrollHeight > node.clientHeight + 1),
       source: Boolean(document.querySelector('.reference-panel img')),
       sections: [...document.querySelectorAll('.section-label')].map((node) => node.textContent.trim()),
     };
@@ -47,8 +49,9 @@ for (const width of widths) {
     accountTopbar: !intersects(state.accountPanel, state.intermediateTopbar),
     accountControls: !intersects(state.accountPanel, state.intermediateControls),
     intermediateSurfaces: state.menuCount >= 2 && state.accountCount >= 2,
+    postintentSurfaces: state.postintentCount >= 6 && !state.postintentOverflow,
     sourceVisible: state.source,
-    allSectionsVisible: state.sections.length >= 3,
+    allSectionsVisible: state.sections.length >= 4,
   };
   Object.entries(checks).forEach(([name, passed]) => { if (!passed && name !== 'sourceVisible' && name !== 'allSectionsVisible') failures.push(`${width}:${name}`); });
   if (!checks.sourceVisible) failures.push(`${width}:sourceVisible`);

@@ -54,7 +54,7 @@ The map remains mounted through all map-first buyer and seller flows. Use one sh
 - defined back, Escape, close and gesture ownership;
 - preserved unfinished context unless the user explicitly cancels or completes it.
 
-The top chrome contains brand/context, notifications and real menu actions only. The search dock contains one search input and one Options disclosure. Every visible action resolves to a typed state and operation or is clearly labelled manual/unavailable.
+The top chrome contains the compact J5/account icon as the sole account and navigation owner, plus only real contextual actions. Omni does not add a separate hamburger menu. Pressing the J5 icon opens the account/navigation sheet, whose contents vary by visitor/authenticated state and authorized role. The search dock contains one search input and one Options disclosure. Every visible action resolves to a typed state and operation or is clearly labelled manual/unavailable.
 
 ## 4. Visitor and authentication flow
 
@@ -313,7 +313,9 @@ Only an eligible comparison response can create an intent. Intent creation accep
 
 The transaction room owns the single canonical timeline, scoped chat, QR context and actor-specific next action. Contact, itinerary, private seller data and transaction chat unlock only after intent creation. Messages cannot advance the state machine.
 
-The room is resumable through menu, notifications, saved context or direct transaction entry. Missing, expired, unavailable and unauthorized context leads to a safe recovery state.
+The room is resumable through the J5 account/navigation sheet, notifications, saved context or direct transaction entry. Missing, expired, unavailable and unauthorized context leads to a safe recovery state.
+
+After `transaction_created`, the buyer’s transaction sheet becomes the single owner of the post-intent surface. It exposes the transaction summary, seller contact details and itinerary only after the intent exists. Before intent, comparison and intent-review surfaces show the contact and itinerary actions as locked with an explicit explanation. After intent, the buyer may leave and return through the J5 account/navigation sheet without losing the transaction context. No contact or itinerary action is available from a public facility card.
 
 ## 13. QR and external handoff flow
 
