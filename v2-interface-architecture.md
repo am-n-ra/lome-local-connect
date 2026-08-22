@@ -15,23 +15,27 @@ Omni is a permanent map scene with contextual surfaces above it:
 
 ```text
 ┌──────────────────────────────────────────────────┐
-│ brand / context                         alerts ☰ │
+│  Acheter  Vendre                      J5 / ☰ │
 │                                                  │
 │                 permanent map scene              │
-│        selected marker / pins / clusters         │
+│                    ◉ place label         +      │
+│                                         ◎       │
 │                                                  │
-│      ┌────── map controls                         │
-│      │                                           │
-│      │  ┌──────── contextual sheet ──────────┐   │
-│      │  │ result / facility / catalogue ... │   │
-│      │  └───────────────────────────────────┘   │
-│      │        ┌──────── search pill ─────────┐  │
-│      │        │ need                       ⌄ │  │
-│      │        └──────────────────────────────┘  │
+│        ┌────────── search pill ─────────────┐    │
+│        │ Rechercher un commerce, un produit…│    │
+│        └────────────────────────────────────┘    │
+│  ┌────────────────────────────────────────────┐  │
+│  │                 ━                          │  │
+│  │  Proche de vous                 Voir tout  │  │
+│  │  ┌──────── primary card ───────┐ ┌next┐   │  │
+│  │  │ status · name · distance     │ │ …  │   │  │
+│  │  │ Vérifier la disponibilité    │ │    │   │  │
+│  │  └─────────────────────────────┘ └────┘   │  │
+│  └────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────┘
 ```
 
-The map remains mounted through visitor, buyer, seller and transaction contexts. Mobile uses a bottom sheet and desktop uses a bounded floating surface or rail. A surface may not cover map controls, attribution, the search action or the primary footer.
+The map remains mounted through visitor, buyer, seller and transaction contexts. Mobile uses the reference-faithful bottom sheet and desktop preserves the same centered/bounded sheet anatomy; it does not become a left dashboard rail. A surface may not cover map controls, attribution, the search action or the primary footer.
 
 ## 2. Surface map
 
@@ -72,7 +76,7 @@ The interface architecture is ready for implementation only when:
 1. the Species blueprint is approved;
 2. every visible action has a Flow state and Root System operation;
 3. every protected field has a named unlock transition;
-4. the map remains dominant on buyer and seller surfaces;
+4. the map remains dominant on buyer and seller surfaces, with the reference’s right-side map controls and bottom-sheet hierarchy;
 5. account capacity, facility state, trust, Pro, bonus, wallet and transaction state are visually distinct;
 6. the responsive and accessibility proof matrix is defined;
 7. the first Trunk slice can be implemented without guessing.

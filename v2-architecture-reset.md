@@ -1,7 +1,7 @@
 # Omni V2 — Nature Way Architecture Reset Record
 
 **Document ID:** `OMNI-V2-RESET-001`
-**Status:** Architecture rewrite complete; implementation not started
+**Status:** Architecture rewrite complete; Species correction pending owner approval; implementation not started
 **Method:** Nature Way
 **Date:** 2026-08-22
 
@@ -14,7 +14,7 @@ This record marks the transition from accumulated prototype patching to a Seed-d
 The product must now be read in this order:
 
 1. [`v2-seed.md`](./v2-seed.md) — product identity, laws, scope and success.
-2. [`v2-species.md`](./v2-species.md) — visual language, wireframes, surface ownership and responsive interaction blueprint.
+2. [`v2-species.md`](./v2-species.md) — reference-faithful Canva composition, visual language, wireframes, surface ownership and responsive interaction blueprint.
 3. [`v2-roots.md`](./v2-roots.md) — domain ownership, persistence, API, security, invariants, recovery and migration.
 4. [`v2-flow.md`](./v2-flow.md) — actor-owned state machines, transitions, locks and terminal outcomes.
 5. [`v2-plan.md`](./v2-plan.md) — dependency-ordered growth sequence.
@@ -54,7 +54,7 @@ Before code begins, the owner must approve the Seed, Species and Root System gat
 | Area | Outcome |
 |---|---|
 | Seed rewrite | Complete for review |
-| Species blueprint | Complete for review; based on supplied artistic reference |
+| Species blueprint | Corrected for review; reproduces the supplied Canva composition and derives responsive extensions from it |
 | Root System rewrite | Complete for review |
 | Flow/state rewrite | Complete for review |
 | Feature inventory | Regenerated |
@@ -67,4 +67,4 @@ Before code begins, the owner must approve the Seed, Species and Root System gat
 
 ## 7. Acceptance decision required
 
-The owner’s next decision is whether to approve the rewritten Seed, Species and Root System as the new build authority. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.
+The owner’s next decision is whether to approve the rewritten Seed, the corrected Canva-faithful Species and the Root System as the new build authority. If approved, implementation begins with the Root System gate and buyer Trunk only. If rejected, record the exact amendment in the relevant authority document before implementation; do not patch the code to resolve an undocumented disagreement.

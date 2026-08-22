@@ -1,219 +1,215 @@
 # Omni V2 — Species Design Blueprint
 
-**Document ID:** `OMNI-V2-SPECIES-001`
-**Status:** Proposed blueprint for approval before Trunk implementation
+**Document ID:** `OMNI-V2-SPECIES-002`
+**Status:** Reference-faithful blueprint for approval before Trunk implementation
 **Method:** Nature Way — Phase 1, Species
 **Parent:** [`v2-seed.md`](./v2-seed.md)
 **Reference asset:** [`docs/references/omni-species-reference.jpeg`](./docs/references/omni-species-reference.jpeg)
 
-> **Design thesis:** Omni is a calm spatial instrument. The map is the application; every other surface appears above it to help the user understand a place, choose a real offer or advance a controlled handoff.
+> **Species decision:** The supplied Canva image is not a loose mood board. It is the visual reference frame for Omni’s first buyer surface. The implementation must reproduce its composition, hierarchy, proportions and restraint before adding responsive extensions or business-state surfaces.
 
-This blueprint converts the supplied visual direction into a buildable visual and interaction contract. It is not a final pixel specification. Exact values may be tuned during Canopy only when they do not change the hierarchy, state ownership or Seed invariants.
+This blueprint corrects the previous Species abstraction. The previous version captured “map-first” in general terms but introduced competing patterns such as desktop rails, left controls, extra chrome and an overly generic sheet. Those are not part of the reference-faithful first species.
 
-## 1. What the reference contributes
+## 1. Reference frame
 
-The reference establishes a mobile-first composition with a pale, quiet map scene; minimal top chrome; compact location and zoom controls; a floating search pill; a bottom sheet with a strong nearby heading; a concise facility/product card; and one high-clarity availability action.
+The supplied image presents a centered mobile application viewport inside a rounded device frame on a quiet warm-white presentation canvas. The application viewport contains a pale spatial map, minimal top controls, a small facility marker and label, a floating search pill, and a white bottom sheet that begins below the search pill.
 
-It also suggests a restrained palette built around warm white, soft grey-green, deep forest green, mint/teal status tones and a small orange/coral accent. The map is visible around the surfaces, while the bottom sheet feels like a purposeful instrument rather than a full dashboard page.
-
-The reference does **not** by itself decide product states, data authority, trust, availability, purchase, transaction or seller permissions. Those remain governed by the Seed, Flow and Root System. The reference is therefore the visual species, not the business contract.
-
-## 2. Experience character
-
-Omni should feel:
-
-- **Spatial:** the user always knows where the search context exists.
-- **Quiet:** the map and information hierarchy do not compete with ornamental chrome.
-- **Trustworthy:** status labels explain what is known, sourced, confirmed or still uncertain.
-- **Immediate:** the next action is visible without making the user understand the whole system first.
-- **Premium but practical:** restrained glass, soft surfaces and generous spacing support utility rather than decoration.
-- **Resumable:** sheets open and close over the same world; they do not make the user feel transported to an unrelated page.
-
-Omni should not look like a generic SaaS dashboard, a dense marketplace grid, a social feed, a finance app or a dark sci-fi map.
-
-## 3. Visual language
-
-### 3.1 Color roles
-
-Use semantic roles rather than component-specific colors. The exact values are initial tokens and require contrast validation before release.
-
-| Token role | Initial direction | Use |
-|---|---|---|
-| `canvas` | Warm near-white | Page and sheet base |
-| `map-surface` | Pale cool grey-green | Quiet map background and fallback |
-| `ink` | Deep charcoal-green | Primary text and high-contrast labels |
-| `brand-green` | Forest green | Primary actions, active tabs and trusted operational emphasis |
-| `mint-status` | Soft mint | Available/success status backgrounds |
-| `peach-status` | Soft peach | Attention, pending or neutral warning backgrounds |
-| `orange-accent` | Confident orange/coral | Selected pin, key highlight and limited action emphasis |
-| `glass` | Translucent warm white | Floating controls and contextual chrome |
-| `hairline` | Low-contrast grey-green | Borders, separators and map-safe outlines |
-
-Green is not a universal synonym for `confirmed`. Status copy and label semantics must distinguish `available`, `certified`, `unconfirmed`, `confirmed`, `pending` and `success`.
-
-### 3.2 Typography
-
-Use a highly readable modern sans-serif with two weights doing most of the work: regular for supporting context and semibold/bold for headings and actions. Avoid display typography that makes facility, product or state names difficult to scan.
-
-The hierarchy is:
-
-1. page/sheet title;
-2. nearby or contextual section heading;
-3. facility/product name;
-4. trust, availability and freshness labels;
-5. distance, category, price and supporting metadata;
-6. helper text, recovery guidance and legal/source context.
-
-All body and action text must remain readable at the smallest supported width. Do not use a mobile font size that causes browser zoom when the search field receives focus.
-
-### 3.3 Shape, elevation and translucency
-
-Use rounded surfaces with one coherent radius family. The bottom sheet is the strongest surface; the search pill and map controls are smaller floating surfaces. Use thin hairlines and restrained shadows rather than heavy elevation.
-
-Glass is a material treatment, not a replacement for contrast. Text and controls must remain legible over the map. When translucency reduces contrast, use an opaque fallback without changing layout or state.
-
-## 4. Permanent composition
-
-The map scene is mounted once and remains visible through buyer and seller flows. Surfaces above the map are stateful overlays, not independent page replacements.
+The app’s visible composition is, from top to bottom:
 
 ```text
-┌──────────────────────────────────────────────────┐
-│ brand / context                         alerts  ◉ │
-│                                                  │
-│                 permanent map scene              │
-│        selected marker / pins / clusters         │
-│  map controls                                     │
-│                                                  │
-│       ┌──────── nearby / context sheet ───────┐  │
-│       │ heading, state, card, primary action  │  │
-│       └───────────────────────────────────────┘  │
-│             ┌──────── search pill ───────────┐   │
-│             │ need                         ⌄ │   │
-│             └────────────────────────────────┘   │
-└──────────────────────────────────────────────────┘
+┌──────────────────────────────────────┐
+│  Acheter  Vendre                 J5  │
+│                                      │
+│                    +                 │
+│                    ◎                 │
+│                                      │
+│              ◉                       │
+│        BOULANGERIE BIO               │
+│                                      │
+│     ┌ rechercher un commerce... ┐    │
+│     └────────────────────────────┘    │
+│  ┌────────────────────────────────┐  │
+│  │              ━                 │  │
+│  │  Proche de vous         Voir tout│  │
+│  │  ┌──────── card ───────┐ ┌card┐ │  │
+│  │  │ icon  DISPONIBLE    │ │ …  │ │  │
+│  │  │ Le Fournil D'Or     │ │    │ │  │
+│  │  │ Boulangerie...       │ │    │ │  │
+│  │  │ Vérifier disponibilité│ │   │ │  │
+│  │  └──────────────────────┘ └────┘ │  │
+│  └────────────────────────────────┘  │
+└──────────────────────────────────────┘
 ```
 
-### 4.1 Mobile composition
+The phone frame in the presentation image is a communication device, not a product requirement. In the application, the viewport itself fills the available screen and retains the same internal composition.
 
-At 320–480 CSS pixels, the map fills the viewport behind safe-area insets. Top chrome stays compact. The search pill sits above the bottom sheet with its own safe gap; it must never be absorbed into or overlap the sheet. The bottom sheet owns nearby results, selected facility context, catalogue, availability steps and comparison states.
+## 2. What is now locked
 
-The sheet begins in a collapsed or compact nearby state so enough map remains visible to explain orientation. It can expand to a focused state when the user selects a facility or enters a multi-step flow. The sheet footer remains reachable above the device gesture area and keyboard.
+The following visual decisions are locked for the first buyer species:
 
-The reference’s role selector may be used only for a meaningful authenticated role/context switch. It must not create a second navigation system or imply that a visitor can access seller actions without authentication and authorization.
+1. The map occupies the entire application viewport behind the surfaces.
+2. The initial mobile top row contains a compact `Acheter / Vendre` segmented switch at the upper left and a small circular account/credit indicator at the upper right.
+3. The initial map controls are a compact vertical group on the right side, with `+` above the location/recenter control. They are not a left rail.
+4. A single facility marker and a small uppercase place/category label may sit in the quiet central map field.
+5. The search control is a single white rounded pill floating immediately above the bottom sheet. It is not a full-width navigation bar and does not create a second search surface.
+6. The bottom sheet is white, rounded at the top corners, full-width on mobile and visually heavier than the search pill.
+7. The sheet starts with a centered grab handle, the heading `Proche de vous`, a small `Voir tout` action and a horizontal card rail.
+8. The first card is a compact facility/product card with an icon, a status pill, facility name, category/distance metadata and one dark-green `Vérifier la disponibilité` action.
+9. A partial next card remains visible at the right edge to communicate horizontal continuation without adding a carousel toolbar.
+10. The visual language is warm white, pale grey, muted green, deep forest green, small mint status accents and a restrained orange/coral map-marker accent.
+11. The initial state is quiet and sparse. It does not show a dashboard sidebar, a second dock, a large explanatory caption, multiple floating chips, a visible filter grid or a collection of unrelated actions.
 
-### 4.2 Tablet and desktop composition
+These are Species rules. Seed product invariants, Flow state transitions and Root System authority remain unchanged.
 
-At 768 CSS pixels and above, the map remains dominant. The bottom sheet becomes a bounded floating surface or anchored rail depending on the state, leaving visible map around it. The search dock remains a single coherent control rather than becoming a conventional desktop navigation bar.
+## 3. Visual anatomy and proportions
 
-At 1280 CSS pixels, the layout may use a compact result rail and a bounded detail sheet simultaneously only when their ownership is unambiguous. No surface may hide map controls, attribution, the primary search action or the selected facility context.
+Use normalized proportions so the reference remains stable across supported phone sizes. Values are targets, not arbitrary suggestions.
 
-## 5. Surface ownership
-
-| Surface | Owns | Does not own |
+| Element | Reference-faithful target | Constraint |
 |---|---|---|
-| Arrival map | Public orientation, map movement, location state and public pins | Private search, availability or transaction state |
-| Search pill/dock | Need input and one Options disclosure | Camera movement while typing, product mutation or transaction actions |
-| Options sheet | Category, radius, open state, discount, sort, quantity, budget and location mode | Duplicate search controls or hidden business rules |
-| Nearby/result sheet | Search progress, result count, cards and result restoration | Claiming, availability mutation or intent creation |
-| Facility sheet | Public identity, source/trust state, hours and catalogue entry | Private contact, QR or claim-by-click |
-| Catalogue sheet | Facility-scoped offers, product selection and catalogue recovery | Stock reservation or purchase intent |
-| Availability flow | Product, scope, constraints, submission and responses | Silent reservation or contact unlock |
-| Comparison sheet | Response differences and eligible choice | Client-authoritative price, trust or intent transition |
-| Transaction room | Timeline, authorized chat, QR, payment declaration, fulfilment, receipt and rating | Public discovery or unscoped chat |
-| Seller workspace | Owned facilities, catalogue, demand and scanner operations | Other sellers’ data or generic dead actions |
-| Menu | Real navigation and account/context actions | Placeholder routes or future-facing controls |
+| Top safe row | 7–13% of viewport height | Never competes with the map marker or sheet |
+| Role switch | 7–31% viewport width, upper-left safe area | Compact segmented pill; `Acheter` active in buyer arrival |
+| Account/credit indicator | 84–94% viewport width, upper-right safe area | Small circular indicator; no large profile panel |
+| Map controls | 84–94% viewport width, around 18–34% viewport height | Right-aligned, vertically stacked, compact and reachable |
+| Facility marker/label | Around 35–65% viewport width and 28–43% viewport height | Quietly centered; never behind search or sheet |
+| Search pill | 7–93% viewport width; bottom edge 1–3% above sheet | One row, rounded, soft shadow, 44–52px high on mobile |
+| Sheet top | 59–63% viewport height in arrival | Full-width with 28–32px top corner radius |
+| Sheet handle | Centered, 40–56px wide, 3–5px high | Visible but subtle |
+| Nearby heading row | 7–93% viewport width, 6–14% below sheet top | Heading left, `Voir tout` right |
+| Card rail | 7–100% viewport width, below heading | First card fully readable; next card partially visible |
+| Primary CTA | Inside first card, full available card width | One clear action; no competing secondary CTA |
 
-Every visible action must map to a typed state and operation. If an action is manual, pending or unavailable, the surface must say so.
+For a 320px viewport, preserve the first card’s readable width and let the next card clip safely. Do not shrink text until the card becomes illegible. For 375px, allow a little more of the next card to appear. At 768px and 1280px, preserve the same visual anatomy inside a bounded centered bottom sheet rather than converting the experience into a side dashboard.
 
-## 6. Core screen/state compositions
+## 4. Map treatment
 
-### 6.1 Arrival
+The map is real geographic context, but the initial frame uses a quiet visual treatment. Use a very pale grey/grey-green basemap with low-contrast roads and labels, softened saturation and a subtle dot-grid or spatial texture layer inspired by the reference. The texture must never be used as fake geography or replace a functioning map provider.
 
-Show the real map/globe immediately. The first explanation is short and spatial: what Omni helps the person find and what public information means. The search pill is discoverable but does not steal map focus. Location is explicit and cancellable; no permission prompt is triggered merely by page load.
+The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
 
-### 6.2 Nearby results
+Public pins remain source-backed and stable. Use a small warm marker/halo for the selected or featured facility, with a compact uppercase label such as `BOULANGERIE BIO`. Do not add availability badges to arbitrary pins. Clustering is allowed at densities where it improves legibility, but the initial reference frame must remain visually sparse and calm.
 
-Use a heading such as “Near you” only when the location context is known or honestly approximate. The supporting copy must explain the scope. Cards are compact and product-first when the query matches a catalogue offer. Each card shows one primary next action, usually “View facility” or “Verify availability” only when the state permits it.
+The map must never become a flat decorative panel. If external tiles fail, show an honest, graceful fallback with the same spatial composition; do not fabricate roads, facilities or availability.
 
-A card selection selects a facility. It does not claim the facility, request availability or create an intent.
+## 5. Top controls
 
-### 6.3 Facility detail
+### 5.1 Buyer/seller switch
 
-The facility sheet makes identity and status legible before action. It shows the source/trust distinction, distance, public hours, available public catalogue summary and a clear explanation of what remains protected. The selected pin is visually highlighted but the rest of the result context remains recoverable.
+The initial role/context control is a single segmented pill at the upper left. It visually resembles the reference: the active segment is deep forest green with light text, and the inactive segment is warm white or translucent with dark text. In the buyer species, `Acheter` is active and `Vendre` is available only when the authenticated account is authorized for seller context.
 
-### 6.4 Catalogue
+This switch changes role context; it does not bypass Auth, facility ownership or permissions. For a visitor, tapping `Vendre` opens the explicit account/authorization gate while preserving the public map.
 
-The matched offer appears first when there is a match. Each offer has a stable product name, authoritative media or a neutral placeholder, price/offer state, quantity eligibility and freshness where applicable. Product selection is visibly separate from availability submission.
+### 5.2 Account or credit indicator
 
-### 6.5 Availability
+The upper-right circular indicator is intentionally small. It may show an account state, compact credit/entitlement indicator such as `J5`, or a notification state when that state is real. It must not become an unexplained wallet claim or a decorative badge. Tapping it opens a real account/context surface.
 
-Use a persistent, named progress indicator. The stages are:
+### 5.3 Map controls
 
-```text
-Product → Scope → Constraints → Responses
-```
+The reference places map controls on the right, not the left. The initial visible group contains a circular `+` control and a circular location/recenter control with consistent size, spacing, translucency and shadow. Zoom-out remains available through a safe expanded control or direct gesture without adding a third crowded button to the initial frame unless the approved design extension explicitly requires it.
 
-The current stage, completed stages, editable inputs, loading state, cancellation path and next action must be obvious. The buyer should never have to guess whether the action is selecting a product, asking for availability or committing to purchase.
+Controls pause idle movement and never overlap the search pill, facility label or sheet. They remain accessible at 320px.
 
-### 6.6 Comparison
+## 6. Search pill
 
-Responses are compared through consistent rows or cards: facility, availability status, quantity, price/offer, freshness, distance and seller message. Only eligible responses expose the intent action. Contact and itinerary remain locked until intent creation.
+The arrival search is one floating pill immediately above the sheet. Its placeholder follows the reference: `Rechercher un commerce, un produit…`. The pill includes a small search icon and one coherent input row.
 
-### 6.7 Transaction room
+The closed arrival state does not display a second search bar, filter chips, a large caption or a separate desktop dock. When the user focuses or expands the pill, the single Options affordance may appear inside that same control or its directly attached state. It must not create a competing panel or move the map unexpectedly.
 
-The transaction room is a focused contextual surface over the map, not a second product. It owns one canonical timeline with named stages, one scoped chat, the QR context and the actor-specific next action. The buyer can leave and return through a resume surface without losing the transaction.
+The input is large enough to type without browser zoom. Search focus does not pan or zoom the map. Pressing Enter and activating the visible action use the same guarded path.
 
-### 6.8 Seller workspace
+## 7. Bottom sheet and card rail
 
-Seller surfaces use the same map and sheet language. The selected facility is the center of context. Facility-level state, catalogue limit, Pro state, trust state, bonus state and account-level Facility Slot capacity are displayed in separate groups. Product and coupon forms are guided, concise and preview their resulting published offer.
+The sheet is the reference’s primary contextual surface. It has a white or nearly opaque warm-white base, soft shadow, 28–32px top radii and a centered grab handle. Its initial height is approximately 38–42% of a phone viewport.
 
-## 7. Map, pins and motion
+The first heading row reads `Proche de vous` on the left and `Voir tout` on the right. `Voir tout` is a real action that expands the nearby result state; it is not an ornamental label.
 
-The map is a calm background with enough contrast to support markers and labels. Public source-backed facilities use stable visual semantics. Cluster at low zoom when density requires it; expand to individual pins at useful local zoom. Do not use clusters as a substitute for a missing discovery result or invent availability from marker density.
+The card rail is horizontally scrollable but intentionally shows one complete card and a partial next card. The first card must contain:
 
-A selected facility uses a clear orange/coral accent or halo. The buyer’s personal location marker is visually distinct and appears only for an accepted location state. Public pins and personal position must never be confused.
+- a compact circular or rounded facility/product icon;
+- a small mint status pill such as `DISPONIBLE` only when backed by the relevant state;
+- a facility/product name such as `Le Fournil D’Or`;
+- category and distance metadata such as `Boulangerie & Pâtisserie · 450m`;
+- one dark-green primary action: `Vérifier la disponibilité`.
 
-Idle globe rotation is gentle and observable, not theatrical. Manual pan, zoom, keyboard focus, search reveal, location, selected facility focus and active flow take priority over rotation. Reduced-motion mode disables or replaces continuous movement. Any motion must explain a change of context and must be interruptible.
+The CTA opens the catalogue/product selection and availability path only when the Flow state permits it. It cannot create an availability request from an unselected product, reserve stock, create an intent or unlock private contact.
 
-## 8. Interaction and state rules
+The rail must restore its scroll position and selected facility context after opening detail and returning. On desktop, keep the rail inside the bounded sheet; do not replace it with a dense data table.
 
-The interface uses one shared sheet primitive with these rules:
+## 8. State compositions
 
-- bottom anchored on mobile and bounded/floating on desktop;
-- scrollable body and reachable primary footer;
-- focus ownership defined on open, close, back and Escape;
-- no horizontal overflow or inaccessible card rail;
-- explicit loading, ready, empty, error, retry, cancel, locked and success states where applicable;
-- preserved query, viewport, selected facility, selected product and unfinished protected context;
-- no camera movement caused by typing in the search field;
-- no fake button, silent transition or future feature disguised as active.
+### 8.1 Arrival state
 
-The UI may show an optimistic interaction only when the server contract supports safe rollback and the pending state is visible. Trust, price, stock, money, permissions, QR validity and transaction state never become true because a client animation finished.
+The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. No permission prompt appears automatically. Location is explicit and cancellable.
 
-## 9. Responsive and accessibility contract
+### 8.2 Search expanded state
 
-The species must be certified at 320, 375, 768 and 1280 CSS pixels. At every width:
+The search pill grows only enough to show the active input and its one Options affordance. The sheet may compress or scroll, but the map remains visible. Options are presented as a single attached contextual state, not a second dashboard.
 
-- the map remains visible and usable;
-- the search control, controls, attribution, result surface and primary footer have non-overlapping safe zones;
-- no horizontal page overflow exists;
-- touch targets are comfortably reachable;
-- keyboard focus is visible and remains in the active input where expected;
-- back, Escape and close have explicit ownership;
-- status changes are announced without overwhelming the user;
-- reduced motion disables continuous rotation and unnecessary transitions;
-- contrast does not depend on translucency over an unpredictable map tile.
+### 8.3 Nearby/results state
 
-## 10. Species gate
+`Voir tout` expands the rail or sheet to show result cards. The original search pill remains the anchor. Cards preserve the same card anatomy and use status/source labels that distinguish public presence, catalogue match and availability evidence.
 
-The blueprint is ready for Root System and Trunk implementation only when the owner confirms:
+### 8.4 Facility state
 
-1. the map is the permanent dominant scene on buyer and seller surfaces;
-2. the mobile composition follows the reference’s calm map + search pill + contextual sheet direction;
-3. the palette, typography, spacing, material and motion rules are accepted as tokens and roles;
-4. surface ownership is explicit and no page or component invents a competing navigation model;
-5. catalogue, availability, comparison and transaction states have a clear visual progression;
-6. facility, account, trust, Pro, bonus, wallet and transaction facts remain visually distinct;
-7. the 320/375/768/1280 responsive and accessibility proof matrix is part of the Trunk definition of done.
+Selecting the first card or a pin highlights the facility and opens a detail sheet using the same white surface and handle. The result rail remains recoverable. Public identity, source, trust state, public hours and catalogue entry are visible; contact, itinerary, chat and QR remain locked.
 
-If a later feature introduces a genuinely new visual pattern, create a nested mini-species blueprint for that feature before implementation. Otherwise inherit this blueprint and record the inheritance.
+### 8.5 Catalogue and availability states
+
+The facility sheet transitions into a catalogue surface without abandoning the map composition. Product selection appears before the availability steps. The visible progress language is `Produit → Portée → Contraintes → Réponses`. Each state retains the same sheet material, heading rhythm, footer reachability and one primary next action.
+
+### 8.6 Seller state
+
+When `Vendre` is authorized, the same map-first species remains. The selected owned facility occupies the spatial center. Seller operations appear in contextual sheets and cards, not a generic left-hand admin dashboard. Product and coupon forms use the same card density and one primary action as the buyer card.
+
+## 9. Material, color and typography tokens
+
+| Token | Initial direction | Reference use |
+|---|---|---|
+| `species-canvas` | Warm white | Presentation and opaque fallback |
+| `species-map` | Very pale cool grey-green | Map treatment |
+| `species-sheet` | Near-white, high-opacity | Bottom sheet |
+| `species-ink` | Deep charcoal/green | Text |
+| `species-forest` | Deep forest green | Active segment, primary CTA |
+| `species-mint` | Soft mint | `DISPONIBLE` and positive status background |
+| `species-peach` | Soft peach | Pending/attention support |
+| `species-coral` | Warm orange/coral | Featured marker and small accent |
+| `species-hairline` | Light grey-green | Borders and separators |
+
+Use one readable sans-serif family, medium/semibold headings and regular supporting metadata. The heading is compact and assertive; the supporting text is quiet. Avoid all-caps except for small status pills and map labels.
+
+## 10. Motion
+
+The first frame is calm. Idle globe/map movement is slow and interruptible. It must stop when the user touches the map, focuses search, opens the sheet, selects a facility, requests location or enters any active flow. Reduced-motion mode disables continuous movement and unnecessary sheet animation.
+
+Cards and the sheet may use a short ease-in transition to explain emergence, but do not animate every label, marker or status. Motion must never hide a state transition, delay an action or imply that data has become authoritative.
+
+## 11. Responsive rules
+
+| Viewport | Required composition |
+|---|---|
+| 320px | Full map; compact top switch; right controls; search pill above full-width sheet; one readable card plus safe partial next card |
+| 375px | Same composition with more breathing room and slightly more next-card visibility |
+| 768px | Full map remains dominant; centered bounded sheet/rail preserves mobile anatomy; no left dashboard rail |
+| 1280px | Full map remains dominant; bounded centered sheet or compact bottom surface preserves the reference hierarchy; detail may be bounded, never a dashboard replacement |
+
+At every width, preserve independent safe areas for top controls, right controls, marker label, search pill and sheet. No horizontal page overflow is allowed. The sheet footer, if present, remains above the device gesture area and keyboard.
+
+## 12. Accessibility and interaction contract
+
+The role switch, account indicator, plus control, location control, search input, Options affordance, `Voir tout`, card rail and primary CTA have accessible names and visible focus. The active role is announced. Sheet opening moves focus intentionally; close, back and Escape restore the prior owner.
+
+Touch targets remain comfortably reachable. The card rail supports keyboard scrolling and does not trap focus. Status changes announce loading, empty, error, locked, permission, success and recovery states. Contrast must remain valid over both the live map and the fallback treatment; translucency is never the only contrast mechanism.
+
+## 13. Species gate
+
+The Species is ready for Root System/Trunk implementation only when the owner confirms:
+
+1. the supplied Canva composition is the first buyer reference frame, not merely a mood reference;
+2. the role switch is upper-left, the compact map controls are right-aligned, the search is one floating pill and the sheet is the primary contextual surface;
+3. the nearby heading, `Voir tout`, one complete card and partial next card are retained as the initial result anatomy;
+4. the map remains real geographic context with a quiet pale treatment and no fabricated data;
+5. seller and buyer use the same spatial language without introducing a generic dashboard;
+6. search, catalogue, availability and transaction states extend the same species instead of creating unrelated screens;
+7. 320, 375, 768 and 1280 proof includes measured safe zones, focus, keyboard, reduced motion and no overlap.
+
+If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.
