@@ -1,147 +1,83 @@
-# Omni V2 — Product Requirements Document
+# Omni V2 — Product Requirements (Derived View)
 
-**Status:** Rewritten from approved Nature Way Seed
-**Authority:** Product problem, users, outcomes, scope and requirements
-**Rule:** This document supersedes all pre-Nature-Way PRD drafts.
+**Document ID:** `OMNI-V2-PRD-002`
+**Status:** Derived compatibility view — not an independent authority
+**Method:** Nature Way
+**Authoritative product source:** [`v2-seed.md`](./v2-seed.md)
+**Authoritative visual source:** [`v2-species.md`](./v2-species.md)
+**Authoritative technical source:** [`v2-roots.md`](./v2-roots.md)
+**Authoritative behavior source:** [`v2-flow.md`](./v2-flow.md)
 
-## 1. Executive summary
+> This file is retained for existing links and tooling. Do not make an independent product decision here. Update `v2-seed.md` first, then regenerate this view if a compatible summary is still needed.
 
-Omni is a global geospatial supply-and-demand search engine. It helps people discover products and services in the environment around them, inspect source-backed facilities, select real catalogue offers, verify availability across relevant suppliers, compare responses and complete a traceable handoff.
+## Product identity
 
-The product is map-first. The globe/map is the permanent scene; contextual sheets, cards and rails are temporary surfaces above it. Omni separates public place knowledge from trusted supply knowledge and separates commercial capacity from trust. A facility can use Pro to publish more, but only three successful Omni sales create the `confirmed` trust badge.
+Omni is a **map-first geospatial supply-and-demand search engine**. It helps a person discover what products or services may be available in the surrounding environment, inspect source-backed facilities, select real catalogue offers, verify availability, compare responses and complete a traceable handoff.
 
-## 2. Problem
+The permanent map scene is the application’s spatial context. Search, facilities, catalogue, availability, comparison, seller operations and transaction handoff appear as contextual surfaces above it. Omni is not a conventional marketplace grid, generic social network, unrestricted public chat, buyer-seller payment processor, seller payout product or decorative globe.
 
-A person may know what they need without knowing where it is available, whether it is available now, what quantity exists, what it costs or which supplier is worth contacting. Current tools force the user to move between maps, directories, catalogues, messages and payment coordination, often making the user ask many suppliers the same question.
-
-A seller may operate a shop, branch, home activity, mobile service or personal expertise. Existing models tend to confuse the account owner with the place, company, catalogue and trust level. Omni must support multiple real operating contexts without allowing unlimited untrusted facilities or purchased trust signals.
-
-## 3. Vision and promise
-
-> **Search what you need, see where a real facility may provide it, verify availability without unnecessary seller polling, compare your options and complete a traceable handoff without losing your place on the map.**
-
-Omni succeeds when a buyer can move from an uncertain need to a trustworthy, resumable next action, while a legitimate seller can establish a facility, publish only what it can support and progress through evidence and real usage.
-
-## 4. Users
-
-| User | Need | Product response |
-|---|---|---|
-| Visitor | Understand Omni and explore nearby context without onboarding friction | Public globe, facilities and public information |
-| Buyer | Find products/services, verify and compare availability | Catalogue-first search, bounded requests and comparison |
-| Seller | Represent distinct companies/facilities and operate supply | Evidence workflow, facility-scoped catalogue and operations |
-| Admin | Make trust decisions with evidence and audit | Review queue, reasons, actor and history |
-| Operator | Know whether public discovery and transactions are healthy | Consent-aware analytics, logs, runbooks and recovery |
-
-## 5. Core journey
+## Core journey
 
 ```text
-arrive on map → search need → discover facilities → inspect facility → choose catalogue offer → request availability → compare responses → create intent → access transaction room → show QR/declare external payment → fulfil → confirm receipt → rate
+map arrival
+→ need search
+→ source-backed facilities
+→ facility detail
+→ catalogue product
+→ availability request
+→ response comparison
+→ purchase intent
+→ authorized transaction room
+→ QR/external payment declaration
+→ fulfilment
+→ receipt
+→ rating
 ```
 
-The map remains mounted. The user can close a surface, explore elsewhere and return to the unfinished context. A search or availability check never silently reserves stock.
+## Product users
 
-## 6. Product principles
+| Actor | Need | Product response |
+|---|---|---|
+| Visitor | Explore and understand public context | Public map, pins, facilities and catalogue information |
+| Buyer | Find and verify a product/service need | Catalogue-first search, bounded availability and comparison |
+| Seller | Represent real companies/facilities and operate supply | Evidence, facility-scoped catalogue, demand response and handoff tools |
+| Admin | Make trust decisions from evidence | Audited manual review and explicit outcomes |
+| Operator | Keep discovery and operations healthy | Bounded imports, recovery, analytics and observability |
 
-| Principle | Requirement |
+## Non-negotiable requirements
+
+| Requirement | Rule |
 |---|---|
-| Map is the scene | Never replace the primary experience with a conventional grid or disconnected dashboard |
-| Public data is not supply proof | A public pin proves source presence only |
-| Catalogue before free text | Use real facility offers whenever they exist |
-| Trust cannot be bought | Pro expands capacity; only three successful sales produce `confirmed` |
-| Facility is the commercial unit | Limits, Pro, bonus and trust belong to the facility |
-| Account controls access breadth | One free slot; additional facility slots require paid/included entitlement |
-| Server owns sensitive facts | Status, price, stock, availability, money, QR and permissions are authoritative server facts |
-| Private data is unlocked | Contact, itinerary, chat and QR follow named transitions |
-| One wallet | One rechargeable Omni Wallet per account; ledgered platform spending only |
-| Resumability is a feature | Refresh, close, back and interruption preserve unfinished intent |
-| Honest states | Empty, unavailable, stale, denied, expired, replayed and error states are designed |
-| Manual before AI | Manual operations must be proven before AI mutates business state |
+| Public access | Public map and facility information are visible; protected search, availability and private data require Auth |
+| Catalogue | Select an existing facility product before availability when one exists |
+| Availability | It is a request for evidence, never an inventory reservation |
+| Facility trust | Claim click creates evidence work; admin certification precedes `unconfirmed`; three successful Omni sales produce `confirmed` |
+| Pro | Facility-scoped capacity/tools; never a purchased trust badge |
+| Capacity | One free Facility Slot per account; additional slots are platform entitlements |
+| Bonus | Facility-scoped $20 non-withdrawable credit, spendable only after three qualifying sales |
+| Wallet | One rechargeable Omni Wallet per account; ledgered platform consumption only |
+| Transaction | Only an eligible response creates an idempotent intent and immutable snapshot |
+| Private data | Contact, itinerary, chat and QR unlock only after intent |
+| Payment | External payment declaration/acknowledgement only; no buyer-seller rail, payout or withdrawal in V1 |
+| Honesty | No public pin, fixture, Pro plan, claim click or client label may imply unsupported truth |
+| Resumability | Refresh, close, back, expiry, failure and interruption preserve safe unfinished context |
 
-## 7. Functional requirements
+## Scope view
 
-### 7.1 Public map and discovery
-
-Omni must render a genuine MapLibre globe/map as the arrival surface, with optional idle rotation, manual camera controls, truthful location states, source-backed pins, low-zoom clustering and visible-bounds discovery. The server must handle antimeridian bounds, source status, deduplication, timeout and bounded fallback.
-
-Visitors may inspect public facilities and public catalogue information. A database-backed search, availability check or protected continuation requires authentication and must preserve the context that triggered the gate.
-
-### 7.2 Buyer search
-
-The buyer uses one search dock with a primary input and one Options disclosure. Options include category, open-now, distance/radius, discounts, sorting, location mode, quantity and budget. Quantity and budget are not shown as distracting default panels; both are manually editable when relevant, and budget supports unlimited.
-
-Enter and the visible search action share one guarded submission. Typing never changes the map view. Search results are bounded by the visible viewport, contextual to the query and recoverable on failure.
-
-### 7.3 Facility and catalogue
-
-A result card shows the matched product/service first, media when available, facility identity, public source/trust status, distance, price/offer and product count. Selecting it only opens facility context.
-
-A public facility surface shows public identity, media, address, public hours, status and catalogue summary. The catalogue is scoped to the selected facility, places the matched offer first and shows media, price, offer status and quantity eligibility. Selecting a product creates a typed selection only; it does not create a request or transaction.
-
-### 7.4 Availability and comparison
-
-An authenticated buyer selects scope and constraints, then submits one availability request. The server validates product, quantity, budget, eligibility, freshness and scope. A request does not reserve stock. Responses are timestamped and explicit: available, partial, unavailable, expired, corrected, no response or error.
-
-Comparison makes differences legible: facility, distance, freshness, price/offer, quantity, response status and next action. Intent is possible only from an eligible comparison response.
-
-### 7.5 Seller facility lifecycle
-
-A seller may claim an imported unclaimed facility or create a new one. A claim action creates an evidence request only. The seller submits identity, facility and product/service evidence. Admin review produces certified, rejected or needs-more-evidence outcomes.
-
-A certified facility becomes `unconfirmed` and may publish five offers on Free capacity. Three successful Omni sales create the non-purchasable `confirmed` trust badge. Facility Pro may expand catalogue limits and tools without creating `confirmed`.
-
-### 7.6 Account slots and facility Pro
-
-Every seller account receives one free facility slot. Additional facility/company slots require Omni Wallet payment or a future workspace entitlement. Slot entitlement controls facility count; it does not grant catalogue capacity or trust.
-
-Facility Pro is scoped to one facility. It expands that facility’s commercial limits and tools. If it expires, Free limits return. A facility keeps `confirmed` only when it has completed three successful Omni sales independently.
-
-### 7.7 Bonus and wallet
-
-The $20 bonus is facility-scoped and becomes spendable only after three successful Omni sales. It is non-withdrawable and usable only for platform features. There is one rechargeable Omni Wallet per account with a server ledger for deposits and platform spending, including slots, facility Pro, ads and coupon credits.
-
-Omni V1 does not process buyer-to-seller payments, seller withdrawals or seller payouts.
-
-### 7.8 Intent and transaction
-
-An eligible comparison response creates an idempotent purchase intent with an immutable snapshot of facility, product, price, offer, quantity, response freshness and fulfilment context. The intent opens one authorized transaction room with timeline, actor-specific next action, chat and QR.
-
-Contact and itinerary become available only after intent creation. QR is server-issued, expiring and replay-safe. The buyer declares an external method such as cash, mobile money or pay-on-delivery. The seller confirms receipt, fulfils the order, and the buyer confirms receipt before rating.
-
-### 7.9 Admin and operations
-
-Admins review evidence with actor, time, reason and evidence context. Operators can inspect discovery failures, recovery status, ingestion outcomes, ledger anomalies and consent-aware analytics. Manual work must have an owner, runbook, audit record and recovery path.
-
-## 8. Success measures
-
-The first release must establish event definitions and denominators for search usefulness, discovery comprehension, catalogue relevance, availability completion, intent uniqueness, transaction completion, seller activation, trust integrity, wallet integrity, recovery quality and mobile usability.
-
-Release targets are directional until the baseline is measured. Non-negotiable integrity targets are zero client-authorized trust/status transitions, zero duplicate intents, 100% auditable trust outcomes and no hidden wallet withdrawal path.
-
-## 9. Scope
-
-| Capability | Release treatment |
+| Capability | Treatment |
 |---|---|
-| Map-first globe and public discovery | Build now |
+| Map/globe and public discovery | Build now |
 | Catalogue-first availability and comparison | Build now |
-| Facility certification and seller onboarding | Build now; admin step may be manual |
-| Seller map-first workspace | Build now |
-| Purchase intent, transaction room, QR and fulfilment | Build now |
-| One Omni Wallet and FedaPay recharge | Build now; platform spending only |
+| Facility verification and seller onboarding | Build now; admin review may be manual |
+| Seller map-first operations | Build now |
+| Intent, transaction room, QR and fulfilment | Build now |
+| One Wallet and FedaPay recharge | Build now; platform consumption only |
 | PWA/mobile web | Build now |
-| OSM/public-data adapter | Build now as bounded/manual operational capability |
-| Automated admin certification | Deferred/manual initially |
-| AI orchestration | Deferred |
-| Native apps | Deferred |
-| Buyer-seller in-app payment | Deferred/not in first release |
-| Seller withdrawals and payouts | Deferred/not in first release |
-| Instant unrestricted global prepopulation | Deferred/not promised |
+| Bounded public-data adapter | Build now as operational/manual capability |
+| Automated certification, native apps, AI state mutation | Deferred |
+| Buyer-seller in-app payment, seller withdrawal/payout | Deferred/not in first release |
+| Unrestricted global prepopulation | Not promised |
 
-## 10. Non-goals
+## Requirement gate
 
-Omni is not a generic social network, public chat application, conventional ecommerce cart, seller payment processor, seller payout system, static directory, decorative globe, unrestricted global data dump or AI agent that replaces unproven manual operations.
-
-No visible action may be fake, dead or silently future-facing. If an operation is manual, the UI must say so and identify its state.
-
-## 11. Roots gate
-
-Before implementation resumes, Roots must define and test the data/API contracts for account slots, facility identity, certification evidence, trust progression, facility Pro, bonus unlock, wallet ledger, public source ingestion, availability freshness, intent idempotency, QR replay safety, external payment declarations and resumable context.
+This derived view is valid only when it matches the Seed, Species, Root System and Flow. If it differs, the mismatch is a documentation defect; reconcile the authoritative documents before implementation.

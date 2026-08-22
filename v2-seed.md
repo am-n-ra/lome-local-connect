@@ -1,131 +1,177 @@
-# Omni V2 — Seed Brief
+# Omni V2 — Seed
 
-**Status:** Approved Seed — restart baseline
-**Method:** Nature Way — Seed phase
+**Document ID:** `OMNI-V2-SEED-001`
+**Status:** Authoritative restart baseline
+**Method:** Nature Way — Phase 0, Seed
+**Version:** 2.0.0
 **Date:** 2026-08-22
-**Design anchor:** Omni location-eye logo supplied by the founder
 
-> Omni is a geospatial supply-and-demand search engine that helps a person understand what is available in the environment around them before they waste time moving, calling or sending repetitive availability requests.
+> **Omni is a map-first geospatial supply-and-demand search engine that helps a person understand what may be available around them before they waste time moving, calling or repeatedly asking suppliers.**
+
+This Seed is the product’s compressed identity. Every later design, data model, state machine, implementation slice and release decision must grow from it. Existing prototype screens, routes and implementation assumptions are not authoritative when they conflict with this document.
 
 ## 1. The problem
 
-A person may need a product or service without knowing which nearby facility, professional or supplier can provide it. Existing tools separate maps, directories, catalogues, messaging and payment coordination. They rarely show a trustworthy path from “what do I need?” to “which real place may have it now?”, and they make the user contact several providers just to discover that an item is unavailable.
+A person may know what they need without knowing which nearby facility, professional or supplier may provide it. Existing tools separate maps, directories, catalogues, messaging and payment coordination. They rarely create a trustworthy path from “what do I need?” to “which real place may provide it now?”, and they make people contact several providers merely to discover that an item is unavailable.
 
-Omni solves this by connecting a live geographic context, source-backed facilities, facility catalogues, availability verification and an eventual traceable handoff. The buyer can discover several options, inspect what each facility offers, ask for availability without blindly polling every seller, compare responses and choose one or more final options. A buyer may also use the catalogue for research and discover other products offered by the same facility without committing to purchase them.
+The supply side is equally fragmented. A person or organization may operate a shop, branch, home activity, mobile service, professional practice or personal expertise. The account owner, company, facility, catalogue, trust status and commercial capacity must remain distinct so that Omni can represent reality without creating unlimited untrusted supply.
 
-The seller-side problem is complementary. A person or organization may operate several kinds of supply contexts: a physical shop, a home-based activity, a branch in another city, a mobile professional service or an individual expertise. Omni must allow these distinct companies and facilities to exist without confusing the account owner, the facility identity, the catalogue limits or the trust signal.
+## 2. Product identity
 
-## 2. Target users
+Omni connects four kinds of knowledge:
 
-### 2.1 Visitor
+1. **Geographic context:** what places exist around a person and where they are.
+2. **Catalogue truth:** what a facility says it offers, through a facility-scoped catalogue.
+3. **Availability evidence:** what a supplier can currently confirm, with freshness and explicit uncertainty.
+4. **Resumable handoff:** what happens after a buyer selects an eligible option and proceeds toward fulfilment.
 
-A visitor can open Omni and immediately explore the real globe/map, inspect public facilities and understand the product without an account. A visitor does not receive private contact, itinerary, chat, QR or purchase access.
+Omni is not primarily a conventional marketplace grid, a social network, a public chat app, a payment processor or a decorative globe. The map is the product’s permanent spatial scene, not a background image behind unrelated dashboard pages.
 
-### 2.2 Buyer
+## 3. Users and actors
 
-A buyer has an account and wants to search for products or services, filter by urgent criteria such as distance, price and quantity, inspect facility catalogues, verify availability across eligible suppliers, compare responses and continue into a controlled purchase handoff. The buyer may leave and return without losing the unfinished context.
+| Actor | Desired outcome | Initial access |
+|---|---|---|
+| Visitor | Understand Omni, explore the real map and inspect public facilities | Public map, public facility and public catalogue information |
+| Buyer | Search a need, choose a catalogue offer, verify and compare availability, then complete a traceable handoff | Account required for database search, availability and protected actions |
+| Seller | Represent companies and facilities, publish supported supply, respond to demand and complete handoffs | Authenticated, facility-scoped operations after the relevant trust gates |
+| Admin | Review evidence and make auditable trust decisions | Controlled administrative operations |
+| Operator | Maintain public discovery, recovery, analytics and operational health | Manual or controlled operational access |
 
-### 2.3 Seller
+## 4. Core promise
 
-A seller manages one or more companies and facilities. A facility may be public/unclaimed or created by the seller. The seller must provide evidence of identity, facility and product/service activity before the facility can publish visible supply. The seller manages each facility independently while the account manages the rights to create additional facilities.
+> **Search what you need, see where a real facility may provide it, verify availability without unnecessary seller polling, compare your options and complete a traceable handoff without losing your place on the map.**
 
-### 2.4 Admin/operator
+The promise is successful only if a new user can understand the map, identify what Omni knows and does not know, select a real catalogue product, complete an availability request without guessing, distinguish public presence from trust, and resume unfinished work later.
 
-An admin reviews evidence and makes audited trust decisions. Operators maintain public-data ingestion, recovery and system observability. These operations must not be disguised as automatic certainty.
+## 5. Core journey
 
-## 3. Core promise
-
-> **Search what you need, see where a real facility may provide it, verify availability without unnecessary seller polling, compare your options, and complete a traceable handoff without losing your place on the map.**
-
-The promise has four parts: geographic context, catalogue truth, availability evidence and resumable action. Omni must never imply that a public pin proves current stock, that a paid plan proves trust, or that a search result has already reserved inventory.
-
-## 4. The one core journey
-
-The core journey is:
+The first product journey is:
 
 ```text
-open Omni → understand the map → search a product/service need → discover source-backed facilities → inspect a facility → choose a catalogue product → request availability → compare verified responses → choose an option → create an authorized intent → complete the external-payment/fulfilment handoff → confirm receipt → rate
+arrive on the map
+→ understand public exploration
+→ search a product or service need
+→ discover source-backed facilities
+→ inspect a facility
+→ inspect and select an existing catalogue offer
+→ request bounded availability
+→ receive honest responses or recovery
+→ compare eligible responses
+→ create an authorized purchase intent
+→ enter the transaction room
+→ use QR and/or declare an external payment method
+→ seller confirms and fulfils
+→ buyer confirms receipt
+→ rate
 ```
 
-The map/globe remains mounted throughout the journey. Sheets, rails and cards are contextual surfaces above the map; they are not disconnected page replacements.
+The map remains mounted throughout. Dock, cards, rails, sheets, menus and the transaction room are contextual surfaces above the map. Leaving a surface must preserve safe unfinished context unless the user explicitly cancels or completes it.
 
-## 5. Confirmed business invariants
+## 6. Product laws
 
-### 5.1 Public discovery and account gates
+### 6.1 Public knowledge is not supply proof
 
-Anyone may view the map, public pins and public facility information. A search that queries Omni’s catalogue/discovery database requires an account so Omni can measure and improve discovery. Availability verification, purchase intent and all private seller information require an account and the relevant state transition.
+Anyone may explore the globe/map and inspect public facility information. Public data may show identity, category, source, location, public hours, public media and public catalogue content according to policy. A public pin proves public source presence only; it does not prove current stock, ownership, certification or availability.
 
-A public facility may show identity, category, source, public hours, public media and public catalogue content. Contact details and Omni-provided itinerary remain hidden until an authorized purchase-intent transition unlocks them.
+Database-backed Omni search, availability verification, purchase intent and private seller information require an account and an explicit state transition. Contact details, itinerary and private chat remain hidden until the authorized intent transition.
 
-### 5.2 Facility lifecycle and trust
+### 6.2 Claiming is not certification
 
-A facility can be imported as `unclaimed` or created by a seller. Clicking claim never changes the facility status. The seller submits evidence of identity, facility ownership/association and product/service activity. Admin review produces an audited outcome.
+A facility can arrive from public data as `unclaimed` or be created by a seller. Clicking Claim only creates or resumes a verification request. It never changes the facility’s trust state.
 
-After successful certification, a facility becomes `unconfirmed`. It may publish a maximum of five products or services. A facility becomes `confirmed` only after three successful Omni sales. The `confirmed` badge is a trust signal and is never directly purchasable.
+The claimant submits evidence of identity, company/facility association and product/service activity. Admin review produces an audited outcome. Successful certification moves the facility to `unconfirmed`; it does not directly create `confirmed`.
 
-### 5.3 Account slots and per-facility Pro
+### 6.3 Trust cannot be purchased
 
-Each seller account receives one facility slot by default. Additional companies or facilities require additional Facility Slots purchased from the single Omni Wallet or included in a future account-level Seller Workspace plan. A global workspace entitlement controls how many facilities an account may manage; it does not grant catalogue limits or the `confirmed` badge.
+A certified/unconfirmed facility may publish a maximum of five offers on Free capacity. A facility becomes `confirmed` only after three qualifying successful Omni sales. The badge is a trust signal, not a product that can be bought.
 
-Each facility has its own commercial plan and limits. Facility Pro can unlock higher catalogue limits and advanced tools for that facility. A facility that is Pro but has not completed three successful sales may exceed the Free catalogue limit, but it displays `certified`/`Pro`, never `confirmed`.
+Facility Pro may expand catalogue capacity and unlock tools for that facility. Pro cannot create, purchase or preserve `confirmed` without the qualifying sales. When Pro expires, the facility returns to Free limits; the `confirmed` badge remains only if independently earned.
 
-If Facility Pro expires, the facility returns to Free catalogue limits. It keeps `confirmed` only if it has independently completed three successful Omni sales. Pro expiry must never create or preserve a misleading trust badge.
+### 6.4 Capacity, facility and account are different
 
-### 5.4 Bonus and wallet
+Every account receives one free Facility Slot. Additional companies or facilities require additional slots purchased from the Omni Wallet or included in a future account-level workspace entitlement. Slots control account capacity; they do not grant product limits, Pro or trust.
 
-The $20 welcome/traction bonus belongs to the facility, not the account. It becomes spendable only after that facility completes three successful Omni sales, regardless of whether the facility reached higher catalogue capacity through Pro. The bonus is non-withdrawable and usable only for Omni platform features.
+A facility is the commercial and trust unit. Its catalogue limits, Pro entitlement, bonus state and sales progression are facility-scoped. The account owns access to the facilities but is not itself a facility.
 
-There is one rechargeable Omni Wallet per account. A server ledger allocates confirmed funds to Facility Slots, facility Pro, advertising, coupon credits and other platform consumption. Omni V1 does not provide buyer-to-seller in-app payment, seller withdrawal or payout.
+### 6.5 The bonus is facility-scoped and non-cash
 
-## 6. Experience direction
+The $20 welcome/traction bonus belongs to the facility and is announced when a facility is created or certified. It becomes spendable only after that facility completes three qualifying successful Omni sales. It is non-withdrawable and usable only for Omni platform features.
 
-The globe/map is a permanent, dominant, calm visual scene. The interface is not a collection of dashboard pages placed beside a map. It should feel like a premium instrument for seeing availability in the world: restrained glass surfaces, clear spatial hierarchy, generous breathing room, readable cards and motion that explains state rather than decorating it.
+### 6.6 There is one rechargeable Omni Wallet
 
-The supplied logo establishes the visual language: warm ivory, translucent white, soft peach and a confident orange accent. The eye inside the location pin represents Omni’s purpose: seeing what exists in a place. The logo must be used consistently in arrival, navigation, authentication, PWA metadata and seller surfaces.
+Each account has one rechargeable Omni Wallet. A server ledger allocates confirmed wallet funds to Facility Slots, facility Pro, advertising, coupon credits and other explicitly approved platform consumption. Internal allocations are ledger entries, not additional rechargeable wallets.
 
-## 7. Success criteria for the Seed
+Omni V1 does not process buyer-to-seller in-app payments, seller withdrawals or seller payouts. It may record external payment declarations and seller acknowledgement as part of a transaction state machine.
 
-The Seed is successful when a new user can explain Omni after seeing the arrival state, complete the map-to-facility-to-availability journey without guessing which control to use, understand exactly when an account is required, distinguish a public source-backed facility from a trusted confirmed facility, and return to an unfinished action without losing context.
+### 6.7 Availability is not reservation
 
-A production-ready first release must also prove that seller trust states are not client-mutable, availability does not reserve inventory, paid capacity does not masquerade as trust, wallet spending is ledgered without withdrawal, and every critical action has loading, empty, error, retry, cancellation and recovery behavior.
+An availability check asks for evidence within a defined scope and time. It never silently reserves stock, guarantees fulfilment or converts a public pin into inventory. Responses must include explicit status, quantity/offer information where available and freshness.
 
-## 8. Explicit non-goals for the first release
+### 6.8 Sensitive actions are state-gated and server-authoritative
 
-Omni will not be a generic social network, unrestricted public chat, conventional cart marketplace, buyer-seller payment processor, seller withdrawal product, decorative globe, static directory, unrestricted global-data promise or AI agent that mutates business state before the manual workflows are proven.
+Only an eligible availability response can create a purchase intent. Intent creation is idempotent and creates an immutable transaction snapshot. Contact, itinerary, private chat and QR become available only after the authorized transition.
 
-Native mobile applications, fully automated admin certification, automatic world prepopulation, buyer-seller in-app payments, seller payouts and AI orchestration remain deferred. PWA/mobile web is the first mobile surface.
+The server owns trust, price, stock, availability, discounts, wallet balance, permissions, QR validity and transaction transitions. The client may present state but may not invent or authorize it.
 
-## 9. Locked Seed decisions
+## 7. Experience direction
 
-The following decisions were explicitly reconfirmed after the earlier V2 documents were audited and are now authoritative for the restart:
+Omni should feel like a calm, premium instrument for seeing what exists in the world. The map/globe is permanent and dominant. Contextual surfaces float above it with generous breathing room, clear hierarchy and restrained glass/translucent treatment rather than dense SaaS chrome.
 
-| Decision | Locked rule |
+The founder’s visual reference establishes a compact mobile composition: a pale spatial map with quiet dot texture, a centered facility marker and label, minimal top controls, a floating search pill, and a bottom sheet with a strong “near you” heading, a product/facility card and one clear availability action. This is an initial Species input, not yet the complete design blueprint.
+
+The logo’s location pin and eye represent seeing what exists in a place. Brand use must be consistent across arrival, navigation, authentication, PWA metadata and seller surfaces.
+
+## 8. Seed success criteria
+
+The Seed is successful when the product direction is unambiguous and a competent builder can explain:
+
+- why the map is always present;
+- which public information a visitor may inspect;
+- exactly when an account is required;
+- why a catalogue product must be selected before availability;
+- why a public pin, Pro plan or claim click does not prove trust or stock;
+- how `unclaimed`, certification, `unconfirmed` and `confirmed` differ;
+- why the one Wallet is platform-only in the first release;
+- how a buyer leaves and resumes an unfinished action.
+
+A production-ready first release must also prove that sensitive state is server-authoritative, availability does not reserve inventory, trust cannot be bought, wallet spending is ledgered without withdrawal, and every critical action has loading, empty, error, retry, cancellation and recovery behavior.
+
+## 9. Scope gate
+
+| Capability | Seed treatment |
 |---|---|
-| Primary product | Omni is a map-first geospatial supply-and-demand search engine, not a conventional marketplace grid |
-| Core user outcome | Discover nearby products/services, inspect real facilities, verify availability with less seller polling, compare options and complete a traceable handoff |
-| Public access | Anyone may explore the globe and public facility information; account is required for database search, availability and protected actions |
-| Facility model | One account may manage multiple companies and facilities, including physical, mobile, personal and branch contexts |
-| Facility trust | Certification requires evidence and admin review; claim click never changes status |
-| `confirmed` badge | Only three successful Omni sales can produce it; Pro cannot purchase or preserve it without those sales |
-| Facility Pro | Per-facility commercial entitlement that expands limits and tools for that facility only |
-| Facility slots | One free facility slot per account; additional slots come from the Omni Wallet or a future workspace entitlement |
-| Bonus | $20 belongs to the facility and becomes spendable only after three successful Omni sales; it is non-withdrawable |
-| Wallet | One rechargeable Omni Wallet per account with a server ledger allocating platform consumption |
-| Payments | No buyer-seller in-app payment, seller payout or withdrawal in the first release |
-| Visual experience | The globe/map remains the permanent dominant scene with floating contextual surfaces |
-| Data promise | Use available public data, but never promise unrestricted global coverage or infer supply from a public pin |
+| Map-first globe and public source-backed discovery | Build now |
+| Catalogue-first buyer search and availability comparison | Build now |
+| Facility claim request, evidence and certification | Build now; admin review may be manual |
+| Seller map-first workspace and facility operations | Build now |
+| Products, Omni allocation, coupons and availability responses | Build now |
+| Purchase intent, transaction room, scoped chat and resume | Build now |
+| QR verification, external payment declaration, fulfilment and rating | Build now |
+| One Omni Wallet and FedaPay recharge for platform use | Build now; no seller withdrawal |
+| PWA/mobile web | Build now |
+| Bounded public-data ingestion and operator recovery | Build now as an explicit operational capability |
+| Fully automated admin certification | Manual/deferred |
+| AI that mutates business state | Deferred |
+| Native mobile applications | Deferred until PWA proof |
+| Buyer-seller in-app payment | Deferred/not in first release |
+| Seller payouts and withdrawals | Deferred/not in first release |
+| Instant unrestricted global prepopulation | Not promised/deferred |
 
-## 10. Decisions requiring later Roots contracts
+## 10. Explicit non-goals
 
-The Seed intentionally does not yet choose the database vendor schema, precise Pro pricing, exact Facility Slot price, supported payment methods, admin evidence taxonomy, geographic coverage SLO, ranking algorithm or final MapLibre tile infrastructure. These must be decided in Roots with explicit API/data contracts before implementation.
+Omni is not a generic social network, unrestricted public chat, conventional cart marketplace, buyer-seller payment processor, seller withdrawal product, static directory, decorative globe, unrestricted global data dump or autonomous AI agent that mutates trust, money, inventory or transaction state before the manual loops are proven.
+
+No visible action may be fake, dead or silently future-facing. If an operation is manual, the product must represent its state honestly and the operating procedure must have an owner and recovery path.
 
 ## 11. Seed gate
 
-Before Roots begins, the owner must approve this Seed brief and specifically confirm:
+The Seed is ready for Species only when the owner confirms:
 
-1. the core journey and map-first experience;
-2. public exploration versus account-gated database search and availability;
-3. facility lifecycle and non-purchasable `confirmed` trust badge;
-4. one free facility slot, paid/included additional slots, and per-facility Pro;
-5. facility-scoped $20 bonus and one rechargeable Omni Wallet;
-6. the explicit non-goals and deferred capabilities.
+1. Omni is a map-first geospatial supply-and-demand search engine.
+2. The core journey begins with the map and reaches catalogue-aware availability before transaction.
+3. Public exploration is distinct from account-gated search, availability and protected actions.
+4. Facility claim, certification, `unconfirmed`, `confirmed`, Pro and the three-sale rule remain distinct.
+5. One account-level Omni Wallet funds platform consumption only in the first release.
+6. The listed build-now, manual and deferred boundaries are accepted.
+
+Only after this gate should the visual Species blueprint and Root System be frozen for implementation.

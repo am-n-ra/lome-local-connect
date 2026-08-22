@@ -1,61 +1,62 @@
-# Omni V2 — Canonical Flow Contract
+# Omni V2 — Flow and State Contract
 
-**Status:** Rewritten from approved Nature Way Seed
-**Authority:** Flow, state, transition, permission and recovery contract
-**Rule:** This document supersedes all pre-Nature-Way flow drafts.
+**Document ID:** `OMNI-V2-FLOW-001`
+**Status:** Authoritative flow contract for implementation
+**Method:** Nature Way — phases Seed → Species → Root System
+**Parent:** [`v2-seed.md`](./v2-seed.md)
+**Species:** [`v2-species.md`](./v2-species.md)
+**Root System:** [`v2-roots.md`](./v2-roots.md)
 
-## 1. Product identity
+> Every meaningful Omni behavior is a state transition owned by an actor and enforced by the server. A screen may present a state; it may not invent one.
 
-Omni is a **map-first geospatial supply-and-demand search engine**. Its job is to help a person understand what products and services may be available in the environment around them, identify the relevant facilities, verify availability without unnecessary seller polling, compare options and complete a traceable handoff.
+## 1. Product flow identity
 
-The map is the permanent scene. Sheets, cards and focused panels are temporary surfaces above it. Omni is not primarily a marketplace grid, social network, generic chat product, payment processor or decorative globe.
+Omni is a map-first geospatial supply-and-demand search engine. The map is the permanent scene. Sheets, cards, rails, dock, menus and the transaction room are contextual surfaces above it, not disconnected page replacements.
 
-The core journey is:
+The full core journey is:
 
 ```text
-arrive → understand the map → search a need → discover facilities → inspect a facility → inspect/select catalogue offer → request availability → compare responses → create purchase intent → access authorized handoff → declare external payment → fulfil → confirm receipt → rate
+arrive
+→ understand map
+→ search a need
+→ discover source-backed facilities
+→ inspect facility
+→ inspect/select catalogue offer
+→ request availability
+→ compare responses
+→ create purchase intent
+→ access authorized transaction room
+→ QR and/or external payment declaration
+→ seller confirmation and fulfilment
+→ buyer receipt confirmation
+→ rating
 ```
 
-## 2. Actors and authority
+## 2. Actor authority
 
-| Actor | Can do | Cannot do |
+| Actor | May do | May not do |
 |---|---|---|
-| Visitor | Explore the map, view public facilities, inspect public facility and catalogue information | Query protected database search, request availability, see private contact/itinerary, create intent, access chat or QR |
-| Buyer | Search, filter, select offers, request availability, compare, create intent, use authorized room, declare external payment, confirm receipt and rate | Mutate catalogue, confirm seller payment, verify seller QR, advance seller-owned states |
-| Seller | Manage authorized facilities, submit evidence, manage catalogues, answer availability, configure coupons, verify QR, confirm payment and fulfil | Self-certify, fabricate trust/status/discount, exceed stock, withdraw wallet funds |
-| Admin | Review evidence, issue audited outcomes, inspect history and correct bounded operational records | Bypass evidence review with an unreasoned generic status mutation |
-| Server | Authorize transitions, enforce invariants, issue tokens, snapshot facts, ledger money and audit changes | Trust client status, price, stock, QR, identity or money claims |
+| Visitor | Explore map, public pins, public facility and public catalogue information | Protected search, availability, private contact, itinerary, chat, intent or QR |
+| Buyer | Search, filter, select offers, request availability, compare, create intent, use own transaction room, declare external payment, confirm receipt and rate | Mutate catalogue, confirm seller payment, verify seller QR or advance seller-owned states |
+| Seller | Manage authorized facilities, submit evidence, manage catalogue/coupons, answer requests, verify QR, confirm payment and fulfil | Self-certify, fabricate trust/status/discount, exceed stock or withdraw wallet funds |
+| Admin | Review evidence and issue audited outcomes | Bypass evidence with an unreasoned generic status mutation |
+| Operator | Run bounded discovery/import/recovery and inspect health | Mutate business state outside an owned operational procedure |
+| Server | Authorize, validate, snapshot, issue tokens, ledger money and audit transitions | Trust client status, price, stock, identity, QR or money claims |
 
-## 3. Source-of-truth boundaries
+## 3. Global surface rules
 
-| Fact | Authority |
-|---|---|
-| Public facility existence, name, category and location | Source-backed public data or reviewed server record |
-| Facility certification and trust | Admin-reviewed evidence outcome |
-| Product identity, price, media and stock allocation | Facility catalogue plus server validation |
-| Availability response | Seller action or explicitly bounded approved automation |
-| Purchase intent and transaction facts | Idempotent server operation and immutable snapshot |
-| QR validity | Server-issued token, expiry and replay state |
-| External payment | Buyer declaration and seller acknowledgement; Omni does not move buyer-seller money |
-| Fulfilment and receipt | Authorized seller and buyer actions |
-| Wallet balance | Confirmed recharge ledger and server spend ledger |
-| Analytics | Consent-aware, minimized and pseudonymous event pipeline |
-
-## 4. Global surface rules
-
-The map remains mounted through all buyer and seller map-first flows. The UI uses one shared sheet primitive:
+The map remains mounted through all map-first buyer and seller flows. Use one shared contextual sheet contract:
 
 - bottom anchored on mobile;
 - bounded floating surface on desktop;
-- scrollable body without horizontal overflow;
-- reachable primary footer action;
-- explicit loading, ready, empty, error, retry, cancel, locked and success states;
-- back, escape, close and gesture ownership defined per surface;
-- unfinished context preserved unless the user explicitly cancels or completes it.
+- scrollable body with reachable primary footer;
+- explicit loading, ready, empty, error, retry, cancel, locked and success states where applicable;
+- defined back, Escape, close and gesture ownership;
+- preserved unfinished context unless the user explicitly cancels or completes it.
 
-The top chrome contains only brand/context, notifications and a typed menu. Every visible action resolves to a real state or a clearly labelled manual operation. No dead menu item is permitted.
+The top chrome contains brand/context, notifications and real menu actions only. The search dock contains one search input and one Options disclosure. Every visible action resolves to a typed state and operation or is clearly labelled manual/unavailable.
 
-## 5. Visitor and buyer access states
+## 4. Visitor and authentication flow
 
 ```text
 visitor_arrival
@@ -80,9 +81,9 @@ authenticated
   → prior_safe_state
 ```
 
-A visitor can see public information but cannot execute a protected Omni database search. The authentication transition must preserve query, filters, map viewport, selected facility and selected product where applicable.
+A visitor can understand and explore public context without an account. The first protected database search, availability request or private action opens an explicit Auth explanation and preserves query, filters, viewport, selected facility and selected product where applicable.
 
-## 6. Map and location state machine
+## 5. Map and location flow
 
 ```text
 idle_globe
@@ -106,17 +107,17 @@ location_denied | location_timeout
   → retry_location | fallback_context | search_input
 ```
 
-The resting state is a real MapLibre globe with slow idle rotation. User pan, zoom, keyboard focus, search reveal and selected-facility focus pause or override rotation according to priority:
+The resting map is a real globe/map with slow idle rotation. Camera ownership priority is:
 
 ```text
 manual interaction > selected facility > active search reveal > result framing > idle rotation
 ```
 
-A blue personal marker is shown only for a fresh browser position with acceptable accuracy. Approximate location is never labelled exact. Location requests are cancellable and non-blocking.
+Pan, zoom, keyboard focus, search reveal, location and selected-facility focus pause or override rotation. Reduced motion disables continuous rotation. A personal marker appears only for a fresh acceptable browser position; approximate context is never labelled exact.
 
-Visible bounds are sent to the server with an abortable request. The server handles antimeridian crossing, scope, source status, deduplication and fallback. Public pins represent source-backed facilities; they do not prove current inventory.
+Visible bounds are sent through an abortable server request. The adapter handles antimeridian crossing, source status, deduplication, timeout and bounded fallback. Public pins represent source-backed facilities, not current inventory.
 
-## 7. Search state machine
+## 6. Search flow
 
 ```text
 search_input
@@ -140,9 +141,11 @@ search_error
   → retry_search | preserve_input | return_to_map
 ```
 
-The search dock has one input row and one Options disclosure. Quantity, budget, category, distance/radius, open-now, discounts, sort and location mode live inside that disclosure. Typing never changes the camera. Enter and the search button use the same guarded submission path. Budget supports unlimited and manually editable values. The buyer selects an existing catalogue product when one exists; free text is a fallback, not the preferred path.
+The search dock has one input row and one Options disclosure. Options may include category, open-now, distance/radius, discount, sort, location mode, quantity and budget. Typing never changes the camera. Enter and the visible search action use the same guarded submission path.
 
-## 8. Results and facility state machine
+The buyer selects an existing catalogue product when one exists. Free text is a fallback when no matching catalogue identity is available; it is not the preferred path. Search scope, eligibility and tracking requirements are enforced server-side.
+
+## 7. Result and facility flow
 
 ```text
 results_visible
@@ -164,11 +167,13 @@ facility_detail
   → result_list_restored
 ```
 
-Result cards show the matched product or service first, media where available, facility identity, source/trust status, distance, offer/price, product count and one next action. Selecting a card only selects a facility. It never claims, checks availability or creates purchase intent.
+A result card shows matched product/service first where applicable, media, facility identity, source/trust status, distance, price/offer, product count and one next action. Selecting a card selects a facility only. It never claims, certifies, checks availability, reserves stock or creates intent.
 
-Public facility detail shows identity, media, source/status, address, public hours/open state, matched offer and product count. Contact and Omni-provided itinerary remain hidden until the purchase-intent unlock.
+Public facility detail shows public identity, media, source/status, location/address, public hours, matched offer and product count. Contact details, itinerary and private seller information remain hidden until the authorized intent transition.
 
-## 9. Catalogue and availability state machine
+Closing detail restores the prior result context. Back, Escape and sheet close never silently erase the query, viewport or selection.
+
+## 8. Catalogue and product selection
 
 ```text
 catalogue_loading
@@ -179,7 +184,15 @@ catalogue_ready
 
 product_selected
   → availability_scope
+```
 
+The catalogue is scoped to the selected facility. The matched offer appears first. Each offer shows stable identity, authoritative media or neutral placeholder, price, offer/discount state, quantity eligibility and freshness where relevant.
+
+Product selection is a typed UI/domain state. It does not create a demand, reserve inventory, unlock contact or create a transaction. A facility’s catalogue limit and publication state are evaluated by the server.
+
+## 9. Availability and comparison flow
+
+```text
 availability_scope
   → availability_constraints
 
@@ -198,11 +211,17 @@ comparison
   → purchase_intent | responses_visible
 ```
 
-The catalogue is scoped to the selected facility. The matched offer appears first. Each offer shows name, media, price, discount/offer state, stock/quantity eligibility and freshness. A catalogue selection never reserves inventory and never creates a demand by itself.
+The buyer provides product, eligible scope, requested quantity, budget/range, location/context and urgency as applicable. Free and Pro scope rules are server-authoritative. Availability does not reserve inventory.
 
-Availability requires an account. The request records product, requested quantity, budget/range, location/context, urgency and eligible scope. A request must not silently query unlimited sellers or imply reservation. Responses are real, bounded and timestamped. `available`, `partial`, `unavailable`, `expired`, `corrected`, `no_response` and error states are explicit.
+Responses are explicit and timestamped:
 
-## 10. Facility trust and seller onboarding
+```text
+available | partial | unavailable | stale | expired | corrected | no_response | error
+```
+
+Comparison makes facility, distance, freshness, price/offer, quantity, status and seller message legible. Only an eligible, non-expired response can expose the intent action.
+
+## 10. Facility verification and trust flow
 
 ```text
 unclaimed
@@ -226,21 +245,48 @@ confirmed
   → confirmed_with_pro | confirmed_free_limits
 ```
 
-A claim click only creates an evidence request. Certification requires identity, facility and product/service evidence and an audited admin outcome. After certification, the facility becomes `unconfirmed` and may publish a maximum of five offers.
+A claim click creates or resumes a verification request and does not change facility status. Evidence covers claimant identity, company/facility association, product/service activity and location/facility proof according to the approved evidence taxonomy.
 
-`confirmed` is a non-purchasable trust badge. It requires three successful Omni sales and is never granted by Pro. Facility Pro may expand catalogue capacity and tools, but a Pro facility with fewer than three sales displays `certified`/`Pro`, never `confirmed`.
+Admin review must record actor, reason, evidence reference, prior state and timestamp. Certification creates `certified`/`unconfirmed`; it never directly creates `confirmed`. An unconfirmed Free facility may publish at most five offers.
 
-If Pro expires, catalogue limits return to Free. The `confirmed` badge remains only when the facility has independently completed three successful sales.
+Three qualifying successful Omni sales create `confirmed` exactly once. Pro expands facility capacity/tools but cannot create, purchase or preserve the trust badge. Rejection supports a reasoned resubmission path. Optional post-certification channel invitation never becomes a certification condition.
 
-## 11. Account slots, wallet and entitlements
+## 11. Account capacity, Pro and Wallet flow
 
-Each account has one free facility slot. Additional facility/company slots require an Omni Wallet purchase or inclusion in a future Seller Workspace entitlement. Slots control how many facilities an account may manage; they do not grant product limits or trust.
+```text
+account_created
+  → free_slot_available
+  → facility_created
+  → slot_exhausted
+  → buy_additional_slot | workspace_entitled
+```
 
-Each facility has its own Pro entitlement, catalogue limit, advanced tools, bonus state and trust progression. There is one rechargeable Omni Wallet per account. A server ledger records recharge, slot purchase, facility Pro, advertising, coupon credits and other platform consumption.
+There is one free Facility Slot per account. Additional slots require confirmed Omni Wallet spend or an explicit workspace entitlement. Slots control account capacity, not trust or product limits.
 
-The $20 facility bonus is non-withdrawable and becomes spendable only after that facility completes three successful Omni sales. It cannot be created by purchasing Pro.
+```text
+facility_free
+  → pro_checkout
+  → pro_pending
+  → pro_active | pro_failed | pro_expired
+```
 
-## 12. Purchase intent and transaction room
+Facility Pro is scoped to one facility and may expand its catalogue and tools. Pro never changes trust state. On expiry, Free catalogue limits return; independently earned `confirmed` may remain.
+
+```text
+wallet_idle
+  → recharge_pending
+  → recharge_confirmed | recharge_failed | recharge_cancelled | recharge_expired
+
+recharge_confirmed
+  → platform_spend
+  → spend_confirmed | spend_rejected | spend_reversed
+```
+
+The account has one rechargeable Omni Wallet. Its append-only ledger records confirmed recharge and platform consumption such as Facility Slots, Pro, advertising and coupon credits. The $20 facility bonus is a separate facility-scoped non-withdrawable platform credit, locked until three qualifying sales.
+
+Omni V1 has no buyer-seller in-app payment, seller payout or withdrawal transition.
+
+## 12. Purchase intent and transaction room flow
 
 ```text
 comparison
@@ -263,11 +309,13 @@ transaction_room
   → rated
 ```
 
-Only an eligible comparison response can create an intent. Intent creation is idempotent and snapshots facility, product, price, offer, quantity, response freshness and selected fulfilment context. The transaction room is the single authorized room for timeline, chat, QR and next action.
+Only an eligible comparison response can create an intent. Intent creation accepts an idempotency key and creates one immutable snapshot of facility, product, quantity, price, offer/coupon, response freshness and fulfilment context.
 
-Contact, itinerary and private seller information unlock only after intent creation. QR generation occurs inside the transaction context. The buyer presents the QR; the seller verifies it through camera or manual fallback. Omni records external cash, mobile money, pay-on-delivery or other configured methods but does not process buyer-seller funds.
+The transaction room owns the single canonical timeline, scoped chat, QR context and actor-specific next action. Contact, itinerary, private seller data and transaction chat unlock only after intent creation. Messages cannot advance the state machine.
 
-## 13. QR, fulfilment and rating
+The room is resumable through menu, notifications, saved context or direct transaction entry. Missing, expired, unavailable and unauthorized context leads to a safe recovery state.
+
+## 13. QR and external handoff flow
 
 ```text
 qr_ready
@@ -292,12 +340,38 @@ buyer_received
   → rated | rating_skipped
 ```
 
-The camera permission prompt must lead to a visible live preview area. If permission is denied, unavailable or interrupted, manual code entry remains available. Verification is server-authoritative and replay-safe. Seller confirmation, fulfilment, buyer receipt and rating are actor-specific transitions.
+The buyer QR is transaction-bound, server-issued, expiring and replay-safe. The seller scanner opens in a scanner-ready state before requesting camera permission. Permission is requested only after an explicit action on a secure top-level origin. A visible live preview must remain mounted after permission; manual code entry is always available for denied, unsupported, malformed or failed camera paths.
+
+Omni records external cash, mobile-money, pay-on-delivery or other configured payment declarations. A buyer declaration is not seller confirmation. The seller may confirm, reject or dispute according to the state. Fulfilment, buyer receipt and rating are actor-specific transitions.
 
 ## 14. Recovery contract
 
-Every protected state must preserve the exact context required to resume: actor, map viewport, query, filters, selected facility, selected product, availability request, comparison choice, intent ID and transaction ID. Refresh, close, back navigation, duplicate submission, timeout, offline transition, denied permission and expired token each have a defined recovery path.
+Every protected state persists enough context to resume: actor, map viewport, query, filters, selected facility, selected product, availability request, comparison choice, intent ID and transaction ID.
 
-## 15. Seed gate for Roots
+| Failure | Required recovery |
+|---|---|
+| Auth cancellation/error | Return to the triggering public or draft state with context preserved |
+| Search timeout/server error | Preserve input/options; allow retry or return to map |
+| Empty result | Explain scope and allow retry, adjustment or return; never fabricate data |
+| Catalogue unavailable | Preserve facility context and show retry/return |
+| Stale availability | Show freshness and return to constraints or request a refresh |
+| Duplicate mutation | Return the original authoritative result |
+| Location denied/timeout | Preserve manual exploration and provide retry/fallback |
+| Camera denied/unavailable | Preserve transaction and provide manual code path |
+| QR expired/replayed/mismatch | Show exact reason and safe regeneration/manual path |
+| Failed recharge | Do not create spendable funds; show retry/support state |
+| Expired notification/context | Route to a safe surface without exposing private data |
+| Offline mutation | Block or explicitly queue only when the contract supports it; never show false completion |
+| Back/close/refresh | Restore the last safe state unless explicitly cancelled |
 
-Roots may begin only when the following are represented in data/API contracts: public versus protected access, facility identity and lifecycle, separate account slots and facility Pro, non-purchasable confirmed trust, one-wallet ledger, availability freshness, idempotent intent, QR replay safety, external payment boundaries and resumability.
+## 15. Flow gate
+
+The flow is ready for the Trunk when:
+
+1. each core journey has explicit states, actors, authorities and terminal outcomes;
+2. every meaningful fork covers success, empty, timeout, error, cancellation, duplicate, expiry and unauthorized behavior where applicable;
+3. state-to-screen ownership matches the Species blueprint;
+4. the server-authoritative data source for every sensitive fact is named;
+5. protected transitions preserve context and public/private boundaries;
+6. no card, pin, menu item or CTA implies a transition it cannot perform;
+7. the first vertical slice has a testable state path from map arrival to availability comparison.
