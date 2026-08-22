@@ -57,6 +57,8 @@ export type ErrorCode =
   | 'STALE_STATE'
   | 'ENTITLEMENT_REQUIRED'
   | 'SOURCE_UNAVAILABLE'
+  | 'ROUTE_NOT_AUTHORIZED'
+  | 'ROUTE_UNAVAILABLE'
   | 'CONFLICT'
   | 'EXPIRED'
   | 'REPLAYED'
@@ -116,6 +118,20 @@ export interface ProductSelection {
   requestedQuantity: number;
 }
 
+export interface CatalogProduct {
+  id: string;
+  facilityId: string;
+  publicationState: 'draft' | 'pending_validation' | 'published' | 'sold_out' | 'archived';
+}
+
+export interface AvailabilitySelectionInput {
+  productId: string;
+  facilityId: string;
+  quantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+}
+
 export interface AvailabilityRequest {
   id: string;
   buyerAccountId: string;
@@ -126,6 +142,18 @@ export interface AvailabilityRequest {
   budgetMinor: number | null;
   status: AvailabilityStatus;
   expiresAt: string;
+}
+
+export interface AvailabilityResponse {
+  id: string;
+  availabilityRequestId: string;
+  facilityId: string;
+  productId: string;
+  unitPriceMinor: number;
+  couponCode: string | null;
+  quantity: number;
+  observedAt: string;
+  eligible: boolean;
 }
 
 export interface PurchaseIntentSnapshot {

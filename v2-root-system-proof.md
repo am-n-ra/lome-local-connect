@@ -4,7 +4,7 @@
 **Method:** Nature Way — Phase 2, Root System
 **Status:** `review`
 **Parent:** [`v2-roots.md`](./v2-roots.md)
-**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
+**Related:** [`v2-seed.md`](./v2-seed.md), [`v2-species.md`](./v2-species.md), [`v2-flow.md`](./v2-flow.md), [`v2-root-schema-review.md`](./v2-root-schema-review.md), [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md), [`v2-tasks.md`](./v2-tasks.md)
 
 ## Purpose
 
@@ -16,21 +16,21 @@ This ledger records whether the Root System contract is documented, implemented,
 |---|---|---|---|---|
 | Browser/server boundary | Defined in Root System | Current TypeScript/Vite build and client-boundary grep are clean; server integration remains separately gated | `review` | Re-run against the clean Trunk seam and browser bundle inspection |
 | Neon Auth identity linking | Defined as idempotent and identity-preserving | Existing production branch has preserved identities; real session path is not re-proven here | `review` | Live sign-in, bearer verification and duplicate-provisioning proof |
-| Domain ownership | Defined for Identity, Capacity, Company, Facility, Trust, Discovery, Map Context, Catalogue, Availability, Entitlements, Wallet, Transactions, Communications and Operations | Root/domain invariant tests pass locally; database ownership review remains open | `review` | Schema review plus ownership/forgery tests |
-| Persistence and migration | Additive, namespaced and preservation-first | No migration executed in this architecture ring | `review` | Forward check, preserved-row check, rollback/recovery record |
+| Domain ownership | Defined for Identity, Capacity, Company, Facility, Trust, Discovery, Map Context, Catalogue, Availability, Entitlements, Wallet, Transactions, Communications and Operations | Root/domain invariant tests and static schema review pass; database ownership enforcement gaps are recorded | `review` | Close same-account ownership and scope/FK gaps with server/schema proof |
+| Persistence and migration | Additive, namespaced and preservation-first | Migration 001/002 were read-only reviewed; no migration executed in this ring and no identity/data change was made | `review` | Authorized forward check, preserved-row check and rollback/recovery record |
 | Public discovery and map facts | Pins/clusters/source status separated from stock and trust | Public-discovery tests pass locally; map contract is documented and fixtures remain bounded | `review` | Map/API contract integration and source-failure proof |
 | Trust and certification | Claim, evidence, admin review, unconfirmed and confirmed transitions defined | No new certification implementation in this ring | `review` | Positive/negative transition tests and admin audit evidence |
-| Catalogue and availability | Facility-scoped catalogue and non-reserving availability defined | Catalogue/discovery/domain tests pass locally; live Authenticated availability and recovery remain open | `review` | Server contract tests, stale/error/retry/recovery proof |
+| Catalogue and availability | Facility-scoped catalogue and non-reserving availability defined | Catalogue/discovery/domain tests plus server-side availability-selection and forged-response tests pass locally; live Authenticated persistence and recovery remain open | `review` | Wire validators into the live API transaction and prove stale/error/retry/recovery |
 | Wallet and entitlements | One rechargeable Omni Wallet, append-only ledger, facility-scoped Pro and locked bonus defined | No live recharge or ledger mutation executed in this ring | `review` | Ledger invariant, replay, failed recharge and non-withdrawal proof |
 | Intent and transaction | Immutable snapshot, server transition, protected room and resumability defined | No new transaction implementation in this ring | `review` | Duplicate intent, authorization and state-transition proof |
 | QR and external payment | Hashed expiring server token, replay-safe verification and declaration-only external payment defined | No live QR/payment proof in this ring | `review` | QR mismatch/expiry/replay and actor-forgery proof |
-| Map route boundary | `MapContextSnapshot`, protected `getRoute`, no pre-intent private location defined | Maquette and contract only; no route provider call is claimed | `review` | Authorized route seam, unavailable-provider state and privacy proof |
-| Recovery | Map, query, selection, request, intent and transaction context defined as recoverable | No full runtime recovery proof in this ring | `review` | Refresh/back/reconnect/expired/manual recovery tests |
+| Map route boundary | `MapContextSnapshot`, protected `getRoute`, no pre-intent private location defined | Map context serializer/restorer and protected-route policy tests pass for pre-intent denial, non-member denial and authorized private visibility; no HTTP route/provider call is claimed | `review` | Authorized route seam, unavailable-provider state and privacy proof |
+| Recovery | Map, query, selection, request, intent and transaction context defined as recoverable | Map-context round-trip and tamper rejection pass; full browser refresh/back/reconnect/expired/manual recovery remains open | `review` | Refresh/back/reconnect/expired/manual recovery tests |
 | Analytics and privacy | Event minimization, consent, pseudonymous identity and retention boundary defined | No analytics pipeline changed in this ring | `todo` | Event schema review and privacy test |
 
 ## Validation checkpoint
 
-The current repository checks pass: 6 Vitest files, 19 tests, TypeScript/Vite production build, Vercel function bundling and a client-boundary grep. The build emits only the existing chunk-size warning. These checks validate the local foundation; they do not prove live Auth, production persistence, route provider authorization, QR replay or payment behavior.
+The current repository checks pass: 7 Vitest files, 29 tests, TypeScript/Vite production build, Vercel function bundling and `check:boundary` (`Client boundary: clean`). The focused Root additions prove map-context round-trip/tamper rejection, public marker semantics, protected-route policy, published catalogue selection and forged availability-response rejection. The static schema review is recorded in [`v2-root-schema-review.md`](./v2-root-schema-review.md). These checks validate the local foundation; they do not prove live Auth, production persistence, route provider authorization, QR replay or payment behavior.
 
 ## Required Root exit evidence
 

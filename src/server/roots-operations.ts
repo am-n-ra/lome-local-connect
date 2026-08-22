@@ -2,8 +2,11 @@ import type {
   ActorContext,
   ApiEnvelope,
   AvailabilityRequest,
+  AvailabilitySelectionInput,
   Facility,
   FacilitySlot,
+  AvailabilityResponse,
+  CatalogProduct,
   PurchaseIntentSnapshot,
   WalletLedgerEntry,
 } from '../domain/contracts';
@@ -29,10 +32,12 @@ export interface AuditSink {
 
 export interface RootsRepository {
   getFacility(id: string): Facility | null;
+  getProduct(id: string): CatalogProduct | null;
   countPublishedOffers(facilityId: string): number;
   getSlots(accountId: string): readonly FacilitySlot[];
   getWalletEntries(accountId: string): readonly WalletLedgerEntry[];
   getAvailability(id: string): AvailabilityRequest | null;
+  getAvailabilityResponse(id: string): AvailabilityResponse | null;
   getIntentByIdempotency(accountId: string, key: string): PurchaseIntentSnapshot | null;
   saveIntent(snapshot: PurchaseIntentSnapshot, idempotencyKey: string): void;
 }
@@ -113,29 +118,49 @@ export function recordQualifyingSale(
   return ok(correlationId, { trust: nextTrust, bonusEligible });
 }
 
+export function validateAvailabilitySelection(
+  actor: ActorContext,
+  repository: RootsRepository,
+  selection: AvailabilitySelectionInput,
+  correlationId: string,
+): ApiEnvelope<true> {
+  if (actor.suspended) return failure(correlationId, 'FORBIDDEN', 'Account is suspended.');
+  if (!actor.roles.includes('buyer')) return failure(correlationId, 'FORBIDDEN', 'Buyer role required.');
+  if (!selection.productId || !selection.facilityId || !Number.isInteger(selection.quantity) || selection.quantity <= 0) {
+    return failure(correlationId, 'INVALID_INPUT', 'Choose a published product and a positive quantity.');
+  }
+  if (selection.budgetMode === 'maximum' && (!Number.isInteger(selection.budgetMinor) || selection.budgetMinor! < 0)) {
+    return failure(correlationId, 'INVALID_INPUT', 'A maximum budget must be a non-negative integer.');
+  }
+  const facility = repository.getFacility(selection.facilityId);
+  const product = repository.getProduct(selection.productId);
+  if (!facility || !product) return failure(correlationId, 'NOT_FOUND', 'The selected facility or product was not found.');
+  if (product.facilityId !== facility.id) return failure(correlationId, 'FORBIDDEN', 'Product is outside the selected facility catalogue.');
+  if (product.publicationState !== 'published') return failure(correlationId, 'STALE_STATE', 'The selected product is no longer published.');
+  return ok(correlationId, true);
+}
+
 export function createIdempotentIntent(
   actor: ActorContext,
   repository: RootsRepository,
-  response: {
-    id: string;
-    facilityId: string;
-    productId: string;
-    unitPriceMinor: number;
-    couponCode: string | null;
-    quantity: number;
-    observedAt: string;
-    eligible: boolean;
-  },
+  responseId: string,
   idempotencyKey: string,
   correlationId: string,
 ): ApiEnvelope<PurchaseIntentSnapshot> {
   if (actor.suspended) return failure(correlationId, 'FORBIDDEN', 'Account is suspended.');
   if (!actor.roles.includes('buyer')) return failure(correlationId, 'FORBIDDEN', 'Buyer role required.');
-  if (!response.eligible) return failure(correlationId, 'STALE_STATE', 'Availability response is not eligible for intent.');
   const existing = repository.getIntentByIdempotency(actor.accountId, idempotencyKey);
   if (existing) return ok(correlationId, existing);
-  if (!Number.isInteger(response.quantity) || response.quantity <= 0) {
-    return failure(correlationId, 'INVALID_INPUT', 'Quantity must be a positive integer.');
+  const response = repository.getAvailabilityResponse(responseId);
+  if (!response) return failure(correlationId, 'NOT_FOUND', 'Availability response was not found.');
+  const request = repository.getAvailability(response.availabilityRequestId);
+  if (!request || request.buyerAccountId !== actor.accountId) return failure(correlationId, 'FORBIDDEN', 'Availability response is outside buyer ownership.');
+  if (request.productId !== response.productId || !request.facilityScope.includes(response.facilityId)) {
+    return failure(correlationId, 'FORBIDDEN', 'Availability response is outside the request scope.');
+  }
+  if (!response.eligible) return failure(correlationId, 'STALE_STATE', 'Availability response is not eligible for intent.');
+  if (!Number.isInteger(response.quantity) || response.quantity <= 0 || !Number.isInteger(response.unitPriceMinor) || response.unitPriceMinor < 0) {
+    return failure(correlationId, 'INVALID_INPUT', 'Availability response contains invalid commercial values.');
   }
   const snapshot: PurchaseIntentSnapshot = {
     intentId: `intent-${crypto.randomUUID()}`,

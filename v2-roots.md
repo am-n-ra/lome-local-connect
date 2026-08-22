@@ -202,17 +202,22 @@ The map presentation is client-owned visual state backed by server-owned discove
 
 ```ts
 type MapContextSnapshot = {
-  mode: "idle_globe" | "local_map" | "cluster_selected" | "facility_focus" | "route_visible" | "map_recovery";
-  center: { lng: number; lat: number };
-  zoom: number;
-  bounds?: { west: number; south: number; east: number; north: number };
-  query?: string;
-  filters?: Record<string, string | number | boolean | null>;
-  selectedFacilityId?: string;
-  selectedProductId?: string;
-  availabilityRequestId?: string;
-  intentId?: string;
-  transactionId?: string;
+  version: 1;
+  mode: "idle_globe" | "local_map" | "cluster_selected" | "trust_marker" | "facility_focus" | "route_visible" | "map_recovery";
+  camera: {
+    longitude: number;
+    latitude: number;
+    zoom: number;
+    bearing: number;
+    pitch: number;
+  };
+  query: string;
+  filters: Record<string, string | number | boolean | null | string[]>;
+  selectedFacilityId: string | null;
+  selectedProductId: string | null;
+  availabilityRequestId: string | null;
+  returnSurface: string;
+  capturedAt: string;
 };
 ```
 
