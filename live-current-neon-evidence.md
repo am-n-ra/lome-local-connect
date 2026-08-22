@@ -30,3 +30,7 @@
 - Authenticated live availability POST, duplicate idempotency replay, and interruption/recovery proof remain incomplete.
 - A full browser screenshot-level check of facility selection/detail is still desirable once the connected browser bridge responds reliably.
 - Do not call the Trunk production-ready until those protected-flow proofs and Heartwood recovery checks pass.
+
+## Live four-width Playwright proof
+
+The updated proof script was run against `TRUNK_BASE_URL=https://omniviewer.vercel.app` after replacing obsolete isolated-fixture labels with the current bounded fixtures. At each required width—320, 375, 768 and 1280—the live page reported `Live map`, rendered one MapLibre canvas, exposed the accessible search input and Omni actions navigation, showed three public facilities, opened the `Cotonou Fresh Hub` detail sheet, rendered its `Tomatoes` catalogue item, and opened the account gate from `Verify availability`. Body scroll width exactly matched the viewport at 320/320, 375/375, 768/768 and 1280/1280. Each run returned HTTP 200 for public discovery and facility detail, and recorded no console or page errors.

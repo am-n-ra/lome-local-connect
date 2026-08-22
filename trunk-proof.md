@@ -45,3 +45,10 @@ The Git-linked production deployment `dpl_Eev6K9XuJ9kLn7A6Ye19mTfyseH7` (commit 
 The connected browser loaded both the Vercel alias and the trusted custom domain and exposed the map-first V2 content, including `Live map`, `The world around you`, `3 public places in view`, and `Public exploration · account required to verify`. The browser bridge timed out during viewport inspection, so this pass records live page reachability and API evidence but not a new screenshot-level interaction capture. The existing responsive proof remains valid for 320, 375, 768 and 1280 px.
 
 The Trunk is **partial, not production-ready**. Authenticated availability creation, duplicate idempotency replay, interrupted-session recovery and the Heartwood hardening gate remain to be proven before release clearance.
+
+
+## Live four-width browser proof — 2026-08-22
+
+The proof script was updated to target the current-Neon bounded fixtures and then run against `https://omniviewer.vercel.app`. At 320, 375, 768 and 1280 px, every run reported `Live map`, rendered one MapLibre canvas, exposed the accessible search input and Omni actions navigation, showed all three current public facilities, opened the `Cotonou Fresh Hub` detail sheet, rendered its `Tomatoes` catalogue item, and opened the account gate from `Verify availability`. The measured body width matched the viewport exactly at 320/320, 375/375, 768/768 and 1280/1280. Each run returned HTTP 200 for public discovery and facility detail and recorded no console or page errors.
+
+This closes the current-Neon proof for public discovery, map rendering, facility detail, catalogue visibility, responsive containment and unauthenticated protected-action gating. It does not close authenticated availability creation, duplicate idempotency replay or Heartwood recovery hardening.

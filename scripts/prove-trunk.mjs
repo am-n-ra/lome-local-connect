@@ -15,28 +15,28 @@ for (const width of widths) {
   page.on('pageerror', (error) => errors.push(`page:${error.message}`));
   await page.goto(base, { waitUntil: 'domcontentloaded', timeout: 15000 });
   await page.waitForTimeout(8500);
-  await page.getByRole('button', { name: /Atelier Kegue/ }).first().waitFor({ state: 'visible', timeout: 12000 }).catch(() => undefined);
+  await page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first().waitFor({ state: 'visible', timeout: 12000 }).catch(() => undefined);
   await page.screenshot({ path: `/tmp/omni-v2-proof/trunk-${width}.png`, fullPage: true });
   const initial = await page.locator('text=The world around you').count();
   const search = await page.getByLabel('Search nearby products and services').count();
   const dock = await page.getByRole('navigation', { name: 'Omni actions' }).count();
   const mapStatus = await page.locator('.map-status').innerText();
   const caption = await page.locator('.map-caption').innerText();
-  const facilityLabels = await page.getByText(/Atelier Kegue|Pharmacie du Port|Marche de Hanoukope/).count();
+  const facilityLabels = await page.getByText(/Cotonou Fresh Hub|Mènontin Home Bakery|Zongo Mobile Market/).count();
   const canvasCount = await page.locator('.map-canvas canvas').count();
   await page.getByRole('button', { name: /Create your account to search/ }).click();
   const auth = await page.getByRole('dialog', { name: /Search with certainty|Start seeing before you move/ }).count();
   await page.getByRole('button', { name: 'Close' }).click();
-  const facilityCard = page.getByRole('button', { name: /Atelier Kegue/ }).first();
+  const facilityCard = page.getByRole('button', { name: /Cotonou Fresh Hub/ }).first();
   const facilityCardCount = await facilityCard.count();
   let detail = 0;
   let catalogue = 0;
   let availabilityAuth = 0;
   if (facilityCardCount) {
     await facilityCard.click();
-    await page.getByRole('dialog', { name: /Atelier Kegue/ }).waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
-    detail = await page.getByRole('dialog', { name: /Atelier Kegue/ }).count();
-    catalogue = await page.getByText('Kente tote bag').count();
+    await page.getByRole('dialog', { name: /Cotonou Fresh Hub/ }).waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
+    detail = await page.getByRole('dialog', { name: /Cotonou Fresh Hub/ }).count();
+    catalogue = await page.getByText('Tomatoes').count();
     const verifyButton = page.getByRole('button', { name: /Verify availability/ });
     if (await verifyButton.count()) {
       await verifyButton.click();
