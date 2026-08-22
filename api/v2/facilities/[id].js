@@ -55,7 +55,6 @@ var toProduct = (row) => ({
   unit: String(row.unit ?? "unit"),
   priceMinor: Number(row.price_minor),
   currency: String(row.currency ?? "USD"),
-  availableQuantity: row.quantity_allocated_omni === null ? null : Number(row.quantity_allocated_omni),
   couponLabel: row.coupon_label ? String(row.coupon_label) : null
 });
 function createTrunkRepository(sql = database()) {
@@ -109,7 +108,7 @@ function createTrunkRepository(sql = database()) {
       if (!row) return null;
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
-               p.price_minor, p.currency, p.quantity_allocated_omni,
+               p.price_minor, p.currency,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id

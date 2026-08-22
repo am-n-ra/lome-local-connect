@@ -25,7 +25,6 @@ export interface PublicProduct {
   unit: string;
   priceMinor: number;
   currency: string;
-  availableQuantity: number | null;
   couponLabel: string | null;
 }
 

@@ -37,7 +37,7 @@ const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
   throw lastError instanceof Error ? lastError : new Error('Neon database request failed after bounded recovery attempts.');
 };
 
-const toProduct = (row: Record<string, unknown>): PublicProduct => ({
+export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
   name: String(row.name),
@@ -46,7 +46,6 @@ const toProduct = (row: Record<string, unknown>): PublicProduct => ({
   unit: String(row.unit ?? 'unit'),
   priceMinor: Number(row.price_minor),
   currency: String(row.currency ?? 'USD'),
-  availableQuantity: row.quantity_allocated_omni === null ? null : Number(row.quantity_allocated_omni),
   couponLabel: row.coupon_label ? String(row.coupon_label) : null,
 });
 
@@ -102,7 +101,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) return null;
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
-               p.price_minor, p.currency, p.quantity_allocated_omni,
+               p.price_minor, p.currency,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id

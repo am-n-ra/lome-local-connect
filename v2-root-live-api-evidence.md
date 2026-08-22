@@ -13,7 +13,7 @@
 | `GET /api/v2/facilities/00000000-0000-0000-0000-000000000001` | HTTP 200 | Returned the public facility detail and one facility-scoped published `Tomatoes` catalogue item |
 | `POST /api/v2/availability` without bearer token | HTTP 401 | Returned `AUTH_REQUIRED`; no availability request was created |
 
-The public responses included correlation IDs and the protected denial used the documented envelope. The public facility payload did not expose seller contact data, private route data or transaction permissions. The public catalogue item contained an `availableQuantity` field in the current historical Trunk API response; this remains a Root/Trunk review item because the locked public map/pin rule is that presence and catalogue visibility must never be interpreted as current guaranteed stock.
+The public responses included correlation IDs and the protected denial used the documented envelope. The public facility payload did not expose seller contact data, private route data or transaction permissions. The observed deployed response did contain an `availableQuantity` field in the historical Trunk API response, which violated the locked public stock boundary. The V2 branch now removes that field from the public type, serializer and SQL projection; 30 local tests pass and the generated API bundles contain neither `availableQuantity` nor `quantity_allocated_omni`. Because no deployment was performed, canonical-domain verification of the fix remains open.
 
 ## Protection result
 
@@ -21,8 +21,8 @@ The unauthenticated POST used a valid-looking idempotency header and placeholder
 
 ## Limitations and non-claims
 
-This is a live canonical-domain smoke probe, not a complete Trunk or Root acceptance test. It does not prove the connected browser interaction path, authenticated availability creation, server-side validator wiring, migration preservation, route authorization, QR replay safety, payment declarations, seller certification or recovery behavior. The test created no data and exposed no credentials.
+This is a live canonical-domain smoke probe plus a branch-side static boundary check, not a complete Trunk or Root acceptance test. It does not prove the connected browser interaction path, authenticated availability creation, server-side validator wiring, migration preservation, route authorization, QR replay safety, payment declarations, seller certification or recovery behavior. The live probe created no data and exposed no credentials; the branch-side fix is not live until the V2 branch is deployed through the normal Vercel integration.
 
 ## Nature Way decision
 
-The canonical public read path and unauthenticated protected-write denial are **partially evidenced**. Root remains `review`; the buyer Trunk remains blocked until authenticated and recovery proofs are complete and the public API’s stock semantics are reconciled with the Root contract.
+The canonical public read path and unauthenticated protected-write denial are **partially evidenced**. The public stock leak is fixed in the isolated V2 branch and covered by executable proof, but the deployed canonical endpoint still requires a later verification after the normal branch deployment. Root remains `review`; the buyer Trunk remains blocked until authenticated and recovery proofs are complete.
