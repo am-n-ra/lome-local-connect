@@ -31,3 +31,8 @@ export async function externalPaymentConfirmationHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/external-payment-confirmations');
   await handleApi(req, res, '/api/v2/external-payment-confirmations', url);
 }
+
+export async function externalPaymentDeclarationHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/external-payment-declarations');
+  await handleApi(req, res, '/api/v2/external-payment-declarations', url);
+}
