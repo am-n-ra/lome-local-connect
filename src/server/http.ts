@@ -225,16 +225,6 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === 'GET' && pathname === '/api/v2/availability-requests') {
-      const authUserId = await getAuthUserId(req.headers);
-      if (!authUserId) {
-        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your availability requests.'));
-        return true;
-      }
-      const result = await repository.getBuyerAvailabilityRequests({ authUserId });
-      json(res, 200, { ok: true, correlationId, data: result });
-      return true;
-    }
     if (req.method === 'GET' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -242,6 +232,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const requestId = url.searchParams.get('requestId')?.trim() ?? '';
+      if (!requestId) {
+        const result = await repository.getBuyerAvailabilityRequests({ authUserId });
+        json(res, 200, { ok: true, correlationId, data: result });
+        return true;
+      }
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(requestId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid availability request.'));

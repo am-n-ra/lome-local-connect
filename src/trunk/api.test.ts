@@ -40,7 +40,7 @@ describe('listPublicFacilities search contract', () => {
     await getBuyerAvailabilityRequests({ token: 'session-token' });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      '/api/v2/availability-requests',
+      '/api/v2/availability-responses',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });

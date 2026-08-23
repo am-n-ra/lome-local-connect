@@ -60,7 +60,7 @@ export async function requestAvailability(input: {
 }
 
 export async function getBuyerAvailabilityRequests(input: { token: string }): Promise<ApiResult<BuyerAvailabilityRequestList>> {
-  const response = await fetchWithRecovery('/api/v2/availability-requests', {
+  const response = await fetchWithRecovery('/api/v2/availability-responses', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<BuyerAvailabilityRequestList>(response);
