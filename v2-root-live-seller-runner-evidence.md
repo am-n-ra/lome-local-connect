@@ -20,7 +20,7 @@ The repository now contains `scripts/prove-v2-live-seller.mjs`, the non-secret t
 
 The runner was syntax-checked and invoked with an empty environment. It exited with the expected preflight status and listed only missing variable names. No Auth request, database mutation, bearer token, QR issuance, payment declaration or transaction transition was attempted during this preflight.
 
-A read-only Vercel deployment check confirmed the branch deployment reached `READY`. GitHub Actions is enabled, but the read-only secret-name check returned HTTP 403 and the named GitHub environment `omni-v2-seller-proof` returned HTTP 404; no secret value was read. The workflow is therefore prepared but not executable from this session until that external environment is created and populated. The Preview `V2_DATABASE_URL` and branch Auth URL have not been verified as a matched deployment binding, so the runner was not pointed at the deployment.
+A read-only Vercel deployment check confirmed the branch deployment reached `READY`. GitHub Actions is enabled and the named GitHub environment `omni-v2-seller-proof` now exists, but its secret listing reports zero configured secrets; no secret value was read. The workflow is therefore prepared but not executable from this session until the environment is populated. The Preview `V2_DATABASE_URL` and branch Auth URL have not been verified as a matched deployment binding, so the runner was not pointed at the deployment.
 
 ## Not proven
 
