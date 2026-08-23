@@ -13,11 +13,11 @@ The focused Root test covers the authorized first-pass result, buyer-role denial
 
 ## Validation result
 
-The repository validation pass reports 11 Vitest files and 47 passing tests, a successful TypeScript/Vite build, successful bundling of 3 Vercel functions and `Client boundary: clean`. The existing chunk-size warning remains informational.
+The repository validation pass reports 11 Vitest files and 67 passing tests, a successful TypeScript/Vite build, successful bundling of 7 Vercel functions and `Client boundary: clean`. The existing chunk-size warning remains informational.
 
 ## Critical limitation
 
-This artifact proves policy ordering and actor authorization only. It does not prove an atomic database transition. The eventual persistence operation must update a matching unverified token conditionally inside a transaction or row lock, increment replay state exactly once, append the audit event and return `REPLAYED` for all later/concurrent attempts. No QR token was created or changed during this pass.
+This artifact proves policy ordering and actor authorization only. The repository persistence operation now updates a matching unverified token conditionally, increments replay state exactly once and returns a non-acceptance result for later attempts. The authenticated `POST /api/v2/qr-verifications` route and Vercel wrapper are now present in the seven-function build surface. This still does not prove live execution, concurrent behavior or live audit append. No QR token was created or changed during this pass.
 
 ## Current disposable-branch boundary
 
@@ -29,6 +29,6 @@ QR verification is **partially evidenced**. The pure Root policy and isolated se
 
 ## Repository persistence seam
 
-The actual server repository now exposes a Root-only `verifyQrToken` operation. It performs a conditional `UPDATE ... RETURNING` against `v2_qr_tokens`, requiring the matching transaction, exact token hash, an unverified token with replay count zero, an unexpired timestamp, and a seller membership whose `v2_accounts.auth_user_id` matches the authenticated bearer subject. A successful update returns the committed verification timestamp and replay count; a non-matching update returns a non-acceptance result without changing the token.
+The actual server repository now exposes a Root-only `verifyQrToken` operation. It performs a conditional `UPDATE ... RETURNING` against `v2_qr_tokens`, requiring the matching transaction, exact token hash, an unverified token with replay count zero, an unexpired timestamp, and a seller membership whose `v2_accounts.auth_user_id` matches the authenticated bearer subject. A successful update returns the committed verification timestamp and replay count; a non-matching update returns a non-acceptance result without changing the token. The operation is reachable through authenticated `POST /api/v2/qr-verifications` in the seven-function Vercel build.
 
 The focused repository tests prove the SQL seam contains the Auth-to-account join, seller-role membership check, expiry predicate and replay predicates, and cover both accepted and no-row outcomes. This improves the live-writer contract but is not live execution evidence: there is still no authenticated seller request, concurrent caller result, audit append proof or deployed QR endpoint in this ring.

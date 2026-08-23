@@ -36,3 +36,8 @@ export async function externalPaymentDeclarationHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/external-payment-declarations');
   await handleApi(req, res, '/api/v2/external-payment-declarations', url);
 }
+
+export async function qrVerificationHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/qr-verifications');
+  await handleApi(req, res, '/api/v2/qr-verifications', url);
+}

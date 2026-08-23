@@ -87,6 +87,33 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       else json(res, 200, { ok: true, correlationId, data: facility });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/qr-verifications') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before verifying a transaction QR code.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const tokenHash = typeof input.tokenHash === 'string' ? input.tokenHash : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || tokenHash.length < 16 || tokenHash.length > 512) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction and QR token.'));
+        return true;
+      }
+      const result = await repository.verifyQrToken({
+        authUserId,
+        transactionId,
+        tokenHash,
+        now: new Date().toISOString(),
+      });
+      if (!result.accepted) {
+        json(res, 409, errorBody(correlationId, 'CONFLICT', 'The QR code is invalid, expired or already verified.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/external-payment-confirmations') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

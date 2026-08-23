@@ -924,15 +924,13 @@ function requestUrl(req, fallbackPath) {
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-async function availabilityHandler(req, res) {
-  const url = requestUrl(req, "/api/v2/availability");
-  await handleApi(req, res, "/api/v2/availability", url);
+async function qrVerificationHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/qr-verifications");
+  await handleApi(req, res, "/api/v2/qr-verifications", url);
 }
 
-// src/server/vercel/availability.ts
-async function handler(req, res) {
-  await availabilityHandler(req, res);
-}
+// src/server/vercel/qr-verifications.ts
+var qr_verifications_default = qrVerificationHandler;
 export {
-  handler as default
+  qr_verifications_default as default
 };
