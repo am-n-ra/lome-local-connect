@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, parseRequestBody, toApiErrorResponse } from './http';
-import { AvailabilityPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, PurchaseIntentPolicyError } from './trunk-repository';
 
 const requestWithBody = (value: string) => ({
   async *[Symbol.asyncIterator]() {
@@ -51,6 +51,13 @@ describe('Root HTTP error boundary', () => {
         },
       },
     });
+  });
+
+  it('maps purchase-intent policy rejection to a non-retryable 409', () => {
+    const response = toApiErrorResponse('corr-intent', new PurchaseIntentPolicyError('No eligible availability response belongs to the authenticated buyer.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
   });
 
   it('redacts unexpected internal details behind a recoverable 500', () => {

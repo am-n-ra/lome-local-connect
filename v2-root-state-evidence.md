@@ -13,13 +13,17 @@ The policy requires an authenticated, non-suspended actor with the correct role 
 
 ## Validation result
 
-The focused Root tests cover authorized seller and buyer transitions, invalid state jumps, wrong-role membership, missing membership and system-only closure. The full repository pass reports 11 Vitest files and 50 passing tests, a successful TypeScript/Vite build, 3 bundled Vercel functions and `Client boundary: clean`.
+The focused Root tests cover authorized seller and buyer transitions, invalid state jumps, wrong-role membership, missing membership and system-only closure. The full repository pass reports 11 Vitest files and 51 passing tests, a successful TypeScript/Vite build, 4 bundled Vercel functions and `Client boundary: clean`.
 
 ## Purchase-intent repository seam
 
 The actual server repository now exposes `createPurchaseIntent`. Its guarded statement requires an existing, non-suspended V2 account linked to the authenticated Neon Auth subject; joins the selected availability response to its buyer-owned request and facility; accepts only `available`, `partial` or `corrected` responses with positive quantity and non-negative price; requires the response facility to remain inside the request scope; and requires a seller-owned facility. It then creates or reuses one purchase intent by buyer/idempotency key, creates the immutable transaction snapshot, adds buyer and seller membership, and appends the initial `intent_created` event with conflict-safe replay behavior.
 
 The local repository seam tests cover eligible intent creation/replay, unavailable or out-of-scope rejection, and idempotency mismatch rejection. The Neon explanation attempt was blocked by a temporary connector-maintenance response, so SQL planning was not claimed from that attempt; TypeScript/build/test validation remains green.
+
+The serverless HTTP boundary now exposes `POST /api/v2/purchase-intents`. It requires a bearer-authenticated subject, a UUID `responseId` and a stable `Idempotency-Key` header or body value, then delegates to the guarded repository operation. The route returns `401 AUTH_REQUIRED` before protected work, `400 INVALID_INPUT` for malformed request data, `201` with the canonical intent result on success, `409 POLICY_REJECTED` for an ineligible or mismatched request, and a redacted retryable `500` for unexpected failures. The Vercel bundler and a dedicated serverless wrapper include this fourth function.
+
+This is an implemented HTTP seam, not live session evidence: no bearer-authenticated intent request or transaction mutation was executed in this pass.
 
 ## Critical limitation
 

@@ -4,6 +4,7 @@ const entries = {
   'api/v2/public/facilities.js': 'src/server/vercel/public-facilities.ts',
   'api/v2/facilities/[id].js': 'src/server/vercel/facility-detail.ts',
   'api/v2/availability.js': 'src/server/vercel/availability.ts',
+  'api/v2/purchase-intents.js': 'src/server/vercel/purchase-intents.ts',
 };
 
 for (const [outfile, entrypoint] of Object.entries(entries)) {

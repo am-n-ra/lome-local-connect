@@ -470,15 +470,14 @@ function requestUrl(req, fallbackPath) {
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-async function facilityDetailHandler(req, res) {
-  const url = requestUrl(req, "/api/v2/facilities/");
-  const id = typeof req.query?.id === "string" ? req.query.id : "";
-  await handleApi(req, res, `/api/v2/facilities/${id}`, url);
+async function purchaseIntentHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/purchase-intents");
+  await handleApi(req, res, "/api/v2/purchase-intents", url);
 }
 
-// src/server/vercel/facility-detail.ts
+// src/server/vercel/purchase-intents.ts
 async function handler(req, res) {
-  await facilityDetailHandler(req, res);
+  await purchaseIntentHandler(req, res);
 }
 export {
   handler as default

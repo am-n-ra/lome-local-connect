@@ -21,3 +21,8 @@ export async function availabilityHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/availability');
   await handleApi(req, res, '/api/v2/availability', url);
 }
+
+export async function purchaseIntentHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/purchase-intents');
+  await handleApi(req, res, '/api/v2/purchase-intents', url);
+}

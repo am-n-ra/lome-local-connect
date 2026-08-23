@@ -353,7 +353,7 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
   }
-  if (error instanceof AvailabilityPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof PurchaseIntentPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
   return {
@@ -406,6 +406,28 @@ async function handleApi(req, res, pathname, url) {
       const facility = await repository.getFacilityDetail(id);
       if (!facility) json(res, 404, errorBody(correlationId, "NOT_FOUND", "Facility was not found."));
       else json(res, 200, { ok: true, correlationId, data: facility });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/purchase-intents") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before choosing an offer."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const responseId = typeof input.responseId === "string" ? input.responseId : "";
+      const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(responseId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid availability response."));
+        return true;
+      }
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
+        return true;
+      }
+      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/availability") {
