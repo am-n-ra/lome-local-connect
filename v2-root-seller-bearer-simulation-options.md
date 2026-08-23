@@ -16,7 +16,7 @@ The target proof is the explicitly authorized demo seller fixture on an isolated
 
 The Omni server accepts only an `Authorization: Bearer ...` header whose JWT signature is verified against the configured Neon Auth JWKS. The actor is derived from the verified `sub`; the client cannot select the V2 account. The seller route then checks the V2 account binding, onboarding state, facility ownership, product publication, request scope and allocated quantity. A valid simulation must therefore produce a **real signed token from the same Neon Auth issuer**, or it must be explicitly labeled as a local HTTP-test substitute.
 
-The current repository exposes email/password sign-in and sign-up through the client and JWT retrieval for an existing session. It does not expose a test impersonation switch, a token minting endpoint or an Auth admin plugin. The deployed negative proof returns HTTP 401 for all protected V2 mutation routes without a bearer.
+The current repository exposes email/password sign-in and sign-up through the client and JWT retrieval for an existing session. It does not expose a test impersonation switch, a token minting endpoint or an Auth admin plugin. The deployed negative proof returns HTTP 401 for all protected V2 mutation routes without a bearer. The user has supplied a demo password in chat, but the agent must not enter, submit, reuse or store it; it is therefore not an autonomous test secret.
 
 ## Option comparison
 
@@ -36,7 +36,7 @@ Neon’s Managed Better Auth documentation explicitly describes branch-isolated 
 
 ### 1. Isolate the proof environment
 
-Create a disposable Neon branch from `br-dawn-hill-am5amy22`, for example `omni-v2-seller-proof`, and never point the test harness at `br-bitter-math-amrlbym6` or the production/default branch. Deploy the current V2 commit to a Vercel Preview whose `V2_DATABASE_URL` is bound to that proof branch. The preview environment must be identifiable by deployment URL and commit, but no connection value may appear in logs, evidence or chat.
+Create a disposable Neon branch from the current persistent V2 branch, for example `omni-v2-seller-proof`, and never point the test harness at the production/default branch. Deploy the current V2 commit to a Vercel Preview whose `V2_DATABASE_URL` is bound to that proof branch. Configure the branch-specific Neon Auth URL and JWKS URL for the same Preview. The preview environment must be identifiable by deployment URL and commit, but no connection value may appear in logs, evidence or chat. Because the user-reported deletion left the persistent seller-ready V2 account with an unmatched Auth binding, use a fresh labeled seller fixture on the disposable branch or repair that binding only after the new Auth user is created through the supported Auth lifecycle.
 
 Keep the existing persistent V2 demo fixture as the source of the bounded seller/product/request shape, or seed a labeled copy on the disposable branch with the existing idempotent fixture procedure. Do not delete the current persistent demo identities merely to obtain credentials; deletion does not produce a signed session and would destroy useful evidence.
 
@@ -90,7 +90,7 @@ If test secrets cannot be injected without agent visibility, if the Auth branch 
 
 ## Selected decision
 
-Use **dedicated Neon Auth branch/Preview sign-in with encrypted test secrets consumed by an in-memory test runner**. Keep the local ephemeral-JWKS harness as a separate lower-level test. Do not use direct SQL identity creation, hand-crafted JWTs, fake bypass headers or deletion/recreation of the current demo identities as a substitute for a real Auth session.
+Use **dedicated Neon Auth branch/Preview sign-in with encrypted test secrets consumed by an in-memory test runner**. The supplied chat password is not used by the agent. Keep the local ephemeral-JWKS harness as a separate lower-level test. Do not use direct SQL identity creation, hand-crafted JWTs, fake bypass headers or deletion/recreation of the current demo identities as a substitute for a real Auth session. Before the live seller test, repair the seller-ready V2 account’s unmatched Auth binding through a supported, auditable operation on the isolated branch.
 
 ## References
 
