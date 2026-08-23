@@ -18,7 +18,7 @@ Auth credentials, bearer tokens and Neon Auth user identifiers are intentionally
 | Environment | Branch ID | Permitted use | Prohibited use |
 |---|---|---|---|
 | Persistent V2 development branch | `br-dawn-hill-am5amy22` (`omni-v2-rebuild`) | Read-only public catalogue/map proof and preservation comparisons | Authenticated user proof, production claims or treating seeded rows as real supply |
-| Production/default Neon branch | `br-bitter-math-amrlbym6` | Historical/canonical public API smoke evidence only | New mutations, authenticated session simulation or release approval |
+| Production/default Neon branch | `br-bitter-math-amrlbym6` | Historical/canonical public API smoke evidence and the single explicitly confirmed live Auth/idempotency proof recorded below | Further mutations, authenticated session simulation beyond the recorded proof or release approval |
 | Disposable Root-proof branch | `br-broad-wildflower-amw7k0om` (`omni-v2-root-proof-20260822`) | Isolated migration, negative-guard, duplicate-denial and QR policy database tests | Promotion, merge, production data, user-success claims or use as a live marketplace |
 
 Migration 003 and migration 004 were applied only to the disposable branch. The persistent V2 and production/default branches remain unmodified by those migrations. The disposable branch is expiring and must not be promoted automatically.
@@ -50,7 +50,15 @@ These are separate from the persistent V2 fixture set and are retained only to e
 | `P-CAN-PROD-001` | `00000000-0000-0000-0000-000000000011` | Tomatoes | `published`; facility `P-CAN-FAC-001` | Historical facility-scoped catalogue smoke evidence |
 | `P-CAN-PROD-002` | `00000000-0000-0000-0000-000000000012` | Corn flour | `published`; facility `P-CAN-FAC-003` | Historical facility-scoped catalogue smoke evidence |
 
-The canonical smoke request for facility ID `00000000-0000-0000-0000-000000000001` and the unauthenticated availability 401 probe are API evidence only. No authenticated request was performed against these rows.
+The canonical smoke request for facility ID `00000000-0000-0000-0000-000000000001` and the unauthenticated availability 401 probe are API evidence only. The live authenticated proof below used the same public facility/product context but is recorded separately because it landed on production/default.
+
+## Explicitly confirmed live Auth proof fixture
+
+| Fixture key | Environment | Actor label | Observed state | Allowed assertion |
+|---|---|---|---|---|
+| `L-CAN-AUTH-AVAIL-20260823` | Production/default Neon `br-bitter-math-amrlbym6` via Vercel deployment from `omni-v2-rebuild` | User-controlled authenticated buyer session; identity omitted | One `submitted` availability request for `Tomatoes` at `Cotonou Fresh Hub`; the same browser flow was submitted twice and aggregate checks showed one request, one buyer account, one idempotency key, one linked account and one linked wallet | Live bearer-backed availability-writer and sequential idempotency proof on production/default only; not persistent-V2 proof, inventory proof, sale proof or adoption proof |
+
+This fixture was created only after explicit user confirmation. Its existence is an environment-bound test result and must not be presented as a real marketplace user, live stock, successful sale, payment, transaction or release signal. The persistent V2 branch remained at zero availability requests. No IDs, key values, emails, bearer tokens or passwords are recorded.
 
 ## Disposable Root-proof fixtures
 
@@ -78,4 +86,4 @@ No fixture row may be copied into the production/default branch without a separa
 
 ## Evidence links
 
-The source and prior observations are recorded in [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`trunk-proof.md`](./trunk-proof.md), and [`live-current-neon-evidence.md`](./live-current-neon-evidence.md). This ledger closes only the inventory/documentation part of FIX-01; it does not close AUTH-01, AUTH-02, recovery, concurrent QR proof, persistent migration approval or Trunk release clearance.
+The source and prior observations are recorded in [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`trunk-proof.md`](./trunk-proof.md), and [`live-current-neon-evidence.md`](./live-current-neon-evidence.md). This ledger now closes the inventory/documentation part of FIX-01 and records one bounded live Auth proof fixture; it does not close persistent-V2 binding, recovery, concurrent QR proof, persistent migration approval or Trunk release clearance.
