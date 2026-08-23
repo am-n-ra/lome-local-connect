@@ -26,6 +26,7 @@ async function getAuthUserId(headers) {
 
 // src/server/trunk-repository.ts
 import { neon } from "@neondatabase/serverless";
+import { createHash, randomBytes } from "node:crypto";
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) throw new Error("V2_DATABASE_URL is not configured for the server runtime.");
@@ -64,6 +65,12 @@ var PurchaseIntentPolicyError = class extends Error {
   constructor(message) {
     super(message);
     this.name = "PurchaseIntentPolicyError";
+  }
+};
+var AvailabilityResponsePolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "AvailabilityResponsePolicyError";
   }
 };
 var TransactionPolicyError = class extends Error {
@@ -520,6 +527,156 @@ function createTrunkRepository(sql = database()) {
         facilityId: String(row.facility_id)
       };
     },
+    async respondAvailability(input) {
+      if (!["available", "partial", "unavailable"].includes(input.status)) {
+        throw new AvailabilityResponsePolicyError("Choose an allowed availability response status.");
+      }
+      if (input.status === "unavailable") {
+        if (input.quantityAvailable !== 0 || input.priceMinor !== null) {
+          throw new AvailabilityResponsePolicyError("An unavailable response must have zero quantity and no price.");
+        }
+      } else if (!Number.isInteger(input.quantityAvailable) || Number(input.quantityAvailable) < 1 || !Number.isInteger(input.priceMinor) || Number(input.priceMinor) < 0) {
+        throw new AvailabilityResponsePolicyError("An available or partial response requires a positive quantity and non-negative price.");
+      }
+      if (input.sellerMessage && input.sellerMessage.length > 1e3) {
+        throw new AvailabilityResponsePolicyError("The seller message is too long.");
+      }
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as seller_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.onboarding_state in ('seller_ready', 'complete')
+            and a.suspended_at is null
+        ),
+        existing as (
+          select ar.id, ar.request_id, ar.facility_id, ar.product_id, ar.status,
+                 ar.quantity_available, ar.price_minor, ar.observed_at,
+                 ar.responder_account_id
+          from v2_availability_responses ar
+          join seller s on s.seller_account_id = ar.responder_account_id
+          where ar.idempotency_key = ${input.idempotencyKey}
+        ),
+        eligible as (
+          select r.id as request_id, f.id as facility_id, p.id as product_id,
+                 s.seller_account_id,
+                 case when ${input.status} = 'unavailable' then 0 else ${input.quantityAvailable} end as quantity_available,
+                 case when ${input.status} = 'unavailable' then null else ${input.priceMinor} end as price_minor
+          from v2_availability_requests r
+          join v2_facilities f on f.id = ${input.facilityId}::uuid
+          join v2_products p on p.id = ${input.productId}::uuid and p.facility_id = f.id
+          join seller s on s.seller_account_id = f.account_id
+          where r.id = ${input.requestId}::uuid
+            and f.id = any(r.facility_scope)
+            and p.publication_state = 'published'
+            and r.product_id = p.id
+            and (case when ${input.status} = 'unavailable' then 0 else ${input.quantityAvailable} end) <= p.quantity_allocated_omni
+            and (case when ${input.status} = 'unavailable' then true else ${input.priceMinor} is not null end)
+        ),
+        inserted as (
+          insert into v2_availability_responses
+            (request_id, facility_id, responder_account_id, status, quantity_available, price_minor, offer_snapshot, seller_message, idempotency_key)
+          select e.request_id, e.facility_id, e.seller_account_id, ${input.status}, e.quantity_available, e.price_minor,
+                 jsonb_build_object('unit_price_minor', e.price_minor, 'currency', 'USD'), ${input.sellerMessage}, ${input.idempotencyKey}
+          from eligible e
+          where not exists (select 1 from existing)
+          on conflict (responder_account_id, idempotency_key) where idempotency_key is not null do nothing
+          returning id, request_id, facility_id, status, quantity_available, price_minor, observed_at, responder_account_id
+        ),
+        result as (
+          select i.id, i.request_id, i.facility_id, r.product_id, i.status, i.quantity_available, i.price_minor, i.observed_at, i.responder_account_id
+          from inserted i
+          join v2_availability_requests r on r.id = i.request_id
+          union all
+          select e.id, e.request_id, e.facility_id, r.product_id, e.status, e.quantity_available, e.price_minor, e.observed_at, e.responder_account_id
+          from existing e
+          join v2_availability_requests r on r.id = e.request_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select r.responder_account_id, 'availability_response_created', 'availability_response', r.id::text, ${input.correlationId}, r.status, now()
+          from result r
+          where exists (select 1 from inserted i where i.id = r.id)
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select id, request_id, facility_id, product_id, status, quantity_available, price_minor, observed_at
+        from result
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new AvailabilityResponsePolicyError("The seller is not authorized for this request, facility or product.");
+      const responseShapeMatches = String(row.request_id) === input.requestId && String(row.facility_id) === input.facilityId && String(row.product_id) === input.productId && String(row.status) === input.status && (row.quantity_available === null ? null : Number(row.quantity_available)) === input.quantityAvailable && (row.price_minor === null ? null : Number(row.price_minor)) === input.priceMinor;
+      if (!responseShapeMatches) {
+        throw new AvailabilityResponsePolicyError("The idempotency key is already used for a different availability response.");
+      }
+      return {
+        responseId: String(row.id),
+        requestId: String(row.request_id),
+        facilityId: String(row.facility_id),
+        productId: String(row.product_id),
+        status: row.status,
+        quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
+        priceMinor: row.price_minor === null ? null : Number(row.price_minor),
+        observedAt: new Date(String(row.observed_at)).toISOString()
+      };
+    },
+    async issueQrToken(input) {
+      const token = randomBytes(32).toString("base64url");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1e3).toISOString();
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as seller_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.onboarding_state in ('seller_ready', 'complete')
+            and a.suspended_at is null
+        ),
+        eligible as (
+          select s.transaction_id, m.account_id as seller_account_id
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'seller'
+          join seller a on a.seller_account_id = m.account_id
+          where s.transaction_id = ${input.transactionId}::uuid
+            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') = 'intent_created'
+        ),
+        inserted as (
+          insert into v2_qr_tokens (transaction_id, token_hash, expires_at)
+          select e.transaction_id, ${tokenHash}, ${expiresAt}::timestamptz
+          from eligible e
+          on conflict (transaction_id) do nothing
+          returning transaction_id, expires_at
+        ),
+        event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select i.transaction_id, e.seller_account_id, 'qr_ready', '{}'::jsonb, now()
+          from inserted i
+          join eligible e on e.transaction_id = i.transaction_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.seller_account_id, 'qr_issued', 'transaction', i.transaction_id::text, ${input.correlationId}, 'seller_issued', now()
+          from inserted i
+          join eligible e on e.transaction_id = i.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id, expires_at from inserted
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("QR issuance requires an authorized seller transaction in intent-created state.");
+      return {
+        transactionId: String(row.transaction_id),
+        token,
+        expiresAt: new Date(String(row.expires_at)).toISOString()
+      };
+    },
     async createPurchaseIntent(input) {
       const rows = await retryDatabase(() => sql`
         with buyer as (
@@ -623,23 +780,61 @@ function createTrunkRepository(sql = database()) {
     },
     async verifyQrToken(input) {
       const rows = await retryDatabase(() => sql`
-        update v2_qr_tokens q
-        set verified_at = ${input.now}::timestamptz,
-            replay_count = q.replay_count + 1
-        where q.transaction_id = ${input.transactionId}::uuid
-          and q.token_hash = ${input.tokenHash}
-          and q.verified_at is null
-          and q.replay_count = 0
-          and q.expires_at > ${input.now}::timestamptz
-          and exists (
-            select 1
-            from v2_transaction_members m
-            join v2_accounts a on a.id = m.account_id
-            where m.transaction_id = q.transaction_id
-              and a.auth_user_id = ${input.authUserId}
-              and m.role = 'seller'
-          )
-        returning q.transaction_id, q.verified_at, q.replay_count
+        with eligible as (
+          select q.transaction_id, q.token_hash, a.id as actor_account_id,
+            coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = q.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') as current_state
+          from v2_qr_tokens q
+          join v2_transaction_members m on m.transaction_id = q.transaction_id and m.role = 'seller'
+          join v2_accounts a on a.id = m.account_id
+          where q.transaction_id = ${input.transactionId}::uuid
+            and q.token_hash = ${input.tokenHash}
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and q.verified_at is null
+            and q.replay_count = 0
+            and q.expires_at > ${input.now}::timestamptz
+            and coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = q.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') = 'qr_ready'
+          for update of q
+        ),
+        updated as (
+          update v2_qr_tokens q
+          set verified_at = ${input.now}::timestamptz,
+              replay_count = q.replay_count + 1
+          from eligible e
+          where q.transaction_id = e.transaction_id
+            and q.token_hash = e.token_hash
+          returning q.transaction_id, q.verified_at, q.replay_count, e.actor_account_id
+        ),
+        event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select transaction_id, actor_account_id, 'qr_verified', '{}'::jsonb, ${input.now}::timestamptz
+          from updated
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select actor_account_id, 'qr_verified', 'transaction', transaction_id::text, ${input.transactionId}, 'seller_verified', ${input.now}::timestamptz
+          from updated
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id, verified_at, replay_count
+        from updated
+        limit 1
       `);
       const row = rows[0];
       if (!row) return { accepted: false, transactionId: input.transactionId, reason: "NOT_VERIFIED" };
@@ -734,7 +929,7 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
   return {
@@ -901,6 +1096,72 @@ async function handleApi(req, res, pathname, url) {
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/availability-responses") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before responding to availability."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const requestId = typeof input.requestId === "string" ? input.requestId : "";
+      const facilityId = typeof input.facilityId === "string" ? input.facilityId : "";
+      const productId = typeof input.productId === "string" ? input.productId : "";
+      const status = input.status;
+      const rawQuantity = input.quantityAvailable;
+      const quantityAvailable = rawQuantity === null || rawQuantity === void 0 ? null : Number(rawQuantity);
+      const rawPrice = input.priceMinor;
+      const priceMinor = rawPrice === null || rawPrice === void 0 ? null : Number(rawPrice);
+      const sellerMessage = input.sellerMessage === null || input.sellerMessage === void 0 ? null : input.sellerMessage;
+      const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(requestId) || !uuidPattern.test(facilityId) || !uuidPattern.test(productId) || status !== "available" && status !== "partial" && status !== "unavailable") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid request, facility, product and response status."));
+        return true;
+      }
+      if (quantityAvailable !== null && !Number.isInteger(quantityAvailable) || priceMinor !== null && !Number.isInteger(priceMinor)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Quantity and price must be whole numbers when provided."));
+        return true;
+      }
+      if (sellerMessage !== null && typeof sellerMessage !== "string") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Seller message must be text."));
+        return true;
+      }
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
+        return true;
+      }
+      const result = await repository.respondAvailability({
+        authUserId,
+        requestId,
+        facilityId,
+        productId,
+        status,
+        quantityAvailable,
+        priceMinor,
+        sellerMessage,
+        idempotencyKey,
+        correlationId
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/qr-issuances") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before showing a transaction QR code."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      const result = await repository.issueQrToken({ authUserId, transactionId, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/purchase-intents") {

@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 const migration = readFileSync(resolve(process.cwd(), 'db/migrations/003_v2_root_guardrails.sql'), 'utf8');
 const eventIdempotencyMigration = readFileSync(resolve(process.cwd(), 'db/migrations/004_v2_event_idempotency.sql'), 'utf8');
-const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}`;
+const sellerResponseMigration = readFileSync(resolve(process.cwd(), 'db/migrations/005_v2_seller_response_idempotency.sql'), 'utf8');
+const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}\n${sellerResponseMigration}`;
 
 describe('Root guardrail migration review', () => {
   it('contains no destructive schema or data operation', () => {
@@ -22,6 +23,9 @@ describe('Root guardrail migration review', () => {
     expect(migration).toContain('v2_verify_qr_token');
     expect(eventIdempotencyMigration).toContain('v2_transaction_event_state_unique');
     expect(eventIdempotencyMigration).toContain('v2_audit_action_idempotency_unique');
+    expect(sellerResponseMigration).toContain('v2_availability_response_idempotency_unique');
+    expect(sellerResponseMigration).toContain('v2_qr_transaction_unique');
+    expect(sellerResponseMigration).toContain('ADD COLUMN IF NOT EXISTS idempotency_key');
     expect(migration).toContain('verified_at IS NULL');
     expect(migration).toContain('expires_at > p_now');
   });
@@ -30,5 +34,7 @@ describe('Root guardrail migration review', () => {
     expect(migration).toContain('CHECK ((verified_at IS NULL AND replay_count = 0) OR (verified_at IS NOT NULL AND replay_count > 0)) NOT VALID');
     expect(migration).toContain('apply first on a disposable branch');
     expect(eventIdempotencyMigration).toContain('Apply after migration 003 on a disposable branch');
+    expect(sellerResponseMigration).toContain('no destructive operation is used');
+    expect(sellerResponseMigration).toContain('no existing rows are rewritten');
   });
 });

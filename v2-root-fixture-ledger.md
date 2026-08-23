@@ -17,11 +17,11 @@ Auth credentials, bearer tokens and Neon Auth user identifiers are intentionally
 
 | Environment | Branch ID | Permitted use | Prohibited use |
 |---|---|---|---|
-| Persistent V2 development branch | `br-dawn-hill-am5amy22` (`omni-v2-rebuild`) | Read-only public catalogue/map proof and preservation comparisons | Authenticated user proof, production claims or treating seeded rows as real supply |
+| Persistent V2 development branch | `br-dawn-hill-am5amy22` (`omni-v2-rebuild`) | Explicitly authorized bounded demo seller/buyer Root proof, public catalogue/map proof and preservation comparisons | Production claims, real-user adoption claims or treating labeled fixtures as real supply |
 | Production/default Neon branch | `br-bitter-math-amrlbym6` | Historical/canonical public API smoke evidence and the single explicitly confirmed live Auth/idempotency proof recorded below | Further mutations, authenticated session simulation beyond the recorded proof or release approval |
-| Disposable Root-proof branch | `br-broad-wildflower-amw7k0om` (`omni-v2-root-proof-20260822`) | Isolated migration, negative-guard, duplicate-denial and QR policy database tests | Promotion, merge, production data, user-success claims or use as a live marketplace |
+| Former disposable Root-proof branch | `br-broad-wildflower-amw7k0om` (`omni-v2-root-proof-20260822`) | Historical isolated migration, negative-guard, duplicate-denial and QR policy database evidence only | Reuse, promotion, merge, production data or new writes; branch is no longer present in the current project branch list |
 
-Migration 003 and migration 004 were applied only to the disposable branch. The persistent V2 and production/default branches remain unmodified by those migrations. The disposable branch is expiring and must not be promoted automatically.
+Migration 003 and migration 004 were applied only to the former disposable branch. Migration 005 was separately and explicitly applied to persistent V2 and added only the seller-response/QR idempotency column and indexes. The production/default branch remains unmodified by these Root fixture operations. The former disposable branch is retained only as historical evidence and must not be recreated, promoted or used as a live marketplace without a new explicit decision.
 
 ## Persistent V2 public fixtures
 
@@ -36,7 +36,7 @@ The following rows were inventoried read-only on 2026-08-23. They are the three 
 | `P-V2-PROD-002` | `30000000-0000-0000-0000-000000000002` | Natural shea butter | `published`; facility `P-V2-FAC-002` | Catalogue serialization and facility scope only; not live stock |
 | `P-V2-PROD-003` | `30000000-0000-0000-0000-000000000003` | First-aid kit | `published`; facility `P-V2-FAC-003` | Catalogue serialization and facility scope only; not live stock |
 
-The persistent V2 branch has no V2 account rows in the recorded comparison. Its 35 Neon Auth users are preserved identities, not assigned fixture actors.
+The persistent V2 branch currently has one `buyer_ready` V2 account linked to the user-controlled KH availability proof and one `seller_ready` V2 account bound to an existing demo-like Auth identity under the explicitly authorized fixture scope. The remaining demo-like Neon Auth identities remain preserved and unbound. Auth identities are not themselves seller authorization.
 
 ## Production/default public smoke fixtures
 
@@ -66,6 +66,19 @@ This fixture was created only after explicit user confirmation. Its existence is
 
 The persistent-V2 fixture was also created only after explicit user confirmation. Its one request and one account/wallet are bounded Root proof records, not marketplace success. No IDs, key values, emails, bearer tokens or passwords are recorded.
 
+## Authorized persistent-V2 demo seller fixture
+
+The user explicitly authorized reuse of existing demo accounts and creation of demo-related transaction data. The bounded scope is recorded in [`v2-root-demo-seller-fixture.md`](./v2-root-demo-seller-fixture.md). The operation may create one V2 seller binding for one existing unlinked demo-like Auth identity, one owned `created`/`unconfirmed` facility, one published product with bounded non-zero allocation and only the transaction records required for Root proof. It may not rewrite the three public-import facilities, alter production/default, create an Auth identity, create a claim-by-click transition, or be interpreted as real marketplace activity.
+
+| Fixture key | Environment | Role/state | Allowed assertion |
+|---|---|---|---|
+| `D-V2-DEMO-SELLER` | Persistent V2 | Existing demo-like Auth identity bound to one `seller_ready` V2 account | Seller authorization/ownership proof only; raw Auth ID omitted |
+| `D-V2-DEMO-FACILITY` | Persistent V2 | Owned `created`/`unconfirmed` facility | Facility ownership and product-scope proof only |
+| `D-V2-DEMO-PRODUCT` | Persistent V2 | One published product with bounded allocated quantity | Availability/intent/transaction proof input only |
+| `D-V2-DEMO-TRANSACTION` | Persistent V2 | Transaction records produced by the bounded proof | QR/payment/state/audit proof only; not a real sale |
+
+The fixture is retained as labeled Root evidence unless the user separately authorizes cleanup. No IDs, key values, emails, bearer tokens, passwords, QR hashes or connection strings are recorded.
+
 ## Disposable Root-proof fixtures
 
 The disposable branch contains labeled business fixtures created only for migration and guardrail testing. The following IDs are non-secret UUIDs; no Auth user IDs or QR token hashes are recorded.
@@ -82,7 +95,7 @@ The disposable branch contains labeled business fixtures created only for migrat
 | `D-ROOT-QR` | `00000000-0000-4000-8000-000000000901` | QR token; verified, replay count `1` | First-pass/second-pass replay behavior only; token hash remains secret |
 | `D-ROOT-EVENT` | `8d6d3414-16c1-443b-9090-f9111082d57c` | Transaction event, `intent_created` | Disposable transaction-event inspection only |
 
-The disposable transaction has buyer membership for account `D-ROOT-ACCOUNT-BUYER` and seller membership for account `D-ROOT-ACCOUNT-SELLER`. It is not a real transaction and has no release, payment or marketplace meaning. The recorded database checks also proved representative denials for mismatched company ownership, product/scope mismatch, response/scope mismatch, forged buyer intent and wallet-ledger update/delete attempts; those denials do not turn the fixture into a successful business flow.
+The former disposable transaction had buyer membership for account `D-ROOT-ACCOUNT-BUYER` and seller membership for account `D-ROOT-ACCOUNT-SELLER`. It is historical policy evidence only and has no release, payment or marketplace meaning. The recorded database checks also proved representative denials for mismatched company ownership, product/scope mismatch, response/scope mismatch, forged buyer intent and wallet-ledger update/delete attempts; those denials do not turn the fixture into a successful business flow.
 
 ## Fixture operating rules
 
@@ -92,4 +105,4 @@ No fixture row may be copied into the production/default branch without a separa
 
 ## Evidence links
 
-The source and prior observations are recorded in [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`trunk-proof.md`](./trunk-proof.md), and [`live-current-neon-evidence.md`](./live-current-neon-evidence.md). This ledger now closes the inventory/documentation part of FIX-01 and records one bounded live Auth proof fixture; it does not close persistent-V2 binding, recovery, concurrent QR proof, persistent migration approval or Trunk release clearance.
+The source and prior observations are recorded in [`v2-root-live-evidence.md`](./v2-root-live-evidence.md), [`v2-root-live-api-evidence.md`](./v2-root-live-api-evidence.md), [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md), [`v2-root-auth-evidence.md`](./v2-root-auth-evidence.md), [`v2-root-demo-seller-fixture.md`](./v2-root-demo-seller-fixture.md), [`v2-root-demo-transaction-evidence.md`](./v2-root-demo-transaction-evidence.md), [`trunk-proof.md`](./trunk-proof.md), and [`live-current-neon-evidence.md`](./live-current-neon-evidence.md). This ledger now records the current Auth/account inventory, the authorized demo-seller binding and the bounded transaction fixture. It does not close persistent-V2 migration rollback/recovery, database concurrency, live bearer audit completeness, browser recovery, route privacy, concurrent QR proof or Trunk release clearance.

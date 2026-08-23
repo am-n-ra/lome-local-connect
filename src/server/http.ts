@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 import type { TransactionState } from '../domain/contracts';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -27,7 +27,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -203,6 +203,72 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         now: new Date().toISOString(),
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/availability-responses') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller before responding to availability.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const requestId = typeof input.requestId === 'string' ? input.requestId : '';
+      const facilityId = typeof input.facilityId === 'string' ? input.facilityId : '';
+      const productId = typeof input.productId === 'string' ? input.productId : '';
+      const status = input.status;
+      const rawQuantity = input.quantityAvailable;
+      const quantityAvailable = rawQuantity === null || rawQuantity === undefined ? null : Number(rawQuantity);
+      const rawPrice = input.priceMinor;
+      const priceMinor = rawPrice === null || rawPrice === undefined ? null : Number(rawPrice);
+      const sellerMessage = input.sellerMessage === null || input.sellerMessage === undefined ? null : input.sellerMessage;
+      const idempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(requestId) || !uuidPattern.test(facilityId) || !uuidPattern.test(productId) || (status !== 'available' && status !== 'partial' && status !== 'unavailable')) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid request, facility, product and response status.'));
+        return true;
+      }
+      if ((quantityAvailable !== null && !Number.isInteger(quantityAvailable)) || (priceMinor !== null && !Number.isInteger(priceMinor))) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Quantity and price must be whole numbers when provided.'));
+        return true;
+      }
+      if (sellerMessage !== null && typeof sellerMessage !== 'string') {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Seller message must be text.'));
+        return true;
+      }
+      if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A stable idempotency key is required.'));
+        return true;
+      }
+      const result = await repository.respondAvailability({
+        authUserId,
+        requestId,
+        facilityId,
+        productId,
+        status,
+        quantityAvailable,
+        priceMinor,
+        sellerMessage,
+        idempotencyKey,
+        correlationId,
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/qr-issuances') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller before showing a transaction QR code.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
+        return true;
+      }
+      const result = await repository.issueQrToken({ authUserId, transactionId, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/purchase-intents') {

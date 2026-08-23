@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -90,6 +90,115 @@ describe('availability repository Root seam', () => {
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toThrow(
       'The idempotency key is already used for a different availability request.',
     );
+  });
+});
+
+describe('seller availability response persistence Root seam', () => {
+  it('accepts an owned seller response and records idempotent audit context', async () => {
+    const call = stubSql([{
+      id: 'response-1',
+      request_id: 'request-1',
+      facility_id: 'facility-1',
+      product_id: 'product-1',
+      status: 'available',
+      quantity_available: 2,
+      price_minor: 1500,
+      observed_at: '2026-08-23T00:00:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.respondAvailability({
+      authUserId: 'auth-seller-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'available',
+      quantityAvailable: 2,
+      priceMinor: 1500,
+      sellerMessage: 'Ready for pickup.',
+      idempotencyKey: 'response-key-1',
+      correlationId: 'corr-response-1',
+    });
+    expect(result).toEqual({
+      responseId: 'response-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'available',
+      quantityAvailable: 2,
+      priceMinor: 1500,
+      observedAt: '2026-08-23T00:00:00.000Z',
+    });
+    expect(call.queries[0]).toContain("a.onboarding_state in ('seller_ready', 'complete')");
+    expect(call.queries[0]).toContain('p.quantity_allocated_omni');
+    expect(call.queries[0]).toContain('on conflict (responder_account_id, idempotency_key)');
+    expect(call.queries[0]).toContain('insert into v2_audit_events');
+  });
+
+  it('rejects an unavailable response with a price or an over-allocated response before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.respondAvailability({
+      authUserId: 'auth-seller-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'unavailable',
+      quantityAvailable: 0,
+      priceMinor: 1500,
+      sellerMessage: null,
+      idempotencyKey: 'response-key-2',
+      correlationId: 'corr-response-2',
+    })).rejects.toBeInstanceOf(AvailabilityResponsePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects a seller response when the server finds no authorized matching context', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.respondAvailability({
+      authUserId: 'auth-seller-1',
+      requestId: 'request-1',
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      status: 'partial',
+      quantityAvailable: 1,
+      priceMinor: 1500,
+      sellerMessage: null,
+      idempotencyKey: 'response-key-3',
+      correlationId: 'corr-response-3',
+    })).rejects.toThrow('The seller is not authorized for this request, facility or product.');
+  });
+});
+
+describe('QR issuance persistence Root seam', () => {
+  it('issues a server-generated token only for an owned intent-created transaction', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      expires_at: '2026-08-23T00:10:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.issueQrToken({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-qr-1',
+    });
+    expect(result.transactionId).toBe('transaction-1');
+    expect(result.token).toHaveLength(43);
+    expect(result.expiresAt).toBe('2026-08-23T00:10:00.000Z');
+    expect(call.queries[0]).toContain("a.onboarding_state in ('seller_ready', 'complete')");
+    expect(call.queries[0]).toContain('insert into v2_qr_tokens');
+    expect(call.queries[0]).toContain('on conflict (transaction_id) do nothing');
+    expect(call.queries[0]).toContain("'qr_ready'");
+  });
+
+  it('rejects QR issuance when seller membership or transaction state is missing', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.issueQrToken({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-qr-2',
+    })).rejects.toBeInstanceOf(TransactionPolicyError);
   });
 });
 
