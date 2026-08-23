@@ -12,6 +12,14 @@ type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
+export type EscapeTarget = 'facility' | 'seller-queue' | 'close' | 'none';
+
+export function resolveEscape(panel: Panel, hasSellerRequest: boolean): EscapeTarget {
+  if (panel === 'availability') return 'facility';
+  if (panel === 'seller-entry' && hasSellerRequest) return 'seller-queue';
+  if (panel !== 'none') return 'close';
+  return 'none';
+}
 
 export type SellerEntryIntent =
   | { kind: 'open-seller-boundary' }
@@ -100,7 +108,9 @@ export function TrunkApp() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
       if (panel !== 'none') {
-        if (panel === 'availability') setPanel('facility');
+        const target = resolveEscape(panel, Boolean(sellerRequest));
+        if (target === 'facility') setPanel('facility');
+        else if (target === 'seller-queue') setSellerRequest(null);
         else setPanel('none');
         return;
       }
@@ -112,7 +122,7 @@ export function TrunkApp() {
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [menuOpen, optionsOpen, panel]);
+  }, [menuOpen, optionsOpen, panel, sellerRequest]);
 
   useEffect(() => {
     if (window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')) {
