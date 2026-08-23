@@ -45,6 +45,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .34; background-image: radial-gradient(rgba(71, 102, 94, .2) .7px, transparent .7px); background-size: 8px 8px; mix-blend-mode: multiply; }
 .map-stage::after { position: absolute; z-index: 2; inset: 0; pointer-events: none; content: ""; background: linear-gradient(180deg, rgba(255,255,255,.20), transparent 30%, rgba(255,255,255,.06) 70%, rgba(217,229,223,.12)); }
 
+.species-topbar, .map-error, .map-status, .map-attribution, .map-controls, .location-prompt, .search-anchor, .nearby-sheet, .map-pin-overlay { position: absolute; }
+.map-pin-overlay { z-index: 5; inset: 0; pointer-events: none; }
+.map-pin { position: absolute; display: grid; place-items: center; pointer-events: auto; transform: translate(-50%, -100%); cursor: pointer; transition: transform .16s var(--ease), filter .16s var(--ease); }
+.map-pin:hover, .map-pin:focus-visible { transform: translate(-50%, -100%) scale(1.08); filter: drop-shadow(0 7px 10px rgba(41, 70, 62, .20)); }
+.map-pin-cluster { width: 31px; height: 31px; border: 2px solid rgba(255,255,255,.94); border-radius: 50%; color: #fff; background: var(--coral); box-shadow: 0 7px 16px rgba(72, 93, 83, .22); font-size: 11px; font-weight: 900; }
+.map-pin-facility { width: 34px; height: 38px; border: 0; color: #fff; background: transparent; }
+.map-pin-facility::before { position: absolute; inset: 2px 4px 7px; content: ""; border: 2px solid #fff; border-radius: 50% 50% 50% 0; background: var(--forest); box-shadow: 0 7px 14px rgba(42, 71, 63, .22); transform: rotate(-45deg); }
+.map-pin-facility svg { position: relative; z-index: 1; margin-top: -4px; color: #fff; }
+.map-pin-facility.selected::before { background: var(--coral); }
+
 .species-topbar, .map-error, .map-status, .map-attribution, .map-controls, .location-prompt, .search-anchor, .nearby-sheet { position: absolute; }
 .species-topbar { z-index: 7; top: var(--safe-top); left: var(--safe-left); right: var(--safe-right); display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
 .role-switch, .account-orb { pointer-events: auto; }

@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
-import { Crosshair, Minus, Plus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Crosshair, MapPin, Minus, Plus } from 'lucide-react';
 import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
+import { groupProjectedFacilities, type ProjectedFacility, type ScreenPin } from './map-pins';
 
 type LocationState = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
 
@@ -53,7 +54,31 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
   const [zoomExpanded, setZoomExpanded] = useState(false);
+  const [screenPins, setScreenPins] = useState<ScreenPin[]>([]);
+  const screenPinsFrame = useRef<number | null>(null);
   facilitiesRef.current = facilities;
+
+  const updateScreenPins = useCallback(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const bounds = map.getBounds();
+    const projected = facilitiesRef.current
+      .filter((facility) => Number.isFinite(facility.longitude) && Number.isFinite(facility.latitude) && bounds.contains([facility.longitude, facility.latitude]))
+      .map((facility) => {
+        const point = map.project([facility.longitude, facility.latitude]);
+        return { facility, x: point.x, y: point.y } satisfies ProjectedFacility;
+      })
+      .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y));
+    setScreenPins(groupProjectedFacilities(projected));
+  }, []);
+
+  const scheduleScreenPins = useCallback(() => {
+    if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
+    screenPinsFrame.current = window.requestAnimationFrame(() => {
+      screenPinsFrame.current = null;
+      updateScreenPins();
+    });
+  }, [updateScreenPins]);
 
   const pauseMotion = () => {
     rotating.current = false;
@@ -123,6 +148,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       addLayers(map);
       const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
       source?.setData(featureCollection(facilitiesRef.current));
+      scheduleScreenPins();
     });
 
     const resume = () => {
@@ -150,9 +176,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     map.on('wheel', pauseMotion);
     map.on('dragstart', pauseMotion);
     map.on('zoomstart', pauseMotion);
-    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); resume(); });
-    map.on('dragend', emitBounds);
-    map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); });
+    map.on('move', scheduleScreenPins);
+    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); scheduleScreenPins(); resume(); });
+    map.on('dragend', () => { emitBounds(); scheduleScreenPins(); });
+    map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
     map.on('error', () => {
       if (fallbackUsed.current) return;
       fallbackUsed.current = true;
@@ -176,6 +203,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       map.resize();
       syncCameraPadding();
       addLayers(map);
+      scheduleScreenPins();
       emitBounds();
 
       const rotate = () => {
@@ -200,6 +228,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
+      if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
       observer.disconnect();
       map.remove();
       mapRef.current = null;
@@ -233,12 +262,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
         target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
     }
-  }, [onBoundsChange, onSelect]);
+  }, [onBoundsChange, onSelect, scheduleScreenPins]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
     source?.setData(featureCollection(facilities));
-  }, [facilities]);
+    scheduleScreenPins();
+  }, [facilities, scheduleScreenPins]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -263,6 +293,27 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   return (
     <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState}>
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
+      <div className="map-pin-overlay" aria-label="Lieux publics sur la carte">
+        {screenPins.map((pin) => pin.kind === 'cluster' ? (
+          <button
+            key={`cluster-${pin.longitude.toFixed(4)}-${pin.latitude.toFixed(4)}`}
+            className="map-pin map-pin-cluster"
+            type="button"
+            style={{ left: pin.left, top: pin.top }}
+            aria-label={`Afficher ${pin.count} lieux publics sur la carte`}
+            onClick={() => { pauseMotion(); mapRef.current?.easeTo({ center: [pin.longitude, pin.latitude], zoom: Math.min(mapRef.current.getZoom() + 2, 6.3), duration: 500, essential: true }); }}
+          >{pin.count}</button>
+        ) : (
+          <button
+            key={`facility-${pin.facility?.name ?? pin.longitude.toFixed(4)}`}
+            className={`map-pin map-pin-facility${pin.facility?.id === selectedId ? ' selected' : ''}`}
+            type="button"
+            style={{ left: pin.left, top: pin.top }}
+            aria-label={`Ouvrir ${pin.facility?.name ?? 'le lieu public'}`}
+            onClick={() => { if (pin.facility) { pauseMotion(); onSelect(pin.facility); mapRef.current?.easeTo({ center: [pin.facility.longitude, pin.facility.latitude], zoom: Math.max(mapRef.current.getZoom(), 5.2), duration: 650, essential: true }); } }}
+          ><MapPin size={18} strokeWidth={2.4} /></button>
+        ))}
+      </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'fallback' ? 'Carte en mode de secours' : 'Carte active'}</div>
