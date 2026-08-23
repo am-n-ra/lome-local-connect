@@ -7,10 +7,10 @@ import type { AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions 
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'availability';
+type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'seller-entry';
 type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
-type AuthReturn = 'none' | 'availability';
+type AuthReturn = 'none' | 'availability' | 'seller-entry';
 
 function currency(minor: number, code: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(minor / 100);
@@ -127,6 +127,16 @@ export function TrunkApp() {
     setMenuOpen(false);
     setOptionsOpen(false);
     setPanel('auth');
+  };
+
+  const openSellerEntry = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'seller-entry');
+      return;
+    }
+    setPanel('seller-entry');
   };
 
   const beginSearch = (event?: FormEvent) => {
@@ -270,7 +280,7 @@ export function TrunkApp() {
       setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
       setAppliedOptions(draftOptions);
       setAuthState('idle');
-      const resumePanel = authReturn === 'availability' ? 'availability' : 'none';
+      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'seller-entry' ? 'seller-entry' : 'none';
       setAuthReturn('none');
       setPanel(resumePanel);
       if (query.trim()) setCommittedQuery(query.trim());
@@ -301,7 +311,7 @@ export function TrunkApp() {
       <header className="species-topbar">
         <div className="role-switch" aria-label="Omni role context">
           <button className="role-option active" type="button" aria-current="page">Acheter</button>
-          <button className="role-option" type="button" onClick={() => openAuth('sign-in')}>Vendre</button>
+          <button className={`role-option${panel === 'seller-entry' ? ' active' : ''}`} type="button" aria-current={panel === 'seller-entry' ? 'page' : undefined} onClick={openSellerEntry}>Vendre</button>
         </div>
         <button className="account-orb" type="button" aria-label="Ouvrir le compte et le menu Omni" aria-expanded={menuOpen} aria-controls="omni-menu" onClick={() => { setMenuOpen((open) => !open); setOptionsOpen(false); }}>
           {sessionUser ? (sessionUser.name?.slice(0, 2).toUpperCase() || 'OM') : 'J5'}
@@ -331,6 +341,7 @@ export function TrunkApp() {
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
+      {panel === 'seller-entry' && <SellerEntrySheet user={sessionUser} onClose={() => setPanel('none')} onSignOut={signOut} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} onClose={() => setPanel('none')} onVerify={openAvailability} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
@@ -361,6 +372,10 @@ function SearchOptionsPopover(props: { category: string; categoryOptions: string
 
 function AuthSheet(props: { mode: AuthMode; setMode: (mode: AuthMode) => void; email: string; setEmail: (value: string) => void; password: string; setPassword: (value: string) => void; name: string; setName: (value: string) => void; state: 'idle' | 'loading' | 'error'; error: string; onSubmit: (event: FormEvent) => void; onClose: () => void }) {
   return <section className="omni-sheet auth-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte Omni</span><h2 id="auth-title">{props.mode === 'sign-in' ? 'Recherchez avec certitude' : 'Commencez à voir avant de bouger'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">La carte publique reste ouverte. Votre compte débloque la recherche catalogue et la vérification de disponibilité.</p><form onSubmit={props.onSubmit} className="auth-form">{props.mode === 'sign-up' && <label>Prénom<input value={props.name} onChange={(event) => props.setName(event.target.value)} placeholder="Votre prénom" autoComplete="name" /></label>}<label>Email<input type="email" required value={props.email} onChange={(event) => props.setEmail(event.target.value)} placeholder="vous@exemple.com" autoComplete="email" /></label><label>Mot de passe<input type="password" required minLength={8} value={props.password} onChange={(event) => props.setPassword(event.target.value)} placeholder="8 caractères minimum" autoComplete={props.mode === 'sign-in' ? 'current-password' : 'new-password'} /></label>{props.error && <div className="inline-error" role="alert">{props.error}</div>}<button className="primary-button" type="submit" disabled={props.state === 'loading'}>{props.state === 'loading' ? 'Connexion…' : props.mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}</button></form><button className="text-button auth-switch" type="button" onClick={() => props.setMode(props.mode === 'sign-in' ? 'sign-up' : 'sign-in')}>{props.mode === 'sign-in' ? 'Nouveau sur Omni ? Créer un compte' : 'Déjà un compte ? Se connecter'}</button></section>;
+}
+
+function SellerEntrySheet(props: { user: SessionUser | null; onClose: () => void; onSignOut: () => void }) {
+  return <section className="omni-sheet context-sheet seller-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="seller-entry-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Vendre</span><h2 id="seller-entry-title">Espace vendeur</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><div className="seller-entry-status"><span className="seller-entry-mark"><ShieldCheck size={21} /></span><div><strong>Accès vendeur à vérifier</strong><p>{props.user ? 'Votre compte Omni est connecté, mais aucun profil vendeur autorisé n’est encore lié à ce compte.' : 'Connectez-vous pour vérifier votre accès vendeur.'}</p></div></div><div className="notice-card"><strong>Votre compte reste intact</strong><p>Ce passage n’ajoute aucune facilité, ne revendique aucun lieu et ne modifie aucun produit. La certification et les droits vendeur seront vérifiés avant toute opération.</p></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à acheter</button>{props.user && <button className="text-button" type="button" onClick={props.onSignOut}>Se déconnecter</button>}</section>;
 }
 
 function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; onClose: () => void; onVerify: () => void }) {
