@@ -46,3 +46,13 @@ export async function transactionTransitionHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/transaction-transitions');
   await handleApi(req, res, '/api/v2/transaction-transitions', url);
 }
+
+export async function availabilityResponseHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/availability-responses');
+  await handleApi(req, res, '/api/v2/availability-responses', url);
+}
+
+export async function qrIssuanceHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/qr-issuances');
+  await handleApi(req, res, '/api/v2/qr-issuances', url);
+}

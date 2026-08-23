@@ -17,7 +17,7 @@ The confirmed-balance calculation treats `recharge`, `bonus_grant`, `coupon_cred
 
 ## Local proof
 
-The repository tests cover the Auth-linked account join, facility ownership condition, wallet row lock, confirmed-balance filter, append-only ledger insert, conflict-safe reference replay, invalid amount rejection before SQL, and no-row rejection for missing wallet, invalid ownership or insufficient funds. The full local validation reports 11 Vitest files and 57 passing tests, a successful TypeScript/Vite build, four bundled Vercel functions and `Client boundary: clean`.
+The repository tests cover the Auth-linked account join, facility ownership condition, wallet row lock, confirmed-balance filter, append-only ledger insert, conflict-safe reference replay, invalid amount rejection before SQL, and no-row rejection for missing wallet, invalid ownership or insufficient funds. The full local validation reports 12 Vitest files and 75 passing tests, a successful TypeScript/Vite build, ten bundled Vercel functions and `Client boundary: clean`.
 
 ## Explicit non-evidence
 

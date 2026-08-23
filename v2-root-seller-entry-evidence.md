@@ -25,11 +25,11 @@ The browser inspection did not submit a seller operation. No facility, certifica
 
 ## Validation
 
-The exact local validation after the correction reported 12 Vitest files and 70 passing tests, a successful TypeScript/Vite production build, 8 Vercel functions bundled and `Client boundary: clean`. The seller-entry decision tests cover both authenticated direct entry and anonymous Auth return targeting.
+The exact local validation after the correction and Root additions reports 12 Vitest files and 75 passing tests, a successful TypeScript/Vite production build, 10 Vercel functions bundled and `Client boundary: clean`. The seller-entry decision tests cover both authenticated direct entry and anonymous Auth return targeting.
 
 ## Remaining boundary
 
-This evidence proves the client entry correction and browser-visible no-loop behavior only. It does not prove a seller-ready actor, facility ownership, certification, seller workspace operations, seller request handling, QR verification or transaction authority. Persistent V2 currently contains one buyer-ready account and no seller-ready account in the aggregate actor check. The full seller branch remains open and must be grown only after its own Seed/Species/Root contracts and authorized actor are available.
+This evidence proves the client entry correction and browser-visible no-loop behavior only. A separate explicitly authorized persistent-V2 fixture now contains one seller-ready demo account, one owned unconfirmed facility and one bounded transaction record; that fixture does not prove a real seller bearer session, certification, seller workspace operations, camera QR verification, concurrent replay or transaction authority. The full seller branch remains open and must be grown only through its own Seed/Species/Root contracts and authorized fixture boundary.
 
 ## Nature Way decision
 

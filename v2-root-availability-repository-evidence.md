@@ -35,7 +35,7 @@ The focused tests use an injectable tagged-SQL seam and do not connect to Neon o
 | Malformed JSON and array bodies are typed input errors | Pass |
 | Policy rejection maps to HTTP conflict; unexpected internal details are redacted | Pass |
 
-The current full local validation checkpoint is **11 Vitest files / 70 tests passing**, production build passing, 8 Vercel functions bundled and `Client boundary: clean`.
+The current full local validation checkpoint is **12 Vitest files / 75 tests passing, production build passing, 10 Vercel functions bundled and `Client boundary: clean`.
 
 ## Live authenticated proofs — 2026-08-23
 
@@ -43,6 +43,6 @@ The first explicitly confirmed browser proof submitted `Tomatoes` at `Cotonou Fr
 
 After `V2_DATABASE_URL` was bound to persistent V2 and the latest Git-integrated deployment was redeployed, the authenticated browser submitted `Kente tote bag` at `Atelier Kegue`, quantity `1`, with no budget ceiling. The exact same flow was submitted a second time. Both submissions returned the same user-visible `DEMANDE ENVOYÉE` / `En attente de la disponibilité` state.
 
-Aggregate-only Neon checks on persistent V2 branch `br-dawn-hill-am5amy22` then showed exactly one availability request, one distinct buyer account, one distinct idempotency key, status `submitted`, one linked V2 account and one linked account-level wallet. Totals on that branch were one account, one wallet and one availability request. This proves the real bearer-backed writer reached persistent V2 and that the two sequential browser submissions collapsed to one request with idempotent Auth-to-account/wallet provisioning. No IDs, key values, emails, bearer tokens or passwords were recorded. No inventory availability, reservation, payment, QR, seller confirmation or Trunk success is claimed.
+Aggregate-only Neon checks on persistent V2 branch `br-dawn-hill-am5amy22` then showed exactly one availability request, one distinct buyer account, one distinct idempotency key, status `submitted`, one linked V2 account and one linked account-level wallet. Totals on that branch were one account, one wallet and one availability request. This proves the real bearer-backed writer reached persistent V2 and that the two sequential browser submissions collapsed to one request with idempotent Auth-to-account/wallet provisioning. No IDs, key values, emails, bearer tokens or passwords were recorded. No inventory availability, reservation, payment, QR, seller confirmation or Trunk success is claimed by this buyer proof. The separate persistent-V2 demo seller/transaction evidence is recorded in [`v2-root-demo-transaction-evidence.md`](./v2-root-demo-transaction-evidence.md) and remains bounded fixture data, not a live buyer proof.
 
 The disposable database branch still provides separate migration/guardrail evidence, including labeled account and transaction fixtures, but those records cannot be used to claim this repository path is live or user-authorized. See [`v2-root-fixture-ledger.md`](./v2-root-fixture-ledger.md) and [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md).
