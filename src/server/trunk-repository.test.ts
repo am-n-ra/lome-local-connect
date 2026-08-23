@@ -93,6 +93,79 @@ describe('availability repository Root seam', () => {
   });
 });
 
+describe('transaction persistence Root seam', () => {
+  it('locks an authenticated member transaction and appends an allowed state event', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      current_state: 'qr_ready',
+      event_state: 'qr_verified',
+      actor_account_id: 'seller-account-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.transitionTransaction({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      from: 'qr_ready',
+      to: 'qr_verified',
+      actorRole: 'seller',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      accepted: true,
+      transactionId: 'transaction-1',
+      from: 'qr_ready',
+      to: 'qr_verified',
+      actorRole: 'seller',
+    });
+    expect(call.queries[0]).toContain('join v2_transaction_members m on m.transaction_id = s.transaction_id');
+    expect(call.queries[0]).toContain('a.suspended_at is null');
+    expect(call.queries[0]).toContain('for update of s');
+    expect(call.queries[0]).toContain('insert into v2_transaction_events');
+    expect(call.queries[0]).toContain("on conflict (transaction_id, state) do nothing");
+  });
+
+  it('rejects a stale or unauthorized transaction transition when the guarded query matches no row', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.transitionTransaction({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      from: 'qr_ready',
+      to: 'qr_verified',
+      actorRole: 'buyer',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('Transaction state is stale, membership is invalid, or the actor transition is not allowed.');
+  });
+
+  it('returns the same canonical transition result for an already-applied retry', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      current_state: 'qr_verified',
+      event_state: 'qr_verified',
+      actor_account_id: 'seller-account-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.transitionTransaction({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      from: 'qr_ready',
+      to: 'qr_verified',
+      actorRole: 'seller',
+      now: '2026-08-23T00:00:00.000Z',
+    })).resolves.toEqual({
+      accepted: true,
+      transactionId: 'transaction-1',
+      from: 'qr_ready',
+      to: 'qr_verified',
+      actorRole: 'seller',
+    });
+  });
+});
+
 describe('wallet persistence Root seam', () => {
   it('unlocks exactly one nonwithdrawable $20 facility bonus after confirmed trust and three sales', async () => {
     const call = stubSql([{

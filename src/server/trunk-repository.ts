@@ -1,5 +1,5 @@
 import { neon } from '@neondatabase/serverless';
-import type { QrVerificationResult, WalletEntryKind } from '../domain/contracts';
+import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import type { AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
 
 export interface DatabaseClient {
@@ -86,6 +86,21 @@ export interface FacilityBonusPersistenceResult {
   facilityId: string;
 }
 
+export interface TransactionTransitionPersistenceResult {
+  accepted: true;
+  transactionId: string;
+  from: TransactionState;
+  to: TransactionState;
+  actorRole: 'buyer' | 'seller';
+}
+
+export class TransactionPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TransactionPolicyError';
+  }
+}
+
 export class WalletPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -167,6 +182,88 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by p.name
       `);
       return { ...toFacility(row), products: (products as Record<string, unknown>[]).map(toProduct) };
+    },
+
+    async transitionTransaction(input: {
+      authUserId: string;
+      transactionId: string;
+      from: TransactionState;
+      to: TransactionState;
+      actorRole: 'buyer' | 'seller';
+      now: string;
+    }): Promise<TransactionTransitionPersistenceResult> {
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        locked as (
+          select
+            s.transaction_id,
+            a.actor_account_id,
+            coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') as current_state
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id
+          join actor a on a.actor_account_id = m.account_id
+          where s.transaction_id = ${input.transactionId}::uuid
+            and m.role = ${input.actorRole}
+          for update of s
+        ),
+        eligible as (
+          select * from locked
+          where current_state = ${input.to}
+             or (
+               current_state = ${input.from}
+               and (
+                 (${input.actorRole} = 'seller' and current_state = 'qr_ready' and ${input.to} = 'qr_verified')
+                 or (${input.actorRole} = 'buyer' and current_state = 'qr_verified' and ${input.to} = 'payment_declared')
+                 or (${input.actorRole} = 'seller' and current_state = 'payment_declared' and ${input.to} = 'payment_confirmed')
+                 or (${input.actorRole} = 'seller' and current_state = 'payment_confirmed' and ${input.to} = 'fulfilment_pending')
+                 or (${input.actorRole} = 'seller' and current_state = 'fulfilment_pending' and ${input.to} = 'fulfilled')
+                 or (${input.actorRole} = 'buyer' and current_state = 'fulfilled' and ${input.to} = 'received')
+                 or (${input.actorRole} = 'buyer' and current_state = 'received' and ${input.to} = 'rated')
+               )
+             )
+        ),
+        inserted as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select e.transaction_id, e.actor_account_id, ${input.to}, jsonb_build_object('from', e.current_state, 'actor_role', ${input.actorRole}), ${input.now}::timestamptz
+          from eligible e
+          where e.current_state <> ${input.to}
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id, state
+        ),
+        replayed as (
+          select e.transaction_id, e.current_state, e.current_state as event_state, e.actor_account_id
+          from eligible e
+          where e.current_state = ${input.to}
+        )
+        select transaction_id, current_state, event_state, actor_account_id from (
+          select i.transaction_id, ${input.from}::text as current_state, i.state as event_state, e.actor_account_id
+          from inserted i
+          join eligible e on e.transaction_id = i.transaction_id
+          union all
+          select transaction_id, current_state, event_state, actor_account_id from replayed
+        ) result
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new TransactionPolicyError('Transaction state is stale, membership is invalid, or the actor transition is not allowed.');
+      return {
+        accepted: true,
+        transactionId: String(row.transaction_id),
+        from: input.from,
+        to: input.to,
+        actorRole: input.actorRole,
+      };
     },
 
     async unlockFacilityBonus(input: {
