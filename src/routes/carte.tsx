@@ -18,6 +18,8 @@ export const Route = createFileRoute("/carte")({
       },
       { property: "og:title", content: "Carte des commerces à Lomé — OmniView" },
       { property: "og:description", content: "Trouvez un produit disponible près de vous à Lomé." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CarteRoute,

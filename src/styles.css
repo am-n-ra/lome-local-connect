@@ -19,8 +19,8 @@
  */
 
 @theme inline {
-  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --color-forest: var(--forest);
   --color-forest-foreground: var(--forest-foreground);
   --color-gold: var(--gold);
@@ -299,14 +299,14 @@
 
 /* Omni buyer UI — tactile discovery direction. */
 :root {
-  --omni-paper: oklch(0.971 0.011 78);
-  --omni-paper-bright: oklch(0.995 0.004 78);
-  --omni-ink: oklch(0.39 0.077 161);
-  --omni-ink-muted: oklch(0.49 0.035 106);
-  --omni-orange: oklch(0.65 0.169 40);
-  --omni-orange-deep: oklch(0.53 0.16 39);
-  --omni-orange-wash: oklch(0.95 0.035 49);
-  --omni-gold: oklch(0.84 0.13 89);
+  --omni-paper: oklch(0.97 0.012 132);
+  --omni-paper-bright: oklch(0.995 0.004 115);
+  --omni-ink: oklch(0.39 0.073 165);
+  --omni-ink-muted: oklch(0.5 0.025 145);
+  --omni-orange: oklch(0.68 0.14 42);
+  --omni-orange-deep: oklch(0.56 0.145 39);
+  --omni-orange-wash: oklch(0.95 0.035 48);
+  --omni-gold: oklch(0.86 0.135 88);
   --omni-ocean-soft: oklch(0.8 0.045 211);
   --omni-success: oklch(0.49 0.099 163);
   --omni-warning: oklch(0.59 0.13 66);
@@ -317,6 +317,27 @@
 
 .omni-clean-stage {
   font-family: var(--font-sans);
+}
+
+.omni-role-switch {
+  border: 1px solid color-mix(in oklab, var(--omni-paper-bright) 78%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--omni-paper-bright) 90%, transparent);
+  box-shadow: var(--omni-shadow-float);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+
+.omni-role-switch-active {
+  border: 0;
+  background: var(--omni-ink);
+  color: var(--omni-paper-bright);
+  box-shadow: none;
+}
+
+.omni-role-switch-active:hover,
+.omni-role-switch-active:focus-visible {
+  background: color-mix(in oklab, var(--omni-ink) 90%, black);
+  color: var(--omni-paper-bright);
 }
 
 .omni-clean-chip,
@@ -418,9 +439,9 @@
 }
 
 .omni-clean-result-card {
-  min-height: 10rem;
-  border-radius: 1.5rem;
-  padding: 1rem;
+  min-height: 12.25rem;
+  border-radius: 1.25rem;
+  padding: 1.15rem;
   transition:
     transform 180ms cubic-bezier(0.23, 1, 0.32, 1),
     box-shadow 180ms ease,
@@ -440,12 +461,42 @@
 }
 
 .omni-buyer-bottom-sheet {
+  order: 2;
   border: 1px solid color-mix(in oklab, var(--omni-ink) 10%, transparent);
   border-bottom: 0;
-  border-radius: 1.75rem 1.75rem 0 0;
+  border-radius: 2rem 2rem 0 0;
   background: color-mix(in oklab, var(--omni-paper-bright) 96%, transparent);
   box-shadow: var(--omni-shadow-sheet);
   backdrop-filter: blur(22px) saturate(135%);
+}
+
+[data-omni-dock="true"] {
+  order: 1;
+}
+
+[data-omni-dock="true"] > div {
+  display: flex;
+  flex-direction: column;
+}
+
+[data-omni-dock-row="primary"] {
+  order: 1;
+}
+
+[data-omni-dock-row="discovery"] {
+  order: 2;
+}
+
+[data-omni-dock-row="structured"] {
+  order: 3;
+}
+
+[data-omni-dock-row="context"] {
+  order: 4;
+}
+
+[data-omni-dock-row="action"] {
+  order: 5;
 }
 
 .omni-buyer-grabber {
@@ -457,7 +508,19 @@
 
 @media (max-width: 639px) {
   .omni-clean-result-card {
-    min-height: 9.25rem;
+    min-height: 12rem;
+  }
+
+  [data-omni-dock="true"] > div {
+    gap: 0.45rem;
+  }
+
+  [data-omni-dock-row="context"] {
+    display: none;
+  }
+
+  .omni-buyer-bottom-sheet {
+    max-height: min(42dvh, 20rem);
   }
 }
 
