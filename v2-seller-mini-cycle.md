@@ -174,7 +174,7 @@ The response endpoint’s UUID guard was also widened to accept any syntacticall
 
 ## 15. Current Seller ring status
 
-Seller Trunk remains `partial`: the Species-aligned UI, authorized demo rebind, scoped queue, request detail, validation tests and deployment are evidenced; the final persisted response and Buyer comparison card are still open because the browser session timed out during the last retry and the first code version failed at the database-column boundary. Global Root remains `review`.
+Seller Trunk remains `partial`: the Species-aligned UI, authorized demo rebind, scoped queue, request detail, corrected persisted response and Buyer comparison card are now evidenced by the bounded cross-flow in section 19; Canopy spacing across all Seller widths, reduced-motion/focus coverage, concurrency, recovery, trust, QR and broader onboarding remain open. Global Root remains `review`.
 
 
 
@@ -199,3 +199,11 @@ The fresh ff9f4e0 cross-flow attempt reached the Seller response route twice thr
 ## 19. Canonical Buyer→Seller→Buyer proof
 
 After the quantity-cast correction was deployed in the canonical production alias, one new bounded Buyer request was created for the existing `Omni Demo Seller Hub` catalogue product, quantity 1, without a budget. The map-mounted Seller workspace displayed the fresh request as `Sans réponse` alongside the older answered request. The Seller response was submitted once as `Disponible`, quantity 1, price 15.00. The UI immediately rendered `Réponse déjà enregistrée` and exposed no duplicate action. Returning to Buyer through the J5-owned `Mes demandes` surface showed the latest request with one response; resuming it rendered a real `Disponible` / `Actualisée` comparison card for `Omni Demo Seller Hub` and `Root proof demo product`, quantity 1, `$15.00`, received time and `Intention encore verrouillée`. No reservation, contact, itinerary, QR, payment or transaction action was opened. This verifies the bounded response/comparison proof, while Seller Canopy, concurrency, broad onboarding and Global Root remain open; the Seller mini-ring remains `partial`.
+
+## 20. 2026-08-23 — Species/Canopy audit continuation
+
+The READY `48bf064` deployment was inspected in the authenticated Browser Sandbox without creating a new Buyer request or modifying a Seller response. The permanent MapLibre canvas remained dominant; the fallback status was honest; the public cluster/pin overlay remained visible behind the Seller sheet; the compact `Acheter / Vendre` switch, J5 owner control and right-side map controls stayed in their Species positions. The Seller surface remained a rounded map-mounted sheet rather than a dashboard rail.
+
+At the Browser Sandbox viewport reported as 1024×880, the Seller queue sheet measured 520×561 with 22px bottom clearance. Its header, authorization summary, tabs, request list and two request cards had no pairwise overlap; the sheet did not overlap the topbar or right-side map controls; document width matched the viewport. The `Catalogue` tab rendered one scoped published product in a 520×469 sheet, with no dashboard rail or horizontal overflow.
+
+Opening an existing answered request showed the incoming product, facility, quantity, budget, deadline and read-only `Réponse déjà enregistrée` state; no duplicate response, reservation, contact, itinerary, QR, payment or transaction action appeared. Pressing Escape on that request detail now returns to `Espace vendeur` with the queue intact, covered by `resolveEscape` tests and verified live on `48bf064`. This remains a one-authenticated-viewport Seller proof: four-width Seller capture, full Tab/Shift+Tab/focus-trap review, reduced-motion, location-denial/retry and interrupted-session evidence remain open. Seller mini-ring and Global Root remain `partial`/`review`.

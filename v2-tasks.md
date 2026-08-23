@@ -107,9 +107,9 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `partial` | Canvas, motion and location proof |
+| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `partial` | Canonical MapLibre canvas, globe/fallback map, visible controls and camera focus are proven; idle/reduced-motion/location/recovery coverage remains |
 | TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `partial` | Submit parity and context proof |
-| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `partial` | Bounds/source/error proof |
+| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `partial` | Canonical 48bf064 proves public cluster 4 → local cluster 3 + individual pin, accessible pin actions, three public cards and truthful fallback; broader bounds/error/recovery coverage remains |
 | TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `partial` | Privacy and back/close proof |
 | TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `verified` | Product/no-reservation proof |
 | TRUNK-AVAILABILITY | Build Product → Scope → Constraints → Responses | TRUNK-CATALOGUE | `verified` | Auth, scope, freshness and response proof |
@@ -227,19 +227,25 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status |
 |---|---|---|---|
-| CANOPY-001 | Reconcile all surfaces against Species blueprint | Required branches | `todo` |
-| CANOPY-002 | Four-width responsive and safe-area certification | Required branches | `todo` |
-| CANOPY-003 | Accessibility, keyboard, focus and reduced-motion certification | Required branches | `todo` |
-| CANOPY-004 | Map, API, database, cache and bundle performance audit | Required branches | `todo` |
-| CANOPY-005 | Dead-action, false-state, privacy and client-boundary audit | Required branches | `todo` |
+| CANOPY-001 | Reconcile all surfaces against Species blueprint | Required branches | `partial` | Buyer map-first structure, visible pins/clusters and Seller map-mounted mini-ring audited; full surface matrix remains open |
+| CANOPY-002 | Four-width responsive and safe-area certification | Required branches | `partial` | Buyer 320/375/768/1280 structural audit passes with no overflow or measured overlap; Seller is only proven at authenticated 1024×880 |
+| CANOPY-003 | Accessibility, keyboard, focus and reduced-motion certification | Required branches | `partial` | Native accessible pins and Seller Escape queue recovery are proven with tests/live check; full Tab/Shift+Tab, focus-trap and reduced-motion pass remains |
+| CANOPY-004 | Map, API, database, cache and bundle performance audit | Required branches | `partial` | 12-function build and canonical map/fallback/pin checks pass; bundle warning, tile reliability and deeper performance/recovery checks remain |
+| CANOPY-005 | Dead-action, false-state, privacy and client-boundary audit | Required branches | `partial` | No stock/trust/permission inference, private handoff stays locked, client boundary passes and no protected write occurred in this audit; broader negative-state sweep remains |
 | RING-001 | Buyer release gate | CANOPY | `todo` |
 | RING-002 | Seller/trust release gate | CANOPY | `todo` |
 | RING-003 | Wallet/money release gate | CANOPY | `todo` |
 | RING-004 | Transaction/QR/recovery release gate | CANOPY | `todo` |
 | RING-005 | Operations, rollback and acceptance record | CANOPY | `todo` |
 
-## 9. Backlog gate
+## 9. Species/Canopy audit checkpoint — 2026-08-23
+
+The live `48bf064` audit closed the immediate public map-pin visibility blocker without changing the approved Species: the canonical MapLibre canvas now visibly exposes a public cluster and accessible facility pins in fallback mode, supports cluster expansion and facility context selection, and preserves the separate dock/sheet geometry. Buyer structural measurements pass at 320×760, 375×812, 768×900 and 1280×900 with no horizontal overflow or measured overlaps. The authenticated Seller surface remains map-mounted, scoped to `Demandes / Catalogue`, and its read-only request detail now returns to the Seller queue on Escape.
+
+The checkpoint is intentionally **partial**. Seller four-width capture, full keyboard/focus/reduced-motion/location/recovery/concurrency coverage, remote tile reliability, performance, broader onboarding and every post-verification branch are not proven. Global Root remains `review`; no Ring is closed and no production-readiness claim is made.
+
+## 10. Backlog gate
 
 A task may move to `ready` only when its parent contract and dependencies are clear. It may move to `in_progress` only when its Seed/Species/Root work is complete at the required depth. It may move to `verified` only when proof artifacts exist. It may move to `done` only when its parent Nature Way gate is accepted.
 
-The first execution batch is `SEED-001` through `ROOT-011`, followed by the buyer Trunk. Root evidence currently includes 12 local test files/75 tests, ten Vercel functions, the recorded disposable-branch database behavior checks, one bounded live Auth/availability idempotency proof on production/default and one corrected proof on persistent V2, plus the bounded demo seller transaction fixture, manual credential-rotation record, blocked demo-Auth-recreation decision and session-simulation decision. No new seller, wallet, transaction or QR UI implementation should begin while the Root gate remains in review.
+The first execution batch is `SEED-001` through `ROOT-011`, followed by the buyer Trunk. Root/Trunk evidence currently includes 13 local test files/90 tests, exactly 12 Vercel functions, the recorded disposable-branch database behavior checks, one bounded live Auth/availability idempotency proof on production/default and one corrected proof on persistent V2, plus the bounded demo seller transaction fixture, manual credential-rotation record, blocked demo-Auth-recreation decision and session-simulation decision. No new seller, wallet, transaction or QR UI implementation should begin while the Root gate remains in review.
