@@ -34,7 +34,7 @@ The current repository checks pass: 11 Vitest files, 68 tests, TypeScript/Vite p
 
 ## Live proof limitations
 
-On 2026-08-23, a fresh read-only navigation through the enabled connected browser returned public map/catalogue content but no session proof. A follow-up view, sign-in-indicator search and `/auth` navigation returned HTTP 504 before inspection. Separate unauthenticated header probes returned HTTP 200 for the canonical domain and HTTP 404 `NOT_FOUND` for `/auth`, confirming public-domain reachability but not browser/session/Auth behavior. This is recorded as an inspection/routing blocker, not as a product success or failure. No login, form submission, mutation or credential handling was performed.
+On 2026-08-23, a fresh read-only navigation through the enabled connected browser returned public map/catalogue content but no session proof. A follow-up view, sign-in-indicator search and `/auth` navigation returned HTTP 504 before inspection. Separate unauthenticated header probes returned HTTP 200 for the canonical domain and HTTP 404 `NOT_FOUND` for `/auth`, confirming public-domain reachability but not browser/session/Auth behavior. The V2 branch now contains a narrow SPA rewrite for `/auth` plus path-aware opening of the existing Auth sheet; a local production-like server and read-only Playwright probe returned HTTP 200 and confirmed the Auth surface. Canonical verification after the Git-integrated Vercel build remains pending. This is recorded as an inspection/deployment blocker, not as a product success or failure. No login, form submission, mutation or credential handling was performed.
 
 ## Required Root exit evidence
 

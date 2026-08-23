@@ -84,6 +84,12 @@ export function TrunkApp() {
   }, [menuOpen, optionsOpen, panel]);
 
   useEffect(() => {
+    if (window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')) {
+      setPanel('auth');
+    }
+  }, []);
+
+  useEffect(() => {
     let active = true;
     authClient?.getSession().then((result) => {
       const data = result.data as { user?: { id?: string; email?: string | null; name?: string | null } } | null | undefined;
