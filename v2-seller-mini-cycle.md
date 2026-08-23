@@ -126,3 +126,13 @@ The Seller ring decision is `partial` until the deployed official seller bearer 
 [3]: ./v2-flow.md "Omni V2 Flow and State Contract"
 [4]: ./docs/maquette/omni-species-maquette.md "Omni Species Maquette Contract"
 [5]: ./v2-root-seller-response.md "Seller Availability Response Mini-Root"
+
+
+## 7. Canonical Species alignment observation
+
+The READY deployment for commit `e2c6dee` is serving the canonical aliases, including `https://omni.sparkafrika.online`. A fresh canonical extraction shows the expected inherited arrival anatomy: `Acheter / Vendre` role switch, J5 account owner, right-side `+` and recenter controls, active map attribution, a separate search dock and the `Proche de vous` result sheet with facility cards. The protected Seller queue route independently returns `401 AUTH_REQUIRED` without a bearer session. The connected-browser extension timed out during the attempted interactive `Vendre` click, so the Seller sheet’s visual click-through remains unproven rather than being claimed as verified. No new bounded demo write was performed.
+
+
+## 8. Canonical connected-browser proof — unauthorized Seller boundary
+
+On the canonical deployment, the connected authenticated Buyer session opened `Vendre` successfully without an Auth loop. The captured surface preserves the permanent map, top role switch, right-side map controls, rounded contextual sheet, centered handle, close control and separated `Demandes / Catalogue` segmented rhythm. The queue then settled to the honest locked state: `Accès vendeur à vérifier` and `Aucune opération vendeur ouverte`, because this session has no server-bound seller profile. The handoff note remains visible and explicitly keeps stock response, contact, itinerary and QR locked. The map reported its documented fallback mode during this check; no location or seller data was fabricated. The Seller route’s interaction with an authorized session remains the next proof owner.
