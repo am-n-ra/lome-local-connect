@@ -14,13 +14,13 @@ This record covers only preparation and guarded execution of the isolated seller
 
 A disposable Neon branch named `omni-v2-seller-proof-20260823` was created from persistent V2. Branch-local Managed Better Auth is available with a branch-specific Auth/JWKS endpoint. The Vercel branch deployment for commit `55ec741` reached `READY` under the `omni-v2-rebuild` branch alias.
 
-The repository now contains `scripts/prove-v2-live-seller.mjs`, the non-secret template `scripts/prove-v2-live-seller.env.example` and the command `npm run proof:live-seller`. The runner refuses the canonical Omni domain, requires `OMNI_PROOF_ENVIRONMENT=isolated`, supports sign-in and an explicitly guarded branch-local sign-up fallback, binds only the labeled seller fixture, keeps fixture IDs/tokens/idempotency values in memory and emits only redacted step markers.
+The repository now contains `scripts/prove-v2-live-seller.mjs`, the non-secret template `scripts/prove-v2-live-seller.env.example`, the command `npm run proof:live-seller` and `.github/workflows/prove-v2-live-seller.yml`. The workflow is manual-dispatch only, restricted to `omni-v2-rebuild`, and injects values only from the GitHub environment `omni-v2-seller-proof`; it never defines secret values in source. The runner refuses the canonical Omni domain, requires `OMNI_PROOF_ENVIRONMENT=isolated`, supports sign-in and an explicitly guarded branch-local sign-up fallback, binds only the labeled seller fixture, keeps fixture IDs/tokens/idempotency values in memory and emits only redacted step markers.
 
 ## Executed checks
 
 The runner was syntax-checked and invoked with an empty environment. It exited with the expected preflight status and listed only missing variable names. No Auth request, database mutation, bearer token, QR issuance, payment declaration or transaction transition was attempted during this preflight.
 
-A read-only Vercel deployment check confirmed the branch deployment reached `READY`. A read-only GitHub Actions secret-name check returned HTTP 403; no secret value was read. The Preview `V2_DATABASE_URL` and branch Auth URL have not been verified as a matched deployment binding, so the runner was not pointed at the deployment.
+A read-only Vercel deployment check confirmed the branch deployment reached `READY`. A read-only GitHub Actions secret-name check returned HTTP 403; no secret value was read. The workflow is therefore prepared but not executable from this session until the external environment is populated. The Preview `V2_DATABASE_URL` and branch Auth URL have not been verified as a matched deployment binding, so the runner was not pointed at the deployment.
 
 ## Not proven
 
