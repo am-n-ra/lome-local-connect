@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct } from './trunk-repository';
+import { AvailabilityPolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct, WalletPolicyError } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -90,6 +90,73 @@ describe('availability repository Root seam', () => {
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toThrow(
       'The idempotency key is already used for a different availability request.',
     );
+  });
+});
+
+describe('wallet persistence Root seam', () => {
+  it('uses the authenticated account, facility ownership, confirmed balance and append-only spend shape', async () => {
+    const call = stubSql([{
+      id: 'ledger-1',
+      wallet_id: 'wallet-1',
+      kind: 'facility_pro_spend',
+      amount_minor: 1000,
+      status: 'confirmed',
+      facility_id: 'facility-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.spendWallet({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      kind: 'facility_pro_spend',
+      amountMinor: 1000,
+      reference: 'pro-cycle-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      ledgerEntryId: 'ledger-1',
+      walletId: 'wallet-1',
+      kind: 'facility_pro_spend',
+      amountMinor: 1000,
+      status: 'confirmed',
+      facilityId: 'facility-1',
+    });
+    expect(call.queries[0]).toContain('join v2_accounts a on a.id = w.account_id');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('for update of w');
+    expect(call.queries[0]).toContain("where e.status = 'confirmed'");
+    expect(call.queries[0]).toContain('insert into v2_wallet_ledger_entries');
+    expect(call.queries[0]).toContain('on conflict (wallet_id, kind, reference) do nothing');
+  });
+
+  it('rejects invalid spend input before reaching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.spendWallet({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      kind: 'facility_pro_spend',
+      amountMinor: 0,
+      reference: 'pro-cycle-2',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toBeInstanceOf(WalletPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects a missing wallet, ownership failure or insufficient balance without inserting a ledger row', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.spendWallet({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      kind: 'facility_pro_spend',
+      amountMinor: 1000,
+      reference: 'pro-cycle-3',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('Wallet is unavailable, facility ownership is invalid, or confirmed funds are insufficient.');
   });
 });
 

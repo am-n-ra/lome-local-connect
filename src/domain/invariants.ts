@@ -41,9 +41,10 @@ export function confirmedWalletBalanceMinor(entries: readonly WalletLedgerEntry[
   return entries.reduce((balance, entry) => {
     if (!entry.confirmedAt) return balance;
     const signedKinds = new Set<WalletLedgerEntry['kind']>([
-      'recharge',
-      'bonus_grant',
-      'reversal',
+        'recharge',
+        'bonus_grant',
+        'coupon_credit',
+        'reversal',
     ]);
     return balance + (signedKinds.has(entry.kind) ? entry.amountMinor : -entry.amountMinor);
   }, 0);

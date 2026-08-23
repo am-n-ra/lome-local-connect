@@ -62,6 +62,7 @@ describe('Nature Way Roots invariants', () => {
     expect(hasFreeSlot([slot()])).toBe(true);
     expect(hasFreeSlot([slot({ status: 'assigned', facilityId: 'facility-1' })])).toBe(false);
     expect(confirmedWalletBalanceMinor([entry('recharge', 1000), entry('slot_spend', 250), entry('facility_pro_spend', 300)])).toBe(450);
+    expect(confirmedWalletBalanceMinor([entry('recharge', 1000), entry('coupon_credit', 100)])).toBe(1100);
     expect(confirmedWalletBalanceMinor([entry('recharge', 1000, '')])).toBe(0);
   });
 });

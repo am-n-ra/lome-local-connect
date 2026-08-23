@@ -66,6 +66,12 @@ var PurchaseIntentPolicyError = class extends Error {
     this.name = "PurchaseIntentPolicyError";
   }
 };
+var WalletPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "WalletPolicyError";
+  }
+};
 var toProduct = (row) => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
@@ -138,6 +144,70 @@ function createTrunkRepository(sql = database()) {
         order by p.name
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
+    },
+    async spendWallet(input) {
+      if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0 || !input.reference.trim()) {
+        throw new WalletPolicyError("Wallet spend amount and reference are invalid.");
+      }
+      const rows = await retryDatabase(() => sql`
+        with wallet as (
+          select w.id as wallet_id, a.id as account_id
+          from v2_wallets w
+          join v2_accounts a on a.id = w.account_id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and exists (
+              select 1 from v2_facilities f
+              where f.id = ${input.facilityId}::uuid
+                and f.account_id = a.id
+            )
+          for update of w
+        ),
+        existing as (
+          select e.id, e.wallet_id, e.kind, e.amount_minor, e.status, e.facility_id
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = ${input.kind}
+            and e.reference = ${input.reference}
+        ),
+        balance as (
+          select coalesce(sum(
+            case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit')
+              then e.amount_minor else -e.amount_minor end
+          ), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ),
+        inserted as (
+          insert into v2_wallet_ledger_entries
+            (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select w.wallet_id, ${input.kind}, ${input.amountMinor}, 'confirmed', ${input.reference}, ${input.facilityId}::uuid, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from wallet w
+          cross join balance b
+          where b.balance_minor >= ${input.amountMinor}
+            and not exists (select 1 from existing)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, kind, amount_minor, status, facility_id
+        )
+        select id, wallet_id, kind, amount_minor, status, facility_id from inserted
+        union all
+        select id, wallet_id, kind, amount_minor, status, facility_id from existing
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new WalletPolicyError("Wallet is unavailable, facility ownership is invalid, or confirmed funds are insufficient.");
+      if (String(row.kind) !== input.kind || Number(row.amount_minor) !== input.amountMinor || String(row.facility_id) !== input.facilityId) {
+        throw new WalletPolicyError("The wallet reference is already used for a different spend.");
+      }
+      return {
+        ledgerEntryId: String(row.id),
+        walletId: String(row.wallet_id),
+        kind: row.kind,
+        amountMinor: Number(row.amount_minor),
+        status: "confirmed",
+        facilityId: String(row.facility_id)
+      };
     },
     async createPurchaseIntent(input) {
       const rows = await retryDatabase(() => sql`
