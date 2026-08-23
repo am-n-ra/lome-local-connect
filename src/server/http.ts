@@ -363,10 +363,18 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     return true;
   } catch (error) {
     const errorName = error instanceof Error ? error.name : typeof error;
-    const errorCode = typeof error === 'object' && error !== null && 'code' in error
-      ? String((error as { code?: unknown }).code ?? '').slice(0, 32)
-      : undefined;
-    console.error('v2_api_error', { pathname, errorName, errorCode });
+    const errorRecord = typeof error === 'object' && error !== null ? error as Record<string, unknown> : null;
+    const errorCode = String(errorRecord?.code ?? '').slice(0, 32) || undefined;
+    const errorMessage = String(errorRecord?.message ?? '').replace(/[0-9a-f]{8,}/gi, '[redacted]').replace(/Bearer\s+\S+/gi, '[redacted]').slice(0, 180) || undefined;
+    const errorFields = {
+      detail: String(errorRecord?.detail ?? '').slice(0, 120) || undefined,
+      hint: String(errorRecord?.hint ?? '').slice(0, 120) || undefined,
+      position: String(errorRecord?.position ?? '').slice(0, 32) || undefined,
+      table: String(errorRecord?.table ?? '').slice(0, 80) || undefined,
+      column: String(errorRecord?.column ?? '').slice(0, 80) || undefined,
+      constraint: String(errorRecord?.constraint ?? '').slice(0, 80) || undefined,
+    };
+    console.error('v2_api_error', { pathname, errorName, errorCode, errorMessage, ...errorFields });
     const failure = toApiErrorResponse(correlationId, error);
     json(res, failure.status, failure.body);
     return true;
