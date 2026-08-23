@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
+import { AvailabilityPolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -90,6 +90,67 @@ describe('availability repository Root seam', () => {
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toThrow(
       'The idempotency key is already used for a different availability request.',
     );
+  });
+});
+
+describe('purchase-intent persistence Root seam', () => {
+  it('creates an intent path only from an eligible buyer-owned response and makes replay writes idempotent', async () => {
+    const call = stubSql([{
+      id: 'intent-1',
+      response_id: 'response-1',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      state: 'active',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const first = await repository.createPurchaseIntent({
+      authUserId: 'auth-user-1',
+      responseId: 'response-1',
+      idempotencyKey: 'intent-key-1',
+    });
+    const replay = await repository.createPurchaseIntent({
+      authUserId: 'auth-user-1',
+      responseId: 'response-1',
+      idempotencyKey: 'intent-key-1',
+    });
+
+    expect(replay).toEqual(first);
+    expect(call.queries).toHaveLength(2);
+    expect(call.queries[0]).toContain("ar.status in ('available', 'partial', 'corrected')");
+    expect(call.queries[0]).toContain('r.buyer_account_id');
+    expect(call.queries[0]).toContain('insert into v2_transaction_snapshots');
+    expect(call.queries[0]).toContain('insert into v2_transaction_members');
+    expect(call.queries[0]).toContain('insert into v2_transaction_events');
+    expect(call.queries[0]).toContain('on conflict (transaction_id, state) do nothing');
+  });
+
+  it('rejects an unavailable or out-of-scope response without returning an intent', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.createPurchaseIntent({
+      authUserId: 'auth-user-1',
+      responseId: 'response-1',
+      idempotencyKey: 'intent-key-2',
+    })).rejects.toBeInstanceOf(PurchaseIntentPolicyError);
+  });
+
+  it('rejects a stored idempotency result bound to another response', async () => {
+    const call = stubSql([{
+      id: 'intent-1',
+      response_id: 'response-other',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      state: 'active',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.createPurchaseIntent({
+      authUserId: 'auth-user-1',
+      responseId: 'response-1',
+      idempotencyKey: 'intent-key-3',
+    })).rejects.toThrow('The idempotency key is already used for a different purchase intent.');
   });
 });
 

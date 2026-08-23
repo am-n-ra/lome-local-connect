@@ -60,6 +60,12 @@ var AvailabilityPolicyError = class extends Error {
     this.name = "AvailabilityPolicyError";
   }
 };
+var PurchaseIntentPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "PurchaseIntentPolicyError";
+  }
+};
 var toProduct = (row) => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
@@ -132,6 +138,107 @@ function createTrunkRepository(sql = database()) {
         order by p.name
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
+    },
+    async createPurchaseIntent(input) {
+      const rows = await retryDatabase(() => sql`
+        with buyer as (
+          select a.id as buyer_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        existing as (
+          select pi.id, pi.response_id, pi.transaction_id, pi.buyer_account_id, pi.state
+          from v2_purchase_intents pi
+          join buyer b on b.buyer_account_id = pi.buyer_account_id
+          where pi.idempotency_key = ${input.idempotencyKey}
+        ),
+        eligible as (
+          select
+            ar.id as response_id,
+            r.id as request_id,
+            r.buyer_account_id,
+            f.account_id as seller_account_id,
+            ar.facility_id,
+            ar.product_id,
+            least(r.requested_quantity, ar.quantity_available) as quantity,
+            ar.price_minor,
+            nullif(ar.offer_snapshot ->> 'coupon_code', '') as coupon_code,
+            ar.observed_at
+          from v2_availability_responses ar
+          join v2_availability_requests r on r.id = ar.request_id
+          join v2_facilities f on f.id = ar.facility_id
+          join buyer b on b.buyer_account_id = r.buyer_account_id
+          where ar.id = ${input.responseId}::uuid
+            and ar.status in ('available', 'partial', 'corrected')
+            and ar.quantity_available is not null
+            and ar.quantity_available > 0
+            and ar.price_minor is not null
+            and ar.price_minor >= 0
+            and ar.facility_id = any(r.facility_scope)
+            and f.account_id is not null
+        ),
+        intent_upsert as (
+          insert into v2_purchase_intents
+            (buyer_account_id, response_id, transaction_id, idempotency_key, state)
+          select b.buyer_account_id, e.response_id, gen_random_uuid(), ${input.idempotencyKey}, 'active'
+          from buyer b
+          cross join eligible e
+          where not exists (select 1 from existing)
+          on conflict (buyer_account_id, idempotency_key)
+          do update set idempotency_key = excluded.idempotency_key
+          returning id, response_id, transaction_id, buyer_account_id, state
+        ),
+        intent_result as (
+          select id, response_id, transaction_id, buyer_account_id, state from intent_upsert
+          union all
+          select id, response_id, transaction_id, buyer_account_id, state from existing
+        ),
+        snapshot_insert as (
+          insert into v2_transaction_snapshots
+            (transaction_id, intent_id, buyer_account_id, facility_id, product_id, quantity, unit_price_minor, coupon_code, net_amount_minor, response_observed_at)
+          select i.transaction_id, i.id, e.buyer_account_id, e.facility_id, e.product_id, e.quantity, e.price_minor, e.coupon_code, e.quantity * e.price_minor, e.observed_at
+          from intent_upsert i
+          join eligible e on e.response_id = i.response_id
+          on conflict (transaction_id) do nothing
+          returning transaction_id
+        ),
+        member_insert as (
+          insert into v2_transaction_members (transaction_id, account_id, role)
+          select i.transaction_id, e.buyer_account_id, 'buyer'
+          from intent_upsert i
+          join eligible e on e.response_id = i.response_id
+          union all
+          select i.transaction_id, e.seller_account_id, 'seller'
+          from intent_upsert i
+          join eligible e on e.response_id = i.response_id
+          on conflict (transaction_id, account_id, role) do nothing
+          returning transaction_id
+        ),
+        event_insert as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata)
+          select i.transaction_id, null, 'intent_created', jsonb_build_object('response_id', e.response_id)
+          from intent_upsert i
+          join eligible e on e.response_id = i.response_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        )
+        select id, response_id, transaction_id, buyer_account_id, state
+        from intent_result
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new PurchaseIntentPolicyError("No eligible availability response belongs to the authenticated buyer.");
+      if (String(row.response_id) !== input.responseId) {
+        throw new PurchaseIntentPolicyError("The idempotency key is already used for a different purchase intent.");
+      }
+      return {
+        intentId: String(row.id),
+        responseId: String(row.response_id),
+        transactionId: String(row.transaction_id),
+        buyerAccountId: String(row.buyer_account_id),
+        state: String(row.state)
+      };
     },
     async verifyQrToken(input) {
       const rows = await retryDatabase(() => sql`
