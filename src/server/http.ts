@@ -362,6 +362,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'V2 API route was not found.'));
     return true;
   } catch (error) {
+    const errorName = error instanceof Error ? error.name : typeof error;
+    const errorCode = typeof error === 'object' && error !== null && 'code' in error
+      ? String((error as { code?: unknown }).code ?? '').slice(0, 32)
+      : undefined;
+    console.error('v2_api_error', { pathname, errorName, errorCode });
     const failure = toApiErrorResponse(correlationId, error);
     json(res, failure.status, failure.body);
     return true;
