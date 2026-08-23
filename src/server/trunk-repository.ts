@@ -978,7 +978,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and a.suspended_at is null
         ),
         existing as (
-          select ar.id, ar.request_id, ar.facility_id, ar.product_id, ar.status,
+          select ar.id, ar.request_id, ar.facility_id, ar.status,
                  ar.quantity_available, ar.price_minor, ar.observed_at,
                  ar.responder_account_id
           from v2_availability_responses ar
