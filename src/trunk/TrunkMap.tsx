@@ -112,6 +112,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       cooperativeGestures: false,
     });
     mapRef.current = map;
+    const syncCameraPadding = () => {
+      const sheetHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-height')) || 320;
+      const bottomPadding = Math.min(sheetHeight + 56, Math.max(180, window.innerHeight - 110));
+      map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
+    };
+    syncCameraPadding();
 
     map.on('style.load', () => {
       addLayers(map);
@@ -168,6 +174,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       map.setProjection({ type: 'globe' });
       setZoom(map.getZoom());
       map.resize();
+      syncCameraPadding();
       addLayers(map);
       emitBounds();
 
@@ -188,7 +195,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       rotationTimer.current = window.setTimeout(rotate, 1400);
     });
 
-    const observer = new ResizeObserver(() => map.resize());
+    const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
