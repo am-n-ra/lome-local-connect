@@ -1,4 +1,4 @@
-name: Omni V2 isolated seller proof
+name: Omni V2 bounded seller proof
 
 on:
   workflow_dispatch:
