@@ -1,31 +1,35 @@
-# Omni V2 Root — Live Seller Runner Evidence
-
 **Document ID:** `OMNI-V2-ROOT-LIVE-SELLER-RUNNER-001`  
-**Structural path:** `Root System > Auth boundary > seller bearer proof > isolated runner`  
+**Structural path:** `Root System > Auth boundary > seller bearer proof > guarded runner`
 **Method:** Nature Way  
 **Observed:** 2026-08-23  
-**Status:** `blocked-at-secret-store`
+**Status:** `blocked-before-job-start`
 
 ## Scope
 
-This record covers only preparation and guarded execution of the isolated seller-bearer runner. It does not claim a live seller transaction, QR success, camera proof or production readiness.
+This record covers preparation and attempted guarded execution of the seller-bearer runner for the user-approved current production-connected B path. It does not claim a live seller transaction, QR success, camera proof, payment success or production release clearance.
 
 ## Prepared boundary
 
-A disposable Neon branch named `omni-v2-seller-proof-20260823` was created from persistent V2. Branch-local Managed Better Auth is available with a branch-specific Auth/JWKS endpoint. The Vercel branch deployment for commit `55ec741` reached `READY` under the `omni-v2-rebuild` branch alias.
+The persistent V2 branch `omni-v2-rebuild` is the selected application/Auth/database environment. Its Neon Auth configuration has email/password sign-up enabled and the Omni Preview origin added to the trusted-origin list. The canonical deployment serves the current V2 map-first application and is the public HTTP target encoded by the guarded production-connected mode.
 
-The repository now contains `scripts/prove-v2-live-seller.mjs`, the non-secret template `scripts/prove-v2-live-seller.env.example`, the command `npm run proof:live-seller` and `.github/workflows/prove-v2-live-seller.yml`. The workflow is manual-dispatch only, restricted to `omni-v2-rebuild`, and injects values only from the GitHub environment `omni-v2-seller-proof`; it never defines secret values in source. The runner refuses the canonical Omni domain, requires `OMNI_PROOF_ENVIRONMENT=isolated`, supports sign-in and an explicitly guarded branch-local sign-up fallback, binds only the labeled seller fixture, keeps fixture IDs/tokens/idempotency values in memory and emits only redacted step markers.
+The repository contains `scripts/prove-v2-live-seller.mjs`, the non-secret template `scripts/prove-v2-live-seller.env.example`, the command `npm run proof:live-seller` and `.github/workflows/prove-v2-live-seller.yml`. The runner accepts `production-connected-demo` only with an explicit allow flag, requires the canonical base URL in that mode, signs in through official Neon Auth, binds only the labeled demo seller fixture and guarded buyer application account, keeps credentials/tokens/fixture identifiers/idempotency values in memory and emits only redacted markers. No direct Neon Auth SQL, fabricated bearer or Auth bypass is used.
+
+The workflow is manual-dispatch only, restricted by condition to `omni-v2-rebuild`, checks out that branch, uses the GitHub environment `omni-v2-seller-proof`, and injects values only from external secrets. It was registered on the repository default branch solely so GitHub can discover the workflow; the workflow still executes the V2 branch and does not copy application code to the default branch.
+
+## Operator-managed inputs
+
+The GitHub environment metadata reports all eight required secret names: branch ID, canonical base URL, persistent Auth URL, persistent database URL, seller email/password and buyer email/password. Values were not read. The workflow inputs were set for `allow_signup=0` and `rebind_fixtures=1`, because both identities were created through the official Omni Auth UI and the application binding is guarded and additive.
 
 ## Executed checks
 
-The runner was syntax-checked and invoked with an empty environment. It exited with the expected preflight status and listed only missing variable names. No Auth request, database mutation, bearer token, QR issuance, payment declaration or transaction transition was attempted during this preflight.
+The runner and workflow changes passed `git diff --check`, the full Vitest suite with 12 files and 75 tests, `npm run build`, `npm run check:boundary`, a staged-content secret scan and a clean commit/push on `omni-v2-rebuild` at commit `505ab4d`. The corresponding Vercel deployment reached `READY` and carries the same commit metadata.
 
-A read-only Vercel deployment check confirmed the branch deployment reached `READY`. GitHub Actions is enabled and the named GitHub environment `omni-v2-seller-proof` now exists, but its secret listing reports zero configured secrets; no secret value was read. The workflow is therefore prepared but not executable from this session until the environment is populated. The Preview `V2_DATABASE_URL` and branch Auth URL have not been verified as a matched deployment binding, so the runner was not pointed at the deployment.
+A manual workflow dispatch was accepted by GitHub, but the run completed without starting the job. The visible GitHub annotation states that the account is locked because of a billing issue. Therefore no Auth request, database mutation, bearer proof, QR issuance, payment declaration or transaction transition was attempted by the failed run. This is a host-execution blocker, not a proof result.
 
 ## Not proven
 
-The following remain open: a real branch Neon Auth sign-in/sign-up session, seller response through deployed HTTP, response idempotency conflict, buyer purchase intent, server QR issuance, first QR verification, sequential replay rejection, external payment declaration/acknowledgement, concurrent QR verification and HTTPS camera recovery. No persistent/default or production data was written by this runner-preparation pass.
+The following remain open: seller bearer sign-in through the runner, additive seller fixture rebinding, seller availability response, same-key idempotent replay, conflicting-key rejection, buyer purchase intent, server-issued QR, first QR verification, sequential replay rejection, external payment declaration/acknowledgement, concurrent QR verification and HTTPS camera recovery. The browser did prove official account creation for two user-controlled identities and one current-environment buyer availability request, but those facts do not replace the seller bearer proof.
 
 ## Ring decision
 
-The isolated proof stem is prepared but cannot enter the live Trunk until an operator places fresh branch-scoped seller and buyer test credentials plus the disposable database/Preview metadata in an external secret store that is not visible to the agent. The password supplied in chat is not used. Root remains `review`; Buyer Trunk remains closed.
+Root remains `review` and Buyer Trunk remains closed. The next action is not another code workaround: the operator must restore GitHub Actions execution for this repository/account or provide an approved equivalent external runner that can consume the same eight values in memory. Once execution is available, the already-dispatched proof contract can be rerun; no password from chat is used and no direct Auth-table write is permitted.
