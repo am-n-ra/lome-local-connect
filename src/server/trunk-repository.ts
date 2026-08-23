@@ -988,8 +988,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         eligible as (
           select r.id as request_id, f.id as facility_id, p.id as product_id,
                  s.seller_account_id,
-                 case when ${input.status} = 'unavailable' then 0 else ${input.quantityAvailable} end as quantity_available,
-                 case when ${input.status} = 'unavailable' then null else ${input.priceMinor} end as price_minor
+                 ${input.quantityAvailable} as quantity_available,
+                 ${input.priceMinor}::int as price_minor
           from v2_availability_requests r
           join v2_facilities f on f.id = ${input.facilityId}::uuid
           join v2_products p on p.id = ${input.productId}::uuid and p.facility_id = f.id
@@ -998,8 +998,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and f.id = any(r.facility_scope)
             and p.publication_state = 'published'
             and r.product_id = p.id
-            and (case when ${input.status} = 'unavailable' then 0 else ${input.quantityAvailable} end) <= p.quantity_allocated_omni
-            and (case when ${input.status} = 'unavailable' then true else ${input.priceMinor} is not null end)
+            and ${input.quantityAvailable} <= p.quantity_allocated_omni
         ),
         inserted as (
           insert into v2_availability_responses

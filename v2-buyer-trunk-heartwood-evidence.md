@@ -55,3 +55,11 @@ After explicit user authorization, the current official Buyer session submitted 
 ## 2026-08-23 — newly authorized request expired before Seller retry
 
 The clean Manus-computer Buyer session completed the official catalogue-backed flow for `Omni Demo Seller Hub` and submitted one explicitly authorized bounded request. The real pending surface appeared with `Demande envoyée`, `En attente de la disponibilité`, refresh and expiry, while the four-step `Produit → Portée → Contraintes → Réponses` rhythm and pre-intent privacy lock remained visible. Because the Seller response-route correction and deployment took longer than the bounded response window, the same request later displayed `La demande a expiré` and offered `Actualiser` / `Retour à la facilité`. No Seller response was persisted for this request and no comparison card was fabricated. A further request requires a new explicit authorization.
+
+## 2026-08-23 — fresh pending request and Seller persistence blocker
+
+After a second explicit user confirmation, the READY `ddcdd4c` canonical build created one fresh bounded request for the existing `Omni Demo Seller Hub` catalogue product, quantity 1 and no budget. The Buyer sheet displayed `Demande envoyée`, a response deadline and `Recherche des réponses…`; the Seller queue immediately showed the matching request as `Sans réponse`.
+
+The Seller form was filled with `Disponible`, quantity 1 and `15.00`, then submitted exactly once. The route returned a generic 500 after the client’s single bounded recovery retry, and the Seller UI rendered the service-unavailable error. Aggregate-only Neon inspection confirmed one active eligible request, one authorized Seller row, one published product row and five allocated units, with zero persisted responses for the fresh request. No comparison card was fabricated, no duplicate response was submitted, and no QR, intent, contact, itinerary, payment or transaction action was opened.
+
+A locally validated response-SQL hardening patch now removes the parameterized CASE expressions from the eligible CTE and keeps the server-normalized values. Seller persistence and Buyer comparison remain `partial` until that patch is deployed and a retry is explicitly authorized; global Root remains `review`.

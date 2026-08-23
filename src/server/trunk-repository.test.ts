@@ -297,6 +297,9 @@ describe('seller availability response persistence Root seam', () => {
     });
     expect(call.queries[0]).toContain("a.onboarding_state in ('seller_ready', 'complete')");
     expect(call.queries[0]).toContain('p.quantity_allocated_omni');
+    expect(call.queries[0]).toContain('as quantity_available');
+    expect(call.queries[0]).toContain('::int as price_minor');
+    expect(call.queries[0]).not.toContain('case when ');
     expect(call.queries[0]).toContain('on conflict (responder_account_id, idempotency_key)');
     expect(call.queries[0]).toContain('insert into v2_audit_events');
   });
