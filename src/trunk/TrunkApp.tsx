@@ -1,16 +1,16 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { getAvailabilityResponses, getFacilityDetail, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
+import { getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
 import { TrunkMap } from './TrunkMap';
-import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, FacilityDetail, PublicFacility, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'seller-entry';
+type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'buyer-requests' | 'seller-entry';
 type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
-type AuthReturn = 'none' | 'availability' | 'seller-entry';
+type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 
 export type SellerEntryIntent =
@@ -49,6 +49,9 @@ export function TrunkApp() {
   const [responseData, setResponseData] = useState<AvailabilityResponsesResult | null>(null);
   const [responseState, setResponseState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
   const [responseError, setResponseError] = useState('');
+  const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestList | null>(null);
+  const [buyerRequestsState, setBuyerRequestsState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [buyerRequestsError, setBuyerRequestsError] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>(undefined);
@@ -154,6 +157,60 @@ export function TrunkApp() {
     setMenuOpen(false);
     setOptionsOpen(false);
     setPanel('auth');
+  };
+
+  const loadBuyerRequests = async () => {
+    if (!authClient) return;
+    setBuyerRequestsState('loading');
+    setBuyerRequestsError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setBuyerRequestsState('error');
+        setBuyerRequestsError('Votre session doit être réouverte pour retrouver vos demandes.');
+        return;
+      }
+      const result = await getBuyerAvailabilityRequests({ token });
+      if (!result.ok || !result.data) {
+        setBuyerRequestsState('error');
+        setBuyerRequestsError(result.error?.message ?? 'Vos demandes ne peuvent pas être chargées pour le moment.');
+        return;
+      }
+      setBuyerRequests(result.data);
+      setBuyerRequestsState('idle');
+    } catch (caught) {
+      setBuyerRequestsState('error');
+      setBuyerRequestsError(caught instanceof Error ? caught.message : 'Vos demandes ne peuvent pas être chargées pour le moment.');
+    }
+  };
+
+  const openBuyerRequests = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    setPanel('buyer-requests');
+    void loadBuyerRequests();
+  };
+
+  const resumeBuyerRequest = async (request: BuyerAvailabilityRequestSummary) => {
+    setPanel('buyer-requests');
+    setBuyerRequestsState('loading');
+    setBuyerRequestsError('');
+    const detail = await getFacilityDetail(request.facilityId);
+    if (!detail.ok || !detail.data) {
+      setBuyerRequestsState('error');
+      setBuyerRequestsError(detail.error?.message ?? 'La facilité de cette demande ne peut pas être rouverte.');
+      return;
+    }
+    setSelectedFacility(detail.data);
+    setSelectedProductId(request.productId);
+    setAvailability({ requestId: request.id, productId: request.productId, facilityId: request.facilityId, status: request.requestStatus, expiresAt: request.expiresAt, message: request.responseCount > 0 ? 'Des réponses vérifiées sont disponibles.' : 'Omni attend une réponse de la facilité.' });
+    setAvailabilityStep(4);
+    setResponseData(null);
+    setResponseError('');
+    setResponseState('loading');
+    setBuyerRequestsState('idle');
+    setPanel('availability');
+    await refreshResponses(request.id);
   };
 
   const loadSellerQueue = async () => {
@@ -503,7 +560,7 @@ export function TrunkApp() {
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
         <div className="menu-brand"><img src="/omni-logo-transparent.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button>}
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
@@ -524,6 +581,7 @@ export function TrunkApp() {
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <SellerWorkspaceSheet user={sessionUser} queue={sellerQueue} queueState={sellerQueueState} queueError={sellerQueueError} request={sellerRequest} tab={sellerTab} setTab={setSellerTab} responseStatus={sellerResponseStatus} setResponseStatus={setSellerResponseStatus} quantity={sellerQuantity} setQuantity={setSellerQuantity} price={sellerPrice} setPrice={setSellerPrice} message={sellerMessage} setMessage={setSellerMessage} responseState={sellerResponseState} responseError={sellerResponseError} responseResult={sellerResponseResult} rebindState={sellerRebindState} rebindError={sellerRebindError} onRebindDemo={() => void rebindSellerDemo()} onLoadQueue={() => void loadSellerQueue()} onSelectRequest={openSellerRequest} onSubmitResponse={() => void submitSellerResponse()} onBackToQueue={() => { setSellerRequest(null); setSellerResponseState('idle'); }} onClose={() => { setSellerRequest(null); setPanel('none'); }} onSignOut={signOut} />}
+      {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} onClose={() => setPanel('none')} onVerify={openAvailability} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
@@ -546,6 +604,11 @@ function NearbySheet(props: { facilities: PublicFacility[]; mapState: 'loading' 
       <button className="card-cta" type="button" disabled={facility.productCount === 0} onClick={() => props.onVerify(facility)}>{facility.productCount ? 'Vérifier la disponibilité' : 'Voir le lieu'}</button>
     </article>)}</div>}
   </section>;
+}
+
+function BuyerRequestsSheet(props: { user: SessionUser | null; data: BuyerAvailabilityRequestList | null; state: 'idle' | 'loading' | 'error'; error: string; onRefresh: () => void; onResume: (request: BuyerAvailabilityRequestSummary) => void; onClose: () => void }) {
+  const requests = props.data?.requests ?? [];
+  return <section className="omni-sheet context-sheet buyer-requests-sheet" role="dialog" aria-modal="true" aria-labelledby="buyer-requests-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte J5</span><h2 id="buyer-requests-title">Mes demandes</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">Retrouvez vos demandes de disponibilité et reprenez la comparaison sans recréer une demande.</p>{props.state === 'loading' && <div className="sheet-loading" role="status"><span className="spinner" /> Chargement de vos demandes…</div>}{props.state === 'error' && <div className="comparison-state comparison-error" role="alert"><strong>Vos demandes ne sont pas disponibles</strong><p>{props.error}</p><button className="secondary-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>}{props.state === 'idle' && requests.length === 0 && <div className="empty-state"><Clock3 size={23} /><strong>Aucune demande enregistrée</strong><p>Vos prochaines demandes de disponibilité apparaîtront ici.</p></div>}{props.state === 'idle' && requests.length > 0 && <div className="buyer-request-list"><div className="seller-list-heading"><span className="section-kicker">Historique récent</span><button className="text-button" type="button" onClick={props.onRefresh}>Actualiser</button></div>{requests.map((request) => <button className="buyer-request-card" type="button" key={request.id} onClick={() => props.onResume(request)}><span className="request-card-icon"><Clock3 size={18} /></span><span className="buyer-request-copy"><span className={`status-pill request-status-${request.requestStatus}`}>{responseStatusLabel(request.requestStatus)}</span><strong>{request.productName}</strong><small>{request.facilityName} · {request.facilityCategory}</small><small>{request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'} · {request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString()}</small></span><ChevronRight size={17} /></button>)}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Reprise sûre</strong><small>La demande existante est relue côté serveur. Aucun nouveau stock ou contact ne s’ouvre ici.</small></span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à la carte</button></section>;
 }
 
 function SearchOptionsPopover(props: { category: string; categoryOptions: string[]; setCategory: (value: string) => void; quantity: number; setQuantity: (value: number) => void; budgetMode: 'unlimited' | 'maximum'; setBudgetMode: (value: 'unlimited' | 'maximum') => void; budget: string; setBudget: (value: string) => void; onClear: () => void; onApply: () => void; onClose: () => void }) {

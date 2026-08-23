@@ -122,8 +122,8 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 | HEART-001 | Add complete async, empty, locked, error, retry, cancel and success states | TRUNK | `partial` | [`v2-buyer-trunk-heartwood-evidence.md`](./v2-buyer-trunk-heartwood-evidence.md) records implemented states; forced error/cancellation coverage remains |
 | HEART-002 | Prove Auth cancellation/error and exact context restoration | TRUNK | `partial` | Official Auth return is proven; cancellation/interrupted return remains manual |
 | HEART-003 | Prove duplicate/concurrent requests and no reservation | TRUNK | `partial` | No-reservation boundary and request-shape idempotency are implemented; concurrency proof remains |
-| HEART-004 | Prove back, close, refresh, interrupted session and stale-response recovery | TRUNK | `partial` | Stale-detail guard and step-back code landed; full refresh/resume remains open |
-| HEART-005 | Certify focus, keyboard, touch, safe areas and reduced motion | TRUNK | `partial` | Accessible names/live regions and responsive CSS exist; four-width/manual pass remains |
+| HEART-004 | Prove back, close, refresh, interrupted session and stale-response recovery | TRUNK | `partial` | Stale-detail guard, step-back code and server-backed J5 `Mes demandes` resume seam landed; canonical refresh/resume proof remains open |
+| HEART-005 | Certify focus, keyboard, touch, safe areas and reduced motion | TRUNK | `partial` | Accessible names/live regions and responsive CSS exist; canonical resume sheet added, four-width/manual pass remains |
 | HEART-006 | Run adversarial false-state, permission and privacy review | HEART-001–005 | `todo` | Rejection report resolved |
 
 ## 7. Branches

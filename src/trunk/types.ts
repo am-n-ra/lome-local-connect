@@ -73,6 +73,26 @@ export interface AvailabilityResponsesResult {
   responses: BuyerAvailabilityResponse[];
 }
 
+export interface BuyerAvailabilityRequestSummary {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCategory: string;
+  productId: string;
+  productName: string;
+  requestedQuantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+  requestStatus: AvailabilityRequestState;
+  createdAt: string;
+  expiresAt: string;
+  responseCount: number;
+}
+
+export interface BuyerAvailabilityRequestList {
+  requests: BuyerAvailabilityRequestSummary[];
+}
+
 export interface SellerAvailabilityRequest {
   id: string;
   facilityId: string;

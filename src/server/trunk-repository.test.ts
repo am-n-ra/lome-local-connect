@@ -140,6 +140,46 @@ describe('buyer availability response read seam', () => {
   });
 });
 
+describe('buyer request resume seam', () => {
+  it('returns buyer-owned request summaries with response count and server state', async () => {
+    const call = stubSql([{
+      id: 'request-1',
+      facility_id: 'facility-1',
+      facility_name: 'Demo Facility',
+      facility_category: 'Local supply',
+      product_id: 'product-1',
+      product_name: 'Demo product',
+      requested_quantity: 2,
+      budget_mode: 'unlimited',
+      budget_minor: null,
+      request_status: 'responses',
+      created_at: '2026-08-23T10:00:00.000Z',
+      expires_at: '2026-08-23T11:00:00.000Z',
+      response_count: 1,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.getBuyerAvailabilityRequests({ authUserId: 'auth-user-1' })).resolves.toEqual({ requests: [{
+      id: 'request-1',
+      facilityId: 'facility-1',
+      facilityName: 'Demo Facility',
+      facilityCategory: 'Local supply',
+      productId: 'product-1',
+      productName: 'Demo product',
+      requestedQuantity: 2,
+      budgetMode: 'unlimited',
+      budgetMinor: null,
+      requestStatus: 'responses',
+      createdAt: '2026-08-23T10:00:00.000Z',
+      expiresAt: '2026-08-23T11:00:00.000Z',
+      responseCount: 1,
+    }] });
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('a.suspended_at is null');
+    expect(call.queries[0]).toContain('limit 50');
+  });
+});
+
 describe('seller demo rebinding seam', () => {
   it('rebinds only the labeled Seller fixture and records a bounded audit event', async () => {
     const queries: string[] = [];
