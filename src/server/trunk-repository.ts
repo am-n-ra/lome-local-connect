@@ -1,4 +1,5 @@
 import { neon } from '@neondatabase/serverless';
+import type { QrVerificationResult } from '../domain/contracts';
 import type { AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
 
 export interface DatabaseClient {
@@ -43,6 +44,12 @@ export class AvailabilityPolicyError extends Error {
     this.name = 'AvailabilityPolicyError';
   }
 }
+
+export type QrVerificationPersistenceResult = QrVerificationResult | {
+  accepted: false;
+  transactionId: string;
+  reason: 'NOT_VERIFIED';
+};
 
 export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
   id: String(row.id),
@@ -118,6 +125,41 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by p.name
       `);
       return { ...toFacility(row), products: (products as Record<string, unknown>[]).map(toProduct) };
+    },
+
+    async verifyQrToken(input: {
+      authUserId: string;
+      transactionId: string;
+      tokenHash: string;
+      now: string;
+    }): Promise<QrVerificationPersistenceResult> {
+      const rows = await retryDatabase(() => sql`
+        update v2_qr_tokens q
+        set verified_at = ${input.now}::timestamptz,
+            replay_count = q.replay_count + 1
+        where q.transaction_id = ${input.transactionId}::uuid
+          and q.token_hash = ${input.tokenHash}
+          and q.verified_at is null
+          and q.replay_count = 0
+          and q.expires_at > ${input.now}::timestamptz
+          and exists (
+            select 1
+            from v2_transaction_members m
+            join v2_accounts a on a.id = m.account_id
+            where m.transaction_id = q.transaction_id
+              and a.auth_user_id = ${input.authUserId}
+              and m.role = 'seller'
+          )
+        returning q.transaction_id, q.verified_at, q.replay_count
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return { accepted: false, transactionId: input.transactionId, reason: 'NOT_VERIFIED' };
+      return {
+        accepted: true,
+        transactionId: String(row.transaction_id),
+        verifiedAt: new Date(String(row.verified_at)).toISOString(),
+        nextReplayCount: Number(row.replay_count),
+      };
     },
 
     async createAvailabilityRequest(input: {

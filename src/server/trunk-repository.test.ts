@@ -92,3 +92,49 @@ describe('availability repository Root seam', () => {
     );
   });
 });
+
+describe('QR persistence Root seam', () => {
+  it('conditionally verifies one authorized seller token and returns the committed replay count', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      verified_at: '2026-08-23T00:00:00.000Z',
+      replay_count: 1,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.verifyQrToken({
+      authUserId: 'auth-user-1',
+      transactionId: 'transaction-1',
+      tokenHash: 'hash-not-recorded',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      accepted: true,
+      transactionId: 'transaction-1',
+      verifiedAt: '2026-08-23T00:00:00.000Z',
+      nextReplayCount: 1,
+    });
+    expect(call.queries[0]).toContain('update v2_qr_tokens q');
+    expect(call.queries[0]).toContain('q.verified_at is null');
+    expect(call.queries[0]).toContain('q.replay_count = 0');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain("m.role = 'seller'");
+  });
+
+  it('returns a non-acceptance result when the conditional QR update matches no row', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.verifyQrToken({
+      authUserId: 'auth-user-1',
+      transactionId: 'transaction-1',
+      tokenHash: 'hash-not-recorded',
+      now: '2026-08-23T00:00:00.000Z',
+    })).resolves.toEqual({
+      accepted: false,
+      transactionId: 'transaction-1',
+      reason: 'NOT_VERIFIED',
+    });
+  });
+});

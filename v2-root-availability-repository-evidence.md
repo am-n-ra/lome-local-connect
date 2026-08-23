@@ -35,7 +35,7 @@ The focused tests use an injectable tagged-SQL seam and do not connect to Neon o
 | Malformed JSON and array bodies are typed input errors | Pass |
 | Policy rejection maps to HTTP conflict; unexpected internal details are redacted | Pass |
 
-The full local validation checkpoint for this slice is **11 Vitest files / 45 tests passing**, production build passing, 3 Vercel functions bundled and `Client boundary: clean`.
+The full local validation checkpoint for this slice is **11 Vitest files / 47 tests passing**, production build passing, 3 Vercel functions bundled and `Client boundary: clean`.
 
 ## Explicit non-evidence
 
