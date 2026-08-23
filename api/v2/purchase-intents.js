@@ -151,6 +151,87 @@ function createTrunkRepository(sql = database()) {
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
     },
+    async declareExternalPayment(input) {
+      if (!["cash", "mobile_money", "pay_on_delivery"].includes(input.method)) {
+        throw new TransactionPolicyError("External payment method is not supported.");
+      }
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        locked as (
+          select s.transaction_id, m.account_id as buyer_account_id, a.actor_account_id,
+            coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') as current_state
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id
+          join actor a on a.actor_account_id = m.account_id
+          where s.transaction_id = ${input.transactionId}::uuid
+            and m.role = 'buyer'
+          for update of s
+        ),
+        eligible as (
+          select * from locked
+          where current_state in ('qr_verified', 'payment_declared')
+        ),
+        declaration as (
+          insert into v2_external_payment_declarations
+            (transaction_id, buyer_account_id, method, declared_at)
+          select e.transaction_id, e.buyer_account_id, ${input.method}, ${input.now}::timestamptz
+          from eligible e
+          where e.current_state = 'qr_verified'
+          on conflict (transaction_id) do update
+            set transaction_id = v2_external_payment_declarations.transaction_id
+          returning id, transaction_id, buyer_account_id, method
+        ),
+        event as (
+          insert into v2_transaction_events
+            (transaction_id, actor_account_id, state, metadata, created_at)
+          select d.transaction_id, e.actor_account_id, 'payment_declared', jsonb_build_object('method', d.method), ${input.now}::timestamptz
+          from declaration d
+          join eligible e on e.transaction_id = d.transaction_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'external_payment_declared', 'transaction', d.transaction_id::text, ${input.correlationId}, d.method, ${input.now}::timestamptz
+          from declaration d
+          join eligible e on e.transaction_id = d.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        ),
+        existing as (
+          select d.id, d.transaction_id, d.buyer_account_id, d.method
+          from v2_external_payment_declarations d
+          join eligible e on e.transaction_id = d.transaction_id
+        )
+        select id, transaction_id, buyer_account_id, method from declaration
+        union all
+        select id, transaction_id, buyer_account_id, method from existing
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Payment declaration requires a buyer member after QR verification.");
+      if (String(row.method) !== input.method) {
+        throw new TransactionPolicyError("A different external payment method was already declared for this transaction.");
+      }
+      return {
+        declarationId: String(row.id),
+        transactionId: String(row.transaction_id),
+        method: row.method,
+        buyerAccountId: String(row.buyer_account_id)
+      };
+    },
     async transitionTransaction(input) {
       const rows = await retryDatabase(() => sql`
         with actor as (

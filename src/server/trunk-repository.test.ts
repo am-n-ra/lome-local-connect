@@ -93,6 +93,80 @@ describe('availability repository Root seam', () => {
   });
 });
 
+describe('external payment persistence Root seam', () => {
+  it('records one supported buyer payment declaration after QR verification and appends its event/audit', async () => {
+    const call = stubSql([{
+      id: 'declaration-1',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      method: 'mobile_money',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.declareExternalPayment({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      method: 'mobile_money',
+      correlationId: 'corr-payment-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      declarationId: 'declaration-1',
+      transactionId: 'transaction-1',
+      method: 'mobile_money',
+      buyerAccountId: 'buyer-account-1',
+    });
+    expect(call.queries[0]).toContain("m.role = 'buyer'");
+    expect(call.queries[0]).toContain("current_state in ('qr_verified', 'payment_declared')");
+    expect(call.queries[0]).toContain('insert into v2_external_payment_declarations');
+    expect(call.queries[0]).toContain('insert into v2_transaction_events');
+    expect(call.queries[0]).toContain('insert into v2_audit_events');
+    expect(call.queries[0]).toContain('on conflict (transaction_id) do update');
+  });
+
+  it('rejects unsupported payment methods before reaching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.declareExternalPayment({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      method: 'card' as never,
+      correlationId: 'corr-payment-2',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('External payment method is not supported.');
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects a buyer without QR verification or with a different existing method', async () => {
+    const emptyCall = stubSql([]);
+    const repository = createTrunkRepository(emptyCall.sql);
+    await expect(repository.declareExternalPayment({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      method: 'cash',
+      correlationId: 'corr-payment-3',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('Payment declaration requires a buyer member after QR verification.');
+
+    const replayCall = stubSql([{
+      id: 'declaration-1',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      method: 'cash',
+    }]);
+    const replayRepository = createTrunkRepository(replayCall.sql);
+    await expect(replayRepository.declareExternalPayment({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      method: 'mobile_money',
+      correlationId: 'corr-payment-4',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('A different external payment method was already declared for this transaction.');
+  });
+});
+
 describe('transaction persistence Root seam', () => {
   it('locks an authenticated member transaction and appends an allowed state event', async () => {
     const call = stubSql([{
