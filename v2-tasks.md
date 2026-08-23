@@ -147,9 +147,9 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status |
 |---|---|---|---|
-| SELL-001 | Seller map-first workspace and owned facility context | BRANCH-A, TRUNK | `partial` | [`v2-seller-mini-cycle.md`](./v2-seller-mini-cycle.md); map-mounted Species-aligned workspace is deployed, seller authorization and canonical visual proof remain open |
+| SELL-001 | Seller map-first workspace and owned facility context | BRANCH-A, TRUNK | `partial` | [`v2-seller-mini-cycle.md`](./v2-seller-mini-cycle.md); map-mounted Species-aligned workspace is deployed, the explicitly approved demo rebind is guarded, official seller proof remains open |
 | SELL-002 | Facility open/closed, hours and discovery mode | SELL-001 | `todo` |
-| SELL-003 | Demand queue and manual availability response | SELL-001, TRUNK | `partial` | Protected queue read and response form are deployed; official seller session, persisted response and Buyer comparison refresh remain open |
+| SELL-003 | Demand queue and manual availability response | SELL-001, TRUNK | `partial` | Protected queue read, guarded demo rebind and response form are deployed; persisted response and Buyer comparison refresh remain open |
 | SELL-004 | Automatic response correction, audit and buyer notification | SELL-003 | `todo` |
 | SELL-005 | Product draft/create/edit/publish/sold-out lifecycle | SELL-001, BRANCH-A | `todo` |
 | SELL-006 | Omni stock allocation server constraint | SELL-005 | `todo` |

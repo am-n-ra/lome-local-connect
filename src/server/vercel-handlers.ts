@@ -57,6 +57,11 @@ export async function sellerAvailabilityRequestsHandler(req: any, res: any) {
   await handleApi(req, res, '/api/v2/seller/availability-requests', url);
 }
 
+export async function sellerDemoRebindHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/seller/demo-rebind');
+  await handleApi(req, res, '/api/v2/seller/demo-rebind', url);
+}
+
 export async function qrIssuanceHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/qr-issuances');
   await handleApi(req, res, '/api/v2/qr-issuances', url);

@@ -74,6 +74,15 @@ export async function getSellerAvailabilityQueue(input: { token: string }): Prom
   return parse<SellerAvailabilityQueue>(response);
 }
 
+export async function rebindDemoSeller(input: { token: string }): Promise<ApiResult<{ authorized: true }>> {
+  const response = await fetchWithRecovery('/api/v2/seller/demo-rebind', {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse<{ authorized: true }>(response);
+}
+
 export async function requestSellerAvailabilityResponse(input: {
   requestId: string;
   facilityId: string;

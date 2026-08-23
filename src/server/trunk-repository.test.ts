@@ -140,6 +140,34 @@ describe('buyer availability response read seam', () => {
   });
 });
 
+describe('seller demo rebinding seam', () => {
+  it('rebinds only the labeled Seller fixture and records a bounded audit event', async () => {
+    const queries: string[] = [];
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      void values;
+      return Promise.resolve(queries.length === 1
+        ? [{ id: 'seller-1', auth_user_id: 'old-auth', conflicting_auth_binding: false, labeled_demo_facility: true }]
+        : [{ id: 'seller-1' }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+
+    await expect(repository.rebindDemoSeller({ authUserId: 'new-auth' })).resolves.toEqual({ authorized: true });
+    expect(queries[0]).toContain("f.name = 'Omni Demo Seller Hub'");
+    expect(queries[0]).toContain("f.source_ref = 'D-V2-DEMO-FACILITY'");
+    expect(queries[1]).toContain('seller_demo_rebound');
+    expect(queries[1]).toContain('set auth_user_id');
+  });
+
+  it('rejects a missing or unlabeled Seller fixture before any update', async () => {
+    const call = stubSql([{ id: 'seller-1', auth_user_id: 'old-auth', conflicting_auth_binding: false, labeled_demo_facility: false }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.rebindDemoSeller({ authUserId: 'new-auth' })).rejects.toThrow('labeled Seller demonstration fixture');
+    expect(call.queries).toHaveLength(1);
+  });
+});
+
 describe('seller availability queue read seam', () => {
   it('returns only authorized seller-scoped requests and response state', async () => {
     const queries: string[] = [];

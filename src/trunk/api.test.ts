@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAvailabilityResponses, getSellerAvailabilityQueue, listPublicFacilities } from './api';
+import { getAvailabilityResponses, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller } from './api';
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -42,6 +42,17 @@ describe('listPublicFacilities search contract', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/availability-requests',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('posts the explicit bounded Seller demo rebind with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await rebindDemoSeller({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/demo-rebind',
+      { method: 'POST', headers: { Accept: 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
     );
   });
 });

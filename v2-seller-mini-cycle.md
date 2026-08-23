@@ -136,3 +136,13 @@ The READY deployment for commit `e2c6dee` is serving the canonical aliases, incl
 ## 8. Canonical connected-browser proof — unauthorized Seller boundary
 
 On the canonical deployment, the connected authenticated Buyer session opened `Vendre` successfully without an Auth loop. The captured surface preserves the permanent map, top role switch, right-side map controls, rounded contextual sheet, centered handle, close control and separated `Demandes / Catalogue` segmented rhythm. The queue then settled to the honest locked state: `Accès vendeur à vérifier` and `Aucune opération vendeur ouverte`, because this session has no server-bound seller profile. The handoff note remains visible and explicitly keeps stock response, contact, itinerary and QR locked. The map reported its documented fallback mode during this check; no location or seller data was fabricated. The Seller route’s interaction with an authorized session remains the next proof owner.
+
+
+## 9. Canonical connected-browser proof — seller authorization negative case
+
+A second official Auth-backed session was opened in the canonical browser and reached `Vendre` without an Auth loop. The protected queue read returned a successful response whose data remained `authorized: false` with an empty request list. The UI displayed `Accès vendeur à vérifier` and did not render request, product-response or private buyer data. This confirms that an authenticated identity is not treated as seller authorization. Cross-flow response proof is blocked until an officially authorized seller binding is available; no workaround using direct Auth SQL, hand-crafted tokens or client-selected account IDs is permitted.
+
+
+## 10. Explicitly approved bounded demo rebind
+
+Because the original demo Seller Auth identity was deleted and recreated, the user explicitly approved a temporary server-side rebinding path for this bounded environment. `POST /api/v2/seller/demo-rebind` accepts only the current official bearer session, checks the existing labeled `Omni Demo Seller Hub` fixture, rejects a session already bound to another Omni account, updates only that Seller demo account’s `auth_user_id`, and records a bounded audit event. It neither creates/deletes Neon Auth users nor accepts an account ID from the client. This is a demo-environment recovery seam, not a production onboarding or certification feature; it remains outside the global Root release claim and must not be used for arbitrary account transfers.

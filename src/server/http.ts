@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
 import type { TransactionState } from '../domain/contracts';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -27,7 +27,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -202,6 +202,16 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         correlationId,
         now: new Date().toISOString(),
       });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/seller/demo-rebind') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before activating the bounded Seller demonstration.'));
+        return true;
+      }
+      const result = await repository.rebindDemoSeller({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
