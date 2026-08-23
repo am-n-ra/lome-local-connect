@@ -266,7 +266,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from buyer_request br
         left join v2_availability_responses ar on ar.request_id = br.id
         left join v2_facilities f on f.id = ar.facility_id
-        left join v2_products p on p.id = ar.product_id
+        left join v2_products p on p.id = br.product_id
         order by ar.observed_at desc nulls last, ar.id desc nulls last
       `);
       const typedRows = rows as Record<string, unknown>[];
