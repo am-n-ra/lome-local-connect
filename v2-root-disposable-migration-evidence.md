@@ -65,3 +65,15 @@ A matching read-only count query was run on the persistent `omni-v2-rebuild` bra
 | Selected legacy public tables | 0 | 0 | No selected legacy table appeared or was removed |
 
 This is a count-level preservation check, not a row-by-row checksum or migration replay comparison. The persistent V2 branch remains unchanged, and migration 003 remains unapplied there and on the production/default branch. The disposable branch is still temporary and must not be promoted automatically.
+
+## Auth preservation checksum
+
+A read-only checksum query was run against `neon_auth.user` on both branches. It returned the same 35-user count and matching non-reversible aggregate values:
+
+| Measure | Persistent V2 branch | Disposable proof branch |
+|---|---|---|
+| Auth user count | 35 | 35 |
+| Auth ID aggregate checksum | `ed098a8cfa789278524d3b99c8b7133c` | `ed098a8cfa789278524d3b99c8b7133c` |
+| Auth schema aggregate checksum | `436113c870a83fee9caf861df0cceaf5` | `436113c870a83fee9caf861df0cceaf5` |
+
+The checksums are aggregate evidence only and do not expose individual Auth IDs or credentials. They strengthen preservation confidence for the disposable migration test; they do not prove that migration 003 has been applied to the persistent V2 or production/default branch.
