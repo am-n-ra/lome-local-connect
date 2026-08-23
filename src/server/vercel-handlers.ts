@@ -41,3 +41,8 @@ export async function qrVerificationHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/qr-verifications');
   await handleApi(req, res, '/api/v2/qr-verifications', url);
 }
+
+export async function transactionTransitionHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/transaction-transitions');
+  await handleApi(req, res, '/api/v2/transaction-transitions', url);
+}

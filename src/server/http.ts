@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
 import { AvailabilityPolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import type { TransactionState } from '../domain/contracts';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -48,6 +49,22 @@ export async function parseRequestBody(req: IncomingMessage): Promise<Record<str
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ApiInputError('Request body must be an object.');
   return parsed as Record<string, unknown>;
 }
+
+const TRANSACTION_STATES: readonly TransactionState[] = [
+  'intent_created',
+  'qr_ready',
+  'qr_verified',
+  'payment_declared',
+  'payment_confirmed',
+  'fulfilment_pending',
+  'fulfilled',
+  'received',
+  'rated',
+  'closed',
+];
+
+export const isTransactionState = (value: unknown): value is TransactionState =>
+  typeof value === 'string' && TRANSACTION_STATES.includes(value as TransactionState);
 
 function numberParam(url: URL, key: string, fallback: number): number {
   const value = Number(url.searchParams.get(key));
@@ -111,6 +128,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 409, errorBody(correlationId, 'CONFLICT', 'The QR code is invalid, expired or already verified.'));
         return true;
       }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/transaction-transitions') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before changing a transaction state.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const from = input.from;
+      const to = input.to;
+      const actorRole = input.actorRole;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !isTransactionState(from) || !isTransactionState(to) || (actorRole !== 'buyer' && actorRole !== 'seller')) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction, state transition and actor role.'));
+        return true;
+      }
+      const result = await repository.transitionTransaction({
+        authUserId,
+        transactionId,
+        from,
+        to,
+        actorRole,
+        correlationId,
+        now: new Date().toISOString(),
+      });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

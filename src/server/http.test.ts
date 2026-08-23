@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, parseRequestBody, toApiErrorResponse } from './http';
+import { ApiInputError, isTransactionState, parseRequestBody, toApiErrorResponse } from './http';
 import { AvailabilityPolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 
 const requestWithBody = (value: string) => ({
@@ -65,6 +65,14 @@ describe('Root HTTP error boundary', () => {
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('POLICY_REJECTED');
     expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('accepts only the locked transaction states at the HTTP boundary', () => {
+    expect(isTransactionState('qr_verified')).toBe(true);
+    expect(isTransactionState('closed')).toBe(true);
+    expect(isTransactionState('rejected')).toBe(false);
+    expect(isTransactionState('disputed')).toBe(false);
+    expect(isTransactionState(null)).toBe(false);
   });
 
   it('redacts unexpected internal details behind a recoverable 500', () => {

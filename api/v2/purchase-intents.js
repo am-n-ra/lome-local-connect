@@ -755,6 +755,19 @@ async function parseRequestBody(req) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiInputError("Request body must be an object.");
   return parsed;
 }
+var TRANSACTION_STATES = [
+  "intent_created",
+  "qr_ready",
+  "qr_verified",
+  "payment_declared",
+  "payment_confirmed",
+  "fulfilment_pending",
+  "fulfilled",
+  "received",
+  "rated",
+  "closed"
+];
+var isTransactionState = (value) => typeof value === "string" && TRANSACTION_STATES.includes(value);
 function numberParam(url, key, fallback) {
   const value = Number(url.searchParams.get(key));
   return Number.isFinite(value) ? value : fallback;
@@ -813,6 +826,34 @@ async function handleApi(req, res, pathname, url) {
         json(res, 409, errorBody(correlationId, "CONFLICT", "The QR code is invalid, expired or already verified."));
         return true;
       }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/transaction-transitions") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before changing a transaction state."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const from = input.from;
+      const to = input.to;
+      const actorRole = input.actorRole;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !isTransactionState(from) || !isTransactionState(to) || actorRole !== "buyer" && actorRole !== "seller") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction, state transition and actor role."));
+        return true;
+      }
+      const result = await repository.transitionTransaction({
+        authUserId,
+        transactionId,
+        from,
+        to,
+        actorRole,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

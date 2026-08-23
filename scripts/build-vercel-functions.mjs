@@ -8,6 +8,7 @@ const entries = {
   'api/v2/external-payment-confirmations.js': 'src/server/vercel/external-payment-confirmations.ts',
   'api/v2/external-payment-declarations.js': 'src/server/vercel/external-payment-declarations.ts',
   'api/v2/qr-verifications.js': 'src/server/vercel/qr-verifications.ts',
+  'api/v2/transaction-transitions.js': 'src/server/vercel/transaction-transitions.ts',
 };
 
 for (const [outfile, entrypoint] of Object.entries(entries)) {

@@ -965,16 +965,13 @@ function requestUrl(req, fallbackPath) {
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-async function facilityDetailHandler(req, res) {
-  const url = requestUrl(req, "/api/v2/facilities/");
-  const id = typeof req.query?.id === "string" ? req.query.id : "";
-  await handleApi(req, res, `/api/v2/facilities/${id}`, url);
+async function transactionTransitionHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/transaction-transitions");
+  await handleApi(req, res, "/api/v2/transaction-transitions", url);
 }
 
-// src/server/vercel/facility-detail.ts
-async function handler(req, res) {
-  await facilityDetailHandler(req, res);
-}
+// src/server/vercel/transaction-transitions.ts
+var transaction_transitions_default = transactionTransitionHandler;
 export {
-  handler as default
+  transaction_transitions_default as default
 };
