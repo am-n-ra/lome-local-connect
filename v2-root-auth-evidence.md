@@ -2,7 +2,7 @@
 
 **Document ID:** `OMNI-V2-ROOT-AUTH-001`
 **Method:** Nature Way — Root System evidence
-**Observed:** 2026-08-22
+**Observed:** 2026-08-23
 **Target branch:** `omni-v2-rebuild` (`br-dawn-hill-am5amy22`)
 **Status:** `partial`
 
@@ -20,7 +20,7 @@ The separate read-only database check reported 35 rows in `neon_auth.user` and 0
 
 ## Open proof
 
-No valid bearer token was available for a real authenticated request. Therefore this artifact does not prove JWT signature acceptance for a real Neon Auth token, issuer/audience policy, authenticated availability creation, idempotent first-login V2 account provisioning, role derivation or duplicate-account prevention. The connected browser navigation also returned an HTTP 504 before session inspection. A future authenticated proof must use a real authorized test session or an explicitly owned fixture identity, and must record only non-secret outcome data.
+No valid bearer token was available for a real authenticated request. Therefore this artifact does not prove JWT signature acceptance for a real Neon Auth token, issuer/audience policy, authenticated availability creation, idempotent first-login V2 account provisioning, role derivation or duplicate-account prevention. A fresh read-only navigation and follow-up view through the enabled connected browser both returned HTTP 504 before session inspection. A separate unauthenticated `curl` header probe to the canonical domain returned HTTP 200, which confirms domain reachability but not browser/session or Auth proof. A future authenticated proof must use a real authorized test session or an explicitly owned fixture identity, and must record only non-secret outcome data.
 
 ## Nature Way decision
 

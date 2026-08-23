@@ -34,7 +34,7 @@ The current repository checks pass: 11 Vitest files, 68 tests, TypeScript/Vite p
 
 ## Live proof limitations
 
-The canonical-domain browser navigation was attempted with the connected browser, but the browser bridge returned HTTP 504 before viewport/session inspection. This is recorded as an inspection blocker, not as a product success or failure. No login, form submission, mutation or credential handling was performed.
+A fresh read-only navigation and follow-up view of the canonical domain through the enabled connected browser both returned HTTP 504 before viewport/session inspection. A separate unauthenticated header probe to the canonical domain returned HTTP 200, confirming domain reachability but not browser/session/Auth behavior. This is recorded as an inspection blocker, not as a product success or failure. No login, form submission, mutation or credential handling was performed.
 
 ## Required Root exit evidence
 
