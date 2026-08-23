@@ -26,6 +26,8 @@ The repository Auth client exposes the normal email/password sign-in and sign-up
 
 A status-only negative pass against all protected V2 mutation routes returned HTTP 401 for `/api/v2/availability`, `/api/v2/availability-responses`, `/api/v2/purchase-intents`, `/api/v2/qr-issuances`, `/api/v2/qr-verifications`, `/api/v2/transaction-transitions`, `/api/v2/external-payment-declarations` and `/api/v2/external-payment-confirmations`. This confirms the deployed boundary fails closed without authentication; it does not provide the seller bearer required for positive proof.
 
+The runner commit `55ec741` has a READY Vercel branch deployment under the `omni-v2-rebuild` alias. This is code-deployment evidence only: the deployment has not been accepted as the proof environment because its Preview `V2_DATABASE_URL`/Auth binding has not been verified against the disposable Neon branch. A read-only attempt to list GitHub Actions secret names returned HTTP 403, so no external secret-store availability is claimed.
+
 ## Root contract and route order
 
 The live proof must use server-issued identifiers from the bounded fixture and a fresh, non-secret correlation value for each operation. Identifiers and idempotency values must remain in the execution channel only and must not be written into evidence.
