@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAvailabilityResponses, listPublicFacilities } from './api';
+import { getAvailabilityResponses, getSellerAvailabilityQueue, listPublicFacilities } from './api';
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -30,6 +30,17 @@ describe('listPublicFacilities search contract', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/availability-responses?requestId=request-1',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('reads the seller-owned availability queue with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true, requests: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getSellerAvailabilityQueue({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/availability-requests',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });

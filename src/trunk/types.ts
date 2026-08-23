@@ -73,6 +73,29 @@ export interface AvailabilityResponsesResult {
   responses: BuyerAvailabilityResponse[];
 }
 
+export interface SellerAvailabilityRequest {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCategory: string;
+  productId: string;
+  productName: string;
+  requestedQuantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+  requestStatus: AvailabilityRequestState;
+  createdAt: string;
+  expiresAt: string;
+  responseStatus: AvailabilityResponseStatus | null;
+  responseObservedAt: string | null;
+  freshness: AvailabilityFreshness;
+}
+
+export interface SellerAvailabilityQueue {
+  authorized: boolean;
+  requests: SellerAvailabilityRequest[];
+}
+
 export interface ApiFailure {
   code: string;
   message: string;

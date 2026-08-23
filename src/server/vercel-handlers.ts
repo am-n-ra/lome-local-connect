@@ -52,6 +52,11 @@ export async function availabilityResponseHandler(req: any, res: any) {
   await handleApi(req, res, '/api/v2/availability-responses', url);
 }
 
+export async function sellerAvailabilityRequestsHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/seller/availability-requests');
+  await handleApi(req, res, '/api/v2/seller/availability-requests', url);
+}
+
 export async function qrIssuanceHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/qr-issuances');
   await handleApi(req, res, '/api/v2/qr-issuances', url);

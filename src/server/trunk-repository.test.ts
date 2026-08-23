@@ -140,6 +140,58 @@ describe('buyer availability response read seam', () => {
   });
 });
 
+describe('seller availability queue read seam', () => {
+  it('returns only authorized seller-scoped requests and response state', async () => {
+    const queries: string[] = [];
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      void values;
+      return Promise.resolve(queries.length === 1 ? [{ id: 'seller-1' }] : [{
+        id: 'request-1',
+        facility_id: 'facility-1',
+        facility_name: 'Demo Facility',
+        facility_category: 'Local supply',
+        product_id: 'product-1',
+        product_name: 'Tomatoes',
+        requested_quantity: 2,
+        budget_mode: 'maximum',
+        budget_minor: 1500,
+        request_status: 'submitted',
+        created_at: '2026-08-23T00:00:00.000Z',
+        expires_at: '2099-08-23T01:00:00.000Z',
+        response_status: 'available',
+        response_observed_at: '2026-08-23T00:05:00.000Z',
+        freshness: 'fresh',
+      }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+
+    const result = await repository.getSellerAvailabilityQueue({ authUserId: 'auth-seller-1' });
+
+    expect(result).toEqual({ authorized: true, requests: [expect.objectContaining({
+      id: 'request-1',
+      facilityId: 'facility-1',
+      productName: 'Tomatoes',
+      requestedQuantity: 2,
+      budgetMinor: 1500,
+      responseStatus: 'available',
+      freshness: 'fresh',
+    })] });
+    expect(queries[0]).toContain("a.onboarding_state in ('seller_ready', 'complete')");
+    expect(queries[1]).toContain('f.account_id');
+    expect(queries[1]).toContain("p.publication_state = 'published'");
+    expect(queries[1]).toContain('ar.responder_account_id');
+  });
+
+  it('returns a locked empty queue when Auth is present but seller authorization is absent', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.getSellerAvailabilityQueue({ authUserId: 'auth-buyer-1' })).resolves.toEqual({ authorized: false, requests: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+});
+
 describe('seller availability response persistence Root seam', () => {
   it('accepts an owned seller response and records idempotent audit context', async () => {
     const call = stubSql([{

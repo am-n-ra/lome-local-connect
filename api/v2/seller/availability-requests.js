@@ -1,34 +1,50 @@
-import { neon } from '@neondatabase/serverless';
-import { createHash, randomBytes } from 'node:crypto';
-
-import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
-
-export interface DatabaseClient {
-  query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
-  transaction?(queries: unknown[], options?: Record<string, unknown>): Promise<unknown[]>;
+// src/server/auth-context.ts
+import { createRemoteJWKSet, jwtVerify } from "jose";
+var keySet = null;
+var DEFAULT_NEON_AUTH_JWKS_URL = "https://ep-purple-fog-amwsyc3j.neonauth.c-5.us-east-1.aws.neon.tech/neondb/auth/.well-known/jwks.json";
+function remoteKeys() {
+  const url = (process.env.NEON_AUTH_JWKS_URL ?? DEFAULT_NEON_AUTH_JWKS_URL).trim();
+  keySet ??= createRemoteJWKSet(new URL(url));
+  return keySet;
+}
+function getBearerToken(headers) {
+  const authorization = headers.authorization;
+  if (!authorization?.startsWith("Bearer ")) return null;
+  const token = authorization.slice("Bearer ".length).trim();
+  return token || null;
+}
+async function getAuthUserId(headers) {
+  const token = getBearerToken(headers);
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, remoteKeys());
+    return typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+  } catch {
+    return null;
+  }
 }
 
-function database(): ReturnType<typeof neon> {
+// src/server/trunk-repository.ts
+import { neon } from "@neondatabase/serverless";
+import { createHash, randomBytes } from "node:crypto";
+function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
-  if (!url) throw new Error('V2_DATABASE_URL is not configured for the server runtime.');
+  if (!url) throw new Error("V2_DATABASE_URL is not configured for the server runtime.");
   return neon(url);
 }
-
-const toFacility = (row: Record<string, unknown>): PublicFacility => ({
+var toFacility = (row) => ({
   id: String(row.id),
   name: String(row.name),
-  category: String(row.category ?? 'Local supply'),
+  category: String(row.category ?? "Local supply"),
   address: row.address ? String(row.address) : null,
   latitude: Number(row.latitude),
   longitude: Number(row.longitude),
-  trust: String(row.trust_state) as PublicFacility['trust'],
-  plan: String(row.commercial_plan) as PublicFacility['plan'],
-  productCount: Number(row.product_count ?? 0),
+  trust: String(row.trust_state),
+  plan: String(row.commercial_plan),
+  productCount: Number(row.product_count ?? 0)
 });
-
-const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
-  let lastError: unknown;
+var retryDatabase = async (operation) => {
+  let lastError;
   for (const delay of [0, 800, 1800]) {
     if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
     try {
@@ -37,141 +53,56 @@ const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
       lastError = error;
     }
   }
-  throw lastError instanceof Error ? lastError : new Error('Neon database request failed after bounded recovery attempts.');
+  throw lastError instanceof Error ? lastError : new Error("Neon database request failed after bounded recovery attempts.");
 };
-
-export class AvailabilityPolicyError extends Error {
-  constructor(message: string) {
+var AvailabilityPolicyError = class extends Error {
+  constructor(message) {
     super(message);
-    this.name = 'AvailabilityPolicyError';
+    this.name = "AvailabilityPolicyError";
   }
-}
-
-export type QrVerificationPersistenceResult = QrVerificationResult | {
-  accepted: false;
-  transactionId: string;
-  reason: 'NOT_VERIFIED';
 };
-
-export class PurchaseIntentPolicyError extends Error {
-  constructor(message: string) {
+var PurchaseIntentPolicyError = class extends Error {
+  constructor(message) {
     super(message);
-    this.name = 'PurchaseIntentPolicyError';
+    this.name = "PurchaseIntentPolicyError";
   }
-}
-
-export interface PurchaseIntentPersistenceResult {
-  intentId: string;
-  responseId: string;
-  transactionId: string;
-  buyerAccountId: string;
-  state: string;
-}
-
-export type AvailabilityResponseStatus = 'available' | 'partial' | 'unavailable';
-
-export interface AvailabilityResponsePersistenceResult {
-  responseId: string;
-  requestId: string;
-  facilityId: string;
-  productId: string;
-  status: AvailabilityResponseStatus;
-  quantityAvailable: number | null;
-  priceMinor: number | null;
-  observedAt: string;
-}
-
-export interface QrTokenIssuePersistenceResult {
-  transactionId: string;
-  token: string;
-  expiresAt: string;
-}
-
-export type WalletSpendKind = Extract<WalletEntryKind, 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'bonus_spend'>;
-
-export interface WalletSpendPersistenceResult {
-  ledgerEntryId: string;
-  walletId: string;
-  kind: WalletSpendKind;
-  amountMinor: number;
-  status: 'confirmed';
-  facilityId: string;
-}
-
-export interface FacilityBonusPersistenceResult {
-  ledgerEntryId: string;
-  walletId: string;
-  kind: 'bonus_grant';
-  amountMinor: 2000;
-  status: 'confirmed';
-  facilityId: string;
-}
-
-export interface TransactionTransitionPersistenceResult {
-  accepted: true;
-  transactionId: string;
-  from: TransactionState;
-  to: TransactionState;
-  actorRole: 'buyer' | 'seller';
-}
-
-export type ExternalPaymentMethod = 'cash' | 'mobile_money' | 'pay_on_delivery';
-
-export interface ExternalPaymentDeclarationPersistenceResult {
-  declarationId: string;
-  transactionId: string;
-  method: ExternalPaymentMethod;
-  buyerAccountId: string;
-}
-
-export interface ExternalPaymentConfirmationPersistenceResult {
-  declarationId: string;
-  transactionId: string;
-  buyerAccountId: string;
-  sellerAccountId: string;
-  state: 'payment_confirmed';
-}
-
-export class AvailabilityResponsePolicyError extends Error {
-  constructor(message: string) {
+};
+var AvailabilityResponsePolicyError = class extends Error {
+  constructor(message) {
     super(message);
-    this.name = 'AvailabilityResponsePolicyError';
+    this.name = "AvailabilityResponsePolicyError";
   }
-}
-
-export class TransactionPolicyError extends Error {
-  constructor(message: string) {
+};
+var TransactionPolicyError = class extends Error {
+  constructor(message) {
     super(message);
-    this.name = 'TransactionPolicyError';
+    this.name = "TransactionPolicyError";
   }
-}
-
-export class WalletPolicyError extends Error {
-  constructor(message: string) {
+};
+var WalletPolicyError = class extends Error {
+  constructor(message) {
     super(message);
-    this.name = 'WalletPolicyError';
+    this.name = "WalletPolicyError";
   }
-}
-
-export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
+};
+var toProduct = (row) => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
   name: String(row.name),
   description: row.description ? String(row.description) : null,
   category: row.category ? String(row.category) : null,
-  unit: String(row.unit ?? 'unit'),
+  unit: String(row.unit ?? "unit"),
   priceMinor: Number(row.price_minor),
-  currency: String(row.currency ?? 'USD'),
-  couponLabel: row.coupon_label ? String(row.coupon_label) : null,
+  currency: String(row.currency ?? "USD"),
+  couponLabel: row.coupon_label ? String(row.coupon_label) : null
 });
-
-export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
+function createTrunkRepository(sql = database()) {
   return {
-    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {
+    async listPublicFacilities(bounds, query, category) {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
-        const queryText = query?.trim() ?? '';
-        const categoryText = category?.trim() ?? '';
+        const queryText = query?.trim() ?? "";
+        const categoryText = category?.trim() ?? "";
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
@@ -196,11 +127,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           order by f.trust_state = 'unclaimed', f.name
           limit 250
         `;
-        return (rows as Record<string, unknown>[]).map(toFacility);
+        return rows.map(toFacility);
       });
     },
-
-    async getFacilityDetail(id: string): Promise<FacilityDetail | null> {
+    async getFacilityDetail(id) {
       const facilities = await retryDatabase(() => sql`
         select
           f.id, f.name, f.category, f.address, f.latitude, f.longitude,
@@ -213,7 +143,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         group by f.id
         limit 1
       `);
-      const row = (facilities as Record<string, unknown>[])[0];
+      const row = facilities[0];
       if (!row) return null;
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
@@ -226,26 +156,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
         order by p.name
       `);
-      return { ...toFacility(row), products: (products as Record<string, unknown>[]).map(toProduct) };
+      return { ...toFacility(row), products: products.map(toProduct) };
     },
-
-    async getSellerAvailabilityQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: Array<{
-      id: string;
-      facilityId: string;
-      facilityName: string;
-      facilityCategory: string;
-      productId: string;
-      productName: string;
-      requestedQuantity: number;
-      budgetMode: 'unlimited' | 'maximum';
-      budgetMinor: number | null;
-      requestStatus: AvailabilityResponsesResult['requestStatus'];
-      createdAt: string;
-      expiresAt: string;
-      responseStatus: AvailabilityResponseStatus | null;
-      responseObservedAt: string | null;
-      freshness: 'fresh' | 'stale' | 'expired';
-    }> }> {
+    async getSellerAvailabilityQueue(input) {
       const sellerRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
@@ -254,7 +167,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           and a.suspended_at is null
         limit 1
       `);
-      const seller = (sellerRows as Record<string, unknown>[])[0];
+      const seller = sellerRows[0];
       if (!seller) return { authorized: false, requests: [] };
       const sellerAccountId = String(seller.id);
       const rows = await retryDatabase(() => sql`
@@ -292,27 +205,26 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       return {
         authorized: true,
-        requests: (rows as Record<string, unknown>[]).map((row) => ({
+        requests: rows.map((row) => ({
           id: String(row.id),
           facilityId: String(row.facility_id),
           facilityName: String(row.facility_name),
-          facilityCategory: String(row.facility_category ?? 'Local supply'),
+          facilityCategory: String(row.facility_category ?? "Local supply"),
           productId: String(row.product_id),
           productName: String(row.product_name),
           requestedQuantity: Number(row.requested_quantity),
-          budgetMode: row.budget_mode as 'unlimited' | 'maximum',
+          budgetMode: row.budget_mode,
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
-          requestStatus: row.request_status as AvailabilityResponsesResult['requestStatus'],
+          requestStatus: row.request_status,
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
-          responseStatus: row.response_status === null || row.response_status === undefined ? null : row.response_status as AvailabilityResponseStatus,
-          responseObservedAt: row.response_observed_at === null || row.response_observed_at === undefined ? null : new Date(String(row.response_observed_at)).toISOString(),
-          freshness: row.freshness as 'fresh' | 'stale' | 'expired',
-        })),
+          responseStatus: row.response_status === null || row.response_status === void 0 ? null : row.response_status,
+          responseObservedAt: row.response_observed_at === null || row.response_observed_at === void 0 ? null : new Date(String(row.response_observed_at)).toISOString(),
+          freshness: row.freshness
+        }))
       };
     },
-
-    async getAvailabilityResponses(input: { authUserId: string; requestId: string }): Promise<AvailabilityResponsesResult> {
+    async getAvailabilityResponses(input) {
       const rows = await retryDatabase(() => sql`
         with buyer_request as (
           select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status
@@ -352,52 +264,38 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_products p on p.id = br.product_id
         order by ar.observed_at desc nulls last, ar.id desc nulls last
       `);
-      const typedRows = rows as Record<string, unknown>[];
+      const typedRows = rows;
       const first = typedRows[0];
-      if (!first) throw new AvailabilityPolicyError('Availability request was not found or is not owned by this account.');
+      if (!first) throw new AvailabilityPolicyError("Availability request was not found or is not owned by this account.");
       const expiresAt = new Date(String(first.expires_at)).toISOString();
       const now = Date.now();
-      const responses = typedRows
-        .filter((row) => row.response_id !== null && row.response_id !== undefined)
-        .map((row) => ({
-          id: String(row.response_id),
-          requestId: String(row.request_id),
-          facilityId: String(row.response_facility_id),
-          facilityName: String(row.facility_name ?? 'Facility'),
-          facilityCategory: String(row.facility_category ?? 'Local supply'),
-          productId: String(row.product_id),
-          productName: String(row.product_name ?? 'Catalogue offer'),
-          status: String(row.response_status) as BuyerAvailabilityResponseStatus,
-          quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
-          priceMinor: row.price_minor === null ? null : Number(row.price_minor),
-          currency: String(row.currency ?? 'USD'),
-          sellerMessage: row.seller_message === null ? null : String(row.seller_message),
-          observedAt: new Date(String(row.observed_at)).toISOString(),
-          freshness: String(row.freshness) as AvailabilityResponsesResult['responses'][number]['freshness'],
-        }));
-      const requestStatus: AvailabilityResponsesResult['requestStatus'] = responses.length > 0
-        ? 'responses'
-        : new Date(expiresAt).getTime() <= now
-          ? 'expired'
-          : String(first.request_status) === 'responding'
-            ? 'responding'
-            : 'submitted';
+      const responses = typedRows.filter((row) => row.response_id !== null && row.response_id !== void 0).map((row) => ({
+        id: String(row.response_id),
+        requestId: String(row.request_id),
+        facilityId: String(row.response_facility_id),
+        facilityName: String(row.facility_name ?? "Facility"),
+        facilityCategory: String(row.facility_category ?? "Local supply"),
+        productId: String(row.product_id),
+        productName: String(row.product_name ?? "Catalogue offer"),
+        status: String(row.response_status),
+        quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
+        priceMinor: row.price_minor === null ? null : Number(row.price_minor),
+        currency: String(row.currency ?? "USD"),
+        sellerMessage: row.seller_message === null ? null : String(row.seller_message),
+        observedAt: new Date(String(row.observed_at)).toISOString(),
+        freshness: String(row.freshness)
+      }));
+      const requestStatus = responses.length > 0 ? "responses" : new Date(expiresAt).getTime() <= now ? "expired" : String(first.request_status) === "responding" ? "responding" : "submitted";
       return {
         requestId: String(first.request_id),
         productId: String(first.product_id),
         facilityId: String(first.facility_id),
         requestStatus,
         expiresAt,
-        responses,
+        responses
       };
     },
-
-    async confirmExternalPayment(input: {
-      authUserId: string;
-      transactionId: string;
-      correlationId: string;
-      now: string;
-    }): Promise<ExternalPaymentConfirmationPersistenceResult> {
+    async confirmExternalPayment(input) {
       const rows = await retryDatabase(() => sql`
         with actor as (
           select a.id as actor_account_id
@@ -467,26 +365,19 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select declaration_id, transaction_id, buyer_account_id, seller_account_id from replayed
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new TransactionPolicyError('Payment confirmation requires a seller member and a buyer declaration in payment-declared state.');
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Payment confirmation requires a seller member and a buyer declaration in payment-declared state.");
       return {
         declarationId: String(row.declaration_id),
         transactionId: String(row.transaction_id),
         buyerAccountId: String(row.buyer_account_id),
         sellerAccountId: String(row.seller_account_id),
-        state: 'payment_confirmed',
+        state: "payment_confirmed"
       };
     },
-
-    async declareExternalPayment(input: {
-      authUserId: string;
-      transactionId: string;
-      method: ExternalPaymentMethod;
-      correlationId: string;
-      now: string;
-    }): Promise<ExternalPaymentDeclarationPersistenceResult> {
-      if (!['cash', 'mobile_money', 'pay_on_delivery'].includes(input.method)) {
-        throw new TransactionPolicyError('External payment method is not supported.');
+    async declareExternalPayment(input) {
+      if (!["cash", "mobile_money", "pay_on_delivery"].includes(input.method)) {
+        throw new TransactionPolicyError("External payment method is not supported.");
       }
       const rows = await retryDatabase(() => sql`
         with actor as (
@@ -553,28 +444,19 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select id, transaction_id, buyer_account_id, method from existing
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new TransactionPolicyError('Payment declaration requires a buyer member after QR verification.');
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Payment declaration requires a buyer member after QR verification.");
       if (String(row.method) !== input.method) {
-        throw new TransactionPolicyError('A different external payment method was already declared for this transaction.');
+        throw new TransactionPolicyError("A different external payment method was already declared for this transaction.");
       }
       return {
         declarationId: String(row.id),
         transactionId: String(row.transaction_id),
-        method: row.method as ExternalPaymentMethod,
-        buyerAccountId: String(row.buyer_account_id),
+        method: row.method,
+        buyerAccountId: String(row.buyer_account_id)
       };
     },
-
-    async transitionTransaction(input: {
-      authUserId: string;
-      transactionId: string;
-      from: TransactionState;
-      to: TransactionState;
-      actorRole: 'buyer' | 'seller';
-      correlationId: string;
-      now: string;
-    }): Promise<TransactionTransitionPersistenceResult> {
+    async transitionTransaction(input) {
       const rows = await retryDatabase(() => sql`
         with actor as (
           select a.id as actor_account_id
@@ -647,22 +529,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select transaction_id, current_state, event_state, actor_account_id from result
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new TransactionPolicyError('Transaction state is stale, membership is invalid, or the actor transition is not allowed.');
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Transaction state is stale, membership is invalid, or the actor transition is not allowed.");
       return {
         accepted: true,
         transactionId: String(row.transaction_id),
         from: input.from,
         to: input.to,
-        actorRole: input.actorRole,
+        actorRole: input.actorRole
       };
     },
-
-    async unlockFacilityBonus(input: {
-      authUserId: string;
-      facilityId: string;
-      now: string;
-    }): Promise<FacilityBonusPersistenceResult> {
+    async unlockFacilityBonus(input) {
       const reference = `facility-bonus:${input.facilityId}`;
       const rows = await retryDatabase(() => sql`
         with facility as (
@@ -712,28 +589,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select id, wallet_id, facility_id from existing
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new WalletPolicyError('Facility bonus requires confirmed trust, three qualifying sales and an owned wallet.');
+      const row = rows[0];
+      if (!row) throw new WalletPolicyError("Facility bonus requires confirmed trust, three qualifying sales and an owned wallet.");
       return {
         ledgerEntryId: String(row.id),
         walletId: String(row.wallet_id),
-        kind: 'bonus_grant',
-        amountMinor: 2000,
-        status: 'confirmed',
-        facilityId: String(row.facility_id),
+        kind: "bonus_grant",
+        amountMinor: 2e3,
+        status: "confirmed",
+        facilityId: String(row.facility_id)
       };
     },
-
-    async spendWallet(input: {
-      authUserId: string;
-      facilityId: string;
-      kind: WalletSpendKind;
-      amountMinor: number;
-      reference: string;
-      now: string;
-    }): Promise<WalletSpendPersistenceResult> {
+    async spendWallet(input) {
       if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0 || !input.reference.trim()) {
-        throw new WalletPolicyError('Wallet spend amount and reference are invalid.');
+        throw new WalletPolicyError("Wallet spend amount and reference are invalid.");
       }
       const rows = await retryDatabase(() => sql`
         with wallet as (
@@ -781,49 +650,33 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select id, wallet_id, kind, amount_minor, status, facility_id from existing
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new WalletPolicyError('Wallet is unavailable, facility ownership is invalid, or confirmed funds are insufficient.');
-      if (
-        String(row.kind) !== input.kind
-        || Number(row.amount_minor) !== input.amountMinor
-        || String(row.facility_id) !== input.facilityId
-      ) {
-        throw new WalletPolicyError('The wallet reference is already used for a different spend.');
+      const row = rows[0];
+      if (!row) throw new WalletPolicyError("Wallet is unavailable, facility ownership is invalid, or confirmed funds are insufficient.");
+      if (String(row.kind) !== input.kind || Number(row.amount_minor) !== input.amountMinor || String(row.facility_id) !== input.facilityId) {
+        throw new WalletPolicyError("The wallet reference is already used for a different spend.");
       }
       return {
         ledgerEntryId: String(row.id),
         walletId: String(row.wallet_id),
-        kind: row.kind as WalletSpendKind,
+        kind: row.kind,
         amountMinor: Number(row.amount_minor),
-        status: 'confirmed',
-        facilityId: String(row.facility_id),
+        status: "confirmed",
+        facilityId: String(row.facility_id)
       };
     },
-
-    async respondAvailability(input: {
-      authUserId: string;
-      requestId: string;
-      facilityId: string;
-      productId: string;
-      status: AvailabilityResponseStatus;
-      quantityAvailable: number | null;
-      priceMinor: number | null;
-      sellerMessage: string | null;
-      idempotencyKey: string;
-      correlationId: string;
-    }): Promise<AvailabilityResponsePersistenceResult> {
-      if (!['available', 'partial', 'unavailable'].includes(input.status)) {
-        throw new AvailabilityResponsePolicyError('Choose an allowed availability response status.');
+    async respondAvailability(input) {
+      if (!["available", "partial", "unavailable"].includes(input.status)) {
+        throw new AvailabilityResponsePolicyError("Choose an allowed availability response status.");
       }
-      if (input.status === 'unavailable') {
+      if (input.status === "unavailable") {
         if (input.quantityAvailable !== 0 || input.priceMinor !== null) {
-          throw new AvailabilityResponsePolicyError('An unavailable response must have zero quantity and no price.');
+          throw new AvailabilityResponsePolicyError("An unavailable response must have zero quantity and no price.");
         }
       } else if (!Number.isInteger(input.quantityAvailable) || Number(input.quantityAvailable) < 1 || !Number.isInteger(input.priceMinor) || Number(input.priceMinor) < 0) {
-        throw new AvailabilityResponsePolicyError('An available or partial response requires a positive quantity and non-negative price.');
+        throw new AvailabilityResponsePolicyError("An available or partial response requires a positive quantity and non-negative price.");
       }
-      if (input.sellerMessage && input.sellerMessage.length > 1000) {
-        throw new AvailabilityResponsePolicyError('The seller message is too long.');
+      if (input.sellerMessage && input.sellerMessage.length > 1e3) {
+        throw new AvailabilityResponsePolicyError("The seller message is too long.");
       }
       const rows = await retryDatabase(() => sql`
         with seller as (
@@ -889,37 +742,27 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from result
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new AvailabilityResponsePolicyError('The seller is not authorized for this request, facility or product.');
-      const responseShapeMatches = String(row.request_id) === input.requestId
-        && String(row.facility_id) === input.facilityId
-        && String(row.product_id) === input.productId
-        && String(row.status) === input.status
-        && (row.quantity_available === null ? null : Number(row.quantity_available)) === input.quantityAvailable
-        && (row.price_minor === null ? null : Number(row.price_minor)) === input.priceMinor;
+      const row = rows[0];
+      if (!row) throw new AvailabilityResponsePolicyError("The seller is not authorized for this request, facility or product.");
+      const responseShapeMatches = String(row.request_id) === input.requestId && String(row.facility_id) === input.facilityId && String(row.product_id) === input.productId && String(row.status) === input.status && (row.quantity_available === null ? null : Number(row.quantity_available)) === input.quantityAvailable && (row.price_minor === null ? null : Number(row.price_minor)) === input.priceMinor;
       if (!responseShapeMatches) {
-        throw new AvailabilityResponsePolicyError('The idempotency key is already used for a different availability response.');
+        throw new AvailabilityResponsePolicyError("The idempotency key is already used for a different availability response.");
       }
       return {
         responseId: String(row.id),
         requestId: String(row.request_id),
         facilityId: String(row.facility_id),
         productId: String(row.product_id),
-        status: row.status as AvailabilityResponseStatus,
+        status: row.status,
         quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
         priceMinor: row.price_minor === null ? null : Number(row.price_minor),
-        observedAt: new Date(String(row.observed_at)).toISOString(),
+        observedAt: new Date(String(row.observed_at)).toISOString()
       };
     },
-
-    async issueQrToken(input: {
-      authUserId: string;
-      transactionId: string;
-      correlationId: string;
-    }): Promise<QrTokenIssuePersistenceResult> {
-      const token = randomBytes(32).toString('base64url');
-      const tokenHash = createHash('sha256').update(token).digest('hex');
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+    async issueQrToken(input) {
+      const token = randomBytes(32).toString("base64url");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1e3).toISOString();
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id as seller_account_id
@@ -963,20 +806,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select transaction_id, expires_at from inserted
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new TransactionPolicyError('QR issuance requires an authorized seller transaction in intent-created state.');
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("QR issuance requires an authorized seller transaction in intent-created state.");
       return {
         transactionId: String(row.transaction_id),
         token,
-        expiresAt: new Date(String(row.expires_at)).toISOString(),
+        expiresAt: new Date(String(row.expires_at)).toISOString()
       };
     },
-
-    async createPurchaseIntent(input: {
-      authUserId: string;
-      responseId: string;
-      idempotencyKey: string;
-    }): Promise<PurchaseIntentPersistenceResult> {
+    async createPurchaseIntent(input) {
       const rows = await retryDatabase(() => sql`
         with buyer as (
           select a.id as buyer_account_id
@@ -1064,26 +902,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from intent_result
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new PurchaseIntentPolicyError('No eligible availability response belongs to the authenticated buyer.');
+      const row = rows[0];
+      if (!row) throw new PurchaseIntentPolicyError("No eligible availability response belongs to the authenticated buyer.");
       if (String(row.response_id) !== input.responseId) {
-        throw new PurchaseIntentPolicyError('The idempotency key is already used for a different purchase intent.');
+        throw new PurchaseIntentPolicyError("The idempotency key is already used for a different purchase intent.");
       }
       return {
         intentId: String(row.id),
         responseId: String(row.response_id),
         transactionId: String(row.transaction_id),
         buyerAccountId: String(row.buyer_account_id),
-        state: String(row.state),
+        state: String(row.state)
       };
     },
-
-    async verifyQrToken(input: {
-      authUserId: string;
-      transactionId: string;
-      tokenHash: string;
-      now: string;
-    }): Promise<QrVerificationPersistenceResult> {
+    async verifyQrToken(input) {
       const rows = await retryDatabase(() => sql`
         with eligible as (
           select q.transaction_id, q.token_hash, a.id as actor_account_id,
@@ -1141,26 +973,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from updated
         limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) return { accepted: false, transactionId: input.transactionId, reason: 'NOT_VERIFIED' };
+      const row = rows[0];
+      if (!row) return { accepted: false, transactionId: input.transactionId, reason: "NOT_VERIFIED" };
       return {
         accepted: true,
         transactionId: String(row.transaction_id),
         verifiedAt: new Date(String(row.verified_at)).toISOString(),
-        nextReplayCount: Number(row.replay_count),
+        nextReplayCount: Number(row.replay_count)
       };
     },
-
-    async createAvailabilityRequest(input: {
-      authUserId: string;
-      productId: string;
-      facilityId: string;
-      quantity: number;
-      budgetMode: 'unlimited' | 'maximum';
-      budgetMinor: number | null;
-      idempotencyKey: string;
-    }): Promise<AvailabilityResult> {
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    async createAvailabilityRequest(input) {
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
           select p.id as product_id, f.id as facility_id
@@ -1204,25 +1027,375 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         )
         select * from request_result limit 1
       `);
-      const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new AvailabilityPolicyError('The selected product is not published at the requested facility.');
-      if (
-        String(row.product_id) !== input.productId
-        || String(row.facility_id) !== input.facilityId
-        || Number(row.requested_quantity) !== input.quantity
-        || String(row.budget_mode) !== input.budgetMode
-        || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor
-      ) {
-        throw new AvailabilityPolicyError('The idempotency key is already used for a different availability request.');
+      const row = rows[0];
+      if (!row) throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
+      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor) {
+        throw new AvailabilityPolicyError("The idempotency key is already used for a different availability request.");
       }
       return {
         requestId: String(row.id),
         productId: String(row.product_id),
         facilityId: String(row.facility_id),
-        status: String(row.status) as AvailabilityResult['status'],
+        status: String(row.status),
         expiresAt: new Date(String(row.expires_at)).toISOString(),
-        message: 'Request sent. The facility can now confirm the live availability.',
+        message: "Request sent. The facility can now confirm the live availability."
       };
-    },
+    }
   };
 }
+
+// src/server/http.ts
+var json = (res, status, body) => {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.end(JSON.stringify(body));
+};
+var errorBody = (correlationId, code, message, retryable = false) => ({
+  ok: false,
+  correlationId,
+  error: { code, message, retryable }
+});
+var ApiInputError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ApiInputError";
+  }
+};
+function toApiErrorResponse(correlationId, error) {
+  if (error instanceof ApiInputError) {
+    return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
+  }
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
+    return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
+  }
+  return {
+    status: 500,
+    body: errorBody(correlationId, "INTERNAL_RECOVERABLE", "The service is temporarily unavailable. Please try again.", true)
+  };
+}
+async function parseRequestBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(Buffer.from(chunk));
+  if (!chunks.length) return {};
+  let parsed;
+  try {
+    parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new ApiInputError("Request body must be valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiInputError("Request body must be an object.");
+  return parsed;
+}
+var TRANSACTION_STATES = [
+  "intent_created",
+  "qr_ready",
+  "qr_verified",
+  "payment_declared",
+  "payment_confirmed",
+  "fulfilment_pending",
+  "fulfilled",
+  "received",
+  "rated",
+  "closed"
+];
+var isTransactionState = (value) => typeof value === "string" && TRANSACTION_STATES.includes(value);
+function numberParam(url, key, fallback) {
+  const value = Number(url.searchParams.get(key));
+  return Number.isFinite(value) ? value : fallback;
+}
+async function handleApi(req, res, pathname, url) {
+  const correlationId = crypto.randomUUID();
+  if (req.method === "OPTIONS") {
+    res.statusCode = 204;
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.end();
+    return true;
+  }
+  if (!pathname.startsWith("/api/v2/")) return false;
+  res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN ?? "*");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key");
+  try {
+    const repository = createTrunkRepository();
+    if (req.method === "GET" && pathname === "/api/v2/public/facilities") {
+      const hasBounds = ["west", "south", "east", "north"].every((key) => url.searchParams.has(key));
+      const bounds = hasBounds ? [numberParam(url, "west", -180), numberParam(url, "south", -90), numberParam(url, "east", 180), numberParam(url, "north", 90)] : void 0;
+      const category = url.searchParams.get("category")?.trim() || void 0;
+      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get("q") ?? void 0, category);
+      json(res, 200, { ok: true, correlationId, data: facilities });
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/facilities/")) {
+      const id = pathname.slice("/api/v2/facilities/".length);
+      const facility = await repository.getFacilityDetail(id);
+      if (!facility) json(res, 404, errorBody(correlationId, "NOT_FOUND", "Facility was not found."));
+      else json(res, 200, { ok: true, correlationId, data: facility });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/qr-verifications") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before verifying a transaction QR code."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const tokenHash = typeof input.tokenHash === "string" ? input.tokenHash : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || tokenHash.length < 16 || tokenHash.length > 512) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction and QR token."));
+        return true;
+      }
+      const result = await repository.verifyQrToken({
+        authUserId,
+        transactionId,
+        tokenHash,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      if (!result.accepted) {
+        json(res, 409, errorBody(correlationId, "CONFLICT", "The QR code is invalid, expired or already verified."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/transaction-transitions") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before changing a transaction state."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const from = input.from;
+      const to = input.to;
+      const actorRole = input.actorRole;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !isTransactionState(from) || !isTransactionState(to) || actorRole !== "buyer" && actorRole !== "seller") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction, state transition and actor role."));
+        return true;
+      }
+      const result = await repository.transitionTransaction({
+        authUserId,
+        transactionId,
+        from,
+        to,
+        actorRole,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/external-payment-confirmations") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before confirming an external payment."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      const result = await repository.confirmExternalPayment({
+        authUserId,
+        transactionId,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/external-payment-declarations") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before declaring an external payment."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const method = input.method;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !["cash", "mobile_money", "pay_on_delivery"].includes(method)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction and supported external payment method."));
+        return true;
+      }
+      const result = await repository.declareExternalPayment({
+        authUserId,
+        transactionId,
+        method,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/seller/availability-requests") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to view incoming requests."));
+        return true;
+      }
+      const result = await repository.getSellerAvailabilityQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/availability-responses") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view availability responses."));
+        return true;
+      }
+      const requestId = url.searchParams.get("requestId")?.trim() ?? "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(requestId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid availability request."));
+        return true;
+      }
+      const result = await repository.getAvailabilityResponses({ authUserId, requestId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/availability-responses") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before responding to availability."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const requestId = typeof input.requestId === "string" ? input.requestId : "";
+      const facilityId = typeof input.facilityId === "string" ? input.facilityId : "";
+      const productId = typeof input.productId === "string" ? input.productId : "";
+      const status = input.status;
+      const rawQuantity = input.quantityAvailable;
+      const quantityAvailable = rawQuantity === null || rawQuantity === void 0 ? null : Number(rawQuantity);
+      const rawPrice = input.priceMinor;
+      const priceMinor = rawPrice === null || rawPrice === void 0 ? null : Number(rawPrice);
+      const sellerMessage = input.sellerMessage === null || input.sellerMessage === void 0 ? null : input.sellerMessage;
+      const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(requestId) || !uuidPattern.test(facilityId) || !uuidPattern.test(productId) || status !== "available" && status !== "partial" && status !== "unavailable") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid request, facility, product and response status."));
+        return true;
+      }
+      if (quantityAvailable !== null && !Number.isInteger(quantityAvailable) || priceMinor !== null && !Number.isInteger(priceMinor)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Quantity and price must be whole numbers when provided."));
+        return true;
+      }
+      if (sellerMessage !== null && typeof sellerMessage !== "string") {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Seller message must be text."));
+        return true;
+      }
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
+        return true;
+      }
+      const result = await repository.respondAvailability({
+        authUserId,
+        requestId,
+        facilityId,
+        productId,
+        status,
+        quantityAvailable,
+        priceMinor,
+        sellerMessage,
+        idempotencyKey,
+        correlationId
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/qr-issuances") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before showing a transaction QR code."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      const result = await repository.issueQrToken({ authUserId, transactionId, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/purchase-intents") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before choosing an offer."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const responseId = typeof input.responseId === "string" ? input.responseId : "";
+      const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(responseId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid availability response."));
+        return true;
+      }
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
+        return true;
+      }
+      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/availability") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Create your account or sign in to verify availability."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const productId = typeof input.productId === "string" ? input.productId : "";
+      const facilityId = typeof input.facilityId === "string" ? input.facilityId : "";
+      const quantity = Number(input.quantity);
+      const budgetMode = input.budgetMode === "maximum" ? "maximum" : "unlimited";
+      const budgetMinor = input.budgetMinor === null || input.budgetMinor === void 0 ? null : Number(input.budgetMinor);
+      const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      if (!productId || !facilityId || !Number.isInteger(quantity) || quantity < 1 || budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a product and a positive quantity."));
+        return true;
+      }
+      if (typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
+        return true;
+      }
+      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, idempotencyKey });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    json(res, 404, errorBody(correlationId, "NOT_FOUND", "V2 API route was not found."));
+    return true;
+  } catch (error) {
+    const failure = toApiErrorResponse(correlationId, error);
+    json(res, failure.status, failure.body);
+    return true;
+  }
+}
+
+// src/server/vercel-handlers.ts
+function requestUrl(req, fallbackPath) {
+  const protocol = String(req.headers?.["x-forwarded-proto"] ?? "https");
+  const host = String(req.headers?.host ?? "localhost");
+  return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
+}
+async function sellerAvailabilityRequestsHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/seller/availability-requests");
+  await handleApi(req, res, "/api/v2/seller/availability-requests", url);
+}
+
+// src/server/vercel/seller-availability-requests.ts
+var seller_availability_requests_default = sellerAvailabilityRequestsHandler;
+export {
+  seller_availability_requests_default as default
+};

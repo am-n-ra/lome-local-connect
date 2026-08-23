@@ -1,4 +1,4 @@
-import type { AvailabilityResponsesResult, SearchOptions, ApiResult, AvailabilityResult, FacilityDetail, PublicFacility } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, SearchOptions, ApiResult, AvailabilityResult, FacilityDetail, PublicFacility, SellerAvailabilityQueue } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -65,4 +65,43 @@ export async function getAvailabilityResponses(input: { requestId: string; token
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<AvailabilityResponsesResult>(response);
+}
+
+export async function getSellerAvailabilityQueue(input: { token: string }): Promise<ApiResult<SellerAvailabilityQueue>> {
+  const response = await fetchWithRecovery('/api/v2/seller/availability-requests', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<SellerAvailabilityQueue>(response);
+}
+
+export async function requestSellerAvailabilityResponse(input: {
+  requestId: string;
+  facilityId: string;
+  productId: string;
+  status: Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
+  quantityAvailable: number | null;
+  priceMinor: number | null;
+  sellerMessage: string | null;
+  token: string;
+  idempotencyKey: string;
+}): Promise<ApiResult<{ responseId: string; requestId: string; facilityId: string; productId: string; status: AvailabilityResponseStatus; quantityAvailable: number | null; priceMinor: number | null; observedAt: string }>> {
+  const response = await fetchWithRecovery('/api/v2/availability-responses', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${input.token}`,
+      'Idempotency-Key': input.idempotencyKey,
+    },
+    body: JSON.stringify({
+      requestId: input.requestId,
+      facilityId: input.facilityId,
+      productId: input.productId,
+      status: input.status,
+      quantityAvailable: input.quantityAvailable,
+      priceMinor: input.priceMinor,
+      sellerMessage: input.sellerMessage,
+    }),
+  });
+  return parse(response);
 }

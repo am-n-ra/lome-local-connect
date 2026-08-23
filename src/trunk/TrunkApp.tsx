@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { getAvailabilityResponses, getFacilityDetail, listPublicFacilities, requestAvailability } from './api';
+import { getAvailabilityResponses, getFacilityDetail, getSellerAvailabilityQueue, listPublicFacilities, requestAvailability, requestSellerAvailabilityResponse } from './api';
 import { TrunkMap } from './TrunkMap';
-import type { AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -11,6 +11,7 @@ type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'seller-entry';
 type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
 type AuthReturn = 'none' | 'availability' | 'seller-entry';
+type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 
 export type SellerEntryIntent =
   | { kind: 'open-seller-boundary' }
@@ -62,6 +63,17 @@ export function TrunkApp() {
   const [authState, setAuthState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [authError, setAuthError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityQueue | null>(null);
+  const [sellerQueueState, setSellerQueueState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [sellerQueueError, setSellerQueueError] = useState('');
+  const [sellerRequest, setSellerRequest] = useState<SellerAvailabilityRequest | null>(null);
+  const [sellerResponseStatus, setSellerResponseStatus] = useState<SellerResponseStatus>('available');
+  const [sellerQuantity, setSellerQuantity] = useState(1);
+  const [sellerPrice, setSellerPrice] = useState('');
+  const [sellerMessage, setSellerMessage] = useState('');
+  const [sellerResponseState, setSellerResponseState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [sellerResponseError, setSellerResponseError] = useState('');
+  const [sellerResponseResult, setSellerResponseResult] = useState<{ status: AvailabilityResponseStatus; observedAt: string } | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -141,6 +153,31 @@ export function TrunkApp() {
     setPanel('auth');
   };
 
+  const loadSellerQueue = async () => {
+    if (!authClient) return;
+    setSellerQueueState('loading');
+    setSellerQueueError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSellerQueueState('error');
+        setSellerQueueError('Votre session doit être réouverte pour vérifier l’accès vendeur.');
+        return;
+      }
+      const result = await getSellerAvailabilityQueue({ token });
+      if (!result.ok || !result.data) {
+        setSellerQueueState('error');
+        setSellerQueueError(result.error?.message ?? 'La file vendeur est temporairement indisponible.');
+        return;
+      }
+      setSellerQueue(result.data);
+      setSellerQueueState('idle');
+    } catch (caught) {
+      setSellerQueueState('error');
+      setSellerQueueError(caught instanceof Error ? caught.message : 'La file vendeur est temporairement indisponible.');
+    }
+  };
+
   const openSellerEntry = () => {
     setMenuOpen(false);
     setOptionsOpen(false);
@@ -150,6 +187,67 @@ export function TrunkApp() {
       return;
     }
     setPanel('seller-entry');
+    setSellerRequest(null);
+    setSellerResponseState('idle');
+    void loadSellerQueue();
+  };
+
+  const openSellerRequest = (request: SellerAvailabilityRequest) => {
+    setSellerRequest(request);
+    setSellerResponseStatus(request.responseStatus === 'partial' || request.responseStatus === 'unavailable' ? request.responseStatus : 'available');
+    setSellerQuantity(request.responseStatus === 'unavailable' ? 0 : Math.max(1, request.requestedQuantity));
+    setSellerPrice(request.budgetMinor !== null ? (request.budgetMinor / 100).toFixed(2) : '');
+    setSellerMessage('');
+    setSellerResponseState('idle');
+    setSellerResponseError('');
+    setSellerResponseResult(null);
+  };
+
+  const submitSellerResponse = async () => {
+    if (!sellerRequest || !authClient) {
+      openAuth('sign-in', 'seller-entry');
+      return;
+    }
+    setSellerResponseState('loading');
+    setSellerResponseError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSellerResponseState('error');
+        setSellerResponseError('Votre session doit être réouverte avant de répondre.');
+        return;
+      }
+      const quantityAvailable = sellerResponseStatus === 'unavailable' ? 0 : Math.max(1, sellerQuantity);
+      const parsedPrice = sellerPrice.trim() === '' ? null : Math.round(Number(sellerPrice) * 100);
+      if (sellerResponseStatus !== 'unavailable' && (!Number.isFinite(parsedPrice) || parsedPrice === null || parsedPrice < 0)) {
+        setSellerResponseState('error');
+        setSellerResponseError('Indiquez un prix valide pour une réponse disponible.');
+        return;
+      }
+      const result = await requestSellerAvailabilityResponse({
+        requestId: sellerRequest.id,
+        facilityId: sellerRequest.facilityId,
+        productId: sellerRequest.productId,
+        status: sellerResponseStatus,
+        quantityAvailable,
+        priceMinor: sellerResponseStatus === 'unavailable' ? null : parsedPrice,
+        sellerMessage: sellerMessage.trim() || null,
+        token,
+        idempotencyKey: `seller-response-${sellerRequest.id}-${sellerResponseStatus}-${quantityAvailable}-${parsedPrice ?? 'none'}`,
+      });
+      if (!result.ok || !result.data) {
+        setSellerResponseState('error');
+        setSellerResponseError(result.error?.message ?? 'La réponse vendeur n’a pas pu être enregistrée.');
+        return;
+      }
+      setSellerResponseResult({ status: result.data.status, observedAt: result.data.observedAt });
+      setSellerResponseState('success');
+      setSellerRequest((current) => current ? { ...current, responseStatus: result.data?.status ?? current.responseStatus, responseObservedAt: result.data?.observedAt ?? current.responseObservedAt } : current);
+      setSellerQueue((current) => current ? { ...current, requests: current.requests.map((request) => request.id === sellerRequest.id ? { ...request, responseStatus: result.data?.status ?? request.responseStatus, responseObservedAt: result.data?.observedAt ?? request.responseObservedAt } : request) } : current);
+    } catch (caught) {
+      setSellerResponseState('error');
+      setSellerResponseError(caught instanceof Error ? caught.message : 'La réponse vendeur n’a pas pu être enregistrée.');
+    }
   };
 
   const beginSearch = (event?: FormEvent) => {
@@ -333,6 +431,10 @@ export function TrunkApp() {
       const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'seller-entry' ? 'seller-entry' : 'none';
       setAuthReturn('none');
       setPanel(resumePanel);
+      if (resumePanel === 'seller-entry') {
+        setSellerRequest(null);
+        void loadSellerQueue();
+      }
       if (query.trim()) setCommittedQuery(query.trim());
     } catch (caught) {
       setAuthState('error');
@@ -391,7 +493,7 @@ export function TrunkApp() {
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
-      {panel === 'seller-entry' && <SellerEntrySheet user={sessionUser} onClose={() => setPanel('none')} onSignOut={signOut} />}
+      {panel === 'seller-entry' && <SellerWorkspaceSheet user={sessionUser} queue={sellerQueue} queueState={sellerQueueState} queueError={sellerQueueError} request={sellerRequest} responseStatus={sellerResponseStatus} setResponseStatus={setSellerResponseStatus} quantity={sellerQuantity} setQuantity={setSellerQuantity} price={sellerPrice} setPrice={setSellerPrice} message={sellerMessage} setMessage={setSellerMessage} responseState={sellerResponseState} responseError={sellerResponseError} responseResult={sellerResponseResult} onLoadQueue={() => void loadSellerQueue()} onSelectRequest={openSellerRequest} onSubmitResponse={() => void submitSellerResponse()} onBackToQueue={() => { setSellerRequest(null); setSellerResponseState('idle'); }} onClose={() => { setSellerRequest(null); setPanel('none'); }} onSignOut={signOut} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} onClose={() => setPanel('none')} onVerify={openAvailability} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
@@ -424,8 +526,11 @@ function AuthSheet(props: { mode: AuthMode; setMode: (mode: AuthMode) => void; e
   return <section className="omni-sheet auth-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte Omni</span><h2 id="auth-title">{props.mode === 'sign-in' ? 'Recherchez avec certitude' : 'Commencez à voir avant de bouger'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">La carte publique reste ouverte. Votre compte débloque la recherche catalogue et la vérification de disponibilité.</p><form onSubmit={props.onSubmit} className="auth-form">{props.mode === 'sign-up' && <label>Prénom<input value={props.name} onChange={(event) => props.setName(event.target.value)} placeholder="Votre prénom" autoComplete="name" /></label>}<label>Email<input type="email" required value={props.email} onChange={(event) => props.setEmail(event.target.value)} placeholder="vous@exemple.com" autoComplete="email" /></label><label>Mot de passe<input type="password" required minLength={8} value={props.password} onChange={(event) => props.setPassword(event.target.value)} placeholder="8 caractères minimum" autoComplete={props.mode === 'sign-in' ? 'current-password' : 'new-password'} /></label>{props.error && <div className="inline-error" role="alert">{props.error}</div>}<button className="primary-button" type="submit" disabled={props.state === 'loading'}>{props.state === 'loading' ? 'Connexion…' : props.mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}</button></form><button className="text-button auth-switch" type="button" onClick={() => props.setMode(props.mode === 'sign-in' ? 'sign-up' : 'sign-in')}>{props.mode === 'sign-in' ? 'Nouveau sur Omni ? Créer un compte' : 'Déjà un compte ? Se connecter'}</button></section>;
 }
 
-function SellerEntrySheet(props: { user: SessionUser | null; onClose: () => void; onSignOut: () => void }) {
-  return <section className="omni-sheet context-sheet seller-entry-sheet" role="dialog" aria-modal="true" aria-labelledby="seller-entry-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Vendre</span><h2 id="seller-entry-title">Espace vendeur</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><div className="seller-entry-status"><span className="seller-entry-mark"><ShieldCheck size={21} /></span><div><strong>Accès vendeur à vérifier</strong><p>{props.user ? 'Votre compte Omni est connecté, mais aucun profil vendeur autorisé n’est encore lié à ce compte.' : 'Connectez-vous pour vérifier votre accès vendeur.'}</p></div></div><div className="notice-card"><strong>Votre compte reste intact</strong><p>Ce passage n’ajoute aucune facilité, ne revendique aucun lieu et ne modifie aucun produit. La certification et les droits vendeur seront vérifiés avant toute opération.</p></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à acheter</button>{props.user && <button className="text-button" type="button" onClick={props.onSignOut}>Se déconnecter</button>}</section>;
+function SellerWorkspaceSheet(props: { user: SessionUser | null; queue: SellerAvailabilityQueue | null; queueState: 'idle' | 'loading' | 'error'; queueError: string; request: SellerAvailabilityRequest | null; responseStatus: SellerResponseStatus; setResponseStatus: (value: SellerResponseStatus) => void; quantity: number; setQuantity: (value: number) => void; price: string; setPrice: (value: string) => void; message: string; setMessage: (value: string) => void; responseState: 'idle' | 'loading' | 'error' | 'success'; responseError: string; responseResult: { status: AvailabilityResponseStatus; observedAt: string } | null; onLoadQueue: () => void; onSelectRequest: (request: SellerAvailabilityRequest) => void; onSubmitResponse: () => void; onBackToQueue: () => void; onClose: () => void; onSignOut: () => void }) {
+  const request = props.request;
+  const statusLabel = props.responseStatus === 'available' ? 'Disponible' : props.responseStatus === 'partial' ? 'Partielle' : 'Indisponible';
+  const responseStatusLabel = props.responseResult?.status === 'available' ? 'Disponible' : props.responseResult?.status === 'partial' ? 'Partielle' : 'Indisponible';
+  return <section className="omni-sheet context-sheet seller-workspace-sheet" role="dialog" aria-modal="true" aria-labelledby="seller-workspace-title"><div className="sheet-handle" /><div className="sheet-head"><div>{request && <button className="back-button" type="button" onClick={props.onBackToQueue}><ArrowLeft size={17} /> Demandes</button>}<span className="section-kicker">Vendre</span><h2 id="seller-workspace-title">{request ? 'Répondre à la demande' : 'Espace vendeur'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{!request && <><div className="seller-workspace-summary"><span className="seller-entry-mark"><ShieldCheck size={21} /></span><div><strong>{props.queue?.authorized ? 'Contexte vendeur autorisé' : 'Accès vendeur à vérifier'}</strong><p>{props.queue?.authorized ? 'Répondez aux demandes de vos facilités sans modifier le catalogue public.' : props.user ? 'Votre compte est connecté, mais aucun profil vendeur autorisé n’est lié à cette session.' : 'Connectez-vous pour vérifier votre accès vendeur.'}</p></div></div>{props.queueState === 'loading' && <div className="sheet-loading"><span className="spinner" /> Vérification de vos demandes…</div>}{props.queueState === 'error' && <div className="inline-error" role="alert">{props.queueError}<button className="text-button" type="button" onClick={props.onLoadQueue}>Réessayer</button></div>}{props.queueState !== 'loading' && props.queueState !== 'error' && !props.queue?.authorized && <div className="notice-card"><strong>Aucune opération vendeur ouverte</strong><p>La connexion ne certifie pas une facilité et ne crée aucune demande. Revenez à Acheter ou complétez plus tard la vérification manuelle.</p></div>}{props.queue?.authorized && props.queue.requests.length === 0 && props.queueState !== 'loading' && <div className="empty-state"><PackageSearch size={22} /><strong>Aucune demande en attente</strong><p>Les nouvelles demandes ciblées sur vos produits publiés apparaîtront ici.</p><button className="secondary-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>}{props.queue?.authorized && props.queue.requests.length > 0 && <div className="seller-request-list"><div className="seller-list-heading"><span className="section-kicker">Demandes ciblées</span><button className="text-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>{props.queue.requests.map((item) => <button className="seller-request-card" type="button" key={item.id} onClick={() => props.onSelectRequest(item)}><span className="request-card-icon"><PackageSearch size={18} /></span><span className="seller-request-copy"><strong>{item.productName}</strong><small>{item.facilityName} · {item.facilityCategory}</small><small>Quantité demandée : {item.requestedQuantity} · {item.freshness === 'stale' ? 'Réponse à actualiser' : item.responseStatus ? `Réponse ${item.responseStatus === 'available' ? 'disponible' : item.responseStatus === 'partial' ? 'partielle' : 'indisponible'}` : 'Sans réponse'}</small></span><ChevronRight size={17} /></button>)}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Handoff encore verrouillé</strong><small>Répondre ne réserve pas le stock et n’ouvre ni contact, ni itinéraire, ni QR.</small></span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à acheter</button>{props.user && <button className="text-button" type="button" onClick={props.onSignOut}>Se déconnecter</button>}</>}{request && <><div className="seller-request-detail"><span className="section-kicker">Demande entrante</span><strong>{request.productName}</strong><small>{request.facilityName} · {request.facilityCategory}</small><div className="seller-request-facts"><span><b>Quantité</b>{request.requestedQuantity}</span><span><b>Budget</b>{request.budgetMinor === null ? 'Sans plafond' : currency(request.budgetMinor, 'USD')}</span><span><b>Échéance</b>{new Date(request.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div>{props.responseState === 'success' && props.responseResult ? <div className="seller-response-success" role="status"><CheckCircle2 size={24} /><div><strong>Réponse enregistrée</strong><p>{responseStatusLabel} · reçue à {new Date(props.responseResult.observedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. La demande n’est pas une réservation.</p></div></div> : <><div className="seller-response-form"><span className="section-kicker">Votre réponse</span><div className="seller-status-options" role="group" aria-label="Statut de disponibilité">{(['available', 'partial', 'unavailable'] as SellerResponseStatus[]).map((status) => <button type="button" key={status} className={props.responseStatus === status ? 'active' : ''} onClick={() => props.setResponseStatus(status)}>{status === 'available' ? 'Disponible' : status === 'partial' ? 'Partielle' : 'Indisponible'}</button>)}</div>{props.responseStatus !== 'unavailable' && <div className="seller-input-grid"><label>Quantité proposée<input type="number" min="1" step="1" value={props.quantity} onChange={(event) => props.setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label><label>Prix unitaire<input type="number" min="0" step="0.01" value={props.price} onChange={(event) => props.setPrice(event.target.value)} placeholder="0,00" /></label></div>}{props.responseStatus === 'unavailable' && <div className="notice-card"><strong>{statusLabel}</strong><p>Le serveur enregistrera une quantité nulle et aucun prix.</p></div>}<label className="seller-message-field">Message facultatif<textarea value={props.message} onChange={(event) => props.setMessage(event.target.value)} maxLength={1000} rows={3} placeholder="Ajoutez une précision utile au besoin exprimé…" /></label>{props.responseError && <div className="inline-error" role="alert">{props.responseError}</div>}<button className="primary-button" type="button" disabled={props.responseState === 'loading'} onClick={props.onSubmitResponse}>{props.responseState === 'loading' ? 'Enregistrement…' : 'Envoyer la réponse'} <ArrowRight size={16} /></button></div><div className="locked-note"><ShieldCheck size={17} /><span><strong>Pas de réservation</strong><small>Cette réponse reste une information de disponibilité vérifiée. Les étapes privées viennent plus tard.</small></span></div></>}</>}</section>;
 }
 
 function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; onClose: () => void; onVerify: () => void }) {

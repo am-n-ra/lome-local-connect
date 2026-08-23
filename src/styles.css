@@ -304,3 +304,43 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
+
+/* Seller mini-Species: same sheet material, narrower operation surface, no dashboard rail. */
+.seller-workspace-sheet { gap: 0; }
+.seller-workspace-summary { display: flex; align-items: flex-start; gap: 10px; margin-top: 17px; padding: 12px; border-radius: 15px; background: #f0f8f4; }
+.seller-workspace-summary > div { display: grid; gap: 4px; }
+.seller-workspace-summary strong { color: var(--ink); font-size: 12px; }
+.seller-workspace-summary p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+.seller-request-list { display: grid; gap: 7px; margin-top: 17px; }
+.seller-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.seller-request-card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; padding: 11px; border: 1px solid #e3ece6; border-radius: 14px; color: var(--ink); background: #fbfdfb; text-align: left; transition: border-color .16s var(--ease), transform .16s var(--ease), background .16s var(--ease); }
+.seller-request-card:hover, .seller-request-card:focus-visible { border-color: rgba(31,88,72,.4); background: #f3faf6; transform: translateY(-1px); }
+.request-card-icon { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 11px; color: #d5815d; background: var(--peach); }
+.seller-request-copy { display: grid; min-width: 0; gap: 3px; }
+.seller-request-copy strong { overflow: hidden; color: var(--ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.seller-request-copy small { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.seller-request-card > svg { color: var(--muted-2); }
+.seller-request-detail { display: grid; gap: 4px; margin-top: 17px; padding: 13px; border-radius: 15px; background: #f0f8f4; }
+.seller-request-detail > strong { color: var(--ink); font-size: 17px; letter-spacing: -.04em; }
+.seller-request-detail > small { color: var(--muted); font-size: 9px; }
+.seller-request-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 7px; }
+.seller-request-facts span { display: grid; gap: 4px; min-width: 0; padding: 7px; border-radius: 10px; background: rgba(255,255,255,.7); color: var(--ink); font-size: 9px; }
+.seller-request-facts b { color: var(--muted); font-size: 8px; font-weight: 700; }
+.seller-response-form { display: grid; gap: 10px; margin-top: 17px; }
+.seller-status-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.seller-status-options button { min-height: 38px; border: 1px solid #e0ebe5; border-radius: 10px; color: var(--ink-soft); background: #fbfdfb; font-size: 9px; font-weight: 800; }
+.seller-status-options button.active { border-color: rgba(31,88,72,.35); color: var(--forest); background: var(--mint); box-shadow: inset 0 0 0 1px rgba(31,88,72,.1); }
+.seller-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.seller-input-grid label, .seller-message-field { display: grid; gap: 6px; color: var(--ink-soft); font-size: 10px; font-weight: 800; }
+.seller-input-grid input, .seller-message-field textarea { width: 100%; border: 1px solid #dfeae4; border-radius: 11px; padding: 9px 10px; color: var(--ink); background: #fbfdfb; outline-color: var(--coral); font: inherit; font-size: 12px; }
+.seller-input-grid input { min-height: 41px; }
+.seller-message-field textarea { resize: vertical; line-height: 1.4; }
+.seller-response-success { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 13px; border-radius: 15px; color: var(--forest); background: var(--mint); }
+.seller-response-success > svg { flex: 0 0 auto; }
+.seller-response-success strong { color: var(--ink); font-size: 13px; }
+.seller-response-success p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.seller-workspace-sheet > .text-button:last-child { align-self: center; margin-top: 12px; }
+@media (max-width: 380px) {
+  .seller-status-options button { padding: 0 4px; font-size: 8px; }
+  .seller-request-facts span { padding: 6px 5px; }
+}
