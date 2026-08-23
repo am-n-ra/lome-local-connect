@@ -15,10 +15,12 @@ The actual server repository now exposes `declareExternalPayment`. It resolves t
 
 The operation supports only `cash`, `mobile_money` and `pay_on_delivery`. Omni does not receive, hold, settle or withdraw buyer-seller funds in this seam.
 
+The repository also exposes `confirmExternalPayment` for the seller side. It requires a non-suspended authenticated seller member, an existing buyer declaration, `payment_declared` as the current transaction state and an unacknowledged declaration. It locks the transaction snapshot, marks the declaration acknowledged, appends `payment_confirmed` and a correlation-keyed audit event, and returns the existing confirmed declaration on replay.
+
 ## Local proof
 
-Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` route now delegates to this seam. Full local validation reports 11 Vitest files and 64 passing tests, a successful TypeScript/Vite build, four bundled Vercel functions and `Client boundary: clean`.
+Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection, seller confirmation gating/replay and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` and `POST /api/v2/external-payment-confirmations` routes now delegate to these seams. Full local validation reports 11 Vitest files and 67 passing tests, a successful TypeScript/Vite build, five bundled Vercel functions and `Client boundary: clean`.
 
 ## Explicit non-evidence
 
-No live authenticated payment declaration, seller acknowledgement, dispute path, payment-provider integration, payment credential handling or production transaction mutation was executed. The route is implemented in the V2 HTTP/serverless surface but remains unproven in a deployed authenticated session. Therefore the external-payment part of TX-02 remains `partial` until seller acknowledgement/rejection, recovery and live audit evidence exist.
+No live authenticated payment declaration, seller acknowledgement, dispute path, payment-provider integration, payment credential handling or production transaction mutation was executed. Both routes are implemented in the V2 HTTP/serverless surface but remain unproven in a deployed authenticated session. Seller rejection/dispute and recovery are not implemented in this slice. Therefore the external-payment part of TX-02 remains `partial` until live declaration/acknowledgement, rejection/dispute, recovery and audit evidence exist.

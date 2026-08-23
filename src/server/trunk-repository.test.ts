@@ -93,6 +93,68 @@ describe('availability repository Root seam', () => {
   });
 });
 
+describe('external payment confirmation persistence Root seam', () => {
+  it('confirms a buyer declaration only for an authenticated seller member in payment-declared state', async () => {
+    const call = stubSql([{
+      declaration_id: 'declaration-1',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      seller_account_id: 'seller-account-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.confirmExternalPayment({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-confirm-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      declarationId: 'declaration-1',
+      transactionId: 'transaction-1',
+      buyerAccountId: 'buyer-account-1',
+      sellerAccountId: 'seller-account-1',
+      state: 'payment_confirmed',
+    });
+    expect(call.queries[0]).toContain("m.role = 'seller'");
+    expect(call.queries[0]).toContain("l.current_state = 'payment_declared'");
+    expect(call.queries[0]).toContain('d.seller_acknowledged_at is null');
+    expect(call.queries[0]).toContain('update v2_external_payment_declarations');
+    expect(call.queries[0]).toContain("'payment_confirmed'");
+    expect(call.queries[0]).toContain('insert into v2_audit_events');
+  });
+
+  it('rejects a missing seller/member/declaration state without mutating payment data', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.confirmExternalPayment({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-confirm-2',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('Payment confirmation requires a seller member and a buyer declaration in payment-declared state.');
+  });
+
+  it('returns the existing confirmed declaration on a replay', async () => {
+    const call = stubSql([{
+      declaration_id: 'declaration-1',
+      transaction_id: 'transaction-1',
+      buyer_account_id: 'buyer-account-1',
+      seller_account_id: 'seller-account-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.confirmExternalPayment({
+      authUserId: 'auth-seller-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-confirm-3',
+      now: '2026-08-23T00:00:00.000Z',
+    })).resolves.toMatchObject({ state: 'payment_confirmed', transactionId: 'transaction-1' });
+  });
+});
+
 describe('external payment persistence Root seam', () => {
   it('records one supported buyer payment declaration after QR verification and appends its event/audit', async () => {
     const call = stubSql([{

@@ -26,3 +26,8 @@ export async function purchaseIntentHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/purchase-intents');
   await handleApi(req, res, '/api/v2/purchase-intents', url);
 }
+
+export async function externalPaymentConfirmationHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/external-payment-confirmations');
+  await handleApi(req, res, '/api/v2/external-payment-confirmations', url);
+}

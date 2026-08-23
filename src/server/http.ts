@@ -87,6 +87,28 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       else json(res, 200, { ok: true, correlationId, data: facility });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/external-payment-confirmations') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before confirming an external payment.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
+        return true;
+      }
+      const result = await repository.confirmExternalPayment({
+        authUserId,
+        transactionId,
+        correlationId,
+        now: new Date().toISOString(),
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/external-payment-declarations') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

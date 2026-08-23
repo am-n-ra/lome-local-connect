@@ -151,6 +151,86 @@ function createTrunkRepository(sql = database()) {
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
     },
+    async confirmExternalPayment(input) {
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        locked as (
+          select s.transaction_id, m.account_id as seller_account_id, a.actor_account_id,
+            coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') as current_state
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id
+          join actor a on a.actor_account_id = m.account_id
+          where s.transaction_id = ${input.transactionId}::uuid
+            and m.role = 'seller'
+          for update of s
+        ),
+        eligible as (
+          select l.transaction_id, l.seller_account_id, l.actor_account_id, d.id as declaration_id, d.buyer_account_id
+          from locked l
+          join v2_external_payment_declarations d on d.transaction_id = l.transaction_id
+          where l.current_state = 'payment_declared'
+            and d.seller_acknowledged_at is null
+        ),
+        acknowledged as (
+          update v2_external_payment_declarations d
+          set seller_acknowledged_at = ${input.now}::timestamptz
+          from eligible e
+          where d.id = e.declaration_id
+          returning d.id as declaration_id, d.transaction_id, d.buyer_account_id
+        ),
+        event as (
+          insert into v2_transaction_events
+            (transaction_id, actor_account_id, state, metadata, created_at)
+          select a.transaction_id, e.actor_account_id, 'payment_confirmed', '{}'::jsonb, ${input.now}::timestamptz
+          from acknowledged a
+          join eligible e on e.transaction_id = a.transaction_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'external_payment_confirmed', 'transaction', a.transaction_id::text, ${input.correlationId}, 'seller_acknowledged', ${input.now}::timestamptz
+          from acknowledged a
+          join eligible e on e.transaction_id = a.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        ),
+        replayed as (
+          select d.id as declaration_id, l.transaction_id, d.buyer_account_id, l.seller_account_id
+          from locked l
+          join v2_external_payment_declarations d on d.transaction_id = l.transaction_id
+          where l.current_state = 'payment_confirmed'
+            and d.seller_acknowledged_at is not null
+        )
+        select a.declaration_id, a.transaction_id, a.buyer_account_id, e.seller_account_id
+        from acknowledged a
+        join eligible e on e.transaction_id = a.transaction_id
+        union all
+        select declaration_id, transaction_id, buyer_account_id, seller_account_id from replayed
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Payment confirmation requires a seller member and a buyer declaration in payment-declared state.");
+      return {
+        declarationId: String(row.declaration_id),
+        transactionId: String(row.transaction_id),
+        buyerAccountId: String(row.buyer_account_id),
+        sellerAccountId: String(row.seller_account_id),
+        state: "payment_confirmed"
+      };
+    },
     async declareExternalPayment(input) {
       if (!["cash", "mobile_money", "pay_on_delivery"].includes(input.method)) {
         throw new TransactionPolicyError("External payment method is not supported.");
@@ -707,6 +787,28 @@ async function handleApi(req, res, pathname, url) {
       const facility = await repository.getFacilityDetail(id);
       if (!facility) json(res, 404, errorBody(correlationId, "NOT_FOUND", "Facility was not found."));
       else json(res, 200, { ok: true, correlationId, data: facility });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/external-payment-confirmations") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before confirming an external payment."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      const result = await repository.confirmExternalPayment({
+        authUserId,
+        transactionId,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/external-payment-declarations") {
