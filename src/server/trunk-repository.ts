@@ -37,6 +37,13 @@ const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
   throw lastError instanceof Error ? lastError : new Error('Neon database request failed after bounded recovery attempts.');
 };
 
+export class AvailabilityPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AvailabilityPolicyError';
+  }
+}
+
 export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
@@ -123,37 +130,64 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       idempotencyKey: string;
     }): Promise<AvailabilityResult> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      const accountRows = await sql`
-        insert into v2_accounts (auth_user_id, onboarding_state)
-        values (${input.authUserId}, 'buyer_ready')
-        on conflict (auth_user_id) do update set updated_at = now()
-        returning id
-      `;
-      const accountId = String((accountRows as Record<string, unknown>[])[0]?.id);
-      if (!accountId || accountId === 'undefined') throw new Error('Unable to provision V2 account.');
-      await sql`
-        insert into v2_wallets (account_id) values (${accountId}::uuid)
-        on conflict (account_id) do nothing
-      `;
-      await sql`
-        insert into v2_availability_requests
-          (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
-        values
-          (${accountId}::uuid, ${input.productId}::uuid, array[${input.facilityId}::uuid], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz)
-        on conflict (buyer_account_id, idempotency_key) do nothing
-      `;
-      const rows = await sql`
-        select r.id, r.product_id, r.status, r.expires_at
-        from v2_availability_requests r
-        where r.buyer_account_id = ${accountId}::uuid and r.idempotency_key = ${input.idempotencyKey}
-        limit 1
-      `;
+      const rows = await retryDatabase(() => sql`
+        with valid_selection as (
+          select p.id as product_id, f.id as facility_id
+          from v2_products p
+          join v2_facilities f on f.id = ${input.facilityId}::uuid and p.facility_id = f.id
+          where p.id = ${input.productId}::uuid
+            and p.publication_state = 'published'
+            and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+        ),
+        account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          where exists (select 1 from valid_selection)
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ),
+        wallet as (
+          insert into v2_wallets (account_id)
+          select id from account
+          on conflict (account_id) do update set account_id = excluded.account_id
+          returning account_id
+        ),
+        request_insert as (
+          insert into v2_availability_requests
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+          from account a
+          cross join valid_selection s
+          join wallet w on w.account_id = a.id
+          on conflict (buyer_account_id, idempotency_key) do nothing
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+        ),
+        request_result as (
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          from request_insert
+          union all
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.status, r.expires_at
+          from v2_availability_requests r
+          where r.buyer_account_id = (select id from account)
+            and r.idempotency_key = ${input.idempotencyKey}
+        )
+        select * from request_result limit 1
+      `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new Error('Availability request could not be persisted.');
+      if (!row) throw new AvailabilityPolicyError('The selected product is not published at the requested facility.');
+      if (
+        String(row.product_id) !== input.productId
+        || String(row.facility_id) !== input.facilityId
+        || Number(row.requested_quantity) !== input.quantity
+        || String(row.budget_mode) !== input.budgetMode
+        || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor
+      ) {
+        throw new AvailabilityPolicyError('The idempotency key is already used for a different availability request.');
+      }
       return {
         requestId: String(row.id),
         productId: String(row.product_id),
-        facilityId: input.facilityId,
+        facilityId: String(row.facility_id),
         status: String(row.status) as AvailabilityResult['status'],
         expiresAt: new Date(String(row.expires_at)).toISOString(),
         message: 'Request sent. The facility can now confirm the live availability.',

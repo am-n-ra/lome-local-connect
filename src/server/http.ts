@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { createTrunkRepository } from './trunk-repository';
+import { AvailabilityPolicyError, createTrunkRepository } from './trunk-repository';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -15,12 +15,37 @@ const errorBody = (correlationId: string, code: string, message: string, retryab
   error: { code, message, retryable },
 });
 
-async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
+export class ApiInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ApiInputError';
+  }
+}
+
+export function toApiErrorResponse(correlationId: string, error: unknown) {
+  if (error instanceof ApiInputError) {
+    return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
+  }
+  if (error instanceof AvailabilityPolicyError) {
+    return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
+  }
+  return {
+    status: 500,
+    body: errorBody(correlationId, 'INTERNAL_RECOVERABLE', 'The service is temporarily unavailable. Please try again.', true),
+  };
+}
+
+export async function parseRequestBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   if (!chunks.length) return {};
-  const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Request body must be an object.');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+  } catch {
+    throw new ApiInputError('Request body must be valid JSON.');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ApiInputError('Request body must be an object.');
   return parsed as Record<string, unknown>;
 }
 
@@ -68,7 +93,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create your account or sign in to verify availability.'));
         return true;
       }
-      const input = await body(req);
+      const input = await parseRequestBody(req);
       const productId = typeof input.productId === 'string' ? input.productId : '';
       const facilityId = typeof input.facilityId === 'string' ? input.facilityId : '';
       const quantity = Number(input.quantity);
@@ -90,8 +115,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'V2 API route was not found.'));
     return true;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected server error.';
-    json(res, 500, errorBody(correlationId, 'INTERNAL_RECOVERABLE', message, true));
+    const failure = toApiErrorResponse(correlationId, error);
+    json(res, failure.status, failure.body);
     return true;
   }
 }

@@ -54,6 +54,12 @@ var retryDatabase = async (operation) => {
   }
   throw lastError instanceof Error ? lastError : new Error("Neon database request failed after bounded recovery attempts.");
 };
+var AvailabilityPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "AvailabilityPolicyError";
+  }
+};
 var toProduct = (row) => ({
   id: String(row.id),
   facilityId: String(row.facility_id),
@@ -129,37 +135,58 @@ function createTrunkRepository(sql = database()) {
     },
     async createAvailabilityRequest(input) {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
-      const accountRows = await sql`
-        insert into v2_accounts (auth_user_id, onboarding_state)
-        values (${input.authUserId}, 'buyer_ready')
-        on conflict (auth_user_id) do update set updated_at = now()
-        returning id
-      `;
-      const accountId = String(accountRows[0]?.id);
-      if (!accountId || accountId === "undefined") throw new Error("Unable to provision V2 account.");
-      await sql`
-        insert into v2_wallets (account_id) values (${accountId}::uuid)
-        on conflict (account_id) do nothing
-      `;
-      await sql`
-        insert into v2_availability_requests
-          (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
-        values
-          (${accountId}::uuid, ${input.productId}::uuid, array[${input.facilityId}::uuid], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz)
-        on conflict (buyer_account_id, idempotency_key) do nothing
-      `;
-      const rows = await sql`
-        select r.id, r.product_id, r.status, r.expires_at
-        from v2_availability_requests r
-        where r.buyer_account_id = ${accountId}::uuid and r.idempotency_key = ${input.idempotencyKey}
-        limit 1
-      `;
+      const rows = await retryDatabase(() => sql`
+        with valid_selection as (
+          select p.id as product_id, f.id as facility_id
+          from v2_products p
+          join v2_facilities f on f.id = ${input.facilityId}::uuid and p.facility_id = f.id
+          where p.id = ${input.productId}::uuid
+            and p.publication_state = 'published'
+            and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+        ),
+        account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          where exists (select 1 from valid_selection)
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ),
+        wallet as (
+          insert into v2_wallets (account_id)
+          select id from account
+          on conflict (account_id) do update set account_id = excluded.account_id
+          returning account_id
+        ),
+        request_insert as (
+          insert into v2_availability_requests
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+          from account a
+          cross join valid_selection s
+          join wallet w on w.account_id = a.id
+          on conflict (buyer_account_id, idempotency_key) do nothing
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+        ),
+        request_result as (
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          from request_insert
+          union all
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.status, r.expires_at
+          from v2_availability_requests r
+          where r.buyer_account_id = (select id from account)
+            and r.idempotency_key = ${input.idempotencyKey}
+        )
+        select * from request_result limit 1
+      `);
       const row = rows[0];
-      if (!row) throw new Error("Availability request could not be persisted.");
+      if (!row) throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
+      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor) {
+        throw new AvailabilityPolicyError("The idempotency key is already used for a different availability request.");
+      }
       return {
         requestId: String(row.id),
         productId: String(row.product_id),
-        facilityId: input.facilityId,
+        facilityId: String(row.facility_id),
         status: String(row.status),
         expiresAt: new Date(String(row.expires_at)).toISOString(),
         message: "Request sent. The facility can now confirm the live availability."
@@ -169,23 +196,46 @@ function createTrunkRepository(sql = database()) {
 }
 
 // src/server/http.ts
-var json = (res, status, body2) => {
+var json = (res, status, body) => {
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
-  res.end(JSON.stringify(body2));
+  res.end(JSON.stringify(body));
 };
 var errorBody = (correlationId, code, message, retryable = false) => ({
   ok: false,
   correlationId,
   error: { code, message, retryable }
 });
-async function body(req) {
+var ApiInputError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ApiInputError";
+  }
+};
+function toApiErrorResponse(correlationId, error) {
+  if (error instanceof ApiInputError) {
+    return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
+  }
+  if (error instanceof AvailabilityPolicyError) {
+    return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
+  }
+  return {
+    status: 500,
+    body: errorBody(correlationId, "INTERNAL_RECOVERABLE", "The service is temporarily unavailable. Please try again.", true)
+  };
+}
+async function parseRequestBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   if (!chunks.length) return {};
-  const parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Request body must be an object.");
+  let parsed;
+  try {
+    parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new ApiInputError("Request body must be valid JSON.");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiInputError("Request body must be an object.");
   return parsed;
 }
 function numberParam(url, key, fallback) {
@@ -228,7 +278,7 @@ async function handleApi(req, res, pathname, url) {
         json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Create your account or sign in to verify availability."));
         return true;
       }
-      const input = await body(req);
+      const input = await parseRequestBody(req);
       const productId = typeof input.productId === "string" ? input.productId : "";
       const facilityId = typeof input.facilityId === "string" ? input.facilityId : "";
       const quantity = Number(input.quantity);
@@ -250,8 +300,8 @@ async function handleApi(req, res, pathname, url) {
     json(res, 404, errorBody(correlationId, "NOT_FOUND", "V2 API route was not found."));
     return true;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected server error.";
-    json(res, 500, errorBody(correlationId, "INTERNAL_RECOVERABLE", message, true));
+    const failure = toApiErrorResponse(correlationId, error);
+    json(res, failure.status, failure.body);
     return true;
   }
 }
