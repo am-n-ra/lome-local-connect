@@ -19,3 +19,7 @@ The first comparison read returned a generic recoverable service error. A redact
 ## Current interpretation
 
 The deployed Buyer surface reaches the protected availability boundary and renders the approved pre-submit composition on the canonical URL. One real buyer request was created through the official Auth session. The comparison route fix is validated against the current schema locally, but the corrected code still requires a new deployment and one read-only browser retry before the Buyer slice can be considered verified end-to-end. This record makes no claim that the global Root gate is closed.
+
+## Corrected deployment check
+
+After the join fix was deployed, a second explicitly confirmed single demo request was submitted on the canonical URL. The response-read operation now completed successfully: the sheet showed `En attente des vendeurs`, an `Actualiser` control and the request expiry, rather than the previous service error. No seller response exists yet, so no comparison card or private contact/itinerary action was exposed. The Buyer read path is therefore verified for the real pending state; seller response and cross-flow Root proof remain outstanding.
