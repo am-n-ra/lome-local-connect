@@ -146,3 +146,13 @@ A second official Auth-backed session was opened in the canonical browser and re
 ## 10. Explicitly approved bounded demo rebind
 
 Because the original demo Seller Auth identity was deleted and recreated, the user explicitly approved a temporary server-side rebinding path for this bounded environment. `POST /api/v2/seller/demo-rebind` accepts only the current official bearer session, checks the existing labeled `Omni Demo Seller Hub` fixture, rejects a session already bound to another Omni account, updates only that Seller demo account’s `auth_user_id`, and records a bounded audit event. It neither creates/deletes Neon Auth users nor accepts an account ID from the client. This is a demo-environment recovery seam, not a production onboarding or certification feature; it remains outside the global Root release claim and must not be used for arbitrary account transfers.
+
+
+## 11. Canonical connected-browser proof — bounded rebind and queue
+
+After the user’s explicit approval, the official Seller session invoked `Activer l’espace Seller de démo`. The deployed server acknowledged the bounded rebind, the sheet changed to `Contexte vendeur autorisé`, and the protected queue returned one request for `Root proof demo product` at `Omni Demo Seller Hub`, with requested quantity `2` and an existing `Réponse disponible` status. The UI remained map-mounted, used the Species sheet and segmented tabs, and kept the handoff lock visible. Because the request already has a persisted available response, no duplicate Seller response write was issued during this check; the next proof is Buyer-side refresh and comparison visibility.
+
+
+## 12. Canonical Seller request-detail inspection
+
+The authorized Seller queue opened the request detail in the Species-aligned response sheet. The map remains visible behind the bounded sheet, the facility/product request facts are read-only, the three allowed response statuses are explicit, the form scrolls to a reachable primary action, and the no-reservation lock is preserved. The queue row already carried `Réponse disponible`, but the detail surface still exposed a fresh submit form rather than a persisted-response state. To avoid a duplicate response mutation, no submit was issued; this is recorded as a Heartwood UI hardening item to render existing response status as read-only with a return/refresh action.
