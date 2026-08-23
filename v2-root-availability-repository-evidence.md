@@ -7,7 +7,7 @@
 
 ## Scope
 
-This record covers the current server repository path and one explicitly user-confirmed live browser proof for `POST /api/v2/availability`. It does not claim inventory availability, reservation, payment, marketplace adoption or Trunk approval. The live proof landed on the Vercel production/default Neon branch, not the persistent V2 development branch, so it cannot be used as persistent-V2 migration proof.
+This record covers the current server repository path and explicitly user-confirmed live browser proofs for `POST /api/v2/availability`. It does not claim inventory availability, reservation, payment, marketplace adoption or Trunk approval. The first live proof landed on production/default; after the Vercel binding correction, the bounded replay proof landed on the persistent V2 development branch.
 
 ## Implemented boundary
 
@@ -37,12 +37,12 @@ The focused tests use an injectable tagged-SQL seam and do not connect to Neon o
 
 The current full local validation checkpoint is **11 Vitest files / 68 tests passing**, production build passing, 8 Vercel functions bundled and `Client boundary: clean`.
 
-## Live authenticated proof — 2026-08-23
+## Live authenticated proofs — 2026-08-23
 
-The connected browser displayed the authenticated account label `KH`. After explicit confirmation, one availability request was submitted for the catalogue product `Tomatoes` at `Cotonou Fresh Hub`, with quantity `1` and no budget ceiling. The exact same flow was submitted a second time. Both submissions returned the same user-visible `DEMANDE ENVOYÉE` / `En attente de la disponibilité` state.
+The first explicitly confirmed browser proof submitted `Tomatoes` at `Cotonou Fresh Hub` twice and landed on production/default; it remains recorded as a bounded environment-mismatch fixture in the ledger. No rollback or delete was performed because destructive cleanup is prohibited without a separately scoped decision.
 
-Read-only aggregate Neon checks then showed that the persistent V2 branch `br-dawn-hill-am5amy22` remained at zero availability requests, while the production/default branch `br-bitter-math-amrlbym6` contained exactly one availability request, one distinct buyer account, one distinct idempotency key and status `submitted`. A linked aggregate check showed one account and one wallet for the request; total production/default counts were one V2 account, one wallet and one availability request. This proves a real bearer-authenticated request reached the deployed writer and that the two browser submissions collapsed to one row on the production/default branch. It does not prove the same behavior on the persistent V2 branch.
+After `V2_DATABASE_URL` was bound to persistent V2 and the latest Git-integrated deployment was redeployed, the authenticated browser submitted `Kente tote bag` at `Atelier Kegue`, quantity `1`, with no budget ceiling. The exact same flow was submitted a second time. Both submissions returned the same user-visible `DEMANDE ENVOYÉE` / `En attente de la disponibilité` state.
 
-The production/default write was an explicitly confirmed bounded test, but it violated the intended environment boundary recorded earlier in the fixture ledger. No rollback or delete was performed because destructive cleanup is prohibited without a separately scoped decision. No IDs, key values, emails, bearer tokens or passwords were recorded. No inventory availability, reservation, payment, QR, seller confirmation or Trunk success is claimed.
+Aggregate-only Neon checks on persistent V2 branch `br-dawn-hill-am5amy22` then showed exactly one availability request, one distinct buyer account, one distinct idempotency key, status `submitted`, one linked V2 account and one linked account-level wallet. Totals on that branch were one account, one wallet and one availability request. This proves the real bearer-backed writer reached persistent V2 and that the two sequential browser submissions collapsed to one request with idempotent Auth-to-account/wallet provisioning. No IDs, key values, emails, bearer tokens or passwords were recorded. No inventory availability, reservation, payment, QR, seller confirmation or Trunk success is claimed.
 
 The disposable database branch still provides separate migration/guardrail evidence, including labeled account and transaction fixtures, but those records cannot be used to claim this repository path is live or user-authorized. See [`v2-root-fixture-ledger.md`](./v2-root-fixture-ledger.md) and [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md).

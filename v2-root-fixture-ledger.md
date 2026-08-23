@@ -58,7 +58,13 @@ The canonical smoke request for facility ID `00000000-0000-0000-0000-00000000000
 |---|---|---|---|---|
 | `L-CAN-AUTH-AVAIL-20260823` | Production/default Neon `br-bitter-math-amrlbym6` via Vercel deployment from `omni-v2-rebuild` | User-controlled authenticated buyer session; identity omitted | One `submitted` availability request for `Tomatoes` at `Cotonou Fresh Hub`; the same browser flow was submitted twice and aggregate checks showed one request, one buyer account, one idempotency key, one linked account and one linked wallet | Live bearer-backed availability-writer and sequential idempotency proof on production/default only; not persistent-V2 proof, inventory proof, sale proof or adoption proof |
 
-This fixture was created only after explicit user confirmation. Its existence is an environment-bound test result and must not be presented as a real marketplace user, live stock, successful sale, payment, transaction or release signal. The persistent V2 branch remained at zero availability requests. No IDs, key values, emails, bearer tokens or passwords are recorded.
+This fixture was created only after explicit user confirmation. Its existence is an environment-bound test result and must not be presented as a real marketplace user, live stock, successful sale, payment, transaction or release signal. No IDs, key values, emails, bearer tokens or passwords are recorded.
+
+| Fixture key | Environment | Actor label | Observed state | Allowed assertion |
+|---|---|---|---|---|
+| `L-V2-AUTH-AVAIL-20260823` | Persistent V2 Neon `br-dawn-hill-am5amy22` via the redeployed Git-integrated Vercel production deployment | User-controlled authenticated buyer session; identity omitted | One `submitted` availability request for `Kente tote bag` at `Atelier Kegue`; the same browser flow was submitted twice and aggregate checks showed one request, one buyer account, one idempotency key, one linked account and one linked wallet | Live bearer-backed availability-writer and sequential idempotency/account-wallet provisioning proof on persistent V2 only; not inventory proof, sale proof, payment proof or adoption proof |
+
+The persistent-V2 fixture was also created only after explicit user confirmation. Its one request and one account/wallet are bounded Root proof records, not marketplace success. No IDs, key values, emails, bearer tokens or passwords are recorded.
 
 ## Disposable Root-proof fixtures
 
