@@ -87,6 +87,7 @@ export function TrunkApp() {
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
   const detailRequestRef = useRef(0);
+  const availabilityKeyRef = useRef<{ shape: string; key: string } | null>(null);
 
   const selectedProduct = useMemo(() => selectedFacility?.products.find((product) => product.id === selectedProductId) ?? null, [selectedFacility, selectedProductId]);
   const categoryOptions = useMemo(() => {
@@ -405,6 +406,7 @@ export function TrunkApp() {
     if (verify && result.data.products.length > 0) {
       setSelectedProductId(result.data.products[0].id);
       setAvailabilityStep(1);
+      availabilityKeyRef.current = null;
       setAvailability(null);
       setResponseData(null);
       setResponseState('idle');
@@ -417,6 +419,7 @@ export function TrunkApp() {
   const openAvailability = () => {
     if (!selectedFacility?.products.length) return;
     setAvailabilityStep(1);
+    availabilityKeyRef.current = null;
     setSelectedProductId(selectedProductId ?? selectedFacility.products[0].id);
     setQuantity(Math.max(1, quantity));
     setAvailability(null);
@@ -446,6 +449,10 @@ export function TrunkApp() {
         return;
       }
       const numericBudget = budgetMode === 'maximum' && budget && Number.isFinite(Number(budget)) ? Math.round(Number(budget) * 100) : null;
+      const requestShape = `${selectedFacility.id}-${selectedProduct.id}-${quantity}-${budgetMode}-${numericBudget ?? 'none'}`;
+      if (!availabilityKeyRef.current || availabilityKeyRef.current.shape !== requestShape) {
+        availabilityKeyRef.current = { shape: requestShape, key: `availability-${requestShape}-${crypto.randomUUID()}` };
+      }
       const result = await requestAvailability({
         productId: selectedProduct.id,
         facilityId: selectedFacility.id,
@@ -453,7 +460,7 @@ export function TrunkApp() {
         budgetMode,
         budgetMinor: numericBudget,
         token,
-        idempotencyKey: `availability-${selectedFacility.id}-${selectedProduct.id}-${quantity}-${budgetMode}-${numericBudget ?? 'none'}`,
+        idempotencyKey: availabilityKeyRef.current.key,
       });
       if (result.ok && result.data) {
         setAvailability(result.data);

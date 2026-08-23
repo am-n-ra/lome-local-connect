@@ -156,3 +156,30 @@ After the user’s explicit approval, the official Seller session invoked `Activ
 ## 12. Canonical Seller request-detail inspection
 
 The authorized Seller queue opened the request detail in the Species-aligned response sheet. The map remains visible behind the bounded sheet, the facility/product request facts are read-only, the three allowed response statuses are explicit, the form scrolls to a reachable primary action, and the no-reservation lock is preserved. The queue row already carried `Réponse disponible`, but the detail surface still exposed a fresh submit form rather than a persisted-response state. To avoid a duplicate response mutation, no submit was issued; this is recorded as a Heartwood UI hardening item to render existing response status as read-only with a return/refresh action.
+
+
+## 13. Manus-computer Species audit
+
+A clean sandbox Manus-computer pass on the canonical alias confirms the arrival composition remains consistent with the approved Species: the real map canvas is dominant with pale geographic treatment, the compact `Acheter / Vendre` switch stays upper-left, J5 remains the sole account/navigation owner, right-side zoom/location controls retain their safe zone, and the search dock is visibly separated above the rounded `Proche de vous` result sheet. The labeled `Omni Demo Seller Hub` remains a normal catalogue card with one availability action; no public pin or card implies stock, trust or seller permission.
+
+Opening `Vendre` from this clean browser presents the same map-mounted rounded Auth sheet and does not fabricate Seller access for a guest session. This is a visual/negative proof only: the sandbox browser has no authenticated Seller session, so the authorized Seller workspace and response acknowledgement still require the user’s official session in the connected browser or a personal sign-in takeover. No credentials or secrets were entered or recorded.
+
+The authorized Seller screen previously captured in the canonical connected session remains the reference implementation: bounded map-mounted sheet, `Demandes / Catalogue` rhythm, facility trust context, scoped request cards, response form and visible no-reservation lock. The current cross-flow response write remains unrecorded after the earlier route failures; the latest code fix is deployed but requires one clean authenticated retry.
+
+## 14. 2026-08-23 response-route diagnosis
+
+The first canonical retry reached the deployed response route but returned a generic 500. Aggregate-only V2 inspection showed that the recent request, facility and product all exist, are published/eligible, unexpired and allocated. The deployed route was diagnosed with the Vercel runtime path plus a non-executing SQL plan check: the `v2_availability_responses` table does not contain `product_id`, but the Seller idempotency CTE selected `ar.product_id`. The CTE now derives product identity from the matched availability request, and the fix is committed/pushed as `c2586fa` and deployed READY. No direct database write was used for this diagnosis, and the response count remains unchanged at one existing response.
+
+The response endpoint’s UUID guard was also widened to accept any syntactically valid UUID, including the labeled deterministic V2 fixture IDs whose version nibble is zero; that earlier fix is committed as `9aee5ce`. The next proof owner is a single official Seller form submission against the already-created bounded Buyer request, followed by Buyer refresh and comparison-card inspection.
+
+## 15. Current Seller ring status
+
+Seller Trunk remains `partial`: the Species-aligned UI, authorized demo rebind, scoped queue, request detail, validation tests and deployment are evidenced; the final persisted response and Buyer comparison card are still open because the browser session timed out during the last retry and the first code version failed at the database-column boundary. Global Root remains `review`.
+
+
+
+## 16. Authenticated Manus-computer Seller visual proof
+
+After the user personally authenticated the Seller profile in the Manus computer, the canonical deployment opened the map-mounted Seller sheet in the intended Species anatomy. The map/globe remains dominant behind the rounded bounded sheet; the upper-left `Acheter / Vendre` switch and upper-right account control remain visible; the sheet has the centered handle and close affordance; the `Demandes / Catalogue` segmented rhythm is compact and not a dashboard rail; the authorized context is explicit; the request card is readable; and the handoff lock continues to state that responding does not reserve stock or open contact, itinerary or QR.
+
+The live queue currently shows one request for `Root proof demo product` at `Omni Demo Seller Hub`, quantity 2, with `Réponse disponible`. The previously created quantity-1 demo request is no longer answerable in this queue because its response window expired before the corrected deployment could be retried; it did not receive a persisted response. No additional write was performed in this pass. The next cross-flow proof therefore requires a fresh explicit authorization for one new bounded Buyer request, followed by one Seller response.

@@ -45,3 +45,13 @@ After commit `7a24142`, the canonical URL rendered the Buyer arrival surface wit
 ## 2026-08-23 — J5 request resume verification
 
 The canonical deployment rendered the approved Species arrival and the J5 account menu with `Mes demandes` as the sole account-owned resume entry. Opening it displayed the intended separate contextual sheet, `Compte J5 / Mes demandes`, with the safe-copy boundary that resume does not recreate a request or open private contact. The current official Buyer session returned the truthful empty state `Aucune demande enregistrée`; it is a newly selected Buyer identity and does not own the earlier bounded demo request. No new availability request was submitted. The request-list contract is browser-proven for menu, sheet and empty behavior, while non-empty resume and Buyer comparison remain blocked until the Buyer identity owning the bounded request is reopened or a new bounded request is explicitly authorized.
+
+
+## 2026-08-23 — bounded Buyer request recreated for cross-flow
+
+After explicit user authorization, the current official Buyer session submitted one new bounded availability request through the Species flow for the labeled `Omni Demo Seller Hub` catalogue product. The canonical sheet showed the four-stage sequence `Produit → Portée → Contraintes → Réponses`, the no-reservation copy, and the locked private-action note before the write. The resulting live state displayed `Demande envoyée`, `En attente de la disponibilité`, and `En attente des vendeurs` with refresh and expiry, confirming the request reached the server-backed pending state. No additional Buyer write was made.
+
+
+## 2026-08-23 — newly authorized request expired before Seller retry
+
+The clean Manus-computer Buyer session completed the official catalogue-backed flow for `Omni Demo Seller Hub` and submitted one explicitly authorized bounded request. The real pending surface appeared with `Demande envoyée`, `En attente de la disponibilité`, refresh and expiry, while the four-step `Produit → Portée → Contraintes → Réponses` rhythm and pre-intent privacy lock remained visible. Because the Seller response-route correction and deployment took longer than the bounded response window, the same request later displayed `La demande a expiré` and offered `Actualiser` / `Retour à la facilité`. No Seller response was persisted for this request and no comparison card was fabricated. A further request requires a new explicit authorization.
