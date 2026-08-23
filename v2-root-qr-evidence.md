@@ -13,7 +13,7 @@ The focused Root test covers the authorized first-pass result, buyer-role denial
 
 ## Validation result
 
-The repository validation pass reports 11 Vitest files and 68 passing tests, a successful TypeScript/Vite build, successful bundling of 8 Vercel functions and `Client boundary: clean`. The existing chunk-size warning remains informational.
+The repository validation pass reports 11 Vitest files and 70 passing tests, a successful TypeScript/Vite build, successful bundling of 8 Vercel functions and `Client boundary: clean`. The existing chunk-size warning remains informational.
 
 ## Critical limitation
 

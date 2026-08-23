@@ -19,7 +19,7 @@ The repository also exposes `confirmExternalPayment` for the seller side. It req
 
 ## Local proof
 
-Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection, seller confirmation gating/replay and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` and `POST /api/v2/external-payment-confirmations` routes now delegate to these seams. Full local validation reports 11 Vitest files and 68 passing tests, a successful TypeScript/Vite build, eight bundled Vercel functions and `Client boundary: clean`.
+Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection, seller confirmation gating/replay and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` and `POST /api/v2/external-payment-confirmations` routes now delegate to these seams. Full local validation reports 11 Vitest files and 70 passing tests, a successful TypeScript/Vite build, eight bundled Vercel functions and `Client boundary: clean`.
 
 ## Explicit non-evidence
 

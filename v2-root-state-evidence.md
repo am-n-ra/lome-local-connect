@@ -13,7 +13,7 @@ The policy requires an authenticated, non-suspended actor with the correct role 
 
 ## Validation result
 
-The focused Root tests cover authorized seller and buyer transitions, invalid state jumps, wrong-role membership, missing membership and system-only closure. The full repository pass reports 11 Vitest files and 68 passing tests, a successful TypeScript/Vite build, 8 bundled Vercel functions and `Client boundary: clean`. Wallet balance and bonus-grant evidence is maintained separately in [`v2-root-wallet-evidence.md`](./v2-root-wallet-evidence.md).
+The focused Root tests cover authorized seller and buyer transitions, invalid state jumps, wrong-role membership, missing membership and system-only closure. The full repository pass reports 11 Vitest files and 70 passing tests, a successful TypeScript/Vite build, 8 bundled Vercel functions and `Client boundary: clean`. Wallet balance and bonus-grant evidence is maintained separately in [`v2-root-wallet-evidence.md`](./v2-root-wallet-evidence.md).
 
 ## Purchase-intent repository seam
 

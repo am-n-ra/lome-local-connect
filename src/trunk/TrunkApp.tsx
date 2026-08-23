@@ -12,6 +12,14 @@ type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
 type AuthReturn = 'none' | 'availability' | 'seller-entry';
 
+export type SellerEntryIntent =
+  | { kind: 'open-seller-boundary' }
+  | { kind: 'authenticate'; returnTo: 'seller-entry' };
+
+export function resolveSellerEntry(sessionUserId: string | null): SellerEntryIntent {
+  return sessionUserId ? { kind: 'open-seller-boundary' } : { kind: 'authenticate', returnTo: 'seller-entry' };
+}
+
 function currency(minor: number, code: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(minor / 100);
 }
@@ -132,8 +140,9 @@ export function TrunkApp() {
   const openSellerEntry = () => {
     setMenuOpen(false);
     setOptionsOpen(false);
-    if (!sessionUser) {
-      openAuth('sign-in', 'seller-entry');
+    const intent = resolveSellerEntry(sessionUser?.id ?? null);
+    if (intent.kind === 'authenticate') {
+      openAuth('sign-in', intent.returnTo);
       return;
     }
     setPanel('seller-entry');
