@@ -1,7 +1,7 @@
 # Omni V2 — Species Design Blueprint
 
 **Document ID:** `OMNI-V2-SPECIES-002`
-**Status:** Blueprint and maquette contract pending owner approval before Root System or Trunk implementation
+**Status:** Owner-approved for Buyer Trunk inheritance; Seller and post-intent extensions remain subject to their own mini-species and ring decisions
 **Method:** Nature Way — Phase 1, Species
 **Parent:** [`v2-seed.md`](./v2-seed.md)
 **Reference asset:** [`docs/references/omni-species-reference.jpeg`](./docs/references/omni-species-reference.jpeg)

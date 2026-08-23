@@ -2,7 +2,8 @@
 
 **Document ID:** `OMNI-V2-TRUNK-ENTRY-001`
 **Method:** Nature Way — Phase 3 entry definition
-**Status:** `blocked_pending_root_approval`
+**Status:** `authorized_next_slice`
+**Root status:** `review` — the global Root proof is not silently closed
 **Parent:** [`v2-root-system-proof.md`](./v2-root-system-proof.md)
 **Design:** [`v2-species.md`](./v2-species.md)
 **Flow:** [`v2-flow.md`](./v2-flow.md)
@@ -88,4 +89,4 @@ Stop Trunk work and return to Root System if a decision changes schema authority
 
 ## Nature Way decision
 
-The Trunk entry boundary is ready for implementation planning, but its status remains `blocked_pending_root_approval` until the Root System proof ledger’s required evidence is accepted. Once accepted, implement only this complete vertical slice and do not open additional branches until the Trunk ring passes.
+The Trunk entry boundary is authorized for the next bounded Buyer implementation slice by the current product decision, while the global Root System remains `review`. This is an explicit sequencing exception for the buyer core, not a claim that seller bearer/QR/payment proof is complete. Implement only this complete vertical slice and do not open the Seller, Wallet, Transaction or QR branches until the Buyer Trunk ring has a recorded decision and the Root residuals are reconciled.

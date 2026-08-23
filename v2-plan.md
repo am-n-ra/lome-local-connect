@@ -1,7 +1,7 @@
 # Omni V2 — Nature Way Implementation Plan
 
 **Document ID:** `OMNI-V2-PLAN-002`
-**Status:** Rewritten execution architecture — pending Seed/Species/Roots approval
+**Status:** Active Buyer Trunk execution plan; Seed and Buyer Species approved; Root residuals remain under review
 **Method:** Nature Way
 **Authority chain:** [`v2-seed.md`](./v2-seed.md) → [`v2-species.md`](./v2-species.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md)
 
@@ -246,6 +246,6 @@ Record commit, deployment, environment, migrations, fixtures, tests, screenshots
 
 ## 12. Recommended execution order
 
-The first actual work package is **Seed + Species approval and Root System reconciliation**, not another UI patch. Once those gates are accepted, execute only the buyer Trunk and its Heartwood. The first branch after that is Trust, then Seller Operations, Wallet/Entitlements, Transaction Room, QR/Handoff, PWA/Notifications and Operations.
+The Seed and Buyer Species approvals are recorded. The current bounded work package is the Buyer Trunk and its Heartwood: map → search → facility → catalogue → availability → pending/comparison. The global Root residuals remain visible and are not declared closed by the Buyer Trunk. After the Buyer Trunk ring, sequence Seller mini-species and Seller Operations, then the remaining trust, wallet, transaction, QR/handoff, PWA and operations branches.
 
 At every stop, report the current structural path, phase, changed surfaces, evidence, residual gaps and one next gate. If a requirement changes the Seed, Species or Root System, stop implementation and update the authority before continuing.

@@ -1,6 +1,6 @@
 # Omni V2 — Species Maquette Contract
 
-**Status:** Draft for owner approval before further Trunk or Branch implementation
+**Status:** Owner-approved visual authority for Buyer Trunk inheritance; Seller and post-intent extensions remain gated by their own mini-species/rings
 **Method:** Nature Way — Phase 1, Species
 **Visual authority:** The supplied Canva reference image and [`omni-species-maquette.html`](./omni-species-maquette.html)
 **Parent authority:** [`../../v2-seed.md`](../../v2-seed.md)
@@ -155,7 +155,7 @@ Species is not approved merely because the first screen looks attractive. The ga
 6. Seed laws and Flow locks are visible in the maquette without inventing unsupported data;
 7. the owner approves the set before Root System or Trunk work continues.
 
-Until this gate is approved, application code is historical implementation evidence only. It must not define the Species by accident.
+The owner’s recorded approvals cover the Buyer map/search, facility/availability and shared room language needed for the next Buyer Trunk inheritance. Application code remains implementation evidence only and may not redefine the Species by accident. Any genuinely new Seller or post-intent visual pattern must receive an explicit mini-species decision.
 
 ## References
 

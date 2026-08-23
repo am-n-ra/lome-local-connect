@@ -45,9 +45,9 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | Unit | Nature Way phase | Dependency | Status |
 |---|---|---|---|
 | SEED | Seed and PRD | None | `ready` |
-| SPECIES | Design blueprint and complete maquette | SEED | `in_progress` |
+| SPECIES | Design blueprint and complete maquette | SEED | `partial` |
 | ROOTS | Root System | SEED, SPECIES | `review` |
-| TRUNK | Buyer map → availability core | ROOTS | `blocked` |
+| TRUNK | Buyer map → availability core | ROOTS | `in_progress` |
 | HEARTWOOD | Harden buyer trunk | TRUNK | `todo` |
 | BRANCH-A | Trust and facility verification | HEARTWOOD | `todo` |
 | BRANCH-B | Seller map-first operations | BRANCH-A, TRUNK | `todo` |
@@ -107,13 +107,13 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `todo` | Canvas, motion and location proof |
-| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `todo` | Submit parity and context proof |
-| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `todo` | Bounds/source/error proof |
-| TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `todo` | Privacy and back/close proof |
-| TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `todo` | Product/no-reservation proof |
-| TRUNK-AVAILABILITY | Build Product → Scope → Constraints → Responses | TRUNK-CATALOGUE | `todo` | Auth, scope, freshness and response proof |
-| TRUNK-COMPARISON | Build comparison with eligible-response lock | TRUNK-AVAILABILITY | `todo` | Ordering and intent-lock proof |
+| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `in_progress` | Canvas, motion and location proof |
+| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `in_progress` | Submit parity and context proof |
+| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `in_progress` | Bounds/source/error proof |
+| TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `in_progress` | Privacy and back/close proof |
+| TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `in_progress` | Product/no-reservation proof |
+| TRUNK-AVAILABILITY | Build Product → Scope → Constraints → Responses | TRUNK-CATALOGUE | `in_progress` | Auth, scope, freshness and response proof |
+| TRUNK-COMPARISON | Build comparison with eligible-response lock | TRUNK-AVAILABILITY | `ready` | Ordering and intent-lock proof |
 
 ## 6. Heartwood
 
