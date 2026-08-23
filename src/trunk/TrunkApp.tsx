@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
@@ -388,7 +388,7 @@ export function TrunkApp() {
     setMenuOpen(false);
   };
 
-  const selectFacility = async (facility: PublicFacility, verify = false) => {
+  const selectFacility = useCallback(async (facility: PublicFacility, verify = false) => {
     setMenuOpen(false);
     setOptionsOpen(false);
     const requestNumber = detailRequestRef.current + 1;
@@ -418,7 +418,7 @@ export function TrunkApp() {
       setRequestState('idle');
       if (sessionUser) setPanel('availability');
     }
-  };
+  }, [sessionUser]);
 
   const openAvailability = () => {
     if (!selectedFacility?.products.length) return;
