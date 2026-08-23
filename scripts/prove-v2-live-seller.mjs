@@ -20,14 +20,24 @@ if (missing.length) {
   process.exit(2);
 }
 
-if (process.env.OMNI_PROOF_ENVIRONMENT !== 'isolated') {
-  console.error('Refusing to run: OMNI_PROOF_ENVIRONMENT must be isolated.');
+const proofEnvironment = process.env.OMNI_PROOF_ENVIRONMENT;
+if (!['isolated', 'production-connected-demo'].includes(proofEnvironment)) {
+  console.error('Refusing to run: OMNI_PROOF_ENVIRONMENT is not an allowed proof environment.');
+  process.exit(2);
+}
+if (proofEnvironment === 'production-connected-demo' && process.env.OMNI_PROOF_ALLOW_PRODUCTION_CONNECTED !== '1') {
+  console.error('Refusing to run: current-environment proof requires explicit allow flag.');
   process.exit(2);
 }
 
 const baseUrl = new URL(process.env.OMNI_PROOF_BASE_URL);
-if (baseUrl.hostname === 'omni.sparkafrika.online' || baseUrl.hostname.endsWith('.omni.sparkafrika.online')) {
-  console.error('Refusing to run against the canonical Omni domain.');
+const isCanonical = baseUrl.hostname === 'omni.sparkafrika.online' || baseUrl.hostname.endsWith('.omni.sparkafrika.online');
+if (proofEnvironment === 'isolated' && isCanonical) {
+  console.error('Refusing to run isolated proof against the canonical Omni domain.');
+  process.exit(2);
+}
+if (proofEnvironment === 'production-connected-demo' && baseUrl.hostname !== 'omni.sparkafrika.online') {
+  console.error('Refusing to run current-environment proof outside the canonical Omni domain.');
   process.exit(2);
 }
 
@@ -163,15 +173,16 @@ async function bindBuyerFixture(buyerUserId) {
   const alreadyBound = await sql`
     select count(*)::int as count
     from v2_accounts
-    where onboarding_state = 'buyer_ready'
+    where onboarding_state in ('buyer_ready', 'complete')
+      and suspended_at is null
       and auth_user_id = ${buyerUserId}
   `;
   if (Number(alreadyBound[0]?.count) === 1) return;
-  if (process.env.OMNI_PROOF_REBIND_FIXTURES !== '1') throw new Error('BUYER_FIXTURE_REBIND_REQUIRED');
+  if (process.env.OMNI_PROOF_REBIND_FIXTURES !== '1') throw new Error('BUYER_APPLICATION_ACCOUNT_MISSING');
 
   const target = await sql`
     update v2_accounts
-    set auth_user_id = ${buyerUserId}
+    set auth_user_id = ${buyerUserId}, updated_at = now()
     where onboarding_state = 'buyer_ready'
       and suspended_at is null
       and (select count(*) from v2_accounts where onboarding_state = 'buyer_ready' and suspended_at is null) = 1
@@ -180,7 +191,7 @@ async function bindBuyerFixture(buyerUserId) {
   if (target.length !== 1) throw new Error('BUYER_FIXTURE_NOT_UNIQUE');
 }
 
-async function resolveFixture(sellerUserId) {
+async function resolveFixture(sellerUserId, buyerUserId) {
   const rows = await sql`
     select r.id as request_id, f.id as facility_id, p.id as product_id,
            greatest(1, least(p.quantity_allocated_omni, 1))::int as quantity_available
@@ -188,13 +199,16 @@ async function resolveFixture(sellerUserId) {
     join v2_facilities f on f.id = any(r.facility_scope)
     join v2_products p on p.id = r.product_id and p.facility_id = f.id
     join v2_accounts a on a.id = f.account_id
+    join v2_accounts buyer on buyer.id = r.buyer_account_id
     where f.name = 'Omni Demo Seller Hub'
       and a.auth_user_id = ${sellerUserId}
       and a.onboarding_state in ('seller_ready', 'complete')
       and a.suspended_at is null
+      and buyer.auth_user_id = ${buyerUserId}
+      and buyer.suspended_at is null
       and p.publication_state = 'published'
       and p.quantity_allocated_omni > 0
-    order by r.created_at, r.id
+    order by r.created_at desc, r.id desc
     limit 1
   `;
   if (!rows.length) throw new Error('SELLER_FIXTURE_NOT_ELIGIBLE');
@@ -215,7 +229,7 @@ async function createTransaction({ seller, buyer, fixture, priceMinor }) {
     status: 'available',
     quantityAvailable: fixture.quantityAvailable,
     priceMinor,
-    sellerMessage: 'Isolated Root proof response',
+    sellerMessage: 'Current-environment bounded Root proof response',
   }, responseKey);
   assertStatus('seller-response', responseResult, 201);
   const response = data(responseResult, 'seller-response');
@@ -227,7 +241,7 @@ async function createTransaction({ seller, buyer, fixture, priceMinor }) {
     status: 'available',
     quantityAvailable: fixture.quantityAvailable,
     priceMinor,
-    sellerMessage: 'Isolated Root proof response',
+    sellerMessage: 'Current-environment bounded Root proof response',
   }, responseKey);
   assertStatus('seller-response-replay', replayResult, 201);
   const replay = data(replayResult, 'seller-response-replay');
@@ -280,12 +294,12 @@ async function createTransaction({ seller, buyer, fixture, priceMinor }) {
 }
 
 async function run() {
-  console.log(`proof-start branch=${proofLabel}`);
+  console.log(`proof-start environment=${proofEnvironment}`);
   const seller = await signInOrCreate(process.env.OMNI_PROOF_SELLER_EMAIL, process.env.OMNI_PROOF_SELLER_PASSWORD, 'Omni V2 Proof Seller');
   const buyer = await signInOrCreate(process.env.OMNI_PROOF_BUYER_EMAIL, process.env.OMNI_PROOF_BUYER_PASSWORD, 'Omni V2 Proof Buyer');
   await bindSellerFixture(seller.userId);
   await bindBuyerFixture(buyer.userId);
-  const fixture = await resolveFixture(seller.userId);
+  const fixture = await resolveFixture(seller.userId, buyer.userId);
   const first = await createTransaction({ seller, buyer, fixture, priceMinor: 100 });
   console.log('seller-response-qr=verified');
 

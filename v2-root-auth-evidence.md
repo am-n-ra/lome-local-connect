@@ -31,3 +31,15 @@ A local production-like server served `/auth` with HTTP 200, and a read-only Pla
 ## Nature Way decision
 
 Auth configuration, JWKS reachability, fail-closed malformed-token handling and one live authenticated availability request are **partially evidenced**. The corrected deployment now accepts the real bearer-backed request on persistent V2 and the exact sequential replay collapses to one request with one linked account and wallet. Root remains `review` because concurrent behavior, broader authenticated mutations, recovery and remaining transaction/QR evidence are still open; Trunk remains blocked until those Root conditions are closed or explicitly accepted.
+
+## Current production-connected B-path update — 2026-08-23
+
+The selected proof environment is the persistent V2 branch `omni-v2-rebuild` (`br-dawn-hill-am5amy22`), which is the branch currently connected to the V2 Preview/server configuration. Its Neon Auth configuration reports email/password enabled, sign-up allowed, email verification not required, and the trusted Vercel Preview origin added explicitly. The client bundle and the server-side availability writer were verified against this persistent V2 binding; the prior invalid-origin response was caused by the missing trusted-origin entry, not by a need for a second authentication provider.
+
+The user completed two fresh account-creation attempts through the existing Omni Auth sheet, with the user entering the credentials personally. The first account returned to the map with an active account session, was then signed out through Omni, and the second account returned to the map with an active account session. The account subjects, emails, passwords and bearer material are intentionally omitted. This is official Auth lifecycle evidence, but distinct seller/buyer subject mapping remains to be proven by the guarded bearer runner or equivalent authenticated route evidence.
+
+With the second active session, the user confirmed one bounded catalog-backed availability request for the labeled `Omni Demo Seller Hub` fixture. The request moved to the visible `submitted`/waiting-for-seller state, and aggregate Neon checks on the persistent V2 branch showed `accounts_total=3`, `buyer_ready_accounts=2`, `seller_capable_accounts=1`, `wallets_total=3`, `recent_requests=1`, and `submitted_requests=3`. These counts confirm that the official buyer session reached the V2 application account/request writer; they do not yet prove the seller bearer path, QR issuance, replay rejection, payment declaration or payment acknowledgement.
+
+## Updated decision
+
+Official Auth sign-up and persistent-V2 buyer availability/account provisioning are now evidenced through the real deployed UI. The Auth origin blocker is resolved. Root remains `review`: the fresh seller subject must still be authenticated through the official lifecycle and bound additively to the labeled seller fixture, after which the seller-response → intent → QR → verification/replay → external-payment declaration/acknowledgement and concurrency proof must be completed. Buyer and Seller Trunk expansion remains gated on that evidence.
