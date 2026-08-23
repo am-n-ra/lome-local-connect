@@ -1,0 +1,61 @@
+name: Omni V2 isolated seller proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_signup:
+        description: "Permit Neon Auth sign-up only when the operator explicitly needs it"
+        required: true
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+      rebind_fixtures:
+        description: "Permit guarded buyer fixture rebinding when the application account is not yet linked"
+        required: true
+        default: "0"
+        type: choice
+        options:
+          - "0"
+          - "1"
+
+permissions:
+  contents: read
+
+jobs:
+  proof:
+    if: github.ref == 'refs/heads/omni-v2-rebuild'
+    runs-on: ubuntu-latest
+    environment: omni-v2-seller-proof
+    timeout-minutes: 15
+    steps:
+      - name: Checkout proof branch
+        uses: actions/checkout@v4
+        with:
+          ref: omni-v2-rebuild
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run guarded seller proof
+        run: npm run proof:live-seller
+        env:
+          OMNI_PROOF_ENVIRONMENT: production-connected-demo
+          OMNI_PROOF_ALLOW_PRODUCTION_CONNECTED: "1"
+          OMNI_PROOF_BRANCH_ID: ${{ secrets.OMNI_PROOF_BRANCH_ID }}
+          OMNI_PROOF_BASE_URL: ${{ secrets.OMNI_PROOF_BASE_URL }}
+          OMNI_PROOF_AUTH_URL: ${{ secrets.OMNI_PROOF_AUTH_URL }}
+          OMNI_PROOF_DATABASE_URL: ${{ secrets.OMNI_PROOF_DATABASE_URL }}
+          OMNI_PROOF_SELLER_EMAIL: ${{ secrets.OMNI_PROOF_SELLER_EMAIL }}
+          OMNI_PROOF_SELLER_PASSWORD: ${{ secrets.OMNI_PROOF_SELLER_PASSWORD }}
+          OMNI_PROOF_BUYER_EMAIL: ${{ secrets.OMNI_PROOF_BUYER_EMAIL }}
+          OMNI_PROOF_BUYER_PASSWORD: ${{ secrets.OMNI_PROOF_BUYER_PASSWORD }}
+          OMNI_PROOF_ALLOW_SIGN_UP: ${{ inputs.allow_signup }}
+          OMNI_PROOF_REBIND_FIXTURES: ${{ inputs.rebind_fixtures }}
