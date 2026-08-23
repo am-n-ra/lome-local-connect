@@ -4,7 +4,7 @@
 
 **Method:** Nature Way — mini-Seed → mini-Species → mini-Root → mini-Trunk → mini-Heartwood → ring
 
-**Status:** `authorized for implementation`
+**Status:** `partial — implementation deployed; canonical seller bearer proof pending`
 
 **Parent authority:** [`v2-seed.md`](./v2-seed.md) → [`v2-species.md`](./v2-species.md) → [`v2-flow.md`](./v2-flow.md) → [`docs/maquette/omni-species-maquette.md`](./docs/maquette/omni-species-maquette.md)
 
@@ -37,7 +37,7 @@ This mini-cycle does not implement facility claiming or certification, admin rev
 
 ### 2.1 Inheritance decision
 
-The Seller surface inherits the approved Species rather than introducing a dashboard or a second navigation system. The permanent MapLibre map remains mounted and dominant. The upper-left role switch shows `Vendre` as active, the upper-right J5/account control remains the sole account/navigation owner, map controls stay on the right, and contextual seller sheets remain separated from the bottom search/result dock. The seller workspace is a bounded sheet over the map, not a route replacement or generic admin rail.
+The Seller surface inherits the approved Species rather than introducing a dashboard or a second navigation system. The deployed implementation now keeps the permanent MapLibre map mounted, uses the same near-white rounded contextual sheet, preserves the compact top role switch and J5 account owner, and adds only the bounded S14 rhythm: `Demandes` / `Catalogue`, request cards and a response form. The Catalogue tab is read-only in this mini-cycle; product lifecycle editing remains a later branch. The permanent MapLibre map remains mounted and dominant. The upper-left role switch shows `Vendre` as active, the upper-right J5/account control remains the sole account/navigation owner, map controls stay on the right, and contextual seller sheets remain separated from the bottom search/result dock. The seller workspace is a bounded sheet over the map, not a route replacement or generic admin rail.
 
 The existing Seller entry sheet is only an authorization boundary. It is retained as the locked/unauthorized state, but it must grow into the following small set of seller-owned states before the Seller Trunk ring can close.
 
@@ -94,7 +94,11 @@ The read is a server-owned queue, not a local array and not a fixture-only list.
 
 The UI must treat `Vendre` as an entry boundary until the seller session is both officially authenticated and server-authorized. A logged-in Buyer session with no seller binding remains locked. Any Seller Trunk browser proof uses the user-approved bounded demo environment, labeled demo identities/facility/product/request records and an explicit confirmation before each new write. No credentials, bearer tokens, raw Auth IDs, idempotency values or database secrets are recorded in code, logs, screenshots or evidence.
 
-## 4. Mini-Trunk definition of done
+## 4. Implementation evidence
+
+The protected Seller queue read is deployed at `GET /api/v2/seller/availability-requests`; it returns `401 AUTH_REQUIRED` without a bearer session and otherwise filters by the server-bound seller account, owned facility, published product and request scope. The Seller UI is map-mounted and uses the approved Buyer Species sheet primitives rather than a dashboard. Automated validation currently passes with 81 tests, 11 Vercel functions, the client-boundary scan and whitespace checks. Canonical browser interaction with the connected session is still pending because the browser extension timed out during the visual click pass; no Seller response write has been performed.
+
+## 5. Mini-Trunk definition of done
 
 The Seller Trunk may be called implemented only when the following path works through the deployed canonical surface with a real official seller session and the existing Buyer pending request:
 
@@ -109,7 +113,7 @@ The Seller Trunk may be called implemented only when the following path works th
 | Recovery | Duplicate submit, conflicting idempotency, invalid quantity/status, unauthorized seller, expired request and network failure have honest non-success states |
 | Proof | Automated tests, canonical browser proof, responsive inspection and a redacted evidence record exist |
 
-## 5. Mini-Heartwood and ring gate
+## 6. Mini-Heartwood and ring gate
 
 The Seller mini-Heartwood must cover duplicate and conflicting-key replay, seller/buyer actor separation, facility/product mismatch, allocation bounds, unavailable/partial validation, expired request handling, refresh after accepted response, back/Escape/close, interrupted Auth return, queue empty/error/retry, and no private-data leakage. QR, payment and transaction gates remain closed even if the response is accepted.
 

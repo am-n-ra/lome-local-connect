@@ -78,6 +78,8 @@ export interface SellerAvailabilityRequest {
   facilityId: string;
   facilityName: string;
   facilityCategory: string;
+  facilityTrust: PublicFacility['trust'];
+  facilityPlan: PublicFacility['plan'];
   productId: string;
   productName: string;
   requestedQuantity: number;

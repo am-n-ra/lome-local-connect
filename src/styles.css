@@ -344,3 +344,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .seller-status-options button { padding: 0 4px; font-size: 8px; }
   .seller-request-facts span { padding: 6px 5px; }
 }
+
+.seller-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 14px; padding: 4px; border-radius: 12px; background: #f0f5f1; }
+.seller-tabs button { min-height: 34px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-size: 9px; font-weight: 900; }
+.seller-tabs button.active { color: var(--forest); background: #fff; box-shadow: 0 3px 10px rgba(34, 74, 59, .08); }
+.seller-catalogue-preview { margin-top: 17px; }
+.catalogue-count { color: var(--muted-2); font-size: 9px; }
+.seller-catalogue-preview .empty-state { min-height: 145px; }
