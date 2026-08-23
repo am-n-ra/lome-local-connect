@@ -113,6 +113,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     });
     mapRef.current = map;
 
+    map.on('style.load', () => {
+      addLayers(map);
+      const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
+      source?.setData(featureCollection(facilitiesRef.current));
+    });
+
     const resume = () => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         rotating.current = false;
@@ -138,7 +144,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     map.on('wheel', pauseMotion);
     map.on('dragstart', pauseMotion);
     map.on('zoomstart', pauseMotion);
-    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); resume(); });
+    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); resume(); });
     map.on('dragend', emitBounds);
     map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); });
     map.on('error', () => {

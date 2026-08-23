@@ -188,6 +188,10 @@ export function TrunkApp() {
   const openBuyerRequests = () => {
     setMenuOpen(false);
     setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'buyer-requests');
+      return;
+    }
     setPanel('buyer-requests');
     void loadBuyerRequests();
   };
@@ -521,9 +525,13 @@ export function TrunkApp() {
       setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
       setAppliedOptions(draftOptions);
       setAuthState('idle');
-      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'seller-entry' ? 'seller-entry' : 'none';
+      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : 'none';
       setAuthReturn('none');
       setPanel(resumePanel);
+      if (resumePanel === 'buyer-requests') {
+        setBuyerRequestsState('idle');
+        void loadBuyerRequests();
+      }
       if (resumePanel === 'seller-entry') {
         setSellerRequest(null);
         setSellerTab('requests');
