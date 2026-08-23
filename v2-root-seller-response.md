@@ -32,6 +32,10 @@ The operation is idempotent for the same request, facility, product, seller and 
 
 Positive source/repository proof accepts an authorized seller response to a matching buyer request and records one response plus one audit fact; the persistent-V2 bounded fixture then contains one buyer intent, one immutable snapshot, two memberships and the expected QR/payment event path. Negative unit coverage rejects invalid status/quantity combinations and missing authorized context. The live bearer-backed HTTP response, conflicting-key replay, buyer-actor rejection, concurrent execution and deployed camera recovery remain open; the bounded direct database procedure must not be mistaken for those claims.
 
+## Deployed protected-route smoke — 2026-08-23
+
+On the READY Git deployment for `b83cc20`, unauthenticated `POST /api/v2/availability-responses` and `POST /api/v2/qr-issuances` probes returned `401 AUTH_REQUIRED` with the documented redacted error envelope. This confirms that both Vercel entrypoints are present and fail closed before protected work. No database mutation was made by these probes. It does not prove an authenticated seller bearer request, response persistence, QR issuance, camera execution, replay behavior or live audit append.
+
 ## Fixture boundary
 
 The operation was exercised only on the persistent V2 branch using `D-V2-DEMO-SELLER`, `D-V2-DEMO-FACILITY`, `D-V2-DEMO-PRODUCT` and the existing KH buyer fixture. Aggregate results are recorded in [`v2-root-demo-transaction-evidence.md`](./v2-root-demo-transaction-evidence.md). The operation is not a seller workspace UI and does not authorize facility claim, certification, admin review, Pro activation or production writes.
