@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { getAvailabilityResponses, getFacilityDetail, listPublicFacilities, requestAvailability } from './api';
@@ -68,6 +68,7 @@ export function TrunkApp() {
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
+  const detailRequestRef = useRef(0);
 
   const selectedProduct = useMemo(() => selectedFacility?.products.find((product) => product.id === selectedProductId) ?? null, [selectedFacility, selectedProductId]);
   const categoryOptions = useMemo(() => {
@@ -199,12 +200,15 @@ export function TrunkApp() {
   };
 
   const selectFacility = async (facility: PublicFacility, verify = false) => {
+    const requestNumber = detailRequestRef.current + 1;
+    detailRequestRef.current = requestNumber;
     setPanel('facility');
     setSelectedFacility(null);
     setSelectedProductId(null);
     setDetailState('loading');
     setError('');
     const result = await getFacilityDetail(facility.id);
+    if (detailRequestRef.current !== requestNumber) return;
     if (!result.ok || !result.data) {
       setDetailState('error');
       setError(result.error?.message ?? 'Cette facilité ne peut pas être ouverte.');
@@ -212,7 +216,7 @@ export function TrunkApp() {
     }
     setSelectedFacility(result.data);
     setDetailState('idle');
-      if (verify && result.data.products.length > 0) {
+    if (verify && result.data.products.length > 0) {
       setSelectedProductId(result.data.products[0].id);
       setAvailabilityStep(1);
       setAvailability(null);
@@ -263,7 +267,7 @@ export function TrunkApp() {
         budgetMode,
         budgetMinor: numericBudget,
         token,
-        idempotencyKey: `availability-${selectedFacility.id}-${selectedProduct.id}-${quantity}`,
+        idempotencyKey: `availability-${selectedFacility.id}-${selectedProduct.id}-${quantity}-${budgetMode}-${numericBudget ?? 'none'}`,
       });
       if (result.ok && result.data) {
         setAvailability(result.data);
