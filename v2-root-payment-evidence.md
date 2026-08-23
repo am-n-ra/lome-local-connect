@@ -17,8 +17,8 @@ The operation supports only `cash`, `mobile_money` and `pay_on_delivery`. Omni d
 
 ## Local proof
 
-Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection and conflicting-method replay rejection. Full local validation reports 11 Vitest files and 63 passing tests, a successful TypeScript/Vite build, four bundled Vercel functions and `Client boundary: clean`.
+Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` route now delegates to this seam. Full local validation reports 11 Vitest files and 64 passing tests, a successful TypeScript/Vite build, four bundled Vercel functions and `Client boundary: clean`.
 
 ## Explicit non-evidence
 
-No live authenticated payment declaration, seller acknowledgement, dispute path, payment-provider integration, payment credential handling or production transaction mutation was executed. The seam is not exposed as a public or deployed payment endpoint in this slice. Therefore the external-payment part of TX-02 remains `partial` until its authenticated route, seller acknowledgement/rejection, recovery and live audit evidence exist.
+No live authenticated payment declaration, seller acknowledgement, dispute path, payment-provider integration, payment credential handling or production transaction mutation was executed. The route is implemented in the V2 HTTP/serverless surface but remains unproven in a deployed authenticated session. Therefore the external-payment part of TX-02 remains `partial` until seller acknowledgement/rejection, recovery and live audit evidence exist.

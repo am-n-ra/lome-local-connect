@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, createTrunkRepository, PurchaseIntentPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -26,7 +26,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof PurchaseIntentPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof PurchaseIntentPolicyError || error instanceof TransactionPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -85,6 +85,30 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const facility = await repository.getFacilityDetail(id);
       if (!facility) json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'Facility was not found.'));
       else json(res, 200, { ok: true, correlationId, data: facility });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/external-payment-declarations') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before declaring an external payment.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const method = input.method;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !['cash', 'mobile_money', 'pay_on_delivery'].includes(method as string)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction and supported external payment method.'));
+        return true;
+      }
+      const result = await repository.declareExternalPayment({
+        authUserId,
+        transactionId,
+        method: method as ExternalPaymentMethod,
+        correlationId,
+        now: new Date().toISOString(),
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/purchase-intents') {
