@@ -3,7 +3,7 @@
 **Document ID:** `OMNI-V2-ROOT-LIVE-SELLER-001`  
 **Structural path:** `Root System > seller availability response > authenticated live proof`  
 **Method:** Nature Way  
-**Status:** `ready-for-manual-auth`
+**Status:** `blocked`
 
 ## Mini-seed
 
@@ -15,7 +15,13 @@ The proof is limited to the existing demo seller fixture on the persistent V2 br
 
 The user must personally sign in as the authorized demo seller identity in the connected browser, or confirm that an already-open session is that identity. The agent must not request, receive, type or inspect a password, one-time code, recovery code, bearer token, Auth ID or connection value. If the correct seller session is not already available, the proof stops at `manual` and the user owns the login step.
 
-The current browser page is the canonical map-first entry surface. The browser bridge returned HTTP 504 while opening the J5 account surface, so that timeout is a runtime limitation and not proof of authentication failure or success.
+The current browser page is the canonical map-first entry surface. The browser bridge returned HTTP 504 while opening the J5 account surface and again while inspecting the Auth page, so those timeouts are runtime limitations and not proof of authentication failure or success.
+
+## Autonomous feasibility check
+
+The repository Auth client exposes only the normal email/password sign-in and sign-up path plus retrieval of an existing JWT session. The server accepts a bearer token and verifies its subject against the Neon Auth JWKS; there is no autonomous demo-session, impersonation or pre-provisioned bearer mechanism in the repository or environment names. No password, one-time code, recovery code, bearer token, Auth ID or connection value was requested, received, typed or inspected.
+
+A status-only negative pass against all protected V2 mutation routes returned HTTP 401 for `/api/v2/availability`, `/api/v2/availability-responses`, `/api/v2/purchase-intents`, `/api/v2/qr-issuances`, `/api/v2/qr-verifications`, `/api/v2/transaction-transitions`, `/api/v2/external-payment-declarations` and `/api/v2/external-payment-confirmations`. This confirms the deployed boundary fails closed without authentication; it does not provide the seller bearer required for positive proof.
 
 ## Root contract and route order
 
@@ -52,4 +58,4 @@ Camera proof is also separate. It requires an HTTPS camera-capable browser, an e
 
 ## Ring decision
 
-The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Until the user-owned seller login is available and the route operations can be exercised, the item remains `ready-for-manual-auth`; Root remains `review` and Buyer Trunk remains blocked.
+The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Because no autonomous demo session is available and the browser bridge did not provide a usable authenticated session, the item is currently `blocked` at the authentication boundary; Root remains `review` and Buyer Trunk remains blocked. The next permissible step is to use a pre-existing authenticated demo seller session if one becomes available, without transferring credentials to the agent.
