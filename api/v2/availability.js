@@ -145,6 +145,67 @@ function createTrunkRepository(sql = database()) {
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
     },
+    async unlockFacilityBonus(input) {
+      const reference = `facility-bonus:${input.facilityId}`;
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.account_id
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and f.trust_state = 'confirmed'
+            and f.qualifying_sales >= 3
+          for update of f
+        ),
+        wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join facility f on f.account_id = w.account_id
+          for update of w
+        ),
+        existing as (
+          select e.id, e.wallet_id, e.facility_id
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = 'bonus_grant'
+            and e.reference = ${reference}
+        ),
+        unlocked as (
+          update v2_facilities f
+          set bonus_unlocked_at = ${input.now}::timestamptz,
+              updated_at = ${input.now}::timestamptz
+          from facility eligible
+          where f.id = eligible.facility_id
+            and f.bonus_unlocked_at is null
+          returning f.id as facility_id
+        ),
+        grant as (
+          insert into v2_wallet_ledger_entries
+            (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select w.wallet_id, 'bonus_grant', 2000, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from wallet w
+          join unlocked u on true
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, facility_id
+        )
+        select id, wallet_id, facility_id from grant
+        union all
+        select id, wallet_id, facility_id from existing
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new WalletPolicyError("Facility bonus requires confirmed trust, three qualifying sales and an owned wallet.");
+      return {
+        ledgerEntryId: String(row.id),
+        walletId: String(row.wallet_id),
+        kind: "bonus_grant",
+        amountMinor: 2e3,
+        status: "confirmed",
+        facilityId: String(row.facility_id)
+      };
+    },
     async spendWallet(input) {
       if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0 || !input.reference.trim()) {
         throw new WalletPolicyError("Wallet spend amount and reference are invalid.");

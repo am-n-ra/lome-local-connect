@@ -94,6 +94,72 @@ describe('availability repository Root seam', () => {
 });
 
 describe('wallet persistence Root seam', () => {
+  it('unlocks exactly one nonwithdrawable $20 facility bonus after confirmed trust and three sales', async () => {
+    const call = stubSql([{
+      id: 'bonus-ledger-1',
+      wallet_id: 'wallet-1',
+      facility_id: 'facility-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.unlockFacilityBonus({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      ledgerEntryId: 'bonus-ledger-1',
+      walletId: 'wallet-1',
+      kind: 'bonus_grant',
+      amountMinor: 2000,
+      status: 'confirmed',
+      facilityId: 'facility-1',
+    });
+    expect(call.queries[0]).toContain("f.trust_state = 'confirmed'");
+    expect(call.queries[0]).toContain('f.qualifying_sales >= 3');
+    expect(call.queries[0]).toContain('f.bonus_unlocked_at is null');
+    expect(call.queries[0]).toContain('for update of f');
+    expect(call.queries[0]).toContain("'bonus_grant', 2000, 'confirmed'");
+    expect(call.queries[0]).toContain('e.reference =');
+  });
+
+  it('does not grant the bonus when the eligibility or owned-wallet query returns no row', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.unlockFacilityBonus({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      now: '2026-08-23T00:00:00.000Z',
+    })).rejects.toThrow('Facility bonus requires confirmed trust, three qualifying sales and an owned wallet.');
+  });
+
+  it('returns the existing bonus ledger row on an idempotent replay', async () => {
+    const call = stubSql([{
+      id: 'bonus-ledger-1',
+      wallet_id: 'wallet-1',
+      facility_id: 'facility-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const first = await repository.unlockFacilityBonus({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+    const replay = await repository.unlockFacilityBonus({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      now: '2026-08-23T00:00:00.000Z',
+    });
+
+    expect(replay).toEqual(first);
+    expect(call.queries[0]).toContain('on conflict (wallet_id, kind, reference) do nothing');
+  });
+});
+
+describe('wallet spend persistence Root seam', () => {
   it('uses the authenticated account, facility ownership, confirmed balance and append-only spend shape', async () => {
     const call = stubSql([{
       id: 'ledger-1',
