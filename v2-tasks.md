@@ -47,8 +47,8 @@ A trivial task may use fewer subtasks when the unit is genuinely simple. A compl
 | SEED | Seed and PRD | None | `ready` |
 | SPECIES | Design blueprint and complete maquette | SEED | `partial` |
 | ROOTS | Root System | SEED, SPECIES | `review` |
-| TRUNK | Buyer map → availability core | ROOTS | `in_progress` |
-| HEARTWOOD | Harden buyer trunk | TRUNK | `todo` |
+| TRUNK | Buyer map → availability core | ROOTS | `partial` |
+| HEARTWOOD | Harden buyer trunk | TRUNK | `partial` |
 | BRANCH-A | Trust and facility verification | HEARTWOOD | `todo` |
 | BRANCH-B | Seller map-first operations | BRANCH-A, TRUNK | `todo` |
 | BRANCH-C | Omni Wallet, slots and Pro | ROOTS, BRANCH-B | `todo` |
@@ -107,23 +107,23 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `in_progress` | Canvas, motion and location proof |
-| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `in_progress` | Submit parity and context proof |
-| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `in_progress` | Bounds/source/error proof |
-| TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `in_progress` | Privacy and back/close proof |
-| TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `in_progress` | Product/no-reservation proof |
-| TRUNK-AVAILABILITY | Build Product → Scope → Constraints → Responses | TRUNK-CATALOGUE | `in_progress` | Auth, scope, freshness and response proof |
-| TRUNK-COMPARISON | Build comparison with eligible-response lock | TRUNK-AVAILABILITY | `ready` | Ordering and intent-lock proof |
+| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `partial` | Canvas, motion and location proof |
+| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `partial` | Submit parity and context proof |
+| TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `partial` | Bounds/source/error proof |
+| TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `partial` | Privacy and back/close proof |
+| TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `verified` | Product/no-reservation proof |
+| TRUNK-AVAILABILITY | Build Product → Scope → Constraints → Responses | TRUNK-CATALOGUE | `verified` | Auth, scope, freshness and response proof |
+| TRUNK-COMPARISON | Build comparison with eligible-response lock | TRUNK-AVAILABILITY | `partial` | Pending/no-response proven; real response card awaits Seller Trunk |
 
 ## 6. Heartwood
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| HEART-001 | Add complete async, empty, locked, error, retry, cancel and success states | TRUNK | `todo` | State matrix |
-| HEART-002 | Prove Auth cancellation/error and exact context restoration | TRUNK | `todo` | Browser/integration proof |
-| HEART-003 | Prove duplicate/concurrent requests and no reservation | TRUNK | `todo` | Server negative tests |
-| HEART-004 | Prove back, close, refresh, interrupted session and stale-response recovery | TRUNK | `todo` | Recovery trace |
-| HEART-005 | Certify focus, keyboard, touch, safe areas and reduced motion | TRUNK | `todo` | Four-width accessibility proof |
+| HEART-001 | Add complete async, empty, locked, error, retry, cancel and success states | TRUNK | `partial` | [`v2-buyer-trunk-heartwood-evidence.md`](./v2-buyer-trunk-heartwood-evidence.md) records implemented states; forced error/cancellation coverage remains |
+| HEART-002 | Prove Auth cancellation/error and exact context restoration | TRUNK | `partial` | Official Auth return is proven; cancellation/interrupted return remains manual |
+| HEART-003 | Prove duplicate/concurrent requests and no reservation | TRUNK | `partial` | No-reservation boundary and request-shape idempotency are implemented; concurrency proof remains |
+| HEART-004 | Prove back, close, refresh, interrupted session and stale-response recovery | TRUNK | `partial` | Stale-detail guard and step-back code landed; full refresh/resume remains open |
+| HEART-005 | Certify focus, keyboard, touch, safe areas and reduced motion | TRUNK | `partial` | Accessible names/live regions and responsive CSS exist; four-width/manual pass remains |
 | HEART-006 | Run adversarial false-state, permission and privacy review | HEART-001–005 | `todo` | Rejection report resolved |
 
 ## 7. Branches
