@@ -192,8 +192,8 @@ export function CleanBuyerMapStage({
                 {hasActiveSearch ? <Button variant="ghost" className="h-11 shrink-0 rounded-full px-3 text-xs font-bold text-[var(--omni-orange-deep)]" onClick={onOpenBulkAvailability}>Tout vérifier</Button> : null}
               </div>
               <div className="-mx-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <div className="flex min-w-0 gap-3">
-                {(hasActiveSearch ? results : discoveryFacilities).slice(0, 8).map((facility) => (
+              <div className="flex min-w-0 gap-4">
+                {((hasActiveSearch ? results : discoveryFacilities) as BuyerFacility[]).slice(0, 8).map((facility) => (
                   <Button
                     key={facility.id}
                     type="button"
@@ -218,7 +218,7 @@ export function CleanBuyerMapStage({
                     {formatMoney(facility.min_price) ? (
                       <p className="mt-3 text-sm font-extrabold text-[var(--omni-ink)]">À partir de {formatMoney(facility.min_price)}</p>
                     ) : null}
-                    <span className="mt-3 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--omni-ink)] px-3 text-xs font-bold text-[var(--omni-gold)]">Voir l’offre</span>
+                    <span className="mt-4 inline-flex min-h-11 items-center justify-center rounded-xl bg-[var(--omni-ink)] px-3 text-xs font-bold text-[var(--omni-gold)]">Vérifier la disponibilité</span>
                   </Button>
                 ))}
               </div>
