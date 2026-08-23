@@ -15,11 +15,11 @@ The actual server repository now exposes `declareExternalPayment`. It resolves t
 
 The operation supports only `cash`, `mobile_money` and `pay_on_delivery`. Omni does not receive, hold, settle or withdraw buyer-seller funds in this seam.
 
-The repository also exposes `confirmExternalPayment` for the seller side. It requires a non-suspended authenticated seller member, an existing buyer declaration, `payment_declared` as the current transaction state and an unacknowledged declaration. It locks the transaction snapshot, marks the declaration acknowledged, appends `payment_confirmed` and a correlation-keyed audit event, and returns the existing confirmed declaration on replay.
+The repository also exposes `confirmExternalPayment` for the seller side. It requires a non-suspended authenticated seller member, an existing buyer declaration, `payment_declared` as the current transaction state and an unacknowledged declaration. It locks the transaction snapshot, marks the declaration acknowledged, appends `payment_confirmed` and a correlation-keyed audit event, and returns the existing confirmed declaration on replay. The authenticated `POST /api/v2/external-payment-confirmations` route delegates to this operation.
 
 ## Local proof
 
-Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection, seller confirmation gating/replay and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` and `POST /api/v2/external-payment-confirmations` routes now delegate to these seams. Full local validation reports 11 Vitest files and 67 passing tests, a successful TypeScript/Vite build, five bundled Vercel functions and `Client boundary: clean`.
+Repository tests cover a supported buyer declaration, the buyer-role and QR-state predicates, declaration/event/audit inserts, transaction-level conflict handling, unsupported-method rejection before SQL, missing QR/member rejection, conflicting-method replay rejection, seller confirmation gating/replay and HTTP policy mapping. The authenticated `POST /api/v2/external-payment-declarations` and `POST /api/v2/external-payment-confirmations` routes now delegate to these seams. Full local validation reports 11 Vitest files and 70 passing tests, a successful TypeScript/Vite build, five bundled Vercel functions and `Client boundary: clean`.
 
 ## Explicit non-evidence
 
