@@ -4,7 +4,7 @@
 **Structural path:** `Root System > Auth boundary > seller bearer proof`  
 **Method:** Nature Way  
 **Observed:** 2026-08-23  
-**Status:** `decision-ready`
+**Status:** `in_progress`
 
 ## Mini-seed
 
@@ -36,19 +36,19 @@ Neon’s Managed Better Auth documentation explicitly describes branch-isolated 
 
 ### 1. Isolate the proof environment
 
-Create a disposable Neon branch from the current persistent V2 branch, for example `omni-v2-seller-proof`, and never point the test harness at the production/default branch. Deploy the current V2 commit to a Vercel Preview whose `V2_DATABASE_URL` is bound to that proof branch. Configure the branch-specific Neon Auth URL and JWKS URL for the same Preview. The preview environment must be identifiable by deployment URL and commit, but no connection value may appear in logs, evidence or chat. Because the user-reported deletion left the persistent seller-ready V2 account with an unmatched Auth binding, use a fresh labeled seller fixture on the disposable branch or repair that binding only after the new Auth user is created through the supported Auth lifecycle.
+A disposable Neon branch named `omni-v2-seller-proof-20260823` has been created from persistent V2 with branch-local Better Auth and a branch-specific Auth/JWKS endpoint. The remaining environment action is to deploy the current V2 commit to a Vercel Preview whose `V2_DATABASE_URL` is bound to that branch and configure the same branch-specific Auth/JWKS URLs. The test runner refuses the canonical domain and requires `OMNI_PROOF_ENVIRONMENT=isolated`. The preview environment must be identifiable by deployment URL and commit, but no connection value may appear in logs, evidence or chat. Because the user-reported deletion left the persistent seller-ready V2 account with an unmatched Auth binding, use a fresh labeled seller fixture on the disposable branch or repair that binding only after the new Auth user is created through the supported Auth lifecycle.
 
 Keep the existing persistent V2 demo fixture as the source of the bounded seller/product/request shape, or seed a labeled copy on the disposable branch with the existing idempotent fixture procedure. Do not delete the current persistent demo identities merely to obtain credentials; deletion does not produce a signed session and would destroy useful evidence.
 
 ### 2. Inject test credentials through an external secret store
 
-Create four test-only secret names in the CI or Preview secret store: `OMNI_TEST_SELLER_EMAIL`, `OMNI_TEST_SELLER_PASSWORD`, `OMNI_TEST_BUYER_EMAIL` and `OMNI_TEST_BUYER_PASSWORD`. The values must be random demo credentials, scoped to the disposable Auth branch and never reused by a human account.
+The repository now provides the non-secret template `scripts/prove-v2-live-seller.env.example` and the runner expects `OMNI_PROOF_SELLER_EMAIL`, `OMNI_PROOF_SELLER_PASSWORD`, `OMNI_PROOF_BUYER_EMAIL` and `OMNI_PROOF_BUYER_PASSWORD` in an external CI/Preview secret store. Values must be freshly generated, scoped to the disposable Auth branch and never reused by a human account. The password supplied in chat is not used.
 
-The agent must not read, print, paste or receive these values. The runner may consume them only in process memory. Logs must contain only actor class, route, HTTP status, redacted error code, aggregate counts and a non-secret correlation reference. If the external secret store cannot be configured without exposing values to the agent, this step remains `manual` and the live proof stays blocked.
+The agent must not read, print, paste or receive these values. The runner may consume them only in process memory. Logs contain only branch metadata and step/status markers; fixture IDs, correlation values, idempotency keys, QR material and database URLs are not printed. If the external secret store cannot be configured without exposing values to the agent, this step remains `manual` and the live proof stays blocked.
 
 ### 3. Add a test-only Auth session bootstrap
 
-Implement a Playwright/Node proof harness outside the production client path. It should call the existing Neon Auth sign-in method with the encrypted seller or buyer secrets, retrieve the session JWT in memory, and immediately use it as a bearer header against the Vercel Preview. It must never write the token to a file, screenshot, test snapshot, console, exception message or evidence document.
+Implemented `scripts/prove-v2-live-seller.mjs` and registered `npm run proof:live-seller`. It uses the installed Neon Auth client, attempts sign-in first, permits branch-local sign-up only when `OMNI_PROOF_ALLOW_SIGN_UP=1`, retrieves the JWT in memory and immediately uses it as a bearer header against the isolated Preview. It emits only step/status markers, never credential or token material. It must never write the token to a file, screenshot, test snapshot, console, exception message or evidence document.
 
 If the fixture branch does not contain the required user, the bootstrap may sign up the test user through the normal Neon Auth API in that branch. It must then verify the session through the Auth client before calling Omni. No direct insert into `neon_auth` is permitted. The harness should fail if the Auth issuer, JWKS origin or preview database branch is not the expected test environment.
 

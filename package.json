@@ -10,6 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check:boundary": "node scripts/check-client-boundary.mjs",
+    "proof:live-seller": "node scripts/prove-v2-live-seller.mjs",
     "server": "tsx server/index.ts",
     "build:server": "tsc --noEmit",
     "dev:full": "npm run build && npm run server"

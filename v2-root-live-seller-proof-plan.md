@@ -3,8 +3,10 @@
 **Document ID:** `OMNI-V2-ROOT-LIVE-SELLER-001`  
 **Structural path:** `Root System > seller availability response > authenticated live proof`  
 **Method:** Nature Way  
-**Status:** `blocked`
+**Status:** `in_progress`
 **Auth decision:** [`v2-root-seller-bearer-simulation-options.md`](./v2-root-seller-bearer-simulation-options.md)
+**Runner:** [`scripts/prove-v2-live-seller.mjs`](./scripts/prove-v2-live-seller.mjs)
+**Environment template:** [`scripts/prove-v2-live-seller.env.example`](./scripts/prove-v2-live-seller.env.example)
 
 ## Mini-seed
 
@@ -20,7 +22,7 @@ The current browser page is the canonical map-first entry surface. The browser b
 
 ## Autonomous feasibility check
 
-The repository Auth client exposes only the normal email/password sign-in and sign-up path plus retrieval of an existing JWT session. The server accepts a bearer token and verifies its subject against the Neon Auth JWKS; there is no autonomous demo-session, impersonation or pre-provisioned bearer mechanism in the repository or environment names. No password, one-time code, recovery code, bearer token, Auth ID or connection value was requested, received, typed or inspected.
+The repository Auth client exposes the normal email/password sign-in and sign-up path plus retrieval of an existing JWT session. The server accepts a bearer token and verifies its subject against the Neon Auth JWKS; there is no autonomous demo-session, impersonation or pre-provisioned bearer mechanism in the repository or environment names. The disposable Neon branch `omni-v2-seller-proof-20260823` now exists with branch-local Better Auth and a branch-specific Auth/JWKS endpoint. The guarded runner consumes only external `OMNI_PROOF_*` values, refuses the canonical domain, keeps tokens and fixture IDs in memory, and fails preflight when those external values are absent. No password, one-time code, recovery code, bearer token, Auth ID or connection value was requested, received, typed or inspected by the agent.
 
 A status-only negative pass against all protected V2 mutation routes returned HTTP 401 for `/api/v2/availability`, `/api/v2/availability-responses`, `/api/v2/purchase-intents`, `/api/v2/qr-issuances`, `/api/v2/qr-verifications`, `/api/v2/transaction-transitions`, `/api/v2/external-payment-declarations` and `/api/v2/external-payment-confirmations`. This confirms the deployed boundary fails closed without authentication; it does not provide the seller bearer required for positive proof.
 
@@ -37,7 +39,7 @@ The live proof must use server-issued identifiers from the bounded fixture and a
 | 5 | Demo seller bearer | `POST /api/v2/qr-issuances` for the transaction | `201`; QR is server-issued and transaction-bound; returned QR material is never written to evidence | Seller-only issuance; current state becomes `qr_ready` |
 | 6 | Demo seller bearer | `POST /api/v2/qr-verifications` using the server-issued transaction/QR material | First request is accepted and appends the expected event/audit fact | Seller membership, exact transaction/token match, unexpired and unverified token |
 | 7 | Demo seller bearer | Repeat step 6 with the same QR material | `409`; replay is rejected and replay state increments exactly once | Sequential replay negative proof |
-| 8 | Authorized buyer bearer | `POST /api/v2/external-payment-declarations` with `pay_on_delivery` | `201`; one declaration and one `payment_declared` event | Declaration only; no in-app payment rail |
+| 8 | Authorized buyer bearer | `POST /api/v2/external-payment-declarations` with `pay_on_delivery` | `200`; one declaration and one `payment_declared` event | Declaration only; no in-app payment rail |
 | 9 | Demo seller bearer | `POST /api/v2/external-payment-confirmations` for the transaction | `200`; seller acknowledgement is accepted exactly once and `payment_confirmed` is recorded | External acknowledgement only |
 
 The buyer bearer in step 4 and step 8 may reuse the already authorized KH buyer session only if the session is still available and the operation is explicitly bounded to this fixture. If a second authenticated browser actor cannot be established without asking the agent to handle credentials, stop rather than substitute a fixture insert or direct SQL call.
@@ -59,4 +61,4 @@ Camera proof is also separate. It requires an HTTPS camera-capable browser, an e
 
 ## Ring decision
 
-The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Because no autonomous demo session is available and the browser bridge did not provide a usable authenticated session, the item is currently `blocked` at the authentication boundary; Root remains `review` and Buyer Trunk remains blocked. The next permissible step is to implement the isolated Neon Auth branch/Preview test-runner path defined in [`v2-root-seller-bearer-simulation-options.md`](./v2-root-seller-bearer-simulation-options.md), or use a pre-existing authenticated demo seller session if one becomes available, without transferring credentials to the agent.
+The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Because no autonomous demo session is available and the browser bridge did not provide a usable authenticated session, the item is currently `blocked` at the authentication boundary; Root remains `review` and Buyer Trunk remains blocked. The next permissible step is to bind a Vercel Preview to the disposable branch, place fresh test credentials in an external secret store, and run `npm run proof:live-seller` with the non-secret environment metadata plus secret-store injection. The runner is intentionally blocked until those external values exist; the user-provided chat password is not used. A pre-existing authenticated demo seller session remains an alternative, without transferring credentials to the agent.
