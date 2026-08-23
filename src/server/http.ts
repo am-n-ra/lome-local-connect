@@ -263,7 +263,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const priceMinor = rawPrice === null || rawPrice === undefined ? null : Number(rawPrice);
       const sellerMessage = input.sellerMessage === null || input.sellerMessage === undefined ? null : input.sellerMessage;
       const idempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(requestId) || !uuidPattern.test(facilityId) || !uuidPattern.test(productId) || (status !== 'available' && status !== 'partial' && status !== 'unavailable')) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid request, facility, product and response status.'));
         return true;
