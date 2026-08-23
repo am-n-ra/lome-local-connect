@@ -238,7 +238,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     if (!map) return;
     if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', ['case', ['==', ['get', 'id'], selectedId ?? ''], '#e97c54', '#2c5b50']);
     if (map.getLayer('omni-selected-halo')) map.setFilter('omni-selected-halo', ['==', ['get', 'id'], selectedId ?? '']);
-  }, [selectedId]);
+    if (!selectedId) return;
+    const selected = facilities.find((facility) => facility.id === selectedId);
+    if (!selected || map.isMoving()) return;
+    map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+  }, [facilities, selectedId]);
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'
