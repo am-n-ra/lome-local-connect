@@ -1,4 +1,4 @@
-import type { SearchOptions, ApiResult, AvailabilityResult, FacilityDetail, PublicFacility } from './types';
+import type { AvailabilityResponsesResult, SearchOptions, ApiResult, AvailabilityResult, FacilityDetail, PublicFacility } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -57,4 +57,12 @@ export async function requestAvailability(input: {
     }),
   });
   return parse<AvailabilityResult>(response);
+}
+
+export async function getAvailabilityResponses(input: { requestId: string; token: string }): Promise<ApiResult<AvailabilityResponsesResult>> {
+  const params = new URLSearchParams({ requestId: input.requestId });
+  const response = await fetchWithRecovery(`/api/v2/availability-responses?${params.toString()}`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<AvailabilityResponsesResult>(response);
 }

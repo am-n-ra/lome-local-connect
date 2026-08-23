@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
 
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
-import type { AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -227,6 +227,86 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by p.name
       `);
       return { ...toFacility(row), products: (products as Record<string, unknown>[]).map(toProduct) };
+    },
+
+    async getAvailabilityResponses(input: { authUserId: string; requestId: string }): Promise<AvailabilityResponsesResult> {
+      const rows = await retryDatabase(() => sql`
+        with buyer_request as (
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status
+          from v2_availability_requests r
+          join v2_accounts a on a.id = r.buyer_account_id
+          where r.id = ${input.requestId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        )
+        select
+          br.id as request_id,
+          br.product_id,
+          br.facility_id,
+          br.expires_at,
+          br.status as request_status,
+          ar.id as response_id,
+          ar.facility_id as response_facility_id,
+          f.name as facility_name,
+          f.category as facility_category,
+          p.name as product_name,
+          ar.status as response_status,
+          ar.quantity_available,
+          ar.price_minor,
+          coalesce(ar.offer_snapshot ->> 'currency', 'USD') as currency,
+          ar.seller_message,
+          ar.observed_at,
+          case
+            when ar.id is null then null
+            when ar.observed_at >= br.expires_at then 'expired'
+            when ar.observed_at < now() - interval '10 minutes' then 'stale'
+            else 'fresh'
+          end as freshness
+        from buyer_request br
+        left join v2_availability_responses ar on ar.request_id = br.id
+        left join v2_facilities f on f.id = ar.facility_id
+        left join v2_products p on p.id = ar.product_id
+        order by ar.observed_at desc nulls last, ar.id desc nulls last
+      `);
+      const typedRows = rows as Record<string, unknown>[];
+      const first = typedRows[0];
+      if (!first) throw new AvailabilityPolicyError('Availability request was not found or is not owned by this account.');
+      const expiresAt = new Date(String(first.expires_at)).toISOString();
+      const now = Date.now();
+      const responses = typedRows
+        .filter((row) => row.response_id !== null && row.response_id !== undefined)
+        .map((row) => ({
+          id: String(row.response_id),
+          requestId: String(row.request_id),
+          facilityId: String(row.response_facility_id),
+          facilityName: String(row.facility_name ?? 'Facility'),
+          facilityCategory: String(row.facility_category ?? 'Local supply'),
+          productId: String(row.product_id),
+          productName: String(row.product_name ?? 'Catalogue offer'),
+          status: String(row.response_status) as BuyerAvailabilityResponseStatus,
+          quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
+          priceMinor: row.price_minor === null ? null : Number(row.price_minor),
+          currency: String(row.currency ?? 'USD'),
+          sellerMessage: row.seller_message === null ? null : String(row.seller_message),
+          observedAt: new Date(String(row.observed_at)).toISOString(),
+          freshness: String(row.freshness) as AvailabilityResponsesResult['responses'][number]['freshness'],
+        }));
+      const requestStatus: AvailabilityResponsesResult['requestStatus'] = responses.length > 0
+        ? 'responses'
+        : new Date(expiresAt).getTime() <= now
+          ? 'expired'
+          : String(first.request_status) === 'responding'
+            ? 'responding'
+            : 'submitted';
+      return {
+        requestId: String(first.request_id),
+        productId: String(first.product_id),
+        facilityId: String(first.facility_id),
+        requestStatus,
+        expiresAt,
+        responses,
+      };
     },
 
     async confirmExternalPayment(input: {

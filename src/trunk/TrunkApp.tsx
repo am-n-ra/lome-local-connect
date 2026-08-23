@@ -1,9 +1,9 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { getFacilityDetail, listPublicFacilities, requestAvailability } from './api';
+import { getAvailabilityResponses, getFacilityDetail, listPublicFacilities, requestAvailability } from './api';
 import { TrunkMap } from './TrunkMap';
-import type { AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions } from './types';
+import type { AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, SearchOptions } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -45,6 +45,9 @@ export function TrunkApp() {
   const [panel, setPanel] = useState<Panel>('none');
   const [availabilityStep, setAvailabilityStep] = useState(1);
   const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
+  const [responseData, setResponseData] = useState<AvailabilityResponsesResult | null>(null);
+  const [responseState, setResponseState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [responseError, setResponseError] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>(undefined);
@@ -209,10 +212,13 @@ export function TrunkApp() {
     }
     setSelectedFacility(result.data);
     setDetailState('idle');
-    if (verify && result.data.products.length > 0) {
+      if (verify && result.data.products.length > 0) {
       setSelectedProductId(result.data.products[0].id);
       setAvailabilityStep(1);
       setAvailability(null);
+      setResponseData(null);
+      setResponseState('idle');
+      setResponseError('');
       setRequestState('idle');
       if (sessionUser) setPanel('availability');
     }
@@ -224,6 +230,9 @@ export function TrunkApp() {
     setSelectedProductId(selectedProductId ?? selectedFacility.products[0].id);
     setQuantity(Math.max(1, quantity));
     setAvailability(null);
+    setResponseData(null);
+    setResponseState('idle');
+    setResponseError('');
     setRequestState('idle');
     if (!sessionUser) {
       openAuth('sign-in', 'availability');
@@ -260,6 +269,7 @@ export function TrunkApp() {
         setAvailability(result.data);
         setRequestState('idle');
         setAvailabilityStep(4);
+        void refreshResponses(result.data.requestId);
       } else {
         setRequestState('error');
         setError(result.error?.message ?? 'La demande de disponibilité n’a pas pu être envoyée.');
@@ -267,6 +277,31 @@ export function TrunkApp() {
     } catch (caught) {
       setRequestState('error');
       setError(caught instanceof Error ? caught.message : 'La demande de disponibilité n’a pas pu être envoyée.');
+    }
+  };
+
+  const refreshResponses = async (requestId = availability?.requestId) => {
+    if (!requestId || !authClient) return;
+    setResponseState('loading');
+    setResponseError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setResponseState('error');
+        setResponseError('Votre session doit être réouverte pour voir les réponses.');
+        return;
+      }
+      const result = await getAvailabilityResponses({ requestId, token });
+      if (result.ok && result.data) {
+        setResponseData(result.data);
+        setResponseState('ready');
+      } else {
+        setResponseState('error');
+        setResponseError(result.error?.message ?? 'Les réponses ne peuvent pas être actualisées pour le moment.');
+      }
+    } catch (caught) {
+      setResponseState('error');
+      setResponseError(caught instanceof Error ? caught.message : 'Les réponses ne peuvent pas être actualisées pour le moment.');
     }
   };
 
@@ -352,7 +387,7 @@ export function TrunkApp() {
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <SellerEntrySheet user={sessionUser} onClose={() => setPanel('none')} onSignOut={signOut} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} onClose={() => setPanel('none')} onVerify={openAvailability} />}
-      {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
+      {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
   );
 }
@@ -391,8 +426,28 @@ function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' |
   return <section className="omni-sheet context-sheet facility-sheet" role="dialog" aria-modal="true" aria-labelledby="facility-title"><div className="sheet-handle" /><div className="sheet-head"><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Carte</button><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{props.state === 'loading' && <div className="sheet-loading"><span className="spinner" /> Ouverture de la facilité…</div>}{props.state === 'error' && <div className="empty-state"><PackageSearch size={26} /><strong>Facilité indisponible</strong><p>{props.error}</p><button type="button" className="secondary-button" onClick={props.onClose}>Retour à la carte</button></div>}{props.facility && props.state === 'idle' && <><div className="facility-identity"><span className="facility-identity-icon"><MapPin size={21} /></span><div><span className="section-kicker">{props.facility.category}</span><h2 id="facility-title">{props.facility.name}</h2><p>{props.facility.address ?? 'Lieu partagé sur la carte publique'}</p></div></div><div className="trust-row"><span className="trust-badge"><ShieldCheck size={14} /> {trustLabel(props.facility.trust)}</span>{props.facility.plan === 'pro_active' && <span className="pro-badge">Pro</span>}</div>{props.facility.trust === 'unclaimed' ? <div className="notice-card"><strong>Lieu public, pas encore certifié</strong><p>Ce pin vient d’une source publique. Une revendication doit passer par la vérification avant toute publication de catalogue.</p></div> : props.facility.products.length ? <><div className="catalogue-heading"><div><span className="section-kicker">Catalogue de la facilité</span><strong>{props.facility.products.length} offre{props.facility.products.length === 1 ? '' : 's'}</strong></div><span>Source facility</span></div><div className="catalogue-list">{props.facility.products.slice(0, 5).map((product) => <div className="catalogue-item" key={product.id}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{product.name}</strong><small>{product.description ?? product.category ?? 'Offre locale'} · {currency(product.priceMinor, product.currency)} / {product.unit}</small></span></div>)}</div><button className="primary-button" type="button" onClick={props.onVerify}>Vérifier la disponibilité <ArrowRight size={16} /></button></> : <div className="empty-state compact"><Clock3 size={25} /><strong>Catalogue non publié</strong><p>Cette facilité n’a pas encore d’offre publique à vérifier.</p></div>}<p className="privacy-note">Les contacts et l’itinéraire apparaissent seulement après une intention d’achat autorisée.</p></>}</section>;
 }
 
-function AvailabilitySheet(props: { facility: FacilityDetail | null; step: number; setStep: (value: number) => void; productId: string | null; setProductId: (value: string) => void; quantity: number; setQuantity: (value: number) => void; budgetMode: 'unlimited' | 'maximum'; setBudgetMode: (value: 'unlimited' | 'maximum') => void; budget: string; setBudget: (value: string) => void; state: 'idle' | 'loading' | 'error'; error: string; result: AvailabilityResult | null; onClose: () => void; onSubmit: () => void }) {
+function responseStatusLabel(status: string) {
+  if (status === 'available') return 'Disponible';
+  if (status === 'partial') return 'Partielle';
+  if (status === 'corrected') return 'Corrigée';
+  return 'Indisponible';
+}
+
+function freshnessLabel(freshness: string) {
+  if (freshness === 'fresh') return 'Actualisée';
+  if (freshness === 'stale') return 'À confirmer';
+  return 'Expirée';
+}
+
+function ResponseComparison(props: { data: AvailabilityResponsesResult | null; state: 'idle' | 'loading' | 'ready' | 'error'; error: string; onRefresh: () => void }) {
+  if (props.state === 'loading' && !props.data) return <div className="comparison-state" role="status"><span className="spinner" /><strong>Recherche des réponses…</strong><p>Omni vérifie les retours liés à votre demande.</p></div>;
+  if (props.state === 'error') return <div className="comparison-state comparison-error" role="alert"><strong>Les réponses ne sont pas disponibles</strong><p>{props.error}</p><button className="secondary-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>;
+  if (!props.data || props.data.responses.length === 0) return <div className="comparison-state" role="status"><span className="response-mark"><Clock3 size={21} /></span><strong>{props.data?.requestStatus === 'expired' ? 'La demande a expiré' : 'En attente des vendeurs'}</strong><p>{props.data?.requestStatus === 'expired' ? 'Une nouvelle demande peut être envoyée depuis la facilité.' : 'Aucune réponse vérifiée pour le moment. Vous pouvez revenir plus tard sans perdre votre demande.'}</p><div className="comparison-actions"><button className="secondary-button" type="button" onClick={props.onRefresh}>Actualiser</button><span className="freshness-note">Expiration {props.data ? new Date(props.data.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'bientôt'}</span></div></div>;
+  return <div className="comparison-content"><div className="comparison-summary"><div><span className="section-kicker">Réponses vérifiées</span><strong>{props.data.responses.length} option{props.data.responses.length === 1 ? '' : 's'} à comparer</strong></div><button className="text-button" type="button" onClick={props.onRefresh} disabled={props.state === 'loading'}>{props.state === 'loading' ? 'Actualisation…' : 'Actualiser'}</button></div><div className="response-list">{props.data.responses.map((response) => <article className="response-card" key={response.id}><div className="response-card-head"><span className={`response-status status-${response.status}`}>{responseStatusLabel(response.status)}</span><span className={`response-freshness freshness-${response.freshness}`}>{freshnessLabel(response.freshness)}</span></div><div className="response-card-title"><strong>{response.facilityName}</strong><small>{response.facilityCategory} · {response.productName}</small></div><div className="response-card-meta"><span><b>Quantité</b>{response.quantityAvailable === null ? 'Non indiquée' : response.quantityAvailable}</span><span><b>Prix</b>{response.priceMinor === null ? 'Non indiqué' : currency(response.priceMinor, response.currency)}</span><span><b>Reçu</b>{new Date(response.observedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div>{response.sellerMessage && <p className="response-message">{response.sellerMessage}</p>}<div className="locked-note compact"><ShieldCheck size={16} /><span><strong>Intention encore verrouillée</strong><small>Comparez les réponses avant toute action privée.</small></span></div></article>)}</div></div>;
+}
+
+function AvailabilitySheet(props: { facility: FacilityDetail | null; step: number; setStep: (value: number) => void; productId: string | null; setProductId: (value: string) => void; quantity: number; setQuantity: (value: number) => void; budgetMode: 'unlimited' | 'maximum'; setBudgetMode: (value: 'unlimited' | 'maximum') => void; budget: string; setBudget: (value: string) => void; state: 'idle' | 'loading' | 'error'; error: string; result: AvailabilityResult | null; responseData: AvailabilityResponsesResult | null; responseState: 'idle' | 'loading' | 'ready' | 'error'; responseError: string; onRefreshResponses: () => void; onClose: () => void; onSubmit: () => void }) {
   if (!props.facility) return null;
   const selected = props.facility.products.find((product) => product.id === props.productId) ?? props.facility.products[0];
-  return <section className="omni-sheet context-sheet availability-sheet" role="dialog" aria-modal="true" aria-labelledby="availability-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Vérifier la disponibilité</span><h2 id="availability-title">{props.facility.name}</h2></div><button type="button" onClick={props.onClose} aria-label="Retour"><ArrowLeft size={18} /></button></div><div className="stepper" aria-label={`Étape ${props.step} sur 4`}><span className={props.step >= 1 ? 'active' : ''}>01<small>Produit</small></span><i /><span className={props.step >= 2 ? 'active' : ''}>02<small>Portée</small></span><i /><span className={props.step >= 3 ? 'active' : ''}>03<small>Contraintes</small></span><i /><span className={props.step >= 4 ? 'active' : ''}>04<small>Réponses</small></span></div>{props.step === 1 && <div className="step-content"><p className="step-intro">Choisissez dans le catalogue de cette facilité. Vous n’avez pas besoin de retaper le produit.</p><div className="select-list">{props.facility.products.map((product) => <button type="button" key={product.id} className={`select-product ${props.productId === product.id ? 'selected' : ''}`} onClick={() => props.setProductId(product.id)}><span className="radio-dot" /><span><strong>{product.name}</strong><small>{currency(product.priceMinor, product.currency)} / {product.unit} · vérification sur demande</small></span><span className="product-price">{product.couponLabel ?? 'Offre'}</span></button>)}</div><button className="primary-button" type="button" disabled={!props.productId} onClick={() => props.setStep(2)}>Continuer <ArrowRight size={16} /></button></div>}{props.step === 2 && <div className="step-content"><p className="step-intro">Cette première demande est ciblée sur la facilité sélectionnée. Omni n’interprète pas encore cette demande comme une réservation.</p><div className="scope-card"><span className="scope-icon"><MapPin size={18} /></span><div><strong>{props.facility.name}</strong><small>{props.facility.category} · une facilité ciblée</small></div><span className="scope-state">Ciblée</span></div><button className="primary-button" type="button" onClick={() => props.setStep(3)}>Définir les contraintes <ArrowRight size={16} /></button></div>}{props.step === 3 && <div className="step-content"><p className="step-intro">Indiquez ce que le vendeur doit vérifier. Une demande de disponibilité ne bloque pas le stock.</p><div className="quantity-control"><div><span className="section-kicker">Quantité</span><strong>{selected?.name}</strong></div><div><button type="button" onClick={() => props.setQuantity(Math.max(1, props.quantity - 1))} aria-label="Diminuer la quantité">−</button><strong>{props.quantity}</strong><button type="button" onClick={() => props.setQuantity(props.quantity + 1)} aria-label="Augmenter la quantité">+</button></div></div><div className="budget-toggle"><button type="button" className={props.budgetMode === 'unlimited' ? 'active' : ''} onClick={() => props.setBudgetMode('unlimited')}>Sans plafond</button><button type="button" className={props.budgetMode === 'maximum' ? 'active' : ''} onClick={() => props.setBudgetMode('maximum')}>Prix maximum</button></div>{props.budgetMode === 'maximum' && <label className="money-input">Budget maximum<input type="number" min="0" step="0.01" value={props.budget} onChange={(event) => props.setBudget(event.target.value)} placeholder="0,00" /></label>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Les informations privées restent verrouillées</strong><small>Contact et itinéraire ne s’ouvrent qu’après une intention autorisée.</small></span></div>{props.error && <div className="inline-error" role="alert">{props.error}</div>}<button className="primary-button" type="button" disabled={props.state === 'loading'} onClick={props.onSubmit}>{props.state === 'loading' ? 'Envoi de la demande…' : 'Vérifier maintenant'} <ArrowRight size={16} /></button></div>}{props.step === 4 && <div className="step-content"><div className="response-state"><span className="response-mark"><CheckCircle2 size={25} /></span><div><span className="section-kicker">Demande envoyée</span><h3>En attente de la disponibilité</h3><p>{props.result?.message ?? 'Omni attend une réponse de la facilité.'}</p></div></div><div className="response-meta"><span><strong>Produit</strong><small>{selected?.name}</small></span><span><strong>État</strong><small>Réponse vendeur attendue</small></span><span><strong>Expiration</strong><small>{props.result ? new Date(props.result.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '15 min'}</small></span></div><div className="comparison-placeholder"><strong>La comparaison apparaîtra ici</strong><span>Quand une réponse vérifiée sera disponible, vous pourrez comparer les options avant de créer une intention d’achat.</span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à la facilité</button></div>}</section>;
+  return <section className="omni-sheet context-sheet availability-sheet" role="dialog" aria-modal="true" aria-labelledby="availability-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Vérifier la disponibilité</span><h2 id="availability-title">{props.facility.name}</h2></div><button type="button" onClick={props.onClose} aria-label="Retour"><ArrowLeft size={18} /></button></div><div className="stepper" aria-label={`Étape ${props.step} sur 4`}><span className={props.step >= 1 ? 'active' : ''}>01<small>Produit</small></span><i /><span className={props.step >= 2 ? 'active' : ''}>02<small>Portée</small></span><i /><span className={props.step >= 3 ? 'active' : ''}>03<small>Contraintes</small></span><i /><span className={props.step >= 4 ? 'active' : ''}>04<small>Réponses</small></span></div>{props.step === 1 && <div className="step-content"><p className="step-intro">Choisissez dans le catalogue de cette facilité. Vous n’avez pas besoin de retaper le produit.</p><div className="select-list">{props.facility.products.map((product) => <button type="button" key={product.id} className={`select-product ${props.productId === product.id ? 'selected' : ''}`} onClick={() => props.setProductId(product.id)}><span className="radio-dot" /><span><strong>{product.name}</strong><small>{currency(product.priceMinor, product.currency)} / {product.unit} · vérification sur demande</small></span><span className="product-price">{product.couponLabel ?? 'Offre'}</span></button>)}</div><button className="primary-button" type="button" disabled={!props.productId} onClick={() => props.setStep(2)}>Continuer <ArrowRight size={16} /></button></div>}{props.step === 2 && <div className="step-content"><p className="step-intro">Cette première demande est ciblée sur la facilité sélectionnée. Omni n’interprète pas encore cette demande comme une réservation.</p><div className="scope-card"><span className="scope-icon"><MapPin size={18} /></span><div><strong>{props.facility.name}</strong><small>{props.facility.category} · une facilité ciblée</small></div><span className="scope-state">Ciblée</span></div><button className="primary-button" type="button" onClick={() => props.setStep(3)}>Définir les contraintes <ArrowRight size={16} /></button></div>}{props.step === 3 && <div className="step-content"><p className="step-intro">Indiquez ce que le vendeur doit vérifier. Une demande de disponibilité ne bloque pas le stock.</p><div className="quantity-control"><div><span className="section-kicker">Quantité</span><strong>{selected?.name}</strong></div><div><button type="button" onClick={() => props.setQuantity(Math.max(1, props.quantity - 1))} aria-label="Diminuer la quantité">−</button><strong>{props.quantity}</strong><button type="button" onClick={() => props.setQuantity(props.quantity + 1)} aria-label="Augmenter la quantité">+</button></div></div><div className="budget-toggle"><button type="button" className={props.budgetMode === 'unlimited' ? 'active' : ''} onClick={() => props.setBudgetMode('unlimited')}>Sans plafond</button><button type="button" className={props.budgetMode === 'maximum' ? 'active' : ''} onClick={() => props.setBudgetMode('maximum')}>Prix maximum</button></div>{props.budgetMode === 'maximum' && <label className="money-input">Budget maximum<input type="number" min="0" step="0.01" value={props.budget} onChange={(event) => props.setBudget(event.target.value)} placeholder="0,00" /></label>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Les informations privées restent verrouillées</strong><small>Contact et itinéraire ne s’ouvrent qu’après une intention autorisée.</small></span></div>{props.error && <div className="inline-error" role="alert">{props.error}</div>}<button className="primary-button" type="button" disabled={props.state === 'loading'} onClick={props.onSubmit}>{props.state === 'loading' ? 'Envoi de la demande…' : 'Vérifier maintenant'} <ArrowRight size={16} /></button></div>}{props.step === 4 && <div className="step-content"><div className="response-state"><span className="response-mark"><CheckCircle2 size={25} /></span><div><span className="section-kicker">Demande envoyée</span><h3>En attente de la disponibilité</h3><p>{props.result?.message ?? 'Omni attend une réponse de la facilité.'}</p></div></div><div className="response-meta"><span><strong>Produit</strong><small>{selected?.name}</small></span><span><strong>État</strong><small>Réponse vendeur attendue</small></span><span><strong>Expiration</strong><small>{props.result ? new Date(props.result.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '15 min'}</small></span></div><ResponseComparison data={props.responseData} state={props.responseState} error={props.responseError} onRefresh={props.onRefreshResponses} /><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à la facilité</button></div>}</section>;
 }

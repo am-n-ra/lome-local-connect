@@ -93,6 +93,53 @@ describe('availability repository Root seam', () => {
   });
 });
 
+describe('buyer availability response read seam', () => {
+  it('returns only a buyer-owned request with mapped response and freshness', async () => {
+    const call = stubSql([{
+      request_id: 'request-1',
+      product_id: 'product-1',
+      facility_id: 'facility-1',
+      expires_at: '2099-08-23T01:00:00.000Z',
+      request_status: 'submitted',
+      response_id: 'response-1',
+      response_facility_id: 'facility-1',
+      facility_name: 'Demo Facility',
+      facility_category: 'Local supply',
+      product_name: 'Tomatoes',
+      response_status: 'available',
+      quantity_available: 2,
+      price_minor: 1500,
+      currency: 'USD',
+      seller_message: 'Ready for pickup.',
+      observed_at: '2099-08-22T23:00:00.000Z',
+      freshness: 'fresh',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.getAvailabilityResponses({ authUserId: 'auth-user-1', requestId: 'request-1' });
+
+    expect(result.requestStatus).toBe('responses');
+    expect(result.responses).toEqual([expect.objectContaining({
+      id: 'response-1',
+      facilityName: 'Demo Facility',
+      productName: 'Tomatoes',
+      status: 'available',
+      quantityAvailable: 2,
+      priceMinor: 1500,
+      freshness: 'fresh',
+    })]);
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('left join v2_availability_responses');
+  });
+
+  it('does not reveal a missing or non-owned request', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.getAvailabilityResponses({ authUserId: 'auth-user-2', requestId: 'request-1' })).rejects.toThrow('not found or is not owned');
+  });
+});
+
 describe('seller availability response persistence Root seam', () => {
   it('accepts an owned seller response and records idempotent audit context', async () => {
     const call = stubSql([{
