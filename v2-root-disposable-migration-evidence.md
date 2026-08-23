@@ -77,3 +77,14 @@ A read-only checksum query was run against `neon_auth.user` on both branches. It
 | Auth schema aggregate checksum | `436113c870a83fee9caf861df0cceaf5` | `436113c870a83fee9caf861df0cceaf5` |
 
 The checksums are aggregate evidence only and do not expose individual Auth IDs or credentials. They strengthen preservation confidence for the disposable migration test; they do not prove that migration 003 has been applied to the persistent V2 or production/default branch.
+
+## Exactly-once event and audit behavior
+
+Migration 004 was applied only on the expiring disposable branch and adds unique boundaries for a transaction state event and an audit action. Labeled duplicate attempts were then exercised:
+
+| Check | Result |
+|---|---|
+| Duplicate `(transaction_id, state)` event | Denied by `v2_transaction_event_state_unique` with `23505` |
+| Duplicate `(correlation_id, event_type, entity_type, entity_id)` audit action | Denied by `v2_audit_action_idempotency_unique` with `23505` |
+
+This proves representative single-transaction duplicate denial on the disposable branch. It does not yet prove that every live writer uses these boundaries, that an idempotency retry returns the original response, or that concurrent transaction and audit writes are handled correctly in the deployed service.
