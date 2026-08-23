@@ -88,3 +88,16 @@ Migration 004 was applied only on the expiring disposable branch and adds unique
 | Duplicate `(correlation_id, event_type, entity_type, entity_id)` audit action | Denied by `v2_audit_action_idempotency_unique` with `23505` |
 
 This proves representative single-transaction duplicate denial on the disposable branch. It does not yet prove that every live writer uses these boundaries, that an idempotency retry returns the original response, or that concurrent transaction and audit writes are handled correctly in the deployed service.
+
+## Public-row preservation checksum
+
+A read-only checksum comparison was run for the existing public V2 rows. The disposable query excluded only the explicitly labeled `root-proof` fixture facilities and the `Root Proof Fixture Product`; all source-reference and source rows were compared directly.
+
+| Relation | Persistent count | Disposable non-fixture count | Persistent checksum | Disposable checksum |
+|---|---:|---:|---|---|
+| Facilities | 3 | 3 | `4bfd055bfc243bee2c0e1d8227f39ed5` | `4bfd055bfc243bee2c0e1d8227f39ed5` |
+| Products | 3 | 3 | `4672fea035bc2d372aadf9b85b0e4a4e` | `4672fea035bc2d372aadf9b85b0e4a4e` |
+| Facility source references | 3 | 3 | `b5b506d09d35855f6af4c161aa6c18bf` | `b5b506d09d35855f6af4c161aa6c18bf` |
+| Public sources | 1 | 1 | `8c2d9bc02534798c26701e4291782a93` | `8c2d9bc02534798c26701e4291782a93` |
+
+The checksums match for all compared public rows. This strengthens the migration-preservation proof for the isolated branch, while still not authorizing application of migration 003/004 to the persistent V2 or production/default branch.
