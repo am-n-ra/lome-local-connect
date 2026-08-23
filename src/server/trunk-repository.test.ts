@@ -109,6 +109,7 @@ describe('transaction persistence Root seam', () => {
       from: 'qr_ready',
       to: 'qr_verified',
       actorRole: 'seller',
+      correlationId: 'corr-transition-1',
       now: '2026-08-23T00:00:00.000Z',
     });
 
@@ -124,6 +125,8 @@ describe('transaction persistence Root seam', () => {
     expect(call.queries[0]).toContain('for update of s');
     expect(call.queries[0]).toContain('insert into v2_transaction_events');
     expect(call.queries[0]).toContain("on conflict (transaction_id, state) do nothing");
+    expect(call.queries[0]).toContain('insert into v2_audit_events');
+    expect(call.queries[0]).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
   });
 
   it('rejects a stale or unauthorized transaction transition when the guarded query matches no row', async () => {
@@ -136,6 +139,7 @@ describe('transaction persistence Root seam', () => {
       from: 'qr_ready',
       to: 'qr_verified',
       actorRole: 'buyer',
+      correlationId: 'corr-transition-2',
       now: '2026-08-23T00:00:00.000Z',
     })).rejects.toThrow('Transaction state is stale, membership is invalid, or the actor transition is not allowed.');
   });
@@ -155,6 +159,7 @@ describe('transaction persistence Root seam', () => {
       from: 'qr_ready',
       to: 'qr_verified',
       actorRole: 'seller',
+      correlationId: 'corr-transition-3',
       now: '2026-08-23T00:00:00.000Z',
     })).resolves.toEqual({
       accepted: true,

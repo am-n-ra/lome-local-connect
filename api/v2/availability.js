@@ -205,14 +205,23 @@ function createTrunkRepository(sql = database()) {
           select e.transaction_id, e.current_state, e.current_state as event_state, e.actor_account_id
           from eligible e
           where e.current_state = ${input.to}
-        )
-        select transaction_id, current_state, event_state, actor_account_id from (
+        ),
+        result as (
           select i.transaction_id, ${input.from}::text as current_state, i.state as event_state, e.actor_account_id
           from inserted i
           join eligible e on e.transaction_id = i.transaction_id
           union all
           select transaction_id, current_state, event_state, actor_account_id from replayed
-        ) result
+        ),
+        audited as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select r.actor_account_id, 'transaction_state_transition', 'transaction', r.transaction_id::text, ${input.correlationId}, ${input.from} || '->' || ${input.to}, ${input.now}::timestamptz
+          from result r
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id, current_state, event_state, actor_account_id from result
         limit 1
       `);
       const row = rows[0];

@@ -27,9 +27,9 @@ This is an implemented HTTP seam, not live session evidence: no bearer-authentic
 
 ## Transaction state-transition repository seam
 
-The actual server repository now exposes `transitionTransaction`. It resolves the authenticated Neon Auth subject to a non-suspended account, locks the transaction snapshot, requires matching buyer or seller membership, derives the latest persisted event state, allows only the actor-owned transitions in the Root state matrix, inserts the next immutable event with the migration-004 uniqueness boundary, and returns the same canonical transition result for an already-applied retry. System-owned transitions remain excluded from actor calls.
+The actual server repository now exposes `transitionTransaction`. It resolves the authenticated Neon Auth subject to a non-suspended account, locks the transaction snapshot, requires matching buyer or seller membership, derives the latest persisted event state, allows only the actor-owned transitions in the Root state matrix, inserts the next immutable event with the migration-004 uniqueness boundary, appends a correlation-keyed `v2_audit_events` row in the same SQL operation, and returns the same canonical transition result for an already-applied retry. System-owned transitions remain excluded from actor calls.
 
-Focused repository tests cover an authorized seller transition, stale or unauthorized rejection and canonical retry response. This is a local repository seam only: no live transaction state, event row or authenticated actor was changed in this pass, and the disposable branch was not used for this test.
+Focused repository tests cover an authorized seller transition, stale or unauthorized rejection, canonical retry response and the transaction/audit conflict boundaries. This is a local repository seam only: no live transaction state, event row, audit row or authenticated actor was changed in this pass, and the disposable branch was not used for this test.
 
 ## Critical limitation
 
