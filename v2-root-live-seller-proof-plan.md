@@ -4,6 +4,7 @@
 **Structural path:** `Root System > seller availability response > authenticated live proof`  
 **Method:** Nature Way  
 **Status:** `blocked`
+**Auth decision:** [`v2-root-seller-bearer-simulation-options.md`](./v2-root-seller-bearer-simulation-options.md)
 
 ## Mini-seed
 
@@ -58,4 +59,4 @@ Camera proof is also separate. It requires an HTTPS camera-capable browser, an e
 
 ## Ring decision
 
-The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Because no autonomous demo session is available and the browser bridge did not provide a usable authenticated session, the item is currently `blocked` at the authentication boundary; Root remains `review` and Buyer Trunk remains blocked. The next permissible step is to use a pre-existing authenticated demo seller session if one becomes available, without transferring credentials to the agent.
+The proof may be marked `verified` only when the seller bearer, response idempotency, buyer intent, server-issued QR, first verification, sequential replay rejection, declaration and seller acknowledgement are all observed through the deployed authenticated path and the aggregate state matches without secret disclosure. Because no autonomous demo session is available and the browser bridge did not provide a usable authenticated session, the item is currently `blocked` at the authentication boundary; Root remains `review` and Buyer Trunk remains blocked. The next permissible step is to implement the isolated Neon Auth branch/Preview test-runner path defined in [`v2-root-seller-bearer-simulation-options.md`](./v2-root-seller-bearer-simulation-options.md), or use a pre-existing authenticated demo seller session if one becomes available, without transferring credentials to the agent.
