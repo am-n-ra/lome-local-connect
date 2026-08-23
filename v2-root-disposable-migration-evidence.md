@@ -51,3 +51,17 @@ Labeled disposable fixtures were inserted only on the expiring proof branch and 
 The fixture transaction was isolated to the disposable branch and used fixed IDs/labels beginning with `root-proof-fixture`. No production/default-branch row was touched.
 
 These checks prove representative single-transaction behavior for the installed guardrails. They do not prove concurrent QR scanner behavior, role permissions of the deployed database user, preserved-row comparison across migration history, or production application.
+
+## Preservation comparison
+
+A matching read-only count query was run on the persistent `omni-v2-rebuild` branch and on the disposable migration branch.
+
+| Measure | Persistent V2 branch | Disposable migration branch | Interpretation |
+|---|---:|---:|---|
+| Neon Auth users | 35 | 35 | Auth identity count unchanged |
+| V2 accounts | 0 | 2 | Disposable branch contains only the two labeled proof accounts |
+| Public V2 tables | 26 | 26 | No table loss or unexpected table addition |
+| V2-named constraints | 125 | 127 | Two new migration-003 constraints present |
+| Selected legacy public tables | 0 | 0 | No selected legacy table appeared or was removed |
+
+This is a count-level preservation check, not a row-by-row checksum or migration replay comparison. The persistent V2 branch remains unchanged, and migration 003 remains unapplied there and on the production/default branch. The disposable branch is still temporary and must not be promoted automatically.
