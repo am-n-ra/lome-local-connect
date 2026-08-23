@@ -988,7 +988,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         eligible as (
           select r.id as request_id, f.id as facility_id, p.id as product_id,
                  s.seller_account_id,
-                 ${input.quantityAvailable} as quantity_available,
+                 ${input.quantityAvailable}::int as quantity_available,
                  ${input.priceMinor}::int as price_minor
           from v2_availability_requests r
           join v2_facilities f on f.id = ${input.facilityId}::uuid
