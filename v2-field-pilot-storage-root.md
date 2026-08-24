@@ -2,7 +2,7 @@
 
 **Structural path:** product → field pilot → Branch A → claim verification → private evidence storage
 
-**Status:** `ready / blocked on provider provisioning`
+**Status:** `partial / provider configured; claimant proof complete; reviewer read pending`
 
 **Parent:** [`v2-field-pilot-registry-root.md`](./v2-field-pilot-registry-root.md)
 
@@ -20,7 +20,7 @@ The surface inherits the approved Species: one J5-owned contextual sheet over th
 
 Vercel Blob private storage is the selected provider candidate because the application is already deployed on Vercel and the provider supports private stores. Official documentation states that private Blob stores require authentication for all reads and writes, use OIDC with short-lived automatically rotated credentials when connected to a Vercel project, and should be served through an authenticated Function rather than a public URL.[1] Client uploads are preferred for evidence because Vercel Functions have a 4.5 MB request-body limit for server uploads; the browser-to-Blob path still requires an authenticated and authorized server token exchange.[2]
 
-The provider store is **not provisioned yet**. No store creation, project connection, environment-variable change or uploaded object is authorized by this document. The owner must create or connect one private Blob store to the existing Vercel project and enable only the environments required for the pilot. The code must remain fail-closed until the runtime exposes the provider configuration.
+The owner has manually provisioned and connected one private Blob store to the existing Vercel project. No token or credential is recorded here. The canonical runtime first recognized the provider-ready state, and a later bounded live proof successfully uploaded one non-sensitive test object and submitted the claim after server-side object verification. This does not authorize general evidence collection, sensitive documents, reviewer decisions or production readiness.
 
 ## Storage contract
 
@@ -50,7 +50,7 @@ The slice is not accepted until tests cover unauthenticated token request, claim
 
 ## Next manual gate
 
-Provision one **private** Blob store connected to the existing `omniview` Vercel project, without sharing its token or any credential in chat. Then run a read-only environment/configuration check and deploy the fail-closed adapter. Only after that check passes may an explicitly authorized bounded evidence upload be attempted. No role grant, OSM import, claim submission or review is implied by this document.
+The provider gate has been exercised for one bounded non-sensitive test object. The next manual gate is the owner-selected bootstrap of trusted Omni `operator` and/or `reviewer` business roles, followed by authenticated reviewer private-read proof and a separately bounded OSM source operation. Neon Auth `admin` remains distinct from Omni business roles. No further evidence collection, role grant, OSM import or reviewer decision is implied by this document.
 
 ## References
 
