@@ -143,7 +143,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .nearby-empty strong { color: var(--ink); font-size: 13px; }
 .loading-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 5px rgba(233,147,115,.15); animation: pulse 1.2s ease-in-out infinite; }
 
-.options-popover { z-index: 11; bottom: calc(100% + 18px); left: 50%; width: min(100%, 430px); max-height: min(430px, calc(100dvh - 150px)); overflow: auto; transform: translateX(-50%); padding: 15px; border: 1px solid rgba(255,255,255,.96); border-radius: 22px; color: var(--ink); background: rgba(255,255,255,.98); box-shadow: 0 20px 55px rgba(42, 72, 63, .19); backdrop-filter: blur(22px); animation: lift-in .2s var(--ease); }
+.options-popover { z-index: 11; bottom: calc(100% + 30px); left: 50%; width: min(100%, 430px); max-height: min(430px, calc(100dvh - 150px)); overflow: auto; transform: translateX(-50%); padding: 15px; border: 1px solid rgba(255,255,255,.96); border-radius: 22px; color: var(--ink); background: rgba(255,255,255,.98); box-shadow: 0 20px 55px rgba(42, 72, 63, .19); backdrop-filter: blur(22px); animation: lift-in .2s var(--ease); }
 .options-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 .options-head strong { color: var(--ink); font-size: 15px; letter-spacing: -.04em; }
 .options-head > button { display: grid; width: 28px; height: 28px; place-items: center; border: 0; border-radius: 50%; color: var(--ink-soft); background: #eff4f0; }
