@@ -25,3 +25,21 @@ Reuse the existing V2 map contracts instead of copying the main branch wholesale
 ## Phase 1 decision
 
 Proceed with a focused mini-Root/mini-Trunk camera ownership extension: explicit camera mode/ref/token, interruption-safe RAF rotation and search reveal, source-backed result framing, a subtle user-location marker, and a lighter color treatment. Preserve existing API/search behavior and document unproven geocoding/location conditions rather than inventing them.
+
+## Canonical initial frame — Canopy deployment `38d37cb`
+
+After deployment `38d37cb` reached READY, the canonical authenticated Sandbox page at the available `891×765` viewport mounted a MapLibre canvas/globe, one visible public cluster labelled `4`, right-side `Zoom avant` and `Utiliser ma localisation` controls, Buyer/Seller switch, J5 account owner, and the bottom search dock. The settled DOM reported `Carte active`, `data-basemap="soft-color"` in the implementation, and the map remained present behind the idle composition. Initial screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-38-57_1442.webp`.
+
+The initial frame is a bounded authenticated visual observation only. No facility, claim, availability, seller response, reviewer action or location permission was triggered.
+
+## Initial idle rotation measurement
+
+At the current Sandbox viewport `1024×880`, the settled stage reported `cameraMode="resting_globe"`, `data-rotation="rotating"`, `data-reveal-stage="idle"`, `data-zoom="1.35"`, no nearby sheet, one cluster and no facility overlay pins. After approximately 1.6 seconds, `centerLng` changed from `54.4780` to `109.7567` while zoom remained `1.35` and the camera mode remained `resting_globe`. This confirms real RAF globe motion on the deployed build, not a static screenshot. One initial console expression had a syntax error because of an unwrapped async expression; the corrected read-only measurement succeeded and changed nothing.
+
+## Hover interruption proof
+
+The cursor was moved to the globe center on the canonical page. After approximately 1.2 seconds, the DOM reported the same `centerLng` before and after (`147.7913`), `zoom="1.35"`, `cameraMode="resting_globe"` and `data-rotation="paused"`. The globe therefore stopped at its current position rather than returning to its initial center. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-39-49_4261.webp`.
+
+## Hover-leave diagnosis
+
+Moving the cursor from the globe to the search dock produced a screenshot with the dock under the pointer, but after approximately 1.7 seconds the DOM still reported the same `centerLng="147.7913"`, `zoom="1.35"`, `cameraMode="resting_globe"` and `data-rotation="paused"`. The canvas container spans the whole viewport beneath overlay surfaces, so its DOM `mouseleave` is not a reliable signal when the pointer enters the dock/control layers. The smallest correction is a window-level pointer-move ownership check using `canvasContainer.contains(event.target)`, with cleanup, so overlays release the resting-globe pause without changing the camera.

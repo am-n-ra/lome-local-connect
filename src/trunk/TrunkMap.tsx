@@ -342,6 +342,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     };
     canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
     canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
+    const handleWindowPointerMove = (event: PointerEvent) => {
+      const target = event.target;
+      const isOnCanvas = target instanceof Node && canvasContainer.contains(target);
+      if (isOnCanvas) {
+        if (!pointerInside.current) handleCanvasEnter();
+        return;
+      }
+      if (pointerInside.current) handleCanvasLeave();
+    };
+    window.addEventListener('pointermove', handleWindowPointerMove, true);
     map.on('mousedown', () => pauseMotion());
     map.on('touchstart', () => pauseMotion());
     map.on('wheel', () => pauseMotion());
@@ -393,6 +403,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       window.removeEventListener('resize', handleWindowResize);
       canvasContainer.removeEventListener('mouseenter', handleCanvasEnter);
       canvasContainer.removeEventListener('mouseleave', handleCanvasLeave);
+      window.removeEventListener('pointermove', handleWindowPointerMove, true);
       resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
