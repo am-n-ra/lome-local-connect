@@ -86,3 +86,16 @@ The operator and claimant surfaces inherit the approved Species: permanent MapLi
 ## 9. Stop gate
 
 Do not treat the applied migration as a production-readiness acceptance until the deployment’s current Auth session behavior, account provisioning, role grants, object storage path and reviewer ownership are confirmed. Do not import all OSM data for Lomé–Aflao from the browser. The first operational implementation must use a bounded, reviewed import fixture or operator payload and produce an auditable run; source breadth expands only after dedupe and recovery evidence.
+
+
+## 10. 2026-08-24 Heartwood checkpoint
+
+The Vercel runtime target is now aligned with the persistent V2 Neon branch. The production deployment `dpl_3bWyJ4ArKKYmAfXBwi6JxHRwBxxw` reached `READY`, retained the canonical aliases, and reported exactly 12 Node.js functions.
+
+The implementation now exposes the following actual multiplexed routes without adding a function: `POST /api/v2/facilities/:id?action=claim`, `POST /api/v2/facilities/:id?action=claim-submit`, `POST /api/v2/facilities/:id?action=claim-cancel`, `GET /api/v2/public/facilities?reviewer=queue` and `POST /api/v2/facilities/:id?action=review`. Claim drafts are resumable and versioned; cancellation is claimant-owned, pre-review and returns the public facility to `unclaimed` only when it remains unowned. Evidence submission accepts only typed `private://omni/` references and rejects raw files, data URLs and public URLs before persistence.
+
+Private object storage is not configured in the runtime. Therefore a valid evidence submission currently stops with `EVIDENCE_STORAGE_UNAVAILABLE` and leaves the claim as a resumable draft; the UI shows the same locked state and does not simulate upload or review. Reviewer queue results expose only evidence count/categories, never private object keys. Review now requires private evidence, emits an in-app delivery row idempotently, records facility history, and maps `certified` to the Free publication state `unconfirmed` rather than silently implying confirmed stock or ownership.
+
+Validation passed: `104` Vitest tests, `npm run build` with exactly 12 Vercel functions, client boundary clean and `git diff --check`. Browser proof passed for the fresh globe/map-first surface, public cluster/pin continuity, existing bounded fixture detail and no-write behavior. Full claim draft → private upload → submit → reviewer decision remains unproven because object storage and an active reviewer role are not configured for the Browser Sandbox session.
+
+**Ring decision:** `partial / blocked at evidence-storage gate`. Do not grant roles, import facilities, submit claims, review claims or claim pilot readiness until the owner explicitly selects trusted accounts and the private evidence storage adapter/contract is configured and proven.
