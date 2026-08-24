@@ -8,7 +8,7 @@
   --ink-soft: #547269;
   --muted: #8a9b96;
   --muted-2: #aab8b3;
-  --map: #e9eeea;
+  --map: #c6d2cb;
   --sheet: #ffffff;
   --forest: #1f5848;
   --forest-deep: #17483d;
@@ -40,11 +40,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .species-app { position: relative; width: 100vw; height: 100dvh; overflow: hidden; isolation: isolate; background: var(--map); }
 .map-stage, .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.map-stage { z-index: 0; overflow: hidden; background: radial-gradient(circle at 52% 38%, #f7faf7 0, #eef3ee 50%, #e0e9e3 100%); }
+.map-stage { z-index: 0; overflow: hidden; background: radial-gradient(circle at 52% 38%, #dbe5df 0, #c5d2ca 52%, #99ada3 100%); }
 .map-canvas .maplibregl-canvas-container, .map-canvas .maplibregl-canvas { width: 100%; height: 100%; }
-.map-canvas .maplibregl-canvas { filter: saturate(.72) sepia(.05) brightness(1.03) contrast(.98); }
-.map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .34; background-image: radial-gradient(rgba(71, 102, 94, .2) .7px, transparent .7px); background-size: 8px 8px; mix-blend-mode: multiply; }
-.map-stage::after { position: absolute; z-index: 2; inset: 0; pointer-events: none; content: ""; background: linear-gradient(180deg, rgba(255,255,255,.16), transparent 30%, rgba(255,255,255,.03) 70%, rgba(204,224,211,.10)); }
+.map-canvas .maplibregl-canvas { filter: saturate(.84) sepia(.02) brightness(.82) contrast(1.12); }
+.map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .16; background-image: radial-gradient(rgba(38, 70, 61, .28) .7px, transparent .7px); background-size: 8px 8px; mix-blend-mode: multiply; }
+.map-stage::after { position: absolute; z-index: 2; inset: 0; pointer-events: none; content: ""; background: linear-gradient(180deg, rgba(239,247,242,.08), transparent 30%, rgba(25,58,48,.05) 70%, rgba(25,58,48,.12)); }
 
 .species-topbar, .map-error, .map-status, .map-attribution, .map-controls, .location-prompt, .search-anchor, .nearby-sheet, .map-pin-overlay { position: absolute; }
 .map-pin-overlay { z-index: 5; inset: 0; pointer-events: none; }
@@ -55,9 +55,15 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 [data-motion="reduced"] .map-reveal-status { animation: none; }
 .map-pin { position: absolute; display: grid; place-items: center; pointer-events: auto; transform: translate(-50%, -100%); cursor: pointer; transition: transform .16s var(--ease), filter .16s var(--ease); }
 .map-pin:hover, .map-pin:focus-visible { transform: translate(-50%, -100%) scale(1.08); filter: drop-shadow(0 7px 10px rgba(41, 70, 62, .20)); }
-.map-pin-cluster { width: 31px; height: 31px; border: 2px solid rgba(255,255,255,.94); border-radius: 50%; color: #fff; background: var(--coral); box-shadow: 0 7px 16px rgba(72, 93, 83, .22); font-size: 11px; font-weight: 900; }
+.map-pin-cluster { width: 64px; height: 64px; border: 0; border-radius: 50%; color: var(--ink); background: transparent; box-shadow: none; font-size: 0; font-weight: 900; }
+.map-pin-cluster::before, .map-pin-cluster::after { position: absolute; content: ""; border-radius: 50%; pointer-events: none; }
+.map-pin-cluster::before { inset: 4px; border: 1px solid rgba(31,88,72,.26); background: rgba(233,244,237,.18); box-shadow: 0 8px 18px rgba(34, 69, 58, .16); }
+.map-pin-cluster::after { inset: 13px; border: 1px solid rgba(228,147,104,.40); background: rgba(228,147,104,.08); }
+.cluster-core { position: relative; z-index: 1; display: grid; width: 17px; height: 17px; place-items: center; border: 2px solid rgba(255,255,255,.94); border-radius: 50%; color: #fff; background: var(--coral); box-shadow: 0 4px 10px rgba(72, 93, 83, .22); }
+.cluster-count { position: absolute; z-index: 2; top: 5px; right: 6px; min-width: 18px; border: 1px solid rgba(255,255,255,.9); border-radius: 999px; padding: 2px 4px; color: var(--ink); background: rgba(255,255,255,.86); font-size: 8px; line-height: 1; }
 .map-pin-facility { width: 34px; height: 38px; border: 0; color: #fff; background: transparent; }
 .map-pin-facility::before { position: absolute; inset: 2px 4px 7px; content: ""; border: 2px solid #fff; border-radius: 50% 50% 50% 0; background: var(--forest); box-shadow: 0 7px 14px rgba(42, 71, 63, .22); transform: rotate(-45deg); }
+.map-pin-facility::after { position: absolute; inset: -3px -3px 4px; content: ""; border: 1px solid rgba(31,88,72,.24); border-radius: 50%; opacity: .9; }
 .map-pin-facility svg { position: relative; z-index: 1; margin-top: -4px; color: #fff; }
 .map-pin-facility.selected::before { background: #d47e5b; box-shadow: 0 0 0 4px rgba(228,147,104,.16), 0 7px 14px rgba(42, 71, 63, .18); }
 
@@ -85,7 +91,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .menu-action.secondary { color: var(--ink-soft); }
 
 .map-status { z-index: 3; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
-.map-attribution { z-index: 3; right: var(--safe-right); bottom: calc(var(--safe-bottom) + 4px); color: rgba(63, 92, 83, .52); font-size: 8px; letter-spacing: .01em; }
+.map-attribution { z-index: 3; right: var(--safe-right); bottom: calc(var(--safe-bottom) + 4px); color: rgba(38, 66, 57, .70); font-size: 8px; letter-spacing: .01em; }
 .map-error { z-index: 10; top: 15%; left: 50%; display: flex; align-items: center; gap: 10px; width: min(360px, calc(100% - 28px)); transform: translateX(-50%); padding: 10px 11px 10px 13px; border: 1px solid rgba(255,255,255,.9); border-radius: 14px; color: #7c5949; background: rgba(255,247,242,.94); box-shadow: var(--shadow-soft); font-size: 11px; }
 .map-error span { min-width: 0; flex: 1; }
 .map-error button, .secondary-button { border: 1px solid rgba(31,88,72,.20); border-radius: 999px; padding: 8px 12px; color: var(--forest); background: #f5fbf7; font-size: 10px; font-weight: 800; }
@@ -123,6 +129,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .sheet-handle-button:focus-visible { outline-offset: -2px; }
 .sheet-handle-button .sheet-handle { pointer-events: none; }
 .nearby-heading-actions { display: inline-flex; align-items: center; gap: 8px; }
+.nearby-result-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 17px 0; }
+.result-toolbar-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 29px; border: 1px solid rgba(31,88,72,.22); border-radius: 999px; padding: 0 9px; color: #fff; background: var(--forest); font-size: 9px; font-weight: 900; }
+.result-toolbar-button:hover { background: var(--forest-deep); }
+.result-toolbar-button.secondary { color: var(--forest); background: #f2f8f4; }
+.result-toolbar-button.secondary:hover { background: var(--mint); }
 .nearby-collapse { display: grid; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 50%; color: var(--ink-soft); background: #f0f5f1; }
 .nearby-collapse svg { transition: transform .18s var(--ease); }
 .nearby-collapse .chevron-up { transform: rotate(180deg); }
@@ -210,6 +221,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .catalogue-item small { color: var(--muted); font-size: 9px; }
 .product-icon { display: grid; width: 31px; height: 31px; flex: 0 0 auto; place-items: center; border-radius: 10px; color: #d5815d; background: var(--peach); }
 .privacy-note { margin: 12px 1px 0; color: var(--muted-2); font-size: 9px; line-height: 1.45; }
+.availability-bundle-note { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 11px; border: 1px solid rgba(31,88,72,.14); border-radius: 13px; color: var(--forest); background: #f1f8f4; }
+.availability-bundle-note svg { flex: 0 0 auto; margin-top: 1px; }
+.availability-bundle-note span { display: grid; gap: 3px; min-width: 0; }
+.availability-bundle-note strong { font-size: 10px; }
+.availability-bundle-note small { color: var(--muted); font-size: 9px; line-height: 1.4; }
 
 .stepper { display: flex; align-items: center; gap: 6px; margin-top: 17px; }
 .stepper span { display: inline-flex; align-items: center; gap: 4px; color: #a5b5ae; font-size: 9px; font-weight: 900; }
@@ -307,14 +323,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (min-width: 900px) {
   :root { --sheet-height: min(46dvh, 430px); }
   .species-topbar { top: 24px; left: 32px; right: 32px; }
-  .nearby-sheet { bottom: 22px; height: auto; min-height: 0; max-height: min(400px, calc(100dvh - 150px)); border-radius: 30px; }
-  .search-anchor { bottom: var(--nearby-sheet-offset, 28px); }
+  .nearby-sheet { bottom: 22px; width: min(70vw, 720px); height: auto; min-height: 0; max-height: min(430px, calc(100dvh - 150px)); border-radius: 30px; }
+  .nearby-heading { padding-left: 22px; padding-right: 22px; }
+  .nearby-result-toolbar { padding-left: 22px; padding-right: 22px; }
+  .nearby-rail { gap: 14px; padding-left: 22px; padding-right: 22px; }
+  .nearby-card { flex-basis: min(320px, 47%); }
+  .search-anchor { width: min(54vw, 560px); bottom: var(--nearby-sheet-offset, 28px); }
   .map-controls { top: 22%; right: 32px; }
-  .omni-sheet { bottom: 22px; border: 1px solid rgba(255,255,255,.96); border-radius: 30px; }
+  .omni-sheet { width: min(100%, 620px); bottom: 22px; border: 1px solid rgba(255,255,255,.96); border-radius: 30px; }
   .sheet-backdrop { background: rgba(29, 62, 52, .14); }
 }
 
 @media (max-width: 620px) {
+  .nearby-result-toolbar { padding-left: 14px; padding-right: 14px; }
+  .result-toolbar-button { min-height: 28px; padding-left: 8px; padding-right: 8px; }
   .map-attribution { left: var(--safe-left); right: auto; max-width: 155px; }
   .nearby-sheet { max-height: calc(100dvh - 150px); }
   .map-controls { top: 18%; right: var(--safe-right); }
@@ -340,8 +362,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .response-meta span { padding: 7px; }
 }
 
+@keyframes cluster-breathe { 0%, 100% { transform: scale(.96); opacity: .65; } 50% { transform: scale(1.03); opacity: .95; } }
+.map-pin-cluster::before { animation: cluster-breathe 3.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+  .map-pin-cluster::before { animation: none; }
 }
 
 /* Seller mini-Species: same sheet material, narrower operation surface, no dashboard rail. */

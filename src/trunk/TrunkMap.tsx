@@ -80,6 +80,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   const [revealRunning, setRevealRunning] = useState(false);
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.35);
+  const [bearing, setBearing] = useState(0);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
   const [userPosition, setUserPosition] = useState<RevealPoint | null>(null);
@@ -138,7 +139,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     setCameraModeState('manual_navigation');
   };
 
-  const pauseMotion = (reason: 'interaction' | 'surface' = 'interaction') => {
+  const pauseMotion = (reason: 'interaction' | 'surface' = 'interaction', stopMap = reason === 'surface') => {
     if (reason === 'interaction') cancelActiveReveal();
     rotating.current = false;
     if (rotationFrame.current !== null) {
@@ -150,7 +151,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       rotationResumeTimer.current = null;
     }
     const map = mapRef.current;
-    if (map?.isMoving()) map.stop();
+    // Do not stop MapLibre during a native drag/rotate/wheel gesture. Stopping the
+    // map on mousedown/dragstart makes the globe feel locked and can discard the
+    // first part of the user's gesture. We only stop an active reveal or an
+    // explicitly opened surface/control.
+    if (map && (stopMap || revealRunningRef.current) && map.isMoving()) map.stop();
     if (reason === 'interaction' && cameraMode.current !== 'search_reveal') {
       cameraMode.current = 'manual_navigation';
       setCameraModeState('manual_navigation');
@@ -220,6 +225,39 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   };
 
   useEffect(() => {
+    let active = true;
+    const arrivalAttemptKey = 'omni.canopy.v3.location-attempted';
+    const attemptArrivalLocation = async () => {
+      if (!navigator.geolocation) {
+        setLocationState('unavailable');
+        return;
+      }
+      let permissionState: PermissionState | undefined;
+      try {
+        if (navigator.permissions) permissionState = (await navigator.permissions.query({ name: 'geolocation' })).state;
+      } catch {
+        permissionState = undefined;
+      }
+      if (!active) return;
+      if (permissionState === 'denied') {
+        setLocationState('denied');
+        return;
+      }
+      let alreadyAttempted = false;
+      try {
+        alreadyAttempted = window.sessionStorage.getItem(arrivalAttemptKey) === '1';
+        if (permissionState !== 'granted') window.sessionStorage.setItem(arrivalAttemptKey, '1');
+      } catch {
+        // A restricted storage context must not prevent the browser permission flow.
+      }
+      if (permissionState !== 'granted' && alreadyAttempted) return;
+      requestLocation();
+    };
+    void attemptArrivalLocation();
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 3500);
     return () => window.clearTimeout(readinessTimer);
   }, []);
@@ -236,6 +274,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       maxZoom: 18,
       attributionControl: false,
       cooperativeGestures: false,
+      dragPan: true,
+      dragRotate: true,
+      touchZoomRotate: true,
     });
     mapRef.current = map;
     const syncCameraPadding = () => {
@@ -303,6 +344,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
+        if (pointerInside.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= 2.4) return;
+        if (cameraMode.current === 'manual_navigation') {
+          cameraMode.current = 'resting_globe';
+          setCameraModeState('resting_globe');
+        }
         resume();
       }, 900);
     };
@@ -317,6 +363,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
       source?.setData(featureCollection(facilitiesRef.current));
       setZoom(map.getZoom());
+      setBearing(map.getBearing());
       scheduleScreenPins();
       emitBounds();
     };
@@ -334,11 +381,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const canvasContainer = map.getCanvasContainer();
     const handleCanvasEnter = () => {
       pointerInside.current = true;
-      pauseMotion('surface');
+      if (rotationFrame.current !== null) {
+        window.cancelAnimationFrame(rotationFrame.current);
+        rotationFrame.current = null;
+      }
+      if (rotationResumeTimer.current !== null) {
+        window.clearTimeout(rotationResumeTimer.current);
+        rotationResumeTimer.current = null;
+      }
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setRotationState('paused');
     };
     const handleCanvasLeave = () => {
       pointerInside.current = false;
-      if (cameraMode.current === 'resting_globe' && !contextSurfaceRef.current) resume();
+      if ((cameraMode.current === 'resting_globe' || cameraMode.current === 'manual_navigation') && !contextSurfaceRef.current) scheduleSettledResume();
     };
     canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
     canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
@@ -353,20 +408,43 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     };
     window.addEventListener('pointermove', handleWindowMove, true);
     window.addEventListener('mousemove', handleWindowMove, true);
-    map.on('mousedown', () => pauseMotion());
-    map.on('touchstart', () => pauseMotion());
-    map.on('wheel', () => pauseMotion());
-    map.on('dragstart', () => pauseMotion());
-    map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion(); });
-    map.on('move', scheduleScreenPins);
+    // Pause Omni's idle choreography, but let MapLibre keep ownership of the
+    // actual native gesture. This is the critical difference from the previous
+    // V2 behavior where map.stop() ran before drag/pan could take effect.
+    map.on('mousedown', () => pauseMotion('interaction', false));
+    map.on('touchstart', () => pauseMotion('interaction', false));
+    map.on('wheel', () => pauseMotion('interaction', false));
+    map.on('dragstart', () => pauseMotion('interaction', false));
+    map.on('rotatestart', () => pauseMotion('interaction', false));
+    map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
+    map.on('move', () => { setBearing(map.getBearing()); scheduleScreenPins(); });
     map.on('moveend', () => {
       setCenterLongitude(map.getCenter().lng);
       if (!rotating.current) emitBounds();
       scheduleScreenPins();
       if (cameraMode.current === 'resting_globe' && !pointerInside.current) scheduleSettledResume();
     });
-    map.on('dragend', () => { rotating.current = false; if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') { cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); } emitBounds(); scheduleScreenPins(); });
-    map.on('zoomend', () => { rotating.current = false; if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') { cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); } setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
+    map.on('dragend', () => {
+      rotating.current = false;
+      if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
+      }
+      emitBounds();
+      scheduleScreenPins();
+      if (map.getZoom() < 2.4 && !contextSurfaceRef.current) scheduleSettledResume();
+    });
+    map.on('zoomend', () => {
+      rotating.current = false;
+      if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
+      }
+      setZoom(map.getZoom());
+      emitBounds();
+      scheduleScreenPins();
+      if (map.getZoom() < 2.4 && !contextSurfaceRef.current) scheduleSettledResume();
+    });
     map.on('error', () => {
       if (fallbackUsed.current || initialStyleReady.current) return;
       fallbackUsed.current = true;
@@ -381,10 +459,21 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         map.setStyle(FALLBACK_STYLE);
       }
     }, 3000);
+    let globeProjection = true;
+    const syncProjection = () => {
+      const wantsGlobe = map.getZoom() < 2.4;
+      if (wantsGlobe !== globeProjection) {
+        globeProjection = wantsGlobe;
+        map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+      }
+    };
+    map.on('zoom', syncProjection);
+    map.on('moveend', syncProjection);
     map.on('load', () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (!fallbackUsed.current) setMapStatus('ready');
       configureStyle();
+      globeProjection = map.getZoom() < 2.4;
       resume();
     });
 
@@ -556,7 +645,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="soft-color" data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="deep-neutral" data-projection={zoom < 2.4 ? 'globe' : 'mercator'} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="map-reveal-dot" /><span>{revealLabel}</span></div>}
@@ -569,7 +658,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
             style={{ left: pin.left, top: pin.top }}
             aria-label={`Afficher ${pin.count} lieux publics sur la carte`}
             onClick={() => { pauseMotion(); mapRef.current?.easeTo({ center: [pin.longitude, pin.latitude], zoom: Math.min(mapRef.current.getZoom() + 2, 6.3), duration: 500, essential: true }); }}
-          >{pin.count}</button>
+            ><span className="cluster-core" aria-hidden="true" /><span className="cluster-count" aria-hidden="true">{pin.count}</span></button>
         ) : (
           <button
             key={`facility-${pin.facility?.name ?? pin.longitude.toFixed(4)}`}
