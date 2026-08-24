@@ -47,7 +47,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
   const rotationTimer = useRef<number | null>(null);
+  const rotationResumeTimer = useRef<number | null>(null);
   const fallbackUsed = useRef(false);
+  const initialStyleReady = useRef(false);
+  const contextSurfaceRef = useRef(contextSurfaceOpen);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'fallback'>('loading');
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
@@ -64,14 +67,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
   const updateScreenPins = useCallback(() => {
     const map = mapRef.current;
     if (!map) return;
-    const bounds = map.getBounds();
+    const { width, height } = map.getContainer().getBoundingClientRect();
     const projected = facilitiesRef.current
-      .filter((facility) => Number.isFinite(facility.longitude) && Number.isFinite(facility.latitude) && bounds.contains([facility.longitude, facility.latitude]))
+      .filter((facility) => Number.isFinite(facility.longitude) && Number.isFinite(facility.latitude))
       .map((facility) => {
         const point = map.project([facility.longitude, facility.latitude]);
         return { facility, x: point.x, y: point.y } satisfies ProjectedFacility;
       })
-      .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y));
+      .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y) && x >= -56 && x <= width + 56 && y >= -56 && y <= height + 56);
     setScreenPins(groupProjectedFacilities(projected));
   }, []);
 
@@ -89,6 +92,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       window.clearTimeout(rotationTimer.current);
       rotationTimer.current = null;
     }
+    if (rotationResumeTimer.current !== null) {
+      window.clearTimeout(rotationResumeTimer.current);
+      rotationResumeTimer.current = null;
+    }
+    mapRef.current?.stop();
     setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused');
   };
 
@@ -179,6 +187,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       rotationTimer.current = window.setTimeout(rotate, 1400);
     };
     const resume = () => {
+      if (contextSurfaceRef.current) {
+        rotating.current = false;
+        setRotationState('paused');
+        return;
+      }
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         rotating.current = false;
         setRotationState('reduced');
@@ -192,6 +205,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
         rotating.current = false;
         setRotationState('paused');
       }
+    };
+    const scheduleSettledResume = () => {
+      if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
+      rotationResumeTimer.current = window.setTimeout(() => {
+        rotationResumeTimer.current = null;
+        resume();
+      }, 900);
     };
     const rotate = () => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -211,6 +231,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       scheduleRotation();
     };
     const configureStyle = () => {
+      initialStyleReady.current = true;
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (!fallbackUsed.current) setMapStatus('ready');
       map.setProjection({ type: 'globe' });
       map.resize();
       syncCameraPadding();
@@ -238,18 +261,18 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     map.on('dragstart', pauseMotion);
     map.on('zoomstart', pauseMotion);
     map.on('move', scheduleScreenPins);
-    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); scheduleScreenPins(); resume(); });
-    map.on('dragend', () => { emitBounds(); scheduleScreenPins(); });
+    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
+    map.on('dragend', () => { emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
     map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
     map.on('error', () => {
-      if (fallbackUsed.current) return;
+      if (fallbackUsed.current || initialStyleReady.current) return;
       fallbackUsed.current = true;
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       setMapStatus('fallback');
       map.setStyle(FALLBACK_STYLE);
     });
     fallbackTimer = window.setTimeout(() => {
-      if (!fallbackUsed.current && mapRef.current === map) {
+      if (!initialStyleReady.current && !fallbackUsed.current && mapRef.current === map) {
         fallbackUsed.current = true;
         setMapStatus('fallback');
         map.setStyle(FALLBACK_STYLE);
@@ -271,6 +294,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
+      if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
       observer.disconnect();
       surfaceObserver.disconnect();
@@ -313,6 +337,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
   }, [onBoundsChange, onSelect, scheduleScreenPins]);
 
   useEffect(() => {
+    contextSurfaceRef.current = contextSurfaceOpen;
     if (contextSurfaceOpen) pauseMotion();
     else resumeMotionRef.current?.();
   }, [contextSurfaceOpen]);
