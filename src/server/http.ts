@@ -87,7 +87,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
 
   try {
     const repository = createTrunkRepository();
-    if (req.method === 'POST' && pathname === '/api/v2/operator/public-imports') {
+    if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni operator before importing a public facility.'));
@@ -110,7 +110,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === 'GET' && pathname === '/api/v2/operator/runs') {
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('operator') === 'runs') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni operator to view field runs.'));
@@ -120,7 +120,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && pathname.endsWith('/claims')) {
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create or open your Omni account before starting a facility claim.'));

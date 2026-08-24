@@ -134,7 +134,7 @@ export async function importPublicFacility(input: {
   address: string | null;
   token: string;
 }): Promise<ApiResult<PublicFacilityImportResult>> {
-  const response = await fetchWithRecovery('/api/v2/operator/public-imports', {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?action=operator-import', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ provider: input.provider, attribution: input.attribution, sourceRef: input.sourceRef, name: input.name, category: input.category, latitude: input.latitude, longitude: input.longitude, address: input.address }),
@@ -143,14 +143,14 @@ export async function importPublicFacility(input: {
 }
 
 export async function getOperatorRuns(input: { token: string }): Promise<ApiResult<OperatorRunsResult>> {
-  const response = await fetchWithRecovery('/api/v2/operator/runs', {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?operator=runs', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<OperatorRunsResult>(response);
 }
 
 export async function createFacilityClaimDraft(input: { facilityId: string; token: string }): Promise<ApiResult<ClaimDraftResult>> {
-  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.facilityId)}/claims`, {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.facilityId)}?action=claim`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({}),
