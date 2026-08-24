@@ -133,6 +133,7 @@ export function TrunkApp() {
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
   const detailRequestRef = useRef(0);
   const availabilityKeyRef = useRef<{ shape: string; key: string } | null>(null);
+  const facilityQueryKeyRef = useRef<string | null>(null);
   const appRef = useRef<HTMLElement | null>(null);
   const nearbySheetRef = useRef<HTMLElement | null>(null);
 
@@ -179,6 +180,13 @@ export function TrunkApp() {
   }, []);
 
   useEffect(() => {
+    if (!bounds) {
+      setMapState('loading');
+      return;
+    }
+    const requestKey = `${bounds.map((value) => value.toFixed(5)).join(',')}|${committedQuery}|${JSON.stringify(appliedOptions)}`;
+    if (facilityQueryKeyRef.current === requestKey) return;
+    facilityQueryKeyRef.current = requestKey;
     let active = true;
     setMapState('loading');
     listPublicFacilities(bounds, committedQuery || undefined, appliedOptions).then((result) => {
@@ -775,6 +783,11 @@ export function TrunkApp() {
     setMenuOpen(false);
   };
 
+  const retryPublicFacilities = () => {
+    facilityQueryKeyRef.current = null;
+    setBounds((current) => current ? [...current] as [number, number, number, number] : undefined);
+  };
+
   const selectFacility = useCallback(async (facility: PublicFacility, verify = false) => {
     setMenuOpen(false);
     setOptionsOpen(false);
@@ -999,7 +1012,7 @@ export function TrunkApp() {
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
-      {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={() => setBounds((current) => current ? [...current] as [number, number, number, number] : undefined)}>Réessayer</button></div>}
+      {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={retryPublicFacilities}>Réessayer</button></div>}
 
       {panel === 'none' && <>
         <div className="search-anchor">
