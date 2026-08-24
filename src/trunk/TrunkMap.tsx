@@ -342,7 +342,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     };
     canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
     canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
-    const handleWindowPointerMove = (event: PointerEvent) => {
+    const handleWindowMove = (event: Event) => {
       const target = event.target;
       const isOnCanvas = target instanceof Node && canvasContainer.contains(target);
       if (isOnCanvas) {
@@ -351,7 +351,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }
       if (pointerInside.current) handleCanvasLeave();
     };
-    window.addEventListener('pointermove', handleWindowPointerMove, true);
+    window.addEventListener('pointermove', handleWindowMove, true);
+    window.addEventListener('mousemove', handleWindowMove, true);
     map.on('mousedown', () => pauseMotion());
     map.on('touchstart', () => pauseMotion());
     map.on('wheel', () => pauseMotion());
@@ -403,7 +404,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       window.removeEventListener('resize', handleWindowResize);
       canvasContainer.removeEventListener('mouseenter', handleCanvasEnter);
       canvasContainer.removeEventListener('mouseleave', handleCanvasLeave);
-      window.removeEventListener('pointermove', handleWindowPointerMove, true);
+      window.removeEventListener('pointermove', handleWindowMove, true);
+      window.removeEventListener('mousemove', handleWindowMove, true);
       resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;

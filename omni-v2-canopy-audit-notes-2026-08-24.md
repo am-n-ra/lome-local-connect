@@ -43,3 +43,15 @@ The cursor was moved to the globe center on the canonical page. After approximat
 ## Hover-leave diagnosis
 
 Moving the cursor from the globe to the search dock produced a screenshot with the dock under the pointer, but after approximately 1.7 seconds the DOM still reported the same `centerLng="147.7913"`, `zoom="1.35"`, `cameraMode="resting_globe"` and `data-rotation="paused"`. The canvas container spans the whole viewport beneath overlay surfaces, so its DOM `mouseleave` is not a reliable signal when the pointer enters the dock/control layers. The smallest correction is a window-level pointer-move ownership check using `canvasContainer.contains(event.target)`, with cleanup, so overlays release the resting-globe pause without changing the camera.
+
+## Canonical replay after `bf72e22`
+
+The canonical READY replay of commit `bf72e22` mounted the MapLibre globe/canvas, one public cluster with count `4`, right-side zoom/location controls, J5, Buyer/Seller switch and the separated search dock at the available `1024×880` Sandbox viewport. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-42-37_2542.webp`.
+
+## Corrected hover pause
+
+On the `bf72e22` replay, hovering the globe again produced `data-rotation="paused"` with identical `centerLng="59.3189"` and `zoom="1.35"` across approximately 1.1 seconds. The stage remained in `cameraMode="resting_globe"`; no search sheet or extra request was introduced. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-42-56_6372.webp`.
+
+## Corrected hover-leave replay result
+
+The `bf72e22` replay still reported `data-rotation="paused"`, unchanged `centerLng="59.3189"` and `zoom="1.35"` after the pointer was moved to the dock and held there for approximately 1.9 seconds. The global listener was not sufficient in this browser harness, likely because `browser_move_mouse` does not emit the expected pointer transition to the page or because the map/canvas remains the event target beneath the overlay. The pause behavior is proven; resume-outside-canvas remains unproven and requires either a controlled real pointer event or an interaction-state adjustment that does not reset the camera.
