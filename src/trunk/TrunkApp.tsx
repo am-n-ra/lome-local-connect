@@ -822,6 +822,23 @@ export function TrunkApp() {
     window.setTimeout(() => searchInputRef.current?.focus(), 0);
   };
 
+  const clearFacilityFocus = () => {
+    setSelectedFacility(null);
+    setSelectedProductId(null);
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  };
+
+  const closeNearbyResults = () => {
+    clearFacilityFocus();
+    setNearbyOpen(false);
+    setShowAllResults(false);
+  };
+
+  const closeFacilityContext = () => {
+    clearFacilityFocus();
+    setPanel('none');
+  };
+
   const retryPublicFacilities = () => {
     facilityQueryKeyRef.current = null;
     setSearchRevealRevision((revision) => revision + 1);
@@ -1068,10 +1085,10 @@ export function TrunkApp() {
             <button className="pill-options" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Fermer les options' : 'Ouvrir les options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
           </form>
         </div>
-        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} onCollapse={() => { setNearbyOpen(false); setShowAllResults(false); }} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); }} showAll={showAllResults} />}
+        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} onCollapse={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); }} showAll={showAllResults} />}
       </>}
 
-      {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
+      {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim') { closeFacilityContext(); return; } setPanel('none'); }} />}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <SellerWorkspaceSheet user={sessionUser} queue={sellerQueue} queueState={sellerQueueState} queueError={sellerQueueError} request={sellerRequest} tab={sellerTab} setTab={setSellerTab} responseStatus={sellerResponseStatus} setResponseStatus={setSellerResponseStatus} quantity={sellerQuantity} setQuantity={setSellerQuantity} price={sellerPrice} setPrice={setSellerPrice} message={sellerMessage} setMessage={setSellerMessage} responseState={sellerResponseState} responseError={sellerResponseError} responseResult={sellerResponseResult} rebindState={sellerRebindState} rebindError={sellerRebindError} onRebindDemo={() => void rebindSellerDemo()} onLoadQueue={() => void loadSellerQueue()} onSelectRequest={openSellerRequest} onSubmitResponse={() => void submitSellerResponse()} onBackToQueue={() => { setSellerRequest(null); setSellerResponseState('idle'); }} onClose={() => { setSellerRequest(null); setPanel('none'); }} onSignOut={signOut} />}
       {panel === 'field-pilot' && <FieldPilotSheet user={sessionUser} state={fieldPilotState} error={fieldPilotError} runs={operatorRuns} name={fieldPilotName} setName={setFieldPilotName} sourceRef={fieldPilotSourceRef} setSourceRef={setFieldPilotSourceRef} category={fieldPilotCategory} setCategory={setFieldPilotCategory} address={fieldPilotAddress} setAddress={setFieldPilotAddress} latitude={fieldPilotLatitude} setLatitude={setFieldPilotLatitude} longitude={fieldPilotLongitude} setLongitude={setFieldPilotLongitude} result={fieldPilotResult} onSubmit={submitPublicFacilityImport} onRefresh={() => void loadOperatorRuns()} onClose={() => setPanel('none')} />}
@@ -1079,7 +1096,7 @@ export function TrunkApp() {
       {panel === 'reviewer' && <ReviewerSheet state={reviewerState} error={reviewerError} queue={reviewerQueue} selected={selectedReview} onSelect={setSelectedReview} outcome={reviewOutcome} setOutcome={setReviewOutcome} reason={reviewReason} setReason={setReviewReason} actionState={reviewActionState} actionError={reviewActionError} actionResult={reviewActionResult} onSubmit={submitReview} onRefresh={() => void loadReviewerQueue()} onBack={() => { setSelectedReview(null); setReviewActionState('idle'); }} onClose={() => setPanel('none')} />}
 
       {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
-      {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onOpenClaim={openClaimDraft} onClose={() => setPanel('none')} onVerify={openAvailability} />}
+      {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onOpenClaim={openClaimDraft} onClose={closeFacilityContext} onVerify={openAvailability} />}
       {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} evidence={claimEvidence} storageAvailable={claimStorageAvailable} uploadState={claimUploadState} uploadProgress={claimUploadProgress} uploadError={claimUploadError} submitState={claimSubmitState} submitError={claimSubmitError} actionState={claimActionState} actionError={claimActionError} onUpload={(kind, file) => void uploadClaimEvidence(kind, file)} onRemoveEvidence={removeClaimEvidence} onSubmit={submitClaimEvidence} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>

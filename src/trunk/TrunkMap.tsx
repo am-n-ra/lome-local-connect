@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Crosshair, MapPin, Minus, Plus } from 'lucide-react';
-import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent, type StyleSpecification } from 'maplibre-gl';
+import { Crosshair, Minus, Plus } from 'lucide-react';
+import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
-import { groupProjectedFacilities, type ProjectedFacility, type ScreenPin } from './map-pins';
+import { GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
@@ -19,18 +19,9 @@ type Props = {
   contextSurfaceOpen?: boolean;
 };
 
-const REMOTE_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    osm: {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
-    },
-  },
-  layers: [{ id: 'osm', type: 'raster', source: 'osm', paint: { 'raster-saturation': -1, 'raster-contrast': 0.08, 'raster-brightness-min': 0.24, 'raster-brightness-max': 0.98, 'raster-opacity': 0.9 } }],
-};
+const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const RESULT_LOCAL_ZOOM = 12.8;
+const RESULT_MAX_ZOOM = 14.5;
 const FALLBACK_STYLE = '/omni-local-style.json';
 const SOURCE = 'omni-v2-facilities';
 
@@ -43,6 +34,30 @@ function featureCollection(facilities: PublicFacility[]) {
       properties: { id: facility.id, name: facility.name, trust: facility.trust, productCount: facility.productCount },
     })),
   };
+}
+
+function applyCanopyPalette(map: Map) {
+  const paints: Array<[string, string, unknown]> = [
+    ['background', 'background-color', '#dfe9e4'],
+    ['water', 'fill-color', '#17363c'],
+    ['landcover_grass', 'fill-color', '#edf2e9'],
+    ['landcover_wood', 'fill-color', '#c7d8c8'],
+    ['landcover_sand', 'fill-color', '#efe5c9'],
+    ['boundary_2', 'line-color', '#395d55'],
+    ['boundary_3', 'line-color', '#6c8b7d'],
+    ['boundary_disputed', 'line-color', '#6c8b7d'],
+    ['road_minor', 'line-color', '#fbfaf3'],
+    ['road_secondary_tertiary', 'line-color', '#e8d7b6'],
+    ['road_trunk_primary', 'line-color', '#dfc18d'],
+    ['road_motorway', 'line-color', '#dd9564'],
+  ];
+  for (const [layerId, property, value] of paints) {
+    try {
+      if (map.getLayer(layerId)) map.setPaintProperty(layerId, property as never, value as never);
+    } catch {
+      // A fallback or partially loaded style may not contain every vector layer.
+    }
+  }
 }
 
 function waitForMapMove(map: Map, timeout = 1500) {
@@ -80,54 +95,45 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   const [revealRunning, setRevealRunning] = useState(false);
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.35);
+  const [projection, setProjection] = useState<'globe' | 'mercator'>('globe');
   const [bearing, setBearing] = useState(0);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
   const [userPosition, setUserPosition] = useState<RevealPoint | null>(null);
   const userPositionRef = useRef<RevealPoint | null>(null);
   const [zoomExpanded, setZoomExpanded] = useState(false);
-  const [screenPins, setScreenPins] = useState<ScreenPin[]>([]);
   const [screenUserPosition, setScreenUserPosition] = useState<{ left: number; top: number } | null>(null);
-  const screenPinsFrame = useRef<number | null>(null);
+  const userPositionFrame = useRef<number | null>(null);
   const locationRequest = useRef<number | null>(null);
   const resumeMotionRef = useRef<(() => void) | null>(null);
   facilitiesRef.current = facilities;
   userPositionRef.current = userPosition;
 
-  const updateScreenPins = useCallback(() => {
+  const updateScreenUserPosition = useCallback(() => {
     const map = mapRef.current;
-    if (!map) return;
-    const { width, height } = map.getContainer().getBoundingClientRect();
-    const projected = facilitiesRef.current
-      .filter((facility) => Number.isFinite(facility.longitude) && Number.isFinite(facility.latitude))
-      .map((facility) => {
-        const point = map.project([facility.longitude, facility.latitude]);
-        return { facility, x: point.x, y: point.y } satisfies ProjectedFacility;
-      })
-      .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y) && x >= -56 && x <= width + 56 && y >= -56 && y <= height + 56);
-    setScreenPins(groupProjectedFacilities(projected));
     const currentUser = userPositionRef.current;
-    if (!currentUser || !Number.isFinite(currentUser.longitude) || !Number.isFinite(currentUser.latitude)) {
+    if (!map || !currentUser || !Number.isFinite(currentUser.longitude) || !Number.isFinite(currentUser.latitude)) {
       setScreenUserPosition(null);
       return;
     }
+    const { width, height } = map.getContainer().getBoundingClientRect();
     const userPoint = map.project([currentUser.longitude, currentUser.latitude]);
     setScreenUserPosition(Number.isFinite(userPoint.x) && Number.isFinite(userPoint.y) && userPoint.x >= -40 && userPoint.x <= width + 40 && userPoint.y >= -40 && userPoint.y <= height + 40
       ? { left: userPoint.x, top: userPoint.y }
       : null);
   }, []);
 
-  const scheduleScreenPins = useCallback(() => {
-    if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
-    screenPinsFrame.current = window.requestAnimationFrame(() => {
-      screenPinsFrame.current = null;
-      updateScreenPins();
+  const scheduleUserPosition = useCallback(() => {
+    if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
+    userPositionFrame.current = window.requestAnimationFrame(() => {
+      userPositionFrame.current = null;
+      updateScreenUserPosition();
     });
-  }, [updateScreenPins]);
+  }, [updateScreenUserPosition]);
 
   useEffect(() => {
-    scheduleScreenPins();
-  }, [userPosition, scheduleScreenPins]);
+    scheduleUserPosition();
+  }, [userPosition, scheduleUserPosition]);
 
   const cancelActiveReveal = () => {
     if (!revealRunningRef.current) return;
@@ -172,7 +178,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     setLocationState('cancelled');
   };
 
-  const requestLocation = () => {
+  const requestLocation = (recenter = true) => {
     if (locationState === 'requesting') {
       cancelLocation();
       return;
@@ -199,7 +205,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         rotating.current = false;
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
-        mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
+        if (recenter) mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
       },
       (error) => {
         if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
@@ -251,7 +257,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         // A restricted storage context must not prevent the browser permission flow.
       }
       if (permissionState !== 'granted' && alreadyAttempted) return;
-      requestLocation();
+      requestLocation(false);
     };
     void attemptArrivalLocation();
     return () => { active = false; };
@@ -296,14 +302,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const scheduleRotation = (delay = 1400) => {
       stopRotation();
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= 2.4) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= 2.4) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
         setRotationState('rotating');
         let previousTime = performance.now();
         const frame = (time: number) => {
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.isMoving() || map.getZoom() >= 2.4) {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) {
             stopRotation();
             return;
           }
@@ -329,7 +335,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         setRotationState('reduced');
         return;
       }
-      if (map.getZoom() < 2.4 && !map.isMoving() && !pointerInside.current) {
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !map.isMoving() && !pointerInside.current) {
         rotating.current = true;
         setCameraModeState('resting_globe');
         setRotationState('idle');
@@ -344,7 +350,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (pointerInside.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= 2.4) return;
+        if (pointerInside.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
         if (cameraMode.current === 'manual_navigation') {
           cameraMode.current = 'resting_globe';
           setCameraModeState('resting_globe');
@@ -356,15 +362,20 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       initialStyleReady.current = true;
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (!fallbackUsed.current) setMapStatus('ready');
-      map.setProjection({ type: 'globe' });
+      const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
+      globeProjection = initialGlobe;
+      map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
+      setProjection(initialGlobe ? 'globe' : 'mercator');
       map.resize();
+      applyCanopyPalette(map);
+      map.triggerRepaint();
       syncCameraPadding();
       addLayers(map);
       const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
       source?.setData(featureCollection(facilitiesRef.current));
       setZoom(map.getZoom());
       setBearing(map.getBearing());
-      scheduleScreenPins();
+      scheduleUserPosition();
       emitBounds();
     };
     resumeMotionRef.current = resume;
@@ -417,11 +428,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     map.on('dragstart', () => pauseMotion('interaction', false));
     map.on('rotatestart', () => pauseMotion('interaction', false));
     map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
-    map.on('move', () => { setBearing(map.getBearing()); scheduleScreenPins(); });
+    map.on('move', () => { setBearing(map.getBearing()); scheduleUserPosition(); });
     map.on('moveend', () => {
       setCenterLongitude(map.getCenter().lng);
       if (!rotating.current) emitBounds();
-      scheduleScreenPins();
+      scheduleUserPosition();
       if (cameraMode.current === 'resting_globe' && !pointerInside.current) scheduleSettledResume();
     });
     map.on('dragend', () => {
@@ -431,8 +442,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         setCameraModeState('manual_navigation');
       }
       emitBounds();
-      scheduleScreenPins();
-      if (map.getZoom() < 2.4 && !contextSurfaceRef.current) scheduleSettledResume();
+      scheduleUserPosition();
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !contextSurfaceRef.current) scheduleSettledResume();
     });
     map.on('zoomend', () => {
       rotating.current = false;
@@ -442,8 +453,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }
       setZoom(map.getZoom());
       emitBounds();
-      scheduleScreenPins();
-      if (map.getZoom() < 2.4 && !contextSurfaceRef.current) scheduleSettledResume();
+      scheduleUserPosition();
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !contextSurfaceRef.current) scheduleSettledResume();
     });
     map.on('error', () => {
       if (fallbackUsed.current || initialStyleReady.current) return;
@@ -461,10 +472,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     }, 3000);
     let globeProjection = true;
     const syncProjection = () => {
-      const wantsGlobe = map.getZoom() < 2.4;
+      const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+        setProjection(wantsGlobe ? 'globe' : 'mercator');
+        map.resize();
+        map.triggerRepaint();
       }
     };
     map.on('zoom', syncProjection);
@@ -473,21 +487,21 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (!fallbackUsed.current) setMapStatus('ready');
       configureStyle();
-      globeProjection = map.getZoom() < 2.4;
+      globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
     });
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
-    const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleScreenPins(); });
+    const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleUserPosition(); });
     surfaceObserver.observe(document.body, { childList: true, subtree: true });
-    const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleScreenPins(); };
+    const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-      if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
+      if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
@@ -504,13 +518,15 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
 
     function addLayers(target: Map) {
       if (target.getSource(SOURCE)) return;
-      target.addSource(SOURCE, { type: 'geojson', data: featureCollection(facilitiesRef.current), cluster: true, clusterMaxZoom: 6, clusterRadius: 48 });
-      // The accessible projected overlay is the sole visible pin renderer. Keep the source/layers for
-      // provider-backed feature semantics and compatibility, but do not paint a second marker beneath it.
-      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#ed8a60', 'circle-radius': ['step', ['get', 'point_count'], 17, 10, 22, 30, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0 } });
-      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11 }, paint: { 'text-color': '#ffffff', 'text-opacity': 0 } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 5.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0 } });
-      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0 } });
+      target.addSource(SOURCE, { type: 'geojson', data: featureCollection(facilitiesRef.current), cluster: true, clusterMaxZoom: 8, clusterRadius: 48 });
+      // Facilities and clusters are visible MapLibre features, so the basemap and public presence
+      // reproject in the same render cycle during drag, rotate and zoom. The accessible HTML list
+      // below is only the keyboard fallback; it is not a second visual marker renderer.
+      target.addLayer({ id: 'omni-cluster-rings', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#d7e5de', 'circle-radius': ['step', ['get', 'point_count'], 28, 10, 36, 30, 46], 'circle-stroke-color': '#4d7568', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.55, 'circle-opacity': 0.2 } });
+      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#e49368', 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 23], 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
+      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#b96142', 'text-halo-width': 0.8 } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 7, 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2, 'circle-opacity': 0.98 } });
+      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0.2, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.75 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
@@ -532,7 +548,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
     }
-  }, [onBoundsChange, onSelect, scheduleScreenPins]);
+  }, [onBoundsChange, onSelect, scheduleUserPosition]);
 
   useEffect(() => {
     contextSurfaceRef.current = contextSurfaceOpen;
@@ -567,9 +583,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (finalBounds) {
         const [[west, south], [east, north]] = finalBounds;
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
-          map.easeTo({ center: [west, south], zoom: 6.2, duration: 800, essential: true });
+          map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 800, essential: true });
         } else {
-          map.fitBounds(finalBounds, { padding: { top: 120, right: 76, bottom: 230, left: 76 }, maxZoom: 6.2, duration: 900, essential: true });
+          map.fitBounds(finalBounds, { padding: { top: 120, right: 76, bottom: 230, left: 76 }, maxZoom: RESULT_MAX_ZOOM, duration: 900, essential: true });
         }
         await waitForMapMove(map, 1500);
       }
@@ -577,7 +593,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       revealRunningRef.current = false;
       setRevealRunning(false);
       setRevealLabel(null);
-      cameraMode.current = map.getZoom() <= 2.4 ? 'resting_globe' : 'manual_navigation';
+      cameraMode.current = map.getZoom() <= GLOBE_TO_MERCATOR_ZOOM ? 'resting_globe' : 'manual_navigation';
       setCameraModeState(cameraMode.current);
       if (cameraMode.current === 'resting_globe' && !pointerInside.current && !contextSurfaceRef.current) {
         rotating.current = true;
@@ -613,8 +629,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
     source?.setData(featureCollection(facilities));
-    scheduleScreenPins();
-  }, [facilities, scheduleScreenPins]);
+    scheduleUserPosition();
+  }, [facilities, scheduleUserPosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -631,11 +647,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'
-    ? { title: 'Localisation en cours…', detail: 'La carte va se recentrer sur vous.' }
+    ? { title: 'Localisation en cours…', detail: 'La carte reste sur votre vue pendant la demande.' }
     : locationState === 'exact'
-      ? { title: 'Carte centrée sur vous', detail: 'Position précise acceptée par le navigateur.' }
+      ? { title: 'Position détectée', detail: 'Votre repère est visible; utilisez le contrôle pour recentrer.' }
       : locationState === 'approximate'
-        ? { title: 'Zone approximative', detail: 'La carte est centrée sans afficher une précision exacte.' }
+        ? { title: 'Zone approximative détectée', detail: 'Votre repère reste distinct sans déplacer la carte.' }
         : locationState === 'denied'
           ? { title: 'Localisation désactivée', detail: 'Autorisez-la dans votre navigateur ou continuez à explorer.' }
           : locationState === 'timeout'
@@ -645,30 +661,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="deep-neutral" data-projection={zoom < 2.4 ? 'globe' : 'mercator'} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="deep-neutral" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="map-reveal-dot" /><span>{revealLabel}</span></div>}
-      <div className="map-pin-overlay" aria-label="Lieux publics sur la carte">
-        {screenPins.map((pin) => pin.kind === 'cluster' ? (
-          <button
-            key={`cluster-${pin.longitude.toFixed(4)}-${pin.latitude.toFixed(4)}`}
-            className="map-pin map-pin-cluster"
-            type="button"
-            style={{ left: pin.left, top: pin.top }}
-            aria-label={`Afficher ${pin.count} lieux publics sur la carte`}
-            onClick={() => { pauseMotion(); mapRef.current?.easeTo({ center: [pin.longitude, pin.latitude], zoom: Math.min(mapRef.current.getZoom() + 2, 6.3), duration: 500, essential: true }); }}
-            ><span className="cluster-core" aria-hidden="true" /><span className="cluster-count" aria-hidden="true">{pin.count}</span></button>
-        ) : (
-          <button
-            key={`facility-${pin.facility?.name ?? pin.longitude.toFixed(4)}`}
-            className={`map-pin map-pin-facility${pin.facility?.id === selectedId ? ' selected' : ''}`}
-            type="button"
-            style={{ left: pin.left, top: pin.top }}
-            aria-label={`Ouvrir ${pin.facility?.name ?? 'le lieu public'}`}
-            onClick={() => { if (pin.facility) { pauseMotion(); onSelect(pin.facility); mapRef.current?.easeTo({ center: [pin.facility.longitude, pin.facility.latitude], zoom: Math.max(mapRef.current.getZoom(), 5.2), duration: 650, essential: true }); } }}
-          ><MapPin size={18} strokeWidth={2.4} /></button>
-        ))}
+      <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
+        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { pauseMotion(); onSelect(facility); mapRef.current?.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(mapRef.current.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
@@ -676,12 +674,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       {locationState !== 'idle' && <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="État de la localisation">
         <span className="location-prompt-icon"><Crosshair size={15} /></span>
         <span className="location-prompt-copy"><strong>{locationCopy.title}</strong><small>{locationCopy.detail}</small></span>
-        {locationState === 'requesting' ? <button type="button" onClick={cancelLocation}>Annuler</button> : (locationState === 'denied' || locationState === 'unavailable' || locationState === 'timeout' || locationState === 'cancelled') && <button type="button" onClick={requestLocation}>Réessayer</button>}
+        {locationState === 'requesting' ? <button type="button" onClick={cancelLocation}>Annuler</button> : (locationState === 'denied' || locationState === 'unavailable' || locationState === 'timeout' || locationState === 'cancelled') && <button type="button" onClick={() => requestLocation()}>Réessayer</button>}
       </div>}
       <div className="map-controls" aria-label="Contrôles de carte">
         {zoomExpanded && <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>}
         <button className="zoom-in-control" type="button" aria-label="Zoom avant" aria-expanded={zoomExpanded} aria-controls="zoom-out-control" onClick={() => { zoomIn(); setZoomExpanded(true); }}><Plus size={17} /></button>
-        <button className="location-control" type="button" aria-label="Utiliser ma localisation" onClick={requestLocation}><Crosshair size={16} /></button>
+        <button className="location-control" type="button" aria-label="Utiliser ma localisation" onClick={() => requestLocation()}><Crosshair size={16} /></button>
       </div>
     </div>
   );

@@ -174,3 +174,12 @@ The camera contract is reversible and native to the map: manual drag/pan/rotate/
 Result state adds a visible continuation toolbar inside the existing sheet hierarchy: `Nouvelle recherche`, `Affiner` and `Retour à la carte`. The dock remains mounted and separate from the result sheet; `Affiner` opens upward in its own reserved surface. At desktop widths the dock and rounded bottom sheet use more of the available map without becoming a side rail or dashboard. At mobile widths the reference anatomy remains the source composition.
 
 The current availability visual remains single-product. A quiet planning note may acknowledge future grouped comparison, but no multi-product submission or availability mutation is represented until Root/API work defines grouping, idempotency, expiry, ownership and recovery.
+
+
+## 12. Canopy V4 amendment — continuous map and mobile focus, 2026-08-24
+
+The Canopy V4 map is a single continuous geographic field rather than a globe plus a separate overlay mode. At low zoom, it presents a dark ocean and lighter land with clear continent/country edges; at `zoom 2.4` and above, it transitions automatically to the normal local map. Zooming back out transitions to the globe from the current camera. Center, bearing and pitch are retained across both directions.
+
+Facilities are part of the map render. The preferred visual target is a MapLibre-native source/layer pin and cluster treatment so markers reproject in the same frame as the basemap while the user drags, rotates or zooms. No movement state may hide the facility pins or make them appear after the map settles. The approved inner location circle and calm discovery rings remain, with no supply or trust inference.
+
+The mobile arrival keeps the current worldwide/map context and does not automatically center on the user. The marker may appear after a permission-aware result, but only the explicit location control or an approved search reveal changes the camera to that position. Text focus in the dock and other mobile forms remains visually stable; it must not invoke browser input zoom. When a selected facility grid or result sheet is closed, the selected focus is cleared and the map returns to the prior non-selected state.

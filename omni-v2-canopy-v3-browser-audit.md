@@ -72,3 +72,24 @@ From the ready production result, `Affiner` opened the options popover in a sepa
 ## Production granted-location proof
 
 A temporary production Playwright context granted geolocation with the same synthetic demo coordinates `(1.22, 6.13, accuracy 25)`. The real deployment reported `location=exact`, `userPosition=visible`, `markerCount=1`, accessible marker label `Votre position sur la carte`, `cameraMode=manual_navigation`, and one separate public cluster. The context was destroyed immediately; no coordinate was sent to the API or written to project documentation. The persistent Sandbox browser separately proved the denied/timeout recovery states.
+
+
+## 2026-08-24 — Canopy V4 re-entry: new owner observations
+
+The owner added a new set of Species/Canopy observations after the V3 release. These are recorded as `observed / user-reported` and are not yet implementation acceptance:
+
+1. Globe↔normal map projection must switch automatically in both directions at a zoom threshold, rather than showing raster/globe pixel artifacts or requiring a manual mode change.
+2. Facility pins must remain part of the moving map context while the camera moves. They must not look like HTML objects temporarily detached from the map and then reattached after the camera settles.
+3. The mobile arrival should not be automatically centered on the user; that state hides useful map space and is not considered necessary for the core discovery experience.
+4. Tapping anywhere in the mobile search text field must not trigger browser input zoom or an aesthetically incorrect viewport scale change.
+5. Darker means stronger continent/country edges and a darker ocean, while land should remain lighter and cleaner. The branch-main grey highlight treatment should not be copied.
+6. When a facility is selected and its result grid/sheet is closed, selection/focus must be cleared rather than leaving the map visually focused on a closed facility.
+
+The current V3 audit already proves a partial zoom projection switch, but not its bidirectional visual quality through repeated zoom-in/zoom-out. The current visible facility layer is an HTML projected overlay (`groupProjectedFacilities`), which is the likely cause of the detached-pin perception; this requires a mini-root/rendering decision before replacing or synchronizing it. The current arrival attempt explicitly calls `requestLocation()` and the success callback recenters to the user, so the mobile non-centered rule requires a contract change, not only CSS. The current interactive inputs use `12px`, below the common mobile anti-auto-zoom threshold, so all focused dock/options/auth inputs need a deliberate minimum-size contract. The current nearby collapse callback closes the sheet but does not clear `selectedFacility`, so the focus-loss request has a concrete state-owner defect.
+
+No code has been changed for these V4 observations at this checkpoint. Preserve the existing public data, Auth identities, submitted bounded claim, availability contract and 12-function release path while diagnosing the smallest coherent patch.
+
+
+## 2026-08-24 — Canopy V4 local browser checkpoint
+
+The local V4 instance loaded the new dark-ocean treatment and showed the revised arrival copy `La carte reste sur votre vue pendant la demande.` The local API then entered the honest fallback/unavailable state, so no source-backed public facility or native cluster was available for this isolated view. This is not treated as proof of vector layer styling or pin anchoring. The local browser showed no unexpected mobile recenter in the arrival frame; the location request remained cancellable. The next proof must use the real production API after deployment.

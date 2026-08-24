@@ -87,7 +87,7 @@ For a 320px viewport, preserve the first card’s readable width and let the nex
 
 ## 4. Map treatment
 
-The map is real geographic context, but the initial frame uses a quiet visual treatment. Use a very pale grey/grey-green basemap with low-contrast roads and labels, softened saturation and a subtle dot-grid or spatial texture layer inspired by the reference. The texture must never be used as fake geography or replace a functioning map provider.
+The map is real geographic context, but the initial frame uses a quiet visual treatment. Use a darker ocean, lighter land and clearly readable continent/country edges inspired by the main-branch map, without the heavy grey highlight wash. Roads and labels remain restrained, and any texture must never be used as fake geography or replace a functioning map provider.
 
 The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. The Canopy treatment is a darker cool grey/green with clean geographic edges, restrained texture and visible local roads/labels when the real provider supplies them. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
 
@@ -165,7 +165,7 @@ The rail must restore its scroll position and selected facility context after op
 
 ### 9.1 Arrival state
 
-The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. Canopy V3 adds one non-blocking, permission-aware arrival attempt: when browser permission is prompt or already granted, the browser may request location once per session; denied, unavailable and timeout states remain cancellable with a visible retry. The map and public discovery remain usable without location.
+The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. Canopy V3 adds one non-blocking, permission-aware arrival attempt: when browser permission is prompt or already granted, the browser may request location once per session; denied, unavailable and timeout states remain cancellable with a visible retry. Canopy V4 makes the first mobile frame non-centered: an accepted position may render the distinct user marker, but the map does not recenter until the user explicitly activates `Utiliser ma localisation` or a permitted reveal requires a target. The map and public discovery remain usable without location.
 
 ### 9.2 Search expanded state
 
@@ -282,3 +282,14 @@ The owner’s re-entry feedback is now a bounded Species amendment, not an alter
 Manual camera ownership is explicit: native MapLibre drag/pan/rotate/zoom pauses Omni idle motion, preserves the released center/zoom/bearing and never resets to the initial globe. When the pointer leaves the map/context and no surface owns the camera, a delayed resting rotation can resume from the current camera. Search results keep the dock mounted and expose `Nouvelle recherche`, `Affiner` and `Retour à la carte` in a separate result toolbar. Desktop uses a wider bounded bottom sheet and dock breathing room while retaining the mobile hierarchy and prohibiting a side dashboard rail.
 
 Availability remains a single-product server contract in this ring. The UI explains that grouped comparison is planned, but no multi-product request is enabled until a Root/API decision covers grouping, idempotency, expiry, response ownership and recovery. The V3 amendment therefore extends Species without claiming a multi-product write path.
+
+
+## 17. Canopy V4 amendment — continuous map ownership, 2026-08-24
+
+Canopy V4 tightens the map contract without creating a new layout language. The live camera uses a bidirectional threshold: below `zoom 2.4` it uses `globe`; at or above `zoom 2.4` it uses normal `mercator`. The switch occurs on live zoom events, preserves center/bearing/pitch, and may use a small guard band so repeated wheel events do not thrash the projection. A subsequent zoom-out must return to globe from the current camera rather than reset to the initial world view.
+
+Facility presence belongs to the map’s coordinate system. The preferred visible renderer is a MapLibre-native GeoJSON source/layer path so facilities and clusters are reprojected in the same render cycle as the basemap. If an accessible projected overlay remains during migration, it must track the live `move` event without being hidden and without waiting for `moveend`; a pin that visually disappears while the map is moving is not accepted. This does not change public trust semantics: pins remain source-backed presence, and cluster rings remain density only.
+
+The mobile arrival does not center on the user automatically. Permission-aware location may still produce the distinct marker in bounded in-memory state, but only the explicit location control or an approved search reveal may move the camera to that position. The mobile search input and every text-like field use a platform-safe minimum effective size of `16px` so tapping or focusing text does not trigger viewport zoom. Search focus must not mutate map center, zoom or projection.
+
+The palette is now defined by geographic contrast rather than a global grey wash: dark ocean, lighter land, clear continent/country edges, restrained roads and labels, and no heavy highlight overlay. When a selected facility’s grid or nearby result sheet is closed, selection is cleared and the map returns to its previous non-selected mode. A closed grid must never leave a stale selected pin highlighted on the next map-only state.
