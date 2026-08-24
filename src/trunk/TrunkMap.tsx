@@ -12,6 +12,7 @@ type Props = {
   selectedId: string | null;
   onSelect: (facility: PublicFacility) => void;
   onBoundsChange?: (bounds: [number, number, number, number]) => void;
+  contextSurfaceOpen?: boolean;
 };
 
 const REMOTE_STYLE: StyleSpecification = {
@@ -40,7 +41,7 @@ function featureCollection(facilities: PublicFacility[]) {
   };
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, contextSurfaceOpen = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
@@ -57,6 +58,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const [screenPins, setScreenPins] = useState<ScreenPin[]>([]);
   const screenPinsFrame = useRef<number | null>(null);
   const locationRequest = useRef<number | null>(null);
+  const resumeMotionRef = useRef<(() => void) | null>(null);
   facilitiesRef.current = facilities;
 
   const updateScreenPins = useCallback(() => {
@@ -165,8 +167,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     });
     mapRef.current = map;
     const syncCameraPadding = () => {
-      const sheetHeight = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sheet-height')) || 320;
-      const bottomPadding = Math.min(sheetHeight + 56, Math.max(180, window.innerHeight - 110));
+      const sheet = document.querySelector<HTMLElement>('.nearby-sheet');
+      const sheetHeight = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
+      const bottomPadding = sheetHeight > 0 ? Math.min(sheetHeight + 56, Math.max(180, window.innerHeight - 110)) : 0;
       map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
     };
     syncCameraPadding();
@@ -218,6 +221,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       scheduleScreenPins();
       emitBounds();
     };
+    resumeMotionRef.current = resume;
     map.on('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
@@ -260,11 +264,18 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
+    const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleScreenPins(); });
+    surfaceObserver.observe(document.body, { childList: true, subtree: true });
+    const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleScreenPins(); };
+    window.addEventListener('resize', handleWindowResize);
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
       if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
       observer.disconnect();
+      surfaceObserver.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+      resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
       map.remove();
@@ -300,6 +311,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       }
     }
   }, [onBoundsChange, onSelect, scheduleScreenPins]);
+
+  useEffect(() => {
+    if (contextSurfaceOpen) pauseMotion();
+    else resumeMotionRef.current?.();
+  }, [contextSurfaceOpen]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;

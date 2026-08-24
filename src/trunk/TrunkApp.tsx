@@ -92,7 +92,7 @@ export function TrunkApp() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
-  const [nearbyCollapsed, setNearbyCollapsed] = useState(false);
+  const [nearbyOpen, setNearbyOpen] = useState(false);
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
@@ -364,7 +364,7 @@ export function TrunkApp() {
     setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
     setShowAllResults(true);
-    setNearbyCollapsed(false);
+    setNearbyOpen(true);
     setOptionsOpen(false);
     setMenuOpen(false);
     setError('');
@@ -378,7 +378,7 @@ export function TrunkApp() {
     setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
     setShowAllResults(true);
-    setNearbyCollapsed(false);
+    setNearbyOpen(true);
     setOptionsOpen(false);
     setError('');
   };
@@ -400,7 +400,7 @@ export function TrunkApp() {
     setBudget('');
     setBounds(undefined);
     setShowAllResults(false);
-    setNearbyCollapsed(false);
+    setNearbyOpen(false);
     setOptionsOpen(false);
     setMenuOpen(false);
   };
@@ -578,7 +578,11 @@ export function TrunkApp() {
   useEffect(() => {
     const app = appRef.current;
     const sheet = nearbySheetRef.current;
-    if (!app || !sheet) return;
+    if (!app) return;
+    if (!sheet) {
+      app.style.removeProperty('--nearby-sheet-offset');
+      return;
+    }
     const updateDockBand = () => {
       const sheetTop = sheet.getBoundingClientRect().top;
       app.style.setProperty('--nearby-sheet-offset', `${dockBandOffset(window.innerWidth, window.innerHeight, sheetTop)}px`);
@@ -592,11 +596,11 @@ export function TrunkApp() {
       window.removeEventListener('resize', updateDockBand);
       app.style.removeProperty('--nearby-sheet-offset');
     };
-  }, [mapState, nearbyCollapsed, showAllResults, visibleFacilities.length]);
+  }, [mapState, nearbyOpen, showAllResults, visibleFacilities.length]);
 
   return (
     <main ref={appRef} className={mainClass} data-auth={authClient ? 'configured' : 'missing'}>
-      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} />
+      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} />
 
       <header className="species-topbar">
         <div className="role-switch" aria-label="Omni role context">
@@ -623,10 +627,11 @@ export function TrunkApp() {
           <form className="search-pill" aria-label="Recherche Omni" onSubmit={beginSearch}>
             <Search size={17} aria-hidden="true" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un commerce, un produit…" aria-label="Rechercher un commerce ou un produit" />
+            <button className="pill-submit" type="submit" aria-label="Rechercher"><ArrowRight size={17} /></button>
             <button className="pill-options" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Fermer les options' : 'Ouvrir les options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
           </form>
         </div>
-        <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} collapsed={nearbyCollapsed} onToggleCollapsed={() => setNearbyCollapsed((collapsed) => !collapsed)} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyCollapsed(false); }} showAll={showAllResults} />
+        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} onCollapse={() => setNearbyOpen(false)} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); }} showAll={showAllResults} />}
       </>}
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
@@ -639,21 +644,21 @@ export function TrunkApp() {
   );
 }
 
-const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapState: 'loading' | 'ready' | 'empty' | 'error'; committedQuery: string; collapsed: boolean; showAll: boolean; onToggleCollapsed: () => void; onOpenFacility: (facility: PublicFacility) => void; onVerify: (facility: PublicFacility) => void; onShowAll: () => void }>(function NearbySheet(props, ref) {
-  return <section ref={ref} className={`nearby-sheet${props.collapsed ? ' is-collapsed' : ''}`} aria-label="Facilités proches">
-    <button className="sheet-handle-button" type="button" aria-expanded={!props.collapsed} aria-label={props.collapsed ? 'Développer les facilités proches' : 'Replier les facilités proches'} onClick={props.onToggleCollapsed}><span className="sheet-handle" /></button>
-    <div className="nearby-heading"><div><span className="section-kicker">Omni</span><h1>{props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Proche de vous'}</h1></div><div className="nearby-heading-actions"><button type="button" className="see-all" onClick={props.onShowAll} disabled={props.showAll || !props.facilities.length}>Voir tout</button><button type="button" className="nearby-collapse" aria-expanded={!props.collapsed} aria-label={props.collapsed ? 'Développer la grille des facilités' : 'Replier la grille des facilités'} onClick={props.onToggleCollapsed}><ChevronDown size={15} className={props.collapsed ? '' : 'chevron-up'} /></button></div></div>
-    {!props.collapsed && props.mapState === 'loading' && <div className="nearby-empty"><span className="loading-dot" /><span>Recherche des lieux autour de vous…</span></div>}
-    {!props.collapsed && props.mapState === 'error' && <div className="nearby-empty"><strong>La carte continue de fonctionner</strong><span>La découverte publique peut être réessayée depuis les contrôles.</span></div>}
-    {!props.collapsed && props.mapState === 'empty' && <div className="nearby-empty"><strong>Aucun lieu dans cette vue</strong><span>Déplacez la carte ou ajustez votre recherche.</span></div>}
-    {!props.collapsed && props.mapState === 'ready' && <div className="nearby-rail" tabIndex={0} aria-label="Résultats proches">{props.facilities.map((facility) => <article className="nearby-card" key={facility.id}>
+const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapState: 'loading' | 'ready' | 'empty' | 'error'; committedQuery: string; showAll: boolean; onCollapse: () => void; onOpenFacility: (facility: PublicFacility) => void; onVerify: (facility: PublicFacility) => void; onShowAll: () => void }>(function NearbySheet(props, ref) {
+  return <section ref={ref} className="nearby-sheet" aria-label="Facilités proches">
+    <button className="sheet-handle-button" type="button" aria-expanded="true" aria-label="Replier les facilités proches" onClick={props.onCollapse}><span className="sheet-handle" /></button>
+    <div className="nearby-heading"><div><span className="section-kicker">Omni</span><h1>{props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Proche de vous'}</h1></div><div className="nearby-heading-actions"><button type="button" className="see-all" onClick={props.onShowAll} disabled={props.showAll || !props.facilities.length}>Voir tout</button><button type="button" className="nearby-collapse" aria-expanded="true" aria-label="Replier la grille des facilités" onClick={props.onCollapse}><ChevronDown size={15} className="chevron-up" /></button></div></div>
+    {props.mapState === 'loading' && <div className="nearby-empty"><span className="loading-dot" /><span>Recherche des lieux autour de vous…</span></div>}
+    {props.mapState === 'error' && <div className="nearby-empty"><strong>La carte continue de fonctionner</strong><span>La découverte publique peut être réessayée depuis les contrôles.</span></div>}
+    {props.mapState === 'empty' && <div className="nearby-empty"><strong>Aucun lieu dans cette vue</strong><span>Déplacez la carte ou ajustez votre recherche.</span></div>}
+    {props.mapState === 'ready' && <div className="nearby-rail" tabIndex={0} aria-label="Résultats proches">{props.facilities.map((facility) => <article className="nearby-card" key={facility.id}>
       <button className="nearby-card-main" type="button" onClick={() => props.onOpenFacility(facility)}>
         <span className="facility-card-icon"><MapPin size={17} /></span>
         <span className="nearby-card-copy"><span className="status-pill">{publicBadge(facility)}</span><strong>{facility.name}</strong><small>{facility.category} · Lieu local</small></span>
         <ChevronRight size={16} className="card-chevron" aria-hidden="true" />
       </button>
       <button className="card-cta" type="button" disabled={facility.productCount === 0} onClick={() => props.onVerify(facility)}>{facility.productCount ? 'Vérifier la disponibilité' : 'Voir le lieu'}</button>
-    </article>)}</div>}
+      </article>)}</div>}
   </section>;
 });
 
