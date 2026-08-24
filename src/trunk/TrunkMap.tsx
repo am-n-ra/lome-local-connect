@@ -46,7 +46,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
-  const rotationTimer = useRef<number | null>(null);
+  const rotationFrame = useRef<number | null>(null);
   const rotationResumeTimer = useRef<number | null>(null);
   const fallbackUsed = useRef(false);
   const initialStyleReady = useRef(false);
@@ -88,9 +88,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
 
   const pauseMotion = () => {
     rotating.current = false;
-    if (rotationTimer.current !== null) {
-      window.clearTimeout(rotationTimer.current);
-      rotationTimer.current = null;
+    if (rotationFrame.current !== null) {
+      window.cancelAnimationFrame(rotationFrame.current);
+      rotationFrame.current = null;
     }
     if (rotationResumeTimer.current !== null) {
       window.clearTimeout(rotationResumeTimer.current);
@@ -182,18 +182,45 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     };
     syncCameraPadding();
 
-    const scheduleRotation = () => {
-      if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
-      rotationTimer.current = window.setTimeout(rotate, 1400);
+    const stopRotation = () => {
+      if (rotationFrame.current !== null) {
+        window.cancelAnimationFrame(rotationFrame.current);
+        rotationFrame.current = null;
+      }
+    };
+    const scheduleRotation = (delay = 1400) => {
+      stopRotation();
+      if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || map.getZoom() >= 2.4) return;
+      rotationResumeTimer.current = window.setTimeout(() => {
+        rotationResumeTimer.current = null;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || map.getZoom() >= 2.4) return;
+        setRotationState('rotating');
+        let previousTime = performance.now();
+        const frame = (time: number) => {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= 2.4) {
+            stopRotation();
+            return;
+          }
+          const elapsedSeconds = Math.min(0.1, Math.max(0, time - previousTime) / 1000);
+          previousTime = time;
+          const center = map.getCenter();
+          map.jumpTo({ center: [center.lng + (2.8 * elapsedSeconds), center.lat], bearing: 0, pitch: 0 });
+          rotationFrame.current = window.requestAnimationFrame(frame);
+        };
+        rotationFrame.current = window.requestAnimationFrame(frame);
+      }, delay);
     };
     const resume = () => {
       if (contextSurfaceRef.current) {
         rotating.current = false;
+        stopRotation();
         setRotationState('paused');
         return;
       }
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         rotating.current = false;
+        stopRotation();
         setRotationState('reduced');
         return;
       }
@@ -203,6 +230,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
         scheduleRotation();
       } else {
         rotating.current = false;
+        stopRotation();
         setRotationState('paused');
       }
     };
@@ -212,23 +240,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
         rotationResumeTimer.current = null;
         resume();
       }, 900);
-    };
-    const rotate = () => {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        rotating.current = false;
-        setRotationState('reduced');
-        rotationTimer.current = null;
-        return;
-      }
-      if (!rotating.current || map.isMoving() || map.getZoom() >= 2.4) {
-        rotationTimer.current = null;
-        return;
-      }
-      const nextLongitude = map.getCenter().lng + 0.035;
-      setRotationState('rotating');
-      setCenterLongitude(nextLongitude);
-      map.easeTo({ center: [nextLongitude, map.getCenter().lat], duration: 1200, essential: false });
-      scheduleRotation();
     };
     const configureStyle = () => {
       initialStyleReady.current = true;
@@ -261,9 +272,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     map.on('dragstart', pauseMotion);
     map.on('zoomstart', pauseMotion);
     map.on('move', scheduleScreenPins);
-    map.on('moveend', () => { setCenterLongitude(map.getCenter().lng); emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
-    map.on('dragend', () => { emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
-    map.on('zoomend', () => { setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
+    map.on('moveend', () => {
+      setCenterLongitude(map.getCenter().lng);
+      if (!rotating.current) emitBounds();
+      scheduleScreenPins();
+      scheduleSettledResume();
+    });
+    map.on('dragend', () => { rotating.current = false; emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
+    map.on('zoomend', () => { rotating.current = false; setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
     map.on('error', () => {
       if (fallbackUsed.current || initialStyleReady.current) return;
       fallbackUsed.current = true;
@@ -293,7 +309,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     window.addEventListener('resize', handleWindowResize);
     return () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
+      if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
       observer.disconnect();
@@ -309,10 +325,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     function addLayers(target: Map) {
       if (target.getSource(SOURCE)) return;
       target.addSource(SOURCE, { type: 'geojson', data: featureCollection(facilitiesRef.current), cluster: true, clusterMaxZoom: 6, clusterRadius: 48 });
-      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#ed8a60', 'circle-radius': ['step', ['get', 'point_count'], 17, 10, 22, 30, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.86 } });
-      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11 }, paint: { 'text-color': '#ffffff' } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 5.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2 } });
-      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0.2, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5 } });
+      // The accessible projected overlay is the sole visible pin renderer. Keep the source/layers for
+      // provider-backed feature semantics and compatibility, but do not paint a second marker beneath it.
+      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#ed8a60', 'circle-radius': ['step', ['get', 'point_count'], 17, 10, 22, 30, 28], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0 } });
+      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11 }, paint: { 'text-color': '#ffffff', 'text-opacity': 0 } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 5.5, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0 } });
+      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;

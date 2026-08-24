@@ -129,6 +129,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .see-all:hover { color: var(--forest); }
 .nearby-rail { display: flex; gap: 10px; min-height: 0; overflow-x: auto; padding: 13px 17px 22px; scrollbar-width: none; scroll-snap-type: x proximity; }
 .nearby-rail::-webkit-scrollbar { display: none; }
+.nearby-transition { animation: nearby-state-in .22s var(--ease); }
 .nearby-rail:focus-visible { outline: 3px solid rgba(233,147,115,.28); outline-offset: -2px; }
 .nearby-card { display: flex; flex: 0 0 min(82%, 276px); flex-direction: column; min-width: 0; scroll-snap-align: start; padding: 10px; border: 1px solid #edf2ef; border-radius: 18px; background: #fbfdfb; box-shadow: 0 8px 22px rgba(45, 72, 65, .07); }
 .nearby-card-main { display: flex; align-items: flex-start; gap: 9px; min-width: 0; min-height: 72px; border: 0; padding: 2px 1px 8px; color: var(--ink); background: transparent; text-align: left; }
@@ -186,8 +187,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .trust-badge, .pro-badge { display: inline-flex; align-items: center; gap: 5px; min-height: 24px; border-radius: 999px; padding: 0 8px; font-size: 9px; font-weight: 900; }
 .trust-badge { color: var(--mint-ink); background: var(--mint); }
 .pro-badge { color: #a66a50; background: var(--peach); }
-.notice-card, .locked-note { display: flex; gap: 9px; margin-top: 16px; padding: 11px; border-radius: 13px; color: #765847; background: #fff3eb; }
+.notice-card, .locked-note { display: flex; gap: 9px; margin-top: 16px; padding: 11px; border: 1px solid rgba(233,147,115,.16); border-radius: 13px; color: #765847; background: #fff3eb; }
 .notice-card strong, .locked-note strong { display: block; font-size: 10px; }
+.reviewer-sheet .notice-card { border-color: rgba(31,88,72,.12); color: var(--ink); background: #f2f8f4; }
+.reviewer-sheet .notice-card p { color: var(--muted); }
+.reviewer-sheet .locked-note, .seller-workspace-sheet .locked-note { border-color: rgba(31,88,72,.10); color: var(--forest); background: #f0f8f4; }
 .notice-card p, .locked-note small { display: block; margin: 4px 0 0; color: #9a7867; font-size: 9px; line-height: 1.45; }
 .catalogue-heading { display: flex; align-items: end; justify-content: space-between; gap: 9px; margin-top: 19px; }
 .catalogue-heading strong { color: var(--ink); font-size: 15px; letter-spacing: -.035em; }
@@ -293,7 +297,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 22px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; transform: scale(.82); } }
-
+@keyframes nearby-state-in { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @media (min-width: 900px) {
   :root { --sheet-height: min(46dvh, 430px); }
   .species-topbar { top: 24px; left: 32px; right: 32px; }
@@ -336,8 +340,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 /* Seller mini-Species: same sheet material, narrower operation surface, no dashboard rail. */
 .seller-workspace-sheet { gap: 0; }
-.seller-workspace-summary { display: flex; align-items: flex-start; gap: 10px; margin-top: 17px; padding: 12px; border-radius: 15px; background: #f0f8f4; }
-.seller-workspace-summary > div { display: grid; gap: 4px; }
+.seller-workspace-summary, .reviewer-workspace-summary { display: flex; align-items: flex-start; gap: 10px; margin-top: 17px; padding: 12px; border: 1px solid rgba(31,88,72,.10); border-radius: 15px; background: #f0f8f4; box-shadow: 0 8px 22px rgba(42, 74, 63, .05); }
+.seller-workspace-summary > div, .reviewer-workspace-summary > div { display: grid; gap: 4px; min-width: 0; }
+.reviewer-entry-mark { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; border-radius: 11px; color: var(--forest); background: var(--mint); }
+.reviewer-workspace-summary strong { color: var(--ink); font-size: 12px; }
+.reviewer-workspace-summary p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .seller-workspace-summary strong { color: var(--ink); font-size: 12px; }
 .seller-workspace-summary p { margin: 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .seller-request-list { display: grid; gap: 7px; margin-top: 17px; }
@@ -472,7 +479,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .notification-card small { margin-top: 3px; color: #95a9a1; font-size: 9px; }
 .notification-card p { margin: 6px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.4; }
 .review-form { display: grid; gap: 13px; margin-top: 16px; }
-.review-selected { display: grid; gap: 4px; padding: 11px; border-radius: 13px; color: var(--ink); background: #f1f7f3; }
+.review-list { padding-top: 1px; }
+.review-selected { display: grid; gap: 4px; padding: 13px; border: 1px solid rgba(31,88,72,.10); border-radius: 15px; color: var(--ink); background: #f1f7f3; box-shadow: 0 8px 22px rgba(42, 74, 63, .05); }
 .review-selected strong { font-size: 14px; }
 .review-selected small { color: #859a91; font-size: 10px; }
 .reviewer-sheet .seller-status-options { flex-wrap: wrap; }
