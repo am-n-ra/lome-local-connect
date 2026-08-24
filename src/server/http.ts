@@ -189,7 +189,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const body = await parseRequestBody(req);
       const result = await handleClaimEvidenceUpload({ body, headers: req.headers, url: url.toString(), requestId });
-      json(res, 200, { ok: true, correlationId, data: result });
+      // Vercel Blob client protocol requires `clientToken` at the top level. This provider callback is the deliberate exception to Omni's generic API envelope; errors still leave through the shared redacted boundary.
+      json(res, 200, result);
       return true;
     }
     if (req.method === 'GET' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-evidence') {
