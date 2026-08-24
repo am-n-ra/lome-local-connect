@@ -306,6 +306,11 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .map-controls button { width: 36px; height: 36px; }
   .location-prompt { top: 35%; }
   .nearby-sheet { width: 100%; }
+  .options-popover { left: 0; width: calc(100% - 70px); transform: none; }
+}
+
+@media (max-width: 620px) and (max-height: 700px) {
+  .options-popover { max-height: max(180px, calc(100dvh - 407px)); }
 }
 
 @media (max-width: 380px) {
