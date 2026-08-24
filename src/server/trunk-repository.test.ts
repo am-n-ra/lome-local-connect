@@ -56,6 +56,28 @@ describe('public product boundary', () => {
   });
 });
 
+describe('public facility trust boundary', () => {
+  it('does not expose internal pre-review states as public trust claims', async () => {
+    const call = stubSql([{
+      id: 'facility-1',
+      name: 'Marche de Hanoukope',
+      category: 'Market',
+      address: 'Hanoukope, Lome',
+      latitude: 6.1256,
+      longitude: 1.2124,
+      trust_state: 'verification_draft',
+      commercial_plan: 'free',
+      product_count: 0,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.listPublicFacilities();
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ name: 'Marche de Hanoukope', trust: 'unclaimed' });
+  });
+});
+
 describe('availability repository Root seam', () => {
   it('keeps account, wallet and request provisioning in one guarded statement and replays the canonical request', async () => {
     const firstCall = stubSql([resultRow]);

@@ -17,6 +17,8 @@ function database(): ReturnType<typeof neon> {
   return neon(url);
 }
 
+const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'certified', 'unconfirmed', 'confirmed']);
+
 const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   id: String(row.id),
   name: String(row.name),
@@ -24,7 +26,8 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   address: row.address ? String(row.address) : null,
   latitude: Number(row.latitude),
   longitude: Number(row.longitude),
-  trust: String(row.trust_state) as PublicFacility['trust'],
+  // Internal verification states are never a public trust claim. Before review, the public meaning remains unclaimed.
+  trust: PUBLIC_TRUST_STATES.has(String(row.trust_state) as PublicFacility['trust']) ? String(row.trust_state) as PublicFacility['trust'] : 'unclaimed',
   plan: String(row.commercial_plan) as PublicFacility['plan'],
   productCount: Number(row.product_count ?? 0),
 });
