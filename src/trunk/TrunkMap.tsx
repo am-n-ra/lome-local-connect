@@ -5,7 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 import { groupProjectedFacilities, type ProjectedFacility, type ScreenPin } from './map-pins';
 
-type LocationState = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
 
 type Props = {
   facilities: PublicFacility[];
@@ -56,6 +56,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const [zoomExpanded, setZoomExpanded] = useState(false);
   const [screenPins, setScreenPins] = useState<ScreenPin[]>([]);
   const screenPinsFrame = useRef<number | null>(null);
+  const locationRequest = useRef<number | null>(null);
   facilitiesRef.current = facilities;
 
   const updateScreenPins = useCallback(() => {
@@ -82,25 +83,51 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
 
   const pauseMotion = () => {
     rotating.current = false;
+    if (rotationTimer.current !== null) {
+      window.clearTimeout(rotationTimer.current);
+      rotationTimer.current = null;
+    }
     setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused');
   };
 
+  const cancelLocation = () => {
+    if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
+    locationRequest.current = null;
+    rotating.current = false;
+    setLocationState('cancelled');
+  };
+
   const requestLocation = () => {
+    if (locationState === 'requesting') {
+      cancelLocation();
+      return;
+    }
     pauseMotion();
     if (!navigator.geolocation) {
       setLocationState('unavailable');
       return;
     }
     setLocationState('requesting');
+    locationRequest.current = window.setTimeout(() => {
+      locationRequest.current = null;
+      setLocationState('timeout');
+    }, 10_000);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setLocationState('granted');
+        if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
+        locationRequest.current = null;
+        const approximate = position.coords.accuracy > 500;
+        setLocationState(approximate ? 'approximate' : 'exact');
         mapRef.current?.stop();
         rotating.current = false;
-        mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: 7, duration: 650, essential: true });
+        mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
       },
-      (error) => setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : 'unavailable'),
-      { enableHighAccuracy: false, maximumAge: 60_000, timeout: 10_000 },
+      (error) => {
+        if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
+        locationRequest.current = null;
+        setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : error.code === error.TIMEOUT ? 'timeout' : 'unavailable');
+      },
+      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 8_000 },
     );
   };
 
@@ -144,24 +171,54 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     };
     syncCameraPadding();
 
-    map.on('style.load', () => {
-      addLayers(map);
-      const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
-      source?.setData(featureCollection(facilitiesRef.current));
-      scheduleScreenPins();
-    });
-
+    const scheduleRotation = () => {
+      if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
+      rotationTimer.current = window.setTimeout(rotate, 1400);
+    };
     const resume = () => {
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
         rotating.current = false;
         setRotationState('reduced');
         return;
       }
-      if (map.getZoom() < 2.4) {
+      if (map.getZoom() < 2.4 && !map.isMoving()) {
         rotating.current = true;
         setRotationState('idle');
+        scheduleRotation();
+      } else {
+        rotating.current = false;
+        setRotationState('paused');
       }
     };
+    const rotate = () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        rotating.current = false;
+        setRotationState('reduced');
+        rotationTimer.current = null;
+        return;
+      }
+      if (!rotating.current || map.isMoving() || map.getZoom() >= 2.4) {
+        rotationTimer.current = null;
+        return;
+      }
+      const nextLongitude = map.getCenter().lng + 0.035;
+      setRotationState('rotating');
+      setCenterLongitude(nextLongitude);
+      map.easeTo({ center: [nextLongitude, map.getCenter().lat], duration: 1200, essential: false });
+      scheduleRotation();
+    };
+    const configureStyle = () => {
+      map.setProjection({ type: 'globe' });
+      map.resize();
+      syncCameraPadding();
+      addLayers(map);
+      const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
+      source?.setData(featureCollection(facilitiesRef.current));
+      setZoom(map.getZoom());
+      scheduleScreenPins();
+      emitBounds();
+    };
+    map.on('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
       const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
@@ -196,31 +253,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
     }, 3000);
     map.on('load', () => {
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      setMapStatus('ready');
-      setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'idle');
-      map.setProjection({ type: 'globe' });
-      setZoom(map.getZoom());
-      map.resize();
-      syncCameraPadding();
-      addLayers(map);
-      scheduleScreenPins();
-      emitBounds();
-
-      const rotate = () => {
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          rotating.current = false;
-          setRotationState('reduced');
-          return;
-        }
-        if (rotating.current && !map.isMoving()) {
-          const nextLongitude = map.getCenter().lng + 0.04;
-          setRotationState('rotating');
-          setCenterLongitude(nextLongitude);
-          map.easeTo({ center: [nextLongitude, map.getCenter().lat], duration: 1200, essential: false });
-        }
-        rotationTimer.current = window.setTimeout(rotate, 1400);
-      };
-      rotationTimer.current = window.setTimeout(rotate, 1400);
+      if (!fallbackUsed.current) setMapStatus('ready');
+      configureStyle();
+      resume();
     });
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
@@ -230,6 +265,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       if (rotationTimer.current !== null) window.clearTimeout(rotationTimer.current);
       if (screenPinsFrame.current !== null) window.cancelAnimationFrame(screenPinsFrame.current);
       observer.disconnect();
+      if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
+      locationRequest.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -284,11 +321,17 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'
     ? { title: 'Localisation en cours…', detail: 'La carte va se recentrer sur vous.' }
-    : locationState === 'granted'
-      ? { title: 'Carte centrée sur vous', detail: 'La découverte proche est maintenant contextualisée.' }
-      : locationState === 'denied'
-        ? { title: 'Localisation désactivée', detail: 'Autorisez-la dans votre navigateur ou continuez à explorer.' }
-        : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
+    : locationState === 'exact'
+      ? { title: 'Carte centrée sur vous', detail: 'Position précise acceptée par le navigateur.' }
+      : locationState === 'approximate'
+        ? { title: 'Zone approximative', detail: 'La carte est centrée sans afficher une précision exacte.' }
+        : locationState === 'denied'
+          ? { title: 'Localisation désactivée', detail: 'Autorisez-la dans votre navigateur ou continuez à explorer.' }
+          : locationState === 'timeout'
+            ? { title: 'Localisation trop lente', detail: 'La carte publique reste disponible pendant la nouvelle tentative.' }
+            : locationState === 'cancelled'
+              ? { title: 'Localisation annulée', detail: 'Vous pouvez continuer à explorer la carte publique.' }
+              : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
     <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState}>
@@ -320,7 +363,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange }: P
       {locationState !== 'idle' && <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="État de la localisation">
         <span className="location-prompt-icon"><Crosshair size={15} /></span>
         <span className="location-prompt-copy"><strong>{locationCopy.title}</strong><small>{locationCopy.detail}</small></span>
-        {(locationState === 'denied' || locationState === 'unavailable') && <button type="button" onClick={requestLocation}>Réessayer</button>}
+        {locationState === 'requesting' ? <button type="button" onClick={cancelLocation}>Annuler</button> : (locationState === 'denied' || locationState === 'unavailable' || locationState === 'timeout' || locationState === 'cancelled') && <button type="button" onClick={requestLocation}>Réessayer</button>}
       </div>}
       <div className="map-controls" aria-label="Contrôles de carte">
         {zoomExpanded && <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>}
