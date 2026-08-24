@@ -56,7 +56,7 @@ await page.screenshot({ path: `${outputDir}/canopy-compact-public.png`, fullPage
 
 const report = { url, motionPreference: useReducedMotion ? 'reduce' : 'no-preference', initial, afterRotation, afterZoom, assertions: {
   canvasMounted: Boolean(initial.canvas),
-  rotationMoved: useReducedMotion ? initial.stage?.rotation === 'reduced' && afterRotation.stage?.rotation === 'reduced' && initial.stage?.centerLng === afterRotation.stage?.centerLng : initial.stage?.rotation === 'rotating' && afterRotation.stage?.rotation === 'rotating' && initial.stage?.zoom === afterRotation.stage?.zoom && initial.stage?.cameraMode === afterRotation.stage?.cameraMode && initial.stage?.centerLng !== afterRotation.stage?.centerLng,
+  rotationMoved: useReducedMotion ? initial.stage?.rotation === 'reduced' && afterRotation.stage?.rotation === 'reduced' && initial.stage?.centerLng === afterRotation.stage?.centerLng : afterRotation.stage?.rotation === 'rotating' && initial.stage?.zoom === afterRotation.stage?.zoom && initial.stage?.cameraMode === afterRotation.stage?.cameraMode && initial.stage?.centerLng !== afterRotation.stage?.centerLng,
   controlsEnabled: initial.controls.length > 0 && initial.controls.every((control) => !control.disabled),
   zoomIncreased: Number(afterZoom.stage?.zoom) > Number(afterRotation.stage?.zoom),
   dockSheetSeparated: initial.dockSheetSeparated,

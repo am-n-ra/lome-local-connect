@@ -143,3 +143,18 @@ The Buyer Canopy pass is now materially evidenced but remains partial. On the ca
 Normal-motion and reduced-motion public Playwright runs at `390×844` prove idle rotation or intentional reduced-motion pause, full canvas geometry, enabled named controls, zoom `1.35→2.35`, contained guest dock and no horizontal overflow. One authenticated wide viewport focus check moved Tab to `Utiliser ma localisation` with a visible outline. A temporary bounded geolocation stub proved the distinct accessible marker path and was restored immediately; no real location permission or coordinates were requested.
 
 The Heartwood ring remains **partial**. Authenticated compact result-sheet, Seller/Reviewer responsive/focus proof, full keyboard traversal, real permission/denied-retry/approximate-location states, empty/error/retry, facility focus/back restoration, interrupted-session/concurrency, remote tile resilience and broader production/release evidence remain open. No business mutation was performed in this Canopy pass; Global Root remains `review`.
+
+
+## 2026-08-24 — Canopy V3 re-entry and availability boundary
+
+The production Canopy V3 pass materially strengthens the Buyer arrival without changing the availability API. The canonical READY deployment `dpl_4h49A7jHsfgvddme6qwohw9VsC3x` for commit `60403a3` proves the darker clean-edge map, density-only discovery rings, native drag/pan/rotate/zoom, retained manual camera position with delayed idle resume, globe→mercator local zoom, query-only global search, identical-query loading→ready recovery, result `Nouvelle recherche`/`Affiner`/`Retour à la carte`, desktop `1024×880` geometry with a 14px dock-sheet gap, and compact `390×844` normal/reduced-motion spacing and control behavior.
+
+A temporary production context with synthetic coordinates proved the granted location UI: `location=exact`, one accessible `Votre position sur la carte` marker, and a separate public cluster. The persistent authenticated Sandbox path proved honest `location=denied`/timeout copy with `Réessayer`; neither path persisted personal coordinates. These outcomes strengthen the location row from marker-path-only evidence to bounded granted/denied proof, but they are not proof of the owner’s real browser permission prompt or of remote raster reliability.
+
+The second same-query replay exposed and then fixed a React lifecycle defect in which a repeated value could set loading without rerunning the effect. `searchRevealRevision` is now part of the relevant effect dependencies, and production reached the ready public result after identical re-submission. No facility CTA, claim, response, seller action or other business write was used.
+
+### Multi-product availability decision
+
+The Buyer availability sheet continues to accept exactly one `selectedProductId` per request and retains the existing idempotency and response ownership semantics. This slice adds only a truthful planning note in the Product step; it does not persist a multi-select basket, issue multiple requests implicitly, or submit a grouped request. Grouped availability is **blocked / Root/API decision required** until the contract explicitly defines product-set identity, per-product quantities and budgets, batch idempotency, partial success, expiry, response ownership, resume/retry and permission boundaries. Therefore the visual Canopy gate is advanced, while Buyer Heartwood multi-product capability remains unimplemented.
+
+**Updated status:** Buyer Heartwood remains `partial / ring decision pending`. The map/search and responsive proof is materially stronger, but authenticated compact result-sheet/focus recovery, full keyboard/focus, failure/retry and remote-tile evidence remain open; no Ring is closed and Global Root remains `review`.

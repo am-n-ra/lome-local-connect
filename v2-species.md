@@ -89,7 +89,7 @@ For a 320px viewport, preserve the first card’s readable width and let the nex
 
 The map is real geographic context, but the initial frame uses a quiet visual treatment. Use a very pale grey/grey-green basemap with low-contrast roads and labels, softened saturation and a subtle dot-grid or spatial texture layer inspired by the reference. The texture must never be used as fake geography or replace a functioning map provider.
 
-The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
+The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. The Canopy treatment is a darker cool grey/green with clean geographic edges, restrained texture and visible local roads/labels when the real provider supplies them. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
 
 Public pins remain source-backed and stable. Use a small warm marker/halo for the selected or featured facility, with a compact uppercase label such as `BOULANGERIE BIO`. Do not add availability badges to arbitrary pins. Clustering is allowed at densities where it improves legibility, but the initial reference frame must remain visually sparse and calm.
 
@@ -165,7 +165,7 @@ The rail must restore its scroll position and selected facility context after op
 
 ### 9.1 Arrival state
 
-The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. No permission prompt appears automatically. Location is explicit and cancellable.
+The exact first frame is sparse: map, role switch, small account/credit indicator, right controls, one quiet marker/label, search pill and the `Proche de vous` sheet. Canopy V3 adds one non-blocking, permission-aware arrival attempt: when browser permission is prompt or already granted, the browser may request location once per session; denied, unavailable and timeout states remain cancellable with a visible retry. The map and public discovery remain usable without location.
 
 ### 9.2 Search expanded state
 
@@ -274,3 +274,11 @@ The Species is ready for Root System/Trunk implementation only when the owner co
 12. map transitions, pin/cluster semantics, trust markers, route visibility and Back/Escape restoration are represented in the maquette and do not invent supply truth.
 
 If a feature introduces a genuinely new visual pattern, create a nested mini-species blueprint at the depth that feature requires. Otherwise inherit this blueprint and record the inheritance explicitly.
+
+## 16. Canopy V3 amendment — owner re-entry, 2026-08-24
+
+The owner’s re-entry feedback is now a bounded Species amendment, not an alternative product layout. The map remains the dominant full-viewport surface, but its treatment is darker and cleaner so geographic edges read without decorative highlight. Public clusters inherit the density-only rule and use calm concentric discovery rings with the count as secondary accessible text; rings never imply stock, trust, ownership or permission. Facility pins retain the approved pin-with-inner-circle language and may carry a restrained outer location ring.
+
+Manual camera ownership is explicit: native MapLibre drag/pan/rotate/zoom pauses Omni idle motion, preserves the released center/zoom/bearing and never resets to the initial globe. When the pointer leaves the map/context and no surface owns the camera, a delayed resting rotation can resume from the current camera. Search results keep the dock mounted and expose `Nouvelle recherche`, `Affiner` and `Retour à la carte` in a separate result toolbar. Desktop uses a wider bounded bottom sheet and dock breathing room while retaining the mobile hierarchy and prohibiting a side dashboard rail.
+
+Availability remains a single-product server contract in this ring. The UI explains that grouped comparison is planned, but no multi-product request is enabled until a Root/API decision covers grouping, idempotency, expiry, response ownership and recovery. The V3 amendment therefore extends Species without claiming a multi-product write path.

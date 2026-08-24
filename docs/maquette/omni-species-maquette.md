@@ -163,3 +163,14 @@ The owner’s recorded approvals cover the Buyer map/search, facility/availabili
 [2]: ../../v2-flow.md "Omni V2 Flow and State Contract"
 [3]: ../../v2-roots.md "Omni V2 Root System"
 [4]: ./omni-species-maquette.html "Omni Species static visual maquette"
+
+
+## 11. Canopy V3 visual amendment — 2026-08-24
+
+The Canopy V3 re-entry preserves the supplied Species hierarchy while making the map more legible in a live worldwide context. The production treatment is a darker cool grey/green with cleaner geographic edges and source-backed roads and labels when the raster provider supplies them. Public clusters are shown as restrained concentric discovery rings; the numeric density remains an accessible secondary label and never communicates stock, availability, trust or ownership. Facility pins retain the inner-circle/location-ring treatment already approved for the Species.
+
+The camera contract is reversible and native to the map: manual drag/pan/rotate/zoom pauses idle motion and preserves the released center, zoom and bearing. A delayed idle rotation may resume from that position only after the map/context is left; it never resets to the initial globe. A permission-aware arrival attempt may show the browser prompt once per session when permission is prompt or granted, while denied, unavailable and timeout states keep the map usable and expose a retry.
+
+Result state adds a visible continuation toolbar inside the existing sheet hierarchy: `Nouvelle recherche`, `Affiner` and `Retour à la carte`. The dock remains mounted and separate from the result sheet; `Affiner` opens upward in its own reserved surface. At desktop widths the dock and rounded bottom sheet use more of the available map without becoming a side rail or dashboard. At mobile widths the reference anatomy remains the source composition.
+
+The current availability visual remains single-product. A quiet planning note may acknowledge future grouped comparison, but no multi-product submission or availability mutation is represented until Root/API work defines grouping, idempotency, expiry, ownership and recovery.
