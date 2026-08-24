@@ -180,16 +180,19 @@ export function TrunkApp() {
   }, []);
 
   useEffect(() => {
-    if (!bounds) {
+    const hasSearchQuery = committedQuery.trim().length > 0;
+    const requestBounds = hasSearchQuery ? undefined : bounds;
+    if (!requestBounds && !hasSearchQuery) {
       setMapState('loading');
       return;
     }
-    const requestKey = `${bounds.map((value) => value.toFixed(5)).join(',')}|${committedQuery}|${JSON.stringify(appliedOptions)}`;
+    const boundsKey = requestBounds ? requestBounds.map((value) => value.toFixed(5)).join(',') : 'global-search';
+    const requestKey = `${boundsKey}|${committedQuery}|${JSON.stringify(appliedOptions)}`;
     if (facilityQueryKeyRef.current === requestKey) return;
     facilityQueryKeyRef.current = requestKey;
     let active = true;
     setMapState('loading');
-    listPublicFacilities(bounds, committedQuery || undefined, appliedOptions).then((result) => {
+    listPublicFacilities(requestBounds, committedQuery || undefined, appliedOptions).then((result) => {
       if (!active) return;
       if (result.ok) {
         setFacilities(result.data ?? []);
