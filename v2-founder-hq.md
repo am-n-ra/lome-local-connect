@@ -31,3 +31,9 @@ For this work block, Species repair displaces role bootstrap, OSM importer work,
 ## Next review
 
 After the read-only audit, update this board with the exact reproduction, root cause, smallest correction, deployment commit, canonical proof and residual gaps. Keep Global Root `review` until the evidence supports a gate decision.
+
+## Latest evidence checkpoint — 2026-08-24
+
+The GitHub-triggered deployment `dpl_8gPXTT1Dyde8RwmbHDtXQDPHYehd` is READY for commit `2c63cda` on `omni-v2-rebuild`, with the canonical alias present and exactly 12 Node functions. A public-only 390×844 Playwright run observed `data-rotation="rotating"`, enabled map controls and a zoom change from `1.35` to `2.35`. The same run showed that idle rotation no longer produced a repeated facility-fetch cadence; only two initial readiness requests and one explicit post-zoom request were observed. Guest search deliberately opened the Account sheet while keeping the map mounted behind it.
+
+This advances the shared map/zoom foundation from code diagnosis to `bounded canonical proof`. It does not close the Species gate: authenticated result-ready/empty/error search transitions, the full Buyer state inventory, and role-appropriate Seller and Reviewer/Admin proofs remain open. The next smallest action is a session-appropriate visual proof of those states after confirming My Browser availability; no business mutation is required for that proof.

@@ -37,3 +37,11 @@ The smallest corrective slice should make idle rotation visual-only and interrup
 ## Evidence class and gate
 
 The current evidence is `observed / user-reported` plus `code-compared` against `origin/main`. It is not a Species acceptance. No data mutation, role change, OSM import, payment or new claim action is authorized by this audit. Global Root remains `review`.
+
+## Canonical post-deployment proof
+
+Deployment `dpl_8gPXTT1Dyde8RwmbHDtXQDPHYehd` is READY from GitHub commit `2c63cda` on ref `omni-v2-rebuild`, with aliases including `omni.sparkafrika.online` and `lambdaRuntimeStats` indicating exactly 12 Node functions.
+
+A public-only Playwright run at 390×844 captured the canonical initial state with `data-rotation="rotating"`, `data-zoom="1.35"`, active map status and enabled `Zoom avant` / location controls. Clicking `Zoom avant` changed the measured zoom from `1.35` to `2.35`. The map remained mounted through the guest search boundary, and submitting `Marche de Hanoukope` opened the intentional Account sheet rather than fabricating public results. The initial and post-search screenshots show the globe remains behind the sheet and the sheet keeps its own safe lower band.
+
+The run observed three public-facility requests: two initial requests approximately 65 ms apart during first readiness/bounds settling, then one request approximately 6.5 seconds later after the explicit zoom action. No repeated request cadence was observed during the idle rotation interval, which supports that the new RAF rotation no longer creates a fetch-on-every-easeTo loop. This is a bounded public proof; authenticated search result-ready/empty/error transitions and Seller/Reviewer role states still require a session-appropriate browser proof.
