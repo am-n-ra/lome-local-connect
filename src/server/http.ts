@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, EvidenceStoragePolicyError, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
+import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
+import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { ClaimEvidenceItem } from '../trunk/types';
 
@@ -30,6 +32,9 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   }
   if (error instanceof EvidenceStoragePolicyError) {
     return { status: 409, body: errorBody(correlationId, 'EVIDENCE_STORAGE_UNAVAILABLE', error.message) };
+  }
+  if (error instanceof ClaimEvidenceNotFoundError) {
+    return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
   }
   if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
@@ -158,6 +163,62 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.createClaimDraft({ authUserId, facilityId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-storage-status') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before checking private claim storage.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid facility.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { available: hasPrivateBlobConfiguration() } });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-upload') {
+      const requestId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(requestId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid claim request.'));
+        return true;
+      }
+      const body = await parseRequestBody(req);
+      const result = await handleClaimEvidenceUpload({ body, headers: req.headers, url: url.toString(), requestId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-evidence') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before reading private claim evidence.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/facilities/'.length);
+      const requestId = url.searchParams.get('requestId') ?? '';
+      const index = Number(url.searchParams.get('index') ?? '0');
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !uuidPattern.test(requestId) || !Number.isInteger(index) || index < 0 || index >= 12) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid claim evidence reference.'));
+        return true;
+      }
+      const evidence = await repository.getClaimEvidenceForViewer({ authUserId, facilityId, requestId, index });
+      if (!evidence) {
+        json(res, 404, errorBody(correlationId, 'EVIDENCE_NOT_FOUND', 'The private evidence is unavailable to this account.'));
+        return true;
+      }
+      const result = await readPrivateEvidence(evidence.objectKey);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Length', String(result.size));
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.end(result.body);
       return true;
     }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-submit') {

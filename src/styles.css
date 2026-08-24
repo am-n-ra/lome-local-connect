@@ -495,3 +495,23 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .claim-checklist small { color:var(--muted); line-height:1.4; }
 .claim-sheet .danger-text { color:#a04d48; margin-top:4px; }
 @media (max-width: 420px) { .claim-sheet .claim-context { padding:12px; } .claim-sheet .sheet-lede { font-size:13px; } }
+
+.claim-sheet .evidence-checklist { gap: 0; }
+.claim-sheet .evidence-row { align-items: center; min-width: 0; }
+.claim-sheet .evidence-row-mark { display: grid; place-items: center; width: 24px; flex: none; color: var(--forest); }
+.claim-sheet .evidence-empty-mark { width: 15px; height: 15px; border: 1px solid var(--muted); border-radius: 50%; }
+.claim-sheet .evidence-row > span:nth-child(2) { min-width: 0; flex: 1; }
+.claim-sheet .evidence-row strong, .claim-sheet .evidence-row small { overflow-wrap: anywhere; }
+.claim-sheet .evidence-upload-button { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; min-height: 36px; padding: 0 10px; border: 1px solid rgba(31,88,72,.20); border-radius: 999px; color: var(--forest); background: rgba(255,255,255,.82); font-size: 12px; font-weight: 700; cursor: pointer; flex: none; }
+.claim-sheet .evidence-upload-button:hover { background: var(--mint); }
+.claim-sheet .evidence-upload-button input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.claim-sheet .evidence-upload-button:has(input:disabled) { opacity: .55; cursor: not-allowed; }
+.claim-sheet .evidence-file-list { display: grid; gap: 8px; margin: 8px 0 16px; }
+.claim-sheet .evidence-file-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(244,248,244,.78); }
+.claim-sheet .evidence-file-row > span { display: grid; gap: 3px; min-width: 0; }
+.claim-sheet .evidence-file-row strong { font-size: 12px; text-transform: capitalize; }
+.claim-sheet .evidence-file-row small { color: var(--muted); overflow-wrap: anywhere; }
+@media (max-width: 420px) {
+  .claim-sheet .evidence-row { gap: 7px; padding: 10px 0; }
+  .claim-sheet .evidence-upload-button { min-width: 56px; padding: 0 8px; }
+}

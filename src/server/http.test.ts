@@ -1,7 +1,8 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, isTransactionState, parseRequestBody, toApiErrorResponse } from './http';
-import { AvailabilityPolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, EvidenceStoragePolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
   async *[Symbol.asyncIterator]() {
@@ -73,6 +74,20 @@ describe('Root HTTP error boundary', () => {
     expect(isTransactionState('rejected')).toBe(false);
     expect(isTransactionState('disputed')).toBe(false);
     expect(isTransactionState(null)).toBe(false);
+  });
+
+  it('maps unavailable private evidence storage to a retryable provider boundary', () => {
+    const response = toApiErrorResponse('corr-evidence', new EvidenceStoragePolicyError('Private evidence storage is not configured.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('EVIDENCE_STORAGE_UNAVAILABLE');
+    expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('does not expose private evidence when the object is unavailable', () => {
+    const response = toApiErrorResponse('corr-evidence-not-found', new ClaimEvidenceNotFoundError());
+    expect(response.status).toBe(404);
+    expect(response.body.error.code).toBe('EVIDENCE_NOT_FOUND');
+    expect(response.body.error.message).not.toContain('object key');
   });
 
   it('redacts unexpected internal details behind a recoverable 500', () => {

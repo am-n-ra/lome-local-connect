@@ -1,10 +1,10 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { cancelFacilityClaim, createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim } from './api';
+import { cancelFacilityClaim, createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, submitFacilityClaim, uploadFacilityEvidence } from './api';
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
-import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -105,6 +105,13 @@ export function TrunkApp() {
   const [claimResult, setClaimResult] = useState<ClaimDraftResult | null>(null);
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
+  const [claimEvidence, setClaimEvidence] = useState<ClaimEvidenceItem[]>([]);
+  const [claimUploadState, setClaimUploadState] = useState<'idle' | 'uploading' | 'error'>('idle');
+  const [claimUploadProgress, setClaimUploadProgress] = useState(0);
+  const [claimUploadError, setClaimUploadError] = useState('');
+  const [claimSubmitState, setClaimSubmitState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [claimSubmitError, setClaimSubmitError] = useState('');
+  const [claimStorageAvailable, setClaimStorageAvailable] = useState<boolean | null>(null);
   const [inboxState, setInboxState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [inboxError, setInboxError] = useState('');
   const [inboxData, setInboxData] = useState<NotificationInboxResult | null>(null);
@@ -514,10 +521,27 @@ export function TrunkApp() {
     }
   };
 
+  const loadClaimStorageStatus = async (facilityId: string) => {
+    setClaimStorageAvailable(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setClaimStorageAvailable(false); return; }
+      const result = await getClaimStorageStatus({ facilityId, token });
+      setClaimStorageAvailable(result.ok && result.data?.available === true);
+    } catch {
+      setClaimStorageAvailable(false);
+    }
+  };
+
   const openClaimDraft = () => {
     if (!claimResult) return;
     setClaimActionState('idle');
     setClaimActionError('');
+    setClaimUploadState('idle');
+    setClaimUploadError('');
+    setClaimSubmitState(claimResult.state === 'submitted' ? 'success' : 'idle');
+    setClaimSubmitError('');
+    void loadClaimStorageStatus(claimResult.facilityId);
     setPanel('claim');
   };
 
@@ -540,8 +564,12 @@ export function TrunkApp() {
       }
       setSelectedFacility((current) => current ? { ...current, trust: 'unclaimed' } : current);
       setClaimResult(null);
+      setClaimEvidence([]);
       setClaimState('idle');
       setClaimActionState('idle');
+      setClaimUploadState('idle');
+      setClaimSubmitState('idle');
+      setClaimStorageAvailable(null);
       setPanel('facility');
     } catch (caught) {
       setClaimActionState('error');
@@ -549,10 +577,65 @@ export function TrunkApp() {
     }
   };
 
+  const uploadClaimEvidence = async (evidenceKind: EvidenceKind, file: File) => {
+    if (!claimResult || claimResult.state === 'submitted') return;
+    if (claimEvidence.length >= 12) {
+      setClaimUploadState('error');
+      setClaimUploadError('Un claim peut contenir au maximum 12 preuves privées.');
+      return;
+    }
+    setClaimUploadState('uploading');
+    setClaimUploadProgress(0);
+    setClaimUploadError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Votre session doit être réouverte avant d’ajouter une preuve.');
+      const evidence = await uploadFacilityEvidence({ requestId: claimResult.requestId, evidenceKind, file, token, onProgress: setClaimUploadProgress });
+      setClaimEvidence((current) => [...current, evidence]);
+      setClaimUploadState('idle');
+      setClaimUploadProgress(100);
+    } catch (caught) {
+      setClaimUploadState('error');
+      setClaimUploadError(caught instanceof Error ? caught.message : 'La preuve privée n’a pas pu être téléversée.');
+    }
+  };
+
+  const removeClaimEvidence = (index: number) => {
+    if (claimResult?.state === 'submitted') return;
+    setClaimEvidence((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const submitClaimEvidence = async () => {
+    if (!claimResult || claimEvidence.length === 0 || claimResult.state === 'submitted') return;
+    setClaimSubmitState('loading');
+    setClaimSubmitError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Votre session doit être réouverte avant la soumission.');
+      const result = await submitFacilityClaim({ requestId: claimResult.requestId, version: claimResult.version, evidence: claimEvidence, token });
+      if (!result.ok || !result.data) {
+        setClaimSubmitState('error');
+        setClaimSubmitError(result.error?.message ?? 'La soumission n’a pas été acceptée par le serveur.');
+        return;
+      }
+      setClaimResult(result.data);
+      setClaimStorageAvailable(true);
+      setClaimSubmitState('success');
+    } catch (caught) {
+      setClaimSubmitState('error');
+      setClaimSubmitError(caught instanceof Error ? caught.message : 'La soumission n’a pas pu être terminée.');
+    }
+  };
+
   const startFacilityClaim = async (facility: PublicFacility) => {
     setClaimState('loading');
     setClaimError('');
     setClaimResult(null);
+    setClaimEvidence([]);
+    setClaimUploadState('idle');
+    setClaimUploadError('');
+    setClaimSubmitState('idle');
+    setClaimSubmitError('');
     if (!sessionUser) {
       setClaimState('idle');
       openAuth('sign-in', 'none');
@@ -572,6 +655,7 @@ export function TrunkApp() {
         return;
       }
       setClaimResult(result.data);
+      void loadClaimStorageStatus(result.data.facilityId);
       setClaimActionState('idle');
       setClaimActionError('');
       setClaimState('success');
@@ -937,7 +1021,7 @@ export function TrunkApp() {
 
       {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onOpenClaim={openClaimDraft} onClose={() => setPanel('none')} onVerify={openAvailability} />}
-      {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} actionState={claimActionState} actionError={claimActionError} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
+      {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} evidence={claimEvidence} storageAvailable={claimStorageAvailable} uploadState={claimUploadState} uploadProgress={claimUploadProgress} uploadError={claimUploadError} submitState={claimSubmitState} submitError={claimSubmitError} actionState={claimActionState} actionError={claimActionError} onUpload={(kind, file) => void uploadClaimEvidence(kind, file)} onRemoveEvidence={removeClaimEvidence} onSubmit={submitClaimEvidence} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
   );
@@ -998,9 +1082,9 @@ function SellerWorkspaceSheet(props: { user: SessionUser | null; queue: SellerAv
   return <section className="omni-sheet context-sheet seller-workspace-sheet" role="dialog" aria-modal="true" aria-labelledby="seller-workspace-title"><div className="sheet-handle" /><div className="sheet-head"><div>{request && <button className="back-button" type="button" onClick={props.onBackToQueue}><ArrowLeft size={17} /> Demandes</button>}<span className="section-kicker">Vendre</span><h2 id="seller-workspace-title">{request ? 'Répondre à la demande' : 'Espace vendeur'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{!request && <><div className="seller-workspace-summary"><span className="seller-entry-mark"><ShieldCheck size={21} /></span><div><strong>{props.queue?.authorized ? 'Contexte vendeur autorisé' : 'Accès vendeur à vérifier'}</strong><p>{props.queue?.authorized ? 'Répondez aux demandes de vos facilités sans modifier le catalogue public.' : props.user ? 'Votre compte est connecté, mais aucun profil vendeur autorisé n’est lié à cette session.' : 'Connectez-vous pour vérifier votre accès vendeur.'}</p></div></div><div className="seller-tabs" role="tablist" aria-label="Espace vendeur"><button type="button" role="tab" aria-selected={props.tab === 'requests'} className={props.tab === 'requests' ? 'active' : ''} onClick={() => props.setTab('requests')}>Demandes{props.queue?.authorized && props.queue.requests.length > 0 ? ` · ${props.queue.requests.length}` : ''}</button><button type="button" role="tab" aria-selected={props.tab === 'catalogue'} className={props.tab === 'catalogue' ? 'active' : ''} onClick={() => props.setTab('catalogue')}>Catalogue</button></div>{props.queueState === 'loading' && <div className="sheet-loading"><span className="spinner" /> Vérification de vos demandes…</div>}{props.queueState === 'error' && <div className="inline-error" role="alert">{props.queueError}<button className="text-button" type="button" onClick={props.onLoadQueue}>Réessayer</button></div>}{props.queueState !== 'loading' && props.queueState !== 'error' && !props.queue?.authorized && <><div className="notice-card"><strong>Aucune opération vendeur ouverte</strong><p>La connexion ne certifie pas une facilité et ne crée aucune demande. Revenez à Acheter ou complétez plus tard la vérification manuelle.</p></div>{props.user && <><button className="primary-button" type="button" disabled={props.rebindState === 'loading'} onClick={props.onRebindDemo}>{props.rebindState === 'loading' ? 'Activation de la démo…' : 'Activer l’espace Seller de démo'} <ArrowRight size={16} /></button><p className="privacy-note">Action réservée à cet environnement de démonstration borné. Elle lie uniquement la session actuelle à la facilité Seller de démo existante.</p>{props.rebindError && <div className="inline-error" role="alert">{props.rebindError}</div>}</>}</>}{props.tab === 'requests' && props.queue?.authorized && props.queue.requests.length === 0 && props.queueState !== 'loading' && <div className="empty-state"><PackageSearch size={22} /><strong>Aucune demande en attente</strong><p>Les nouvelles demandes ciblées sur vos produits publiés apparaîtront ici.</p><button className="secondary-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>}{props.tab === 'requests' && props.queue?.authorized && props.queue.requests.length > 0 && <div className="seller-request-list"><div className="seller-list-heading"><span className="section-kicker">Demandes ciblées</span><button className="text-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>{props.queue.requests.map((item) => <button className="seller-request-card" type="button" key={item.id} onClick={() => props.onSelectRequest(item)}><span className="request-card-icon"><PackageSearch size={18} /></span><span className="seller-request-copy"><strong>{item.productName}</strong><small>{item.facilityName} · {item.facilityCategory}</small><small>Quantité demandée : {item.requestedQuantity} · {item.freshness === 'stale' ? 'Réponse à actualiser' : item.responseStatus ? `Réponse ${item.responseStatus === 'available' ? 'disponible' : item.responseStatus === 'partial' ? 'partielle' : 'indisponible'}` : 'Sans réponse'}</small></span><ChevronRight size={17} /></button>)}</div>}{props.tab === 'catalogue' && <div className="seller-catalogue-preview"><div className="seller-list-heading"><span className="section-kicker">Catalogue visible</span><span className="catalogue-count">{catalogueItems.length} produit{catalogueItems.length === 1 ? '' : 's'}</span></div>{catalogueItems.length ? <div className="catalogue-list">{catalogueItems.map((item) => <div className="catalogue-item" key={item.productId}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{item.productName}</strong><small>{item.facilityName} · produit publié</small></span></div>)}</div> : <div className="empty-state compact"><PackageSearch size={22} /><strong>Aucun catalogue dans cette file</strong><p>Les produits publiés sont visibles ici lorsqu’une demande leur est adressée.</p></div>}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Handoff encore verrouillé</strong><small>Répondre ne réserve pas le stock et n’ouvre ni contact, ni itinéraire, ni QR.</small></span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à acheter</button>{props.user && <button className="text-button" type="button" onClick={props.onSignOut}>Se déconnecter</button>}</>}{request && <><div className="seller-request-detail"><span className="section-kicker">Demande entrante</span><strong>{request.productName}</strong><small>{request.facilityName} · {request.facilityCategory} · {trustLabel(request.facilityTrust)}</small><div className="seller-request-facts"><span><b>Quantité</b>{request.requestedQuantity}</span><span><b>Budget</b>{request.budgetMinor === null ? 'Sans plafond' : currency(request.budgetMinor, 'USD')}</span><span><b>Échéance</b>{new Date(request.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div>{request.responseStatus && request.responseObservedAt ? <div className="seller-response-success" role="status"><CheckCircle2 size={24} /><div><strong>Réponse déjà enregistrée</strong><p>{existingStatusLabel} · reçue à {new Date(request.responseObservedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Aucun doublon ne sera créé.</p><button className="secondary-button" type="button" onClick={props.onBackToQueue}>Retour aux demandes</button></div></div> : props.responseState === 'success' && props.responseResult ? <div className="seller-response-success" role="status"><CheckCircle2 size={24} /><div><strong>Réponse enregistrée</strong><p>{responseStatusLabel} · reçue à {new Date(props.responseResult.observedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. La demande n’est pas une réservation.</p><button className="secondary-button" type="button" onClick={props.onBackToQueue}>Retour aux demandes</button></div></div> : <><div className="seller-response-form"><span className="section-kicker">Votre réponse</span><div className="seller-status-options" role="group" aria-label="Statut de disponibilité">{(['available', 'partial', 'unavailable'] as SellerResponseStatus[]).map((status) => <button type="button" key={status} className={props.responseStatus === status ? 'active' : ''} onClick={() => props.setResponseStatus(status)}>{status === 'available' ? 'Disponible' : status === 'partial' ? 'Partielle' : 'Indisponible'}</button>)}</div>{props.responseStatus !== 'unavailable' && <div className="seller-input-grid"><label>Quantité proposée<input type="number" min="1" step="1" value={props.quantity} onChange={(event) => props.setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label><label>Prix unitaire<input type="number" min="0" step="0.01" value={props.price} onChange={(event) => props.setPrice(event.target.value)} placeholder="0,00" /></label></div>}{props.responseStatus === 'unavailable' && <div className="notice-card"><strong>{statusLabel}</strong><p>Le serveur enregistrera une quantité nulle et aucun prix.</p></div>}<label className="seller-message-field">Message facultatif<textarea value={props.message} onChange={(event) => props.setMessage(event.target.value)} maxLength={1000} rows={3} placeholder="Ajoutez une précision utile au besoin exprimé…" /></label>{props.responseError && <div className="inline-error" role="alert">{props.responseError}</div>}<button className="primary-button" type="button" disabled={props.responseState === 'loading'} onClick={props.onSubmitResponse}>{props.responseState === 'loading' ? 'Enregistrement…' : 'Envoyer la réponse'} <ArrowRight size={16} /></button></div><div className="locked-note"><ShieldCheck size={17} /><span><strong>Pas de réservation</strong><small>Cette réponse reste une information de disponibilité vérifiée. Les étapes privées viennent plus tard.</small></span></div></>}</>}</section>;
 }
 
-function ClaimSheet(props: { facility: FacilityDetail | null; draft: ClaimDraftResult | null; actionState: 'idle' | 'loading' | 'error'; actionError: string; onCancel: () => void; onClose: () => void }) {
+function ClaimSheet(props: { facility: FacilityDetail | null; draft: ClaimDraftResult | null; evidence: ClaimEvidenceItem[]; storageAvailable: boolean | null; uploadState: 'idle' | 'uploading' | 'error'; uploadProgress: number; uploadError: string; submitState: 'idle' | 'loading' | 'error' | 'success'; submitError: string; actionState: 'idle' | 'loading' | 'error'; actionError: string; onUpload: (kind: EvidenceKind, file: File) => void; onRemoveEvidence: (index: number) => void; onSubmit: () => void; onCancel: () => void; onClose: () => void }) {
   if (!props.draft) return <section className="omni-sheet context-sheet claim-sheet" role="dialog" aria-modal="true" aria-labelledby="claim-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte J5 · Claim</span><h2 id="claim-title">Aucun draft ouvert</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><div className="empty-state"><Clock3 size={23} /><strong>Reprenez depuis une facilité</strong><p>Un claim commence toujours sur un lieu public non revendiqué.</p></div></section>;
-  return <section className="omni-sheet context-sheet claim-sheet" role="dialog" aria-modal="true" aria-labelledby="claim-title"><div className="sheet-handle" /><div className="sheet-head"><div><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Facilité</button><span className="section-kicker">Compte J5 · Claim</span><h2 id="claim-title">Vérifier une facilité</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><div className="claim-context"><span className="facility-identity-icon"><MapPin size={19} /></span><div><strong>{props.facility?.name ?? 'Facilité sélectionnée'}</strong><small>{props.facility?.category ?? 'Lieu public'} · draft v{props.draft.version}</small></div></div><p className="sheet-lede">Ce parcours prépare une vérification représentant, société, lieu et activité. Il ne certifie jamais une personne au moment du clic.</p><div className="claim-checklist"><div><CheckCircle2 size={17} /><span><strong>Identité du représentant</strong><small>Preuve privée, visible uniquement par l’équipe habilitée.</small></span></div><div><CheckCircle2 size={17} /><span><strong>Facilité et localisation</strong><small>Repère de terrain et relation avec le lieu public sélectionné.</small></span></div><div><CheckCircle2 size={17} /><span><strong>Activité / catalogue</strong><small>Éléments nécessaires avant une décision reviewer.</small></span></div></div><div className="notice-card"><strong>Soumission momentanément verrouillée</strong><p>Le stockage privé d’évidence n’est pas encore configuré sur le runtime. Aucun fichier, URL publique ou contenu brut ne sera accepté. Votre draft reste récupérable.</p></div>{props.actionError && <div className="inline-error" role="alert">{props.actionError}</div>}<button className="primary-button" type="button" disabled>Ajouter les preuves privées <ArrowRight size={16} /></button><button className="secondary-button wide" type="button" onClick={props.onClose}>Continuer plus tard</button><button className="text-button danger-text" type="button" disabled={props.actionState === 'loading'} onClick={props.onCancel}>{props.actionState === 'loading' ? 'Annulation…' : 'Annuler ce brouillon'}</button><div className="locked-note"><ShieldCheck size={17} /><span><strong>Statut séparé</strong><small>Un claim ne devient certifié qu’après preuves privées, revue de l’équipe et historique auditable.</small></span></div></section>;
+  return <section className="omni-sheet context-sheet claim-sheet" role="dialog" aria-modal="true" aria-labelledby="claim-title"><div className="sheet-handle" /><div className="sheet-head"><div><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Facilité</button><span className="section-kicker">Compte J5 · Claim</span><h2 id="claim-title">Vérifier une facilité</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><div className="claim-context"><span className="facility-identity-icon"><MapPin size={19} /></span><div><strong>{props.facility?.name ?? 'Facilité sélectionnée'}</strong><small>{props.facility?.category ?? 'Lieu public'} · draft v{props.draft.version}</small></div></div><p className="sheet-lede">Ce parcours prépare une vérification représentant, société, lieu et activité. Il ne certifie jamais une personne au moment du clic.</p><div className="claim-checklist evidence-checklist">{([['identity', 'Identité du représentant'], ['company', 'Société / activité'], ['facility', 'Facilité et localisation'], ['product', 'Produit ou service'], ['location', 'Repère de localisation'], ['service', 'Preuve de service']] as Array<[EvidenceKind, string]>).map(([kind, label]) => { const count = props.evidence.filter((item) => item.evidenceKind === kind).length; return <div className="evidence-row" key={kind}><span className="evidence-row-mark">{count ? <CheckCircle2 size={17} /> : <span className="evidence-empty-mark" />}</span><span><strong>{label}</strong><small>{count ? `${count} fichier privé ajouté${count === 1 ? '' : 's'}` : 'JPEG, PNG, WebP ou PDF · 10 Mo maximum'}</small></span><label className="evidence-upload-button"><span>{props.uploadState === 'uploading' ? `${props.uploadProgress}%` : props.storageAvailable === true ? 'Ajouter' : 'Bloqué'}</span><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" disabled={props.storageAvailable !== true || props.uploadState === 'uploading' || props.draft?.state === 'submitted'} onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) props.onUpload(kind, file); }} /></label></div>; })}</div><div className="notice-card"><strong>{props.storageAvailable === null ? 'Vérification du stockage privé' : props.storageAvailable ? 'Preuves privées, statut séparé' : 'Stockage privé non connecté'}</strong><p>{props.storageAvailable === null ? 'Omni vérifie si le stockage privé est disponible pour ce runtime.' : props.storageAvailable ? 'Le serveur autorise l’upload uniquement pour le claimant du draft et vérifiera chaque objet privé avant la soumission.' : 'Le store privé Vercel Blob n’est pas encore connecté à ce runtime. Aucun fichier ne sera accepté et votre draft reste récupérable.'} Une preuve ne certifie jamais une personne, une propriété, un stock ou un catalogue.</p></div>{props.evidence.length > 0 && <div className="evidence-file-list" aria-label="Preuves ajoutées">{props.evidence.map((item, index) => <div className="evidence-file-row" key={`${item.objectKey}-${index}`}><span><strong>{item.evidenceKind}</strong><small>Référence privée vérifiable par Omni</small></span>{props.draft?.state !== 'submitted' && <button className="text-button danger-text" type="button" onClick={() => props.onRemoveEvidence(index)}>Retirer</button>}</div>)}</div>}{props.uploadState === 'uploading' && <div className="sheet-loading" role="status"><span className="spinner" /> Upload privé en cours · {props.uploadProgress}%</div>}{props.uploadError && <div className="inline-error" role="alert">{props.uploadError}</div>}{props.submitError && <div className="inline-error" role="alert">{props.submitError}</div>}{props.actionError && <div className="inline-error" role="alert">{props.actionError}</div>}{props.submitState === 'success' && props.draft?.state === 'submitted' ? <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Claim soumis. La file reviewer Omni vérifiera les preuves avant toute évolution du statut.</span></div> : <button className="primary-button" type="button" disabled={props.storageAvailable !== true || props.evidence.length === 0 || props.uploadState === 'uploading' || props.submitState === 'loading'} onClick={props.onSubmit}>{props.submitState === 'loading' ? 'Vérification et soumission…' : props.evidence.length === 0 ? 'Ajoutez une preuve pour continuer' : 'Soumettre à la revue Omni'} <ArrowRight size={16} /></button>}<button className="secondary-button wide" type="button" onClick={props.onClose}>Continuer plus tard</button><button className="text-button danger-text" type="button" disabled={props.actionState === 'loading' || props.draft?.state === 'submitted'} onClick={props.onCancel}>{props.actionState === 'loading' ? 'Annulation…' : 'Annuler ce brouillon'}</button><div className="locked-note"><ShieldCheck size={17} /><span><strong>Statut séparé</strong><small>Un claim ne devient certifié qu’après preuves privées, revue de l’équipe et historique auditable.</small></span></div></section>;
 }
 
 function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; claimState: 'idle' | 'loading' | 'error' | 'success'; claimError: string; claimResult: ClaimDraftResult | null; onClaim: (facility: PublicFacility) => void; onOpenClaim: () => void; onClose: () => void; onVerify: () => void }) {

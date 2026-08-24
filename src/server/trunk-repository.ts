@@ -2,6 +2,8 @@ import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
 
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
+import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
+export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
 import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
 
 export interface DatabaseClient {
@@ -146,19 +148,7 @@ export class SellerAuthorizationPolicyError extends Error {
   }
 }
 
-export class FieldPilotPolicyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'FieldPilotPolicyError';
-  }
-}
 
-export class EvidenceStoragePolicyError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = 'EvidenceStoragePolicyError';
-  }
-}
 
 export interface PublicFacilityImportInput {
   authUserId: string;
@@ -371,6 +361,55 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { authorized: true, runs: (rows as Record<string, unknown>[]).map((row) => ({ id: String(row.id), operation: String(row.operation), provider: row.provider === null ? null : String(row.provider), outcome: String(row.outcome), resultCount: Number(row.result_count), errorClass: row.error_class === null ? null : String(row.error_class), startedAt: new Date(String(row.started_at)).toISOString(), finishedAt: row.finished_at === null ? null : new Date(String(row.finished_at)).toISOString() })) };
     },
 
+    async canUploadClaimEvidence(input: { authUserId: string; requestId: string }): Promise<boolean> {
+      const rows = await retryDatabase(() => sql`
+        select 1
+        from v2_verification_requests vr
+        join v2_accounts a on a.id = vr.claimant_account_id
+        join v2_facilities f on f.id = vr.facility_id
+        where vr.id = ${input.requestId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and f.account_id is null
+          and vr.state in ('draft', 'needs_more_evidence')
+        limit 1
+      `);
+      return Boolean((rows as Record<string, unknown>[])[0]);
+    },
+
+    async getClaimEvidenceForViewer(input: { authUserId: string; facilityId: string; requestId: string; index: number }): Promise<{ objectKey: string; evidenceKind: string; contentType: string | null; size: number | null } | null> {
+      if (!Number.isInteger(input.index) || input.index < 0 || input.index >= 12) throw new FieldPilotPolicyError('The evidence index is invalid.');
+      const rows = await retryDatabase(() => sql`
+        select ve.object_key, ve.evidence_kind, null::text as content_type, null::integer as size
+        from v2_verification_evidence ve
+        join v2_verification_requests vr on vr.id = ve.request_id
+        join v2_facilities f on f.id = vr.facility_id
+        where ve.request_id = ${input.requestId}::uuid
+          and vr.facility_id = ${input.facilityId}::uuid
+          and ve.visibility in ('private', 'admin_only')
+          and (
+            exists (
+              select 1 from v2_accounts claimant
+              where claimant.id = vr.claimant_account_id
+                and claimant.auth_user_id = ${input.authUserId}
+                and claimant.suspended_at is null
+            )
+            or exists (
+              select 1 from v2_accounts reviewer
+              join v2_account_roles ar on ar.account_id = reviewer.id and ar.role = 'reviewer' and ar.status = 'active'
+              where reviewer.auth_user_id = ${input.authUserId}
+                and reviewer.suspended_at is null
+            )
+          )
+        order by ve.created_at asc, ve.id asc
+        offset ${input.index}
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return { objectKey: String(row.object_key), evidenceKind: String(row.evidence_kind), contentType: row.content_type === null ? null : String(row.content_type), size: row.size === null ? null : Number(row.size) };
+    },
+
     async createClaimDraft(input: { authUserId: string; facilityId: string }): Promise<ClaimDraftResult> {
       const rows = await retryDatabase(() => sql`
         with account as (
@@ -469,10 +508,23 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!Number.isInteger(input.version) || input.version < 1 || !Array.isArray(input.evidence) || input.evidence.length < 1 || input.evidence.length > 12 || input.evidence.some((item) => !allowedKinds.has(item.evidenceKind) || typeof item.objectKey !== 'string' || !item.objectKey.startsWith('private://omni/') || item.objectKey.length > 512 || /(?:https?:|data:|\s)/i.test(item.objectKey) || (item.checksum !== null && item.checksum !== undefined && (typeof item.checksum !== 'string' || item.checksum.length > 128)))) {
         throw new FieldPilotPolicyError('Provide one to twelve typed private evidence references; raw files and public URLs are not accepted.');
       }
-      if (process.env.OMNI_EVIDENCE_STORAGE !== 'configured') {
-        throw new EvidenceStoragePolicyError('Private evidence storage is not configured; the claim remains a resumable draft.');
-      }
-      const evidenceJson = JSON.stringify(input.evidence.map((item) => ({ evidence_kind: item.evidenceKind, object_key: item.objectKey, checksum: item.checksum ?? null })));
+      if (!hasPrivateBlobConfiguration()) throw new EvidenceStoragePolicyError('Private evidence storage is not configured; the claim remains a resumable draft.');
+      const candidateRows = await retryDatabase(() => sql`
+        select vr.id
+        from v2_verification_requests vr
+        join v2_accounts a on a.id = vr.claimant_account_id
+        join v2_facilities f on f.id = vr.facility_id
+        where vr.id = ${input.requestId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and vr.version = ${input.version}
+          and vr.state in ('draft', 'needs_more_evidence')
+          and f.account_id is null
+        limit 1
+      `);
+      if (!(candidateRows as Record<string, unknown>[])[0]) throw new FieldPilotPolicyError('The claim cannot be submitted from this account or version.');
+      const verifiedEvidence = await verifyPrivateEvidenceObjects(input.requestId, input.evidence);
+      const evidenceJson = JSON.stringify(verifiedEvidence.map((item) => ({ evidence_kind: item.evidenceKind, object_key: item.objectKey, checksum: item.checksum ?? null })));
       const rows = await retryDatabase(() => sql`
         with claimant as (
           select id from v2_accounts where auth_user_id = ${input.authUserId} and suspended_at is null limit 1

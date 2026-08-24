@@ -1,4 +1,5 @@
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
+import { upload as uploadPrivateBlob } from '@vercel/blob/client';
+import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -156,6 +157,28 @@ export async function createFacilityClaimDraft(input: { facilityId: string; toke
     body: JSON.stringify({}),
   });
   return parse<ClaimDraftResult>(response);
+}
+
+export async function getClaimStorageStatus(input: { facilityId: string; token: string }): Promise<ApiResult<{ available: boolean }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.facilityId)}?action=claim-storage-status`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<{ available: boolean }>(response);
+}
+
+export async function uploadFacilityEvidence(input: { requestId: string; evidenceKind: EvidenceKind; file: File; token: string; onProgress?: (percentage: number) => void }): Promise<ClaimEvidenceItem> {
+  const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'evidence';
+  const pathname = `claims/${input.requestId}/${input.evidenceKind}/${safeName}`;
+  const blob = await uploadPrivateBlob(pathname, input.file, {
+    access: 'private',
+    contentType: input.file.type,
+    multipart: input.file.size > 4 * 1024 * 1024,
+    clientPayload: JSON.stringify({ evidenceKind: input.evidenceKind }),
+    handleUploadUrl: `/api/v2/facilities/${encodeURIComponent(input.requestId)}?action=claim-upload`,
+    headers: { Authorization: `Bearer ${input.token}` },
+    onUploadProgress: (event) => input.onProgress?.(event.percentage),
+  });
+  return { evidenceKind: input.evidenceKind, objectKey: `private://omni/${blob.pathname}`, checksum: null };
 }
 
 export async function submitFacilityClaim(input: { requestId: string; version: number; evidence: ClaimEvidenceItem[]; token: string }): Promise<ApiResult<ClaimSubmitResult>> {

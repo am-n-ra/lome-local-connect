@@ -99,3 +99,14 @@ Private object storage is not configured in the runtime. Therefore a valid evide
 Validation passed: `104` Vitest tests, `npm run build` with exactly 12 Vercel functions, client boundary clean and `git diff --check`. Browser proof passed for the fresh globe/map-first surface, public cluster/pin continuity, existing bounded fixture detail and no-write behavior. Full claim draft → private upload → submit → reviewer decision remains unproven because object storage and an active reviewer role are not configured for the Browser Sandbox session.
 
 **Ring decision:** `partial / blocked at evidence-storage gate`. Do not grant roles, import facilities, submit claims, review claims or claim pilot readiness until the owner explicitly selects trusted accounts and the private evidence storage adapter/contract is configured and proven.
+
+
+## 11. 2026-08-24 — Private evidence storage contract checkpoint
+
+The private evidence mini-Root is recorded in [`v2-field-pilot-storage-root.md`](./v2-field-pilot-storage-root.md). Vercel Blob private storage is the selected provider candidate because the application is already hosted on Vercel and the provider documents authenticated reads/writes for private stores, OIDC for server-side access when connected to a project, and authenticated server token exchange for browser uploads.[1] The implementation uses the existing facility wrapper, so the deployment remains at exactly 12 functions.
+
+The source now contains a fail-closed provider adapter: authenticated claimant-only token issuance, request/category-bound paths, private access, allowed MIME types (`JPEG`, `PNG`, `WebP`, `PDF`), a 10 MB per-object limit, twelve-object claim limit, provider random suffixes, private object metadata verification before submit, an authenticated private stream boundary with `Cache-Control: private, no-store`, and no public URL/object-key exposure in reviewer summaries. Claim submission now rechecks request ownership/version/state, verifies provider objects, then inserts evidence and advances the request only if all checks pass.
+
+The Vercel Blob store is **not provisioned or connected yet**, and no provider environment variable is available to the runtime. Therefore the code remains intentionally blocked at `EVIDENCE_STORAGE_UNAVAILABLE`; no file has been uploaded and no claim has been submitted. The Browser Sandbox still has no active `operator` or `reviewer` role. This is a partial Root/Heartwood checkpoint only: storage provisioning, active-role upload proof, reviewer download proof, retention/reconciliation, role bootstrap, OSM import and pilot data mutations remain open. Global Root remains `review`; no production-readiness claim is made.
+
+[1]: https://vercel.com/docs/vercel-blob/private-storage "Vercel Docs — Private Storage"
