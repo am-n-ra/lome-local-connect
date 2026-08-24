@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, EvidenceStoragePolicyError, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
 import type { TransactionState } from '../domain/contracts';
+import type { ClaimEvidenceItem } from '../trunk/types';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -26,6 +27,9 @@ export class ApiInputError extends Error {
 export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
+  }
+  if (error instanceof EvidenceStoragePolicyError) {
+    return { status: 409, body: errorBody(correlationId, 'EVIDENCE_STORAGE_UNAVAILABLE', error.message) };
   }
   if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
@@ -154,6 +158,48 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.createClaimDraft({ authUserId, facilityId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-submit') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before submitting private claim evidence.'));
+        return true;
+      }
+      const requestId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const input = await parseRequestBody(req);
+      const version = Number(input.version);
+      const rawEvidence = Array.isArray(input.evidence) ? input.evidence : [];
+      const allowedKinds = new Set(['identity', 'company', 'facility', 'product', 'service', 'location']);
+      const evidence = rawEvidence.map((item) => {
+        const value = item && typeof item === 'object' ? item as Record<string, unknown> : {};
+        return { evidenceKind: (typeof value.evidenceKind === 'string' ? value.evidenceKind : '') as ClaimEvidenceItem['evidenceKind'], objectKey: typeof value.objectKey === 'string' ? value.objectKey : '', checksum: value.checksum === null || value.checksum === undefined ? null : String(value.checksum) };
+      });
+      if (!uuidPattern.test(requestId) || !Number.isInteger(version) || version < 1 || evidence.length < 1 || evidence.length > 12 || evidence.some((item) => !allowedKinds.has(item.evidenceKind) || !/^private:\/\/omni\//.test(item.objectKey) || item.objectKey.length > 512 || /(?:https?:|data:|\s)/i.test(item.objectKey) || (item.checksum !== null && item.checksum.length > 128))) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid claim version and typed private evidence references.'));
+        return true;
+      }
+      const result = await repository.submitClaimEvidence({ authUserId, requestId, version, evidence, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-cancel') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before cancelling your claim draft.'));
+        return true;
+      }
+      const requestId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const input = await parseRequestBody(req);
+      const version = Number(input.version);
+      if (!uuidPattern.test(requestId) || !Number.isInteger(version) || version < 1) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid claim and version.'));
+        return true;
+      }
+      const result = await repository.cancelClaim({ authUserId, requestId, version, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'review') {

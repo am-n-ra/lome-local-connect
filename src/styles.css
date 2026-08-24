@@ -480,3 +480,18 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .notification-card { grid-template-columns: auto 1fr; }
   .notification-card .text-button { grid-column: 2; justify-self: start; }
 }
+
+
+.claim-sheet { max-height: min(700px, calc(100dvh - 74px)); overflow-y: auto; }
+.claim-sheet .claim-context { display:flex; align-items:center; gap:12px; padding:14px; border:1px solid var(--line); border-radius:18px; background:rgba(255,255,255,.72); }
+.claim-sheet .claim-context > div { display:grid; gap:3px; }
+.claim-sheet .claim-context strong { font-size:15px; }
+.claim-sheet .claim-context small { color:var(--muted); }
+.claim-checklist { display:grid; gap:10px; margin:16px 0; }
+.claim-checklist > div { display:flex; align-items:flex-start; gap:10px; padding:12px 0; border-bottom:1px solid var(--line); }
+.claim-checklist > div:last-child { border-bottom:0; }
+.claim-checklist svg { flex:none; color:var(--forest); margin-top:1px; }
+.claim-checklist span { display:grid; gap:3px; }
+.claim-checklist small { color:var(--muted); line-height:1.4; }
+.claim-sheet .danger-text { color:#a04d48; margin-top:4px; }
+@media (max-width: 420px) { .claim-sheet .claim-context { padding:12px; } .claim-sheet .sheet-lede { font-size:13px; } }

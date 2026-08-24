@@ -2,7 +2,7 @@ import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
 
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -153,6 +153,13 @@ export class FieldPilotPolicyError extends Error {
   }
 }
 
+export class EvidenceStoragePolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EvidenceStoragePolicyError';
+  }
+}
+
 export interface PublicFacilityImportInput {
   authUserId: string;
   provider: 'openstreetmap';
@@ -188,8 +195,26 @@ export interface OperatorRunSummary {
 export interface ClaimDraftResult {
   requestId: string;
   facilityId: string;
-  state: 'draft';
+  state: 'draft' | 'submitted' | 'admin_review' | 'needs_more_evidence';
   version: number;
+  created: boolean;
+}
+
+export interface ClaimSubmitInput {
+  authUserId: string;
+  requestId: string;
+  version: number;
+  evidence: ClaimEvidenceItem[];
+  correlationId: string;
+}
+
+export interface ClaimSubmitResult {
+  requestId: string;
+  facilityId: string;
+  state: 'submitted';
+  facilityTrust: 'verification_submitted';
+  version: number;
+  evidenceCount: number;
   created: boolean;
 }
 
@@ -204,6 +229,8 @@ export interface ReviewQueueItem {
   version: number;
   createdAt: string;
   submittedAt: string | null;
+  evidenceCount: number;
+  evidenceKinds: string[];
 }
 
 export interface ReviewClaimResult {
@@ -211,6 +238,7 @@ export interface ReviewClaimResult {
   facilityId: string;
   outcome: ReviewOutcome;
   state: ReviewOutcome;
+  facilityTrust: 'unconfirmed' | 'rejected' | 'verification_draft';
   version: number;
 }
 
@@ -386,12 +414,120 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and selected.created
           returning f.id
         )
-        select selected.id as request_id, selected.facility_id, selected.version, selected.created
+        select selected.id as request_id, selected.facility_id, selected.version, selected.created,
+          coalesce((select state from v2_verification_requests where id = selected.id), 'draft') as state
         from selected
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The facility is unavailable for a claim or already claimed by another account.');
-      return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: 'draft', version: Number(row.version), created: row.created === true };
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: (row.state ? String(row.state) : 'draft') as ClaimDraftResult['state'], version: Number(row.version), created: row.created === true };
+    },
+
+    async cancelClaim(input: { authUserId: string; requestId: string; version: number; correlationId: string }): Promise<{ requestId: string; facilityId: string; state: 'cancelled'; version: number }> {
+      if (!Number.isInteger(input.version) || input.version < 1) throw new FieldPilotPolicyError('The claim version is invalid.');
+      const rows = await retryDatabase(() => sql`
+        with claimant as (
+          select id from v2_accounts where auth_user_id = ${input.authUserId} and suspended_at is null limit 1
+        ), candidate as (
+          select vr.id, vr.facility_id, vr.version, f.trust_state, claimant.id as claimant_id
+          from v2_verification_requests vr
+          join claimant on claimant.id = vr.claimant_account_id
+          join v2_facilities f on f.id = vr.facility_id
+          where vr.id = ${input.requestId}::uuid
+            and vr.version = ${input.version}
+            and vr.state in ('draft', 'needs_more_evidence')
+          limit 1
+        ), request_update as (
+          update v2_verification_requests vr
+          set state = 'cancelled', version = vr.version + 1, updated_at = now()
+          from candidate
+          where vr.id = candidate.id
+          returning vr.id, vr.facility_id, vr.version
+        ), facility_update as (
+          update v2_facilities f
+          set trust_state = 'unclaimed', updated_at = now()
+          from candidate join request_update on request_update.facility_id = candidate.facility_id
+          where f.id = candidate.facility_id and f.account_id is null and f.source_kind = 'public_import'
+          returning f.id
+        ), history_insert as (
+          insert into v2_facility_status_history (facility_id, prior_state, next_state, actor_account_id, reason, request_id, correlation_id)
+          select candidate.facility_id, candidate.trust_state, 'unclaimed', candidate.claimant_id, 'claim_cancelled', candidate.id, ${input.correlationId}
+          from candidate join request_update on request_update.facility_id = candidate.facility_id
+          where exists (select 1 from facility_update)
+          returning request_id
+        )
+        select request_update.id as request_id, request_update.facility_id, request_update.version
+        from request_update join history_insert on history_insert.request_id = request_update.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The claim cannot be cancelled from this account or version.');
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: 'cancelled', version: Number(row.version) };
+    },
+
+    async submitClaimEvidence(input: ClaimSubmitInput): Promise<ClaimSubmitResult> {
+      const allowedKinds = new Set(['identity', 'company', 'facility', 'product', 'service', 'location']);
+      if (!Number.isInteger(input.version) || input.version < 1 || !Array.isArray(input.evidence) || input.evidence.length < 1 || input.evidence.length > 12 || input.evidence.some((item) => !allowedKinds.has(item.evidenceKind) || typeof item.objectKey !== 'string' || !item.objectKey.startsWith('private://omni/') || item.objectKey.length > 512 || /(?:https?:|data:|\s)/i.test(item.objectKey) || (item.checksum !== null && item.checksum !== undefined && (typeof item.checksum !== 'string' || item.checksum.length > 128)))) {
+        throw new FieldPilotPolicyError('Provide one to twelve typed private evidence references; raw files and public URLs are not accepted.');
+      }
+      if (process.env.OMNI_EVIDENCE_STORAGE !== 'configured') {
+        throw new EvidenceStoragePolicyError('Private evidence storage is not configured; the claim remains a resumable draft.');
+      }
+      const evidenceJson = JSON.stringify(input.evidence.map((item) => ({ evidence_kind: item.evidenceKind, object_key: item.objectKey, checksum: item.checksum ?? null })));
+      const rows = await retryDatabase(() => sql`
+        with claimant as (
+          select id from v2_accounts where auth_user_id = ${input.authUserId} and suspended_at is null limit 1
+        ), candidate as (
+          select vr.id, vr.facility_id, vr.claimant_account_id, vr.version, f.trust_state
+          from v2_verification_requests vr
+          join claimant on claimant.id = vr.claimant_account_id
+          join v2_facilities f on f.id = vr.facility_id
+          where vr.id = ${input.requestId}::uuid
+            and vr.version = ${input.version}
+            and vr.state in ('draft', 'needs_more_evidence')
+            and f.account_id is null
+          limit 1
+        ), evidence_insert as (
+          insert into v2_verification_evidence (request_id, evidence_kind, object_key, checksum, visibility)
+          select candidate.id, item.evidence_kind, item.object_key, item.checksum, 'private'
+          from candidate cross join jsonb_to_recordset(${evidenceJson}::jsonb) as item(evidence_kind text, object_key text, checksum text)
+          returning id, request_id
+        ), request_update as (
+          update v2_verification_requests vr
+          set state = 'submitted', version = vr.version + 1, submitted_at = now(), updated_at = now()
+          from candidate
+          where vr.id = candidate.id and exists (select 1 from evidence_insert)
+          returning vr.id, vr.facility_id, vr.version
+        ), facility_update as (
+          update v2_facilities f
+          set trust_state = 'verification_submitted', updated_at = now()
+          from candidate join request_update on request_update.facility_id = candidate.facility_id
+          where f.id = candidate.facility_id
+          returning f.id
+        ), history_insert as (
+          insert into v2_facility_status_history (facility_id, prior_state, next_state, actor_account_id, reason, request_id, correlation_id)
+          select candidate.facility_id, candidate.trust_state, 'verification_submitted', candidate.claimant_account_id, 'claim_submitted', candidate.id, ${input.correlationId}
+          from candidate join request_update on request_update.facility_id = candidate.facility_id
+          where exists (select 1 from facility_update)
+          returning request_id
+        ), reviewer_events as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select ar.account_id, 'claim_submitted', 'verification_request', request_update.id::text, request_update.id::text || ':submitted:' || request_update.version::text, jsonb_build_object('state', 'submitted'), ${input.correlationId}
+          from request_update cross join v2_account_roles ar
+          where ar.role = 'reviewer' and ar.status = 'active'
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id
+        ), reviewer_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from reviewer_events
+          on conflict (event_id, channel) do nothing
+          returning id
+        )
+        select request_update.id as request_id, request_update.facility_id, request_update.version, (select count(*) from evidence_insert)::int as evidence_count
+        from request_update join facility_update on facility_update.id = request_update.facility_id join history_insert on history_insert.request_id = request_update.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The claim cannot be submitted from this account or version.');
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: 'submitted', facilityTrust: 'verification_submitted', version: Number(row.version), evidenceCount: Number(row.evidence_count), created: true };
     },
 
     async listReviewQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: ReviewQueueItem[] }> {
@@ -405,14 +541,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, requests: [] };
       const rows = await retryDatabase(() => sql`
-        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, vr.state, vr.version, vr.created_at, vr.submitted_at
+        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, vr.state, vr.version, vr.created_at, vr.submitted_at,
+          count(ve.id)::int as evidence_count, coalesce(array_agg(distinct ve.evidence_kind) filter (where ve.id is not null), '{}'::text[]) as evidence_kinds
         from v2_verification_requests vr
         join v2_facilities f on f.id = vr.facility_id
+        left join v2_verification_evidence ve on ve.request_id = vr.id and ve.visibility in ('private', 'admin_only')
         where vr.state in ('submitted', 'admin_review')
+        group by vr.id, f.id
         order by vr.submitted_at nulls last, vr.created_at asc, vr.id asc
         limit 100
       `);
-      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString() })) };
+      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString(), evidenceCount: Number(row.evidence_count ?? 0), evidenceKinds: Array.isArray(row.evidence_kinds) ? row.evidence_kinds.map(String) : [] })) };
     },
 
     async reviewFacilityClaim(input: { authUserId: string; requestId: string; outcome: ReviewOutcome; reason: string; correlationId: string }): Promise<ReviewClaimResult> {
@@ -428,11 +567,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and a.suspended_at is null
           limit 1
         ), candidate as (
-          select vr.id, vr.facility_id, vr.claimant_account_id, vr.version
+          select vr.id, vr.facility_id, vr.claimant_account_id, vr.version, f.trust_state as facility_trust
           from v2_verification_requests vr
+          join v2_facilities f on f.id = vr.facility_id
           cross join reviewer
           where vr.id = ${input.requestId}::uuid
             and vr.state in ('submitted', 'admin_review')
+            and exists (select 1 from v2_verification_evidence ve where ve.request_id = vr.id and ve.visibility in ('private', 'admin_only'))
             and vr.claimant_account_id <> reviewer.id
           limit 1
         ), review_insert as (
@@ -449,25 +590,38 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning vr.id, vr.facility_id, vr.version
         ), facility_update as (
           update v2_facilities f
-          set trust_state = case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' else ${input.outcome} end,
+          set trust_state = case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' when ${input.outcome} = 'certified' then 'unconfirmed' else 'rejected' end,
               account_id = case when ${input.outcome} = 'certified' then candidate.claimant_account_id else f.account_id end,
               updated_at = now()
           from candidate join request_update on request_update.facility_id = candidate.facility_id
           where f.id = candidate.facility_id
           returning f.id
+        ), history_insert as (
+          insert into v2_facility_status_history (facility_id, prior_state, next_state, actor_account_id, reason, request_id, correlation_id)
+          select candidate.facility_id, candidate.facility_trust, case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' when ${input.outcome} = 'certified' then 'unconfirmed' else 'rejected' end, reviewer.id, ${input.reason.trim()}, candidate.id, ${input.correlationId}
+          from candidate cross join reviewer join request_update on request_update.facility_id = candidate.facility_id
+          where exists (select 1 from facility_update)
+          returning id, facility_id
         ), notification_insert as (
           insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
           select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}), ${input.correlationId}
           from candidate join request_update on request_update.id = candidate.id
           on conflict (recipient_account_id, dedupe_key) do nothing
           returning id
+        ), delivery_insert as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from notification_insert
+          on conflict (event_id, channel) do nothing
+          returning id
         )
-        select request_update.id as request_id, request_update.facility_id, ${input.outcome} as outcome, request_update.version
-        from request_update join facility_update on facility_update.id = request_update.facility_id
+        select request_update.id as request_id, request_update.facility_id, ${input.outcome} as outcome, request_update.version,
+          case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' when ${input.outcome} = 'certified' then 'unconfirmed' else 'rejected' end as facility_trust
+        from request_update join facility_update on facility_update.id = request_update.facility_id join history_insert on history_insert.facility_id = request_update.facility_id
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The claim is not reviewable by this reviewer or is no longer pending.');
-      return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, version: Number(row.version) };
+      const facilityTrust = row.facility_trust ? String(row.facility_trust) : input.outcome === 'certified' ? 'unconfirmed' : input.outcome === 'needs_more_evidence' ? 'verification_draft' : 'rejected';
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, facilityTrust: facilityTrust as ReviewClaimResult['facilityTrust'], version: Number(row.version) };
     },
 
     async listNotificationInbox(input: { authUserId: string }): Promise<{ notifications: NotificationSummary[] }> {

@@ -142,11 +142,31 @@ export interface PublicFacilityImportResult {
   trust: 'unclaimed';
 }
 
+export type ClaimRequestState = 'draft' | 'submitted' | 'admin_review' | 'needs_more_evidence';
+
+export type EvidenceKind = 'identity' | 'company' | 'facility' | 'product' | 'service' | 'location';
+
 export interface ClaimDraftResult {
   requestId: string;
   facilityId: string;
-  state: 'draft';
+  state: ClaimRequestState;
   version: number;
+  created: boolean;
+}
+
+export interface ClaimEvidenceItem {
+  evidenceKind: EvidenceKind;
+  objectKey: string;
+  checksum: string | null;
+}
+
+export interface ClaimSubmitResult {
+  requestId: string;
+  facilityId: string;
+  state: 'submitted';
+  facilityTrust: 'verification_submitted';
+  version: number;
+  evidenceCount: number;
   created: boolean;
 }
 
@@ -159,6 +179,8 @@ export interface ReviewQueueItem {
   version: number;
   createdAt: string;
   submittedAt: string | null;
+  evidenceCount: number;
+  evidenceKinds: string[];
 }
 
 export interface ReviewQueueResult {
@@ -173,6 +195,7 @@ export interface ReviewClaimResult {
   facilityId: string;
   outcome: ReviewOutcome;
   state: ReviewOutcome;
+  facilityTrust: 'unconfirmed' | 'rejected' | 'verification_draft';
   version: number;
 }
 

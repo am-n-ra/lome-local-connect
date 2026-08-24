@@ -876,6 +876,43 @@ describe('field pilot registry Root seam', () => {
 });
 
 
+describe('claim Heartwood seam', () => {
+  it('rejects raw or public evidence references before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.submitClaimEvidence({
+      authUserId: 'auth-claimant', requestId: 'request-1', version: 1,
+      evidence: [{ evidenceKind: 'facility', objectKey: 'https://example.com/photo.jpg', checksum: null }],
+      correlationId: 'corr-submit-1',
+    })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('keeps a valid evidence submission blocked until private storage is configured', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const previous = process.env.OMNI_EVIDENCE_STORAGE;
+    delete process.env.OMNI_EVIDENCE_STORAGE;
+    await expect(repository.submitClaimEvidence({
+      authUserId: 'auth-claimant', requestId: 'request-1', version: 1,
+      evidence: [{ evidenceKind: 'facility', objectKey: 'private://omni/request-1/facility.jpg', checksum: 'sha256:abc' }],
+      correlationId: 'corr-submit-2',
+    })).rejects.toThrow('Private evidence storage is not configured');
+    if (previous === undefined) delete process.env.OMNI_EVIDENCE_STORAGE;
+    else process.env.OMNI_EVIDENCE_STORAGE = previous;
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('requires the claimant-owned current version to cancel a draft', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.cancelClaim({ authUserId: 'auth-other', requestId: 'request-1', version: 1, correlationId: 'corr-cancel-1' })).rejects.toThrow('cannot be cancelled');
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain("state in ('draft', 'needs_more_evidence')");
+    expect(call.queries[0]).toContain('claimant_account_id');
+  });
+});
+
 describe('review and inbox Root seam', () => {
   it('returns a locked empty reviewer queue without an active reviewer role', async () => {
     const call = stubSql([]);
@@ -891,13 +928,16 @@ describe('review and inbox Root seam', () => {
     expect(call.queries).toHaveLength(0);
   });
 
-  it('writes a review, updates the request and queues a redacted claimant notification', async () => {
-    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', outcome: 'certified', version: 2 }]);
+  it('writes a review, queues an in-app delivery and maps certification to Free unconfirmed', async () => {
+    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', outcome: 'certified', facility_trust: 'unconfirmed', version: 2 }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.reviewFacilityClaim({ authUserId: 'auth-reviewer', requestId: 'request-1', outcome: 'certified', reason: 'Evidence matches the facility.', correlationId: 'corr-review-1' })).resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', outcome: 'certified', state: 'certified', version: 2 });
+    await expect(repository.reviewFacilityClaim({ authUserId: 'auth-reviewer', requestId: 'request-1', outcome: 'certified', reason: 'Evidence matches the facility.', correlationId: 'corr-review-1' })).resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', outcome: 'certified', state: 'certified', facilityTrust: 'unconfirmed', version: 2 });
     expect(call.queries[0]).toContain("ar.role = 'reviewer'");
     expect(call.queries[0]).toContain('v2_verification_reviews');
     expect(call.queries[0]).toContain('v2_notification_events');
+    expect(call.queries[0]).toContain('v2_notification_deliveries');
+    expect(call.queries[0]).toContain('v2_facility_status_history');
+    expect(call.queries[0]).toContain('unconfirmed');
     expect(call.queries[0]).toContain('claimant_account_id');
   });
 

@@ -1,4 +1,4 @@
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
+import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -156,6 +156,24 @@ export async function createFacilityClaimDraft(input: { facilityId: string; toke
     body: JSON.stringify({}),
   });
   return parse<ClaimDraftResult>(response);
+}
+
+export async function submitFacilityClaim(input: { requestId: string; version: number; evidence: ClaimEvidenceItem[]; token: string }): Promise<ApiResult<ClaimSubmitResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.requestId)}?action=claim-submit`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ version: input.version, evidence: input.evidence }),
+  });
+  return parse<ClaimSubmitResult>(response);
+}
+
+export async function cancelFacilityClaim(input: { requestId: string; version: number; token: string }): Promise<ApiResult<{ requestId: string; facilityId: string; state: 'cancelled'; version: number }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.requestId)}?action=claim-cancel`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ version: input.version }),
+  });
+  return parse(response);
 }
 
 export async function getReviewQueue(input: { token: string }): Promise<ApiResult<ReviewQueueResult>> {
