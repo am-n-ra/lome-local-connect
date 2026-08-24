@@ -1,24 +1,24 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getOperatorRuns, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
+import { createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim } from './api';
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
-import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, FacilityDetail, OperatorRunSummary, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot';
+type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer';
 type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
-type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot';
+type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 export type EscapeTarget = 'facility' | 'seller-queue' | 'close' | 'none';
 
 export function resolveEscape(panel: Panel, hasSellerRequest: boolean): EscapeTarget {
   if (panel === 'availability') return 'facility';
   if (panel === 'seller-entry' && hasSellerRequest) return 'seller-queue';
-  if (panel === 'field-pilot') return 'close';
+  if (panel === 'field-pilot' || panel === 'inbox' || panel === 'reviewer') return 'close';
   if (panel !== 'none') return 'close';
   return 'none';
 }
@@ -103,6 +103,18 @@ export function TrunkApp() {
   const [claimState, setClaimState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
   const [claimError, setClaimError] = useState('');
   const [claimResult, setClaimResult] = useState<ClaimDraftResult | null>(null);
+  const [inboxState, setInboxState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [inboxError, setInboxError] = useState('');
+  const [inboxData, setInboxData] = useState<NotificationInboxResult | null>(null);
+  const [reviewerState, setReviewerState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [reviewerError, setReviewerError] = useState('');
+  const [reviewerQueue, setReviewerQueue] = useState<ReviewQueueResult | null>(null);
+  const [selectedReview, setSelectedReview] = useState<ReviewQueueItem | null>(null);
+  const [reviewOutcome, setReviewOutcome] = useState<ReviewOutcome>('needs_more_evidence');
+  const [reviewReason, setReviewReason] = useState('');
+  const [reviewActionState, setReviewActionState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [reviewActionError, setReviewActionError] = useState('');
+  const [reviewActionResult, setReviewActionResult] = useState<ReviewClaimResult | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -345,6 +357,119 @@ export function TrunkApp() {
     setPanel('field-pilot');
     setFieldPilotResult(null);
     void loadOperatorRuns();
+  };
+
+  const loadInbox = async () => {
+    setInboxState('loading');
+    setInboxError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setInboxState('error');
+        setInboxError('Votre session doit être réouverte pour accéder à votre inbox.');
+        return;
+      }
+      const result = await getNotificationInbox({ token });
+      if (!result.ok || !result.data) {
+        setInboxState('error');
+        setInboxError(result.error?.message ?? 'Votre inbox n’est pas disponible.');
+        return;
+      }
+      setInboxData(result.data);
+      setInboxState('idle');
+    } catch (caught) {
+      setInboxState('error');
+      setInboxError(caught instanceof Error ? caught.message : 'Votre inbox n’est pas disponible.');
+    }
+  };
+
+  const openInbox = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'inbox');
+      return;
+    }
+    setPanel('inbox');
+    void loadInbox();
+  };
+
+  const loadReviewerQueue = async () => {
+    setReviewerState('loading');
+    setReviewerError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setReviewerState('error');
+        setReviewerError('Votre session doit être réouverte pour accéder à la review.');
+        return;
+      }
+      const result = await getReviewQueue({ token });
+      if (!result.ok || !result.data) {
+        setReviewerState('error');
+        setReviewerError(result.error?.message ?? 'La file de review n’est pas disponible.');
+        return;
+      }
+      setReviewerQueue(result.data);
+      setReviewerState('idle');
+    } catch (caught) {
+      setReviewerState('error');
+      setReviewerError(caught instanceof Error ? caught.message : 'La file de review n’est pas disponible.');
+    }
+  };
+
+  const openReviewer = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'reviewer');
+      return;
+    }
+    setPanel('reviewer');
+    setSelectedReview(null);
+    setReviewActionState('idle');
+    void loadReviewerQueue();
+  };
+
+  const submitReview = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!selectedReview) return;
+    setReviewActionState('loading');
+    setReviewActionError('');
+    setReviewActionResult(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setReviewActionState('error');
+        setReviewActionError('Votre session doit être réouverte avant la review.');
+        return;
+      }
+      const result = await reviewFacilityClaim({ requestId: selectedReview.requestId, outcome: reviewOutcome, reason: reviewReason.trim(), token });
+      if (!result.ok || !result.data) {
+        setReviewActionState('error');
+        setReviewActionError(result.error?.message ?? 'La décision n’a pas été enregistrée.');
+        return;
+      }
+      setReviewActionResult(result.data);
+      setReviewActionState('success');
+      setReviewReason('');
+      setSelectedReview(null);
+      void loadReviewerQueue();
+    } catch (caught) {
+      setReviewActionState('error');
+      setReviewActionError(caught instanceof Error ? caught.message : 'La décision n’a pas été enregistrée.');
+    }
+  };
+
+  const markInboxSeen = async (notificationId: string) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const result = await markNotificationSeen({ notificationId, token });
+      if (result.ok) void loadInbox();
+    } catch {
+      // Inbox marking is best-effort; the event remains visible on refresh if it fails.
+    }
   };
 
   const submitPublicFacilityImport = async (event: FormEvent) => {
@@ -662,7 +787,7 @@ export function TrunkApp() {
       setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
       setAppliedOptions(draftOptions);
       setAuthState('idle');
-      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : authReturn === 'field-pilot' ? 'field-pilot' : 'none';
+      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : authReturn === 'field-pilot' ? 'field-pilot' : authReturn === 'inbox' ? 'inbox' : authReturn === 'reviewer' ? 'reviewer' : 'none';
       setAuthReturn('none');
       setPanel(resumePanel);
       if (resumePanel === 'buyer-requests') {
@@ -677,6 +802,12 @@ export function TrunkApp() {
       if (resumePanel === 'field-pilot') {
         setFieldPilotResult(null);
         void loadOperatorRuns();
+      }
+      if (resumePanel === 'inbox') {
+        void loadInbox();
+      }
+      if (resumePanel === 'reviewer') {
+        void loadReviewerQueue();
       }
       if (query.trim()) setCommittedQuery(query.trim());
     } catch (caught) {
@@ -739,7 +870,7 @@ export function TrunkApp() {
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
         <div className="menu-brand"><img src="/omni-logo-transparent.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
@@ -762,6 +893,9 @@ export function TrunkApp() {
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <SellerWorkspaceSheet user={sessionUser} queue={sellerQueue} queueState={sellerQueueState} queueError={sellerQueueError} request={sellerRequest} tab={sellerTab} setTab={setSellerTab} responseStatus={sellerResponseStatus} setResponseStatus={setSellerResponseStatus} quantity={sellerQuantity} setQuantity={setSellerQuantity} price={sellerPrice} setPrice={setSellerPrice} message={sellerMessage} setMessage={setSellerMessage} responseState={sellerResponseState} responseError={sellerResponseError} responseResult={sellerResponseResult} rebindState={sellerRebindState} rebindError={sellerRebindError} onRebindDemo={() => void rebindSellerDemo()} onLoadQueue={() => void loadSellerQueue()} onSelectRequest={openSellerRequest} onSubmitResponse={() => void submitSellerResponse()} onBackToQueue={() => { setSellerRequest(null); setSellerResponseState('idle'); }} onClose={() => { setSellerRequest(null); setPanel('none'); }} onSignOut={signOut} />}
       {panel === 'field-pilot' && <FieldPilotSheet user={sessionUser} state={fieldPilotState} error={fieldPilotError} runs={operatorRuns} name={fieldPilotName} setName={setFieldPilotName} sourceRef={fieldPilotSourceRef} setSourceRef={setFieldPilotSourceRef} category={fieldPilotCategory} setCategory={setFieldPilotCategory} address={fieldPilotAddress} setAddress={setFieldPilotAddress} latitude={fieldPilotLatitude} setLatitude={setFieldPilotLatitude} longitude={fieldPilotLongitude} setLongitude={setFieldPilotLongitude} result={fieldPilotResult} onSubmit={submitPublicFacilityImport} onRefresh={() => void loadOperatorRuns()} onClose={() => setPanel('none')} />}
+      {panel === 'inbox' && <InboxSheet state={inboxState} error={inboxError} data={inboxData} onRefresh={() => void loadInbox()} onSeen={(notificationId) => void markInboxSeen(notificationId)} onClose={() => setPanel('none')} />}
+      {panel === 'reviewer' && <ReviewerSheet state={reviewerState} error={reviewerError} queue={reviewerQueue} selected={selectedReview} onSelect={setSelectedReview} outcome={reviewOutcome} setOutcome={setReviewOutcome} reason={reviewReason} setReason={setReviewReason} actionState={reviewActionState} actionError={reviewActionError} actionResult={reviewActionResult} onSubmit={submitReview} onRefresh={() => void loadReviewerQueue()} onBack={() => { setSelectedReview(null); setReviewActionState('idle'); }} onClose={() => setPanel('none')} />}
+
       {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
       {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onClose={() => setPanel('none')} onVerify={openAvailability} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
@@ -786,6 +920,16 @@ const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapS
       </article>)}</div>}
   </section>;
 });
+
+function InboxSheet(props: { state: 'idle' | 'loading' | 'error'; error: string; data: NotificationInboxResult | null; onRefresh: () => void; onSeen: (notificationId: string) => void; onClose: () => void }) {
+  const notifications = props.data?.notifications ?? [];
+  return <section className="omni-sheet context-sheet inbox-sheet" role="dialog" aria-modal="true" aria-labelledby="inbox-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte J5</span><h2 id="inbox-title">Inbox Omni</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">Les changements de claim et les événements liés à votre compte apparaissent ici. Les notifications PWA restent opt-in.</p>{props.state === 'loading' && <div className="sheet-loading" role="status"><span className="spinner" /> Chargement de l’inbox…</div>}{props.state === 'error' && <div className="inline-error" role="alert">{props.error}<button className="text-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>}{props.state === 'idle' && notifications.length === 0 && <div className="empty-state"><Clock3 size={23} /><strong>Inbox vide</strong><p>Les événements importants de votre compte apparaîtront ici.</p><button className="secondary-button" type="button" onClick={props.onRefresh}>Actualiser</button></div>}{props.state === 'idle' && notifications.length > 0 && <div className="notification-list">{notifications.map((notification) => <article className={`notification-card ${notification.seenAt ? 'seen' : 'unseen'}`} key={notification.id}><span className="notification-icon"><ShieldCheck size={17} /></span><div><strong>{notification.eventType === 'claim_reviewed' ? 'Claim examiné' : 'Événement Omni'}</strong><small>{notification.state === 'delivered' ? 'Vu' : 'Nouveau'} · {new Date(notification.createdAt).toLocaleString()}</small><p>La mise à jour de votre parcours est disponible dans Omni.</p></div>{!notification.seenAt && <button className="text-button" type="button" onClick={() => props.onSeen(notification.id)}>Marquer vu</button>}</article>)}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Inbox d’abord</strong><small>OSM ne reçoit pas ces événements. Le Web Push sera activé uniquement après consentement PWA.</small></span></div></section>;
+}
+
+function ReviewerSheet(props: { state: 'idle' | 'loading' | 'error'; error: string; queue: ReviewQueueResult | null; selected: ReviewQueueItem | null; onSelect: (item: ReviewQueueItem) => void; outcome: ReviewOutcome; setOutcome: (outcome: ReviewOutcome) => void; reason: string; setReason: (reason: string) => void; actionState: 'idle' | 'loading' | 'error' | 'success'; actionError: string; actionResult: ReviewClaimResult | null; onSubmit: (event: FormEvent) => void; onRefresh: () => void; onBack: () => void; onClose: () => void }) {
+  const requests = props.queue?.requests ?? [];
+  return <section className="omni-sheet context-sheet reviewer-sheet" role="dialog" aria-modal="true" aria-labelledby="reviewer-title"><div className="sheet-handle" /><div className="sheet-head"><div>{props.selected && <button className="back-button" type="button" onClick={props.onBack}><ArrowLeft size={17} /> File</button>}<span className="section-kicker">Équipe Omni · Review</span><h2 id="reviewer-title">Revue des claims</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">Chaque membre reviewer décide séparément. Un claim ne devient jamais certifié au clic du claimant.</p>{props.state === 'loading' && <div className="sheet-loading" role="status"><span className="spinner" /> Vérification de votre rôle reviewer…</div>}{props.state === 'error' && <div className="inline-error" role="alert">{props.error}<button className="text-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>}{props.state !== 'loading' && !props.queue?.authorized && <div className="notice-card"><strong>Rôle reviewer non ouvert</strong><p>Cette session peut être connectée sans pouvoir certifier une facilité. Aucun statut ne sera changé depuis cette surface.</p></div>}{props.state !== 'loading' && props.queue?.authorized && !props.selected && <>{requests.length === 0 ? <div className="empty-state"><CheckCircle2 size={23} /><strong>Aucun claim en attente</strong><p>Les claims soumis apparaîtront ici après la collecte de preuves.</p><button className="secondary-button" type="button" onClick={props.onRefresh}>Actualiser</button></div> : <div className="review-list">{requests.map((item) => <button className="seller-request-card" type="button" key={item.requestId} onClick={() => props.onSelect(item)}><span className="request-card-icon"><ShieldCheck size={18} /></span><span className="seller-request-copy"><strong>{item.facilityName}</strong><small>{item.state} · {item.facilityTrust}</small><small>Soumis {item.submittedAt ? new Date(item.submittedAt).toLocaleString() : 'en brouillon'}</small></span><ChevronRight size={17} /></button>)}</div>}</>}{props.selected && <form className="review-form" onSubmit={props.onSubmit}><div className="review-selected"><span className="section-kicker">Claim sélectionné</span><strong>{props.selected.facilityName}</strong><small>{props.selected.facilityTrust} · version {props.selected.version}</small></div><div className="seller-status-options" role="group" aria-label="Décision de review"><button type="button" className={props.outcome === 'certified' ? 'active' : ''} onClick={() => props.setOutcome('certified')}>Certifier</button><button type="button" className={props.outcome === 'needs_more_evidence' ? 'active' : ''} onClick={() => props.setOutcome('needs_more_evidence')}>Demander des preuves</button><button type="button" className={props.outcome === 'rejected' ? 'active' : ''} onClick={() => props.setOutcome('rejected')}>Rejeter</button></div><label className="seller-message-field">Motif obligatoire<textarea required minLength={3} maxLength={1000} rows={4} value={props.reason} onChange={(event) => props.setReason(event.target.value)} placeholder="Note de review auditée…" /></label>{props.actionError && <div className="inline-error" role="alert">{props.actionError}</div>}{props.actionState === 'success' && props.actionResult ? <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Décision enregistrée. Le compte claimant recevra un événement dans son inbox.</span></div> : <button className="primary-button" type="submit" disabled={props.actionState === 'loading'}>{props.actionState === 'loading' ? 'Enregistrement…' : 'Enregistrer la décision'} <ArrowRight size={16} /></button>}<p className="privacy-note">La certification lie le compte claimant à la facilité ; les autres outcomes ne confèrent aucune propriété.</p></form>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Validation par l’équipe</strong><small>Plusieurs reviewers peuvent utiliser cette file, mais chaque décision reste identifiée et auditée côté serveur.</small></span></div></section>;
+}
 
 function FieldPilotSheet(props: { user: SessionUser | null; state: 'idle' | 'loading' | 'error'; error: string; runs: OperatorRunsResult | null; name: string; setName: (value: string) => void; sourceRef: string; setSourceRef: (value: string) => void; category: string; setCategory: (value: string) => void; address: string; setAddress: (value: string) => void; latitude: string; setLatitude: (value: string) => void; longitude: string; setLongitude: (value: string) => void; result: PublicFacilityImportResult | null; onSubmit: (event: FormEvent) => void; onRefresh: () => void; onClose: () => void }) {
   const authorized = props.runs?.authorized === true;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, PurchaseIntentPolicyError, toProduct, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, FieldPilotPolicyError, PurchaseIntentPolicyError, toProduct, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -872,5 +872,43 @@ describe('field pilot registry Root seam', () => {
     expect(call.queries[0]).toContain('account_id is null');
     expect(call.queries[0]).toContain('v2_verification_requests');
     expect(call.queries[0]).toContain("state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')");
+  });
+});
+
+
+describe('review and inbox Root seam', () => {
+  it('returns a locked empty reviewer queue without an active reviewer role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listReviewQueue({ authUserId: 'auth-user-1' })).resolves.toEqual({ authorized: false, requests: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('rejects a review with an unbounded reason before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.reviewFacilityClaim({ authUserId: 'auth-reviewer', requestId: 'request-1', outcome: 'certified', reason: 'x', correlationId: 'corr-review-1' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('writes a review, updates the request and queues a redacted claimant notification', async () => {
+    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', outcome: 'certified', version: 2 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.reviewFacilityClaim({ authUserId: 'auth-reviewer', requestId: 'request-1', outcome: 'certified', reason: 'Evidence matches the facility.', correlationId: 'corr-review-1' })).resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', outcome: 'certified', state: 'certified', version: 2 });
+    expect(call.queries[0]).toContain("ar.role = 'reviewer'");
+    expect(call.queries[0]).toContain('v2_verification_reviews');
+    expect(call.queries[0]).toContain('v2_notification_events');
+    expect(call.queries[0]).toContain('claimant_account_id');
+  });
+
+  it('returns only the authenticated account inbox and marks its own event seen', async () => {
+    const inboxCall = stubSql([{ id: 'notification-1', event_type: 'claim_reviewed', entity_type: 'verification_request', entity_id: 'request-1', state: 'queued', created_at: '2026-08-24T00:00:00.000Z', seen_at: null }]);
+    const repository = createTrunkRepository(inboxCall.sql);
+    await expect(repository.listNotificationInbox({ authUserId: 'auth-claimant' })).resolves.toEqual({ notifications: [{ id: 'notification-1', eventType: 'claim_reviewed', entityType: 'verification_request', entityId: 'request-1', state: 'queued', createdAt: '2026-08-24T00:00:00.000Z', seenAt: null }] });
+    expect(inboxCall.queries[0]).toContain('recipient_account_id');
+    const seenCall = stubSql([{ id: 'notification-1' }]);
+    const seenRepository = createTrunkRepository(seenCall.sql);
+    await expect(seenRepository.markNotificationSeen({ authUserId: 'auth-claimant', notificationId: 'notification-1' })).resolves.toEqual({ notificationId: 'notification-1', seen: true });
+    expect(seenCall.queries[0]).toContain('seen_at = coalesce');
   });
 });

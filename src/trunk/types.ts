@@ -150,6 +150,46 @@ export interface ClaimDraftResult {
   created: boolean;
 }
 
+export interface ReviewQueueItem {
+  requestId: string;
+  facilityId: string;
+  facilityName: string;
+  facilityTrust: string;
+  state: string;
+  version: number;
+  createdAt: string;
+  submittedAt: string | null;
+}
+
+export interface ReviewQueueResult {
+  authorized: boolean;
+  requests: ReviewQueueItem[];
+}
+
+export type ReviewOutcome = 'certified' | 'rejected' | 'needs_more_evidence';
+
+export interface ReviewClaimResult {
+  requestId: string;
+  facilityId: string;
+  outcome: ReviewOutcome;
+  state: ReviewOutcome;
+  version: number;
+}
+
+export interface NotificationSummary {
+  id: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  state: string;
+  createdAt: string;
+  seenAt: string | null;
+}
+
+export interface NotificationInboxResult {
+  notifications: NotificationSummary[];
+}
+
 export interface ApiFailure {
   code: string;
   message: string;

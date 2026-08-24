@@ -460,3 +460,23 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @media (max-width: 520px) {
   .field-pilot-sheet { max-height: calc(100dvh - 74px); overflow-y: auto; }
 }
+
+
+.inbox-sheet, .reviewer-sheet { max-height: min(680px, calc(100dvh - 74px)); overflow-y: auto; }
+.notification-list, .review-list { display: grid; gap: 8px; margin-top: 15px; }
+.notification-card { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: 9px; padding: 11px; border: 1px solid #e2eee8; border-radius: 14px; background: #fbfdfb; }
+.notification-card.unseen { border-color: #f4c8b7; background: #fffaf7; }
+.notification-icon { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 10px; color: #1d6a56; background: #e9f7ef; }
+.notification-card strong, .notification-card small, .notification-card p { display: block; }
+.notification-card strong { color: var(--ink); font-size: 11px; }
+.notification-card small { margin-top: 3px; color: #95a9a1; font-size: 9px; }
+.notification-card p { margin: 6px 0 0; color: var(--ink-soft); font-size: 10px; line-height: 1.4; }
+.review-form { display: grid; gap: 13px; margin-top: 16px; }
+.review-selected { display: grid; gap: 4px; padding: 11px; border-radius: 13px; color: var(--ink); background: #f1f7f3; }
+.review-selected strong { font-size: 14px; }
+.review-selected small { color: #859a91; font-size: 10px; }
+.reviewer-sheet .seller-status-options { flex-wrap: wrap; }
+@media (max-width: 520px) {
+  .notification-card { grid-template-columns: auto 1fr; }
+  .notification-card .text-button { grid-column: 2; justify-self: start; }
+}

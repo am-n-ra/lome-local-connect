@@ -1,4 +1,4 @@
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, FacilityDetail, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, SearchOptions, SellerAvailabilityQueue } from './types';
+import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -156,4 +156,36 @@ export async function createFacilityClaimDraft(input: { facilityId: string; toke
     body: JSON.stringify({}),
   });
   return parse<ClaimDraftResult>(response);
+}
+
+export async function getReviewQueue(input: { token: string }): Promise<ApiResult<ReviewQueueResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=queue', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<ReviewQueueResult>(response);
+}
+
+export async function reviewFacilityClaim(input: { requestId: string; outcome: ReviewOutcome; reason: string; token: string }): Promise<ApiResult<ReviewClaimResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.requestId)}?action=review`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ outcome: input.outcome, reason: input.reason }),
+  });
+  return parse<ReviewClaimResult>(response);
+}
+
+export async function getNotificationInbox(input: { token: string }): Promise<ApiResult<NotificationInboxResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?inbox=1', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<NotificationInboxResult>(response);
+}
+
+export async function markNotificationSeen(input: { notificationId: string; token: string }): Promise<ApiResult<{ notificationId: string; seen: true }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.notificationId)}?action=notification-seen`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse<{ notificationId: string; seen: true }>(response);
 }

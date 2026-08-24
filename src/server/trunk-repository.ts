@@ -193,6 +193,37 @@ export interface ClaimDraftResult {
   created: boolean;
 }
 
+export type ReviewOutcome = 'certified' | 'rejected' | 'needs_more_evidence';
+
+export interface ReviewQueueItem {
+  requestId: string;
+  facilityId: string;
+  facilityName: string;
+  facilityTrust: string;
+  state: string;
+  version: number;
+  createdAt: string;
+  submittedAt: string | null;
+}
+
+export interface ReviewClaimResult {
+  requestId: string;
+  facilityId: string;
+  outcome: ReviewOutcome;
+  state: ReviewOutcome;
+  version: number;
+}
+
+export interface NotificationSummary {
+  id: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  state: string;
+  createdAt: string;
+  seenAt: string | null;
+}
+
 export class TransactionPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -361,6 +392,111 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The facility is unavailable for a claim or already claimed by another account.');
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: 'draft', version: Number(row.version), created: row.created === true };
+    },
+
+    async listReviewQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: ReviewQueueItem[] }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, requests: [] };
+      const rows = await retryDatabase(() => sql`
+        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, vr.state, vr.version, vr.created_at, vr.submitted_at
+        from v2_verification_requests vr
+        join v2_facilities f on f.id = vr.facility_id
+        where vr.state in ('submitted', 'admin_review')
+        order by vr.submitted_at nulls last, vr.created_at asc, vr.id asc
+        limit 100
+      `);
+      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString() })) };
+    },
+
+    async reviewFacilityClaim(input: { authUserId: string; requestId: string; outcome: ReviewOutcome; reason: string; correlationId: string }): Promise<ReviewClaimResult> {
+      if (!['certified', 'rejected', 'needs_more_evidence'].includes(input.outcome) || input.reason.trim().length < 3 || input.reason.trim().length > 1000) {
+        throw new FieldPilotPolicyError('A review outcome and a bounded reason are required.');
+      }
+      const rows = await retryDatabase(() => sql`
+        with reviewer as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        ), candidate as (
+          select vr.id, vr.facility_id, vr.claimant_account_id, vr.version
+          from v2_verification_requests vr
+          cross join reviewer
+          where vr.id = ${input.requestId}::uuid
+            and vr.state in ('submitted', 'admin_review')
+            and vr.claimant_account_id <> reviewer.id
+          limit 1
+        ), review_insert as (
+          insert into v2_verification_reviews (request_id, admin_account_id, outcome, reason)
+          select candidate.id, reviewer.id, ${input.outcome}, ${input.reason.trim()}
+          from candidate cross join reviewer
+          returning request_id
+        ), request_update as (
+          update v2_verification_requests vr
+          set state = ${input.outcome}, version = vr.version + 1, updated_at = now()
+          from candidate
+          join review_insert on review_insert.request_id = candidate.id
+          where vr.id = candidate.id
+          returning vr.id, vr.facility_id, vr.version
+        ), facility_update as (
+          update v2_facilities f
+          set trust_state = case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' else ${input.outcome} end,
+              account_id = case when ${input.outcome} = 'certified' then candidate.claimant_account_id else f.account_id end,
+              updated_at = now()
+          from candidate join request_update on request_update.facility_id = candidate.facility_id
+          where f.id = candidate.facility_id
+          returning f.id
+        ), notification_insert as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select candidate.claimant_account_id, 'claim_reviewed', 'verification_request', request_update.id::text, request_update.id::text || ':' || request_update.version::text || ':' || ${input.outcome}, jsonb_build_object('outcome', ${input.outcome}), ${input.correlationId}
+          from candidate join request_update on request_update.id = candidate.id
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id
+        )
+        select request_update.id as request_id, request_update.facility_id, ${input.outcome} as outcome, request_update.version
+        from request_update join facility_update on facility_update.id = request_update.facility_id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The claim is not reviewable by this reviewer or is no longer pending.');
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, version: Number(row.version) };
+    },
+
+    async listNotificationInbox(input: { authUserId: string }): Promise<{ notifications: NotificationSummary[] }> {
+      const rows = await retryDatabase(() => sql`
+        select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at
+        from v2_notification_events e
+        join v2_accounts a on a.id = e.recipient_account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        order by e.created_at desc, e.id desc
+        limit 100
+      `);
+      return { notifications: (rows as Record<string, unknown>[]).map((row) => ({ id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), state: String(row.state), createdAt: new Date(String(row.created_at)).toISOString(), seenAt: row.seen_at === null ? null : new Date(String(row.seen_at)).toISOString() })) };
+    },
+
+    async markNotificationSeen(input: { authUserId: string; notificationId: string }): Promise<{ notificationId: string; seen: true }> {
+      const rows = await retryDatabase(() => sql`
+        update v2_notification_events e
+        set seen_at = coalesce(e.seen_at, now()), state = case when e.state = 'queued' then 'delivered' else e.state end
+        from v2_accounts a
+        where e.id = ${input.notificationId}::uuid
+          and a.id = e.recipient_account_id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning e.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The notification is not available to this account.');
+      return { notificationId: String(row.id), seen: true };
     },
 
     async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {

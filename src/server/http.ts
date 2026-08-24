@@ -120,13 +120,33 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'queue') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni reviewer to view the review queue.'));
+        return true;
+      }
+      const result = await repository.listReviewQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('inbox') === '1') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your Omni inbox.'));
+        return true;
+      }
+      const result = await repository.listNotificationInbox({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create or open your Omni account before starting a facility claim.'));
         return true;
       }
-      const facilityId = pathname.slice('/api/v2/facilities/'.length, -'/claims'.length);
+      const facilityId = pathname.slice('/api/v2/facilities/'.length);
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid facility.'));
@@ -134,6 +154,41 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.createClaimDraft({ authUserId, facilityId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'review') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni reviewer before reviewing a claim.'));
+        return true;
+      }
+      const requestId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const input = await parseRequestBody(req);
+      const outcome = input.outcome === 'certified' || input.outcome === 'rejected' || input.outcome === 'needs_more_evidence' ? input.outcome : '';
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      if (!uuidPattern.test(requestId) || !outcome || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid claim, review outcome and bounded reason.'));
+        return true;
+      }
+      const result = await repository.reviewFacilityClaim({ authUserId, requestId, outcome, reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'notification-seen') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to update your Omni inbox.'));
+        return true;
+      }
+      const notificationId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(notificationId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid notification.'));
+        return true;
+      }
+      const result = await repository.markNotificationSeen({ authUserId, notificationId });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities') {
