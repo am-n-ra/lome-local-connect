@@ -77,3 +77,9 @@ Because the browser movement helper did not emit a usable overlay transition, a 
 On READY `375e4f2`, the authenticated search `Marche de Hanoukope` returned one public result and the contextual sheet rendered `Résultats pour « Marche de Hanoukope »`, `Marche de Hanoukope`, `Market · Lieu local` and `Voir le lieu`. The map remained mounted behind the sheet, the public cluster remained visible and the search dock stayed in its own band above the sheet. The screenshot after submit shows the globe framed over the Africa region while the result sheet is present: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-48-19_9575.webp`.
 
 The browser click returned after the asynchronous path had already settled, so a distinct loading/reveal-stage capture is still required.
+
+## `5bff6ef` replay and identical-submit diagnosis
+
+The canonical replay after READY deployment `5bff6ef` mounted the same MapLibre globe, public cluster count `4`, zoom/location controls, J5 and separated search dock at `1024×880`; screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-50-52_1574.webp`.
+
+A read-only `requestSubmit()` of the already settled query `Marche de Hanoukope` was sampled every 250 ms for 6 seconds. The sheet correctly entered `nearby-state-loading` with `Recherche de « Marche de Hanoukope »…`, but the request never settled; the map had already moved to `zoom="1.05"`, `centerLng="1.2124"`, one projected public pin and no cluster. The cause was identified as `beginSearch` setting `mapState="loading"` while `facilityQueryKeyRef` still held the identical global-search key, so the effect deduped the new request and never returned to ready. This led to commit `5bff6ef`, which clears the query key before both `beginSearch` and `applyOptions`.

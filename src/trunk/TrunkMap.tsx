@@ -357,7 +357,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     map.on('touchstart', () => pauseMotion());
     map.on('wheel', () => pauseMotion());
     map.on('dragstart', () => pauseMotion());
-    map.on('zoomstart', () => pauseMotion());
+    map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion(); });
     map.on('move', scheduleScreenPins);
     map.on('moveend', () => {
       setCenterLongitude(map.getCenter().lng);
@@ -365,8 +365,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       scheduleScreenPins();
       if (cameraMode.current === 'resting_globe' && !pointerInside.current) scheduleSettledResume();
     });
-    map.on('dragend', () => { rotating.current = false; cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); emitBounds(); scheduleScreenPins(); });
-    map.on('zoomend', () => { rotating.current = false; cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
+    map.on('dragend', () => { rotating.current = false; if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') { cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); } emitBounds(); scheduleScreenPins(); });
+    map.on('zoomend', () => { rotating.current = false; if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') { cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); } setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
     map.on('error', () => {
       if (fallbackUsed.current || initialStyleReady.current) return;
       fallbackUsed.current = true;
