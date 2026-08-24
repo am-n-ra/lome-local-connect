@@ -205,7 +205,7 @@ export function TrunkApp() {
       }
     });
     return () => { active = false; };
-  }, [appliedOptions, committedQuery]);
+  }, [appliedOptions, committedQuery, searchRevealRevision]);
 
   useEffect(() => {
     if (committedQuery.trim()) return;
@@ -235,7 +235,7 @@ export function TrunkApp() {
       }
     });
     return () => { active = false; };
-  }, [appliedOptions, bounds, committedQuery]);
+  }, [appliedOptions, bounds, committedQuery, searchRevealRevision]);
 
   const openAuth = (mode: AuthMode = 'sign-in', returnTo: AuthReturn = 'none') => {
     setAuthMode(mode);
