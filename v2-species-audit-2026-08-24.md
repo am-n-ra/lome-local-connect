@@ -1,7 +1,7 @@
 # Omni V2 — Species audit, 2026-08-24
 
 **Structural path:** product → Species → map/search composition → Buyer/Seller/Reviewer surfaces
-**Status:** `observed / diagnosis in progress`
+**Status:** `partial / bounded authenticated proof recorded; Species gate open`
 **Primary authority:** `v2-species.md` and the approved maquette contract
 
 ## User-reported symptoms
@@ -36,7 +36,7 @@ The smallest corrective slice should make idle rotation visual-only and interrup
 
 ## Evidence class and gate
 
-The current evidence is `observed / user-reported` plus `code-compared` against `origin/main`. It is not a Species acceptance. No data mutation, role change, OSM import, payment or new claim action is authorized by this audit. Global Root remains `review`.
+The current evidence is `bounded authenticated browser proof` plus `code-compared` against `origin/main`. It is not a full Species acceptance. No data mutation, role change, OSM import, payment or new claim action is authorized by this audit. Global Root remains `review`.
 
 ## Canonical post-deployment proof
 
@@ -74,8 +74,30 @@ The live request log explains the remaining empty-result behavior. The authentic
 
 ## READY deployment reload proof
 
-After the GitHub push, Vercel produced a READY production deployment for commit `add616b` (exactly 12 functions). On the canonical URL at 390×844, the authenticated session reload shows the dominant MapLibre globe/canvas, four public facilities, enabled zoom and location controls, the compact Acheter/Vendre switch, J5 account owner, and the separated bottom search dock. The globe and canvas persist in the viewport; no mutation was performed.
+After the GitHub push, Vercel produced a READY production deployment for commit `add616b` (exactly 12 functions). On the canonical URL in the authenticated 891×765 Sandbox viewport, the session reload shows the dominant MapLibre globe/canvas, four public facilities, enabled zoom and location controls, the compact Acheter/Vendre switch, J5 account owner, and the separated bottom search dock. The globe and canvas persist in the viewport; no mutation was performed.
 
 The same query was replayed from the authenticated Buyer dock. Immediately after submit, the read-only contextual sheet entered `nearby-state-loading` with `Recherche de « Marche de Hanoukope »…`; the MapLibre globe remained mounted, the search dock remained above the sheet with visible separation, and the sheet exposed only collapse/`Voir tout` controls. This confirms the intended intermediate animation/state is now visible; no facility or business action was opened.
 
 After waiting, the live request log contains the expected query-only request `/api/v2/public/facilities?q=Marche+de+Hanoukope` with no bounds, while `.nearby-sheet` is still `nearby-state-loading` and no `Ouvrir Marche de Hanoukope` action exists. The map stage remains mounted at zoom `1.35` with rotation paused. The viewport-scope mismatch is therefore removed from the request, but the promise/result path is still unresolved in the browser and requires direct read-only response inspection.
+
+## Global-search replay on `6e9c335`
+
+After deployment READY, the same authenticated query was replayed. The extracted DOM now exposes the expected public result immediately after submit: `PUBLIC — Marche de Hanoukope — Market · Lieu local — Voir le lieu`. The map canvas remains mounted and the dock/sheet remain separated. The screenshot renderer still showed the nearby body copy `Recherche de…` at that instant, so the next check must reconcile DOM and visual paint rather than claim full visual acceptance from a single frame. No facility was opened and no business mutation occurred.
+
+A subsequent DOM inspection reported `nearby-state-ready` with one `Ouvrir Marche de Hanoukope` action, and the next browser frame visibly showed the public card replacing the loading copy. The globe/canvas remains persistent, the matching pin is visible, zoom remains enabled, and the search dock sits above the rounded result sheet with a measured visual gap in the authenticated 891×765 Sandbox viewport. This closes the authenticated Buyer search lifecycle proof for the bounded public facility query: loading → ready. The facility was not opened and no business mutation occurred.
+
+## Read-only Seller surface proof
+
+From the authenticated J5-owned navigation, the visible `Vendre` mode opened the Seller sheet without an Auth loop. In the authenticated 891×765 Sandbox viewport the MapLibre canvas remains behind a rounded contextual surface; the sheet has a clear `Espace vendeur` heading, `Accès vendeur à vérifier` lock state, `Demandes` and `Catalogue` tabs, a `Retour à acheter` return path, and the safety copy `Handoff encore verrouillé`. No seller profile was activated, no demo rebind was used, and no seller response or other business mutation occurred. The request tab was still resolving at the instant of capture; a settled locked-state check remains to be recorded.
+
+After settling, the Seller sheet reports `Contexte vendeur autorisé`, `Demandes · 2`, two read-only `Root proof demo product` request rows, an `Actualiser` affordance, `Catalogue`, and the explicit `Handoff encore verrouillé` safety boundary. The map remains mounted behind the sheet at zoom `1.35`; no request row, response, catalogue action, rebind, or mutation was triggered.
+
+The J5 account surface remains the sole navigation owner. Returning from the Seller sheet via J5 restored the Buyer result composition, and reopening J5 exposed the expected `Revue des claims` menu item. An indexed menu click did not persist and a coordinate retry closed the menu without opening a review surface; this was a navigation-tool interaction issue only, with no data or role mutation.
+
+The J5 menu was reopened and the exact `Revue des claims` item was triggered through the rendered DOM only to avoid another coordinate selection mismatch. The call was read-only and did not touch a claim, role, or reviewer decision.
+
+The Reviewer/Admin surface is now visually proven in the authenticated 891×765 Sandbox viewport. Its hierarchy reads `Équipe Omni · Review`, `Revue des claims`, `Validation humaine, trace par trace`, `Rôle reviewer non ouvert`, and `Validation par l’équipe`; it explicitly states that no facility status will be changed from this surface. The MapLibre canvas and public pin remain visible behind the rounded review sheet, the close action is available, and the DOM exposes no reviewer form inputs or decision controls. This is read-only visual evidence only; no role assignment, claim decision or other mutation occurred.
+
+The Reviewer surface returned to the Buyer result composition through J5, and the same account menu reopened with `Inbox Omni` available. This confirms the account/navigation owner remains shared across the map-first Buyer, Seller and Reviewer surfaces; no role, claim, request or catalogue state was changed.
+
+The read-only Inbox path opened successfully after the menu selection settled. At the available Sandbox viewport, `Compte J5 — Inbox Omni` shows the truthful `Inbox vide` state, `Actualiser`, and the boundary copy that claim/account events appear here first while PWA Web Push remains opt-in and OSM does not receive these events. The map canvas and public pin remain visible behind the rounded sheet; no notification was marked, sent, or mutated.

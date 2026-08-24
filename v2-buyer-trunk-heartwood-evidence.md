@@ -38,6 +38,12 @@
 
 Buyer Trunk is **implemented and materially evidenced but not fully Heartwood-proven**. The map-first public path, visible fallback clusters/pins, official Auth-backed availability write, corrected buyer-owned response read, pending/no-response state, locked pre-intent boundary, real bounded comparison card and navigation hardening are in place. The honest remaining blockers are full keyboard/reduced-motion/location/recovery/concurrency checks and broader responsive proof across Seller states. Global Root remains `review`; QR, payment, camera, transaction and production-readiness claims remain closed.
 
+## 2026-08-24 — authenticated Buyer search settlement
+
+On READY deployment `dpl_B1HfPNbXJaiyq4WEtj7JNWyQW3xD` for commit `6e9c335`, the authenticated Buyer query `Marche de Hanoukope` visibly progressed from `Recherche de…` to `nearby-state-ready` with one accessible public result. The client now sends text queries through a stable query-only global request rather than the rotating camera bounds; a direct read-only endpoint check returned HTTP 200 with one safe public-name match. The MapLibre canvas, public pin, zoom control, J5 owner and separated result surface remained mounted in the available 891×765 Sandbox viewport. No facility was opened and no business mutation occurred.
+
+This closes the bounded Buyer loading→ready search-state proof, not the wider Heartwood gate. Empty/error/retry/recovery/facility-focus, full compact-width authenticated layout, keyboard/focus, concurrency/interrupted-session, exact location success, remote tile reliability and production-readiness proof remain open.
+
 ## Latest canonical arrival observation
 
 After commit `7a24142`, the canonical URL rendered the Buyer arrival surface with `KH` account control, search dock, result sheet and facility cards. The browser reported `Carte en mode de secours`, confirming the remote-map failure is surfaced honestly rather than presented as an active basemap. The visible control inventory included `Zoom avant` and `Utiliser ma localisation`; zoom-out remains intentionally disclosed after the first zoom-in action. No new write was performed during this observation.
