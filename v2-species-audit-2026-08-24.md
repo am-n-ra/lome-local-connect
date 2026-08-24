@@ -55,3 +55,11 @@ The recovered authenticated Buyer session returned to the idle map after closing
 ## Authenticated Buyer search proof — current deployment
 
 The authenticated Buyer search was submitted for `Marche de Hanoukope` from the bottom dock. The immediate browser state correctly mounted a contextual nearby sheet with query-aware loading copy: `Recherche de « Marche de Hanoukope »…`, while keeping the map and dock visible with separate geometry. After the request settled, the public result was present as an accessible `Ouvrir Marche de Hanoukope` facility action and the globe/pin presentation changed appropriately. However, the extracted text and screenshot still showed the nearby sheet’s loading copy instead of a result card, indicating a stale loading/render synchronization defect despite the result action being present in the DOM. This is a concrete remaining Species bug to fix before acceptance; no business mutation occurred.
+
+The READY search-fix deployment `dpl_9UJqdAERp3A9Rv2zMSnjNXS11WJJ` loaded successfully in the Manus computer browser. The existing authenticated session is present in the UI, the map and J5 controls are mounted, and the browser has no pending mutation from the reload. The next action is the same bounded Buyer query proof.
+
+On the READY search-fix deployment, the authenticated Buyer submit action again mounted the nearby sheet with the explicit query-aware loading copy and preserved the map/dock geometry. The next settled-state observation will determine whether the request-key guard now replaces this loading view with the result card; no business mutation occurred.
+
+## Follow-up authenticated search diagnosis
+
+On deployment `dpl_9UJqdAERp3A9Rv2zMSnjNXS11WJJ`, the authenticated search still reproduces a concrete synchronization defect. The live DOM contains one public facility pin and the nearby result controls, but `.nearby-sheet` remains `nearby-sheet nearby-state-loading` with `Recherche de « Marche de Hanoukope »…`. The map stage reports `data-rotation="paused"`, `data-zoom="1.35"` and a changed center longitude, so opening the contextual sheet or another camera event is likely causing a bounds-driven request after the query result. The previous request-key guard alone did not close this path; further code diagnosis is required. No business mutation occurred.

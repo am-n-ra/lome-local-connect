@@ -96,7 +96,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       window.clearTimeout(rotationResumeTimer.current);
       rotationResumeTimer.current = null;
     }
-    mapRef.current?.stop();
+    const map = mapRef.current;
+    if (map?.isMoving()) map.stop();
     setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused');
   };
 
