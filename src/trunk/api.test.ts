@@ -23,6 +23,17 @@ describe('listPublicFacilities search contract', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/public/facilities?', { headers: { Accept: 'application/json' } });
   });
 
+  it('serializes a text query without viewport bounds for global search', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listPublicFacilities(undefined, 'Marche de Hanoukope');
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?q=Marche+de+Hanoukope',
+      { headers: { Accept: 'application/json' } },
+    );
+  });
+
   it('reads buyer-owned availability responses with the bearer token', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { requestId: 'request-1', responses: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
 

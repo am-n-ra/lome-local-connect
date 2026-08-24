@@ -180,19 +180,43 @@ export function TrunkApp() {
   }, []);
 
   useEffect(() => {
-    const hasSearchQuery = committedQuery.trim().length > 0;
-    const requestBounds = hasSearchQuery ? undefined : bounds;
-    if (!requestBounds && !hasSearchQuery) {
-      setMapState('loading');
-      return;
-    }
-    const boundsKey = requestBounds ? requestBounds.map((value) => value.toFixed(5)).join(',') : 'global-search';
-    const requestKey = `${boundsKey}|${committedQuery}|${JSON.stringify(appliedOptions)}`;
+    if (!committedQuery.trim()) return;
+    const requestKey = `global-search|${committedQuery}|${JSON.stringify(appliedOptions)}`;
     if (facilityQueryKeyRef.current === requestKey) return;
     facilityQueryKeyRef.current = requestKey;
     let active = true;
     setMapState('loading');
-    listPublicFacilities(requestBounds, committedQuery || undefined, appliedOptions).then((result) => {
+    listPublicFacilities(undefined, committedQuery, appliedOptions).then((result) => {
+      if (!active) return;
+      if (result.ok) {
+        setFacilities(result.data ?? []);
+        setMapState(result.data?.length ? 'ready' : 'empty');
+        setError('');
+      } else {
+        setMapState('error');
+        setError(result.error?.message ?? 'La découverte publique est temporairement indisponible.');
+      }
+    }).catch(() => {
+      if (active) {
+        setMapState('error');
+        setError('La découverte publique est temporairement indisponible.');
+      }
+    });
+    return () => { active = false; };
+  }, [appliedOptions, committedQuery]);
+
+  useEffect(() => {
+    if (committedQuery.trim()) return;
+    if (!bounds) {
+      setMapState('loading');
+      return;
+    }
+    const requestKey = `${bounds.map((value) => value.toFixed(5)).join(',')}|nearby|${JSON.stringify(appliedOptions)}`;
+    if (facilityQueryKeyRef.current === requestKey) return;
+    facilityQueryKeyRef.current = requestKey;
+    let active = true;
+    setMapState('loading');
+    listPublicFacilities(bounds, undefined, appliedOptions).then((result) => {
       if (!active) return;
       if (result.ok) {
         setFacilities(result.data ?? []);
