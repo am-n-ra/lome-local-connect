@@ -82,25 +82,7 @@ create table if not exists v2_notification_deliveries (
 create index if not exists v2_notification_deliveries_queue_idx
   on v2_notification_deliveries(state, next_attempt_at, created_at);
 
--- Keep notifications private to their recipient and prevent direct deletion of event history.
-create or replace function public.v2_reject_notification_event_delete()
-returns trigger
-language plpgsql
-as $$
-begin
-  raise exception 'v2 notification events are append-only' using errcode = '55000';
-end;
-$$;
-
-do $$
-begin
-  if not exists (
-    select 1 from pg_trigger
-    where tgname = 'v2_notification_events_append_only_guard'
-      and tgrelid = 'public.v2_notification_events'::regclass
-  ) then
-    create trigger v2_notification_events_append_only_guard
-      before delete on public.v2_notification_events
-      for each row execute function public.v2_reject_notification_event_delete();
-  end if;
-end $$;
+-- Notification events remain recipient-scoped through the API contract.
+-- The append-only trigger is intentionally deferred to a separate compatible
+-- migration because the Neon migration preparer rejects this PL/pgSQL block.
+-- No notification event deletion endpoint is exposed by this slice.

@@ -1,4 +1,4 @@
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, FacilityDetail, PublicFacility, SearchOptions, SellerAvailabilityQueue } from './types';
+import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, FacilityDetail, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, SearchOptions, SellerAvailabilityQueue } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -120,4 +120,40 @@ export async function requestSellerAvailabilityResponse(input: {
     }),
   });
   return parse(response);
+}
+
+
+export async function importPublicFacility(input: {
+  provider: 'openstreetmap';
+  attribution: string;
+  sourceRef: string;
+  name: string;
+  category: string | null;
+  latitude: number;
+  longitude: number;
+  address: string | null;
+  token: string;
+}): Promise<ApiResult<PublicFacilityImportResult>> {
+  const response = await fetchWithRecovery('/api/v2/operator/public-imports', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ provider: input.provider, attribution: input.attribution, sourceRef: input.sourceRef, name: input.name, category: input.category, latitude: input.latitude, longitude: input.longitude, address: input.address }),
+  });
+  return parse<PublicFacilityImportResult>(response);
+}
+
+export async function getOperatorRuns(input: { token: string }): Promise<ApiResult<OperatorRunsResult>> {
+  const response = await fetchWithRecovery('/api/v2/operator/runs', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<OperatorRunsResult>(response);
+}
+
+export async function createFacilityClaimDraft(input: { facilityId: string; token: string }): Promise<ApiResult<ClaimDraftResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.facilityId)}/claims`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse<ClaimDraftResult>(response);
 }

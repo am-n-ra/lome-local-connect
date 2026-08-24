@@ -447,3 +447,16 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     padding: 12px;
   }
 }
+
+
+/* Ring A field-pilot surfaces inherit the Species sheet and remain map-contextual. */
+.field-pilot-form { display: grid; gap: 10px; margin-top: 14px; }
+.field-pilot-form label { display: grid; gap: 6px; color: var(--ink-soft); font-size: 10px; font-weight: 800; }
+.field-pilot-form input { width: 100%; min-height: 41px; border: 1px solid #dfeae4; border-radius: 11px; padding: 0 10px; color: var(--ink); background: #fbfdfb; outline-color: var(--coral); font: inherit; font-size: 12px; }
+.field-pilot-form input::placeholder { color: #a9b8b2; }
+.field-pilot-sheet .seller-list-heading { margin-top: 18px; }
+.claim-success { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 11px; border-radius: 12px; color: #1f6b57; background: #e9f7ef; font-size: 10px; line-height: 1.45; }
+.claim-success svg { flex: 0 0 auto; margin-top: 1px; }
+@media (max-width: 520px) {
+  .field-pilot-sheet { max-height: calc(100dvh - 74px); overflow-y: auto; }
+}

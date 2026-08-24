@@ -15,7 +15,7 @@ A member of the Omni team must be able to register a bounded facility record in 
 | Fact | Authority |
 |---|---|
 | Public OSM presence/name/coordinates | Reviewed, cached Omni public-source record with provider attribution and freshness |
-| Omni facility identity | `v2_facilities` plus source dedupe reference |
+| Omni facility identity | `v2_facilities` plus source dedupe reference; a public imported facility may have no `account_id` until an approved claim |
 | Claim ownership request | `v2_verification_requests` plus claimant Auth-linked account |
 | Evidence | `v2_verification_evidence`, private object reference and checksum/metadata |
 | Review outcome | `v2_verification_reviews` by an authorized reviewer; facility status history/audit |
@@ -32,7 +32,7 @@ The existing V2 schema already has the base `v2_facilities`, `v2_facility_slots`
 - `v2_notification_deliveries`: event, channel (`in_app`, `web_push`), status, attempt count, next attempt, provider reference and last error class; no raw subscription secret in evidence/logs.
 - `v2_operator_runs`: bounded import/review/recovery owner, geography/bounds, source, outcome, count, error class and evidence reference, if not already present in the deployed branch.
 
-The migration must be additive, idempotent and accompanied by forward checks, invariant checks, recovery steps and a statement of preserved Auth/legacy records. It must not be applied to the production database until the Root gate is explicitly accepted.
+The migrations must be additive, idempotent and accompanied by forward checks, invariant checks, recovery steps and a statement of preserved Auth/legacy records. The first migration adds roles, status history, operator runs and notification storage; the follow-up migration allows public source facilities to remain unowned and permits only one active claim per facility. They must not be applied to the production database until the Root gate is explicitly accepted.
 
 ## 4. API contract
 
@@ -59,7 +59,7 @@ The API must reject missing/invalid bounds, unbounded imports, duplicate source 
 
 `unclaimed → verification_draft → verification_submitted → admin_review → certified | unconfirmed | rejected`.
 
-An operator may create a public source-backed `unclaimed` record. A claimant may create a draft. Only a reviewer may produce an outcome. Suspension is a separate audited operation. No claim click, catalogue action, sale count or paid plan can directly create `certified` or `confirmed`.
+An operator may create a public source-backed `unclaimed` record without assigning ownership to the operator. A claimant may create a draft. Only a reviewer may produce an outcome; the approved outcome binds the facility to the claimant through a separate audited ownership transition. Suspension is a separate audited operation. No claim click, catalogue action, sale count or paid plan can directly create `certified` or `confirmed`.
 
 ### Verification request
 

@@ -118,6 +118,38 @@ export interface SellerAvailabilityQueue {
   requests: SellerAvailabilityRequest[];
 }
 
+export interface OperatorRunSummary {
+  id: string;
+  operation: string;
+  provider: string | null;
+  outcome: string;
+  resultCount: number;
+  errorClass: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface OperatorRunsResult {
+  authorized: boolean;
+  runs: OperatorRunSummary[];
+}
+
+export interface PublicFacilityImportResult {
+  runId: string;
+  facilityId: string;
+  sourceRef: string;
+  created: boolean;
+  trust: 'unclaimed';
+}
+
+export interface ClaimDraftResult {
+  requestId: string;
+  facilityId: string;
+  state: 'draft';
+  version: number;
+  created: boolean;
+}
+
 export interface ApiFailure {
   code: string;
   message: string;

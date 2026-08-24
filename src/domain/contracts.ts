@@ -1,4 +1,4 @@
-export type AccountRole = 'buyer' | 'seller' | 'admin';
+export type AccountRole = 'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer';
 
 export type FacilityTrust =
   | 'unclaimed'
@@ -62,7 +62,8 @@ export type ErrorCode =
   | 'CONFLICT'
   | 'EXPIRED'
   | 'REPLAYED'
-  | 'INTERNAL_RECOVERABLE';
+  | 'INTERNAL_RECOVERABLE'
+  | 'ROLE_REQUIRED';
 
 export interface ApiError {
   code: ErrorCode;

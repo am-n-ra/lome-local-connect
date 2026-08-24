@@ -146,6 +146,53 @@ export class SellerAuthorizationPolicyError extends Error {
   }
 }
 
+export class FieldPilotPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'FieldPilotPolicyError';
+  }
+}
+
+export interface PublicFacilityImportInput {
+  authUserId: string;
+  provider: 'openstreetmap';
+  attribution: string;
+  sourceRef: string;
+  name: string;
+  category: string | null;
+  latitude: number;
+  longitude: number;
+  address: string | null;
+  correlationId: string;
+}
+
+export interface PublicFacilityImportResult {
+  runId: string;
+  facilityId: string;
+  sourceRef: string;
+  created: boolean;
+  trust: 'unclaimed';
+}
+
+export interface OperatorRunSummary {
+  id: string;
+  operation: string;
+  provider: string | null;
+  outcome: string;
+  resultCount: number;
+  errorClass: string | null;
+  startedAt: string;
+  finishedAt: string | null;
+}
+
+export interface ClaimDraftResult {
+  requestId: string;
+  facilityId: string;
+  state: 'draft';
+  version: number;
+  created: boolean;
+}
+
 export class TransactionPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -174,6 +221,148 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
+    async createPublicFacilityImport(input: PublicFacilityImportInput): Promise<PublicFacilityImportResult> {
+      if (input.provider !== 'openstreetmap' || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
+        throw new FieldPilotPolicyError('The public facility import payload is invalid.');
+      }
+      const actorRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and ar.role = 'operator'
+          and ar.status = 'active'
+        limit 1
+      `);
+      const actor = (actorRows as Record<string, unknown>[])[0];
+      if (!actor) throw new FieldPilotPolicyError('An active Omni operator role is required for public imports.');
+
+      let sourceRows = await retryDatabase(() => sql`
+        select id from v2_public_sources where provider = ${input.provider} limit 1
+      `);
+      if (!(sourceRows as Record<string, unknown>[])[0]) {
+        sourceRows = await retryDatabase(() => sql`
+          insert into v2_public_sources (provider, attribution)
+          values (${input.provider}, ${input.attribution})
+          returning id
+        `);
+      }
+      const source = (sourceRows as Record<string, unknown>[])[0];
+      if (!source) throw new FieldPilotPolicyError('The public source could not be prepared.');
+
+      const rows = await retryDatabase(() => sql`
+        with existing as (
+          select f.id, false as created
+          from v2_facilities f
+          join v2_facility_source_refs fr on fr.facility_id = f.id
+          where fr.source_id = ${String(source.id)}::uuid
+            and fr.source_ref = ${input.sourceRef.trim()}
+          limit 1
+        ), inserted as (
+          insert into v2_facilities
+            (account_id, source_kind, source_name, source_ref, name, category, latitude, longitude, address, trust_state)
+          select null, 'public_import', ${input.provider}, ${input.sourceRef.trim()}, ${input.name.trim()}, ${input.category?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.address?.trim() || null}, 'unclaimed'
+          where not exists (select 1 from existing)
+          returning id, true as created
+        ), selected as (
+          select id, created from inserted
+          union all
+          select id, created from existing
+          limit 1
+        ), referenced as (
+          insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
+          select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null })}::jsonb
+          from selected
+          on conflict (source_id, source_ref) do update set raw_metadata = excluded.raw_metadata, last_seen_at = now()
+          returning facility_id
+        ), run as (
+          insert into v2_operator_runs
+            (operator_account_id, operation, provider, west, south, east, north, outcome, result_count, correlation_id, finished_at)
+          select ${String(actor.id)}::uuid, 'public_import', ${input.provider}, ${input.longitude}, ${input.latitude}, ${input.longitude}, ${input.latitude}, 'success', 1, ${input.correlationId}, now()
+          returning id
+        )
+        select run.id as run_id, selected.id as facility_id, selected.created
+        from run cross join selected
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The public facility import did not produce a recoverable result.');
+      return { runId: String(row.run_id), facilityId: String(row.facility_id), sourceRef: input.sourceRef.trim(), created: row.created === true, trust: 'unclaimed' };
+    },
+
+    async listOperatorRuns(input: { authUserId: string }): Promise<{ authorized: boolean; runs: OperatorRunSummary[] }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, runs: [] };
+      const rows = await retryDatabase(() => sql`
+        select r.id, r.operation, r.provider, r.outcome, r.result_count, r.error_class, r.started_at, r.finished_at
+        from v2_operator_runs r
+        join v2_accounts a on a.id = r.operator_account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        order by r.started_at desc, r.id desc
+        limit 100
+      `);
+      return { authorized: true, runs: (rows as Record<string, unknown>[]).map((row) => ({ id: String(row.id), operation: String(row.operation), provider: row.provider === null ? null : String(row.provider), outcome: String(row.outcome), resultCount: Number(row.result_count), errorClass: row.error_class === null ? null : String(row.error_class), startedAt: new Date(String(row.started_at)).toISOString(), finishedAt: row.finished_at === null ? null : new Date(String(row.finished_at)).toISOString() })) };
+    },
+
+    async createClaimDraft(input: { authUserId: string; facilityId: string }): Promise<ClaimDraftResult> {
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          values (${input.authUserId}, 'seller_ready')
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ), actor as (
+          select id from account
+          union all
+          select id from v2_accounts where auth_user_id = ${input.authUserId} limit 1
+        ), facility as (
+          select id from v2_facilities
+          where id = ${input.facilityId}::uuid
+            and account_id is null
+            and trust_state in ('unclaimed', 'verification_draft', 'needs_more_evidence')
+          limit 1
+        ), existing as (
+          select vr.id, vr.facility_id, vr.version, false as created
+          from v2_verification_requests vr
+          join actor on actor.id = vr.claimant_account_id
+          where vr.facility_id = ${input.facilityId}::uuid
+            and vr.state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')
+          limit 1
+        ), inserted as (
+          insert into v2_verification_requests (facility_id, claimant_account_id, state, version)
+          select facility.id, actor.id, 'draft', 1
+          from facility cross join actor
+          where not exists (select 1 from existing)
+          returning id, facility_id, version, true as created
+        ), selected as (
+          select id, facility_id, version, created from inserted
+          union all
+          select id, facility_id, version, created from existing
+          limit 1
+        ), marked as (
+          update v2_facilities f
+          set trust_state = 'verification_draft', updated_at = now()
+          from selected
+          where f.id = selected.facility_id
+            and selected.created
+          returning f.id
+        )
+        select selected.id as request_id, selected.facility_id, selected.version, selected.created
+        from selected
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The facility is unavailable for a claim or already claimed by another account.');
+      return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: 'draft', version: Number(row.version), created: row.created === true };
+    },
+
     async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];

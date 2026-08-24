@@ -825,3 +825,52 @@ describe('QR persistence Root seam', () => {
     });
   });
 });
+
+
+describe('field pilot registry Root seam', () => {
+  it('rejects a public import without an active operator role before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-user-1', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market', category: 'Market', latitude: 6.13, longitude: 1.22, address: null, correlationId: 'corr-import-1',
+    })).rejects.toThrow('active Omni operator role');
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('imports a public source facility without assigning it to the operator account', async () => {
+    const queries: string[] = [];
+    let callNumber = 0;
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      void values;
+      callNumber += 1;
+      return Promise.resolve(callNumber === 1 ? [{ id: 'account-1' }] : callNumber === 2 ? [{ id: 'source-1' }] : [{ run_id: 'run-1', facility_id: 'facility-1', created: true }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-operator', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market', category: 'Market', latitude: 6.13, longitude: 1.22, address: 'Lomé', correlationId: 'corr-import-1',
+    })).resolves.toEqual({ runId: 'run-1', facilityId: 'facility-1', sourceRef: 'node/1', created: true, trust: 'unclaimed' });
+    expect(queries[0]).toContain("ar.role = 'operator'");
+    expect(queries[2]).toContain('select null,');
+    expect(queries[2]).toContain('v2_facility_source_refs');
+    expect(queries[2]).toContain('v2_operator_runs');
+  });
+
+  it('rejects invalid import coordinates before reaching Neon', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-operator', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market', category: null, latitude: 91, longitude: 1.22, address: null, correlationId: 'corr-import-invalid',
+    })).rejects.toThrow('payload is invalid');
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('creates a claim draft only from an unowned public facility and returns a safe replay shape', async () => {
+    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', version: 1, created: true }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createClaimDraft({ authUserId: 'auth-claimant', facilityId: 'facility-1' })).resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', state: 'draft', version: 1, created: true });
+    expect(call.queries[0]).toContain('account_id is null');
+    expect(call.queries[0]).toContain('v2_verification_requests');
+    expect(call.queries[0]).toContain("state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')");
+  });
+});

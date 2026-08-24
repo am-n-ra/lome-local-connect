@@ -1,23 +1,24 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
+import { createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getFacilityDetail, getOperatorRuns, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse } from './api';
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
-import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, FacilityDetail, PublicFacility, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
+import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, FacilityDetail, OperatorRunSummary, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'buyer-requests' | 'seller-entry';
+type Panel = 'none' | 'auth' | 'facility' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot';
 type AuthMode = 'sign-in' | 'sign-up';
 type SessionUser = { id: string; email: string | null; name: string | null };
-type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry';
+type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 export type EscapeTarget = 'facility' | 'seller-queue' | 'close' | 'none';
 
 export function resolveEscape(panel: Panel, hasSellerRequest: boolean): EscapeTarget {
   if (panel === 'availability') return 'facility';
   if (panel === 'seller-entry' && hasSellerRequest) return 'seller-queue';
+  if (panel === 'field-pilot') return 'close';
   if (panel !== 'none') return 'close';
   return 'none';
 }
@@ -89,6 +90,19 @@ export function TrunkApp() {
   const [sellerTab, setSellerTab] = useState<'requests' | 'catalogue'>('requests');
   const [sellerRebindState, setSellerRebindState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [sellerRebindError, setSellerRebindError] = useState('');
+  const [fieldPilotState, setFieldPilotState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [fieldPilotError, setFieldPilotError] = useState('');
+  const [operatorRuns, setOperatorRuns] = useState<OperatorRunsResult | null>(null);
+  const [fieldPilotName, setFieldPilotName] = useState('');
+  const [fieldPilotSourceRef, setFieldPilotSourceRef] = useState('');
+  const [fieldPilotCategory, setFieldPilotCategory] = useState('');
+  const [fieldPilotAddress, setFieldPilotAddress] = useState('');
+  const [fieldPilotLatitude, setFieldPilotLatitude] = useState('6.13');
+  const [fieldPilotLongitude, setFieldPilotLongitude] = useState('1.22');
+  const [fieldPilotResult, setFieldPilotResult] = useState<PublicFacilityImportResult | null>(null);
+  const [claimState, setClaimState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
+  const [claimError, setClaimError] = useState('');
+  const [claimResult, setClaimResult] = useState<ClaimDraftResult | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
@@ -295,6 +309,112 @@ export function TrunkApp() {
     setSellerTab('requests');
     setSellerResponseState('idle');
     void loadSellerQueue();
+  };
+
+  const loadOperatorRuns = async () => {
+    setFieldPilotState('loading');
+    setFieldPilotError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setFieldPilotState('error');
+        setFieldPilotError('Votre session doit être réouverte pour accéder aux outils terrain.');
+        return;
+      }
+      const result = await getOperatorRuns({ token });
+      if (!result.ok || !result.data) {
+        setFieldPilotState('error');
+        setFieldPilotError(result.error?.message ?? 'Les outils terrain ne sont pas disponibles pour cette session.');
+        return;
+      }
+      setOperatorRuns(result.data);
+      setFieldPilotState('idle');
+    } catch (caught) {
+      setFieldPilotState('error');
+      setFieldPilotError(caught instanceof Error ? caught.message : 'Les outils terrain ne sont pas disponibles.');
+    }
+  };
+
+  const openFieldPilot = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'field-pilot');
+      return;
+    }
+    setPanel('field-pilot');
+    setFieldPilotResult(null);
+    void loadOperatorRuns();
+  };
+
+  const submitPublicFacilityImport = async (event: FormEvent) => {
+    event.preventDefault();
+    setFieldPilotState('loading');
+    setFieldPilotError('');
+    setFieldPilotResult(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setFieldPilotState('error');
+        setFieldPilotError('Votre session doit être réouverte avant l’import terrain.');
+        return;
+      }
+      const result = await importPublicFacility({
+        provider: 'openstreetmap',
+        attribution: '© OpenStreetMap contributors',
+        sourceRef: fieldPilotSourceRef.trim(),
+        name: fieldPilotName.trim(),
+        category: fieldPilotCategory.trim() || null,
+        address: fieldPilotAddress.trim() || null,
+        latitude: Number(fieldPilotLatitude),
+        longitude: Number(fieldPilotLongitude),
+        token,
+      });
+      if (!result.ok || !result.data) {
+        setFieldPilotState('error');
+        setFieldPilotError(result.error?.message ?? 'La facilité publique n’a pas pu être enregistrée.');
+        return;
+      }
+      setFieldPilotResult(result.data);
+      setFieldPilotState('idle');
+      setBounds(undefined);
+      setCommittedQuery('');
+      setQuery('');
+      void loadOperatorRuns();
+    } catch (caught) {
+      setFieldPilotState('error');
+      setFieldPilotError(caught instanceof Error ? caught.message : 'La facilité publique n’a pas pu être enregistrée.');
+    }
+  };
+
+  const startFacilityClaim = async (facility: PublicFacility) => {
+    setClaimState('loading');
+    setClaimError('');
+    setClaimResult(null);
+    if (!sessionUser) {
+      setClaimState('idle');
+      openAuth('sign-in', 'none');
+      return;
+    }
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setClaimState('error');
+        setClaimError('Votre session doit être réouverte avant de commencer la revendication.');
+        return;
+      }
+      const result = await createFacilityClaimDraft({ facilityId: facility.id, token });
+      if (!result.ok || !result.data) {
+        setClaimState('error');
+        setClaimError(result.error?.message ?? 'Cette facilité ne peut pas commencer une revendication.');
+        return;
+      }
+      setClaimResult(result.data);
+      setClaimState('success');
+    } catch (caught) {
+      setClaimState('error');
+      setClaimError(caught instanceof Error ? caught.message : 'Cette facilité ne peut pas commencer une revendication.');
+    }
   };
 
   const openSellerRequest = (request: SellerAvailabilityRequest) => {
@@ -542,7 +662,7 @@ export function TrunkApp() {
       setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
       setAppliedOptions(draftOptions);
       setAuthState('idle');
-      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : 'none';
+      const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : authReturn === 'field-pilot' ? 'field-pilot' : 'none';
       setAuthReturn('none');
       setPanel(resumePanel);
       if (resumePanel === 'buyer-requests') {
@@ -553,6 +673,10 @@ export function TrunkApp() {
         setSellerRequest(null);
         setSellerTab('requests');
         void loadSellerQueue();
+      }
+      if (resumePanel === 'field-pilot') {
+        setFieldPilotResult(null);
+        void loadOperatorRuns();
       }
       if (query.trim()) setCommittedQuery(query.trim());
     } catch (caught) {
@@ -615,7 +739,7 @@ export function TrunkApp() {
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
         <div className="menu-brand"><img src="/omni-logo-transparent.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
@@ -637,8 +761,9 @@ export function TrunkApp() {
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => panel !== 'auth' && setPanel(panel === 'availability' ? 'facility' : 'none')} />}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <SellerWorkspaceSheet user={sessionUser} queue={sellerQueue} queueState={sellerQueueState} queueError={sellerQueueError} request={sellerRequest} tab={sellerTab} setTab={setSellerTab} responseStatus={sellerResponseStatus} setResponseStatus={setSellerResponseStatus} quantity={sellerQuantity} setQuantity={setSellerQuantity} price={sellerPrice} setPrice={setSellerPrice} message={sellerMessage} setMessage={setSellerMessage} responseState={sellerResponseState} responseError={sellerResponseError} responseResult={sellerResponseResult} rebindState={sellerRebindState} rebindError={sellerRebindError} onRebindDemo={() => void rebindSellerDemo()} onLoadQueue={() => void loadSellerQueue()} onSelectRequest={openSellerRequest} onSubmitResponse={() => void submitSellerResponse()} onBackToQueue={() => { setSellerRequest(null); setSellerResponseState('idle'); }} onClose={() => { setSellerRequest(null); setPanel('none'); }} onSignOut={signOut} />}
+      {panel === 'field-pilot' && <FieldPilotSheet user={sessionUser} state={fieldPilotState} error={fieldPilotError} runs={operatorRuns} name={fieldPilotName} setName={setFieldPilotName} sourceRef={fieldPilotSourceRef} setSourceRef={setFieldPilotSourceRef} category={fieldPilotCategory} setCategory={setFieldPilotCategory} address={fieldPilotAddress} setAddress={setFieldPilotAddress} latitude={fieldPilotLatitude} setLatitude={setFieldPilotLatitude} longitude={fieldPilotLongitude} setLongitude={setFieldPilotLongitude} result={fieldPilotResult} onSubmit={submitPublicFacilityImport} onRefresh={() => void loadOperatorRuns()} onClose={() => setPanel('none')} />}
       {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
-      {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} onClose={() => setPanel('none')} onVerify={openAvailability} />}
+      {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onClose={() => setPanel('none')} onVerify={openAvailability} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} onRefreshResponses={() => void refreshResponses()} onClose={() => setPanel('facility')} onSubmit={submitAvailability} />}
     </main>
   );
@@ -662,6 +787,11 @@ const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapS
   </section>;
 });
 
+function FieldPilotSheet(props: { user: SessionUser | null; state: 'idle' | 'loading' | 'error'; error: string; runs: OperatorRunsResult | null; name: string; setName: (value: string) => void; sourceRef: string; setSourceRef: (value: string) => void; category: string; setCategory: (value: string) => void; address: string; setAddress: (value: string) => void; latitude: string; setLatitude: (value: string) => void; longitude: string; setLongitude: (value: string) => void; result: PublicFacilityImportResult | null; onSubmit: (event: FormEvent) => void; onRefresh: () => void; onClose: () => void }) {
+  const authorized = props.runs?.authorized === true;
+  return <section className="omni-sheet context-sheet field-pilot-sheet" role="dialog" aria-modal="true" aria-labelledby="field-pilot-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Équipe Omni · Ring A</span><h2 id="field-pilot-title">Inscrire une facilité</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">Ajoutez une présence publique OSM sans lui attribuer un propriétaire. Le claim et la revue restent des étapes séparées.</p>{props.state === 'loading' && <div className="sheet-loading" role="status"><span className="spinner" /> Vérification de l’accès terrain…</div>}{props.state === 'error' && <div className="inline-error" role="alert">{props.error}<button className="text-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>}{props.state !== 'loading' && !authorized && <div className="notice-card"><strong>Accès opérateur non ouvert</strong><p>Cette session est connectée, mais le rôle opérateur Omni n’est pas encore accordé. Aucun import ne sera exécuté depuis cette surface.</p></div>}{props.state !== 'loading' && authorized && <form className="field-pilot-form" onSubmit={props.onSubmit}><label>Nom de la facilité<input required maxLength={180} value={props.name} onChange={(event) => props.setName(event.target.value)} placeholder="Nom observé sur le terrain" /></label><label>Référence OSM<input required maxLength={180} value={props.sourceRef} onChange={(event) => props.setSourceRef(event.target.value)} placeholder="node/… ou way/…" /></label><div className="seller-input-grid"><label>Latitude<input required type="number" step="any" min="-90" max="90" value={props.latitude} onChange={(event) => props.setLatitude(event.target.value)} /></label><label>Longitude<input required type="number" step="any" min="-180" max="180" value={props.longitude} onChange={(event) => props.setLongitude(event.target.value)} /></label></div><label>Catégorie<input maxLength={120} value={props.category} onChange={(event) => props.setCategory(event.target.value)} placeholder="Marché, magasin, atelier…" /></label><label>Adresse ou repère<input maxLength={240} value={props.address} onChange={(event) => props.setAddress(event.target.value)} placeholder="Repère utile, sans donnée privée" /></label><button className="primary-button" type="submit">Enregistrer la présence publique <ArrowRight size={16} /></button></form>}{props.result && <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Présence enregistrée comme non revendiquée. Le catalogue et la confiance restent verrouillés jusqu’aux étapes suivantes.</span></div>}<div className="seller-list-heading"><span className="section-kicker">Runs récents</span><button className="text-button" type="button" onClick={props.onRefresh}>Actualiser</button></div>{props.runs?.runs.length ? <div className="seller-request-list">{props.runs.runs.slice(0, 8).map((run) => <div className="catalogue-item" key={run.id}><span className="product-icon"><MapPin size={16} /></span><span><strong>{run.operation === 'public_import' ? 'Import public OSM' : run.operation}</strong><small>{run.outcome} · {run.resultCount} résultat{run.resultCount === 1 ? '' : 's'}</small></span></div>)}</div> : <div className="empty-state compact"><Clock3 size={22} /><strong>Aucun run récent</strong><p>Les imports terrain vérifiés apparaîtront ici.</p></div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>OSM n’est pas Omni</strong><small>La carte publique fournit une présence et une attribution ; les comptes, claims, catalogues et notifications appartiennent à Omni.</small></span></div></section>;
+}
+
 function BuyerRequestsSheet(props: { user: SessionUser | null; data: BuyerAvailabilityRequestList | null; state: 'idle' | 'loading' | 'error'; error: string; onRefresh: () => void; onResume: (request: BuyerAvailabilityRequestSummary) => void; onClose: () => void }) {
   const requests = props.data?.requests ?? [];
   return <section className="omni-sheet context-sheet buyer-requests-sheet" role="dialog" aria-modal="true" aria-labelledby="buyer-requests-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte J5</span><h2 id="buyer-requests-title">Mes demandes</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">Retrouvez vos demandes de disponibilité et reprenez la comparaison sans recréer une demande.</p>{props.state === 'loading' && <div className="sheet-loading" role="status"><span className="spinner" /> Chargement de vos demandes…</div>}{props.state === 'error' && <div className="comparison-state comparison-error" role="alert"><strong>Vos demandes ne sont pas disponibles</strong><p>{props.error}</p><button className="secondary-button" type="button" onClick={props.onRefresh}>Réessayer</button></div>}{props.state === 'idle' && requests.length === 0 && <div className="empty-state"><Clock3 size={23} /><strong>Aucune demande enregistrée</strong><p>Vos prochaines demandes de disponibilité apparaîtront ici.</p></div>}{props.state === 'idle' && requests.length > 0 && <div className="buyer-request-list"><div className="seller-list-heading"><span className="section-kicker">Historique récent</span><button className="text-button" type="button" onClick={props.onRefresh}>Actualiser</button></div>{requests.map((request) => <button className="buyer-request-card" type="button" key={request.id} onClick={() => props.onResume(request)}><span className="request-card-icon"><Clock3 size={18} /></span><span className="buyer-request-copy"><span className={`status-pill request-status-${request.requestStatus}`}>{responseStatusLabel(request.requestStatus)}</span><strong>{request.productName}</strong><small>{request.facilityName} · {request.facilityCategory}</small><small>{request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'} · {request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString()}</small></span><ChevronRight size={17} /></button>)}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Reprise sûre</strong><small>La demande existante est relue côté serveur. Aucun nouveau stock ou contact ne s’ouvre ici.</small></span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à la carte</button></section>;
@@ -684,8 +814,8 @@ function SellerWorkspaceSheet(props: { user: SessionUser | null; queue: SellerAv
   return <section className="omni-sheet context-sheet seller-workspace-sheet" role="dialog" aria-modal="true" aria-labelledby="seller-workspace-title"><div className="sheet-handle" /><div className="sheet-head"><div>{request && <button className="back-button" type="button" onClick={props.onBackToQueue}><ArrowLeft size={17} /> Demandes</button>}<span className="section-kicker">Vendre</span><h2 id="seller-workspace-title">{request ? 'Répondre à la demande' : 'Espace vendeur'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{!request && <><div className="seller-workspace-summary"><span className="seller-entry-mark"><ShieldCheck size={21} /></span><div><strong>{props.queue?.authorized ? 'Contexte vendeur autorisé' : 'Accès vendeur à vérifier'}</strong><p>{props.queue?.authorized ? 'Répondez aux demandes de vos facilités sans modifier le catalogue public.' : props.user ? 'Votre compte est connecté, mais aucun profil vendeur autorisé n’est lié à cette session.' : 'Connectez-vous pour vérifier votre accès vendeur.'}</p></div></div><div className="seller-tabs" role="tablist" aria-label="Espace vendeur"><button type="button" role="tab" aria-selected={props.tab === 'requests'} className={props.tab === 'requests' ? 'active' : ''} onClick={() => props.setTab('requests')}>Demandes{props.queue?.authorized && props.queue.requests.length > 0 ? ` · ${props.queue.requests.length}` : ''}</button><button type="button" role="tab" aria-selected={props.tab === 'catalogue'} className={props.tab === 'catalogue' ? 'active' : ''} onClick={() => props.setTab('catalogue')}>Catalogue</button></div>{props.queueState === 'loading' && <div className="sheet-loading"><span className="spinner" /> Vérification de vos demandes…</div>}{props.queueState === 'error' && <div className="inline-error" role="alert">{props.queueError}<button className="text-button" type="button" onClick={props.onLoadQueue}>Réessayer</button></div>}{props.queueState !== 'loading' && props.queueState !== 'error' && !props.queue?.authorized && <><div className="notice-card"><strong>Aucune opération vendeur ouverte</strong><p>La connexion ne certifie pas une facilité et ne crée aucune demande. Revenez à Acheter ou complétez plus tard la vérification manuelle.</p></div>{props.user && <><button className="primary-button" type="button" disabled={props.rebindState === 'loading'} onClick={props.onRebindDemo}>{props.rebindState === 'loading' ? 'Activation de la démo…' : 'Activer l’espace Seller de démo'} <ArrowRight size={16} /></button><p className="privacy-note">Action réservée à cet environnement de démonstration borné. Elle lie uniquement la session actuelle à la facilité Seller de démo existante.</p>{props.rebindError && <div className="inline-error" role="alert">{props.rebindError}</div>}</>}</>}{props.tab === 'requests' && props.queue?.authorized && props.queue.requests.length === 0 && props.queueState !== 'loading' && <div className="empty-state"><PackageSearch size={22} /><strong>Aucune demande en attente</strong><p>Les nouvelles demandes ciblées sur vos produits publiés apparaîtront ici.</p><button className="secondary-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>}{props.tab === 'requests' && props.queue?.authorized && props.queue.requests.length > 0 && <div className="seller-request-list"><div className="seller-list-heading"><span className="section-kicker">Demandes ciblées</span><button className="text-button" type="button" onClick={props.onLoadQueue}>Actualiser</button></div>{props.queue.requests.map((item) => <button className="seller-request-card" type="button" key={item.id} onClick={() => props.onSelectRequest(item)}><span className="request-card-icon"><PackageSearch size={18} /></span><span className="seller-request-copy"><strong>{item.productName}</strong><small>{item.facilityName} · {item.facilityCategory}</small><small>Quantité demandée : {item.requestedQuantity} · {item.freshness === 'stale' ? 'Réponse à actualiser' : item.responseStatus ? `Réponse ${item.responseStatus === 'available' ? 'disponible' : item.responseStatus === 'partial' ? 'partielle' : 'indisponible'}` : 'Sans réponse'}</small></span><ChevronRight size={17} /></button>)}</div>}{props.tab === 'catalogue' && <div className="seller-catalogue-preview"><div className="seller-list-heading"><span className="section-kicker">Catalogue visible</span><span className="catalogue-count">{catalogueItems.length} produit{catalogueItems.length === 1 ? '' : 's'}</span></div>{catalogueItems.length ? <div className="catalogue-list">{catalogueItems.map((item) => <div className="catalogue-item" key={item.productId}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{item.productName}</strong><small>{item.facilityName} · produit publié</small></span></div>)}</div> : <div className="empty-state compact"><PackageSearch size={22} /><strong>Aucun catalogue dans cette file</strong><p>Les produits publiés sont visibles ici lorsqu’une demande leur est adressée.</p></div>}</div>}<div className="locked-note"><ShieldCheck size={17} /><span><strong>Handoff encore verrouillé</strong><small>Répondre ne réserve pas le stock et n’ouvre ni contact, ni itinéraire, ni QR.</small></span></div><button className="secondary-button wide" type="button" onClick={props.onClose}>Retour à acheter</button>{props.user && <button className="text-button" type="button" onClick={props.onSignOut}>Se déconnecter</button>}</>}{request && <><div className="seller-request-detail"><span className="section-kicker">Demande entrante</span><strong>{request.productName}</strong><small>{request.facilityName} · {request.facilityCategory} · {trustLabel(request.facilityTrust)}</small><div className="seller-request-facts"><span><b>Quantité</b>{request.requestedQuantity}</span><span><b>Budget</b>{request.budgetMinor === null ? 'Sans plafond' : currency(request.budgetMinor, 'USD')}</span><span><b>Échéance</b>{new Date(request.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></div></div>{request.responseStatus && request.responseObservedAt ? <div className="seller-response-success" role="status"><CheckCircle2 size={24} /><div><strong>Réponse déjà enregistrée</strong><p>{existingStatusLabel} · reçue à {new Date(request.responseObservedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Aucun doublon ne sera créé.</p><button className="secondary-button" type="button" onClick={props.onBackToQueue}>Retour aux demandes</button></div></div> : props.responseState === 'success' && props.responseResult ? <div className="seller-response-success" role="status"><CheckCircle2 size={24} /><div><strong>Réponse enregistrée</strong><p>{responseStatusLabel} · reçue à {new Date(props.responseResult.observedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. La demande n’est pas une réservation.</p><button className="secondary-button" type="button" onClick={props.onBackToQueue}>Retour aux demandes</button></div></div> : <><div className="seller-response-form"><span className="section-kicker">Votre réponse</span><div className="seller-status-options" role="group" aria-label="Statut de disponibilité">{(['available', 'partial', 'unavailable'] as SellerResponseStatus[]).map((status) => <button type="button" key={status} className={props.responseStatus === status ? 'active' : ''} onClick={() => props.setResponseStatus(status)}>{status === 'available' ? 'Disponible' : status === 'partial' ? 'Partielle' : 'Indisponible'}</button>)}</div>{props.responseStatus !== 'unavailable' && <div className="seller-input-grid"><label>Quantité proposée<input type="number" min="1" step="1" value={props.quantity} onChange={(event) => props.setQuantity(Math.max(1, Number(event.target.value) || 1))} /></label><label>Prix unitaire<input type="number" min="0" step="0.01" value={props.price} onChange={(event) => props.setPrice(event.target.value)} placeholder="0,00" /></label></div>}{props.responseStatus === 'unavailable' && <div className="notice-card"><strong>{statusLabel}</strong><p>Le serveur enregistrera une quantité nulle et aucun prix.</p></div>}<label className="seller-message-field">Message facultatif<textarea value={props.message} onChange={(event) => props.setMessage(event.target.value)} maxLength={1000} rows={3} placeholder="Ajoutez une précision utile au besoin exprimé…" /></label>{props.responseError && <div className="inline-error" role="alert">{props.responseError}</div>}<button className="primary-button" type="button" disabled={props.responseState === 'loading'} onClick={props.onSubmitResponse}>{props.responseState === 'loading' ? 'Enregistrement…' : 'Envoyer la réponse'} <ArrowRight size={16} /></button></div><div className="locked-note"><ShieldCheck size={17} /><span><strong>Pas de réservation</strong><small>Cette réponse reste une information de disponibilité vérifiée. Les étapes privées viennent plus tard.</small></span></div></>}</>}</section>;
 }
 
-function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; onClose: () => void; onVerify: () => void }) {
-  return <section className="omni-sheet context-sheet facility-sheet" role="dialog" aria-modal="true" aria-labelledby="facility-title"><div className="sheet-handle" /><div className="sheet-head"><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Carte</button><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{props.state === 'loading' && <div className="sheet-loading"><span className="spinner" /> Ouverture de la facilité…</div>}{props.state === 'error' && <div className="empty-state"><PackageSearch size={26} /><strong>Facilité indisponible</strong><p>{props.error}</p><button type="button" className="secondary-button" onClick={props.onClose}>Retour à la carte</button></div>}{props.facility && props.state === 'idle' && <><div className="facility-identity"><span className="facility-identity-icon"><MapPin size={21} /></span><div><span className="section-kicker">{props.facility.category}</span><h2 id="facility-title">{props.facility.name}</h2><p>{props.facility.address ?? 'Lieu partagé sur la carte publique'}</p></div></div><div className="trust-row"><span className="trust-badge"><ShieldCheck size={14} /> {trustLabel(props.facility.trust)}</span>{props.facility.plan === 'pro_active' && <span className="pro-badge">Pro</span>}</div>{props.facility.trust === 'unclaimed' ? <div className="notice-card"><strong>Lieu public, pas encore certifié</strong><p>Ce pin vient d’une source publique. Une revendication doit passer par la vérification avant toute publication de catalogue.</p></div> : props.facility.products.length ? <><div className="catalogue-heading"><div><span className="section-kicker">Catalogue de la facilité</span><strong>{props.facility.products.length} offre{props.facility.products.length === 1 ? '' : 's'}</strong></div><span>Source facility</span></div><div className="catalogue-list">{props.facility.products.slice(0, 5).map((product) => <div className="catalogue-item" key={product.id}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{product.name}</strong><small>{product.description ?? product.category ?? 'Offre locale'} · {currency(product.priceMinor, product.currency)} / {product.unit}</small></span></div>)}</div><button className="primary-button" type="button" onClick={props.onVerify}>Vérifier la disponibilité <ArrowRight size={16} /></button></> : <div className="empty-state compact"><Clock3 size={25} /><strong>Catalogue non publié</strong><p>Cette facilité n’a pas encore d’offre publique à vérifier.</p></div>}<p className="privacy-note">Les contacts et l’itinéraire apparaissent seulement après une intention d’achat autorisée.</p></>}</section>;
+function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; claimState: 'idle' | 'loading' | 'error' | 'success'; claimError: string; claimResult: ClaimDraftResult | null; onClaim: (facility: PublicFacility) => void; onClose: () => void; onVerify: () => void }) {
+  return <section className="omni-sheet context-sheet facility-sheet" role="dialog" aria-modal="true" aria-labelledby="facility-title"><div className="sheet-handle" /><div className="sheet-head"><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Carte</button><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{props.state === 'loading' && <div className="sheet-loading"><span className="spinner" /> Ouverture de la facilité…</div>}{props.state === 'error' && <div className="empty-state"><PackageSearch size={26} /><strong>Facilité indisponible</strong><p>{props.error}</p><button type="button" className="secondary-button" onClick={props.onClose}>Retour à la carte</button></div>}{props.facility && props.state === 'idle' && <><div className="facility-identity"><span className="facility-identity-icon"><MapPin size={21} /></span><div><span className="section-kicker">{props.facility.category}</span><h2 id="facility-title">{props.facility.name}</h2><p>{props.facility.address ?? 'Lieu partagé sur la carte publique'}</p></div></div><div className="trust-row"><span className="trust-badge"><ShieldCheck size={14} /> {trustLabel(props.facility.trust)}</span>{props.facility.plan === 'pro_active' && <span className="pro-badge">Pro</span>}</div>{props.facility.trust === 'unclaimed' ? <div className="notice-card"><strong>Lieu public, pas encore certifié</strong><p>Ce pin vient d’une source publique. Une revendication ouvre seulement un brouillon de vérification ; elle ne certifie ni la personne ni le catalogue.</p>{props.claimState === 'success' && props.claimResult ? <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Brouillon ouvert. Référence de suivi créée ; la preuve et la revue Omni restent nécessaires.</span></div> : <button className="primary-button" type="button" disabled={props.claimState === 'loading'} onClick={() => { if (props.facility) props.onClaim(props.facility); }}>{props.claimState === 'loading' ? 'Ouverture du brouillon…' : 'Commencer la revendication'} <ArrowRight size={16} /></button>}{props.claimState === 'error' && <div className="inline-error" role="alert">{props.claimError}</div>}</div> : props.facility.products.length ? <><div className="catalogue-heading"><div><span className="section-kicker">Catalogue de la facilité</span><strong>{props.facility.products.length} offre{props.facility.products.length === 1 ? '' : 's'}</strong></div><span>Source facility</span></div><div className="catalogue-list">{props.facility.products.slice(0, 5).map((product) => <div className="catalogue-item" key={product.id}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{product.name}</strong><small>{product.description ?? product.category ?? 'Offre locale'} · {currency(product.priceMinor, product.currency)} / {product.unit}</small></span></div>)}</div><button className="primary-button" type="button" onClick={props.onVerify}>Vérifier la disponibilité <ArrowRight size={16} /></button></> : <div className="empty-state compact"><Clock3 size={25} /><strong>Catalogue non publié</strong><p>Cette facilité n’a pas encore d’offre publique à vérifier.</p></div>}<p className="privacy-note">Les contacts et l’itinéraire apparaissent seulement après une intention d’achat autorisée.</p></>}</section>;
 }
 
 function responseStatusLabel(status: string) {

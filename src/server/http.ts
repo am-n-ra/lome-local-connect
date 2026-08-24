@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
 import type { TransactionState } from '../domain/contracts';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -27,7 +27,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -87,6 +87,55 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
 
   try {
     const repository = createTrunkRepository();
+    if (req.method === 'POST' && pathname === '/api/v2/operator/public-imports') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni operator before importing a public facility.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const provider = input.provider === 'openstreetmap' ? 'openstreetmap' : '';
+      const sourceRef = typeof input.sourceRef === 'string' ? input.sourceRef.trim() : '';
+      const name = typeof input.name === 'string' ? input.name.trim() : '';
+      const category = input.category === null || input.category === undefined ? null : String(input.category).trim() || null;
+      const address = input.address === null || input.address === undefined ? null : String(input.address).trim() || null;
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+      const attribution = typeof input.attribution === 'string' ? input.attribution.trim() : '';
+      if (provider !== 'openstreetmap' || !sourceRef || !name || !attribution || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || sourceRef.length > 180 || name.length > 180) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates.'));
+        return true;
+      }
+      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, correlationId });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/operator/runs') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni operator to view field runs.'));
+        return true;
+      }
+      const result = await repository.listOperatorRuns({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && pathname.endsWith('/claims')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create or open your Omni account before starting a facility claim.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/facilities/'.length, -'/claims'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid facility.'));
+        return true;
+      }
+      const result = await repository.createClaimDraft({ authUserId, facilityId });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities') {
       const hasBounds = ['west', 'south', 'east', 'north'].every((key) => url.searchParams.has(key));
       const bounds = hasBounds
