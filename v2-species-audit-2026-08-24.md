@@ -1,7 +1,7 @@
 # Omni V2 — Species audit, 2026-08-24
 
 **Structural path:** product → Species → map/search composition → Buyer/Seller/Reviewer surfaces
-**Status:** `partial / bounded authenticated proof recorded; Species gate open`
+**Status:** `partial / Canopy bounded proof recorded; Species gate open`
 **Primary authority:** `v2-species.md` and the approved maquette contract
 
 ## User-reported symptoms
@@ -101,3 +101,27 @@ The Reviewer/Admin surface is now visually proven in the authenticated 891×765 
 The Reviewer surface returned to the Buyer result composition through J5, and the same account menu reopened with `Inbox Omni` available. This confirms the account/navigation owner remains shared across the map-first Buyer, Seller and Reviewer surfaces; no role, claim, request or catalogue state was changed.
 
 The read-only Inbox path opened successfully after the menu selection settled. At the available Sandbox viewport, `Compte J5 — Inbox Omni` shows the truthful `Inbox vide` state, `Actualiser`, and the boundary copy that claim/account events appear here first while PWA Web Push remains opt-in and OSM does not receive these events. The map canvas and public pin remain visible behind the rounded sheet; no notification was marked, sent, or mutated.
+
+
+## 2026-08-24 — Canopy globe and search reveal checkpoint
+
+The Canopy pass extended the existing Species/Buyer proof without opening a new business branch. Commits `38d37cb`, `bf72e22`, `375e4f2`, `5bff6ef` and `bc8e730` add and harden an explicit camera ownership model, interruption-safe RAF rotation, a bounded search reveal helper, a source-backed final result frame, a distinct user-position marker path and a slightly more legible soft-color basemap treatment. The public-facility API contract remains unchanged: idle nearby discovery uses viewport bounds, while text search is query-only and global within the bounded public dataset.
+
+The canonical authenticated Browser Sandbox proof at `1024×880` showed the real query `Marche de Hanoukope` moving through `nearby-state-loading` to `nearby-state-ready`, then `cameraMode=search_reveal` with perceptible `Le continent → Le pays → La région → La ville → Facilités trouvées` stages and zoom `1.35 → 1.85 → 2.75 → 3.80 → 5.25 → 6.20`. The map remained mounted, the single projected public facility pin replaced the cluster at local framing, and the final result card remained available. Post-reveal Zoom avant changed zoom `6.20 → 7.20` and switched the camera to `manual_navigation` without losing the result. A performance-entry read showed one initial bounds request and one query-only request, with no continuous rotation/bounds cadence.
+
+The same canonical session proved that hover pauses the globe at its current center, a controlled non-mutative mouse event on the search overlay releases the pause and resumes rotation without resetting the center, and a temporary bounded geolocation stub rendered the distinct accessible `Votre position sur la carte` marker before the native geolocation object was restored. No real location permission, claim, seller response, reviewer decision, role assignment or persistent business mutation occurred.
+
+A standalone Playwright proof at `390×844` passed normal-motion rotation (`centerLng 2.3400 → 6.8200` at stable zoom `1.35`), enabled named controls, zoom `1.35 → 2.35`, full canvas geometry, contained guest dock and no horizontal overflow. A second `390×844` run with `prefers-reduced-motion: reduce` passed with `data-rotation=reduced`, unchanged center, enabled controls, working zoom and no overflow. These compact proofs are public guest evidence; authenticated compact result-sheet geometry, full keyboard traversal, real permission flow, facility-focus/back recovery, remote-tile resilience and full Seller/Reviewer responsive coverage remain open.
+
+**Ring decision:** `partial / bounded Canopy evidence recorded; Species gate remains open`. The active next action is the smallest remaining Canopy matrix: authenticated compact result-sheet and Seller/Reviewer responsive/focus/recovery proof, followed by a separate Ring decision. Global Root remains `review`; no operational branch may advance from this checkpoint.
+
+
+## 2026-08-24 — Canopy globe, reveal and responsive proof
+
+The Canopy ring extended the existing Species/search repair without changing the public API or opening a business operation. Commits `38d37cb`, `bf72e22`, `375e4f2`, `5bff6ef` and `bc8e730` add an explicit camera ownership state, RAF globe rotation with pause/resume ownership, a bounded world→context→results reveal helper, final result framing, a distinct user-location marker path, soft-color map treatment and identical-query lifecycle invalidation.
+
+The authenticated canonical Browser Sandbox proof at `1024×880` used the existing query `Marche de Hanoukope`. The nearby sheet showed loading then one ready public result; the map entered `search_reveal` and sampled stages `Le continent`, `Le pays`, `La région`, `La ville`, `Facilités trouvées` with zoom progression `1.35→1.85→2.75→3.80→5.25→6.20`. The single projected public pin replaced the cluster at local framing, the result card stayed present and the dock/sheet geometry measured `14px` apart with no overlap. Post-reveal Zoom avant reached `7.20` and manual navigation without losing the card. The request log contained one initial bounds request and one query-only request, with no continuous bounds cadence during reveal.
+
+The same read-only session proved hover pause at the current center and a controlled synthetic overlay mouse event proved release/resume without resetting the camera. A temporary bounded geolocation stub rendered the accessible `Votre position sur la carte` marker and was restored immediately; real permission was not requested. Public Playwright at `390×844` passed normal idle rotation, full canvas, enabled named controls, zoom `1.35→2.35`, contained guest dock and no horizontal overflow. A second compact run under `prefers-reduced-motion: reduce` passed with no automatic rotation, unchanged center, enabled controls and working zoom. These are bounded visual/runtime proofs, not marketplace or production-readiness proof.
+
+**Current decision:** `partial / Canopy evidence materially advanced; Species gate remains open`. Remaining gates are authenticated compact result-sheet and Seller/Reviewer responsive proof, full keyboard traversal, real location permission, empty/error/retry/recovery, facility focus/back restoration, remote tile resilience, deeper performance, and release-ring acceptance. Global Root remains `review`; the prior bounded private test claim is preserved and no role, claim, seller, reviewer, notification, wallet, transaction, QR, payment, OSM or PWA mutation was performed in this Canopy pass.

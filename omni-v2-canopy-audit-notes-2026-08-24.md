@@ -83,3 +83,41 @@ The browser click returned after the asynchronous path had already settled, so a
 The canonical replay after READY deployment `5bff6ef` mounted the same MapLibre globe, public cluster count `4`, zoom/location controls, J5 and separated search dock at `1024×880`; screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-50-52_1574.webp`.
 
 A read-only `requestSubmit()` of the already settled query `Marche de Hanoukope` was sampled every 250 ms for 6 seconds. The sheet correctly entered `nearby-state-loading` with `Recherche de « Marche de Hanoukope »…`, but the request never settled; the map had already moved to `zoom="1.05"`, `centerLng="1.2124"`, one projected public pin and no cluster. The cause was identified as `beginSearch` setting `mapState="loading"` while `facilityQueryKeyRef` still held the identical global-search key, so the effect deduped the new request and never returned to ready. This led to commit `5bff6ef`, which clears the query key before both `beginSearch` and `applyOptions`.
+
+## Canonical replay after `bc8e730`
+
+The latest READY deployment mounted at `1024×880` with the MapLibre globe/canvas, public cluster count `4`, right-side zoom/location controls, J5 and the separated search dock. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-54-04_4888.webp`.
+
+## Progressive Buyer reveal proof on `bc8e730`
+
+The authenticated query was submitted through the real form and sampled every 250 ms for 8 seconds. At `250–500 ms`, the nearby sheet was `nearby-state-loading` with `Recherche de « Marche de Hanoukope »…`, while the globe remained mounted. At `750 ms`, the sheet became `nearby-state-ready` with one public result. From `1000 ms` onward, the map entered `cameraMode="search_reveal"`; the stage labels and zoom progressed through `Le continent` (`1.35→1.85`), `Le pays` (`1.85→2.75`), `La région` (`2.75→3.80`), `La ville` (`3.80→5.25`), and `Facilités trouvées` (`5.25→6.20`). The result sheet remained ready with `Marche de Hanoukope`, one projected facility pin replaced the cluster, and the map remained mounted throughout. At approximately `5.0 s`, the camera entered `result_framing` at zoom `6.20`; by `5.5 s`, reveal UI cleared and the camera stayed at `manual_navigation`/`6.20` with the ready card visible. This proves the user-requested intermediate animation and final local framing for the bounded query. The `Le monde` label existed as the first step but was too short to appear in the 250 ms first sample; the world-scale zoom frame is still represented by the first `1.05` camera step in the implementation contract.
+
+## Final Buyer framing geometry on `bc8e730`
+
+The final visual frame showed a readable regional map around Lomé with one facility pin, the separated search dock and result sheet: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-55-22_8382.webp`. At `1024×880`, the DOM measured the full canvas `0–1024 × 0–880`, search dock `top=561,bottom=610`, nearby sheet `top=624,bottom=858`, result card `top=704,bottom=836`, and facility pin `top=246,bottom=284`. Both `overlapDockSheet` and `overlapDockPin` were `false`. Final stage attributes were `data-basemap="soft-color"`, `cameraMode="manual_navigation"`, `data-reveal-stage="idle"`, `zoom="6.20"`, `data-location="idle"`. No location permission was requested in this proof, so the user marker remains unproven for actual geolocation permission; the implementation path is present and bounded for a future manual permission test.
+
+## Post-reveal zoom proof
+
+After the final Buyer result frame, clicking the visible `Zoom avant` control changed the map from `zoom="6.20"` to `zoom="7.20"`, set `cameraMode="manual_navigation"`, kept the MapLibre canvas mounted, preserved the `Marche de Hanoukope` card, and left `data-rotation="paused"`. The dock remained `top=561,bottom=610` and the sheet `top=624,bottom=858`, with `separated=true`. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-55-53_4719.webp`.
+
+## Keyboard/focus proof
+
+On the final Buyer result frame after manual zoom, one `Tab` moved focus to the location control. The focused element was a `BUTTON` with accessible name `Utiliser ma localisation`; the computed outline was visible. This is a bounded focus-name observation at `1024×880`. A full keyboard traversal and reduced-motion browser profile remain outside this pass.
+
+## Bounded user-location marker proof
+
+To avoid requesting real location permission, the browser console temporarily injected a bounded demonstration position `(longitude 1.23, latitude 6.15, accuracy 120 m)` for the existing read-only location control, then restored the native geolocation object immediately. The resulting DOM reported `data-location="exact"`, `data-user-position="visible"`, accessible label `Votre position sur la carte`, `cameraMode="manual_navigation"` and `zoom="7.20"`. The visual frame showed the discrete position confirmation surface while the map, facility pin, result card and separated dock/sheet remained mounted: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-57-02_2913.webp`. This proves the UI/marker path only; real permission and real coordinates remain unproven and no actual user location was requested or stored.
+
+## Compact public Playwright proof
+
+A local Playwright run against the canonical URL at `390×844` with `no-preference` motion moved the pointer to the dock before measurement. The initial frame reported a full `390×844` canvas, `cameraMode="resting_globe"`, `data-rotation="rotating"`, `zoom="1.35"`, soft-color basemap, two enabled named controls (`Zoom avant`, `Utiliser ma localisation`), a `335×49` dock within the viewport, no nearby sheet in guest mode, `bodyOverflow="hidden"`, and no horizontal overflow. After 1.6 seconds, `centerLng` advanced from `2.3400` to `6.8200` with zoom still `1.35`; after one Zoom avant action, zoom increased to `2.35`, camera mode became `manual_navigation`, and all controls remained enabled. All scripted assertions passed: canvas mounted, rotation moved, controls enabled, zoom increased, dock separation valid for guest state, and no horizontal overflow. Artifacts: `/home/ubuntu/lome-local-connect-git/canopy-proof/canopy-compact-public.json` and `/home/ubuntu/lome-local-connect-git/canopy-proof/canopy-compact-public.png`.
+
+This is public guest responsive evidence; authenticated compact result-sheet layout, keyboard traversal and reduced-motion rendering remain residual gaps.
+
+## Compact reduced-motion Playwright proof
+
+A second Playwright run at `390×844` with `prefers-reduced-motion: reduce` reported `data-rotation="reduced"` and unchanged `centerLng="1.2200"` across the idle interval, while the full canvas remained `390×844`, both controls were enabled and named, Zoom avant still increased zoom `1.35→2.35`, the guest dock stayed inside the viewport, and `bodyOverflow="hidden"`. All reduced-motion assertions passed. Artifacts: `/home/ubuntu/lome-local-connect-git/canopy-proof-reduced/canopy-compact-public.json` and `/home/ubuntu/lome-local-connect-git/canopy-proof-reduced/canopy-compact-public.png`.
+
+## Search request cadence check
+
+On the authenticated final frame, performance entries contained two public-facility requests: one initial viewport request with `west/south/east/north` and one explicit query-only request with `q` and no bounds. The nearby sheet was `nearby-state-ready`; the stage was `cameraMode="manual_navigation"`, `data-reveal-stage="idle"`, `data-rotation="paused"`, `data-user-position="visible"`, `zoom="7.20"`. No continuous bounds request cadence appeared during the reveal/result path. This is read-only browser evidence with query parameter names only; no IDs, tokens or secret values were recorded.
