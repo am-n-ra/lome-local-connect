@@ -5,7 +5,7 @@ export const CLAIM_EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
 export const CLAIM_EVIDENCE_MAX_ITEMS = 12;
 export const CLAIM_EVIDENCE_CONTENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'] as const;
 
-const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVIDENCE_KINDS = new Set<EvidenceKind>(['identity', 'company', 'facility', 'product', 'service', 'location']);
 
 export class FieldPilotPolicyError extends Error {

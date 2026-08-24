@@ -156,7 +156,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const facilityId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid facility.'));
         return true;
@@ -172,7 +172,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const facilityId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid facility.'));
         return true;
@@ -182,7 +182,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-upload') {
       const requestId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(requestId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid claim request.'));
         return true;
@@ -201,7 +201,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const facilityId = pathname.slice('/api/v2/facilities/'.length);
       const requestId = url.searchParams.get('requestId') ?? '';
       const index = Number(url.searchParams.get('index') ?? '0');
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId) || !uuidPattern.test(requestId) || !Number.isInteger(index) || index < 0 || index >= 12) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid claim evidence reference.'));
         return true;
@@ -228,7 +228,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const requestId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const input = await parseRequestBody(req);
       const version = Number(input.version);
       const rawEvidence = Array.isArray(input.evidence) ? input.evidence : [];
@@ -252,7 +252,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const requestId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const input = await parseRequestBody(req);
       const version = Number(input.version);
       if (!uuidPattern.test(requestId) || !Number.isInteger(version) || version < 1) {
@@ -270,7 +270,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const requestId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const input = await parseRequestBody(req);
       const outcome = input.outcome === 'certified' || input.outcome === 'rejected' || input.outcome === 'needs_more_evidence' ? input.outcome : '';
       const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
@@ -289,7 +289,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const notificationId = pathname.slice('/api/v2/facilities/'.length);
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(notificationId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid notification.'));
         return true;
@@ -324,7 +324,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const input = await parseRequestBody(req);
       const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
       const tokenHash = typeof input.tokenHash === 'string' ? input.tokenHash : '';
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(transactionId) || tokenHash.length < 16 || tokenHash.length > 512) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction and QR token.'));
         return true;
@@ -353,7 +353,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const from = input.from;
       const to = input.to;
       const actorRole = input.actorRole;
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(transactionId) || !isTransactionState(from) || !isTransactionState(to) || (actorRole !== 'buyer' && actorRole !== 'seller')) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction, state transition and actor role.'));
         return true;
@@ -378,7 +378,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const input = await parseRequestBody(req);
       const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(transactionId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
         return true;
@@ -401,7 +401,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const input = await parseRequestBody(req);
       const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
       const method = input.method;
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(transactionId) || !['cash', 'mobile_money', 'pay_on_delivery'].includes(method as string)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction and supported external payment method.'));
         return true;
@@ -448,7 +448,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 200, { ok: true, correlationId, data: result });
         return true;
       }
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(requestId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid availability request.'));
         return true;
@@ -514,7 +514,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const input = await parseRequestBody(req);
       const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(transactionId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
         return true;
@@ -532,7 +532,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const input = await parseRequestBody(req);
       const responseId = typeof input.responseId === 'string' ? input.responseId : '';
       const idempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(responseId)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid availability response.'));
         return true;

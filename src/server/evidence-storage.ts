@@ -6,7 +6,7 @@ import { createTrunkRepository } from './trunk-repository';
 import type { ClaimEvidenceItem, EvidenceKind } from '../trunk/types';
 import { CLAIM_EVIDENCE_CONTENT_TYPES, CLAIM_EVIDENCE_MAX_BYTES, CLAIM_EVIDENCE_MAX_ITEMS, EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, providerPathFromInternalKey } from './evidence-contract';
 
-const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const REQUEST_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EVIDENCE_KINDS = new Set<EvidenceKind>(['identity', 'company', 'facility', 'product', 'service', 'location']);
 
 export class ClaimEvidenceNotFoundError extends Error {
