@@ -419,9 +419,80 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     };
     window.addEventListener('pointermove', handleWindowMove, true);
     window.addEventListener('mousemove', handleWindowMove, true);
+
+    type GlobeGesture = { x: number; y: number; center: [number, number]; bearing: number; touchId?: number };
+    let globeGesture: GlobeGesture | null = null;
+    const clampLatitude = (latitude: number) => Math.max(-82, Math.min(82, latitude));
+    const beginGlobeGesture = (x: number, y: number, touchId?: number) => {
+      if (projectionForZoom(map.getZoom()) !== 'globe' || contextSurfaceRef.current) return false;
+      const center = map.getCenter();
+      globeGesture = { x, y, center: [center.lng, center.lat], bearing: map.getBearing(), touchId };
+      map.dragPan.disable();
+      pauseMotion('interaction', false);
+      return true;
+    };
+    const updateGlobeGesture = (x: number, y: number) => {
+      if (!globeGesture) return;
+      const deltaX = x - globeGesture.x;
+      const deltaY = y - globeGesture.y;
+      map.jumpTo({
+        center: [globeGesture.center[0] - deltaX * 0.28, clampLatitude(globeGesture.center[1] + deltaY * 0.16)],
+        bearing: globeGesture.bearing + deltaX * 0.18,
+        pitch: 0,
+      });
+    };
+    const endGlobeGesture = () => {
+      if (!globeGesture) return;
+      globeGesture = null;
+      map.dragPan.enable();
+      rotating.current = false;
+      cameraMode.current = 'manual_navigation';
+      setCameraModeState('manual_navigation');
+      emitBounds();
+      scheduleUserPosition();
+    };
+    const handleGlobeMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0 || !beginGlobeGesture(event.clientX, event.clientY)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    const handleGlobeMouseMove = (event: MouseEvent) => {
+      if (!globeGesture || globeGesture.touchId !== undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      updateGlobeGesture(event.clientX, event.clientY);
+    };
+    const handleGlobeMouseUp = () => endGlobeGesture();
+    const handleGlobeTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      if (!touch || !beginGlobeGesture(touch.clientX, touch.clientY, touch.identifier)) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    const handleGlobeTouchMove = (event: TouchEvent) => {
+      if (!globeGesture || globeGesture.touchId === undefined) return;
+      const touch = [...event.touches].find((item) => item.identifier === globeGesture?.touchId);
+      if (!touch) return;
+      event.preventDefault();
+      event.stopPropagation();
+      updateGlobeGesture(touch.clientX, touch.clientY);
+    };
+    const handleGlobeTouchEnd = (event: TouchEvent) => {
+      if (globeGesture?.touchId === undefined) return;
+      if (![...event.touches].some((touch) => touch.identifier === globeGesture?.touchId)) endGlobeGesture();
+    };
+    canvasContainer.addEventListener('mousedown', handleGlobeMouseDown, true);
+    canvasContainer.addEventListener('touchstart', handleGlobeTouchStart, { capture: true, passive: false });
+    window.addEventListener('mousemove', handleGlobeMouseMove, true);
+    window.addEventListener('mouseup', handleGlobeMouseUp, true);
+    window.addEventListener('touchmove', handleGlobeTouchMove, { capture: true, passive: false });
+    window.addEventListener('touchend', handleGlobeTouchEnd, true);
+    window.addEventListener('touchcancel', handleGlobeTouchEnd, true);
+
     // Pause Omni's idle choreography, but let MapLibre keep ownership of the
-    // actual native gesture. This is the critical difference from the previous
-    // V2 behavior where map.stop() ran before drag/pan could take effect.
+    // actual local-map gesture. At globe scale the small adapter above makes
+    // the primary left-drag gesture behave like a free globe manipulation.
     map.on('mousedown', () => pauseMotion('interaction', false));
     map.on('touchstart', () => pauseMotion('interaction', false));
     map.on('wheel', () => pauseMotion('interaction', false));
@@ -507,6 +578,15 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       canvasContainer.removeEventListener('mouseleave', handleCanvasLeave);
       window.removeEventListener('pointermove', handleWindowMove, true);
       window.removeEventListener('mousemove', handleWindowMove, true);
+      canvasContainer.removeEventListener('mousedown', handleGlobeMouseDown, true);
+      canvasContainer.removeEventListener('touchstart', handleGlobeTouchStart, true);
+      window.removeEventListener('mousemove', handleGlobeMouseMove, true);
+      window.removeEventListener('mouseup', handleGlobeMouseUp, true);
+      window.removeEventListener('touchmove', handleGlobeTouchMove, true);
+      window.removeEventListener('touchend', handleGlobeTouchEnd, true);
+      window.removeEventListener('touchcancel', handleGlobeTouchEnd, true);
+      if (globeGesture) map.dragPan.enable();
+      globeGesture = null;
       resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
