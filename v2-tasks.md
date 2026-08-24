@@ -249,3 +249,14 @@ The checkpoint is intentionally **partial**. Seller four-width capture, full key
 A task may move to `ready` only when its parent contract and dependencies are clear. It may move to `in_progress` only when its Seed/Species/Root work is complete at the required depth. It may move to `verified` only when proof artifacts exist. It may move to `done` only when its parent Nature Way gate is accepted.
 
 The first execution batch is `SEED-001` through `ROOT-011`, followed by the buyer Trunk. Root/Trunk evidence currently includes 13 local test files/90 tests, exactly 12 Vercel functions, the recorded disposable-branch database behavior checks, one bounded live Auth/availability idempotency proof on production/default and one corrected proof on persistent V2, plus the bounded demo seller transaction fixture, manual credential-rotation record, blocked demo-Auth-recreation decision and session-simulation decision. No new seller, wallet, transaction or QR UI implementation should begin while the Root gate remains in review.
+
+
+## 11. 2026-08-24 — Final dock/globe Species checkpoint
+
+The dock/grid branch is now **implemented and browser-proven for the Buyer surface** on the canonical production deployment published through the configured Manus Vercel connector. The dock band is derived from the real nearby-sheet geometry; the facility sheet is repliable; Options is anchored outside the dock flow and protected on short mobile screens. The final audit covered 320×760, 375×812, 768×900, 1280×900, 1731×818 and 375×620 with three public cards on each viewport, 8px mobile / 14px desktop dock-to-sheet gaps, no dock/sheet/rail/card overlap, no Options/control overlap and no horizontal overflow.
+
+The globe behavior branch is **partially proven**: MapLibre canvas, public cluster/pin visibility, zoom-in/zoom-out, normal idle globe rotation, reduced-motion pause, honest fallback status and denied-location retry are observed. Exact and approximate successful location outcomes, full camera-priority interruption coverage and remote raster reliability remain open.
+
+Seller remains **partial**: the authenticated map-mounted queue, two tabs, existing-response read-only state and Escape-to-queue recovery are proven at 1024×880 only. Seller all-width capture and full focus/keyboard/recovery coverage remain open. No new Buyer request, Seller response, Auth modification or persistent write was made in this audit.
+
+Global Root remains `review`. `CANOPY-001` through `CANOPY-005` remain `partial`; `RING-001` through `RING-005` remain `todo`. Production readiness is not claimed. Next gate: complete authenticated Seller responsive/focus evidence and the remaining location, concurrency, interrupted-session, remote-map and broader Canopy/Ring proofs.

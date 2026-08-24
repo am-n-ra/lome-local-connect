@@ -207,3 +207,14 @@ The READY `48bf064` deployment was inspected in the authenticated Browser Sandbo
 At the Browser Sandbox viewport reported as 1024×880, the Seller queue sheet measured 520×561 with 22px bottom clearance. Its header, authorization summary, tabs, request list and two request cards had no pairwise overlap; the sheet did not overlap the topbar or right-side map controls; document width matched the viewport. The `Catalogue` tab rendered one scoped published product in a 520×469 sheet, with no dashboard rail or horizontal overflow.
 
 Opening an existing answered request showed the incoming product, facility, quantity, budget, deadline and read-only `Réponse déjà enregistrée` state; no duplicate response, reservation, contact, itinerary, QR, payment or transaction action appeared. Pressing Escape on that request detail now returns to `Espace vendeur` with the queue intact, covered by `resolveEscape` tests and verified live on `48bf064`. This remains a one-authenticated-viewport Seller proof: four-width Seller capture, full Tab/Shift+Tab/focus-trap review, reduced-motion, location-denial/retry and interrupted-session evidence remain open. Seller mini-ring and Global Root remain `partial`/`review`.
+
+
+## 21. 2026-08-24 — Seller Species/Canopy audit final
+
+The final production deployment was published through the configured Manus Vercel connector, without a separate Vercel login. Deployment `dpl_9SxwK3RL6YD79x2x23Gbi1ggFScK` reached `READY` with the canonical aliases and the expected Node.js 12-function runtime shape.
+
+The authenticated Seller Browser Sandbox session remained map-mounted at 1024×880. The sheet showed two existing request cards, two scoped tabs (`Demandes · 2` / `Catalogue`), the seller authorization summary and the locked handoff note. Document width matched the viewport, no dashboard rail appeared and the right-side map controls stayed clear. Opening the already-answered first request displayed its read-only `Réponse déjà enregistrée` state; Escape returned to the Seller queue with both request cards intact. No response, Buyer request or persistent write was made.
+
+The broader responsive Buyer audit in the same production deployment covered 320×760, 375×812, 768×900, 1280×900, 1731×818 and 375×620 and passed all dock/grid/Options/control/overflow gates. Seller responsive proof remains independently captured only at the authenticated 1024×880 viewport in this slice; its four-width capture, full focus/Tab/Shift+Tab review, exact/approximate successful location proof, concurrency/interrupted-session recovery and broader Seller Ring remain open.
+
+Seller mini-ring remains **partial**. Global Root remains `review`; no release Ring or production-readiness claim is closed.
