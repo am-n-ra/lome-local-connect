@@ -131,6 +131,7 @@ export function TrunkApp() {
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
+  const [searchRevealRevision, setSearchRevealRevision] = useState(0);
   const detailRequestRef = useRef(0);
   const availabilityKeyRef = useRef<{ shape: string; key: string } | null>(null);
   const facilityQueryKeyRef = useRef<string | null>(null);
@@ -765,6 +766,7 @@ export function TrunkApp() {
       return;
     }
     setMapState('loading');
+    setSearchRevealRevision((revision) => revision + 1);
     setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
     setShowAllResults(true);
@@ -780,6 +782,7 @@ export function TrunkApp() {
       return;
     }
     setMapState('loading');
+    setSearchRevealRevision((revision) => revision + 1);
     setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
     setShowAllResults(true);
@@ -798,6 +801,7 @@ export function TrunkApp() {
   const resetSearch = () => {
     setQuery('');
     setCommittedQuery('');
+    setSearchRevealRevision((revision) => revision + 1);
     setDraftOptions(emptySearchOptions);
     setAppliedOptions(emptySearchOptions);
     setQuantity(1);
@@ -812,6 +816,7 @@ export function TrunkApp() {
 
   const retryPublicFacilities = () => {
     facilityQueryKeyRef.current = null;
+    setSearchRevealRevision((revision) => revision + 1);
     setBounds((current) => current ? [...current] as [number, number, number, number] : undefined);
   };
 
@@ -1018,9 +1023,13 @@ export function TrunkApp() {
     };
   }, [mapState, nearbyOpen, showAllResults, visibleFacilities.length]);
 
+  const searchRevealKey = committedQuery.trim() && mapState === 'ready'
+    ? `${searchRevealRevision}|${committedQuery}|${JSON.stringify(appliedOptions)}|${facilities.map((facility) => facility.id).join(',')}`
+    : null;
+
   return (
     <main ref={appRef} className={mainClass} data-auth={authClient ? 'configured' : 'missing'}>
-      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} />
+      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} />
 
       <header className="species-topbar">
         <div className="role-switch" aria-label="Omni role context">

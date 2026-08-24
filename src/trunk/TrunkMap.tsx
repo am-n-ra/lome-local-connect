@@ -4,14 +4,18 @@ import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEven
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 import { groupProjectedFacilities, type ProjectedFacility, type ScreenPin } from './map-pins';
+import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
+
+type CameraMode = 'resting_globe' | 'manual_navigation' | 'search_reveal' | 'result_framing' | 'selected_facility';
 
 type Props = {
   facilities: PublicFacility[];
   selectedId: string | null;
   onSelect: (facility: PublicFacility) => void;
   onBoundsChange?: (bounds: [number, number, number, number]) => void;
+  revealKey?: string | null;
   contextSurfaceOpen?: boolean;
 };
 
@@ -41,28 +45,53 @@ function featureCollection(facilities: PublicFacility[]) {
   };
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, contextSurfaceOpen = false }: Props) {
+function waitForMapMove(map: Map, timeout = 1500) {
+  return new Promise<void>((resolve) => {
+    let timer: number | null = null;
+    const done = () => {
+      if (timer !== null) window.clearTimeout(timer);
+      map.off('moveend', done);
+      resolve();
+    };
+    map.once('moveend', done);
+    timer = window.setTimeout(done, timeout);
+  });
+}
+
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, revealKey = null, contextSurfaceOpen = false }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
+  const cameraMode = useRef<CameraMode>('resting_globe');
   const rotationFrame = useRef<number | null>(null);
   const rotationResumeTimer = useRef<number | null>(null);
+  const revealToken = useRef(0);
+  const revealRunningRef = useRef(false);
+  const lastRevealKey = useRef<string | null>(null);
+  const pointerInside = useRef(false);
   const fallbackUsed = useRef(false);
   const initialStyleReady = useRef(false);
   const contextSurfaceRef = useRef(contextSurfaceOpen);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'fallback'>('loading');
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
+  const [cameraModeState, setCameraModeState] = useState<CameraMode>('resting_globe');
+  const [revealRunning, setRevealRunning] = useState(false);
+  const [revealLabel, setRevealLabel] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1.35);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
+  const [userPosition, setUserPosition] = useState<RevealPoint | null>(null);
+  const userPositionRef = useRef<RevealPoint | null>(null);
   const [zoomExpanded, setZoomExpanded] = useState(false);
   const [screenPins, setScreenPins] = useState<ScreenPin[]>([]);
+  const [screenUserPosition, setScreenUserPosition] = useState<{ left: number; top: number } | null>(null);
   const screenPinsFrame = useRef<number | null>(null);
   const locationRequest = useRef<number | null>(null);
   const resumeMotionRef = useRef<(() => void) | null>(null);
   facilitiesRef.current = facilities;
+  userPositionRef.current = userPosition;
 
   const updateScreenPins = useCallback(() => {
     const map = mapRef.current;
@@ -76,6 +105,15 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       })
       .filter(({ x, y }) => Number.isFinite(x) && Number.isFinite(y) && x >= -56 && x <= width + 56 && y >= -56 && y <= height + 56);
     setScreenPins(groupProjectedFacilities(projected));
+    const currentUser = userPositionRef.current;
+    if (!currentUser || !Number.isFinite(currentUser.longitude) || !Number.isFinite(currentUser.latitude)) {
+      setScreenUserPosition(null);
+      return;
+    }
+    const userPoint = map.project([currentUser.longitude, currentUser.latitude]);
+    setScreenUserPosition(Number.isFinite(userPoint.x) && Number.isFinite(userPoint.y) && userPoint.x >= -40 && userPoint.x <= width + 40 && userPoint.y >= -40 && userPoint.y <= height + 40
+      ? { left: userPoint.x, top: userPoint.y }
+      : null);
   }, []);
 
   const scheduleScreenPins = useCallback(() => {
@@ -86,7 +124,22 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     });
   }, [updateScreenPins]);
 
-  const pauseMotion = () => {
+  useEffect(() => {
+    scheduleScreenPins();
+  }, [userPosition, scheduleScreenPins]);
+
+  const cancelActiveReveal = () => {
+    if (!revealRunningRef.current) return;
+    revealToken.current += 1;
+    revealRunningRef.current = false;
+    setRevealRunning(false);
+    setRevealLabel(null);
+    cameraMode.current = 'manual_navigation';
+    setCameraModeState('manual_navigation');
+  };
+
+  const pauseMotion = (reason: 'interaction' | 'surface' = 'interaction') => {
+    if (reason === 'interaction') cancelActiveReveal();
     rotating.current = false;
     if (rotationFrame.current !== null) {
       window.cancelAnimationFrame(rotationFrame.current);
@@ -98,6 +151,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     }
     const map = mapRef.current;
     if (map?.isMoving()) map.stop();
+    if (reason === 'interaction' && cameraMode.current !== 'search_reveal') {
+      cameraMode.current = 'manual_navigation';
+      setCameraModeState('manual_navigation');
+    }
     setRotationState(window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'reduced' : 'paused');
   };
 
@@ -105,6 +162,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
     locationRequest.current = null;
     rotating.current = false;
+    cameraMode.current = 'manual_navigation';
+    setCameraModeState('manual_navigation');
     setLocationState('cancelled');
   };
 
@@ -128,9 +187,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
         if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
         locationRequest.current = null;
         const approximate = position.coords.accuracy > 500;
+        const nextPosition = { longitude: position.coords.longitude, latitude: position.coords.latitude };
+        setUserPosition(nextPosition);
         setLocationState(approximate ? 'approximate' : 'exact');
         mapRef.current?.stop();
         rotating.current = false;
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
         mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
       },
       (error) => {
@@ -192,14 +255,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     const scheduleRotation = (delay = 1400) => {
       stopRotation();
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || map.getZoom() >= 2.4) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= 2.4) return;
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || map.getZoom() >= 2.4) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= 2.4) return;
         setRotationState('rotating');
         let previousTime = performance.now();
         const frame = (time: number) => {
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= 2.4) {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.isMoving() || map.getZoom() >= 2.4) {
             stopRotation();
             return;
           }
@@ -213,7 +276,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       }, delay);
     };
     const resume = () => {
-      if (contextSurfaceRef.current) {
+      if (contextSurfaceRef.current || cameraMode.current !== 'resting_globe') {
         rotating.current = false;
         stopRotation();
         setRotationState('paused');
@@ -225,8 +288,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
         setRotationState('reduced');
         return;
       }
-      if (map.getZoom() < 2.4 && !map.isMoving()) {
+      if (map.getZoom() < 2.4 && !map.isMoving() && !pointerInside.current) {
         rotating.current = true;
+        setCameraModeState('resting_globe');
         setRotationState('idle');
         scheduleRotation();
       } else {
@@ -267,20 +331,31 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       onBoundsChange?.(next);
     };
 
-    map.on('mousedown', pauseMotion);
-    map.on('touchstart', pauseMotion);
-    map.on('wheel', pauseMotion);
-    map.on('dragstart', pauseMotion);
-    map.on('zoomstart', pauseMotion);
+    const canvasContainer = map.getCanvasContainer();
+    const handleCanvasEnter = () => {
+      pointerInside.current = true;
+      pauseMotion('surface');
+    };
+    const handleCanvasLeave = () => {
+      pointerInside.current = false;
+      if (cameraMode.current === 'resting_globe' && !contextSurfaceRef.current) resume();
+    };
+    canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
+    canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
+    map.on('mousedown', () => pauseMotion());
+    map.on('touchstart', () => pauseMotion());
+    map.on('wheel', () => pauseMotion());
+    map.on('dragstart', () => pauseMotion());
+    map.on('zoomstart', () => pauseMotion());
     map.on('move', scheduleScreenPins);
     map.on('moveend', () => {
       setCenterLongitude(map.getCenter().lng);
       if (!rotating.current) emitBounds();
       scheduleScreenPins();
-      scheduleSettledResume();
+      if (cameraMode.current === 'resting_globe' && !pointerInside.current) scheduleSettledResume();
     });
-    map.on('dragend', () => { rotating.current = false; emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
-    map.on('zoomend', () => { rotating.current = false; setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); scheduleSettledResume(); });
+    map.on('dragend', () => { rotating.current = false; cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); emitBounds(); scheduleScreenPins(); });
+    map.on('zoomend', () => { rotating.current = false; cameraMode.current = 'manual_navigation'; setCameraModeState('manual_navigation'); setZoom(map.getZoom()); emitBounds(); scheduleScreenPins(); });
     map.on('error', () => {
       if (fallbackUsed.current || initialStyleReady.current) return;
       fallbackUsed.current = true;
@@ -316,6 +391,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
+      canvasContainer.removeEventListener('mouseenter', handleCanvasEnter);
+      canvasContainer.removeEventListener('mouseleave', handleCanvasLeave);
       resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
@@ -357,9 +434,79 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
 
   useEffect(() => {
     contextSurfaceRef.current = contextSurfaceOpen;
-    if (contextSurfaceOpen) pauseMotion();
+    if (contextSurfaceOpen) pauseMotion('surface');
     else resumeMotionRef.current?.();
   }, [contextSurfaceOpen]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !revealKey || revealKey === lastRevealKey.current || !facilities.length) return;
+    lastRevealKey.current = revealKey;
+    const token = revealToken.current + 1;
+    revealToken.current = token;
+    revealRunningRef.current = true;
+    cameraMode.current = 'search_reveal';
+    setCameraModeState('search_reveal');
+    setRevealRunning(true);
+    setRevealLabel('Recherche mondiale');
+    rotating.current = false;
+    if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
+    if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
+    const steps = buildSearchRevealSteps(facilities, userPositionRef.current);
+    const isStale = () => token !== revealToken.current;
+    const wait = (duration: number) => new Promise<void>((resolve) => window.setTimeout(resolve, duration));
+    const finish = async () => {
+      if (isStale()) return;
+      const finalPoints = pointsForResultFraming(facilities, userPositionRef.current);
+      const finalBounds = boundsOfPoints(finalPoints);
+      cameraMode.current = 'result_framing';
+      setCameraModeState('result_framing');
+      setRevealLabel('Facilités trouvées');
+      if (finalBounds) {
+        const [[west, south], [east, north]] = finalBounds;
+        if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
+          map.easeTo({ center: [west, south], zoom: 6.2, duration: 800, essential: true });
+        } else {
+          map.fitBounds(finalBounds, { padding: { top: 120, right: 76, bottom: 230, left: 76 }, maxZoom: 6.2, duration: 900, essential: true });
+        }
+        await waitForMapMove(map, 1500);
+      }
+      if (isStale()) return;
+      revealRunningRef.current = false;
+      setRevealRunning(false);
+      setRevealLabel(null);
+      cameraMode.current = map.getZoom() <= 2.4 ? 'resting_globe' : 'manual_navigation';
+      setCameraModeState(cameraMode.current);
+      if (cameraMode.current === 'resting_globe' && !pointerInside.current && !contextSurfaceRef.current) {
+        rotating.current = true;
+        setRotationState('idle');
+      }
+    };
+    const run = async () => {
+      map.stop();
+      for (const step of steps) {
+        if (isStale()) return;
+        setRevealLabel(step.label);
+        map.flyTo({ center: step.center, zoom: step.zoom, duration: 650, speed: 0.55, curve: 1.12, essential: true });
+        await waitForMapMove(map, 1250);
+        await wait(step.pause);
+      }
+      await finish();
+    };
+    void run();
+    return () => {
+      if (token === revealToken.current) {
+        revealToken.current += 1;
+        revealRunningRef.current = false;
+        setRevealRunning(false);
+        setRevealLabel(null);
+        if (cameraMode.current === 'search_reveal') {
+          cameraMode.current = 'manual_navigation';
+          setCameraModeState('manual_navigation');
+        }
+      }
+    };
+  }, [facilities, revealKey]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
@@ -375,6 +522,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
     if (!selectedId) return;
     const selected = facilities.find((facility) => facility.id === selectedId);
     if (!selected || map.isMoving()) return;
+    cameraMode.current = 'selected_facility';
+    setCameraModeState('selected_facility');
     map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
   }, [facilities, selectedId]);
 
@@ -394,8 +543,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, con
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="soft-color" data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
+      {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker" /></div>}
+      {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="map-reveal-dot" /><span>{revealLabel}</span></div>}
       <div className="map-pin-overlay" aria-label="Lieux publics sur la carte">
         {screenPins.map((pin) => pin.kind === 'cluster' ? (
           <button
