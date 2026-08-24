@@ -765,6 +765,7 @@ export function TrunkApp() {
       openAuth('sign-in');
       return;
     }
+    facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
     setAppliedOptions(draftOptions);
@@ -781,6 +782,7 @@ export function TrunkApp() {
       openAuth('sign-in');
       return;
     }
+    facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
     setAppliedOptions(draftOptions);

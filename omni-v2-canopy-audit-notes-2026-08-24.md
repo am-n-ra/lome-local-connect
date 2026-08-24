@@ -55,3 +55,25 @@ On the `bf72e22` replay, hovering the globe again produced `data-rotation="pause
 ## Corrected hover-leave replay result
 
 The `bf72e22` replay still reported `data-rotation="paused"`, unchanged `centerLng="59.3189"` and `zoom="1.35"` after the pointer was moved to the dock and held there for approximately 1.9 seconds. The global listener was not sufficient in this browser harness, likely because `browser_move_mouse` does not emit the expected pointer transition to the page or because the map/canvas remains the event target beneath the overlay. The pause behavior is proven; resume-outside-canvas remains unproven and requires either a controlled real pointer event or an interaction-state adjustment that does not reset the camera.
+
+## Canonical replay after `375e4f2`
+
+The latest READY deployment replayed with the authenticated Sandbox session at `1024×880`: MapLibre globe/canvas mounted, public cluster count `4`, right-side controls, J5, Buyer/Seller switch and the bottom dock remained visible. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-46-23_2210.webp`.
+
+## Latest hover pause proof
+
+On `375e4f2`, hovering the globe kept `centerLng="49.7527"` and `zoom="1.35"` unchanged across approximately 1 second while `cameraMode="resting_globe"` and `data-rotation="paused"` remained stable. The pause at the current position is reproducible on the canonical deployment. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-46-39_1071.webp`.
+
+## Latest hover-leave result
+
+On `375e4f2`, moving from the globe to the dock and waiting approximately 1.9 seconds still left `centerLng="49.7527"`, `zoom="1.35"`, `cameraMode="resting_globe"` and `data-rotation="paused"`. The browser harness continues to provide reliable hover pause but not a detectable leave transition. The camera is not reset; however, automatic resume outside overlays remains unproven. This is retained as a residual Canopy gap rather than declared fixed.
+
+## Controlled hover-leave proof
+
+Because the browser movement helper did not emit a usable overlay transition, a non-mutative synthetic `mousemove` event was dispatched on the search input, with `elementFromPoint(500,722)` confirming the dock coordinate resolves to the canvas in this harness. After approximately 1.9 seconds, the stage reported `data-rotation="rotating"`, `cameraMode="resting_globe"`, unchanged `zoom="1.35"` and `centerLng="51.0228"` at capture time. This demonstrates the implemented release path resumes RAF rotation without resetting the camera. The limitation is recorded: physical cursor leave is not independently measurable through this browser helper. Screenshot: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-47-49_8747.webp`.
+
+## First deployed search reveal observation
+
+On READY `375e4f2`, the authenticated search `Marche de Hanoukope` returned one public result and the contextual sheet rendered `Résultats pour « Marche de Hanoukope »`, `Marche de Hanoukope`, `Market · Lieu local` and `Voir le lieu`. The map remained mounted behind the sheet, the public cluster remained visible and the search dock stayed in its own band above the sheet. The screenshot after submit shows the globe framed over the Africa region while the result sheet is present: `/home/ubuntu/screenshots/omni_sparkafrika_onl_2026-08-24_17-48-19_9575.webp`.
+
+The browser click returned after the asynchronous path had already settled, so a distinct loading/reveal-stage capture is still required.
