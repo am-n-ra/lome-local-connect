@@ -93,3 +93,38 @@ No code has been changed for these V4 observations at this checkpoint. Preserve 
 ## 2026-08-24 — Canopy V4 local browser checkpoint
 
 The local V4 instance loaded the new dark-ocean treatment and showed the revised arrival copy `La carte reste sur votre vue pendant la demande.` The local API then entered the honest fallback/unavailable state, so no source-backed public facility or native cluster was available for this isolated view. This is not treated as proof of vector layer styling or pin anchoring. The local browser showed no unexpected mobile recenter in the arrival frame; the location request remained cancellable. The next proof must use the real production API after deployment.
+
+
+## 2026-08-24 — Canopy V4 production initial view
+
+Deployment `dpl_2WVikNUNw82fPyKqwHFPJ2bJtCUE` reached READY and the canonical domain loaded the V4 shell. The first production view showed the dark ocean treatment, right controls, role switch, account orb and bottom search dock. The first wait still reported `Chargement de la carte` and did not yet show source-backed facilities or the location state, so this is only an initial shell checkpoint. A later stable view is required before measuring native pin presence and projection transitions.
+
+
+## Production V4 stable arrival and native-renderer checkpoint
+
+The stable canonical V4 view loaded four source-backed public facilities, the dark-ocean/light-land globe and the existing authenticated session. At `zoom=1.35`, the DOM reported `projection=globe`, `center=42.9025`, `bearing=0.00`, `location=idle`, `userPosition=hidden`, one MapLibre canvas, `visibleHtmlFacilityPins=0` and four `.map-pin-a11y` buttons. This confirms the visible facility renderer is no longer the projected HTML overlay; the four HTML buttons are the keyboard fallback only. The current session had no location state, so no arrival recenter or marker was fabricated.
+
+
+## Production V4 zoom-in checkpoint
+
+After one read-only `Zoom avant` action, the real production stage moved from `zoom=1.35` to `zoom=2.35`, kept `projection=globe`, changed center longitude to `105.7532` through the existing idle/manual camera behavior, retained one MapLibre canvas and reported `visibleHtmlPins=0`. The bidirectional projection threshold has not yet been crossed at this sample.
+
+
+## Production V4 bidirectional projection checkpoint — zoom in
+
+After the second read-only zoom, production reported `zoom=3.35`, `projection=mercator`, `center=141.4093`, `bearing=0.00`, one MapLibre canvas and `visibleHtmlPins=0`. The visible screenshot changed from the globe to a normal local-map projection while retaining the dark-ocean/light-land direction. The projection switch occurred automatically at the V4 threshold; no camera reset was observed.
+
+
+## Production V4 bidirectional projection checkpoint — zoom out
+
+A read-only zoom-out from the local-map state returned production to `zoom=2.35`, `projection=globe`, `center=156.2686`, `bearing=0.00`, one MapLibre canvas and `visibleHtmlPins=0`. The globe reappeared from the current camera rather than resetting to the initial center. This proves both directions at the DOM/render level; street-label quality and high-zoom facility rendering still require a dedicated result search proof.
+
+
+## Production V4 result checkpoint — remote style issue observed
+
+The canonical V4 search `Marche de Hanoukope` reached `ready` with the retained dock, result toolbar (`Nouvelle recherche`, `Affiner`, `Retour à la carte`) and a source-backed public card. However, the production map status reported `Carte en mode de secours` and the screenshot showed the fallback globe/local frame rather than a fully rendered Liberty vector basemap. No visible facility pin was counted in the HTML (`map-pin` remains absent by design), and this state is not accepted as proof of native vector pin visibility. The remote style/tile failure must be diagnosed before claiming the V4 visual goal.
+
+
+## Production V4 remote-style diagnosis
+
+The production console did not expose a MapLibre exception, but resource timing showed many OpenFreeMap `natural_earth/ne2sr` tile requests. The style endpoint is therefore reached and at least its natural-earth background assets load; the current visible `Carte en mode de secours` state is driven by the application fallback flag rather than a simple missing network request. Native pin visibility is still not proven in this result because the current map status is fallback. The next step is to inspect MapLibre style/error timing and, if needed, keep the existing stable OSM raster style while applying the V4 dark palette through an additive style layer instead of depending on the remote vector style.

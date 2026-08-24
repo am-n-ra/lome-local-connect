@@ -264,7 +264,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   }, []);
 
   useEffect(() => {
-    const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 3500);
+    const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 8000);
     return () => window.clearTimeout(readinessTimer);
   }, []);
 
@@ -457,11 +457,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !contextSurfaceRef.current) scheduleSettledResume();
     });
     map.on('error', () => {
+      // A tile or glyph error must not replace an otherwise healthy style before
+      // it finishes loading. The delayed timer below is the style-level fallback.
       if (fallbackUsed.current || initialStyleReady.current) return;
-      fallbackUsed.current = true;
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      setMapStatus('fallback');
-      map.setStyle(FALLBACK_STYLE);
     });
     fallbackTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && !fallbackUsed.current && mapRef.current === map) {
@@ -469,7 +467,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         setMapStatus('fallback');
         map.setStyle(FALLBACK_STYLE);
       }
-    }, 3000);
+    }, 8000);
     let globeProjection = true;
     const syncProjection = () => {
       const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
