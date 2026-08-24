@@ -334,3 +334,22 @@ The owner’s Canopy re-entry is addressed as a focused Species amendment rather
 Source validation after the fix passed `116 tests / 16 files`, Vite build with exactly `12` bundled Vercel functions and `check:boundary`. Deployment `dpl_4h49A7jHsfgvddme6qwohw9VsC3x` is READY for commit `60403a3`; production proofs cover native center/bearing movement, retained idle resume, globe→mercator local zoom, repeated-query loading→ready, refine/new-search/return recovery, synthetic granted marker, honest denied/timeout state, desktop `1024×880` geometry and compact `390×844` normal/reduced-motion behavior.
 
 `CANOPY-001` through `CANOPY-005` remain `partial`; `RING-001` through `RING-005` remain `todo`. Full keyboard/focus, authenticated compact Seller/Reviewer/facility recovery, remote-tile resilience and deeper performance remain open. Multi-product availability is explicitly **blocked pending a Root/API decision** because the current server contract is one product per request; no grouped selection, batch write, idempotency, expiry or response-ownership semantics were invented. Global Root remains `review`; no Ring or production-readiness claim is closed.
+
+
+## 2026-08-24 — Canopy V4 re-entry checkpoint
+
+Canopy V4 is now implemented and materially browser-proven on the canonical deployment `dpl_7gg9Rxv5mR9whTgUw42WHCVaMVaQ` for commit `6399b68`: the map switches automatically globe→mercator at zoom `2.4` and back on zoom-out; facility features are rendered by the MapLibre source/layers rather than the prior projected HTML overlay; mobile arrival does not recenter automatically; mobile text inputs are held at `16px`; the V4 palette uses a dark ocean, light land and stronger geographic edges; and closing result/facility context clears selected focus.
+
+The wide production gesture proof passed free left-drag center change, right-button bearing change, retained camera position and idle resumption from the released camera. The result frame reached local-map zoom `12.80`, retained the explicit result actions and returned to map-only dock state without selected-facility mode. The compact proof passed canvas, 16px input sizing, zero visible `.map-pin` overlays and no horizontal overflow, but its reduced-motion one-click sequence did not independently cross the projection threshold; compact authenticated and touch proofs remain open.
+
+| Task ID | V4 checkpoint update | Status after evidence |
+|---|---|---|
+| SPECIES-011 | Bidirectional projection, persistent MapLibre canvas, free globe gesture and retained idle resume are now materially proven on production; compact/touch/full recovery remain. | `verified / parent open` |
+| SPECIES-012 | Discovery rings and native facility layers are implemented; visible dense-cluster, trust-state and moving-frame inspection remain. | `review` |
+| SPECIES-013 | Closing result/facility context clears selected focus and returns to map-only dock; facility detail back/Escape and route recovery remain. | `review` |
+| TRUNK-MAP | Globe/local-map threshold and no-reset camera ownership are proven; remote tile resilience, touch and full responsive certification remain. | `verified / parent open` |
+| TRUNK-DISCOVERY | Native MapLibre source/layers replace the visible HTML overlay and query result reaches local-map zoom; dense/moving pin continuity and error/retry remain. | `partial` |
+| HEART-004 | Explicit `Retour à la carte` clears the facility focus context; full facility-focus/back, refresh and interrupted-session proof remain. | `partial` |
+| HEART-005 | Mobile 16px entry, compact geometry, named controls and no-overflow checks pass; authenticated compact, touch and full keyboard/focus matrix remain. | `partial` |
+
+Multi-product availability remains `blocked / Root/API decision required`; no grouped selection, basket, batch request or mutation was added. Global Root remains `review`, and no release Ring is closed.

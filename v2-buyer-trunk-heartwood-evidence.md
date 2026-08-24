@@ -158,3 +158,14 @@ The second same-query replay exposed and then fixed a React lifecycle defect in 
 The Buyer availability sheet continues to accept exactly one `selectedProductId` per request and retains the existing idempotency and response ownership semantics. This slice adds only a truthful planning note in the Product step; it does not persist a multi-select basket, issue multiple requests implicitly, or submit a grouped request. Grouped availability is **blocked / Root/API decision required** until the contract explicitly defines product-set identity, per-product quantities and budgets, batch idempotency, partial success, expiry, response ownership, resume/retry and permission boundaries. Therefore the visual Canopy gate is advanced, while Buyer Heartwood multi-product capability remains unimplemented.
 
 **Updated status:** Buyer Heartwood remains `partial / ring decision pending`. The map/search and responsive proof is materially stronger, but authenticated compact result-sheet/focus recovery, full keyboard/focus, failure/retry and remote-tile evidence remain open; no Ring is closed and Global Root remains `review`.
+
+
+## 2026-08-24 — Canopy V4 projection and focus checkpoint
+
+Production deployment `dpl_7gg9Rxv5mR9whTgUw42WHCVaMVaQ` for commit `6399b68` is READY on the canonical alias with the expected 12-function Node runtime. The V4 map now uses the existing OpenFreeMap style path with a targeted Canopy palette: dark ocean, light land and stronger boundary contrast. A bidirectional zoom proof recorded `globe` at `1.35`, `mercator` at `3.35`, then `globe` again at `2.35`, with the current camera retained.
+
+The refreshed wide production gesture proof passed free left-drag center change `1.2200→-51.9800`, bearing change `0.00→34.20`, right-button pivot to `-85.80`, and idle resume from that released camera without reset. Facility features are now rendered by the MapLibre GeoJSON source/layers; the DOM contains zero visible `.map-pin` HTML overlays, with only a hidden keyboard fallback list. The result frame reached `mercator` zoom `12.80`, and `Retour à la carte` removed the result/facility sheet, left the dock present and cleared selected-facility mode.
+
+The mobile proof captured a full `390×844` canvas, 16px search input and no horizontal overflow. Its short reduced-motion sequence did not independently reach the projection threshold, so compact authenticated/touch and full pin visual-continuity proof remain open. The location arrival path remains non-centering on mobile and still requires the owner’s direct permission-prompt proof. Multi-product availability remains blocked behind a Root/API contract; the single-product request and idempotency semantics are unchanged.
+
+**Buyer Heartwood status:** `partial / V4 Canopy evidence materially advanced; ring decision pending`. No availability write, facility claim, seller response, reviewer decision or other business mutation was performed in this checkpoint.

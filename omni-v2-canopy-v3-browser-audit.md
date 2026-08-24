@@ -128,3 +128,55 @@ The canonical V4 search `Marche de Hanoukope` reached `ready` with the retained 
 ## Production V4 remote-style diagnosis
 
 The production console did not expose a MapLibre exception, but resource timing showed many OpenFreeMap `natural_earth/ne2sr` tile requests. The style endpoint is therefore reached and at least its natural-earth background assets load; the current visible `Carte en mode de secours` state is driven by the application fallback flag rather than a simple missing network request. Native pin visibility is still not proven in this result because the current map status is fallback. The next step is to inspect MapLibre style/error timing and, if needed, keep the existing stable OSM raster style while applying the V4 dark palette through an additive style layer instead of depending on the remote vector style.
+
+
+## Production V4 post-fallback patch reload
+
+After deployment `dpl_ApabU8DnQR48ikjBQxGFXfcaAALK` reached READY, a fresh canonical navigation and a second wait both remained visually blank with no interactive elements detected. This is a new production loading failure relative to the earlier V4 shell. No business action was taken. The next step is console/network diagnosis; the V4 gate is not accepted while the canonical page fails to mount.
+
+
+## Production V4 post-fallback diagnosis resolved
+
+The blank screenshot was a transient browser loading frame. The subsequent DOM interrogation showed a mounted `main.species-app`, a MapLibre canvas, four keyboard fallback facility buttons, `Carte active`, `projection=globe`, `zoom=1.35`, `rotation=rotating`, and no location recenter. The production page therefore mounted successfully after the deferred fallback patch. A stable visual wait is still required to verify actual vector tiles and native MapLibre features.
+
+
+## Production V4 stable style checkpoint
+
+The post-patch production view now reports `Carte active`, `projection=globe`, `zoom=1.35`, `rotation=rotating`, one MapLibre canvas, four accessible fallback buttons and `visibleHtmlPins=0`. The computed canvas treatment is `saturate(0.88) sepia(0.01) brightness(0.94) contrast(1.08)`. The stable screenshot shows the intended dark ocean and light land globe; the native feature layer is now the only visible facility renderer. The current stable frame has no user marker and does not recenter on arrival.
+
+
+## Production V4 stable zoom checkpoint
+
+From the stable V4 globe, one read-only zoom reached `zoom=2.35`, kept `projection=globe`, preserved `visibleHtmlPins=0`, and reported `rotation=rotating` in the sampled DOM. The screenshot remained a single continuous globe. Because the plus-control transition and the RAF state can overlap in the same frame, a second sample after the threshold is required before interpreting the rotation flag; no visible facility overlay was introduced.
+
+
+## Production V4 stable bidirectional zoom proof — local map
+
+After the second zoom from the stable globe, the production DOM reported `projection=mercator`, `zoom=3.35`, `center=-129.7551`, `bearing=0.00`, `rotation=paused`, `status=Carte active`, `visibleHtmlPins=0` and `a11yButtons=0` at this moment. The V4 switch is therefore active on the live map and the rotation pauses on the user action. The screenshot shows the normal map projection; this sample did not yet contain a visible facility at the current center, so facility pin tracking remains to be proven with a focused result frame.
+
+
+## Production V4 real search checkpoint
+
+The production search for `Marche de Hanoukope` completed with `Carte active`, the retained input dock, the result sheet, the public facility card and the three recovery actions. The current screenshot still showed a pale low-detail local frame at the reveal checkpoint and no HTML pins, which is consistent with native MapLibre rendering but does not by itself prove that the result has reached the intended street/neighborhood zoom or that the native facility feature is visible. This remains a visual-quality checkpoint, not final acceptance of the pin/raster/vector requirement.
+
+
+## Production V4 result framing proof
+
+After the reveal settled, production reported `cameraMode=manual_navigation`, `projection=mercator`, `zoom=12.80`, `reveal=idle`, `status=Carte active`, an open result sheet, `htmlPins=0` and `a11yPins=1`. This confirms the new result frame reaches local-map scale and keeps the visible marker responsibility inside MapLibre rather than the old HTML overlay. The single facility card corresponds to the one public result; street/neighborhood raster detail is rendered on the map canvas, while the pin’s exact on-screen position requires a visual screenshot at a less obstructed sheet state for full acceptance.
+
+
+## Production V4 result exit and focus proof
+
+From the ready result state, `Retour à la carte` removed the nearby result sheet and any facility panel, left the search dock present with the query retained, changed the camera mode to `manual_navigation`, reported no `selected_facility` mode and kept `visibleHtmlPins=0`. This proves the explicit exit clears the facility focus context rather than leaving a stale selected grid/pin state.
+
+The standalone compact Playwright run also confirmed canvas mounting, 16px mobile input sizing, no HTML marker overlay and no horizontal overflow, but its reduced-motion sequence did not cross the projection threshold before the result wait; it is retained as partial evidence rather than a full V4 acceptance proof.
+
+
+## Production V4 free-globe gesture proof — deployment `6399b68`
+
+The refreshed production camera proof passed on `1024×880`. Initial state was `centerLng=1.2200`, `bearing=0.00`, `zoom=1.35`, `projection=globe`, `cameraMode=manual_navigation`, one MapLibre canvas and zero visible HTML pins. A left drag changed the center to `-51.9800` and bearing to `34.20`; a subsequent right-button pivot kept the center and changed bearing to `-85.80`. All frames kept `cameraMode=manual_navigation`, zero HTML facility pins and a valid globe projection. This is the required proof that the free globe gesture is no longer blocked and the released camera is preserved.
+
+
+## Production V4 manual camera and idle-resume proof
+
+The enriched production Playwright proof on `1024×880` passed all camera assertions. Initial state: `centerLng=1.2200`, `bearing=0.00`, `zoom=1.35`, `projection=globe`. Left drag produced `centerLng=-51.9800`, `bearing=34.20`, `cameraMode=manual_navigation`. Right-button pivot kept the center and produced `bearing=-85.80`. After moving to the topbar and waiting, the state became `cameraMode=resting_globe`, `rotation=idle`, with the same `centerLng=-51.9800` and `bearing=-85.80`; no reset occurred. One MapLibre canvas and zero visible HTML pins persisted throughout.
