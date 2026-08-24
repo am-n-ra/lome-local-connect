@@ -107,8 +107,8 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status | Gate evidence |
 |---|---|---|---|---|
-| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `partial` | Canonical MapLibre canvas, globe/fallback map, visible controls and camera focus are proven; idle/reduced-motion/location/recovery coverage remains |
-| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `partial` | Submit parity and context proof |
+| TRUNK-MAP | Build persistent MapLibre globe/map arrival and camera ownership | ROOTS | `partial` | d3a550f canonical proof: true idle has no nearby sheet, full MapLibre stage/canvas, contained globe, public cluster, zoom `1.35 → 2.35 → 1.35`, six responsive viewport checks and truthful fallback; successful location, full camera-priority interruption, remote raster reliability and recovery remain |
+| TRUNK-SEARCH | Build one search pill/dock and one Options disclosure | TRUNK-MAP | `partial` | Visible `Rechercher` submit, contextual nearby reveal and collapse→idle are browser-proven; anonymous submit correctly reaches official Auth, while authenticated result-card settlement and full keyboard/context-motion proof remain |
 | TRUNK-DISCOVERY | Connect bounded source-backed discovery, pins/clusters and results | TRUNK-SEARCH | `partial` | Canonical 48bf064 proves public cluster 4 → local cluster 3 + individual pin, accessible pin actions, three public cards and truthful fallback; broader bounds/error/recovery coverage remains |
 | TRUNK-FACILITY | Build public facility detail and result restoration | TRUNK-DISCOVERY | `partial` | Privacy and back/close proof |
 | TRUNK-CATALOGUE | Build facility-scoped catalogue and typed product selection | TRUNK-FACILITY | `verified` | Product/no-reservation proof |
@@ -227,9 +227,9 @@ The active Root closure register is [`v2-root-closure-register.md`](./v2-root-cl
 
 | Task ID | Task | Dependencies | Status |
 |---|---|---|---|
-| CANOPY-001 | Reconcile all surfaces against Species blueprint | Required branches | `partial` | Buyer map-first structure, visible pins/clusters and Seller map-mounted mini-ring audited; full surface matrix remains open |
-| CANOPY-002 | Four-width responsive and safe-area certification | Required branches | `partial` | Buyer 320/375/768/1280 structural audit passes with no overflow or measured overlap; Seller is only proven at authenticated 1024×880 |
-| CANOPY-003 | Accessibility, keyboard, focus and reduced-motion certification | Required branches | `partial` | Native accessible pins and Seller Escape queue recovery are proven with tests/live check; full Tab/Shift+Tab, focus-trap and reduced-motion pass remains |
+| CANOPY-001 | Reconcile all surfaces against Species blueprint | Required branches | `partial` | Buyer map-first structure, contextual nearby surface, contained idle globe, visible pins/clusters and Seller map-mounted mini-ring audited; full surface matrix remains open |
+| CANOPY-002 | Four-width responsive and safe-area certification | Required branches | `partial` | Buyer six viewport audit (`320×760`, `375×812`, `768×900`, `1280×900`, `1731×818`, `375×620`) passes idle geometry, no overflow and zoom; authenticated reveal/collapse is live-proven at ~1024×880; Seller is only proven at authenticated 1024×880 |
+| CANOPY-003 | Accessibility, keyboard, focus and reduced-motion certification | Required branches | `partial` | Native accessible pins, Seller Escape queue recovery, reduced-motion state and live named controls are proven; full Tab/Shift+Tab, focus-trap and context-motion capture remain |
 | CANOPY-004 | Map, API, database, cache and bundle performance audit | Required branches | `partial` | 12-function build and canonical map/fallback/pin checks pass; bundle warning, tile reliability and deeper performance/recovery checks remain |
 | CANOPY-005 | Dead-action, false-state, privacy and client-boundary audit | Required branches | `partial` | No stock/trust/permission inference, private handoff stays locked, client boundary passes and no protected write occurred in this audit; broader negative-state sweep remains |
 | RING-001 | Buyer release gate | CANOPY | `todo` |
@@ -260,3 +260,11 @@ The globe behavior branch is **partially proven**: MapLibre canvas, public clust
 Seller remains **partial**: the authenticated map-mounted queue, two tabs, existing-response read-only state and Escape-to-queue recovery are proven at 1024×880 only. Seller all-width capture and full focus/keyboard/recovery coverage remain open. No new Buyer request, Seller response, Auth modification or persistent write was made in this audit.
 
 Global Root remains `review`. `CANOPY-001` through `CANOPY-005` remain `partial`; `RING-001` through `RING-005` remain `todo`. Production readiness is not claimed. Next gate: complete authenticated Seller responsive/focus evidence and the remaining location, concurrency, interrupted-session, remote-map and broader Canopy/Ring proofs.
+
+## 12. 2026-08-24 — Contextual nearby / contained globe checkpoint
+
+Commit `d3a550f` is the current local source and canonical READY deployment `dpl_8ZsUTb7Gv1ckgzNh5QirUbfe7MN2`. The six-viewport Playwright audit confirms that the Buyer idle is map-only: no nearby sheet is mounted, the compact dock and visible submit action remain present, the map stage/canvas fill the viewport, there is no horizontal overflow or measured idle collision, and zoom in/out returns to the global frame. The anonymous path opens official Auth on submit rather than presenting a fabricated discovery result.
+
+The authenticated Browser Sandbox proof at approximately `1024×880` confirms that `Proche de vous` appears only after `Rechercher`, that the loading surface is compact (`163.3px`) with a `14px` dock-to-sheet gap and no measured overlap, and that `Replier les facilités proches` unmounts the sheet and restores true idle. The run remained loading, so successful catalogue-result settlement is not claimed. No Buyer/Seller/Auth mutation or persistent write was made.
+
+This is a **partial/verified checkpoint for the focused Species/Canopy layout slice**, not a closed Buyer Heartwood, Canopy or Ring. Seller all-width and focus certification, exact/approximate location success, concurrency/interrupted-session recovery, remote tile reliability, complete result-card reveal, onboarding/trust, QR/payment/transaction and release acceptance remain open.
