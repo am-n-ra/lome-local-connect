@@ -32,7 +32,7 @@ The existing V2 schema already has the base `v2_facilities`, `v2_facility_slots`
 - `v2_notification_deliveries`: event, channel (`in_app`, `web_push`), status, attempt count, next attempt, provider reference and last error class; no raw subscription secret in evidence/logs.
 - `v2_operator_runs`: bounded import/review/recovery owner, geography/bounds, source, outcome, count, error class and evidence reference, if not already present in the deployed branch.
 
-The migrations must be additive, idempotent and accompanied by forward checks, invariant checks, recovery steps and a statement of preserved Auth/legacy records. The first migration adds roles, status history, operator runs and notification storage; the follow-up migration allows public source facilities to remain unowned and permits only one active claim per facility. They must not be applied to the production database until the Root gate is explicitly accepted.
+The migrations are additive and idempotent, with forward and invariant checks recorded for both a disposable fork and the persistent V2 runtime branch. The first migration adds roles, status history, operator runs and notification storage; the follow-up allows public source facilities to remain unowned and permits only one active claim per facility. They are applied on the persistent V2 branch bound to Vercel, while the Root gate remains open for role grants, evidence storage, reviewer proof and operational recovery.
 
 ## 4. API contract
 
@@ -85,4 +85,4 @@ The operator and claimant surfaces inherit the approved Species: permanent MapLi
 
 ## 9. Stop gate
 
-Do not implement or apply the migration as accepted until the deployment’s current Auth session behavior, account provisioning, role grants, object storage path and reviewer ownership are confirmed. Do not import all OSM data for Lomé–Aflao from the browser. The first implementation should use a bounded, reviewed import fixture or operator payload and produce an auditable run; source breadth expands only after dedupe and recovery evidence.
+Do not treat the applied migration as a production-readiness acceptance until the deployment’s current Auth session behavior, account provisioning, role grants, object storage path and reviewer ownership are confirmed. Do not import all OSM data for Lomé–Aflao from the browser. The first operational implementation must use a bounded, reviewed import fixture or operator payload and produce an auditable run; source breadth expands only after dedupe and recovery evidence.
