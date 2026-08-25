@@ -86,7 +86,7 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--atlas-paper)] px-4 py-10">
       <div className="w-full max-w-md">
         <Link
           to="/"
@@ -94,7 +94,10 @@ function AuthPage() {
         >
           <BrandMark className="h-8 w-8" /> OmniView
         </Link>
-        <div className="omni-card p-6">
+        <div className="omni-atlas-surface omni-atlas-ink rounded-[1.75rem] p-6">
+          <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.16em] text-[var(--atlas-orange)]">
+            Accès Omni
+          </p>
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Connexion</TabsTrigger>
