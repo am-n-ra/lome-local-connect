@@ -493,3 +493,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates. No account, fixture, business or operational data changed.
 
 **Evidence record:** `/tmp/omni-canopy-a11y-observation.md`.
+
+## Mobile dock fixed correction checkpoint — 2026-08-25
+
+**Status:** `partial / mobile dock containment correction deployed and canonical non-regression verified; Species and release Rings remain open`.
+
+**Changed:** The mobile media query now pins `.search-anchor` to the viewport with `position: fixed`, while retaining the existing `visualViewport`-derived keyboard inset and safe-area offset. This is the smallest code correction aimed at preventing iOS focus/keyboard panning from moving the full Buyer shell.
+
+**Evidence:** Commit `7481242` is on `omni-v2-rebuild` and the canonical cache-busted reload propagated the change. The canonical still moves from masked loading to the approved monochrome ready globe with mounted MapLibre canvas, public cluster, `Carte active`, permanent map controls, Buyer/Seller controls, account control and search dock. The full suite remains **127/127 tests across 19 files**, client boundary clean, build previously confirmed at exactly 12 Vercel functions, and no business surface or data mutation occurred.
+
+**Decision:** The correction is technically deployed but not iPhone-certified. Keep Species/Canopy `partial`; the next owner action is a real post-`7481242` iPhone recording that exercises search focus, keyboard open/close, outside-tap blur, no-auto-zoom and completed reveal framing. Dense native-pin and decision-relevant performance evidence remain subsequent gates.
+
+**Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates.
