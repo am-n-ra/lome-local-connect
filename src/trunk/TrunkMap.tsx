@@ -16,6 +16,7 @@ type Props = {
   selectedId: string | null;
   onSelect: (facility: PublicFacility) => void;
   onBoundsChange?: (bounds: [number, number, number, number]) => void;
+  onRevealStateChange?: (active: boolean) => void;
   revealKey?: string | null;
   contextSurfaceOpen?: boolean;
 };
@@ -108,7 +109,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, revealKey = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
@@ -664,6 +665,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const token = revealToken.current + 1;
     revealToken.current = token;
     revealRunningRef.current = true;
+    onRevealStateChange?.(true);
     cameraMode.current = 'search_reveal';
     setCameraModeState('search_reveal');
     setRevealRunning(true);
@@ -692,6 +694,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }
       if (isStale()) return;
       revealRunningRef.current = false;
+      onRevealStateChange?.(false);
       setRevealRunning(false);
       setRevealLabel(null);
       cameraMode.current = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM ? 'resting_globe' : 'manual_navigation';
@@ -717,6 +720,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (token === revealToken.current) {
         revealToken.current += 1;
         revealRunningRef.current = false;
+        onRevealStateChange?.(false);
         setRevealRunning(false);
         setRevealLabel(null);
         if (cameraMode.current === 'search_reveal') {
@@ -725,7 +729,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         }
       }
     };
-  }, [facilities, revealKey]);
+  }, [facilities, onRevealStateChange, revealKey]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;

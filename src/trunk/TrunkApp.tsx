@@ -130,6 +130,7 @@ export function TrunkApp() {
   const [showAllResults, setShowAllResults] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [nearbyCollapsed, setNearbyCollapsed] = useState(false);
+  const [revealActive, setRevealActive] = useState(false);
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
@@ -1049,6 +1050,7 @@ export function TrunkApp() {
 
   const mainClass = `species-app${optionsOpen ? ' options-is-open' : ''}${menuOpen ? ' menu-is-open' : ''}`;
   const visibleFacilities = facilities.slice(0, showAllResults ? 8 : 3);
+  const handleRevealStateChange = useCallback((active: boolean) => setRevealActive(active), []);
 
   useEffect(() => {
     const app = appRef.current;
@@ -1071,14 +1073,15 @@ export function TrunkApp() {
         app.style.removeProperty('--nearby-sheet-offset');
       };
     }
-  }, [mapState, nearbyOpen, nearbyCollapsed, showAllResults, visibleFacilities.length]);
+  }, [mapState, nearbyOpen, nearbyCollapsed, revealActive, showAllResults, visibleFacilities.length]);
 
   useEffect(() => {
     const app = appRef.current;
     if (!app) return;
     const viewport = window.visualViewport;
     const updateKeyboardInset = () => {
-      const inset = viewport ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)) : 0;
+      const stableHeight = app.getBoundingClientRect().height;
+      const inset = viewport ? Math.max(0, Math.round(stableHeight - viewport.height - viewport.offsetTop)) : 0;
       app.style.setProperty('--keyboard-inset', `${inset}px`);
       app.toggleAttribute('data-keyboard-open', inset > 120 && document.activeElement === searchInputRef.current);
     };
@@ -1105,7 +1108,7 @@ export function TrunkApp() {
 
   return (
     <main ref={appRef} className={mainClass} data-auth={authClient ? 'configured' : 'missing'}>
-      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} />
+      <TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={selectFacility} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} />
 
       <header className="species-topbar">
         <div className="role-switch" aria-label="Omni role context">
@@ -1136,7 +1139,7 @@ export function TrunkApp() {
             <button className="pill-options" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Fermer les options' : 'Ouvrir les options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
           </form>
         </div>
-        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} collapsed={nearbyCollapsed} onCollapse={collapseNearbyResults} onExpand={() => setNearbyCollapsed(false)} onClose={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); setNearbyCollapsed(false); }} showAll={showAllResults} />}
+        {nearbyOpen && !revealActive && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} collapsed={nearbyCollapsed} onCollapse={collapseNearbyResults} onExpand={() => setNearbyCollapsed(false)} onClose={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); setNearbyCollapsed(false); }} showAll={showAllResults} />}
       </>}
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim') { closeFacilityContext(); return; } setPanel('none'); }} />}
