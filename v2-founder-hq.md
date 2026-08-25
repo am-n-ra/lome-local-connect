@@ -471,3 +471,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind their Root/API gates. No business or operational data changed.
 
 **Evidence record:** `/tmp/omni-canopy-a11y-observation.md`.
+
+## Founder HQ resume-3 canonical checkpoint — 2026-08-25
+
+**Status:** `partial / repeated canonical boot stability confirmed; Species and release Rings remain open`.
+
+**Evidence:** A third fresh canonical reload again showed the short masked `Chargement de la carte` state, then settled to the approved monochrome globe with one mounted MapLibre canvas, public cluster, `Carte active`, permanent minus/plus/recenter controls, Buyer/Seller controls, account control and search dock. No result sheet, auth error or business surface was opened. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Decision:** The repeated desktop check does not justify another code change. The unresolved gate is device-backed: one post-bde95a2 iPhone pass must verify dock-only keyboard lift, no browser auto-zoom and complete reveal framing. Dense native-pin and decision-relevant performance reconciliation remain subsequent proof items.
+
+**Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates. No business or operational data changed.
