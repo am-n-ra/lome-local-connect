@@ -275,3 +275,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded remote stability evidence, not a benchmark, long-window network study, real-device performance test or dense-pin coverage proof. No facility detail, business CTA, availability, claim or write path was opened.
 
 **Next gate:** Continue with real-device touch/input/permission and real assistive-technology evidence if available, then reconcile dense native-pin movement and performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Projection-aware motion clarification checkpoint — 2026-08-25
+
+**Status:** `partial / bounded projection-aware motion behavior confirmed; Species and release Rings remain open`.
+
+**Evidence:** In the canonical session, a safe zoom-in paused rotation while the map was in local `mercator`; moving the pointer to the search dock correctly left that local map non-rotating. Twelve safe zoom-out actions returned the camera below the projection threshold; after the settled wait, the map-stage reported `projection="globe"`, `cameraMode="resting_globe"` and `rotation="rotating"`. The canvas remained mounted, the result sheet remained closed and the query remained unchanged. The observation is recorded in `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This clarifies the earlier signal and is not a new blocker. It does not prove physical-device gesture behavior, OS permission UX, screen-reader output, dense native-pin coverage or benchmark-grade performance. No business CTA or write path was opened.
+
+**Next gate:** Continue with real-device touch/input/permission and real assistive-technology evidence if available, then reconcile dense native-pin movement and performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
