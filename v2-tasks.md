@@ -440,3 +440,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** Commit `9f31dc3`, source `git`, canonical alias present, 12 functions.
 
 **Next gate:** Add only the next bounded device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Device-native Canopy reconciliation
+
+**Status:** `partial / permission, touch persistence and reduced-motion evidence added; CANOPY and release Rings remain open`.
+
+**Changed:** No product task was marked done and no source correction was added. Temporary probes were removed; no data changed.
+
+**Proven:** Synthetic compact permission and integrated touch preserved the accessible user marker and mounted map while moving the camera without an intrusive prompt band. Reduced-motion, keyboard/recovery, mobile and desktop contracts pass. Full source validation remains 127 tests/19 files, build/boundary clean and 12 functions.
+
+**Not proven:** Real device/OS input and permission, assistive technology, extended performance, dense pins and operations remain open. CANOPY-001 through CANOPY-005 stay partial; CANOPY-006 remains deferred.
+
+**Preserved:** Auth and mono-product boundaries remain stable; Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transaction and multi-product work remains paused.
+
+**Deployment:** Commit `b0b995e`, canonical READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, source `git`, alias present and 12 functions.
+
+**Next gate:** Run only the next bounded device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

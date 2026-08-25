@@ -223,3 +223,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, canonical alias, source `git`, 12 functions.
 
 **Next gate:** Continue device-native and performance proof; do not promote Canopy to Species or Rings until the residual matrix is evidenced.
+
+## 2026-08-25 — Device-native boundary addendum
+
+**Status:** `partial / bounded permission, touch persistence and reduced-motion evidence added; full Species/Canopy acceptance remains open`.
+
+**Changed:** No product code changed. Temporary local probes were removed after successful execution.
+
+**Proven:** Compact synthetic exact permission kept an accessible user marker visible without a prompt band. The integrated touch proof moved the camera while preserving the vertical axis and keeping marker/map mounted. Reduced motion stayed reduced with monochrome map, 16px input, three named controls, no horizontal overflow and zero visible HTML pins. Existing canonical keyboard/recovery and responsive proof remain green.
+
+**Not proven:** Real OS/device behavior, screen-reader traversal, long-window remote performance, dense pins, OSM/Overpass coverage and operational readiness remain open. No CTA or write path was invoked.
+
+**Preserved:** Worker/native layers, projection/label contract, map-only rotation, Auth, users/history and paused Root/API tracks remain intact.
+
+**Deployment:** READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue device-native/accessibility/performance evidence; do not promote Canopy to Species or Rings.

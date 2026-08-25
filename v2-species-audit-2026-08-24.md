@@ -240,3 +240,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** Observation was on READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, canonical alias present and 12 functions.
 
 **Next gate:** Gather device-native and extended accessibility/performance evidence; keep Species and Rings open.
+
+## 2026-08-25 — Device-native and reduced-motion audit
+
+**Status:** `partial / bounded touch, permission, user-position and reduced-motion contracts observed; Species remains open`.
+
+**Changed:** No product source change was made; external probes were removed after execution.
+
+**Proven:** Compact synthetic exact permission rendered an accessible position marker while the prompt band stayed absent. Integrated touch moved the camera, preserved the vertical axis, kept the marker and map mounted and kept HTML facility pins hidden. Reduced-motion kept rotation reduced, the monochrome map mounted, 16px input, three named controls and no overflow. Canonical keyboard/options/recovery and responsive proofs remain green.
+
+**Not proven:** Real-device OS permission and accuracy, full assistive technology traversal, extended remote performance, dense native-pin coverage and operational readiness remain open.
+
+**Preserved:** Species visual DNA, native MapLibre layers, map-only motion, projection threshold, Auth repair, users/history and Root/API boundaries remain preserved.
+
+**Deployment:** Canonical evidence ran on READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, alias present, source `git`, 12 functions.
+
+**Next gate:** Continue device-native and accessibility/performance proof without closing Species or Rings.

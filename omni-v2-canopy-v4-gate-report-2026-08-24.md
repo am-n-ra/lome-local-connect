@@ -165,3 +165,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** Canonical proof ran on READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, source `git`, canonical alias and 12 functions.
 
 **Next gate:** Run a bounded real-device/native input and accessibility/performance pass, retaining partial status until its evidence exists. Do not advance Species or Rings.
+
+## 2026-08-25 — Device-native boundary addendum
+
+**Status:** `partial / bounded permission, touch persistence and reduced-motion evidence added; Canopy and Species remain open`.
+
+**Changed:** No source correction was justified. External temporary probes were removed after a successful local run.
+
+**Proven:** Compact synthetic exact permission showed an accessible visible user-position marker without a visible prompt band. The integrated touch proof moved the camera, preserved the vertical axis, kept the marker and MapLibre canvas mounted and kept facility HTML pins hidden. Reduced-motion proof kept rotation reduced, the monochrome map mounted, 16px input, three named controls and no horizontal overflow. The canonical menu/options/recovery proof and existing mobile/desktop proof remain passing; 127 tests/19 files, build, boundary and 12 functions pass.
+
+**Not proven:** Real OS permission, real location accuracy, physical-device touch/input, complete assistive technology support, long-window remote performance, dense pin coverage and operations remain unproven. No CTA or mutation was used.
+
+**Preserved:** Map-only ownership, native layers, projection contract, Auth and all data/Root/API boundaries remain preserved.
+
+**Deployment:** Proof ran on READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, canonical alias present, source `git`, 12 functions.
+
+**Next gate:** Run the smallest available real-device/accessibility/performance evidence; keep Species and Rings open.

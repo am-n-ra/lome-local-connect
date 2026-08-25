@@ -175,3 +175,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** The proof was observed on canonical READY deployment `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, alias `omni.sparkafrika.online`, source `git` and 12 Node functions.
 
 **Next gate:** Continue with device-native touch/input/permission and a bounded accessibility/performance pass. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## Device-native boundary checkpoint — 2026-08-25
+
+**Status:** `partial / bounded permission, touch persistence and reduced-motion proof verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required. Temporary local probes for synthetic permission/touch and reduced motion were used outside the repository and removed after execution. No account, fixture, business record or map data changed.
+
+**Proven:** A compact 390×844 touch context with synthetic exact permission kept the user-position marker visible and accessible while a touch gesture moved the camera, preserved the vertical axis and kept the MapLibre canvas mounted. The visible approximate-location prompt band remained absent and HTML facility pins remained hidden. The reduced-motion compact proof kept rotation reduced, the monochrome map mounted, the input at 16px, three named controls, no horizontal overflow and no visible HTML pins. The canonical keyboard/options/read-only recovery proof remains green. Full validation remains 127 tests/19 files, build/boundary clean and 12 functions.
+
+**Not proven:** Synthetic permission is not an OS prompt, real-device location or accuracy proof. Full screen-reader traversal, device-native gesture matrices, long-window remote performance, dense native-pin coverage and operational readiness remain open. No business CTA or write was invoked.
+
+**Preserved:** Auth/session hydration, users, identities, history, claims, native MapLibre rendering, globe/mercator threshold, map-only rotation and all Root/API-paused boundaries remain unchanged.
+
+**Deployment:** Evidence was observed on canonical READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, with canonical alias `omni.sparkafrika.online`, source `git` and 12 Node functions.
+
+**Next gate:** Continue with real-device/native input and assistive-technology/performance evidence. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

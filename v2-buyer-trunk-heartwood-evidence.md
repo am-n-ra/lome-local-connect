@@ -256,3 +256,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** Proof ran on READY canonical `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, alias `omni.sparkafrika.online`, 12 functions.
 
 **Next gate:** Continue with device-native input/permission and accessibility/performance evidence before any Buyer Heartwood or Species acceptance.
+
+## 2026-08-25 — Buyer location/touch boundary checkpoint
+
+**Status:** `partial / bounded user-position, touch persistence and reduced-motion evidence verified`.
+
+**Changed:** No Buyer source or server logic changed. Temporary local probes were deleted after use.
+
+**Proven:** In compact synthetic permission, the user marker remained accessible and visible without a visible prompt band. A touch gesture moved the map while preserving its vertical axis and keeping the marker and MapLibre canvas mounted. Reduced motion stayed reduced with the map monochrome, 16px input, named controls and no horizontal overflow. No HTML facility pins became visible.
+
+**Not proven:** Real device/OS behavior, screen readers, complete Buyer recovery, dense native pins, performance and any availability/claim mutation remain open. No CTA or write was used.
+
+**Preserved:** Auth hydration, search/reveal, map rendering, read-only ownership, historical data and mono-product boundaries remain intact.
+
+**Deployment:** Evidence was observed on READY canonical `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, alias present and 12 functions.
+
+**Next gate:** Add real-device/native input and accessibility/performance evidence before Buyer Heartwood or Species acceptance.
