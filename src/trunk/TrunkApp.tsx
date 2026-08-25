@@ -1,7 +1,7 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, PackageSearch, QrCode, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, issueQrToken, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
+import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, issueQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
 import { discoverFromOverpass } from '../lib/public-discovery';
@@ -1478,6 +1478,14 @@ function InboxSheet(props: { state: 'idle' | 'loading' | 'error'; error: string;
   const notifications = props.data?.notifications ?? [];
   const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() => typeof Notification === 'undefined' ? 'unsupported' : Notification.permission);
   const [pushState, setPushState] = useState<'idle' | 'subscribing' | 'ready' | 'configuration' | 'error'>('idle');
+  useEffect(() => {
+    if (permission !== 'granted') return;
+    let active = true;
+    void getAuthToken().then((token) => token ? getWebPushStatus({ token }) : null).then((result) => {
+      if (active && result?.ok && (result.data?.active ?? 0) > 0) setPushState('ready');
+    }).catch(() => undefined);
+    return () => { active = false; };
+  }, [permission]);
   const requestNotificationPermission = async () => {
     if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) { setPermission('unsupported'); return; }
     const nextPermission = await Notification.requestPermission();

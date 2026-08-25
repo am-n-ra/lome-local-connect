@@ -630,3 +630,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Release state:** Durable Push subscription persistence is now live in the selected Neon branch. VAPID/provider configuration and real delivery proof remain open; no notification was sent and no production subscription was created during this operation.
 
 **Residual gap:** Configure the VAPID public/private key pair and delivery provider in the intended deployment environment, then capture authenticated subscribe, event enqueue, delivery, expired-endpoint cleanup and revoke evidence before calling Push production-ready.
+
+
+## Persistent Push status reconciliation — 2026-08-25
+
+**Published:** The Inbox now reads the authenticated active-subscription count when browser permission is already granted, so a previously registered device is recognized after reopening or reloading the application. This closes the state-reconciliation gap between browser permission and the server registry without exposing subscription credentials.
+
+**Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and the production build succeeds. No notification was sent and no provider call was made.
+
+**Residual gate:** VAPID/provider configuration and real delivery evidence remain required before Push can be considered production-ready.

@@ -288,6 +288,12 @@ export async function getNotificationInbox(input: { token: string }): Promise<Ap
   return parse<NotificationInboxResult>(response);
 }
 
+export async function getWebPushStatus(input: { token: string }): Promise<ApiResult<{ active: number }>> {
+  const response = await fetchWithRecovery('/api/v2/notifications/push?status=1', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<{ active: number }>(response);
+}
 export async function subscribeWebPush(input: { subscription: PushSubscriptionJSON; token: string }): Promise<ApiResult<{ subscriptionId: string; state: 'granted'; created: boolean }>> {
   const response = await fetchWithRecovery('/api/v2/notifications/push?action=subscribe', {
     method: 'POST',
