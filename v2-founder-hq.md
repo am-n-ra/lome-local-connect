@@ -673,3 +673,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Security:** Suspended or unknown reviewer accounts cannot act; duplicate requested state is rejected; suspended accounts remain excluded by the existing transaction, Inbox, facility and Push authorization queries. No separate admin role was invented.
 
 **Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. The current UI exposes the activation tranche; suspension/re-activation controls are server/client-contract ready but still need a dedicated reviewer interaction surface and end-to-end negative proof.
+
+
+## Admin account status UI — 2026-08-25
+
+**Published:** ReviewerSheet now exposes the existing authenticated suspension action beside each activation candidate, with a bounded audited reason field, loading/error/success states and explicit Inbox confirmation. The interaction does not create a new admin role and does not bypass reviewer authorization.
+
+**Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and the production build succeeds. The existing bundle-size warning remains unchanged.
+
+**Residual gap:** Free/Pro entitlement enforcement, billing contract and real Push delivery remain separate gates.
