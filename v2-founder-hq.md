@@ -317,3 +317,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded post-corrective remote stability evidence, not a long-duration benchmark, real-device performance proof, physical touch/permission proof or screen-reader output. Seller/Admin, transaction, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Folded idle-bar accessibility checkpoint — 2026-08-25
+
+**Status:** `partial / bounded idle-bar DOM and focus evidence verified; Species and release Rings remain open`.
+
+**Evidence:** In the canonical result context, the sheet was folded and the new idle-bar control was focused without opening a result. The bar exposed `Résultats pour « Marche de Hanoukope »` and `1 résultat disponible`; its button was named `Réouvrir les facilités proches` with `aria-expanded="false"`. The active element was the reopen button, the query remained unchanged, and the business CTA was not focused. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded DOM/focus evidence only. It does not prove real screen-reader speech, physical-device touch, OS permission UX, dense native-pin behavior or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Continue with real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
