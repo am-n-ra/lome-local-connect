@@ -224,3 +224,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** GitHub commit `6711151` on `omni-v2-rebuild` is deployed READY as `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; canonical alias `omni.sparkafrika.online` is present and the existing 12 Node functions remain intact.
 
 **Next gate:** Complete dense native-pin movement and the remaining authenticated Buyer focus/recovery, real-device and performance evidence before any Trunk/Species acceptance. Multi-product remains Root/API-blocked.
+
+## 2026-08-25 — Buyer native-layer movement checkpoint
+
+**Status:** `partial / bounded native map rendering proven; Buyer Heartwood and Species gates remain open`.
+
+**Changed:** No Buyer business logic changed. The existing public result source/layers were inspected read-only through the authenticated session.
+
+**Proven:** The initial public frame rendered a native cluster and the safe `Marche de Hanoukope` result rendered a native `omni-pins` feature. Reversible small camera moves changed the projected screen position while preserving feature count and restored the original view. The HTML pin fallback remained visually hidden. Local responsive proofs and the 127-test validation baseline remain green.
+
+**Not proven:** This does not prove dense multi-pin movement, availability or claims, facility detail, real-device behavior, full accessibility, long-run performance or complete recovery. No CTA, write, seller, reviewer or transaction path was used.
+
+**Preserved:** Auth hydration, search/reveal state machine, mono-product contract, users, identities, historical rows and server ownership boundaries remain unchanged.
+
+**Deployment:** The proof ran on canonical READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk` for the `omni-v2-rebuild` line, with `omni.sparkafrika.online` and 12 functions; application behavior is from code commit `6711151`.
+
+**Next gate:** Keep Buyer Heartwood partial and continue with multi-feature native observation only if existing bounded data can support it; otherwise proceed to real-device and accessibility proof without inventing density.

@@ -143,3 +143,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** GitHub commit `6711151` on `omni-v2-rebuild` triggered Vercel production deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, canonical alias present, exactly 12 Node functions.
 
 **Next gate:** Continue the remaining bounded Species/Canopy proof matrix, beginning with dense native-pin movement and real-device/accessibility/performance evidence. Keep Global Root `review`, release Rings open and worldwide OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR, transactions and multi-product `Root/API-blocked`.
+
+## Native cluster/pin movement checkpoint — 2026-08-25
+
+**Status:** `partial / bounded native MapLibre movement proof verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required in this slice. The existing MapLibre GeoJSON source and native layers were directly inspected in the authenticated browser session. The probe stayed within safe public map/search behavior and did not add fixtures, alter records or open a facility.
+
+**Proven:** The canonical initial globe rendered the existing four bounded public fixtures as one native cluster through `omni-cluster-rings`, `omni-clusters` and `omni-cluster-count`; a small reversible camera move kept the cluster count stable, moved its projected screen position and restored it. The safe result reveal rendered one native `omni-pins` feature; a small reversible camera move kept the feature count stable, moved its projected screen position and restored it. Visible HTML `.map-pin` overlays remained zero. Local mobile `390×844` and desktop `1024×880` proofs remain green; source validation remains **127 tests / 19 files**, build/boundary checks are clean and the 12-function bundle is intact. The canonical proof ran on READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk` with `omni.sparkafrika.online`.
+
+**Not proven:** Four bounded public fixtures are not dense worldwide coverage. The result sample does not prove multi-pin density at every zoom, real-device touch/input/permission, full keyboard/screen-reader traversal, extended remote performance, complete Buyer recovery or any business write. `Voir le lieu` and all Seller/Reviewer/payment/transaction/OSM/PWA actions remained untouched.
+
+**Preserved:** The monochrome vector globe, zoom `2.4` projection/label contract, overlay-aware rotation fix, Auth/session repair, users, Auth identities, historical data, claims and Root/API-paused boundaries remain unchanged. Raw coordinates and credentials were not retained in the proof artifact.
+
+**Deployment:** Application behavior remains from commit `6711151` / deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; the canonical read-only native-layer proof was observed on the subsequent documentation-aligned READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, canonical alias present and exactly 12 Node functions.
+
+**Next gate:** Treat native movement as boundedly proven, not dense-proof complete. Continue with a safer multi-feature local result observation if available, then the real-device/accessibility/performance matrix. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

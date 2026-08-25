@@ -191,3 +191,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** `6711151` on `omni-v2-rebuild` → `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, canonical alias present, source `git`, exactly 12 Node functions.
 
 **Next gate:** Use the native MapLibre result layers to prove dense pin movement and then close the remaining bounded Species evidence; do not promote this addendum to product or operational readiness.
+
+## 2026-08-25 — Native cluster/pin movement addendum
+
+**Status:** `partial / V4.3 native movement bounded-proven; full Species/Canopy acceptance remains open`.
+
+**Changed:** No code change was required. The audit directly queried the existing native MapLibre source/layers in the authenticated browser session and used reversible camera moves only.
+
+**Proven:** The initial canonical globe rendered one bounded public cluster in the native cluster layers; a small camera move changed the projected position without changing the feature count and restoration returned it. The safe result reveal rendered one native `omni-pins` feature; a small camera move changed its projected position with stable count and restoration returned it. The HTML fallback remained visually hidden. Responsive local proofs and full source validation remain green.
+
+**Not proven:** This does not establish dense local multi-pin behavior, global OSM/Overpass coverage, `4,067+` facilities, business availability, role operations, real-device input/permission, full accessibility or extended performance. No CTA or write path was used.
+
+**Preserved:** Positron worker/shared-module packaging, monochrome vector styling, projection/label threshold, map-only rotation fix, Auth session mapper, users/historical data and paused Root/API tracks remain intact.
+
+**Deployment:** Code commit `6711151` / READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; canonical read-only native-layer observation on READY `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, alias present, 12 Node functions.
+
+**Next gate:** Keep V4.3 partial and inspect more than one native pin only if the existing bounded data supports it. Otherwise close this evidence as bounded and proceed to real-device/accessibility/performance proof; do not promote it to operational readiness.

@@ -133,3 +133,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** Commit `6711151` was pushed to `omni-v2-rebuild` and deployed through GitHub→Vercel as `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, canonical alias present, 12 Node functions.
 
 **Next gate:** Prove dense native-pin movement and the remaining real-device/accessibility/performance matrix. Keep Species and release Rings open; keep Global Root `review` and worldwide OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR, transactions and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Native cluster and pin movement addendum
+
+**Status:** `partial / native MapLibre movement bounded-proven; Species and Canopy acceptance remain open`.
+
+**Changed:** No source correction was justified. The existing native GeoJSON source/layers were inspected directly in the authenticated browser session. The read-only probe used only the safe public query, map zoom/camera movement and reversible camera restoration.
+
+**Proven:** At the canonical initial globe, the existing bounded public fixtures were rendered in native `omni-cluster-rings`, `omni-clusters` and `omni-cluster-count` layers. A small reversible camera move preserved the native cluster count, changed its projected screen position and restored the original projection. After the safe local result reveal, one native `omni-pins` feature was rendered; a small reversible camera move preserved the feature count, changed its projected screen position and restored it. Visible HTML `.map-pin` overlays remained zero. Local 390×844 and 1024×880 responsive proofs pass; 127 tests/19 files, build, boundary and 12-function generation pass. The canonical observation was on READY `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, alias `omni.sparkafrika.online`.
+
+**Not proven:** This is a bounded fixture/native-layer proof, not worldwide or dense multi-pin coverage. Real-device touch/input/permission, full keyboard/screen-reader traversal, long-window remote performance, complete recovery and business operations remain unproven. No CTA or write path was used.
+
+**Preserved:** The vector Positron worker packaging, monochrome palette, 2.4 projection and globe-label contracts, overlay-aware rotation behavior, Auth mapper, users, identities, historical data and all Root/API-paused scopes remain preserved.
+
+**Deployment:** The application behavior is from commit `6711151` / READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; the read-only proof ran on the documentation-aligned READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, canonical alias present and 12 Node functions.
+
+**Next gate:** Keep the gate partial. If bounded fixtures support it, inspect more than one visible native pin at local zoom; otherwise record the density limitation and move to real-device/accessibility/performance evidence. Do not advance Species, release Rings or Root/API operations.

@@ -408,3 +408,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** GitHub branch `omni-v2-rebuild`, commit `6711151`, Vercel READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, canonical alias present, 12 functions.
 
 **Next gate:** Keep CANOPY tasks partial until dense native-pin motion and the residual device/a11y/performance matrix are linked. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Native movement evidence reconciliation
+
+**Status:** `partial / CANOPY-005 native movement bounded-proven; CANOPY and release Rings remain open`.
+
+**Changed:** No source task was added. Existing MapLibre native cluster/pin layers were verified through read-only camera moves; no second HTML pin renderer or fixture mutation was introduced.
+
+**Proven:** One initial native cluster and one result native pin both moved with the camera and returned after reversible moves while feature counts stayed stable. Visible HTML pins remained zero. Local mobile/desktop proofs, 127 tests/19 files, build, boundary and 12-function generation pass; canonical READY proof ran on `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`.
+
+**Not proven:** Dense multi-pin coverage, real-device and full accessibility behavior, extended remote performance, complete recovery and operational readiness remain open. The four public fixtures remain bounded proof data, not worldwide coverage.
+
+**Preserved:** CANOPY-001 through CANOPY-004, Auth, mono-product availability, users, historical data and all paused Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transaction and multi-product boundaries remain intact.
+
+**Deployment:** Application code remains commit `6711151`; canonical proof was read-only on `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, alias `omni.sparkafrika.online`, 12 functions.
+
+**Next gate:** Keep CANOPY-005 partial until a genuinely multi-pin local frame is available and observed; otherwise move to device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

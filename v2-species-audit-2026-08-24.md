@@ -208,3 +208,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** `6711151` → Vercel `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, `omni.sparkafrika.online`, exactly 12 Node functions.
 
 **Next gate:** Continue the smallest Canopy proof slice: inspect native pins at dense local reveal while moving the camera, then complete real-device/accessibility/performance evidence. Keep Species partial and Global Root review.
+
+## 2026-08-25 — Native layer motion audit
+
+**Status:** `partial / bounded native cluster and pin movement observed; Species gate remains open`.
+
+**Changed:** No visual or business source change was made. The audit inspected the already-approved MapLibre native layers and kept the keyboard fallback visually hidden.
+
+**Proven:** Canonical initial globe: one native cluster feature was rendered, moved on a small reversible camera shift and restored with a stable feature count. Canonical safe result: one native `omni-pins` feature was rendered, moved with a small reversible camera shift and restored with a stable feature count. Visible `.map-pin` HTML overlays stayed at zero. Mobile and desktop responsive proofs, 127 tests/19 files, build, client boundary and 12-function generation remain passing.
+
+**Not proven:** The bounded fixture set does not prove dense native pins at every local zoom, worldwide OSM/Overpass coverage, real-device touch/permission/input, full accessibility or extended tile performance. No business action was invoked.
+
+**Preserved:** Species visual DNA, monochrome vector globe, label suppression below zoom 2.4, worker packaging, map-only rotation, Auth repair and all user/historical/Root/API boundaries remain unchanged.
+
+**Deployment:** Code commit `6711151` remains the application source; the canonical observation ran on READY `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, canonical alias present, source `git`, 12 functions.
+
+**Next gate:** Keep Species partial. Record any additional native-pin density only from existing bounded data and otherwise move to real-device/accessibility/performance evidence; do not claim Species or Ring acceptance.
