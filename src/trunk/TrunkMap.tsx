@@ -3,7 +3,7 @@ import { Crosshair, Minus, Plus } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
-import { GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
+import { countryLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
@@ -25,6 +25,7 @@ const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
 const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
+const COUNTRY_LABEL_LAYERS = ['label_country_1', 'label_country_2', 'label_country_3'] as const;
 
 if (typeof window !== 'undefined') setWorkerUrl(MAPLIBRE_WORKER_URL);
 
@@ -67,6 +68,16 @@ function applyCanopyPalette(map: Map) {
       if (map.getLayer(layerId)) map.setPaintProperty(layerId, property as never, value as never);
     } catch {
       // A fallback or partially loaded style may not contain every vector layer.
+    }
+  }
+}
+
+function setCountryLabelVisibility(map: Map, visible: boolean) {
+  for (const layerId of COUNTRY_LABEL_LAYERS) {
+    try {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+    } catch {
+      // Positron revisions may omit a rank layer; keep the other layers usable.
     }
   }
 }
@@ -383,6 +394,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
+      setCountryLabelVisibility(map, countryLabelsVisibleForZoom(map.getZoom()));
       setProjection(initialGlobe ? 'globe' : 'mercator');
       map.resize();
       applyCanopyPalette(map);
@@ -554,6 +566,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+        setCountryLabelVisibility(map, countryLabelsVisibleForZoom(map.getZoom()));
         setProjection(wantsGlobe ? 'globe' : 'mercator');
         map.resize();
         map.triggerRepaint();

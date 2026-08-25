@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { projectionChanged, projectionForZoom } from './map-camera';
+import { countryLabelsVisibleForZoom, projectionChanged, projectionForZoom } from './map-camera';
 
 describe('map projection contract', () => {
   it('uses globe below the local-map threshold and mercator at the threshold', () => {
@@ -12,6 +12,12 @@ describe('map projection contract', () => {
     expect(projectionChanged('mercator', 2.39)).toBe(true);
     expect(projectionChanged('globe', 2.4)).toBe(true);
     expect(projectionChanged('globe', 1.35)).toBe(false);
+  });
+
+  it('hides country names on the fully zoomed-out globe and restores them locally', () => {
+    expect(countryLabelsVisibleForZoom(1.35)).toBe(false);
+    expect(countryLabelsVisibleForZoom(2.39)).toBe(false);
+    expect(countryLabelsVisibleForZoom(2.4)).toBe(true);
   });
 
   it('does not turn an invalid zoom into a globe claim', () => {
