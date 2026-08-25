@@ -339,3 +339,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** The canonical browser viewport used for current proof is not a real mobile device. Touch behavior, OS-level permission UX, screen-reader speech, native-pin density and long-window performance remain unproven. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Mobile input guardrail propagation checkpoint — 2026-08-25
+
+**Status:** `partial / canonical CSS propagation verified; physical-device behavior remains open`.
+
+**Evidence:** A cache-busted canonical reload exposed the expected `(width <= 620px)` rule containing `font-size: 16px` for the search input, search-option inputs/selects and context-sheet inputs/selects/textareas. The same probe reported the globe in `projection="globe"`, `cameraMode="resting_globe"`, `rotation="rotating"`, with the MapLibre canvas mounted and no business surface open. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This confirms the deployed CSS bundle, not actual browser auto-zoom behavior on a physical phone. Touch/input, OS permission UX, screen-reader speech, native-pin density and long-window performance remain unproven. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
