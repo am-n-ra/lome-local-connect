@@ -349,6 +349,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 }
 
 @media (max-width: 620px) {
+  .search-pill input, .options-popover input, .options-popover select, .omni-sheet input, .omni-sheet select, .omni-sheet textarea { font-size: 16px; }
   .nearby-result-toolbar { padding-left: 14px; padding-right: 14px; }
   .result-toolbar-button { min-height: 28px; padding-left: 8px; padding-right: 8px; }
   .map-attribution { left: var(--safe-left); right: auto; max-width: 155px; }

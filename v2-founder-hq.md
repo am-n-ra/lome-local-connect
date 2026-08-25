@@ -327,3 +327,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded DOM/focus evidence only. It does not prove real screen-reader speech, physical-device touch, OS permission UX, dense native-pin behavior or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Continue with real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Mobile input zoom guardrail checkpoint — 2026-08-25
+
+**Status:** `partial / static mobile input guardrail implemented and locally validated; real-device proof remains open`.
+
+**Changed:** The mobile media query now sets `font-size: 16px` on the Buyer search input, search-option inputs/selects and context-sheet inputs/selects/textareas. This protects the declared mobile interaction contract against browser auto-zoom while leaving desktop typography unchanged.
+
+**Evidence:** Local validation passed with 127 tests across 19 files, TypeScript/Vite production build success, exactly 12 Vercel functions generated, clean client-boundary check and clean `git diff --check`. The source rule is recorded in `src/styles.css`. This does not claim a physical-device result.
+
+**Boundary:** The canonical browser viewport used for current proof is not a real mobile device. Touch behavior, OS-level permission UX, screen-reader speech, native-pin density and long-window performance remain unproven. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
