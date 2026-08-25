@@ -181,3 +181,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** Proof ran on READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, canonical alias present, source `git`, 12 functions.
 
 **Next gate:** Run the smallest available real-device/accessibility/performance evidence; keep Species and Rings open.
+
+## 2026-08-25 — Remote stability observation addendum
+
+**Status:** `partial / bounded remote map stability observation verified; Canopy and Species remain open`.
+
+**Changed:** No product correction was made. The canonical probe was temporary, read-only and removed after execution.
+
+**Proven:** After waiting for real `Carte active` readiness, a 12-second canonical window kept the canvas mounted, monochrome globe stable and idle rotation observable. The sample recorded zero mapped-resource HTTP failures, zero console errors and zero page errors, with one worker, two sprite, two style/asset and 19 vector-PBF resources. Touch/permission and reduced-motion proofs remain bounded and passing; 127 tests/19 files, build, boundary and 12 functions pass.
+
+**Not proven:** No claim of benchmark-grade performance, real-device behavior, long-duration reliability, dense pins or operations is made. No CTA or mutation was used.
+
+**Preserved:** Native MapLibre, projection, motion, Auth and all data/Root/API boundaries remain preserved.
+
+**Deployment:** Observation ran on READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Gather real-device/accessibility evidence and only then decide whether a longer performance window is necessary; keep Species and Rings open.

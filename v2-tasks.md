@@ -456,3 +456,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** Commit `b0b995e`, canonical READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, source `git`, alias present and 12 functions.
 
 **Next gate:** Run only the next bounded device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Remote stability reconciliation
+
+**Status:** `partial / 12-second canonical map stability observation added; CANOPY and release Rings remain open`.
+
+**Changed:** No product task was marked done and no source correction was added. The temporary probe was removed; no data changed.
+
+**Proven:** After real map readiness, the canvas stayed mounted for 12 seconds, the monochrome globe and rotation remained observable, and mapped-resource, console and page errors were zero. Worker/sprite/style/vector-PBF resources loaded. Existing responsive, keyboard/recovery, permission/touch, reduced-motion and native-layer proofs remain passing; 127 tests/19 files, build/boundary and 12 functions pass.
+
+**Not proven:** Real device/OS, assistive technology, benchmark-grade or long-window performance, dense pins and operations remain open. CANOPY-001 through CANOPY-005 stay partial; CANOPY-006 remains deferred.
+
+**Preserved:** Auth, mono-product boundaries and paused Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transaction and multi-product work remain unchanged.
+
+**Deployment:** Commit `95137a1`, canonical READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, source `git`, alias present and 12 functions.
+
+**Next gate:** Run the next bounded real-device/accessibility proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

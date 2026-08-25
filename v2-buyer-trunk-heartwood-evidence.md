@@ -272,3 +272,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** Evidence was observed on READY canonical `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, alias present and 12 functions.
 
 **Next gate:** Add real-device/native input and accessibility/performance evidence before Buyer Heartwood or Species acceptance.
+
+## 2026-08-25 — Buyer remote stability checkpoint
+
+**Status:** `partial / bounded remote map stability observed`.
+
+**Changed:** No Buyer logic changed. A temporary canonical read-only performance probe was removed after use.
+
+**Proven:** The map reached real `Carte active` readiness and stayed mounted and monochrome across a 12-second sample with observed idle rotation, zero mapped-resource failures, zero console errors and zero page errors. The resource sample included a worker, sprites, style/assets and vector-PBF resources. Existing keyboard/recovery, permission/touch and reduced-motion evidence remains passing.
+
+**Not proven:** This is not a real-device, screen-reader, benchmark, long-duration or dense-result proof. No facility CTA, availability, claim or mutation was used.
+
+**Preserved:** Auth, search/reveal, native rendering, read-only ownership, historical data and mono-product boundaries remain intact.
+
+**Deployment:** Evidence was observed on READY canonical `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, alias present and 12 functions.
+
+**Next gate:** Continue with physical-device/native input and accessibility evidence before Buyer Heartwood acceptance.

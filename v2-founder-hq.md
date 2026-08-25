@@ -191,3 +191,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** Evidence was observed on canonical READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, with canonical alias `omni.sparkafrika.online`, source `git` and 12 Node functions.
 
 **Next gate:** Continue with real-device/native input and assistive-technology/performance evidence. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## Remote stability checkpoint — 2026-08-25
+
+**Status:** `partial / bounded remote map stability and performance observation verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required. A temporary read-only canonical probe waited for the real `Carte active` state and sampled the map for 12 seconds; the probe was not added to the repository.
+
+**Proven:** During the corrected 12-second canonical window, the MapLibre canvas stayed mounted in every sample, the monochrome globe remained on the globe projection, idle rotation was observed, mapped-resource HTTP failures were zero, console errors were zero and page errors were zero. One worker, two sprite, two style/asset and 19 vector-PBF resources were observed. Earlier compact touch/permission, reduced-motion, keyboard/recovery and native-layer proofs remain linked. Full validation remains 127 tests/19 files, build/boundary clean and 12 functions.
+
+**Not proven:** This is not a benchmark, real-device proof, long-window network study or dense-pin coverage claim. OS permission, physical touch/input, assistive technology, broader zoom/network matrices and operational readiness remain open. No business CTA or write was invoked.
+
+**Preserved:** Auth/session hydration, user/history data, claims, native layers, map-only rotation, monochrome projection contract and all Root/API-paused boundaries remain unchanged.
+
+**Deployment:** The observation ran on canonical READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, source `git`, canonical alias and 12 Node functions.
+
+**Next gate:** Continue with real-device/native input and accessibility evidence; use a longer performance window only when it is decision-relevant. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

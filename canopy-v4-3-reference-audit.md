@@ -239,3 +239,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, canonical alias, source `git`, 12 functions.
 
 **Next gate:** Continue device-native/accessibility/performance evidence; do not promote Canopy to Species or Rings.
+
+## 2026-08-25 — Remote stability addendum
+
+**Status:** `partial / bounded 12-second canonical stability observation added; full Species/Canopy acceptance remains open`.
+
+**Changed:** No product code changed. The probe was temporary and read-only.
+
+**Proven:** The corrected sample waited for `Carte active`, then kept the MapLibre canvas mounted with monochrome globe projection and observed idle rotation for 12 seconds. No mapped-resource HTTP, console or page errors occurred; worker, sprite, style/asset and vector-PBF resources were observed. Previous native-layer, keyboard/recovery, permission/touch and reduced-motion evidence remains green.
+
+**Not proven:** This is not real-device, assistive-technology, benchmark-grade, long-duration or dense-pin proof; no CTA or write path was invoked.
+
+**Preserved:** Worker/native layers, projection and label contracts, map-only motion, Auth, users/history and paused Root/API tracks remain intact.
+
+**Deployment:** READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue real-device/accessibility evidence and keep Canopy, Species and Rings open.

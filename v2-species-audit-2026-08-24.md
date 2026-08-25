@@ -256,3 +256,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** Canonical evidence ran on READY `dpl_4ZByA7G1W6KLVnwieGzgP23LQs2Y`, commit `b0b995e`, alias present, source `git`, 12 functions.
 
 **Next gate:** Continue device-native and accessibility/performance proof without closing Species or Rings.
+
+## 2026-08-25 — Remote stability audit
+
+**Status:** `partial / bounded remote stability and performance observation added; Species remains open`.
+
+**Changed:** No product source change was made; the temporary canonical probe was removed.
+
+**Proven:** A corrected 12-second canonical sample began at real `Carte active` readiness. The canvas stayed mounted, the monochrome globe and globe projection remained stable, idle rotation was observed and mapped-resource failures, console errors and page errors were all zero. Worker, sprite, style/asset and vector-PBF resources were observed. Device-bound permission/touch and reduced-motion proofs remain bounded and passing.
+
+**Not proven:** Real-device OS behavior, assistive technology, benchmark-grade performance, long windows, dense pins and operational readiness remain open.
+
+**Preserved:** Species visual DNA, native layers, projection threshold, map-only motion, Auth repair, users/history and Root/API pause boundaries remain preserved.
+
+**Deployment:** Canonical observation ran on READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, alias present, source `git`, 12 functions.
+
+**Next gate:** Continue with real-device and accessibility evidence; keep Species and Rings partial/open.
