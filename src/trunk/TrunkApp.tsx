@@ -13,13 +13,14 @@ type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-re
 type AuthMode = 'sign-in' | 'sign-up';
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
-export type EscapeTarget = 'facility' | 'seller-queue' | 'close' | 'none';
+export type EscapeTarget = 'facility' | 'seller-queue' | 'nearby-results' | 'close' | 'none';
 
-export function resolveEscape(panel: Panel, hasSellerRequest: boolean): EscapeTarget {
+export function resolveEscape(panel: Panel, hasSellerRequest: boolean, nearbyOpen = false): EscapeTarget {
   if (panel === 'availability') return 'facility';
   if (panel === 'seller-entry' && hasSellerRequest) return 'seller-queue';
   if (panel === 'field-pilot' || panel === 'claim' || panel === 'inbox' || panel === 'reviewer') return 'close';
   if (panel !== 'none') return 'close';
+  if (nearbyOpen) return 'nearby-results';
   return 'none';
 }
 
@@ -149,22 +150,28 @@ export function TrunkApp() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      if (panel !== 'none') {
-        const target = resolveEscape(panel, Boolean(sellerRequest));
-        if (target === 'facility') setPanel('facility');
-        else if (target === 'seller-queue') setSellerRequest(null);
-        else setPanel('none');
-        return;
-      }
-      if (optionsOpen) {
+      if (panel === 'none' && optionsOpen) {
         setOptionsOpen(false);
         return;
       }
-      if (menuOpen) setMenuOpen(false);
+      if (panel === 'none' && menuOpen) {
+        setMenuOpen(false);
+        return;
+      }
+      const target = resolveEscape(panel, Boolean(sellerRequest), nearbyOpen);
+      if (target === 'facility') setPanel('facility');
+      else if (target === 'seller-queue') setSellerRequest(null);
+      else if (target === 'nearby-results') {
+        setSelectedFacility(null);
+        setSelectedProductId(null);
+        setNearbyOpen(false);
+        setShowAllResults(false);
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+      } else if (target === 'close') setPanel('none');
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [menuOpen, optionsOpen, panel, sellerRequest]);
+  }, [menuOpen, nearbyOpen, optionsOpen, panel, sellerRequest]);
 
   useEffect(() => {
     if (window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')) {

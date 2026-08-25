@@ -14,5 +14,7 @@ describe('seller entry boundary', () => {
     expect(resolveEscape('seller-entry', true)).toBe('seller-queue');
     expect(resolveEscape('seller-entry', false)).toBe('close');
     expect(resolveEscape('availability', false)).toBe('facility');
+    expect(resolveEscape('none', false, true)).toBe('nearby-results');
+    expect(resolveEscape('none', false, false)).toBe('none');
   });
 });
