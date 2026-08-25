@@ -89,3 +89,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision / capacity:** Keep operational expansion displaced: OSM/Overpass worldwide coverage, Seller/Reviewer operational branches, PWA/Web Push, payment, QR, transactions and multi-product remain paused behind their own Root/API gates. Do not call Species or the whole product production-ready from this map ring alone.
 
 **Next owner/action:** Manus continues the smallest remaining Species/Canopy proof: authenticated compact keyboard/focus and recovery matrix, real-device touch/input/permission evidence, dense native-pin movement and remote-tile/performance observation. Founder HQ reviews the Ring only after those residual proofs are linked. Global Root remains `review`; multi-product remains `Root/API-blocked`.
+
+## Country-label refinement checkpoint — 2026-08-25
+
+**Changed:** At the fully zoomed-out globe, Positron country-name layers `label_country_1`, `label_country_2` and `label_country_3` are hidden. They return at the existing `2.4` globe→mercator threshold; continent/ocean labels and local geographic context remain provider-owned.
+
+**Evidence:** Commit `2ab14b2` reached READY deployment `dpl_Fa3HXPj5RR6noUHA6NFud58BTRhv`, with canonical alias `omni.sparkafrika.online` and exactly 12 Node functions. Read-only canonical checks show no country names at globe zoom `1.35`, no country names after one additional globe Plus, and country names restored after the next Plus crossed into mercator. The map remains `Carte active` with the white-field/dark-ocean/light-continent vector treatment and permanent controls. The source test suite is now **123 tests in 18 files**.
+
+**Auth signal:** The owner reports that Auth succeeded but no active session was returned. This is recorded as an unresolved session-handshake signal only; no identity, token, credential or raw Auth data was stored, and no protected business action was attempted. Authenticated compact proof therefore remains open.
+
+**Next gate:** Keep the active milestone on Buyer Species/Canopy. Resolve or reproduce the Auth session return only within the existing privacy boundary, then continue the residual compact focus/recovery, real-device touch/permission, dense native-pin and remote-tile/performance proofs. OSM/Overpass enrichment, Seller/Reviewer operations, PWA/Web Push, payment, QR, transactions and multi-product remain paused behind their own gates.
