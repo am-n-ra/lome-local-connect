@@ -655,3 +655,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Security and evidence:** Claim review and seller activation are separate operations. The activation mutation is reviewer-gated, audit-recorded in `v2_audit_events`, and emits an Inbox event to the activated account. Suspended, unknown, unassociated or already-ready accounts are rejected. The activation action is idempotent with respect to the account state and notification dedupe.
 
 **Residual gap:** No separate `admin` role or account reactivation/suspension UI was invented. The current authority is the existing active reviewer role. Free/Pro entitlement enforcement remains a separate gate.
+
+
+## Free/Pro entitlement boundary — 2026-08-25
+
+**Artifact:** Added `docs/plans-and-entitlements.md` to distinguish the existing authoritative plan states (`free`, `pro_active`, `pro_expired`) and entitlement kinds from the commercial decisions still missing.
+
+**Decision:** Do not add checkout, billing or payment mutations until Free defaults, Pro benefits, price/currency, renewal and expiry, webhook authenticity, refunds, revocation and operator override rules are explicitly defined. Current safe enforcement is limited to named entitlements and the existing seller activation/trust gates.
+
+**Status:** Free/Pro is `partial / enforcement-gated`; billing is not claimed as production-ready.
