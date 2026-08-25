@@ -212,7 +212,7 @@ function ensurePinImage(map: MapInstance) {
   context.lineTo(size / 2, 57);
   context.lineTo(size / 2 - 9, 39);
   context.closePath();
-  context.fillStyle = "#e46f34";
+  context.fillStyle = "#e2793f";
   context.fill();
   context.lineWidth = 4;
   context.strokeStyle = "#ffffff";
@@ -242,7 +242,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       type: "fill",
       source: USER_ACCURACY_SOURCE_ID,
       paint: {
-        "fill-color": "#2f6fb5",
+        "fill-color": "#245646",
         "fill-opacity": 0.1,
       },
     });
@@ -253,7 +253,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       type: "line",
       source: USER_ACCURACY_SOURCE_ID,
       paint: {
-        "line-color": "#2f6fb5",
+        "line-color": "#245646",
         "line-width": 1.5,
         "line-opacity": 0.45,
         "line-dasharray": [2, 2],
@@ -280,7 +280,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       paint: {
         "circle-color": "#2d3335",
         "circle-radius": ["step", ["get", "point_count"], 18, 20, 23, 100, 29],
-        "circle-stroke-color": "#e46f34",
+        "circle-stroke-color": "#e2793f",
         "circle-stroke-width": 3,
         "circle-opacity": 0.93,
       },
@@ -313,7 +313,7 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
         "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 16, 13],
         "circle-opacity": 0.9,
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 1],
-        "circle-stroke-color": ["case", ["boolean", ["feature-state", "selected"], false], "#e46f34", "#2d3335"],
+        "circle-stroke-color": ["case", ["boolean", ["feature-state", "selected"], false], "#e2793f", "#2d3335"],
       },
     });
   }
@@ -333,14 +333,14 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
           "certified",
           "#2d3335",
           "unconfirmed",
-          "#e46f34",
+          "#e2793f",
           "unclaimed",
           "#f6eee4",
           "#d97724",
         ],
         "circle-radius": ["case", ["boolean", ["feature-state", "selected"], false], 12, 9],
         "circle-stroke-width": ["case", ["boolean", ["feature-state", "selected"], false], 3, 2],
-        "circle-stroke-color": ["case", ["boolean", ["feature-state", "selected"], false], "#e46f34", "#2d3335"],
+        "circle-stroke-color": ["case", ["boolean", ["feature-state", "selected"], false], "#e2793f", "#2d3335"],
         "circle-opacity": 0.98,
       },
     });
@@ -990,11 +990,11 @@ export function MapCanvas({
     element.style.pointerEvents = "none";
     element.style.zIndex = "20";
     element.innerHTML = `
-      <span style="position:absolute;left:50%;top:-22px;transform:translateX(-50%);display:block;white-space:nowrap;border-radius:999px;background:#2f6fb5;color:#fff;border:2px solid #fff;padding:3px 6px;font:700 10px/1 system-ui,sans-serif;box-shadow:0 2px 8px rgba(15,23,42,.22);">${markerChip}</span>
-      <span style="position:absolute;inset:${isApproximate ? "-8px -8px 0 -8px" : "0 2px 6px 2px"};display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#2f6fb5;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(47,111,181,.18);">
-        <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #2f6fb5;"></span>
+      <span style="position:absolute;left:50%;top:-22px;transform:translateX(-50%);display:block;white-space:nowrap;border-radius:999px;background:#245646;color:#fff;border:2px solid #fff;padding:3px 6px;font:700 10px/1 system-ui,sans-serif;box-shadow:0 2px 8px rgba(15,23,42,.22);">${markerChip}</span>
+      <span style="position:absolute;inset:${isApproximate ? "-8px -8px 0 -8px" : "0 2px 6px 2px"};display:block;transform:rotate(-45deg);border-radius:55% 55% 55% 0;background:#245646;border:3px solid #fff;box-shadow:0 2px 8px rgba(15,23,42,.32),0 0 0 6px rgba(36,86,70,.18);">
+        <span style="position:absolute;left:50%;top:50%;width:8px;height:8px;transform:translate(-50%,-50%) rotate(45deg);border-radius:999px;background:#fff;box-shadow:0 0 0 2px #245646;"></span>
       </span>
-      ${isApproximate ? '<span style="position:absolute;right:-18px;top:-10px;display:block;border-radius:999px;background:#fff;color:#2f6fb5;border:1px solid #2f6fb5;padding:1px 4px;font:600 10px/1 system-ui,sans-serif;">≈</span>' : ""}
+      ${isApproximate ? '<span style="position:absolute;right:-18px;top:-10px;display:block;border-radius:999px;background:#fff;color:#245646;border:1px solid #245646;padding:1px 4px;font:600 10px/1 system-ui,sans-serif;">≈</span>' : ""}
     `;
     const marker = new gl.Marker({ element, anchor: "bottom" });
     marker.setLngLat([userPosition.lng, userPosition.lat]).addTo(map);

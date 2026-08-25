@@ -72,8 +72,8 @@ export const STATUS_LABEL: Record<string, string> = {
 export const STATUS_COLOR: Record<string, string> = {
   unclaimed: "#b8b0a8",
   unconfirmed: "#9a938c",
-  certified: "#2f6fb5",
-  confirmed: "#d9a521",
+  certified: "#245646",
+  confirmed: "#e2793f",
 };
 
 export function formatFcfa(amount: number): string {
