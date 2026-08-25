@@ -459,3 +459,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** Seller/Admin, OSM/Overpass population, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind their Root/API gates. No business mutation or operational data change occurred.
 
 **Deployment:** Canonical behavior is served from the GitHub-linked `omni-v2-rebuild` path with the validated Buyer shell. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+## Founder HQ resume-2 canonical checkpoint — 2026-08-25
+
+**Status:** `partial / bounded canonical boot stability reconfirmed; Species and release Rings remain open`.
+
+**Evidence:** A second fresh cache-busted reload of `omni.sparkafrika.online` again showed the intended masked `Chargement de la carte` state before settling to the approved monochrome globe. The ready frame retained one mounted MapLibre canvas, public cluster, `Carte active`, permanent minus/plus/recenter controls, Buyer/Seller controls, account control and search dock. No result sheet, auth error or business surface was opened. The existing targeted contracts remain green at 10/10, the full validation baseline remains 127/127 tests, the client boundary is clean and the runtime remains exactly 12 Vercel functions.
+
+**Decision:** No reproducible desktop code residual is justified by this pass. Keep Species/Canopy `partial`. The next smallest gate remains a post-bde95a2 iPhone recording for dock-only keyboard lift, no-auto-zoom and reveal completion, followed by dense native-pin and decision-relevant performance reconciliation.
+
+**Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind their Root/API gates. No business or operational data changed.
+
+**Evidence record:** `/tmp/omni-canopy-a11y-observation.md`.
