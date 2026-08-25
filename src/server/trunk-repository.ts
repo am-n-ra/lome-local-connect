@@ -322,6 +322,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           union all
           select id, created from existing
           limit 1
+        ), refreshed as (
+          update v2_facilities f
+          set name = ${input.name.trim()},
+              category = ${input.category?.trim() || null},
+              latitude = ${input.latitude},
+              longitude = ${input.longitude},
+              address = ${input.address?.trim() || null},
+              updated_at = now()
+          from selected
+          where f.id = selected.id
+            and f.account_id is null
+            and f.source_kind = 'public_import'
+            and f.trust_state = 'unclaimed'
+          returning f.id
         ), referenced as (
           insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
           select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null })}::jsonb

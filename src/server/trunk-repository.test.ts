@@ -878,6 +878,24 @@ describe('field pilot registry Root seam', () => {
     expect(queries[2]).toContain('v2_operator_runs');
   });
 
+  it('refreshes an existing unclaimed public facility on an idempotent source replay', async () => {
+    const queries: string[] = [];
+    let callNumber = 0;
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      void values;
+      callNumber += 1;
+      return Promise.resolve(callNumber === 1 ? [{ id: 'account-1' }] : callNumber === 2 ? [{ id: 'source-1' }] : [{ run_id: 'run-2', facility_id: 'facility-1', created: false }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-operator', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market updated', category: 'Wholesale market', latitude: 6.131, longitude: 1.221, address: 'Updated Lomé', correlationId: 'corr-import-replay',
+    })).resolves.toEqual({ runId: 'run-2', facilityId: 'facility-1', sourceRef: 'node/1', created: false, trust: 'unclaimed' });
+    expect(queries[2]).toContain('update v2_facilities');
+    expect(queries[2]).toContain('f.account_id is null');
+    expect(queries[2]).toContain("f.trust_state = 'unclaimed'");
+    expect(queries[2]).toContain('on conflict (source_id, source_ref) do update');
+  });
   it('rejects invalid import coordinates before reaching Neon', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);

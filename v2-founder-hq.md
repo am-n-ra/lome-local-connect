@@ -564,3 +564,18 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **OSM:** The current production shell has a bounded Overpass fallback for nearby views and an existing authenticated operator-import route. Persistent ingestion, deduplication, refresh scheduling and operator reconciliation remain open; no background job was invented.
 **Push:** The current shell requests browser notification permission and the service worker can render a push event, but no `PushSubscription`, `applicationServerKey`, VAPID configuration or server delivery route exists in the active source. Push is therefore not production-ready and must remain explicitly gated.
 **Decision:** Keep Omni Inbox as the authoritative event surface. Next implementation requires persistent subscription storage, authenticated unsubscribe/rotation, provider delivery, retry/dead-letter handling and opt-in/audit tests. OSM and Push remain separate workstreams.
+
+
+## Functional foundation continuation checkpoint — 2026-08-25
+
+**Active milestone:** Functional Foundation for Buyer, Seller, Reviewer/Admin, QR transactions, PWA readiness and bounded OSM operations.
+
+**Current gate:** OSM persistent-refresh seam advanced; real server Push and Admin plan management remain gated by their missing provider and entitlement contracts.
+
+**Evidence:** The authenticated operator import now refreshes an existing OSM-backed facility only when it remains unowned, `public_import` and `unclaimed`. The source reference remains deduplicated through `v2_facility_source_refs`; the source metadata is refreshed with `last_seen_at`; claimed or verified facilities are not overwritten. The replay result remains explicit with `created: false`.
+
+**Validation:** The repository test file now passes 49/49 tests, including the new idempotent OSM replay test. Client boundary and server TypeScript validation pass. No transaction, claim, role assignment or user data was mutated.
+
+**Decision:** This is a safe persistence-refresh seam, not automated Lomé/Aflao ingestion. A scheduled/bulk importer still requires bounded region queries, rate limits, run reconciliation and operator review. Browser notification permission is still not server Push delivery: persistent `PushSubscription`, VAPID/provider configuration, delivery retries and unsubscribe/rotation remain open.
+
+**Next smallest action:** Run the full production validation and commit this seam; then choose one dedicated infrastructure gate—persistent OSM batch ingestion or Push subscription storage—rather than presenting either as complete prematurely.
