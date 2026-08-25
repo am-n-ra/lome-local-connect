@@ -349,3 +349,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This confirms the deployed CSS bundle, not actual browser auto-zoom behavior on a physical phone. Touch/input, OS permission UX, screen-reader speech, native-pin density and long-window performance remain unproven. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Native-pin projection transition checkpoint — 2026-08-25
+
+**Status:** `partial / bounded projection transition and native-layer ownership evidence; Species and release Rings remain open`.
+
+**Evidence:** From the canonical globe, five reversible zoom-in control actions transitioned the map to `projection="mercator"`, kept the MapLibre canvas mounted and set `rotation="paused"` during manual navigation. No HTML candidate matching pin, cluster, facility or result was present (`candidateCount: 0`), and no result sheet, query or business surface was opened. This supports canvas/native-layer ownership and projection-aware persistence, but does not certify native-pin density or visual quality. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded browser evidence only. It does not prove physical-device touch, OS permission UX, screen-reader speech, dense native-pin rendering quality or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
