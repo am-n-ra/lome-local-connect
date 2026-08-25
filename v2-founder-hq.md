@@ -207,3 +207,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** The observation ran on canonical READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, source `git`, canonical alias and 12 Node functions.
 
 **Next gate:** Continue with real-device/native input and accessibility evidence; use a longer performance window only when it is decision-relevant. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## Accessible result-pin checkpoint — 2026-08-25
+
+**Status:** `partial / bounded accessible result-pin and safe-result navigation proof verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required. The canonical public search `Marche de Hanoukope` was used only to reach the result sheet; the facility CTA remained untouched.
+
+**Proven:** The result state exposed a labeled `.map-pin-a11y` container with one named, focusable native-pin accessibility button. Focus reached that button without activation; its 1×1 clipped surface stayed visually hidden while zero visual `.map-pin` elements were present. One Tab continued to another named button without entering `Voir le lieu`, and the MapLibre canvas remained mounted. The result sheet also exposed `Nouvelle recherche`, `Affiner` and `Retour à la carte`.
+
+**Not proven:** This is not a full screen-reader or device-native keyboard audit, nor a dense multi-pin proof. Focus order across every result/card state, real assistive technology output, real-device behavior and business operations remain open. No facility detail or CTA was invoked.
+
+**Preserved:** Native MapLibre layers, no-HTML-pin visual contract, search/reveal, Auth, users/history, mono-product boundaries and all Root/API-paused tracks remain unchanged.
+
+**Deployment:** Observation ran on canonical READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias, source `git` and 12 Node functions.
+
+**Next gate:** Continue with a bounded full result-sheet focus traversal or real assistive-technology/device check; keep Species, Rings and Global Root `review` boundaries unchanged.

@@ -197,3 +197,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** Observation ran on READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, canonical alias, source `git`, 12 functions.
 
 **Next gate:** Gather real-device/accessibility evidence and only then decide whether a longer performance window is necessary; keep Species and Rings open.
+
+## 2026-08-25 — Accessible native-pin addendum
+
+**Status:** `partial / bounded result-pin ARIA and safe-result focus continuation verified; Canopy and Species remain open`.
+
+**Changed:** No source correction was made. A safe public query was used only to expose the result state.
+
+**Proven:** One named, focusable button existed in the labeled `.map-pin-a11y` container. Programmatic focus reached it without activation; the container was clipped and the visual `.map-pin` count was zero. Tab continued to a named non-business button, not `Voir le lieu`, with the map canvas mounted. `Nouvelle recherche`, `Affiner` and `Retour à la carte` remained available.
+
+**Not proven:** No claim of full WCAG/screen-reader/device coverage, dense pins or operational readiness is made. No CTA or mutation was used.
+
+**Preserved:** Native layers, result-sheet exits, Auth, data boundaries and paused Root/API scope remain preserved.
+
+**Deployment:** Read-only observation used READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias and 12 functions.
+
+**Next gate:** Run the smallest complete result focus traversal or real assistive-technology/device proof; keep Species and Rings open.

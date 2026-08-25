@@ -272,3 +272,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** Canonical observation ran on READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, alias present, source `git`, 12 functions.
 
 **Next gate:** Continue with real-device and accessibility evidence; keep Species and Rings partial/open.
+
+## 2026-08-25 — Result-pin accessibility audit
+
+**Status:** `partial / bounded native-pin ARIA exposure and keyboard continuation observed; Species remains open`.
+
+**Changed:** No product source change was made.
+
+**Proven:** The local mercator result state exposed one named, focusable native-pin accessibility button inside a labeled clipped container. Focus reached it without activation, no visual HTML `.map-pin` appeared, and Tab continued to a non-business named button while the map canvas remained mounted. Safe result exits remained available.
+
+**Not proven:** Full assistive-technology traversal, real-device behavior, dense native-pin coverage, long performance and operations remain open.
+
+**Preserved:** Species visual DNA, native MapLibre rendering, map-only motion, projection threshold, Auth and Root/API boundaries remain preserved.
+
+**Deployment:** Canonical observation ran on READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, alias present, source `git`, 12 functions.
+
+**Next gate:** Continue the result-sheet focus/device proof without promoting Species or Rings.

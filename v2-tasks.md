@@ -472,3 +472,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** Commit `95137a1`, canonical READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, source `git`, alias present and 12 functions.
 
 **Next gate:** Run the next bounded real-device/accessibility proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Accessible result-pin reconciliation
+
+**Status:** `partial / native-pin ARIA exposure and safe keyboard continuation added; CANOPY and release Rings remain open`.
+
+**Changed:** No task was marked done and no source correction was added. The facility CTA and all business operations remained untouched.
+
+**Proven:** Safe public results exposed one named focusable native-pin button, kept visual HTML pins absent, continued focus by Tab without entering `Voir le lieu`, preserved the map canvas and retained `Nouvelle recherche`, `Affiner` and `Retour à la carte`.
+
+**Not proven:** Full screen-reader/device, dense pins, performance and operations remain open. CANOPY-001 through CANOPY-005 remain partial; CANOPY-006 remains deferred.
+
+**Preserved:** Auth, mono-product boundaries and paused Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transaction and multi-product work remain unchanged.
+
+**Deployment:** Observation used READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, source `git`, alias and 12 functions.
+
+**Next gate:** Run only the next bounded result focus/device proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

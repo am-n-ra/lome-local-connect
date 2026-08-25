@@ -255,3 +255,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** READY `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, canonical alias, source `git`, 12 functions.
 
 **Next gate:** Continue real-device/accessibility evidence and keep Canopy, Species and Rings open.
+
+## 2026-08-25 — Accessible result-pin addendum
+
+**Status:** `partial / bounded ARIA native-pin focus continuation added; full Species/Canopy acceptance remains open`.
+
+**Changed:** No product code changed. The public result query was read-only and the business CTA was not invoked.
+
+**Proven:** A named focusable button was present in the clipped `.map-pin-a11y` container; focus reached it without activation, visual `.map-pin` elements remained absent and Tab continued to another named non-business button. The map canvas stayed mounted and safe result exits remained available.
+
+**Not proven:** This is not full WCAG, screen-reader, real-device, dense-pin or operational proof.
+
+**Preserved:** Native layers, projection/label contract, map-only rotation, Auth, users/history and paused Root/API tracks remain intact.
+
+**Deployment:** READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue result-sheet focus/device evidence; do not promote Canopy to Species or Rings.

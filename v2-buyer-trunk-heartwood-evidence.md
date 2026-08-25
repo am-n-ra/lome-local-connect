@@ -288,3 +288,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** Evidence was observed on READY canonical `dpl_B8cpohkrT2dxr1ZaoKhVfCvLs9Wh`, commit `95137a1`, alias present and 12 functions.
 
 **Next gate:** Continue with physical-device/native input and accessibility evidence before Buyer Heartwood acceptance.
+
+## 2026-08-25 — Buyer result-pin focus checkpoint
+
+**Status:** `partial / bounded ARIA result-pin focus continuation verified`.
+
+**Changed:** No Buyer source or server logic changed. The safe public result view was observed without opening the facility.
+
+**Proven:** The result view exposed one named and focusable native-pin accessibility button within a labeled container. Focus reached it without activation, visual `.map-pin` elements remained absent, and Tab continued to another named button without entering `Voir le lieu`. The map remained mounted and safe result actions stayed available.
+
+**Not proven:** Full screen-reader/device behavior, every result-sheet focus path, dense pins and availability/claim operations remain open. No CTA or write was used.
+
+**Preserved:** Auth hydration, search/reveal, read-only ownership, native map rendering, history and mono-product boundaries remain intact.
+
+**Deployment:** Evidence ran on READY canonical `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, alias present and 12 functions.
+
+**Next gate:** Complete a bounded result-sheet focus traversal or obtain real assistive-technology/device evidence before Buyer Heartwood acceptance.
