@@ -379,3 +379,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded desktop-browser motion evidence, not physical-device touch proof, reduced-motion proof, long-window performance or native-pin density certification. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Escape recovery from folded idle bar checkpoint — 2026-08-25
+
+**Status:** `partial / bounded Escape recovery verified from folded Buyer state; Species and release Rings remain open`.
+
+**Evidence:** A canonical Buyer search was folded into the idle bar and Escape was pressed. The result sheet and idle bar were removed; the MapLibre canvas remained mounted; the query `Marche de Hanoukope` remained in the search input; focus returned to the connected `BODY`; and the business CTA was not focused or activated. The final state was `projection="mercator"`, `rotation="rotating"`, `cameraMode="manual_navigation"`. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded desktop-browser keyboard/DOM evidence, not physical-device touch, OS permission UX, real screen-reader speech, native-pin density or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
