@@ -389,3 +389,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded desktop-browser keyboard/DOM evidence, not physical-device touch, OS permission UX, real screen-reader speech, native-pin density or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Real-device capability boundary checkpoint — 2026-08-25
+
+**Status:** `partial / desktop capability boundary confirmed; physical-device Canopy proof blocked by environment`.
+
+**Evidence:** The canonical session reported a 1024×880 viewport at device-pixel-ratio 1.25, `navigator.maxTouchPoints: 0`, no `ontouchstart` support and `prefers-reduced-motion: false`. The MapLibre canvas was mounted with no nearby sheet or idle bar; the stage was `projection="mercator"`, `rotation="rotating"`, `cameraMode="manual_navigation"`. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Decision:** Do not misclassify the current browser as a phone or assistive-technology device. The remaining real-device touch, mobile auto-zoom, OS permission and reduced-motion proofs require an actual device or an explicitly emulated test environment. Native-pin density and long-window performance also remain open.
+
+**Boundary:** Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused. Keep Global Root `review`, Species and release Rings open.
+
+**Next gate:** Obtain device-backed touch/permission/reduced-motion and assistive-technology evidence, then reconcile native-pin density and remote performance before any Species decision.
