@@ -720,3 +720,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite passes 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. The existing bundle-size warning remains unchanged.
 
 **Residual gate:** Capture a real authenticated Lomé and Aflao run with operator identity, imported counts and reconciliation evidence; Overpass availability and rate limits remain external dependencies.
+
+
+## Explicit operator/reviewer provisioning — 2026-08-25
+
+**Neon/Auth finding:** `kheirlissi@icloud.com` exists in Neon Auth with role `admin`, but Neon Auth admin is not automatically treated as an Omni reviewer. `juniorkheir@gmail.com` existed in Neon Auth with role `user` but had no `v2_accounts` row.
+
+**Applied after explicit confirmation:** Kheir's existing Omni account `2f1480bb-a0ac-4726-8651-aaf9dfa02157` now has `reviewer:active`. Junior's Omni account `ea00d0f2-d90f-42b8-81a5-b32fbffbf964` was created account-scoped from the Neon Auth identity and now has `operator:active`. Neon Auth roles and credentials were not modified.
+
+**Verification:** Both identities are non-banned and resolve to the expected Omni account and active role. The production OSM proof can now proceed after each account signs in to refresh its session.
