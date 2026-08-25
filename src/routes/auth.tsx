@@ -183,7 +183,11 @@ function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={busy}>
+                <Button
+                  type="submit"
+                  className="min-h-12 w-full bg-[var(--atlas-orange)] text-white hover:bg-[var(--atlas-orange)]/90"
+                  disabled={busy}
+                >
                   {busy ? "Création…" : "Créer mon compte"}
                 </Button>
               </form>
