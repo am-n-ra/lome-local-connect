@@ -437,9 +437,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const handleWindowMove = (event: Event) => {
       const pointer = event as MouseEvent;
       const bounds = canvasContainer.getBoundingClientRect();
-      const isOnCanvas = Number.isFinite(pointer.clientX) && Number.isFinite(pointer.clientY)
-        ? pointer.clientX >= bounds.left && pointer.clientX <= bounds.right && pointer.clientY >= bounds.top && pointer.clientY <= bounds.bottom
-        : event.target instanceof Node && canvasContainer.contains(event.target);
+      const eventTarget = event.target instanceof Node ? event.target : null;
+      const isOnCanvas = eventTarget
+        ? canvasContainer.contains(eventTarget)
+        : Number.isFinite(pointer.clientX) && Number.isFinite(pointer.clientY)
+          ? pointer.clientX >= bounds.left && pointer.clientX <= bounds.right && pointer.clientY >= bounds.top && pointer.clientY <= bounds.bottom
+          : false;
       if (isOnCanvas) {
         if (!pointerInside.current) handleCanvasEnter();
         return;
