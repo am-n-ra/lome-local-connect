@@ -288,6 +288,22 @@ export async function getNotificationInbox(input: { token: string }): Promise<Ap
   return parse<NotificationInboxResult>(response);
 }
 
+export async function subscribeWebPush(input: { subscription: PushSubscriptionJSON; token: string }): Promise<ApiResult<{ subscriptionId: string; state: 'granted'; created: boolean }>> {
+  const response = await fetchWithRecovery('/api/v2/notifications/push?action=subscribe', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ endpoint: input.subscription.endpoint, keys: input.subscription.keys, userAgent: navigator.userAgent }),
+  });
+  return parse<{ subscriptionId: string; state: 'granted'; created: boolean }>(response);
+}
+export async function revokeWebPush(input: { endpoint: string; token: string }): Promise<ApiResult<{ revoked: true; endpoint: string }>> {
+  const response = await fetchWithRecovery('/api/v2/notifications/push?action=revoke', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ endpoint: input.endpoint }),
+  });
+  return parse<{ revoked: true; endpoint: string }>(response);
+}
 export async function markNotificationSeen(input: { notificationId: string; token: string }): Promise<ApiResult<{ notificationId: string; seen: true }>> {
   const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.notificationId)}?action=notification-seen`, {
     method: 'POST',

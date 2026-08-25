@@ -601,3 +601,14 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite remains 131/131 tests, client boundary is clean, server TypeScript validation passes and the production build succeeds. The migration is additive and has not been applied to the live database in this work block.
 
 **Decision:** Push has advanced from browser permission-only to a durable server contract, but remains `partial / configuration-gated` until migration application, client wiring, VAPID/provider configuration and a real delivery/revoke proof are completed.
+
+
+## Inbox-to-Push client seam checkpoint — 2026-08-25
+
+**Published:** The Inbox now owns the explicit browser opt-in flow and, when `VITE_VAPID_PUBLIC_KEY` is configured, requests a `PushSubscription` from the registered service worker and sends the subscription to the authenticated server registry. The UI distinguishes permission granted, device registration in progress, successful registration, unavailable configuration and retryable failure.
+
+**Boundary:** Without a configured public VAPID key, permission is not presented as a registered device; the user sees that Push configuration is pending. The service worker, Inbox events and server registry remain separate from OSM and do not claim provider delivery.
+
+**Validation:** Client boundary is clean, server typecheck passes, full suite remains 131/131 tests and production build succeeds. No browser permission prompt or production subscription was triggered in this work block.
+
+**Residual gate:** Apply migration 008 to the intended Neon environment, configure the VAPID key pair/provider, then perform a real authenticated subscribe → event → delivery → revoke proof. Keep the feature partial until that external proof exists.
