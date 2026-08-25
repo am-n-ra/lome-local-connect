@@ -234,6 +234,18 @@ export interface ReviewClaimResult {
   facilityTrust: 'unconfirmed' | 'rejected' | 'verification_draft';
   version: number;
 }
+export interface SellerActivationCandidate {
+  accountId: string;
+  authUserId: string;
+  onboardingState: string;
+  facilityCount: number;
+  createdAt: string;
+}
+export interface SellerActivationResult {
+  accountId: string;
+  onboardingState: 'seller_ready';
+  activated: true;
+}
 
 export interface NotificationSummary {
   id: string;
@@ -709,6 +721,70 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), outcome: input.outcome, state: input.outcome, facilityTrust: facilityTrust as ReviewClaimResult['facilityTrust'], version: Number(row.version) };
     },
 
+    async listSellerActivationQueue(input: { authUserId: string }): Promise<{ candidates: SellerActivationCandidate[] }> {
+      const rows = await retryDatabase(() => sql`
+        with reviewer as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        )
+        select candidate.id as account_id, candidate.auth_user_id, candidate.onboarding_state,
+          count(distinct f.id)::int as facility_count, candidate.created_at
+        from reviewer
+        join v2_accounts candidate on candidate.suspended_at is null and candidate.onboarding_state <> 'seller_ready'
+        join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
+        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.created_at
+        order by candidate.created_at asc
+        limit 100
+      `);
+      const reviewerRows = await retryDatabase(() => sql`select 1 from v2_accounts a join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active' where a.auth_user_id = ${input.authUserId} and a.suspended_at is null limit 1`);
+      if (!(rows as Record<string, unknown>[]).length && !(reviewerRows as Record<string, unknown>[]).length) {
+        throw new FieldPilotPolicyError('The account is not authorized to review seller activation.');
+      }
+      return { candidates: (rows as Record<string, unknown>[]).map((row) => ({ accountId: String(row.account_id), authUserId: String(row.auth_user_id), onboardingState: String(row.onboarding_state), facilityCount: Number(row.facility_count), createdAt: new Date(String(row.created_at)).toISOString() })) };
+    },
+    async activateSellerAccount(input: { authUserId: string; accountId: string; correlationId: string }): Promise<SellerActivationResult> {
+      const rows = await retryDatabase(() => sql`
+        with reviewer as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), candidate as (
+          select a.id, a.auth_user_id, a.onboarding_state, reviewer.id as reviewer_id
+          from v2_accounts a
+          cross join reviewer
+          where a.id = ${input.accountId}::uuid
+            and a.suspended_at is null
+            and a.onboarding_state <> 'seller_ready'
+            and exists (select 1 from v2_facilities f where f.account_id = a.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified'))
+        ), updated as (
+          update v2_accounts a
+          set onboarding_state = 'seller_ready', updated_at = now()
+          from candidate
+          where a.id = candidate.id
+          returning a.id, a.auth_user_id, candidate.reviewer_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select reviewer_id, 'seller_account_activated', 'account', id::text, ${input.correlationId}, 'Seller activation approved separately after facility certification.'
+          from updated
+          returning entity_id
+        ), notification_insert as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select updated.id, 'seller_account_activated', 'account', updated.id::text, updated.id::text || ':seller_ready', jsonb_build_object('onboardingState', 'seller_ready'), ${input.correlationId}
+          from updated join audit on audit.entity_id = updated.id::text
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id
+        )
+        select updated.id from updated
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The account is not eligible for separate seller activation.');
+      return { accountId: String(row.id), onboardingState: 'seller_ready', activated: true };
+    },
     async listNotificationInbox(input: { authUserId: string }): Promise<{ notifications: NotificationSummary[] }> {
       const rows = await retryDatabase(() => sql`
         select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at

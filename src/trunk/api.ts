@@ -281,6 +281,20 @@ export async function reviewFacilityClaim(input: { requestId: string; outcome: R
   return parse<ReviewClaimResult>(response);
 }
 
+export async function getSellerActivationQueue(input: { token: string }): Promise<ApiResult<{ candidates: Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string }> }>> {
+  const response = await fetchWithRecovery('/api/v2/admin/seller-activations', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse(response);
+}
+export async function activateSellerAccount(input: { accountId: string; token: string }): Promise<ApiResult<{ accountId: string; onboardingState: 'seller_ready'; activated: true }>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/seller-activations/${encodeURIComponent(input.accountId)}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse(response);
+}
 export async function getNotificationInbox(input: { token: string }): Promise<ApiResult<NotificationInboxResult>> {
   const response = await fetchWithRecovery('/api/v2/public/facilities?inbox=1', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

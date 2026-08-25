@@ -646,3 +646,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Artifact:** Added `docs/push-operations.md` with the server/client configuration boundary, required secret handling, rollout sequence and minimum proof ladder for subscribe, persistence, event enqueue, provider acknowledgement, browser delivery, expired-endpoint cleanup and revoke.
 
 **Decision:** The runbook makes the remaining dependency actionable without inventing a provider. The client remains gated by `VITE_VAPID_PUBLIC_KEY`; server delivery must fail closed when signing/provider configuration is absent. Push remains `partial / configuration-gated`.
+
+
+## Admin seller activation — 2026-08-25
+
+**Published:** Added a reviewer-authenticated seller activation queue and an account-scoped activation action. A candidate must be an active, unsuspended account with at least one certified or otherwise verified facility association; activation changes only `onboarding_state` to `seller_ready`.
+
+**Security and evidence:** Claim review and seller activation are separate operations. The activation mutation is reviewer-gated, audit-recorded in `v2_audit_events`, and emits an Inbox event to the activated account. Suspended, unknown, unassociated or already-ready accounts are rejected. The activation action is idempotent with respect to the account state and notification dedupe.
+
+**Residual gap:** No separate `admin` role or account reactivation/suspension UI was invented. The current authority is the existing active reviewer role. Free/Pro entitlement enforcement remains a separate gate.

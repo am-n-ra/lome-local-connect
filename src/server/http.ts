@@ -364,6 +364,32 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/admin/seller-activations') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized reviewer to view seller activation candidates.'));
+        return true;
+      }
+      const result = await repository.listSellerActivationQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/seller-activations/')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized reviewer to activate a seller account.'));
+        return true;
+      }
+      const accountId = pathname.slice('/api/v2/admin/seller-activations/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(accountId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid account identifier.'));
+        return true;
+      }
+      const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'notification-seen') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
