@@ -417,3 +417,11 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Local Vitest remains 127/127 and the production build bundles exactly 12 Vercel V2 functions. The code changes are not yet a physical-device certification; canonical post-deploy verification of keyboard behavior, boot sequence, immediate rotation and the iPhone session path remains required. Seller/Admin, OSM population, billing, plans, payment, transactions, QR and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Push the bounded Canopy correction, verify the canonical desktop contract, then obtain a fresh device-backed recording focused on keyboard/dock stability and authentication session recovery. Keep Global Root `review`, Species and release Rings open.
+
+## Post-0185e3d canonical verification — 2026-08-25
+
+**Observed:** The cache-busted canonical deployment loaded the intended monochrome globe with `data-map-status="ready"`, `data-projection="globe"`, `data-rotation="rotating"`, `data-camera-mode="resting_globe"` and `data-reveal-stage="idle"`. The MapLibre canvas was mounted; no result sheet, auth error text or business surface was open.
+
+**Boundary:** This is a desktop canonical verification only. The session reported a 1024×880 viewport and computed the search input at 12px, so it cannot certify the mobile media rule, visualViewport dock lift, iOS keyboard behavior, no-auto-zoom behavior or the auth retry path on a physical iPhone. The supplied iPhone recording remains the authoritative evidence for those prior symptoms; the code correction is now deployed but still needs a fresh device-backed retest.
+
+**Decision:** Keep Buyer Species/Canopy `partial`. The next smallest proof is a fresh iPhone retest of keyboard/dock stability and auth session recovery, followed by the already-open native-pin/performance evidence. Do not advance to Seller/Admin, OSM population, billing, plans, payment, transactions, QR or Web Push until Founder HQ closes the active gate.
