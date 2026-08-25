@@ -359,3 +359,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded browser evidence only. It does not prove physical-device touch, OS permission UX, screen-reader speech, dense native-pin rendering quality or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Globe label-suppression checkpoint — 2026-08-25
+
+**Status:** `partial / bounded globe label-suppression evidence; Species and release Rings remain open`.
+
+**Evidence:** The canonical session was returned from retained local-map state to the globe with 12 reversible zoom-out actions. The final state reported `projection="globe"`, a mounted MapLibre canvas, no nearby sheet and no collapsed bar. The root HTML text contained no country or sea/ocean labels (`hasCountryLabel: false`, `hasSeaLabel: false`); map labels remain canvas-rendered and were not treated as HTML overlays. No facility or business surface was opened. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded browser/DOM evidence and does not certify the visual canvas labels, physical-device touch, OS permission UX, screen-reader speech, native-pin density or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
