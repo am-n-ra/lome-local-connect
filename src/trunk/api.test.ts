@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerAvailabilityQueue, listPublicFacilities, rebindDemoSeller } from './api';
+import { createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerAvailabilityQueue, getTransaction, issueQrToken, listPublicFacilities, rebindDemoSeller, verifyQrToken } from './api';
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -65,6 +65,32 @@ describe('listPublicFacilities search contract', () => {
       '/api/v2/seller/availability-requests',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
+  });
+
+  it('reads an authenticated transaction snapshot', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { transactionId: 'tx-1', state: 'intent_created' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getTransaction({ transactionId: 'tx-1', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/transactions/tx-1', { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } });
+  });
+
+  it('posts a Buyer purchase intent with idempotency', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { transactionId: 'tx-1' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createPurchaseIntent({ responseId: 'response-1', token: 'session-token', idempotencyKey: 'intent-response-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/purchase-intents', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'intent-response-1' }, body: JSON.stringify({ responseId: 'response-1' }) });
+  });
+
+  it('posts a Seller QR issuance and verification with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { transactionId: 'tx-1', token: 'qr-token' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await issueQrToken({ transactionId: 'tx-1', token: 'session-token' });
+    await verifyQrToken({ transactionId: 'tx-1', tokenHash: 'hash-1', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v2/qr-issuances', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ transactionId: 'tx-1' }) });
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v2/qr-verifications', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ transactionId: 'tx-1', tokenHash: 'hash-1' }) });
   });
 
   it('posts the explicit bounded Seller demo rebind with the bearer token', async () => {

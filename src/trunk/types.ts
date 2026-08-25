@@ -93,6 +93,65 @@ export interface BuyerAvailabilityRequestList {
   requests: BuyerAvailabilityRequestSummary[];
 }
 
+export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed';
+export type ExternalPaymentMethod = 'cash' | 'mobile_money' | 'pay_on_delivery';
+
+export interface PurchaseIntentResult {
+  intentId: string;
+  responseId: string;
+  transactionId: string;
+  buyerAccountId: string;
+  state: string;
+}
+
+export interface QrTokenIssueResult {
+  transactionId: string;
+  token: string;
+  expiresAt: string;
+}
+
+export interface QrVerificationResult {
+  accepted: boolean;
+  transactionId: string;
+  verifiedAt?: string;
+  nextReplayCount?: number;
+  reason?: string;
+}
+
+export interface TransactionTransitionResult {
+  accepted: true;
+  transactionId: string;
+  from: TransactionState;
+  to: TransactionState;
+  actorRole: 'buyer' | 'seller';
+}
+
+export interface TransactionSnapshotResult {
+  transactionId: string;
+  state: TransactionState;
+  actorRole: 'buyer' | 'seller';
+  productId: string;
+  facilityId: string;
+  quantity: number;
+  unitPriceMinor: number;
+  netAmountMinor: number;
+}
+
+export interface ExternalPaymentDeclarationResult {
+  declarationId: string;
+  transactionId: string;
+  method: ExternalPaymentMethod;
+  buyerAccountId: string;
+}
+
+export interface ExternalPaymentConfirmationResult {
+  declarationId: string;
+  transactionId: string;
+  buyerAccountId: string;
+  sellerAccountId: string;
+  state: 'payment_confirmed';
+}
+
 export interface SellerAvailabilityRequest {
   id: string;
   facilityId: string;

@@ -1,0 +1,26 @@
+{
+  "name": "Omni — Voir avant de bouger",
+  "short_name": "Omni",
+  "lang": "fr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f6f6f4",
+  "theme_color": "#f6f6f4",
+  "description": "Découvrir les facilités locales et vérifier une disponibilité avec Omni.",
+  "icons": [
+    {
+      "src": "/omni-logo-compact.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/omni-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

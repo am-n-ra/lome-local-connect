@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue } from './types';
+import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, TransactionState, TransactionTransitionResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -89,6 +89,72 @@ export async function rebindDemoSeller(input: { token: string }): Promise<ApiRes
     body: JSON.stringify({}),
   });
   return parse<{ authorized: true }>(response);
+}
+
+export async function getTransaction(input: { transactionId: string; token: string }): Promise<ApiResult<import('./types').TransactionSnapshotResult>> {
+  const response = await fetchWithRecovery(`/api/v2/transactions/${encodeURIComponent(input.transactionId)}`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').TransactionSnapshotResult>(response);
+}
+
+export async function createPurchaseIntent(input: { responseId: string; token: string; idempotencyKey: string }): Promise<ApiResult<PurchaseIntentResult>> {
+  const response = await fetchWithRecovery('/api/v2/purchase-intents', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${input.token}`,
+      'Idempotency-Key': input.idempotencyKey,
+    },
+    body: JSON.stringify({ responseId: input.responseId }),
+  });
+  return parse<PurchaseIntentResult>(response);
+}
+
+export async function issueQrToken(input: { transactionId: string; token: string }): Promise<ApiResult<QrTokenIssueResult>> {
+  const response = await fetchWithRecovery('/api/v2/qr-issuances', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId }),
+  });
+  return parse<QrTokenIssueResult>(response);
+}
+
+export async function verifyQrToken(input: { transactionId: string; tokenHash: string; token: string }): Promise<ApiResult<QrVerificationResult>> {
+  const response = await fetchWithRecovery('/api/v2/qr-verifications', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId, tokenHash: input.tokenHash }),
+  });
+  return parse<QrVerificationResult>(response);
+}
+
+export async function declareExternalPayment(input: { transactionId: string; method: ExternalPaymentMethod; token: string }): Promise<ApiResult<ExternalPaymentDeclarationResult>> {
+  const response = await fetchWithRecovery('/api/v2/external-payment-declarations', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId, method: input.method }),
+  });
+  return parse<ExternalPaymentDeclarationResult>(response);
+}
+
+export async function confirmExternalPayment(input: { transactionId: string; token: string }): Promise<ApiResult<ExternalPaymentConfirmationResult>> {
+  const response = await fetchWithRecovery('/api/v2/external-payment-confirmations', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId }),
+  });
+  return parse<ExternalPaymentConfirmationResult>(response);
+}
+
+export async function transitionTransaction(input: { transactionId: string; from: TransactionState; to: TransactionState; actorRole: 'buyer' | 'seller'; token: string }): Promise<ApiResult<TransactionTransitionResult>> {
+  const response = await fetchWithRecovery('/api/v2/transaction-transitions', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId, from: input.from, to: input.to, actorRole: input.actorRole }),
+  });
+  return parse<TransactionTransitionResult>(response);
 }
 
 export async function requestSellerAvailabilityResponse(input: {

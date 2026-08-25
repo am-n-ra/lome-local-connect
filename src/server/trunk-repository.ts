@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, TransactionSnapshotResult } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -1825,6 +1825,45 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         transactionId: String(row.transaction_id),
         verifiedAt: new Date(String(row.verified_at)).toISOString(),
         nextReplayCount: Number(row.replay_count),
+      };
+    },
+
+    async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
+      const rows = await retryDatabase(() => sql`
+        select
+          s.transaction_id,
+          s.product_id,
+          s.facility_id,
+          s.quantity,
+          s.unit_price_minor,
+          s.net_amount_minor,
+          m.role as actor_role,
+          coalesce((
+            select e.state
+            from v2_transaction_events e
+            where e.transaction_id = s.transaction_id
+            order by e.created_at desc, e.id desc
+            limit 1
+          ), 'intent_created') as current_state
+        from v2_transaction_snapshots s
+        join v2_transaction_members m on m.transaction_id = s.transaction_id
+        join v2_accounts a on a.id = m.account_id
+        where s.transaction_id = ${input.transactionId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return {
+        transactionId: String(row.transaction_id),
+        state: String(row.current_state) as TransactionSnapshotResult['state'],
+        actorRole: String(row.actor_role) as TransactionSnapshotResult['actorRole'],
+        productId: String(row.product_id),
+        facilityId: String(row.facility_id),
+        quantity: Number(row.quantity),
+        unitPriceMinor: Number(row.unit_price_minor),
+        netAmountMinor: Number(row.net_amount_minor),
       };
     },
 

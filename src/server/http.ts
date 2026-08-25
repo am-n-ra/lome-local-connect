@@ -316,6 +316,26 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       else json(res, 200, { ok: true, correlationId, data: facility });
       return true;
     }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/transactions/')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view this transaction.'));
+        return true;
+      }
+      const transactionId = pathname.slice('/api/v2/transactions/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
+        return true;
+      }
+      const result = await repository.getTransaction({ authUserId, transactionId });
+      if (!result) {
+        json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'The transaction was not found for this account.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/qr-verifications') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
