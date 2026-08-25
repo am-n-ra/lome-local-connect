@@ -3,7 +3,7 @@ import { Crosshair, Minus, Plus } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
-import { countryLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
+import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
@@ -25,7 +25,13 @@ const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
 const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
-const COUNTRY_LABEL_LAYERS = ['label_country_1', 'label_country_2', 'label_country_3'] as const;
+const GLOBE_SUPPRESSED_LABEL_LAYERS = [
+  'label_country_1',
+  'label_country_2',
+  'label_country_3',
+  'water_name_point_label',
+  'water_name_line_label',
+] as const;
 
 if (typeof window !== 'undefined') setWorkerUrl(MAPLIBRE_WORKER_URL);
 
@@ -72,8 +78,8 @@ function applyCanopyPalette(map: Map) {
   }
 }
 
-function setCountryLabelVisibility(map: Map, visible: boolean) {
-  for (const layerId of COUNTRY_LABEL_LAYERS) {
+function setGlobeContextLabelVisibility(map: Map, visible: boolean) {
+  for (const layerId of GLOBE_SUPPRESSED_LABEL_LAYERS) {
     try {
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
     } catch {
@@ -394,7 +400,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
-      setCountryLabelVisibility(map, countryLabelsVisibleForZoom(map.getZoom()));
+      setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
       setProjection(initialGlobe ? 'globe' : 'mercator');
       map.resize();
       applyCanopyPalette(map);
@@ -566,7 +572,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
-        setCountryLabelVisibility(map, countryLabelsVisibleForZoom(map.getZoom()));
+        setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
         setProjection(wantsGlobe ? 'globe' : 'mercator');
         map.resize();
         map.triggerRepaint();

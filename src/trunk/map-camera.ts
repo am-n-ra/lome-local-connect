@@ -10,10 +10,10 @@ export function projectionChanged(previous: MapProjection, zoom: number): boolea
   return previous !== projectionForZoom(zoom);
 }
 
-/** Country names are intentionally omitted from the fully zoomed-out globe.
- * Local/country context labels return with the mercator map at the existing
- * globe-to-local threshold; continent/ocean labels remain owned by Positron.
+/** Country and water-body names are intentionally omitted from the fully
+ * zoomed-out globe. They return with the mercator map at the existing
+ * globe-to-local threshold; continent/ocean geometry remains provider-owned.
  */
-export function countryLabelsVisibleForZoom(zoom: number): boolean {
+export function globeContextLabelsVisibleForZoom(zoom: number): boolean {
   return projectionForZoom(zoom) === 'mercator';
 }
