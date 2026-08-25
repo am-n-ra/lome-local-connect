@@ -192,3 +192,19 @@ The provider diagnosis found that the browser and OpenFreeMap Positron are viabl
 Local proofs passed with **122 tests across 18 files**, `git diff --check`, TypeScript/Vite build, `check:boundary` and exactly 12 Vercel function bundles. The settled `390×844` frame visibly shows the requested globe, boundaries, permanent controls, clean dock separation and no visible location chip/band. The desktop state probe at `1024×880` shows the globe before and after direct drag, preserves the released camera and resumes rotation from that camera. Manual Plus actions show the globe enlargement and globe→mercator transition with vector geography still present at zoom `3.35`. The reveal helper now centers early stages on authorized user context when available and final framing on the result context.
 
 **Audit decision:** `partial / V4.3 canonical map and bounded reveal proven; Species, Canopy and Ring gates remain open`. The worker packaging fix is deployed in READY deployment `dpl_62FQ6GnjqnTMbJsMpbW1cya6sa41` for commit `2cab2d8`, with canonical alias `omni.sparkafrika.online` and exactly 12 Node functions. The read-only canonical smoke reached `Carte active`, loaded the same-origin worker plus Positron style/planet/sprites and PBF/glyph resources, and the safe query `Marche de Hanoukope` reached a result sheet whose final local frame visibly showed Lome/Aflao streets, neighbourhood labels, boundaries/coastline and a geographically anchored native point. No business CTA or Root/API operation was invoked. Production monitoring, authenticated accessibility/focus recovery, real-device touch and broader coverage remain open. The mono-product availability contract and all Root/business/privacy boundaries are unchanged.
+
+## 2026-08-25 — Species/Canopy motion reconciliation
+
+**Status:** `partial / map-only motion behavior verified; Species gate remains open`.
+
+**Changed:** Full-screen MapLibre canvas geometry is no longer the sole signal for map ownership. Pointer events targeting the search UI overlay are treated as outside-map events, allowing the post-drag settled-resume path to run. The desktop harness now proves the real overlay exit rather than a coordinate that remains inside the canvas.
+
+**Proven:** Desktop 1024×880 local assertions passed idle movement, drag center change, zero-bearing vertical-axis retention, released-camera hold and rotation resumption after search-overlay exit. Mobile 390×844 assertions remained green, including touch movement, projection reversal, controls, 16px input, no visible approximate-location band and non-map focus/options/account behavior. Canonical READY deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` for commit `6711151` passed the bounded drag/resume smoke with the canonical alias and 12-function runtime. Source tests/build/boundary validation also passed.
+
+**Not proven:** No Species acceptance is granted for real-device permission/input/touch, complete a11y traversal, dense pin movement during camera motion, remote-tile/performance observation or full result/error/recovery coverage. Worldwide OSM/Overpass coverage is not inferred.
+
+**Preserved:** The white outer field, charcoal ocean, light land, fine boundaries, country/water label suppression below zoom 2.4, vector worker packaging, Auth repair, user/historical data and paused operational boundaries remain preserved.
+
+**Deployment:** `6711151` → Vercel `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, `omni.sparkafrika.online`, exactly 12 Node functions.
+
+**Next gate:** Continue the smallest Canopy proof slice: inspect native pins at dense local reveal while moving the camera, then complete real-device/accessibility/performance evidence. Keep Species partial and Global Root review.

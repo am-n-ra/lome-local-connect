@@ -127,3 +127,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Evidence:** From the authenticated Buyer map, the safe public query `Marche de Hanoukope` was submitted read-only. The staged reveal settled from the globe into a local mercator view around Lome/Aflao with streets, neighborhood labels, coastline and a native anchored point visible. The result sheet retained `Nouvelle recherche`, `Affiner` and `Retour à la carte`, so the user can leave or refine the result surface without opening the facility detail.
 
 **Boundary / next gate:** `Voir le lieu` was not opened and no availability, claim, contact, Seller, Reviewer, payment, QR, transaction or notification write was performed. This proves the bounded authenticated search/reveal slice, not global OSM/Overpass enrichment, dense multi-pin movement, real-device performance or full accessibility. Keep those Species/Canopy proofs, plus all Root/API-gated operational tracks, open or paused as recorded above.
+
+## Desktop rotation-resume checkpoint — 2026-08-25
+
+**Status:** `partial / Canopy motion slice verified; Species and release Rings remain open`. The active Buyer Species/Canopy gate advanced past the desktop `idleResumesOutsideMap` blocker, but the parent Species gate is not accepted.
+
+**Changed:** `TrunkMap.tsx` now determines map ownership from the pointer event target when available, so full-screen UI overlays are not misclassified as the MapLibre canvas. The desktop proof harness now moves to the real search-input overlay instead of `(20,20)`, which was still inside the full-screen canvas.
+
+**Proven:** Local desktop `1024×880` proof passes idle motion, direct drag center change, vertical-axis preservation, released-camera retention and rotation resumption after moving to the search overlay. Local mobile `390×844` proof remains fully green, including touch movement, reversible projection, three controls, 16px input, no visible approximate-location band, map-only ownership and non-map focus/options/account behavior. The source suite passes **127 tests in 19 files**, `npm run build` emits exactly 12 Vercel functions, the client boundary is clean and `git diff --check` is clean. Canonical read-only smoke against deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` for commit `6711151` is READY, includes `omni.sparkafrika.online`, retains the existing 12-function runtime, keeps the released globe center during the hold interval and resumes stable rotation after the pointer moves to the search overlay.
+
+**Not proven:** This does not close the full Species gate. Dense native-pin movement, real-device touch/input/permission behavior, full keyboard/screen-reader traversal, remote-tile/performance observation and complete Buyer recovery coverage remain open. No facility detail, availability, claim, Seller response, Reviewer decision, payment, QR, transaction, notification, OSM/Overpass or PWA operation was performed.
+
+**Preserved:** Users, Auth identities, historical data, Neon branches, the bounded submitted test claim, mono-product availability, privacy boundaries and all paused operational tracks remain unchanged. The correction does not reset the camera to an origin; it preserves the released position before resuming.
+
+**Deployment:** GitHub commit `6711151` on `omni-v2-rebuild` triggered Vercel production deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, canonical alias present, exactly 12 Node functions.
+
+**Next gate:** Continue the remaining bounded Species/Canopy proof matrix, beginning with dense native-pin movement and real-device/accessibility/performance evidence. Keep Global Root `review`, release Rings open and worldwide OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR, transactions and multi-product `Root/API-blocked`.

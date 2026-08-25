@@ -392,3 +392,19 @@ The owner’s latest reference text clarifies that the intended map is a **MapLi
 | RING-001 | V4.3 is materially advanced but Species, Buyer Heartwood, Global Root and release Rings remain open. | `todo` | Deploy the implementation, run canonical read-only smoke, then decide the residual vector-detail gate. |
 
 The exact next smallest action for the next ring is now the residual Species/Canopy proof: authenticated compact keyboard/focus and recovery, real-device touch/input/permission evidence, dense native-pin movement and remote-tile/performance observation. V4.3 itself is deployed and boundedly proven: commit `2cab2d8` reached READY deployment `dpl_62FQ6GnjqnTMbJsMpbW1cya6sa41`, canonical `Carte active` loaded the same-origin worker and Positron PBF/glyph resources, and safe query `Marche de Hanoukope` settled to visible Lome/Aflao streets, neighbourhoods, boundaries/coastline and an anchored native point. No availability, claim, Seller, Reviewer, transaction, payment, QR, PWA, OSM or multi-product action was permitted in this gate. `CANOPY-001` through `CANOPY-005` remain `partial`, `CANOPY-006` remains `deferred`, `RING-001` through `RING-005` remain `todo`, Global Root remains `review` and multi-product remains `blocked / Root/API decision required`.
+
+## 2026-08-25 — Canopy motion blocker closed, residual tasks remain
+
+**Status:** `partial / desktop Canopy blocker resolved; release Rings remain open`.
+
+**Changed:** `TrunkMap.tsx` uses pointer event target ownership for overlay-aware map exit; `scripts/canopy-v4.1-local-desktop-proof.mjs` now exits through the real search input overlay. The full-screen canvas coordinate ambiguity is documented rather than hidden by weakening the assertion.
+
+**Proven:** Local desktop and mobile responsive proofs pass; 127 tests in 19 files, build, client boundary, diff check and exactly 12 generated Vercel functions pass. Canonical deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` for `6711151` is READY and the read-only drag/release/outside-overlay/resume smoke passes.
+
+**Not proven:** Native-pin density/movement, real-device touch/input/permission, full keyboard/screen-reader proof, remote performance, full Species acceptance and operational readiness remain open. No business mutation was performed.
+
+**Preserved:** Existing tasks and branch boundaries for Auth, claims, mono-product availability, Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transactions and multi-product were not expanded or deleted.
+
+**Deployment:** GitHub branch `omni-v2-rebuild`, commit `6711151`, Vercel READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, canonical alias present, 12 functions.
+
+**Next gate:** Keep CANOPY tasks partial until dense native-pin motion and the residual device/a11y/performance matrix are linked. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

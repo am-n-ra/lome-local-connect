@@ -208,3 +208,19 @@ The latest owner reference is now represented by a loaded Positron-style vector 
 The compact and desktop settled local frames preserve the Buyer map contract: permanent minus/plus/recenter controls, no visible location chip or approximate band, map-only rotation ownership, released-camera drag/resume, no visible HTML pin overlays, and separated bottom dock. Manual Plus at zoom `3.35` keeps Positron vector geography visible after the globe→mercator transition. The reveal helper now uses an explicitly authorized user position for the early context stages when present, then uses the result/user envelope for final framing.
 
 **Buyer Heartwood status:** `partial / V4.3 canonical map and bounded result reveal proven; ring decision pending`. Commit `2cab2d8` is deployed READY as `dpl_62FQ6GnjqnTMbJsMpbW1cya6sa41` with canonical alias `omni.sparkafrika.online` and exactly 12 Node functions. The canonical read-only query `Marche de Hanoukope` settled to a local Lome/Aflao frame with Positron streets, neighbourhood labels, boundaries/coastline and a geographically anchored native point; `Voir le lieu` remained unopened. Authenticated compact focus/recovery, device-native touch/input zoom, owner permission UX, remote performance and broader density remain open. No availability, claim, Seller, Reviewer, transaction, payment, QR, OSM or multi-product mutation occurred; the mono-product contract is unchanged.
+
+## 2026-08-25 — Buyer Canopy motion recovery checkpoint
+
+**Status:** `partial / bounded Buyer map motion proof verified; Buyer Trunk and Species gates remain open`.
+
+**Changed:** The map controller now recognizes pointer ownership by event target when an overlay is under the cursor. The desktop proof leaves through the search input overlay, matching the map-first contract without treating the full-screen canvas bounds as the entire interaction surface.
+
+**Proven:** Local 1024×880 desktop proof passed idle rotation, direct globe drag, center change, vertical-axis preservation, released position retention and rotation restart outside the map. Local 390×844 mobile proof remained green for touch, reversible globe/mercator projection, controls, 16px input and non-map focus/options/account ownership. Canonical read-only proof on `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` / commit `6711151` confirmed the same released-center hold and stable rotation after pointer movement to the search dock. Full source validation passed at 127 tests/19 files, build, boundary check and 12-function bundle.
+
+**Not proven:** This is not proof of availability, claim, facility detail, contact, Seller response, Reviewer decision, dense multi-pin behavior, real-device permission/touch/input, complete accessibility or remote performance. No Buyer business write or CTA was invoked.
+
+**Preserved:** Auth session hydration, public search/reveal, mono-product contract, user data, Auth identities, historical records, claims and server ownership boundaries remain unchanged.
+
+**Deployment:** GitHub commit `6711151` on `omni-v2-rebuild` is deployed READY as `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; canonical alias `omni.sparkafrika.online` is present and the existing 12 Node functions remain intact.
+
+**Next gate:** Complete dense native-pin movement and the remaining authenticated Buyer focus/recovery, real-device and performance evidence before any Trunk/Species acceptance. Multi-product remains Root/API-blocked.

@@ -117,3 +117,19 @@ Le diagnostic a isolé la cause du précédent blanc Positron: le provider fonct
 La révélation sépare désormais le contexte utilisateur autorisé pour les étapes monde→ville du cadrage final des résultats. Les tests locaux et preuves responsive restent verts: 122 tests/18 fichiers, build TypeScript/Vite, `check:boundary`, exactement 12 fonctions, mobile `390×844`, desktop `1024×880`, globe/mercator réversible, zoom Plus visible, drag à axe vertical, reprise idle et dock/contrôles sans chevauchement.
 
 **Décision de gate:** `partial / V4.3 localement prouvé, non déployé, non accepté`. Il reste à pousser puis vérifier le déploiement canonique, refaire le smoke read-only et prouver sur résultat réel les rues/quartiers et les pins natifs en mouvement. OSM/Overpass mondial, `4,067+` facilités, Seller, Reviewer, Auth complet, PWA, paiements, QR, transactions et multi-produit restent hors de ce gate.
+
+## 2026-08-25 — Desktop rotation-resume reconciliation
+
+**Status:** `partial / Canopy motion slice verified; parent Species gate remains open`.
+
+**Changed:** The map-only pointer ownership path now uses the actual event target when available. Because the MapLibre canvas fills the viewport beneath the interface, the previous coordinate-only test treated the search dock and other UI overlays as if they were still on the map. The desktop proof now exits through the real search input overlay.
+
+**Proven:** The local `1024×880` desktop proof passes idle globe motion, direct drag center change, zero-bearing vertical-axis preservation, released-camera retention and rotation restart after pointer movement to the search dock. The local `390×844` mobile proof remains green across touch, projection reversal, controls, 16px input, no visible approximate band, native canvas and non-map focus/options/account ownership. Full validation passes: **127 tests / 19 files**, Vite build, exactly 12 generated Vercel functions, client boundary and diff check. Canonical read-only smoke on `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` for commit `6711151` is `READY`, carries `omni.sparkafrika.online`, and reproduced the released-center hold followed by stable rotation from that position after leaving to the search overlay.
+
+**Not proven:** This ring does not prove full Species acceptance, dense real-result pin movement across frames, real-device permission/touch behavior, complete keyboard/screen-reader traversal, remote-tile performance or all recovery states. No business CTA or write path was used.
+
+**Preserved:** Existing map projection threshold `2.4`, monochrome vector treatment, native-rendered pin boundary, Auth/session repair, users, identities, historical data, claims, server contracts and all Root/API-paused operations remain intact.
+
+**Deployment:** Commit `6711151` was pushed to `omni-v2-rebuild` and deployed through GitHub→Vercel as `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, source `git`, canonical alias present, 12 Node functions.
+
+**Next gate:** Prove dense native-pin movement and the remaining real-device/accessibility/performance matrix. Keep Species and release Rings open; keep Global Root `review` and worldwide OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR, transactions and multi-product `Root/API-blocked`.

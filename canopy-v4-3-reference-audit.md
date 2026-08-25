@@ -175,3 +175,19 @@ The repair publishes the version-matched MapLibre runtime pair at stable same-or
 The rebuilt production preview at `http://localhost:4179/` reached `Carte active` at globe zoom `1.35`, retained the white-field/dark-ocean/light-continent monochrome Positron rendering, and transitioned to `mercator` at zoom `5.35` after four safe Plus actions. The browser captured the public worker, Positron style/planet/sprites, and actual OpenFreeMap PBF and glyph resources. Tile requests aborted during camera replacement were normal request cancellation during zoom, not a provider-unavailable state. The mobile proof remained green across 390x844, including three permanent controls, 16px input, touch movement, reversible projection, no visible approximate-location band and no HTML pins. The desktop proof remained green across 1024x880, including idle motion, globe-axis drag, released-camera retention, and rotation resumption outside the map.
 
 The earlier canonical blocker is therefore resolved in source and production-like preview, but canonical acceptance remains pending until the new GitHub-triggered Vercel deployment is READY and the same read-only browser smoke passes on `omni.sparkafrika.online`. Real-result street-level reveal and source-backed facility visibility remain separate, unproven gates.
+
+## 2026-08-25 — Overlay-aware rotation-resume addendum
+
+**Status:** `partial / V4.3 production vector globe and motion recovery are bounded-proven; full Species/Canopy acceptance remains open`.
+
+**Changed:** The production controller now distinguishes UI overlay targets from the full-screen MapLibre canvas during pointer movement. This resolves the proof regression where `(20,20)` was still inside the canvas and could not generate a true map exit. The authoritative desktop proof now moves to the visible search input overlay.
+
+**Proven:** Local 1024×880 proof passed idle globe rotation, drag center change, vertical-axis preservation, released-camera retention and rotation restart after search-overlay exit. Local 390×844 proof remained green. Canonical Vercel read-only smoke for `6711151` / `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1` reached `Carte active`, retained the released center during the hold interval and showed stable `resting_globe`/`rotating` recovery after leaving to the search dock. The source suite passed 127 tests/19 files, Vite build, boundary check and 12-function generation.
+
+**Not proven:** The audit still does not establish worldwide OSM/Overpass coverage, `4,067+` facilities, business availability, role operations, real-device permission/touch, complete accessibility, dense native-pin movement or production performance over a long observation window.
+
+**Preserved:** The Positron worker/shared-module production fix, monochrome vector contract, zoom 2.4 projection/label contract, Auth session mapper, user and historical data, and all paused Root/API tracks are unchanged.
+
+**Deployment:** `6711151` on `omni-v2-rebuild` → `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`, `READY`, canonical alias present, source `git`, exactly 12 Node functions.
+
+**Next gate:** Use the native MapLibre result layers to prove dense pin movement and then close the remaining bounded Species evidence; do not promote this addendum to product or operational readiness.
