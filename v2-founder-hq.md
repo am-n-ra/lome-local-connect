@@ -447,3 +447,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** GitHub commit `bde95a2` is the active source on `omni-v2-rebuild`; canonical `omni.sparkafrika.online` serves the validated Buyer shell. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
 
 **Next owner/action:** Owner supplies one fresh post-bde95a2 iPhone recording focused on search-dock keyboard behavior and reveal completion; Manus then reconciles that evidence before deciding whether the Species gate can close.
+
+## Founder HQ resume boot checkpoint — 2026-08-25
+
+**Status:** `partial / bounded canonical boot contract reconfirmed; Species and release Rings remain open`.
+
+**Evidence:** A fresh cache-busted reload of `omni.sparkafrika.online` again showed the intended masked `Chargement de la carte` state, then settled to the approved white-field/dark-ocean/light-continent globe with a mounted MapLibre canvas, public cluster, `Carte active`, permanent minus/plus/recenter controls, Buyer/Seller controls, account control and search dock. No result, auth or business surface was opened. The targeted Auth/session, map-reveal and layout contracts remain green at 10/10; the full baseline remains 127/127 tests, clean client boundary and exactly 12 Vercel functions.
+
+**Decision:** No further desktop code change is justified by this checkpoint. Keep Species/Canopy `partial`. The next smallest gate is still one post-bde95a2 iPhone recording covering dock-only keyboard lift, iOS no-auto-zoom and reveal completion, followed by reconciliation of dense native-pin and decision-relevant performance evidence.
+
+**Boundary:** Seller/Admin, OSM/Overpass population, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind their Root/API gates. No business mutation or operational data change occurred.
+
+**Deployment:** Canonical behavior is served from the GitHub-linked `omni-v2-rebuild` path with the validated Buyer shell. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
