@@ -307,3 +307,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded canonical browser evidence, not physical-device responsive proof, screen-reader output, long-window performance or business-flow readiness. Seller/Admin separation, transactions, QR, OSM/global facility population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Continue with real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Post-fold canonical stability checkpoint — 2026-08-25
+
+**Status:** `partial / bounded post-corrective stability verified; Species and release Rings remain open`.
+
+**Evidence:** After the result-fold correction was deployed, the canonical page was observed for 10 seconds with 11 one-second samples. Every sample showed a mounted MapLibre canvas, no result sheet, no idle bar, `projection="mercator"`, `rotation="rotating"` and `cameraMode="manual_navigation"`. No `error` or `unhandledrejection` event occurred, and the public-facility resource count remained 2. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded post-corrective remote stability evidence, not a long-duration benchmark, real-device performance proof, physical touch/permission proof or screen-reader output. Seller/Admin, transaction, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
