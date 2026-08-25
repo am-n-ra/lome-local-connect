@@ -612,3 +612,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Client boundary is clean, server typecheck passes, full suite remains 131/131 tests and production build succeeds. No browser permission prompt or production subscription was triggered in this work block.
 
 **Residual gate:** Apply migration 008 to the intended Neon environment, configure the VAPID key pair/provider, then perform a real authenticated subscribe → event → delivery → revoke proof. Keep the feature partial until that external proof exists.
+
+
+## Push Root proof checkpoint — 2026-08-25
+
+**Evidence added:** Root migration tests now include migration 008 and assert the account-scoped table, endpoint uniqueness, granted/revoked state constraint, revocation timestamp and active-subscription partial index. This keeps the persistence contract reviewable before any Neon application.
+
+**Validation:** Full suite passes 132/132 tests, client boundary is clean and server TypeScript validation passes. The migration remains additive and unapplied to production in this block.
+
+**Decision:** The Push slice is now contract-tested from browser opt-in through authenticated registry shape. It remains partial until the intended Neon environment is migrated and a configured VAPID/provider delivery proof is captured.

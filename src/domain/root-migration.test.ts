@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 const migration = readFileSync(resolve(process.cwd(), 'db/migrations/003_v2_root_guardrails.sql'), 'utf8');
 const eventIdempotencyMigration = readFileSync(resolve(process.cwd(), 'db/migrations/004_v2_event_idempotency.sql'), 'utf8');
 const sellerResponseMigration = readFileSync(resolve(process.cwd(), 'db/migrations/005_v2_seller_response_idempotency.sql'), 'utf8');
-const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}\n${sellerResponseMigration}`;
+const pushSubscriptionMigration = readFileSync(resolve(process.cwd(), 'db/migrations/008_v2_web_push_subscriptions.sql'), 'utf8');
+const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}\n${sellerResponseMigration}\n${pushSubscriptionMigration}`;
 
 describe('Root guardrail migration review', () => {
   it('contains no destructive schema or data operation', () => {
@@ -28,6 +29,15 @@ describe('Root guardrail migration review', () => {
     expect(sellerResponseMigration).toContain('ADD COLUMN IF NOT EXISTS idempotency_key');
     expect(migration).toContain('verified_at IS NULL');
     expect(migration).toContain('expires_at > p_now');
+  });
+
+  it('defines the account-scoped Push subscription registry without public exposure', () => {
+    expect(pushSubscriptionMigration).toContain('create table if not exists v2_web_push_subscriptions');
+    expect(pushSubscriptionMigration).toContain('unique (account_id, endpoint)');
+    expect(pushSubscriptionMigration).toContain("permission_state text not null default 'granted'");
+    expect(pushSubscriptionMigration).toContain("permission_state in ('granted', 'revoked')");
+    expect(pushSubscriptionMigration).toContain('revoked_at');
+    expect(pushSubscriptionMigration).toContain("where permission_state = 'granted' and revoked_at is null");
   });
 
   it('does not claim to repair existing rows silently', () => {
