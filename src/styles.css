@@ -1,14 +1,14 @@
 :root {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #24483f;
-  background: #f6f6f4;
+  color: #171717;
+  background: #ffffff;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --ink: #21483e;
   --ink-soft: #547269;
   --muted: #8a9b96;
   --muted-2: #aab8b3;
-  --map: #c6d2cb;
+  --map: #ffffff;
   --sheet: #ffffff;
   --forest: #1f5848;
   --forest-deep: #17483d;
@@ -40,20 +40,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .species-app { position: relative; width: 100vw; height: 100dvh; overflow: hidden; isolation: isolate; background: var(--map); }
 .map-stage, .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.map-stage { z-index: 0; overflow: hidden; background: #17363c; }
+.map-stage { z-index: 0; overflow: hidden; background: #ffffff; }
 .map-canvas .maplibregl-canvas-container, .map-canvas .maplibregl-canvas { width: 100%; height: 100%; }
-.map-canvas .maplibregl-canvas { filter: saturate(.88) sepia(.01) brightness(.94) contrast(1.08); }
-.map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: .055; background-image: radial-gradient(rgba(22, 56, 60, .3) .6px, transparent .6px); background-size: 9px 9px; mix-blend-mode: multiply; }
-.map-stage::after { position: absolute; z-index: 2; inset: 0; pointer-events: none; content: ""; background: linear-gradient(180deg, rgba(255,255,255,.025), transparent 35%, rgba(11,37,39,.06) 100%); }
+.map-canvas .maplibregl-canvas { filter: grayscale(1) contrast(1.08); }
+.map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: 0; background: none; }
+.map-stage::after { position: absolute; z-index: 2; inset: 0; pointer-events: none; content: ""; background: none; }
 
 .species-topbar, .map-error, .map-status, .map-attribution, .map-controls, .location-prompt, .search-anchor, .nearby-sheet, .map-pin-overlay { position: absolute; }
 .map-pin-overlay { z-index: 5; inset: 0; pointer-events: none; }
 .map-pin-a11y { position: absolute; z-index: 0; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .map-pin-a11y button { position: absolute; width: 1px; height: 1px; padding: 0; border: 0; }
 .user-position-overlay { position: absolute; z-index: 4; display: grid; width: 22px; height: 22px; place-items: center; transform: translate(-50%, -50%); pointer-events: none; }
-.user-position-marker { display: block; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: var(--user); box-shadow: 0 0 0 5px rgba(94,156,135,.18), 0 4px 10px rgba(42,71,63,.18); }
-.map-reveal-status { position: absolute; z-index: 4; top: calc(var(--safe-top) + 58px); left: 50%; display: inline-flex; align-items: center; gap: 7px; transform: translateX(-50%); padding: 7px 10px; border: 1px solid rgba(255,255,255,.72); border-radius: 999px; color: var(--ink-soft); background: rgba(255,255,255,.72); box-shadow: 0 8px 20px rgba(44,73,66,.08); backdrop-filter: blur(14px); font-size: 9px; font-weight: 800; pointer-events: none; }
-.map-reveal-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 4px rgba(228,147,104,.12); }
+.user-position-marker { display: block; width: 11px; height: 11px; border: 2px solid #fff; border-radius: 50%; background: #111; box-shadow: 0 0 0 5px rgba(0,0,0,.10), 0 4px 10px rgba(0,0,0,.18); }
+.map-reveal-status { position: absolute; z-index: 4; top: calc(var(--safe-top) + 58px); left: 50%; display: inline-flex; align-items: center; gap: 7px; transform: translateX(-50%); padding: 7px 10px; border: 1px solid rgba(0,0,0,.18); border-radius: 999px; color: #333; background: rgba(255,255,255,.88); box-shadow: 0 8px 20px rgba(0,0,0,.08); backdrop-filter: blur(14px); font-size: 9px; font-weight: 800; pointer-events: none; }
+.map-reveal-dot { width: 7px; height: 7px; border-radius: 50%; background: #222; box-shadow: 0 0 0 4px rgba(0,0,0,.10); }
 [data-motion="reduced"] .map-reveal-status { animation: none; }
 .map-pin { position: absolute; display: grid; place-items: center; pointer-events: auto; transform: translate(-50%, -100%); cursor: pointer; transition: transform .16s var(--ease), filter .16s var(--ease); }
 .map-pin:hover, .map-pin:focus-visible { transform: translate(-50%, -100%) scale(1.08); filter: drop-shadow(0 7px 10px rgba(41, 70, 62, .20)); }
@@ -93,16 +93,17 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .menu-action.secondary { color: var(--ink-soft); }
 
 .map-status { z-index: 3; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
-.map-attribution { z-index: 3; right: var(--safe-right); bottom: calc(var(--safe-bottom) + 4px); color: rgba(38, 66, 57, .70); font-size: 8px; letter-spacing: .01em; }
+.map-attribution { z-index: 3; right: var(--safe-right); bottom: calc(var(--safe-bottom) + 4px); color: rgba(0, 0, 0, .62); font-size: 8px; letter-spacing: .01em; }
 .map-error { z-index: 10; top: 15%; left: 50%; display: flex; align-items: center; gap: 10px; width: min(360px, calc(100% - 28px)); transform: translateX(-50%); padding: 10px 11px 10px 13px; border: 1px solid rgba(255,255,255,.9); border-radius: 14px; color: #7c5949; background: rgba(255,247,242,.94); box-shadow: var(--shadow-soft); font-size: 11px; }
 .map-error span { min-width: 0; flex: 1; }
 .map-error button, .secondary-button { border: 1px solid rgba(31,88,72,.20); border-radius: 999px; padding: 8px 12px; color: var(--forest); background: #f5fbf7; font-size: 10px; font-weight: 800; }
 
 .map-controls { z-index: 6; top: 18%; right: var(--safe-right); display: grid; gap: 8px; }
-.map-controls button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255,255,255,.92); border-radius: 14px; color: var(--ink); background: rgba(255,255,255,.82); box-shadow: var(--shadow-soft); backdrop-filter: blur(16px); transition: transform .16s var(--ease), background .16s var(--ease); }
+.map-controls button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(0,0,0,.18); border-radius: 14px; color: #171717; background: rgba(255,255,255,.94); box-shadow: 0 12px 28px rgba(0,0,0,.12); backdrop-filter: blur(16px); transition: transform .16s var(--ease), background .16s var(--ease); }
 .map-controls button:hover { background: #fff; transform: translateY(-1px); }
-.map-controls .location-control { color: var(--forest); }
-.location-prompt { z-index: 8; top: 37%; right: var(--safe-right); display: flex; align-items: center; gap: 8px; width: min(290px, calc(100% - 28px)); padding: 8px; border: 1px solid rgba(255,255,255,.9); border-radius: 15px; background: rgba(255,255,255,.94); box-shadow: var(--shadow-soft); backdrop-filter: blur(18px); }
+.map-controls .location-control { color: #171717; }
+.location-prompt { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+.location-status-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .location-prompt-icon { display: grid; width: 27px; height: 27px; flex: 0 0 auto; place-items: center; border-radius: 9px; color: var(--forest); background: var(--mint); }
 .location-prompt-copy { display: grid; min-width: 0; flex: 1; gap: 2px; }
 .location-prompt-copy strong, .location-prompt-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -341,9 +342,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .result-toolbar-button { min-height: 28px; padding-left: 8px; padding-right: 8px; }
   .map-attribution { left: var(--safe-left); right: auto; max-width: 155px; }
   .nearby-sheet { max-height: calc(100dvh - 150px); }
-  .map-controls { top: 18%; right: var(--safe-right); }
+  .map-error { top: calc(var(--safe-top) + 58px); }
+  .map-controls { top: calc(var(--safe-top) + 122px); right: var(--safe-right); }
   .map-controls button { width: 36px; height: 36px; }
-  .location-prompt { top: 35%; }
+  .location-prompt { left: -10000px; top: auto; }
   .nearby-sheet { width: 100%; }
   .options-popover { left: 0; width: calc(100% - 70px); transform: none; animation-name: options-lift-in; }
 }

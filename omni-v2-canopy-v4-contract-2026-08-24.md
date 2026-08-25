@@ -58,3 +58,14 @@ This slice does not add multi-product availability, new OSM ingestion, route/iti
 ## Revisit trigger
 
 Reopen this contract if the owner rejects the `zoom 2.4` threshold, if the live provider cannot maintain readable local geography at high zoom, if native MapLibre layers cannot preserve the desired facility-pin art direction/accessibility, or if mobile user-location recentering is later requested as an explicit action rather than arrival behavior.
+
+
+## 2026-08-25 — V4.1 monochrome and map-only interaction amendment
+
+The owner clarified that the intended reference is the existing Omni **white/black/gray map**, not the green-toned Canopy palette: white map background, near-black oceans, white/light continents, and charcoal/gray country and continent boundaries. V4.1 removes the green/sepia map wash and decorative colored selection halo; visible public pins remain source-backed and restrained, while cluster density may use neutral gray rings only where needed for the Species density cue.
+
+Idle globe rotation is now owned strictly by the map interaction surface. Search typing/focus, Options, J5/account, and non-map navigation must not pause the globe. Direct globe touch/pointer drag, wheel/pinch/rotate, native facility/cluster action, and explicit map controls may pause it. Primary left-drag orbit preserves a stable vertical axis: horizontal movement changes longitude responsively, vertical movement changes latitude within a safe clamp, pitch stays zero, and horizontal drag does not create unintended bearing drift. The control group always renders `Zoom arrière`, `Zoom avant` and `Utiliser ma localisation` together in stable order.
+
+The visible `Zone approximative détectée` banner is removed from the compact surface. Automatic location remains permission-aware, in-memory and non-recentering; explicit `Utiliser ma localisation` remains the only arrival recenter action. This is a client-only Canopy amendment with no database, API, Auth, migration or Root impact.
+
+**V4.1 gate remains open** until monochrome visual frames, direct-map-only pause proof, touch/axis proof, always-visible controls, non-obstructive location behavior, reversible projection, native pin movement and the existing accessibility/responsive/performance matrix are recorded.

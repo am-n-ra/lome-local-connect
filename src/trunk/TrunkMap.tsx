@@ -5,6 +5,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 import { GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
 
@@ -38,18 +39,18 @@ function featureCollection(facilities: PublicFacility[]) {
 
 function applyCanopyPalette(map: Map) {
   const paints: Array<[string, string, unknown]> = [
-    ['background', 'background-color', '#dfe9e4'],
-    ['water', 'fill-color', '#17363c'],
-    ['landcover_grass', 'fill-color', '#edf2e9'],
-    ['landcover_wood', 'fill-color', '#c7d8c8'],
-    ['landcover_sand', 'fill-color', '#efe5c9'],
-    ['boundary_2', 'line-color', '#395d55'],
-    ['boundary_3', 'line-color', '#6c8b7d'],
-    ['boundary_disputed', 'line-color', '#6c8b7d'],
-    ['road_minor', 'line-color', '#fbfaf3'],
-    ['road_secondary_tertiary', 'line-color', '#e8d7b6'],
-    ['road_trunk_primary', 'line-color', '#dfc18d'],
-    ['road_motorway', 'line-color', '#dd9564'],
+    ['background', 'background-color', '#ffffff'],
+    ['water', 'fill-color', '#111111'],
+    ['landcover_grass', 'fill-color', '#ffffff'],
+    ['landcover_wood', 'fill-color', '#f5f5f5'],
+    ['landcover_sand', 'fill-color', '#fafafa'],
+    ['boundary_2', 'line-color', '#2b2b2b'],
+    ['boundary_3', 'line-color', '#6d6d6d'],
+    ['boundary_disputed', 'line-color', '#6d6d6d'],
+    ['road_minor', 'line-color', '#d4d4d4'],
+    ['road_secondary_tertiary', 'line-color', '#b5b5b5'],
+    ['road_trunk_primary', 'line-color', '#8d8d8d'],
+    ['road_motorway', 'line-color', '#5f5f5f'],
   ];
   for (const [layerId, property, value] of paints) {
     try {
@@ -73,7 +74,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, revealKey = null, contextSurfaceOpen = false }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, revealKey = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   const facilitiesRef = useRef(facilities);
@@ -87,7 +88,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   const pointerInside = useRef(false);
   const fallbackUsed = useRef(false);
   const initialStyleReady = useRef(false);
-  const contextSurfaceRef = useRef(contextSurfaceOpen);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'fallback'>('loading');
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
@@ -101,11 +101,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   const [locationState, setLocationState] = useState<LocationState>('idle');
   const [userPosition, setUserPosition] = useState<RevealPoint | null>(null);
   const userPositionRef = useRef<RevealPoint | null>(null);
-  const [zoomExpanded, setZoomExpanded] = useState(false);
   const [screenUserPosition, setScreenUserPosition] = useState<{ left: number; top: number } | null>(null);
   const userPositionFrame = useRef<number | null>(null);
   const locationRequest = useRef<number | null>(null);
-  const resumeMotionRef = useRef<(() => void) | null>(null);
   facilitiesRef.current = facilities;
   userPositionRef.current = userPosition;
 
@@ -159,8 +157,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const map = mapRef.current;
     // Do not stop MapLibre during a native drag/rotate/wheel gesture. Stopping the
     // map on mousedown/dragstart makes the globe feel locked and can discard the
-    // first part of the user's gesture. We only stop an active reveal or an
-    // explicitly opened surface/control.
+    // first part of the user's gesture. We only stop an active reveal or a
+    // direct map-owned control action.
     if (map && (stopMap || revealRunningRef.current) && map.isMoving()) map.stop();
     if (reason === 'interaction' && cameraMode.current !== 'search_reveal') {
       cameraMode.current = 'manual_navigation';
@@ -183,7 +181,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       cancelLocation();
       return;
     }
-    pauseMotion();
+    if (recenter) pauseMotion();
     if (!navigator.geolocation) {
       setLocationState('unavailable');
       return;
@@ -201,18 +199,20 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         const nextPosition = { longitude: position.coords.longitude, latitude: position.coords.latitude };
         setUserPosition(nextPosition);
         setLocationState(approximate ? 'approximate' : 'exact');
-        mapRef.current?.stop();
-        rotating.current = false;
-        cameraMode.current = 'manual_navigation';
-        setCameraModeState('manual_navigation');
-        if (recenter) mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
+        if (recenter) {
+          mapRef.current?.stop();
+          rotating.current = false;
+          cameraMode.current = 'manual_navigation';
+          setCameraModeState('manual_navigation');
+          mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
+        }
       },
       (error) => {
         if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
         locationRequest.current = null;
         setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : error.code === error.TIMEOUT ? 'timeout' : 'unavailable');
       },
-      { enableHighAccuracy: true, maximumAge: 60_000, timeout: 8_000 },
+      { enableHighAccuracy: recenter, maximumAge: recenter ? 60_000 : 300_000, timeout: recenter ? 8_000 : 10_000 },
     );
   };
 
@@ -220,19 +220,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const map = mapRef.current;
     if (!map) return;
     pauseMotion();
-    map.zoomIn({ duration: 0 });
+    map.easeTo({ zoom: map.getZoom() + 1, duration: 0, essential: true });
   };
 
   const zoomOut = () => {
     const map = mapRef.current;
     if (!map) return;
     pauseMotion();
-    map.zoomOut({ duration: 0 });
+    map.easeTo({ zoom: Math.max(0, map.getZoom() - 1), duration: 0, essential: true });
   };
 
   useEffect(() => {
     let active = true;
-    const arrivalAttemptKey = 'omni.canopy.v3.location-attempted';
+    const arrivalAttemptKey = 'omni.canopy.v4.1.location-attempted';
     const attemptArrivalLocation = async () => {
       if (!navigator.geolocation) {
         setLocationState('unavailable');
@@ -302,14 +302,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const scheduleRotation = (delay = 1400) => {
       stopRotation();
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
         setRotationState('rotating');
         let previousTime = performance.now();
         const frame = (time: number) => {
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || contextSurfaceRef.current || pointerInside.current || cameraMode.current !== 'resting_globe' || map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !rotating.current || cameraMode.current !== 'resting_globe' || map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) {
             stopRotation();
             return;
           }
@@ -323,7 +323,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }, delay);
     };
     const resume = () => {
-      if (contextSurfaceRef.current || cameraMode.current !== 'resting_globe') {
+      if (cameraMode.current !== 'resting_globe') {
         rotating.current = false;
         stopRotation();
         setRotationState('paused');
@@ -335,7 +335,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         setRotationState('reduced');
         return;
       }
-      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !map.isMoving() && !pointerInside.current) {
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !map.isMoving()) {
         rotating.current = true;
         setCameraModeState('resting_globe');
         setRotationState('idle');
@@ -350,7 +350,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (pointerInside.current || contextSurfaceRef.current || map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
+        if (map.isMoving() || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
         if (cameraMode.current === 'manual_navigation') {
           cameraMode.current = 'resting_globe';
           setCameraModeState('resting_globe');
@@ -378,7 +378,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       scheduleUserPosition();
       emitBounds();
     };
-    resumeMotionRef.current = resume;
     map.on('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
@@ -392,19 +391,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const canvasContainer = map.getCanvasContainer();
     const handleCanvasEnter = () => {
       pointerInside.current = true;
-      if (rotationFrame.current !== null) {
-        window.cancelAnimationFrame(rotationFrame.current);
-        rotationFrame.current = null;
-      }
-      if (rotationResumeTimer.current !== null) {
-        window.clearTimeout(rotationResumeTimer.current);
-        rotationResumeTimer.current = null;
-      }
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) setRotationState('paused');
     };
     const handleCanvasLeave = () => {
       pointerInside.current = false;
-      if ((cameraMode.current === 'resting_globe' || cameraMode.current === 'manual_navigation') && !contextSurfaceRef.current) scheduleSettledResume();
+      if (cameraMode.current === 'resting_globe' || cameraMode.current === 'manual_navigation') scheduleSettledResume();
     };
     canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
     canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
@@ -422,9 +412,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
 
     type GlobeGesture = { x: number; y: number; center: [number, number]; bearing: number; touchId?: number };
     let globeGesture: GlobeGesture | null = null;
-    const clampLatitude = (latitude: number) => Math.max(-82, Math.min(82, latitude));
     const beginGlobeGesture = (x: number, y: number, touchId?: number) => {
-      if (projectionForZoom(map.getZoom()) !== 'globe' || contextSurfaceRef.current) return false;
+      if (projectionForZoom(map.getZoom()) !== 'globe') return false;
       const center = map.getCenter();
       globeGesture = { x, y, center: [center.lng, center.lat], bearing: map.getBearing(), touchId };
       map.dragPan.disable();
@@ -435,9 +424,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       if (!globeGesture) return;
       const deltaX = x - globeGesture.x;
       const deltaY = y - globeGesture.y;
+      const [longitude, latitude] = centerForGlobeAxisDrag({ longitude: globeGesture.center[0], latitude: globeGesture.center[1], bearing: globeGesture.bearing }, { x: deltaX, y: deltaY });
       map.jumpTo({
-        center: [globeGesture.center[0] - deltaX * 0.28, clampLatitude(globeGesture.center[1] + deltaY * 0.16)],
-        bearing: globeGesture.bearing + deltaX * 0.18,
+        center: [longitude, latitude],
+        bearing: bearingForGlobeAxisDrag({ longitude: globeGesture.center[0], latitude: globeGesture.center[1], bearing: globeGesture.bearing }),
         pitch: 0,
       });
     };
@@ -472,6 +462,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     };
     const handleGlobeTouchMove = (event: TouchEvent) => {
       if (!globeGesture || globeGesture.touchId === undefined) return;
+      if (event.touches.length > 1) {
+        endGlobeGesture();
+        return;
+      }
       const touch = [...event.touches].find((item) => item.identifier === globeGesture?.touchId);
       if (!touch) return;
       event.preventDefault();
@@ -504,7 +498,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       setCenterLongitude(map.getCenter().lng);
       if (!rotating.current) emitBounds();
       scheduleUserPosition();
-      if (cameraMode.current === 'resting_globe' && !pointerInside.current) scheduleSettledResume();
+      if (cameraMode.current === 'resting_globe') scheduleSettledResume();
     });
     map.on('dragend', () => {
       rotating.current = false;
@@ -514,7 +508,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }
       emitBounds();
       scheduleUserPosition();
-      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !contextSurfaceRef.current) scheduleSettledResume();
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
     map.on('zoomend', () => {
       rotating.current = false;
@@ -525,7 +519,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       setZoom(map.getZoom());
       emitBounds();
       scheduleUserPosition();
-      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM && !contextSurfaceRef.current) scheduleSettledResume();
+      if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
     map.on('error', () => {
       // A tile or glyph error must not replace an otherwise healthy style before
@@ -587,7 +581,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       window.removeEventListener('touchcancel', handleGlobeTouchEnd, true);
       if (globeGesture) map.dragPan.enable();
       globeGesture = null;
-      resumeMotionRef.current = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
       map.remove();
@@ -600,11 +593,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       // Facilities and clusters are visible MapLibre features, so the basemap and public presence
       // reproject in the same render cycle during drag, rotate and zoom. The accessible HTML list
       // below is only the keyboard fallback; it is not a second visual marker renderer.
-      target.addLayer({ id: 'omni-cluster-rings', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#d7e5de', 'circle-radius': ['step', ['get', 'point_count'], 28, 10, 36, 30, 46], 'circle-stroke-color': '#4d7568', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.55, 'circle-opacity': 0.2 } });
-      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#e49368', 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 23], 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
-      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#b96142', 'text-halo-width': 0.8 } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#2c5b50', 'circle-radius': 7, 'circle-stroke-color': '#fffaf4', 'circle-stroke-width': 2, 'circle-opacity': 0.98 } });
-      target.addLayer({ id: 'omni-selected-halo', type: 'circle', source: SOURCE, filter: ['==', ['get', 'id'], ''], paint: { 'circle-color': '#e97c54', 'circle-radius': 17, 'circle-opacity': 0.2, 'circle-stroke-color': '#e97c54', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.75 } });
+      target.addLayer({ id: 'omni-cluster-rings', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#d8d8d8', 'circle-radius': ['step', ['get', 'point_count'], 28, 10, 36, 30, 46], 'circle-stroke-color': '#777777', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.55, 'circle-opacity': 0.2 } });
+      target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#222222', 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 23], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
+      target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#222222', 'text-halo-width': 0.8 } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#111111', 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.98 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
@@ -616,7 +608,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         const id = String(event.features?.[0]?.properties?.id ?? '');
         const facility = facilitiesRef.current.find((item) => item.id === id);
         if (facility) {
-          pauseMotion();
+          pauseMotion('interaction', false);
           onSelect(facility);
           target.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(target.getZoom(), 5.2), duration: 700 });
         }
@@ -627,12 +619,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }
     }
   }, [onBoundsChange, onSelect, scheduleUserPosition]);
-
-  useEffect(() => {
-    contextSurfaceRef.current = contextSurfaceOpen;
-    if (contextSurfaceOpen) pauseMotion('surface');
-    else resumeMotionRef.current?.();
-  }, [contextSurfaceOpen]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -671,9 +657,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       revealRunningRef.current = false;
       setRevealRunning(false);
       setRevealLabel(null);
-      cameraMode.current = map.getZoom() <= GLOBE_TO_MERCATOR_ZOOM ? 'resting_globe' : 'manual_navigation';
+      cameraMode.current = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM ? 'resting_globe' : 'manual_navigation';
       setCameraModeState(cameraMode.current);
-      if (cameraMode.current === 'resting_globe' && !pointerInside.current && !contextSurfaceRef.current) {
+      if (cameraMode.current === 'resting_globe') {
         rotating.current = true;
         setRotationState('idle');
       }
@@ -713,8 +699,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', ['case', ['==', ['get', 'id'], selectedId ?? ''], '#e97c54', '#2c5b50']);
-    if (map.getLayer('omni-selected-halo')) map.setFilter('omni-selected-halo', ['==', ['get', 'id'], selectedId ?? '']);
+    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', '#111111');
     if (!selectedId) return;
     const selected = facilities.find((facility) => facility.id === selectedId);
     if (!selected || map.isMoving()) return;
@@ -729,7 +714,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     : locationState === 'exact'
       ? { title: 'Position détectée', detail: 'Votre repère est visible; utilisez le contrôle pour recentrer.' }
       : locationState === 'approximate'
-        ? { title: 'Zone approximative détectée', detail: 'Votre repère reste distinct sans déplacer la carte.' }
+        ? { title: 'Position détectée', detail: 'Votre repère approximatif reste distinct sans déplacer la carte.' }
         : locationState === 'denied'
           ? { title: 'Localisation désactivée', detail: 'Autorisez-la dans votre navigateur ou continuez à explorer.' }
           : locationState === 'timeout'
@@ -739,24 +724,20 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="deep-neutral" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'}>
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="map-reveal-dot" /><span>{revealLabel}</span></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
-        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { pauseMotion(); onSelect(facility); mapRef.current?.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(mapRef.current.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
+        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
       <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'fallback' ? 'Carte en mode de secours' : 'Carte active'}</div>
-      {locationState !== 'idle' && <div className={`location-prompt location-${locationState}`} role={locationState === 'requesting' ? 'status' : 'group'} aria-label="État de la localisation">
-        <span className="location-prompt-icon"><Crosshair size={15} /></span>
-        <span className="location-prompt-copy"><strong>{locationCopy.title}</strong><small>{locationCopy.detail}</small></span>
-        {locationState === 'requesting' ? <button type="button" onClick={cancelLocation}>Annuler</button> : (locationState === 'denied' || locationState === 'unavailable' || locationState === 'timeout' || locationState === 'cancelled') && <button type="button" onClick={() => requestLocation()}>Réessayer</button>}
-      </div>}
+      {locationState !== 'idle' && <div className="location-status-sr" role="status" aria-live="polite">{locationCopy.title}. {locationCopy.detail}</div>}
       <div className="map-controls" aria-label="Contrôles de carte">
-        {zoomExpanded && <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>}
-        <button className="zoom-in-control" type="button" aria-label="Zoom avant" aria-expanded={zoomExpanded} aria-controls="zoom-out-control" onClick={() => { zoomIn(); setZoomExpanded(true); }}><Plus size={17} /></button>
+        <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>
+        <button className="zoom-in-control" type="button" aria-label="Zoom avant" onClick={zoomIn}><Plus size={17} /></button>
         <button className="location-control" type="button" aria-label="Utiliser ma localisation" onClick={() => requestLocation()}><Crosshair size={16} /></button>
       </div>
     </div>

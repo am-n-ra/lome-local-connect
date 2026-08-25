@@ -59,7 +59,7 @@ The following visual decisions are locked for the first buyer species:
 8. The sheet starts with a centered grab handle, the heading `Proche de vous`, a small `Voir tout` action and a horizontal card rail.
 9. The first card is a compact facility/product card with an icon, a status pill, facility name, category/distance metadata and one dark-green `Vérifier la disponibilité` action.
 10. A partial next card remains visible at the right edge to communicate horizontal continuation without adding a carousel toolbar.
-11. The visual language is warm white, pale grey, muted green, deep forest green, small mint status accents and a restrained orange/coral map-marker accent.
+11. The visual language is white/black/gray for the map: white map field/background, near-black oceans, white/light continents and charcoal/gray boundaries; shared sheets may retain their existing Species material, while map markers remain restrained and neutral.
 12. The initial state is quiet and sparse. It does not show a dashboard sidebar, an overlapping dock/grid, a large explanatory caption, multiple floating chips, a visible filter grid or a collection of unrelated actions.
 
 These are Species rules. Seed product invariants, Flow state transitions and Root System authority remain unchanged.
@@ -87,11 +87,11 @@ For a 320px viewport, preserve the first card’s readable width and let the nex
 
 ## 4. Map treatment
 
-The map is real geographic context, but the initial frame uses a quiet visual treatment. Use a darker ocean, lighter land and clearly readable continent/country edges inspired by the main-branch map, without the heavy grey highlight wash. Roads and labels remain restrained, and any texture must never be used as fake geography or replace a functioning map provider.
+The map is real geographic context, and the initial frame uses the established Omni monochrome treatment: a white map field/background, near-black oceans, white/light land and clearly readable charcoal/gray continent and country edges. Do not apply a green/sepia tint, heavy grey highlight wash or decorative map-wide effect. Roads and labels remain neutral and restrained, and any texture must never be used as fake geography or replace a functioning map provider.
 
-The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. The Canopy treatment is a darker cool grey/green with clean geographic edges, restrained texture and visible local roads/labels when the real provider supplies them. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
+The first buyer view should be locally legible without feeling like a dense navigation application. The resting globe may exist as the underlying map state, but when the interface presents `Proche de vous`, the camera may settle into an appropriate local context. The V4.1 treatment remains monochrome at every projection: the remote style is recolored toward white/black/gray where layers exist, and the honest fallback follows the same direction. Camera movement, visible bounds and source-backed pins remain governed by the Root System and Flow.
 
-Public pins remain source-backed and stable. Use a small warm marker/halo for the selected or featured facility, with a compact uppercase label such as `BOULANGERIE BIO`. Do not add availability badges to arbitrary pins. Clustering is allowed at densities where it improves legibility, but the initial reference frame must remain visually sparse and calm.
+Public pins remain source-backed and stable. Use a small neutral marker for a selected or featured facility, with a compact uppercase label such as `BOULANGERIE BIO`; do not add a colored glow or decorative selection halo. Do not add availability badges to arbitrary pins. Clustering is allowed at densities where it improves legibility, but the initial reference frame must remain visually sparse and calm.
 
 The map must never become a flat decorative panel. If external tiles fail, show an honest, graceful fallback with the same spatial composition; do not fabricate roads, facilities or availability.
 
@@ -131,7 +131,7 @@ The upper-right circular indicator is intentionally small. It may show an accoun
 
 ### 6.3 Map controls
 
-The reference places map controls on the right, not the left. The initial visible group contains a circular `+` control and a circular location/recenter control with consistent size, spacing, translucency and shadow. Zoom-out remains available through a safe expanded control or direct gesture without adding a third crowded button to the initial frame unless the approved design extension explicitly requires it.
+The reference places map controls on the right, not the left. The initial visible group contains `Zoom arrière`, `Zoom avant` and a circular location/recenter control together, with consistent size, spacing, translucency and safe-area placement. The three controls remain visible after every zoom action and do not shift position.
 
 Controls pause idle movement and never overlap the search pill, facility label or sheet. They remain accessible at 320px.
 
@@ -293,3 +293,11 @@ Facility presence belongs to the map’s coordinate system. The preferred visibl
 The mobile arrival does not center on the user automatically. Permission-aware location may still produce the distinct marker in bounded in-memory state, but only the explicit location control or an approved search reveal may move the camera to that position. The mobile search input and every text-like field use a platform-safe minimum effective size of `16px` so tapping or focusing text does not trigger viewport zoom. Search focus must not mutate map center, zoom or projection.
 
 The palette is now defined by geographic contrast rather than a global grey wash: dark ocean, lighter land, clear continent/country edges, restrained roads and labels, and no heavy highlight overlay. When a selected facility’s grid or nearby result sheet is closed, selection is cleared and the map returns to its previous non-selected mode. A closed grid must never leave a stale selected pin highlighted on the next map-only state.
+
+## 18. Canopy V4.1 amendment — monochrome reference and map-only motion, 2026-08-25
+
+The owner clarified that the intended map is the established Omni **white/black/gray reference**, not the green-toned Canopy treatment: the map field/background is white, oceans are near-black, continents are white or near-white, and country/continent boundaries are charcoal or restrained gray. Roads and labels remain neutral where the vector style exposes them. Green/sepia tint, heavy gray wash and decorative colored selected-facility halos are not part of the Species map. Any cluster density rings inherit neutral grayscale semantics.
+
+Idle globe motion belongs exclusively to the map interaction surface. Search typing/focus, Options, J5/account and non-map navigation do not stop the globe. Direct map touch/pointer/wheel/pinch/rotate, native facility/cluster actions and explicit map controls may stop it. Primary left-drag orbits around a stable vertical axis: horizontal movement changes longitude responsively, vertical movement changes latitude within a bounded range, pitch remains zero and ordinary left drag does not create unintended bearing drift. Minus, plus and explicit recenter remain visible together in stable order.
+
+The approximate-zone banner is not part of the compact visual Species. Permission-aware location may still render a distinct in-memory marker and accessible status, but automatic arrival does not recenter and must not cover useful mobile map space. Only explicit recenter moves the camera.
