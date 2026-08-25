@@ -709,3 +709,14 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite passes 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. This seam does not call Overpass or import data by itself; a dedicated Lomé/Aflao discovery-and-review interaction remains required before records are written.
 
 **Residual gate:** Add operator-facing region discovery, preview and explicit import confirmation, then capture a real Lomé/Aflao import run with attribution and reconciliation evidence.
+
+
+## Regional OSM discovery surface — 2026-08-25
+
+**Published:** Field Pilot now supports an explicit operator flow for Lomé and Aflao: discover bounded Overpass results, preview the first 100 records, select individual facilities, then submit the selected records to the authenticated batch importer with OpenStreetMap attribution.
+
+**Safety:** Discovery does not write to Omni. Only the operator’s explicit import action writes records, and the server retains the unclaimed/public-import state, deduplication and claim protections. The UI reports created versus existing records and refreshes operator runs.
+
+**Validation:** Full suite passes 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. The existing bundle-size warning remains unchanged.
+
+**Residual gate:** Capture a real authenticated Lomé and Aflao run with operator identity, imported counts and reconciliation evidence; Overpass availability and rate limits remain external dependencies.
