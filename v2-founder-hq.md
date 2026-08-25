@@ -401,3 +401,9 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused. Keep Global Root `review`, Species and release Rings open.
 
 **Next gate:** Obtain device-backed touch/permission/reduced-motion and assistive-technology evidence, then reconcile native-pin density and remote performance before any Species decision.
+
+## Canopy device-backed proof boundary — 2026-08-25
+
+**Decision:** The current sandbox browser cannot close the remaining device-backed gate. Its session reports `maxTouchPoints: 0`, no `ontouchstart`, a desktop viewport and `prefers-reduced-motion: false`; synthetic browser gestures and DOM inspections have already been recorded and must not be relabeled as phone or screen-reader evidence.
+
+**Remaining owner/action:** Run one device-backed pass covering mobile touch, safe-area and 16px input behavior, OS location permission, reduced-motion behavior and a real screen reader; then run the native-pin density and long-window performance checks. Until that evidence is attached, keep Species/Canopy `partial` and do not open Seller/Admin, OSM population, billing or payment.
