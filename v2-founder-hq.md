@@ -691,3 +691,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite passes 132/132 tests, client boundary is clean, server TypeScript passes and the production build succeeds. A client type-closing regression was caught and corrected before publication.
 
 **Status:** The Admin account-status tranche is now UI and server-contract complete. Free/Pro enforcement, billing, and real Push delivery remain separate gates.
+
+
+## Admin reactivation visible — 2026-08-25
+
+**Published:** The Reviewer activation queue now returns suspended and already-ready candidates, and the UI selects `Activer vendeur`, `Suspendre` or `Réactiver` from the authoritative account state. A single bounded audited reason is required for suspension and reactivation.
+
+**Validation:** A client type-closing regression was caught during validation, corrected, and the full suite was rerun successfully: 132/132 tests, clean client boundary, server typecheck and production build. The existing bundle-size warning remains unchanged.
+
+**Residual gates:** Free/Pro enforcement, billing, and VAPID/provider Push delivery remain separate and are not implied by this Admin tranche.
