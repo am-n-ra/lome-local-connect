@@ -287,6 +287,14 @@ export async function getSellerActivationQueue(input: { token: string }): Promis
   });
   return parse(response);
 }
+export async function setSellerAccountSuspension(input: { accountId: string; suspended: boolean; reason: string; token: string }): Promise<ApiResult<{ accountId: string; suspended: boolean }>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/seller-accounts/${encodeURIComponent(input.accountId)}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ suspended: input.suspended, reason: input.reason }),
+  });
+  return parse(response);
+}
 export async function activateSellerAccount(input: { accountId: string; token: string }): Promise<ApiResult<{ accountId: string; onboardingState: 'seller_ready'; activated: true }>> {
   const response = await fetchWithRecovery(`/api/v2/admin/seller-activations/${encodeURIComponent(input.accountId)}`, {
     method: 'POST',

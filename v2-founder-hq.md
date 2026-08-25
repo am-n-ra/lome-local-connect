@@ -664,3 +664,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** Do not add checkout, billing or payment mutations until Free defaults, Pro benefits, price/currency, renewal and expiry, webhook authenticity, refunds, revocation and operator override rules are explicitly defined. Current safe enforcement is limited to named entitlements and the existing seller activation/trust gates.
 
 **Status:** Free/Pro is `partial / enforcement-gated`; billing is not claimed as production-ready.
+
+
+## Seller account suspension boundary — 2026-08-25
+
+**Published:** Added reviewer-authenticated, account-scoped suspension and reactivation endpoints using the existing `suspended_at` account field. Every status change requires a bounded reason, is audit-recorded and emits an Inbox event.
+
+**Security:** Suspended or unknown reviewer accounts cannot act; duplicate requested state is rejected; suspended accounts remain excluded by the existing transaction, Inbox, facility and Push authorization queries. No separate admin role was invented.
+
+**Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. The current UI exposes the activation tranche; suspension/re-activation controls are server/client-contract ready but still need a dedicated reviewer interaction surface and end-to-end negative proof.

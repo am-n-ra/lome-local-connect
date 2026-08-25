@@ -246,6 +246,10 @@ export interface SellerActivationResult {
   onboardingState: 'seller_ready';
   activated: true;
 }
+export interface SellerAccountSuspensionResult {
+  accountId: string;
+  suspended: boolean;
+}
 
 export interface NotificationSummary {
   id: string;
@@ -784,6 +788,43 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The account is not eligible for separate seller activation.');
       return { accountId: String(row.id), onboardingState: 'seller_ready', activated: true };
+    },
+    async setSellerAccountSuspension(input: { authUserId: string; accountId: string; suspended: boolean; reason: string; correlationId: string }): Promise<SellerAccountSuspensionResult> {
+      const rows = await retryDatabase(() => sql`
+        with reviewer as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), candidate as (
+          select a.id, a.suspended_at, reviewer.id as reviewer_id
+          from v2_accounts a cross join reviewer
+          where a.id = ${input.accountId}::uuid
+            and (a.suspended_at is null) is distinct from ${input.suspended}
+        ), updated as (
+          update v2_accounts a
+          set suspended_at = case when ${input.suspended} then now() else null end, updated_at = now()
+          from candidate
+          where a.id = candidate.id
+          returning a.id, candidate.reviewer_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select reviewer_id, case when ${input.suspended} then 'seller_account_suspended' else 'seller_account_reactivated' end, 'account', id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated
+          returning entity_id
+        ), notification_insert as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select updated.id, case when ${input.suspended} then 'seller_account_suspended' else 'seller_account_reactivated' end, 'account', updated.id::text, updated.id::text || case when ${input.suspended} then ':suspended' else ':reactivated' end || ':' || ${input.correlationId}, jsonb_build_object('suspended', ${input.suspended}), ${input.correlationId}
+          from updated join audit on audit.entity_id = updated.id::text
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id
+        )
+        select updated.id from updated
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The account is not eligible for this suspension change.');
+      return { accountId: String(row.id), suspended: input.suspended };
     },
     async listNotificationInbox(input: { authUserId: string }): Promise<{ notifications: NotificationSummary[] }> {
       const rows = await retryDatabase(() => sql`
