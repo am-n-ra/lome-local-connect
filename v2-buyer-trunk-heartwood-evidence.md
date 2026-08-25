@@ -304,3 +304,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** Evidence ran on READY canonical `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, alias present and 12 functions.
 
 **Next gate:** Complete a bounded result-sheet focus traversal or obtain real assistive-technology/device evidence before Buyer Heartwood acceptance.
+
+## 2026-08-25 — Buyer result-sheet Escape recovery
+
+**Status:** `partial / result-sheet Escape recovery closed a real Canopy blocker`.
+
+**Changed:** Added the nearby-results Escape target and reused safe selection/focus cleanup; added pure resolver tests.
+
+**Proven:** Before the fix, Escape from internal result focus left the sheet and focus trapped. After the fix, local fixture-backed and canonical proof show the sheet closes, focus leaves it, search dock/input and map remain available, and no facility sheet or CTA opens.
+
+**Not proven:** Full screen-reader/device traversal, dense pins, availability flow and Buyer Heartwood acceptance remain open. No write was performed.
+
+**Preserved:** Auth, search/reveal, result exits, native layers, history and mono-product contract remain intact.
+
+**Deployment:** `4fa10bc` is READY at `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue real device/accessibility proof before closing Buyer Heartwood.

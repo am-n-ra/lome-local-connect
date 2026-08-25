@@ -213,3 +213,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** Read-only observation used READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias and 12 functions.
 
 **Next gate:** Run the smallest complete result focus traversal or real assistive-technology/device proof; keep Species and Rings open.
+
+## 2026-08-25 — Result-sheet Escape blocker resolution
+
+**Status:** `partial / nearby result Escape recovery verified; Canopy and Species remain open`.
+
+**Changed:** `resolveEscape` now returns `nearby-results` when the result sheet owns Escape. The handler clears nearby selection/show-all state, closes the sheet and blurs removed focus.
+
+**Proven:** The failure was reproduced before the fix. Fixture-backed local proof and canonical READY proof now show Escape removes the result sheet, moves focus outside it, restores the search dock/input, preserves the map canvas and leaves the facility sheet closed. No business CTA was activated.
+
+**Not proven:** No full WCAG/device/screen-reader, dense-pin or operational readiness claim is made.
+
+**Preserved:** Higher-priority panel transitions, options/menu precedence, native map rendering, Auth and paused Root/API scope remain preserved.
+
+**Deployment:** Code `4fa10bc` / READY `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, canonical alias and 12 functions.
+
+**Next gate:** Complete bounded device/screen-reader or non-business focus traversal evidence.

@@ -223,3 +223,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** Observation ran on canonical READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias, source `git` and 12 Node functions.
 
 **Next gate:** Continue with a bounded full result-sheet focus traversal or real assistive-technology/device check; keep Species, Rings and Global Root `review` boundaries unchanged.
+
+## Result-sheet Escape recovery checkpoint — 2026-08-25
+
+**Status:** `partial / Canopy result-sheet Escape recovery verified; Species and release Rings remain open`.
+
+**Changed:** `TrunkApp` now gives Escape an explicit nearby-results target when no higher-priority panel, options popover or account menu owns the event. The result sheet closes through the same safe state reset as its map-return path, clears selection/show-all state and blurs the removed focus. Added pure `resolveEscape` coverage.
+
+**Proven:** The prior canonical failure was reproducible: Escape left the result sheet visible and focus inside it. After the fix, local fixture-backed proof and the canonical READY proof both show the sheet removed, focus outside the removed sheet, search dock/input restored, MapLibre canvas mounted, facility sheet closed and no business CTA activated. Full tests, build, boundary, mobile and desktop proofs remain green.
+
+**Not proven:** This closes one Canopy recovery blocker only. Full screen-reader/device traversal, dense multi-pin behavior, extended performance and operational Buyer/Seller/Reviewer readiness remain open; no `Voir le lieu`, availability, claim, payment, QR, transaction, PWA or OSM action was invoked.
+
+**Preserved:** Auth/session hydration, users/history, bounded test claim, native layers, map-only rotation, projection/label threshold, mono-product boundaries and Root/API-paused tracks remain unchanged.
+
+**Deployment:** Code commit `4fa10bc` is READY as `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, canonical alias present, source `git`, 12 Node functions. This board checkpoint is being reconciled after that code release.
+
+**Next gate:** Continue the smallest real device/screen-reader or complete non-business result focus proof; do not promote Species or Rings.

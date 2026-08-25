@@ -271,3 +271,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, canonical alias, source `git`, 12 functions.
 
 **Next gate:** Continue result-sheet focus/device evidence; do not promote Canopy to Species or Rings.
+
+## 2026-08-25 — Nearby result Escape addendum
+
+**Status:** `partial / result-sheet Escape ownership and focus recovery verified; full Species/Canopy acceptance remains open`.
+
+**Changed:** `resolveEscape` gained an explicit `nearby-results` target and the handler now performs safe nearby selection/focus cleanup.
+
+**Proven:** A real trapped-focus failure was reproduced on the result sheet. After release, fixture-backed local and canonical checks remove the sheet, move focus out, restore the search dock/input, keep the canvas mounted and leave business CTA/detail surfaces closed.
+
+**Not proven:** Full WCAG/device/screen-reader, dense-pin and operational proof remain open.
+
+**Preserved:** Native layers, projection/labels, rotation, Auth, users/history and Root/API pause remain intact.
+
+**Deployment:** READY `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, commit `4fa10bc`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue bounded device/accessibility evidence; do not promote Canopy to Species or Rings.

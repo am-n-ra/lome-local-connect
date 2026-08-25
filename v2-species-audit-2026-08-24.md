@@ -288,3 +288,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** Canonical observation ran on READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, alias present, source `git`, 12 functions.
 
 **Next gate:** Continue the result-sheet focus/device proof without promoting Species or Rings.
+
+## 2026-08-25 — Nearby result Escape correction
+
+**Status:** `partial / Canopy result-sheet Escape recovery verified; Species remains open`.
+
+**Changed:** Nearby results now own Escape after higher-priority panels, options and menu surfaces. Selection/show-all state is cleared and removed focus is blurred.
+
+**Proven:** The prior trapped-sheet behavior was reproduced; after the fix, local fixture-backed and canonical checks remove the sheet, move focus outside it, restore the dock/input, keep the map mounted and leave business surfaces closed.
+
+**Not proven:** Full WCAG, assistive technology, real-device, dense-pin and operations evidence remain open.
+
+**Preserved:** Species visual DNA, map-only motion, native layers, projection threshold, Auth and Root/API boundaries remain preserved.
+
+**Deployment:** READY `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, commit `4fa10bc`, canonical alias and 12 functions.
+
+**Next gate:** Continue bounded device/screen-reader proof without promoting Species.

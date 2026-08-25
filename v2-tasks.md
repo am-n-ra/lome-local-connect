@@ -488,3 +488,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** Observation used READY `dpl_3Z4rruFzmNPkzuuo8TpmVao4uhQt`, commit `10f2da7`, source `git`, alias and 12 functions.
 
 **Next gate:** Run only the next bounded result focus/device proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Result-sheet Escape blocker closed
+
+**Status:** `partial / Canopy Escape recovery blocker closed; CANOPY and release Rings remain open`.
+
+**Changed:** Added nearby-results ownership to `resolveEscape`, safe state cleanup and focused resolver assertions. No task is marked fully done.
+
+**Proven:** Local fixture-backed and canonical read-only proof confirm that Escape closes results, clears removed focus, preserves dock/input/map, and does not activate `Voir le lieu`.
+
+**Not proven:** Full device/screen-reader traversal, dense pins, long performance and operational flows remain open. CANOPY-001 through CANOPY-005 remain partial; CANOPY-006 remains deferred.
+
+**Preserved:** Auth, data, mono-product, Seller/Reviewer, OSM/Overpass, PWA/Web Push, payment, QR, transaction and multi-product boundaries remain unchanged.
+
+**Deployment:** Code `4fa10bc` / READY `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Run only the next bounded device/accessibility proof; Global Root remains `review` and multi-product remains `Root/API-blocked`.
