@@ -240,3 +240,19 @@ The compact and desktop settled local frames preserve the Buyer map contract: pe
 **Deployment:** The proof ran on canonical READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk` for the `omni-v2-rebuild` line, with `omni.sparkafrika.online` and 12 functions; application behavior is from code commit `6711151`.
 
 **Next gate:** Keep Buyer Heartwood partial and continue with multi-feature native observation only if existing bounded data can support it; otherwise proceed to real-device and accessibility proof without inventing density.
+
+## 2026-08-25 — Buyer keyboard and recovery checkpoint
+
+**Status:** `partial / bounded keyboard, focus and read-only recovery proof verified`.
+
+**Changed:** No Buyer source or server logic changed. The authenticated canonical shell was tested only through menu, options, keyboard and read-only request-history surfaces.
+
+**Proven:** Account-menu focus remained inside the ARIA menu and reached the first read-only menuitem by Tab. Enter opened `Mes demandes`; Escape closed it, restored the active map and left no focus in the removed sheet. Search options opened with separated geometry and Escape restored the dock without applying a filter. The compact reduced-motion contract and existing mobile/desktop proofs remain green; full source validation remains 127 tests/19 files and 12 functions.
+
+**Not proven:** Real-device accessibility, screen-reader output, permission prompts, dense result coverage, complete recovery across every Buyer branch and any availability/claim write remain unproven. No CTA or mutation was used.
+
+**Preserved:** Auth hydration, search/reveal, read-only ownership, historical data and the mono-product boundary remain intact.
+
+**Deployment:** Proof ran on READY canonical `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, alias `omni.sparkafrika.online`, 12 functions.
+
+**Next gate:** Continue with device-native input/permission and accessibility/performance evidence before any Buyer Heartwood or Species acceptance.

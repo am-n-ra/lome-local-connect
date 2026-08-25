@@ -149,3 +149,19 @@ La révélation sépare désormais le contexte utilisateur autorisé pour les é
 **Deployment:** The application behavior is from commit `6711151` / READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; the read-only proof ran on the documentation-aligned READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, canonical alias present and 12 Node functions.
 
 **Next gate:** Keep the gate partial. If bounded fixtures support it, inspect more than one visible native pin at local zoom; otherwise record the density limitation and move to real-device/accessibility/performance evidence. Do not advance Species, release Rings or Root/API operations.
+
+## 2026-08-25 — Accessibility, recovery and reduced-motion addendum
+
+**Status:** `partial / bounded Canopy keyboard, recovery and reduced-motion proof verified; Species and Rings remain open`.
+
+**Changed:** No product source change was needed. The canonical session was used for safe account/options/read-only recovery checks; the reduced-motion check ran against the local preview with an external temporary harness.
+
+**Proven:** The authenticated account menu exposed an ARIA menu whose focus stayed inside: Tab reached close, then `Mes demandes`; Enter opened the read-only Buyer sheet and Escape returned to the active map without focus trapped in the removed sheet. Search options opened and closed via Escape without applying changes, retaining the dock and three map controls. Compact reduced motion kept `motion/rotation=reduced`, the map mounted and monochrome, the input 16px, three named controls, no horizontal overflow and zero visible HTML pins. Full validation passed 127 tests/19 files, build, boundary, diff check and 12-function generation.
+
+**Not proven:** No claim of full WCAG/device-native screen-reader coverage, real-device input/permission or long-run performance is made. Dense global pins, complete operations and business mutation paths remain outside this proof.
+
+**Preserved:** Existing map-only motion, native MapLibre source/layers, Auth, users/historical data and all paused operations remain preserved.
+
+**Deployment:** Canonical proof ran on READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, source `git`, canonical alias and 12 functions.
+
+**Next gate:** Run a bounded real-device/native input and accessibility/performance pass, retaining partial status until its evidence exists. Do not advance Species or Rings.

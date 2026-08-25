@@ -159,3 +159,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** Application behavior remains from commit `6711151` / deployment `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; the canonical read-only native-layer proof was observed on the subsequent documentation-aligned READY deployment `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, canonical alias present and exactly 12 Node functions.
 
 **Next gate:** Treat native movement as boundedly proven, not dense-proof complete. Continue with a safer multi-feature local result observation if available, then the real-device/accessibility/performance matrix. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## Accessibility and reduced-motion checkpoint — 2026-08-25
+
+**Status:** `partial / bounded Canopy accessibility and recovery proof verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required. The authenticated canonical browser was used only for safe account-menu, options, keyboard-focus and read-only Buyer recovery checks. A temporary local reduced-motion harness was corrected and kept outside the repository; no product or fixture data changed.
+
+**Proven:** The canonical account menu kept focus inside its ARIA menu: the first Tab reached the close control and the second reached the first read-only menuitem, `Mes demandes`. Enter opened the server-read-only sheet; Escape closed it, restored `Carte active`, preserved all three map controls and left no focus inside the removed sheet. Options opened as a separated surface and Escape restored the search dock without applying a filter. The compact reduced-motion proof kept the globe mounted and monochrome, rotation `reduced`, input at 16px, three named controls, no horizontal overflow and no visible HTML pins. Full validation remains 127 tests/19 files, build/boundary clean and 12 functions.
+
+**Not proven:** This is not a full WCAG audit, screen-reader/device-native test or production performance benchmark. Real-device touch/input/permission, assistive technology traversal, dense native-pin coverage and complete Buyer/Seller/Reviewer operational proof remain open. No business CTA or write was invoked.
+
+**Preserved:** Auth/session hydration, the vector globe/mercator threshold, overlay-aware rotation, native layer proof, users, identities, historical data, claims and all Root/API-paused boundaries remain unchanged.
+
+**Deployment:** The proof was observed on canonical READY deployment `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, alias `omni.sparkafrika.online`, source `git` and 12 Node functions.
+
+**Next gate:** Continue with device-native touch/input/permission and a bounded accessibility/performance pass. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.

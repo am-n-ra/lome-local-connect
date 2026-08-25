@@ -224,3 +224,19 @@ Local proofs passed with **122 tests across 18 files**, `git diff --check`, Type
 **Deployment:** Code commit `6711151` remains the application source; the canonical observation ran on READY `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, canonical alias present, source `git`, 12 functions.
 
 **Next gate:** Keep Species partial. Record any additional native-pin density only from existing bounded data and otherwise move to real-device/accessibility/performance evidence; do not claim Species or Ring acceptance.
+
+## 2026-08-25 — Accessibility and reduced-motion audit
+
+**Status:** `partial / compact keyboard, recovery and reduced-motion contracts observed; Species gate remains open`.
+
+**Changed:** No source change was made. This audit used existing UI surfaces and a temporary non-repository local probe.
+
+**Proven:** Canonical menu focus moved from close to the first read-only menuitem via Tab, Enter opened the server-read-only Buyer sheet and Escape returned to the active map without trapped focus. Options Escape recovery retained the search dock and controls without applying filters. Local compact reduced-motion proof kept rotation reduced, the vector map mounted and monochrome, 16px input, three named controls, no horizontal overflow and no visible HTML pins. Full tests/build/boundary/12-function checks remain green.
+
+**Not proven:** Full assistive-technology traversal, real-device touch/input/permission, long-window performance, dense native-pin coverage and full Species acceptance remain open. No business action was invoked.
+
+**Preserved:** Species visual DNA, map-only ownership, native layer contract, Auth/session repair, user/history data and Root/API boundaries remain preserved.
+
+**Deployment:** Observation was on READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, canonical alias present and 12 functions.
+
+**Next gate:** Gather device-native and extended accessibility/performance evidence; keep Species and Rings open.

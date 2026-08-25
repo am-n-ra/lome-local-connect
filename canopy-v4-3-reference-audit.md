@@ -207,3 +207,19 @@ The earlier canonical blocker is therefore resolved in source and production-lik
 **Deployment:** Code commit `6711151` / READY `dpl_GetKcB8WL2b4A8d8iauCRJ8SKSp1`; canonical read-only native-layer observation on READY `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, alias present, 12 Node functions.
 
 **Next gate:** Keep V4.3 partial and inspect more than one native pin only if the existing bounded data supports it. Otherwise close this evidence as bounded and proceed to real-device/accessibility/performance proof; do not promote it to operational readiness.
+
+## 2026-08-25 — Accessibility/reduced-motion addendum
+
+**Status:** `partial / Canopy keyboard, recovery and reduced-motion evidence bounded-proven; full Species acceptance remains open`.
+
+**Changed:** No product code changed. The audit used the canonical authenticated shell for read-only menu/options/recovery checks and an external local reduced-motion harness.
+
+**Proven:** Menu focus stayed within ARIA ownership and reached the first read-only action; Enter opened the request-history sheet and Escape returned to the map. Options Escape closed without applying filters. Compact reduced-motion kept the map mounted, monochrome and non-overflowing with a 16px input, three named controls, reduced rotation and no visible HTML pins. Source and responsive validation remains green.
+
+**Not proven:** This does not prove full WCAG/device-native screen-reader support, real-device permission/input, dense native-pin coverage, long-run performance or operational readiness. No CTA or write path was invoked.
+
+**Preserved:** Vector worker/native layers, monochrome projection contract, map-only rotation, Auth repair, users/history and Root/API pause boundaries remain intact.
+
+**Deployment:** READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`, commit `9f31dc3`, canonical alias, source `git`, 12 functions.
+
+**Next gate:** Continue device-native and performance proof; do not promote Canopy to Species or Rings until the residual matrix is evidenced.

@@ -424,3 +424,19 @@ The exact next smallest action for the next ring is now the residual Species/Can
 **Deployment:** Application code remains commit `6711151`; canonical proof was read-only on `dpl_Czq84yAUzdHpjur3w6ehb6ZunKwk`, source `git`, alias `omni.sparkafrika.online`, 12 functions.
 
 **Next gate:** Keep CANOPY-005 partial until a genuinely multi-pin local frame is available and observed; otherwise move to device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
+
+## 2026-08-25 — Canopy accessibility/recovery reconciliation
+
+**Status:** `partial / keyboard, focus, read-only recovery and reduced-motion evidence added; CANOPY and Rings remain open`.
+
+**Changed:** No product task was added or marked done. Existing safe surfaces were tested; no fixture, account, business record or operation changed.
+
+**Proven:** ARIA menu focus, first read-only menuitem reachability, Enter to `Mes demandes`, Escape recovery, options Escape ownership and compact reduced-motion constraints passed. Local mobile/desktop proofs, 127 tests/19 files, build, boundary and 12-function bundling pass. Canonical proof is linked to READY `dpl_FELsPP7PgX6UEzFHesgzwa74p5eV`.
+
+**Not proven:** Device-native touch/input/permission, complete screen-reader traversal, dense multi-pin coverage, extended remote performance and operational readiness remain open.
+
+**Preserved:** CANOPY-001 through CANOPY-005 remain partial, CANOPY-006 deferred, Auth and mono-product boundaries remain stable, and all Seller/Reviewer/OSM/PWA/payment/QR/transaction/multi-product work remains paused.
+
+**Deployment:** Commit `9f31dc3`, source `git`, canonical alias present, 12 functions.
+
+**Next gate:** Add only the next bounded device/a11y/performance proof. Keep Global Root `review`, release Rings open and multi-product `Root/API-blocked`.
