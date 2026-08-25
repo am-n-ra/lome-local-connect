@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Crosshair, Minus, Plus } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
-import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 import { GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
@@ -25,8 +24,9 @@ const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
+const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
 
-if (typeof window !== 'undefined') setWorkerUrl(maplibreWorkerUrl);
+if (typeof window !== 'undefined') setWorkerUrl(MAPLIBRE_WORKER_URL);
 
 function featureCollection(facilities: PublicFacility[]) {
   return {
@@ -542,9 +542,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       scheduleUserPosition();
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
+    // Positron can legitimately take longer than a local raster style on a cold
+    // production connection. Do not present a provider error before that window
+    // has elapsed; the map remains truthful and retryable if it still fails.
     readinessTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map) setMapStatus('error');
-    }, 8000);
+    }, 20_000);
     let globeProjection = true;
     const syncProjection = () => {
       const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';

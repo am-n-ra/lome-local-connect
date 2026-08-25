@@ -144,3 +144,34 @@ The local read-only preview started with the Africa-facing globe at zoom `1.35`;
 ## Globe-to-mercator observation
 
 The second Plus action crossed the approved projection threshold. The settled frame visibly remained populated by Positron vector geography: national boundaries, country labels and coastlines persisted at the closer scale rather than disappearing. The view was intentionally read-only and no facility or business action was opened. A dedicated real-result query is still required to prove local streets and source-backed facility features at the final reveal zoom.
+
+
+## Canonical V4.3 smoke blocker
+
+Deployment `dpl_8kiibzXkDsFKPZB55Toedmc8SnYJ` is READY for commit `be7cff4` and aliases `omni.sparkafrika.online`, but the first canonical smoke did not reach a usable map. After the initial loading frame and a further settle, the public domain reported `Carte indisponible` with the explicit message `La carte vectorielle est temporairement indisponible.` and a visible `Réessayer` action. The permanent map controls and dock remained mounted, but no globe was visible. This is an honest production blocker; V4.3 is not accepted. The next action is to inspect the public worker asset/console path and repair or revert the deployment-safe worker resolution before any further release claim.
+
+
+## Canonical worker diagnostics
+
+The canonical browser requested the Vite worker at `https://omni.sparkafrika.online/assets/maplibre-gl-worker-f96B2wcH.mjs`, the Positron style/TileJSON, sprites and fonts, but recorded **zero PBF resources** before the 8-second timeout. The DOM remained mounted at globe zoom `1.35` with map-only rotating state while the visible status became `Carte indisponible`. The worker URL is therefore present but its production runtime does not reach a loaded vector source; the production-safe fix must validate worker execution/format, not merely publish the asset URL.
+
+
+## Production-preview reproduction
+
+The exact Vite production build reproduced the canonical failure on `http://localhost:4179/`: after the loading window, Omni displayed `Carte indisponible` with the explicit retry state and no globe. Development mode on 4174 succeeds, so the regression is in the bundled production worker/runtime path rather than the Positron provider itself or Vercel-only networking.
+
+
+## Production-preview resource diagnosis
+
+The production preview requested `http://localhost:4179/assets/maplibre-gl-worker-f96B2wcH.mjs`, the Positron style/planet, sprites and fonts, but still recorded zero `.pbf` resources before `Carte indisponible`. No useful console output was emitted. This reproduces the canonical path exactly and confirms the worker file is fetched but not completing the MapLibre worker/source lifecycle in the production bundle.
+
+
+## V4.3 worker packaging reconciliation
+
+The production failure was narrowed to the built worker rather than OpenFreeMap Positron. The Vite-emitted worker requested a relative `maplibre-gl-shared.mjs` module that was not emitted beside it, so the worker URL could return `200` while the MapLibre source lifecycle never completed. This explains the earlier canonical and `vite preview` observations of a fetched worker with no usable vector source.
+
+The repair publishes the version-matched MapLibre runtime pair at stable same-origin paths: `public/maplibre-gl-worker.mjs` and `public/maplibre-gl-shared.mjs`. `TrunkMap.tsx` now calls `setWorkerUrl('/maplibre-gl-worker.mjs')`, preserving the worker's relative shared-module import in both development and production builds. The readiness timeout is 20 seconds so a cold Positron vector load does not present a false retry state at eight seconds; the error remains explicit and retryable if the style still does not become ready.
+
+The rebuilt production preview at `http://localhost:4179/` reached `Carte active` at globe zoom `1.35`, retained the white-field/dark-ocean/light-continent monochrome Positron rendering, and transitioned to `mercator` at zoom `5.35` after four safe Plus actions. The browser captured the public worker, Positron style/planet/sprites, and actual OpenFreeMap PBF and glyph resources. Tile requests aborted during camera replacement were normal request cancellation during zoom, not a provider-unavailable state. The mobile proof remained green across 390x844, including three permanent controls, 16px input, touch movement, reversible projection, no visible approximate-location band and no HTML pins. The desktop proof remained green across 1024x880, including idle motion, globe-axis drag, released-camera retention, and rotation resumption outside the map.
+
+The earlier canonical blocker is therefore resolved in source and production-like preview, but canonical acceptance remains pending until the new GitHub-triggered Vercel deployment is READY and the same read-only browser smoke passes on `omni.sparkafrika.online`. Real-result street-level reveal and source-backed facility visibility remain separate, unproven gates.
