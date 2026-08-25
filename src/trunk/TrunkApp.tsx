@@ -4,6 +4,7 @@ import { authClient, getAuthToken } from '../auth';
 import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, issueQrToken, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
+import { discoverFromOverpass } from '../lib/public-discovery';
 import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicTrust, PurchaseIntentResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest, TransactionState } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 
@@ -35,6 +36,10 @@ export function resolveSellerEntry(sessionUserId: string | null): SellerEntryInt
 
 function currency(minor: number, code: string) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: code, maximumFractionDigits: 2 }).format(minor / 100);
+}
+
+function osmToPublicFacility(item: { id: string; name: string; category: string; lng: number; lat: number }): PublicFacility {
+  return { id: item.id, name: item.name, category: item.category, address: 'Donnée publique OpenStreetMap', latitude: item.lat, longitude: item.lng, trust: 'unclaimed', plan: 'free', productCount: 0, source: 'osm' };
 }
 
 function planLabel(plan: FacilityDetail['plan']) {
@@ -259,9 +264,22 @@ export function TrunkApp() {
     listPublicFacilities(bounds, undefined, appliedOptions).then((result) => {
       if (!active) return;
       if (result.ok) {
-        setFacilities(result.data ?? []);
-        setMapState(result.data?.length ? 'ready' : 'empty');
-        setError('');
+        const persisted = result.data ?? [];
+        if (persisted.length) {
+          setFacilities(persisted);
+          setMapState('ready');
+          setError('');
+          return;
+        }
+        discoverFromOverpass(bounds, undefined).then((items) => {
+          if (!active) return;
+          const osmFacilities = items.map(osmToPublicFacility);
+          setFacilities(osmFacilities);
+          setMapState(osmFacilities.length ? 'ready' : 'empty');
+          setError('');
+        }).catch(() => {
+          if (active) { setFacilities([]); setMapState('empty'); setError('Aucun lieu Omni ou OpenStreetMap dans cette vue.'); }
+        });
       } else {
         setMapState('error');
         setError(result.error?.message ?? 'La découverte publique est temporairement indisponible.');
@@ -1005,6 +1023,13 @@ export function TrunkApp() {
 
   const selectFacility = useCallback(async (facility: PublicFacility, verify = false) => {
     setMenuOpen(false);
+    if (facility.source === 'osm') {
+      setSelectedFacility({ ...facility, products: [] });
+      setSelectedProductId(null);
+      setDetailState('idle');
+      setPanel('facility');
+      return;
+    }
     setOptionsOpen(false);
     const requestNumber = detailRequestRef.current + 1;
     detailRequestRef.current = requestNumber;
@@ -1486,7 +1511,7 @@ function ClaimSheet(props: { facility: FacilityDetail | null; draft: ClaimDraftR
 }
 
 function FacilitySheet(props: { facility: FacilityDetail | null; state: 'idle' | 'loading' | 'error'; error: string; claimState: 'idle' | 'loading' | 'error' | 'success'; claimError: string; claimResult: ClaimDraftResult | null; onClaim: (facility: PublicFacility) => void; onOpenClaim: () => void; onClose: () => void; onVerify: () => void }) {
-  return <section className="omni-sheet context-sheet facility-sheet" role="dialog" aria-modal="true" aria-labelledby="facility-title"><div className="sheet-handle" /><div className="sheet-head"><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Carte</button><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{props.state === 'loading' && <div className="sheet-loading"><span className="spinner" /> Ouverture de la facilité…</div>}{props.state === 'error' && <div className="empty-state"><PackageSearch size={26} /><strong>Facilité indisponible</strong><p>{props.error}</p><button type="button" className="secondary-button" onClick={props.onClose}>Retour à la carte</button></div>}{props.facility && props.state === 'idle' && <><div className="facility-identity"><span className="facility-identity-icon"><MapPin size={21} /></span><div><span className="section-kicker">{props.facility.category}</span><h2 id="facility-title">{props.facility.name}</h2><p>{props.facility.address ?? 'Lieu partagé sur la carte publique'}</p></div></div><div className="trust-row"><span className="trust-badge"><ShieldCheck size={14} /> {trustLabel(props.facility.trust)}</span><span className={`plan-badge plan-${props.facility.plan}`}>{planLabel(props.facility.plan)}</span></div>{props.facility.trust === 'unclaimed' ? <div className="notice-card"><strong>Lieu public, pas encore certifié</strong><p>Ce pin vient d’une source publique. Une revendication ouvre seulement un brouillon de vérification ; elle ne certifie ni la personne ni le catalogue.</p>{props.claimState === 'success' && props.claimResult ? <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Brouillon ouvert. Référence de suivi créée ; la preuve et la revue Omni restent nécessaires.</span><button className="secondary-button wide" type="button" onClick={props.onOpenClaim}>Ouvrir le parcours de preuve</button></div> : <button className="primary-button" type="button" disabled={props.claimState === 'loading'} onClick={() => { if (props.facility) props.onClaim(props.facility); }}>{props.claimState === 'loading' ? 'Ouverture du brouillon…' : 'Commencer la revendication'} <ArrowRight size={16} /></button>}{props.claimState === 'error' && <div className="inline-error" role="alert">{props.claimError}</div>}</div> : props.facility.products.length ? <><div className="catalogue-heading"><div><span className="section-kicker">Catalogue de la facilité</span><strong>{props.facility.products.length} offre{props.facility.products.length === 1 ? '' : 's'}</strong></div><span>Source facility</span></div><div className="catalogue-list">{props.facility.products.slice(0, 5).map((product) => <div className="catalogue-item" key={product.id}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{product.name}</strong><small>{product.description ?? product.category ?? 'Offre locale'} · {currency(product.priceMinor, product.currency)} / {product.unit}</small></span></div>)}</div><button className="primary-button" type="button" onClick={props.onVerify}>Vérifier la disponibilité <ArrowRight size={16} /></button></> : <div className="empty-state compact"><Clock3 size={25} /><strong>Catalogue non publié</strong><p>Cette facilité n’a pas encore d’offre publique à vérifier.</p></div>}<p className="privacy-note">Les contacts et l’itinéraire apparaissent seulement après une intention d’achat autorisée.</p></>}</section>;
+  return <section className="omni-sheet context-sheet facility-sheet" role="dialog" aria-modal="true" aria-labelledby="facility-title"><div className="sheet-handle" /><div className="sheet-head"><button className="back-button" type="button" onClick={props.onClose}><ArrowLeft size={17} /> Carte</button><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div>{props.state === 'loading' && <div className="sheet-loading"><span className="spinner" /> Ouverture de la facilité…</div>}{props.state === 'error' && <div className="empty-state"><PackageSearch size={26} /><strong>Facilité indisponible</strong><p>{props.error}</p><button type="button" className="secondary-button" onClick={props.onClose}>Retour à la carte</button></div>}{props.facility && props.state === 'idle' && <><div className="facility-identity"><span className="facility-identity-icon"><MapPin size={21} /></span><div><span className="section-kicker">{props.facility.category}</span><h2 id="facility-title">{props.facility.name}</h2><p>{props.facility.address ?? 'Lieu partagé sur la carte publique'}</p></div></div><div className="trust-row"><span className="trust-badge"><ShieldCheck size={14} /> {trustLabel(props.facility.trust)}</span><span className={`plan-badge plan-${props.facility.plan}`}>{planLabel(props.facility.plan)}</span></div>{props.facility.source === 'osm' ? <div className="notice-card"><strong>Lieu public OpenStreetMap</strong><p>Cette présence est une découverte cartographique externe. Elle doit être inscrite et vérifiée par l’équipe Omni avant de proposer une offre ou une transaction.</p></div> : props.facility.trust === 'unclaimed' ? <div className="notice-card"><strong>Lieu public, pas encore certifié</strong><p>Ce pin vient d’une source publique. Une revendication ouvre seulement un brouillon de vérification ; elle ne certifie ni la personne ni le catalogue.</p>{props.claimState === 'success' && props.claimResult ? <div className="claim-success" role="status"><CheckCircle2 size={17} /><span>Brouillon ouvert. Référence de suivi créée ; la preuve et la revue Omni restent nécessaires.</span><button className="secondary-button wide" type="button" onClick={props.onOpenClaim}>Ouvrir le parcours de preuve</button></div> : <button className="primary-button" type="button" disabled={props.claimState === 'loading'} onClick={() => { if (props.facility) props.onClaim(props.facility); }}>{props.claimState === 'loading' ? 'Ouverture du brouillon…' : 'Commencer la revendication'} <ArrowRight size={16} /></button>}{props.claimState === 'error' && <div className="inline-error" role="alert">{props.claimError}</div>}</div> : props.facility.products.length ? <><div className="catalogue-heading"><div><span className="section-kicker">Catalogue de la facilité</span><strong>{props.facility.products.length} offre{props.facility.products.length === 1 ? '' : 's'}</strong></div><span>Source facility</span></div><div className="catalogue-list">{props.facility.products.slice(0, 5).map((product) => <div className="catalogue-item" key={product.id}><span className="product-icon"><PackageSearch size={16} /></span><span><strong>{product.name}</strong><small>{product.description ?? product.category ?? 'Offre locale'} · {currency(product.priceMinor, product.currency)} / {product.unit}</small></span></div>)}</div><button className="primary-button" type="button" onClick={props.onVerify}>Vérifier la disponibilité <ArrowRight size={16} /></button></> : <div className="empty-state compact"><Clock3 size={25} /><strong>Catalogue non publié</strong><p>Cette facilité n’a pas encore d’offre publique à vérifier.</p></div>}<p className="privacy-note">Les contacts et l’itinéraire apparaissent seulement après une intention d’achat autorisée.</p></>}</section>;
 }
 
 function responseStatusLabel(status: string) {

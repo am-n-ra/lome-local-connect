@@ -14,6 +14,7 @@ export interface PublicFacility {
   trust: PublicTrust;
   plan: 'free' | 'pro_active' | 'pro_expired';
   productCount: number;
+  source?: 'database' | 'osm';
 }
 
 export interface PublicProduct {
