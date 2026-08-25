@@ -505,3 +505,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** The correction is technically deployed but not iPhone-certified. Keep Species/Canopy `partial`; the next owner action is a real post-`7481242` iPhone recording that exercises search focus, keyboard open/close, outside-tap blur, no-auto-zoom and completed reveal framing. Dense native-pin and decision-relevant performance evidence remain subsequent gates.
 
 **Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates.
+
+## Mobile-fixed canonical resume-6 checkpoint — 2026-08-25
+
+**Status:** `partial / canonical recovered after brief initial blank; Species and release Rings remain open`.
+
+**Evidence:** After the `538a65e` mobile dock correction, the first cache-busted canonical screenshot was briefly blank with no detected elements. A single wait cycle recovered the complete Buyer shell and ready monochrome globe, including `Carte active`, mounted canvas, public map controls, Buyer/Seller controls, account control and search dock. No result or business surface opened.
+
+**Interpretation:** Classify this as an observed startup timing/paint delay, not a persistent blank failure, because the shell recovered without reload or interaction. Keep it in the evidence log for the real iPhone pass; do not introduce a speculative boot change from this desktop observation.
+
+**Decision and boundary:** Keep Species/Canopy `partial`. The next gate remains post-`7481242`/`538a65e` iPhone evidence for dock-only keyboard lift, no-auto-zoom and reveal completion. Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused. No business or operational data changed.
