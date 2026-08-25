@@ -994,9 +994,16 @@ export function TrunkApp() {
         ? await authClient.signUp.email({ name: authName || authEmail.split('@')[0] || 'Omni user', email: authEmail, password: authPassword })
         : await authClient.signIn.email({ email: authEmail, password: authPassword });
       if (result.error) throw new Error(result.error.message);
-      const session = await authClient.getSession();
-      const user = sessionUserFromAuthResult(session);
-      if (!user) throw new Error('Auth succeeded but no active session was returned.');
+      let user = sessionUserFromAuthResult(result);
+      if (!user) {
+        for (const delay of [0, 180, 420, 800]) {
+          if (delay > 0) await new Promise((resolve) => window.setTimeout(resolve, delay));
+          const session = await authClient.getSession();
+          user = sessionUserFromAuthResult(session);
+          if (user) break;
+        }
+      }
+      if (!user) throw new Error('Auth succeeded but no active session was returned. Réessayez une fois si votre navigateur termine encore la synchronisation.');
       setSessionUser(user);
       setAppliedOptions(draftOptions);
       setAuthState('idle');
@@ -1049,22 +1056,48 @@ export function TrunkApp() {
     if (!app) return;
     if (!sheet) {
       app.style.removeProperty('--nearby-sheet-offset');
-      return;
+    } else {
+      const updateDockBand = () => {
+        const sheetTop = sheet.getBoundingClientRect().top;
+        app.style.setProperty('--nearby-sheet-offset', `${dockBandOffset(window.innerWidth, window.innerHeight, sheetTop)}px`);
+      };
+      updateDockBand();
+      const observer = new ResizeObserver(updateDockBand);
+      observer.observe(sheet);
+      window.addEventListener('resize', updateDockBand);
+      return () => {
+        observer.disconnect();
+        window.removeEventListener('resize', updateDockBand);
+        app.style.removeProperty('--nearby-sheet-offset');
+      };
     }
-    const updateDockBand = () => {
-      const sheetTop = sheet.getBoundingClientRect().top;
-      app.style.setProperty('--nearby-sheet-offset', `${dockBandOffset(window.innerWidth, window.innerHeight, sheetTop)}px`);
-    };
-    updateDockBand();
-    const observer = new ResizeObserver(updateDockBand);
-    observer.observe(sheet);
-    window.addEventListener('resize', updateDockBand);
-    return () => {
-      observer.disconnect();
-      window.removeEventListener('resize', updateDockBand);
-      app.style.removeProperty('--nearby-sheet-offset');
-    };
   }, [mapState, nearbyOpen, nearbyCollapsed, showAllResults, visibleFacilities.length]);
+
+  useEffect(() => {
+    const app = appRef.current;
+    if (!app) return;
+    const viewport = window.visualViewport;
+    const updateKeyboardInset = () => {
+      const inset = viewport ? Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)) : 0;
+      app.style.setProperty('--keyboard-inset', `${inset}px`);
+      app.toggleAttribute('data-keyboard-open', inset > 120 && document.activeElement === searchInputRef.current);
+    };
+    const blurOutsideDock = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (document.activeElement === searchInputRef.current && !target?.closest('.search-pill')) searchInputRef.current?.blur();
+    };
+    updateKeyboardInset();
+    viewport?.addEventListener('resize', updateKeyboardInset);
+    viewport?.addEventListener('scroll', updateKeyboardInset);
+    document.addEventListener('pointerdown', blurOutsideDock, true);
+    return () => {
+      viewport?.removeEventListener('resize', updateKeyboardInset);
+      viewport?.removeEventListener('scroll', updateKeyboardInset);
+      document.removeEventListener('pointerdown', blurOutsideDock, true);
+      app.style.removeProperty('--keyboard-inset');
+      app.removeAttribute('data-keyboard-open');
+    };
+  }, []);
 
   const searchRevealKey = committedQuery.trim() && mapState === 'ready'
     ? `${searchRevealRevision}|${committedQuery}|${JSON.stringify(appliedOptions)}|${facilities.map((facility) => facility.id).join(',')}`

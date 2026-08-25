@@ -38,10 +38,12 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 button, input, select { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid rgba(233, 147, 115, .42); outline-offset: 2px; }
 
-.species-app { position: relative; width: 100vw; height: 100dvh; overflow: hidden; isolation: isolate; background: var(--map); }
+.species-app { position: relative; width: 100vw; height: 100svh; min-height: 100svh; overflow: hidden; isolation: isolate; background: var(--map); }
 .map-stage, .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .map-stage { z-index: 0; overflow: hidden; background: #ffffff; }
 .map-canvas .maplibregl-canvas-container, .map-canvas .maplibregl-canvas { width: 100%; height: 100%; }
+.map-stage[data-map-status="loading"] .map-canvas { opacity: 0; }
+.map-stage[data-map-status="loading"] .map-reveal-status { display: none; }
 .map-canvas .maplibregl-canvas { filter: none; }
 .map-stage[data-projection="globe"] .map-canvas .maplibregl-canvas { filter: none; }
 .map-texture { position: absolute; z-index: 1; inset: 0; pointer-events: none; opacity: 0; background: none; }
@@ -115,7 +117,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .location-granted .location-prompt-icon { color: var(--mint-ink); background: var(--mint); }
 .location-denied .location-prompt-icon, .location-unavailable .location-prompt-icon { color: #a96f51; background: var(--peach); }
 
-.search-anchor { z-index: 8; bottom: var(--nearby-sheet-offset, var(--safe-bottom)); left: 50%; width: min(86%, 430px); transform: translateX(-50%); }
+.search-anchor { z-index: 8; bottom: var(--nearby-sheet-offset, var(--safe-bottom)); left: 50%; width: min(86%, 430px); transform: translateX(-50%); transition: bottom .16s var(--ease); }
+.species-app[data-keyboard-open] .search-anchor { bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom)) + var(--keyboard-inset, 0px)); }
 .search-pill { position: relative; display: flex; align-items: center; gap: 9px; min-height: 49px; padding: 5px 7px 5px 14px; border: 1px solid rgba(255,255,255,.96); border-radius: 999px; background: rgba(255,255,255,.94); box-shadow: 0 13px 29px rgba(45, 72, 65, .14); backdrop-filter: blur(18px); }
 .search-pill > svg { flex: 0 0 auto; color: #8ca69c; }
 .search-pill input { min-width: 0; flex: 1; border: 0; outline: 0; color: var(--ink); background: transparent; font-size: 12px; }

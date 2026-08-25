@@ -333,7 +333,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         rotationFrame.current = null;
       }
     };
-    const scheduleRotation = (delay = 1400) => {
+    const scheduleRotation = (delay = 260) => {
       stopRotation();
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
@@ -761,7 +761,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
   return (
-    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-basemap="monochrome" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
+    <div className="map-stage" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap="monochrome" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="map-reveal-dot" /><span>{revealLabel}</span></div>}

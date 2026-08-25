@@ -407,3 +407,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** The current sandbox browser cannot close the remaining device-backed gate. Its session reports `maxTouchPoints: 0`, no `ontouchstart`, a desktop viewport and `prefers-reduced-motion: false`; synthetic browser gestures and DOM inspections have already been recorded and must not be relabeled as phone or screen-reader evidence.
 
 **Remaining owner/action:** Run one device-backed pass covering mobile touch, safe-area and 16px input behavior, OS location permission, reduced-motion behavior and a real screen reader; then run the native-pin density and long-window performance checks. Until that evidence is attached, keep Species/Canopy `partial` and do not open Seller/Admin, OSM population, billing or payment.
+
+## iPhone Canopy regression checkpoint — 2026-08-25
+
+**Signal:** The supplied iPhone recording shows four distinct issues: the search dock/input still causes a small browser zoom and the whole surface shifts instead of only the dock responding to the keyboard; the initial map exposes intermediate blank/flat states before the monochrome globe; the globe appears before idle rotation begins; and sign-in can display `Auth succeeded but no active session was returned.` after the provider reports success. Location detection itself is reported working in the recording.
+
+**Diagnosis and bounded action:** Buyer code now uses a `visualViewport`-derived keyboard inset so only `.search-anchor` lifts above the keyboard while `.species-app` remains on a stable small viewport; pointer-down outside `.search-pill` blurs the search input. The MapLibre canvas is hidden until the style is configured and the final projection/palette are ready, and the idle-globe resume delay is reduced from 1400ms to 260ms. Authentication first accepts a user returned by sign-in/sign-up and otherwise polls `getSession()` across short bounded delays before returning an error. No credentials, raw coordinates or tokens were stored.
+
+**Validation:** Local Vitest remains 127/127 and the production build bundles exactly 12 Vercel V2 functions. The code changes are not yet a physical-device certification; canonical post-deploy verification of keyboard behavior, boot sequence, immediate rotation and the iPhone session path remains required. Seller/Admin, OSM population, billing, plans, payment, transactions, QR and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Push the bounded Canopy correction, verify the canonical desktop contract, then obtain a fresh device-backed recording focused on keyboard/dock stability and authentication session recovery. Keep Global Root `review`, Species and release Rings open.
