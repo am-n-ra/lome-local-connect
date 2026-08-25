@@ -1,5 +1,5 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, LogIn, LogOut, MapPin, PackageSearch, QrCode, Search, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, PackageSearch, QrCode, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, issueQrToken, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
 import { TrunkMap } from './TrunkMap';
@@ -11,6 +11,7 @@ const emptySearchOptions: SearchOptions = { category: '' };
 
 type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer';
 type AuthMode = 'sign-in' | 'sign-up';
+type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 export type EscapeTarget = 'facility' | 'seller-queue' | 'nearby-results' | 'close' | 'none';
@@ -67,6 +68,8 @@ export function TrunkApp() {
   const [paymentState, setPaymentState] = useState<'idle' | 'loading' | 'error' | 'success'>('idle');
   const [paymentError, setPaymentError] = useState('');
   const [buyerTransactionState, setBuyerTransactionState] = useState<TransactionState>('intent_created');
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
   const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestList | null>(null);
   const [buyerRequestsState, setBuyerRequestsState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [buyerRequestsError, setBuyerRequestsError] = useState('');
@@ -1265,6 +1268,29 @@ export function TrunkApp() {
   const handleRevealStateChange = useCallback((active: boolean) => setRevealActive(active), []);
 
   useEffect(() => {
+    const media = window.matchMedia('(display-mode: standalone)');
+    const handleInstalled = () => setInstalled(media.matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    handleInstalled();
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
+  }, []);
+
+  const installOmni = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  };
+
+  useEffect(() => {
     if (!purchaseIntent || panel !== 'availability') return;
     let cancelled = false;
     let timer: number | undefined;
@@ -1356,7 +1382,7 @@ export function TrunkApp() {
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
         <div className="menu-brand"><img src="/omni-logo-compact.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}{installPrompt && !installed && <button className="menu-action" type="button" role="menuitem" onClick={() => void installOmni}><Download size={16} /> Installer Omni</button>}{installed && <div className="menu-install-note" role="status">Omni est installé sur cet appareil.</div>}
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
