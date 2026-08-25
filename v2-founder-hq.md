@@ -515,3 +515,17 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Interpretation:** Classify this as an observed startup timing/paint delay, not a persistent blank failure, because the shell recovered without reload or interaction. Keep it in the evidence log for the real iPhone pass; do not introduce a speculative boot change from this desktop observation.
 
 **Decision and boundary:** Keep Species/Canopy `partial`. The next gate remains post-`7481242`/`538a65e` iPhone evidence for dock-only keyboard lift, no-auto-zoom and reveal completion. Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused. No business or operational data changed.
+
+## iPhone 143 device-backed checkpoint — 2026-08-25
+
+**Status:** `partial / two mobile criteria pass; Species and release Rings remain open`.
+
+**Evidence:** The recording `/home/ubuntu/upload/Demoomniiphone143.mp4` shows the initial boot into the monochrome Africa-facing globe, then Buyer search focus with the iOS AZERTY keyboard. During typing, the globe/shell remains fixed while only the search dock lifts above the keyboard; no browser auto-zoom is visible and element scale remains stable. At approximately 00:23 an Omni account bottom sheet requests email and password.
+
+**Gate reading:** `dock-only keyboard lift = PASS`; `no-auto-zoom = PASS`; `outside-tap blur and dock return = UNOBSERVED`; `successful auth/session hydration = UNOBSERVED`; `full reveal and final result framing = UNOBSERVED`, because the recording ends at the account sheet before those states. No code change is justified by this recording: it validates the purpose of the `position: fixed` dock correction but does not complete the end-to-end proof.
+
+**Decision:** Keep Buyer Species/Canopy `partial`. The next smallest evidence action is a short iPhone continuation covering outside-tap dismissal and dock return, then authenticated search through the complete reveal. Do not close Species on the two passing criteria alone.
+
+**Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates. No business or operational data changed.
+
+**Evidence record:** `/tmp/omni-canopy-a11y-observation.md`; detailed video analysis: `/home/ubuntu/video_Demoomniiphone143_analysis_20260825_180900.md`.
