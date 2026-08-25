@@ -176,3 +176,8 @@ The reversible canonical plus/minus smoke passed. The approved query `Marche de 
 The final reveal remains **not accepted**: two successive settled canonical views after the result choreography showed a blank white map canvas while the result shell and controls remained mounted. The DOM still reported mercator zoom `12.80` with a mounted canvas; public Natural Earth raster requests were present, but no vector street/boundary PBF result was visually proven. A direct OpenFreeMap vector-template experiment and a pre-commit style transform were tested locally, emitted no PBF requests in this controller and were rejected/reverted. The release therefore proves deployment and reference globe arrival/result framing, not the complete continent→country→region/city→local street-level experience.
 
 **Audit decision:** `partial / V4.2 deployed and materially advanced; Species, Canopy and Ring gates remain open`. The next gate is to port or replace the legacy MapLibre wrapper/source-loading path with an explicitly verified vector provider, then rerun native pin movement and local-road result proof. Do not expand operational branches or represent the current frame as full production readiness.
+
+
+## 2026-08-25 — Final canonical alias verification
+
+The documentation/evidence commit `1345c959ebbdc772f7ef2a79b0ec595faaa65ecd` also reached READY as deployment `dpl_DXfz3X7ybMo8TaWnvUWBGrUVfHtf`, with canonical alias `omni.sparkafrika.online` and the same exact 12-Node-function boundary. A second read-only arrival check on that latest alias reproduced the white-field, near-black globe/light-land visual and permanent controls. The previously recorded blank final high-zoom reveal remains unresolved and keeps the decision at `partial`.

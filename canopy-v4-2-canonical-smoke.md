@@ -53,3 +53,7 @@ After replacing the post-load workaround with a pre-commit style transform, the 
 ## Transform-style result
 
 The pre-commit style-transform variant also kept the local page visible at mercator zoom `3.35`, but the console resource list still contained zero `.pbf` requests. The direct controller therefore does not load the Liberty/OpenFreeMap vector source through either post-load `setTiles` or pre-commit source replacement in this environment. This diagnostic patch is rejected and will not be committed; the known-good V4.2 globe path remains the release-safe behavior, with high-zoom vector detail explicitly open.
+
+## Final alias verification
+
+After the documentation commit redeployed, `https://omni.sparkafrika.online/` again settled to the same visible V4.2 arrival: `Carte active`, white surrounding field, near-black globe with light Africa/land, permanent minus/plus/recenter controls, bottom search dock and no excluded highlight or literal location chip. This confirms the latest canonical alias is live on the final GitHub-triggered deployment; it does not change the already recorded blank final high-zoom result residual.
