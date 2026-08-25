@@ -295,3 +295,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is a visual/state snapshot only. It does not prove physical-device touch, OS permission UX, real screen-reader output, dense native-pin behavior or benchmark-grade performance. No business CTA or write path was opened.
 
 **Next gate:** Obtain real-device and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Buyer result-sheet fold and reopen checkpoint — 2026-08-25
+
+**Status:** `partial / bounded result-fold contract verified on canonical; Species and release Rings remain open`.
+
+**Changed:** The Buyer `NearbySheet` now distinguishes a temporary visual fold from an explicit context exit. Replacing the former unmount-on-collapse behavior, the fold keeps the sheet mounted with the current query and results, displays a compact safe-area-aware idle bar, and exposes `Réouvrir les facilités proches`. Reopening restores the existing sheet without changing `searchRevealRevision`; a new search or new filters still intentionally resets the reveal state. `Retour à la carte` and Escape remain explicit exits that remove the result surface and clear facility focus.
+
+**Evidence:** On the freshly reloaded canonical, `Marche de Hanoukope` returned one result. The dedicated grid chevron produced a bottom idle bar labeled `Résultats pour « Marche de Hanoukope »`, `1 résultat disponible`, and a named reopen button while the query and MapLibre canvas remained present. Reopening restored the same result sheet without an additional public-facilities request: the resource count remained 2 (`delta: 0`). An explicit `Retour à la carte` then removed the sheet and all result cards while leaving the canvas mounted and the input text preserved. No result card, business CTA or write path was opened. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded canonical browser evidence, not physical-device responsive proof, screen-reader output, long-window performance or business-flow readiness. Seller/Admin separation, transactions, QR, OSM/global facility population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Continue with real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
