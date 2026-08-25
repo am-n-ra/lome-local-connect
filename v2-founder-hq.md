@@ -481,3 +481,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** The repeated desktop check does not justify another code change. The unresolved gate is device-backed: one post-bde95a2 iPhone pass must verify dock-only keyboard lift, no browser auto-zoom and complete reveal framing. Dense native-pin and decision-relevant performance reconciliation remain subsequent proof items.
 
 **Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates. No business or operational data changed.
+
+## Founder HQ resume-4 validation checkpoint — 2026-08-25
+
+**Status:** `partial / source and canonical Buyer contract reconfirmed; Species and release Rings remain open`.
+
+**Evidence:** The current branch remains `omni-v2-rebuild` at `f28dcfd`, matching `origin`. A fresh canonical reload again moved from the intended masked loading state to the approved monochrome ready globe with mounted MapLibre canvas, public cluster, `Carte active`, permanent map controls and stable Buyer dock; no business surface was opened. The complete suite passed **127/127 tests across 19 files**, `npm run check:boundary` reported `Client boundary: clean`, and the repository diff check is clean.
+
+**Decision:** No additional desktop code change is justified. Species/Canopy remains `partial`; the next smallest gate is still a real post-bde95a2 iPhone pass for dock-only keyboard lift, no-auto-zoom and full reveal completion, followed by dense native-pin and decision-relevant performance reconciliation.
+
+**Boundary:** Seller/Admin, OSM/Overpass, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind Root/API gates. No account, fixture, business or operational data changed.
+
+**Evidence record:** `/tmp/omni-canopy-a11y-observation.md`.
