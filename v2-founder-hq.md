@@ -265,3 +265,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded DOM/semantic evidence only. It does not prove spoken output from a real screen reader, OS-level assistive technology, physical keyboard behavior, real-device touch/input or real permission UX. Dense native-pin coverage, remote performance and operational readiness remain open. No business CTA or write was invoked.
 
 **Next gate:** Obtain real-device and assistive-technology evidence if available, then reconcile dense native-pin movement and remote-tile/performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Additional canonical remote stability checkpoint — 2026-08-25
+
+**Status:** `partial / bounded 10-second remote stability observation verified; Species and release Rings remain open`.
+
+**Evidence:** A non-destructive canonical observation of the active public result state sampled the page 11 times across 10 seconds. The MapLibre canvas remained mounted and visible in every sample. The exposed map-stage state remained `projection="mercator"`, `rotation="rotating"` and `cameraMode="manual_navigation"`; the result sheet remained mounted; horizontal overflow stayed false; the performance sample contained 54 vector PBF resources and 6 style/sprite resources; and zero `error` or `unhandledrejection` events were observed during the window. The observation is recorded in `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded remote stability evidence, not a benchmark, long-window network study, real-device performance test or dense-pin coverage proof. No facility detail, business CTA, availability, claim or write path was opened.
+
+**Next gate:** Continue with real-device touch/input/permission and real assistive-technology evidence if available, then reconcile dense native-pin movement and performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
