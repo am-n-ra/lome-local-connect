@@ -134,13 +134,13 @@ function AuthPage() {
                     onChange={(e) => setPassword(e.target.value)}
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={busy}>
+                <Button
+                  type="submit"
+                  className="min-h-12 w-full bg-[var(--atlas-orange)] text-white hover:bg-[var(--atlas-orange)]/90"
+                  disabled={busy}
+                >
                   {busy ? "Connexion…" : "Se connecter"}
                 </Button>
-                <p className="rounded-lg bg-secondary p-3 text-xs text-muted-foreground">
-                  Compte de démonstration : <strong>demo@omni.tg</strong> /{" "}
-                  <strong>Demo1234!</strong>
-                </p>
               </form>
             </TabsContent>
 
