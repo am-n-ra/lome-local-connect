@@ -255,3 +255,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Evidence:** `/tmp/omni-canopy-a11y-observation.md`; canonical READY result state on `https://omni.sparkafrika.online/`; prior Escape recovery checkpoint above; source validation remains 127 tests in 19 files, build/boundary checks remain clean and the deployed runtime remains exactly 12 Node functions.
 
 **Next gate:** Move to real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin and remote-tile/performance observations. Keep Global Root `review`, Species and release Rings open, and multi-product `Root/API-blocked`. Do not open OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR or transaction work.
+
+## Bounded assistive-technology semantics checkpoint — 2026-08-25
+
+**Status:** `partial / bounded canonical semantic inspection verified; Species and release Rings remain open`.
+
+**Evidence:** The canonical `Marche de Hanoukope` result state was inspected without activating a result, CTA or write path. Every visible interactive element in the inspected inventory had an accessible name; the MapLibre canvas remained `role="region"`; the search input retained its accessible label and placeholder; the polite live region announced `Carte active`; horizontal overflow was false; and the disabled `Voir le lieu` CTA was not focusable. The earlier complete native-Tab traversal remains linked and proves safe focus exit from the result sheet. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded DOM/semantic evidence only. It does not prove spoken output from a real screen reader, OS-level assistive technology, physical keyboard behavior, real-device touch/input or real permission UX. Dense native-pin coverage, remote performance and operational readiness remain open. No business CTA or write was invoked.
+
+**Next gate:** Obtain real-device and assistive-technology evidence if available, then reconcile dense native-pin movement and remote-tile/performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
