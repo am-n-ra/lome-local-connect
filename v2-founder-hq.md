@@ -99,3 +99,11 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Auth signal:** The owner reports that Auth succeeded but no active session was returned. This is recorded as an unresolved session-handshake signal only; no identity, token, credential or raw Auth data was stored, and no protected business action was attempted. Authenticated compact proof therefore remains open.
 
 **Next gate:** Keep the active milestone on Buyer Species/Canopy. Resolve or reproduce the Auth session return only within the existing privacy boundary, then continue the residual compact focus/recovery, real-device touch/permission, dense native-pin and remote-tile/performance proofs. OSM/Overpass enrichment, Seller/Reviewer operations, PWA/Web Push, payment, QR, transactions and multi-product remain paused behind their own gates.
+
+## Sea and ocean label refinement checkpoint — 2026-08-25
+
+**Changed:** The globe now also suppresses Positron water-body labels `water_name_point_label` and `water_name_line_label`, together with the existing country-name layers, below the `2.4` globe-to-mercator threshold. Waterway labels remain available at their provider-defined local zooms; boundaries and continents are unchanged.
+
+**Evidence:** Commit `e48f6fc` reached READY deployment `dpl_52ccifsTpQpf4qMmrKHA6thfjzLT`, with canonical alias `omni.sparkafrika.online` and exactly 12 Node functions. Canonical read-only checks show a clean globe with no country, sea or ocean names at arrival and after one globe Plus. After the next Plus crossed into mercator, country and water-body labels returned, including `Andaman Sea`, `South China Sea`, `Java Sea`, `Celebes Sea` and `Laccadive Sea`, while `Carte active` and the vector map remained intact. The source suite remains at **123 tests in 18 files**.
+
+**Decision / next gate:** The visual refinement is accepted for this bounded Canopy slice; Species and release Rings remain open. Continue with the authenticated compact/focus/recovery, real-device touch/permission, native-pin density/movement and remote-tile/performance proofs. The reported Auth result remains only `authentication succeeded, no active session returned`; no session or identity is inferred and no Auth/business mutation is authorized.
