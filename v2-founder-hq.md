@@ -239,3 +239,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Deployment:** Code commit `4fa10bc` is READY as `dpl_8fs3AYzwk6CFnUT44rHuoSoHrVS7`, canonical alias present, source `git`, 12 Node functions. This board checkpoint is being reconciled after that code release.
 
 **Next gate:** Continue the smallest real device/screen-reader or complete non-business result focus proof; do not promote Species or Rings.
+
+## Complete result-sheet keyboard traversal checkpoint — 2026-08-25
+
+**Status:** `partial / bounded full result-sheet keyboard traversal verified; Species and release Rings remain open`.
+
+**Changed:** No product source change was required. The canonical public result state for `Marche de Hanoukope` was traversed with native Tab only, without activating any result, business CTA or write path. The existing `NearbySheet` order was observed from its collapse controls through the safe result actions, the labeled result rail and the named result card.
+
+**Proven:** Focus remained inside the result sheet through the safe controls `Nouvelle recherche`, `Affiner` and `Retour à la carte`; the result rail was reachable and named `Résultats proches`; the result card was reachable as a named button (`PUBLIC Marche de Hanoukope Market · Lieu local`). The following Tab exited to `BODY` while the sheet remained mounted. `Voir le lieu` was neither focused nor activated, and no facility detail, availability or other business surface opened. The MapLibre canvas remained mounted throughout. This closes the previously open bounded non-business result-sheet traversal item.
+
+**Not proven:** This is observed canonical keyboard evidence, not a full WCAG audit, screen-reader output, OS-level keyboard behavior or real-device touch proof. Dense multi-pin movement, long-window remote performance, exact device permission UX and operational Buyer/Seller/Reviewer readiness remain open. No business CTA or write was invoked.
+
+**Preserved:** Auth/session hydration, users/history, native MapLibre layers, monochrome globe and globe/mercator label contract, map-only rotation, mono-product boundary and all Root/API-paused tracks remain unchanged.
+
+**Evidence:** `/tmp/omni-canopy-a11y-observation.md`; canonical READY result state on `https://omni.sparkafrika.online/`; prior Escape recovery checkpoint above; source validation remains 127 tests in 19 files, build/boundary checks remain clean and the deployed runtime remains exactly 12 Node functions.
+
+**Next gate:** Move to real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin and remote-tile/performance observations. Keep Global Root `review`, Species and release Rings open, and multi-product `Root/API-blocked`. Do not open OSM/Overpass, PWA/Web Push, Seller/Reviewer operations, payment, QR or transaction work.
