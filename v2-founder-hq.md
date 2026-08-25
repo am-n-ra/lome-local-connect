@@ -621,3 +621,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite passes 132/132 tests, client boundary is clean and server TypeScript validation passes. The migration remains additive and unapplied to production in this block.
 
 **Decision:** The Push slice is now contract-tested from browser opt-in through authenticated registry shape. It remains partial until the intended Neon environment is migrated and a configured VAPID/provider delivery proof is captured.
+
+
+## Push Neon migration applied — 2026-08-25
+
+**Evidence:** Migration `35688c29-e901-473b-a40e-aca81e886462` was prepared and verified on temporary branch `br-young-fire-amm5alsu`, then applied to parent branch `br-bitter-math-amrlbym6` after explicit user approval. Neon confirmed successful application and deleted the temporary branch. A follow-up schema query on the parent branch confirmed `v2_web_push_subscriptions` is present.
+
+**Release state:** Durable Push subscription persistence is now live in the selected Neon branch. VAPID/provider configuration and real delivery proof remain open; no notification was sent and no production subscription was created during this operation.
+
+**Residual gap:** Configure the VAPID public/private key pair and delivery provider in the intended deployment environment, then capture authenticated subscribe, event enqueue, delivery, expired-endpoint cleanup and revoke evidence before calling Push production-ready.

@@ -17,4 +17,4 @@ create table if not exists v2_web_push_subscriptions (
 create index if not exists v2_web_push_subscriptions_active_idx
   on v2_web_push_subscriptions(account_id, last_seen_at desc)
   where permission_state = 'granted' and revoked_at is null;
--- Endpoint and key material are private account-scoped credentials; no public route exposes them.
+-- Endpoint and key material are private account-scoped credentials. No public route exposes them.
