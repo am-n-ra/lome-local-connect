@@ -369,3 +369,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This is bounded browser/DOM evidence and does not certify the visual canvas labels, physical-device touch, OS permission UX, screen-reader speech, native-pin density or long-window performance. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
 
 **Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Globe pointer-exit motion checkpoint — 2026-08-25
+
+**Status:** `partial / bounded globe idle-resume behavior verified; Species and release Rings remain open`.
+
+**Evidence:** With no result surface open, the pointer moved from the globe to the search dock. The globe visibly advanced to a different longitudinal orientation while the canvas stayed mounted. After a 2.2-second delayed state probe, the map reported `projection="globe"`, `cameraMode="resting_globe"` and `rotation="rotating"`; no sheet or idle bar was present and no business path was activated. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is bounded desktop-browser motion evidence, not physical-device touch proof, reduced-motion proof, long-window performance or native-pin density certification. Seller/Admin, transactions, QR, OSM population, billing, plans, payment and Web Push remain outside the active Buyer gate and paused.
+
+**Next gate:** Obtain real-device touch/input/permission and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
