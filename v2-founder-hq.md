@@ -682,3 +682,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and the production build succeeds. The existing bundle-size warning remains unchanged.
 
 **Residual gap:** Free/Pro entitlement enforcement, billing contract and real Push delivery remain separate gates.
+
+
+## Admin reactivation UI — 2026-08-25
+
+**Published:** The reviewer queue now includes seller accounts with eligible verified facilities regardless of current activation status. Suspended candidates show `Réactiver`; active candidates can be suspended, while accounts not yet `seller_ready` retain the separate activation action. The same bounded audited reason is required for both directions.
+
+**Validation:** Full suite passes 132/132 tests, client boundary is clean, server TypeScript passes and the production build succeeds. A client type-closing regression was caught and corrected before publication.
+
+**Status:** The Admin account-status tranche is now UI and server-contract complete. Free/Pro enforcement, billing, and real Push delivery remain separate gates.

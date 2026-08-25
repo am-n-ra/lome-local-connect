@@ -281,7 +281,7 @@ export async function reviewFacilityClaim(input: { requestId: string; outcome: R
   return parse<ReviewClaimResult>(response);
 }
 
-export async function getSellerActivationQueue(input: { token: string }): Promise<ApiResult<{ candidates: Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string }> }>> {
+export async function getSellerActivationQueue(input: { token: string }): Promise<ApiResult<{ candidates: Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string; suspended: boolean }> }>> {
   const response = await fetchWithRecovery('/api/v2/admin/seller-activations', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });

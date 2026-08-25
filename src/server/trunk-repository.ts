@@ -240,6 +240,7 @@ export interface SellerActivationCandidate {
   onboardingState: string;
   facilityCount: number;
   createdAt: string;
+  suspended: boolean;
 }
 export interface SellerActivationResult {
   accountId: string;
@@ -735,19 +736,19 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and a.suspended_at is null
         )
         select candidate.id as account_id, candidate.auth_user_id, candidate.onboarding_state,
-          count(distinct f.id)::int as facility_count, candidate.created_at
+          count(distinct f.id)::int as facility_count, candidate.created_at, candidate.suspended_at
         from reviewer
-        join v2_accounts candidate on candidate.suspended_at is null and candidate.onboarding_state <> 'seller_ready'
+        join v2_accounts candidate on true
         join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
-        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.created_at
-        order by candidate.created_at asc
+        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.created_at, candidate.suspended_at
+        order by candidate.suspended_at nulls first, candidate.created_at asc
         limit 100
       `);
       const reviewerRows = await retryDatabase(() => sql`select 1 from v2_accounts a join v2_account_roles ar on ar.account_id = a.id and ar.role = 'reviewer' and ar.status = 'active' where a.auth_user_id = ${input.authUserId} and a.suspended_at is null limit 1`);
       if (!(rows as Record<string, unknown>[]).length && !(reviewerRows as Record<string, unknown>[]).length) {
         throw new FieldPilotPolicyError('The account is not authorized to review seller activation.');
       }
-      return { candidates: (rows as Record<string, unknown>[]).map((row) => ({ accountId: String(row.account_id), authUserId: String(row.auth_user_id), onboardingState: String(row.onboarding_state), facilityCount: Number(row.facility_count), createdAt: new Date(String(row.created_at)).toISOString() })) };
+      return { candidates: (rows as Record<string, unknown>[]).map((row) => ({ accountId: String(row.account_id), authUserId: String(row.auth_user_id), onboardingState: String(row.onboarding_state), facilityCount: Number(row.facility_count), createdAt: new Date(String(row.created_at)).toISOString(), suspended: row.suspended_at !== null })) };
     },
     async activateSellerAccount(input: { authUserId: string; accountId: string; correlationId: string }): Promise<SellerActivationResult> {
       const rows = await retryDatabase(() => sql`
