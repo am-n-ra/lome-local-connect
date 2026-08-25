@@ -559,3 +559,8 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **PWA consent:** Inbox Omni now offers an explicit browser notification-permission action. The UI distinguishes permission from delivery; no persistent push subscription, VAPID keys or provider delivery is claimed.
 **Validation:** 130/130 tests, server build, production build with 12 Vercel functions, client boundary clean and `git diff --check` clean. Canonical `osm-push-be1f056` recovered from the brief blank/paint state to the READY Buyer globe with the dock and controls intact.
 **Decision:** Foundation work can continue, but OSM ingestion/refresh, Admin plan management and real push delivery remain separate implementation/configuration gates. The temporary `canopy-v4-1-proof/` directory remains untracked.
+
+## Push and persistent OSM gate review — 2026-08-25
+**OSM:** The current production shell has a bounded Overpass fallback for nearby views and an existing authenticated operator-import route. Persistent ingestion, deduplication, refresh scheduling and operator reconciliation remain open; no background job was invented.
+**Push:** The current shell requests browser notification permission and the service worker can render a push event, but no `PushSubscription`, `applicationServerKey`, VAPID configuration or server delivery route exists in the active source. Push is therefore not production-ready and must remain explicitly gated.
+**Decision:** Keep Omni Inbox as the authoritative event surface. Next implementation requires persistent subscription storage, authenticated unsubscribe/rotation, provider delivery, retry/dead-letter handling and opt-in/audit tests. OSM and Push remain separate workstreams.
