@@ -639,3 +639,10 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full suite remains 132/132 tests, client boundary is clean, server typecheck passes and the production build succeeds. No notification was sent and no provider call was made.
 
 **Residual gate:** VAPID/provider configuration and real delivery evidence remain required before Push can be considered production-ready.
+
+
+## Push operations runbook — 2026-08-25
+
+**Artifact:** Added `docs/push-operations.md` with the server/client configuration boundary, required secret handling, rollout sequence and minimum proof ladder for subscribe, persistence, event enqueue, provider acknowledgement, browser delivery, expired-endpoint cleanup and revoke.
+
+**Decision:** The runbook makes the remaining dependency actionable without inventing a provider. The client remains gated by `VITE_VAPID_PUBLIC_KEY`; server delivery must fail closed when signing/provider configuration is absent. Push remains `partial / configuration-gated`.
