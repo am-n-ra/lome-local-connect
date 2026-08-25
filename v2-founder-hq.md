@@ -433,3 +433,17 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Bounded correction:** The shell now uses the stable `100svh` viewport and computes the keyboard inset from the shell height and `visualViewport`; only `.search-anchor` is lifted and an outside pointer blurs the search input. The result sheet is withheld while the reveal controller is active and is mounted only after final result framing completes, preventing a sheet/camera race from looking like a stopped reveal. The auth flow keeps the bounded post-success session retry from `0185e3d`.
 
 **Validation and boundary:** Local validation passed at 127/127 tests, TypeScript/Vite build, 12 Vercel functions and clean `git diff --check`; the generated API bundles were restored before source publication. Canonical desktop verification remains green for ready globe and active rotation. The iPhone recording is device-backed evidence for authentication success and a remaining search-dock/reveal symptom, but not yet proof that the new patch fixes the iOS keyboard or final framing. Keep Species/Canopy `partial`, with a fresh post-patch iPhone retest as the next smallest action. Seller/Admin, OSM population, billing, plans, payment, transactions, QR and Web Push remain paused.
+
+## Founder HQ re-entry and bde95a2 validation checkpoint — 2026-08-25
+
+**Status:** `partial / bounded canonical post-correction proof verified; Species and release Rings remain open`.
+
+**Evidence:** The cache-busted canonical re-entry first showed the masked `Chargement de la carte`, then reached the approved monochrome globe with one mounted MapLibre canvas, public cluster presence, permanent minus/plus/recenter controls, Buyer/Seller controls, account control and search dock. No result, auth or business surface was opened during boot verification. The Buyer `Hanoukope` result state was previously confirmed on the same published commit: fold to the safe-area-aware idle bar and reopen with the same query/result without a new search request. The client boundary check remains clean. Targeted contracts passed **10/10 tests** across `auth-session`, `map-reveal` and `layout-contract`; the full release baseline remains **127/127 tests**, build success and exactly 12 Vercel functions.
+
+**Decision:** No additional code change is justified by the current desktop evidence. Keep Canopy/Species `partial`; the remaining gate is physical-device confirmation of dock-only keyboard lift, iOS no-auto-zoom, OS location/reduced-motion behavior and final reveal timing, followed by dense native-pin and decision-relevant performance evidence. The sandbox reports no real touch/OS device capability and must not be relabeled as an iPhone proof.
+
+**Boundary:** Seller/Admin operations, OSM/Overpass population, billing/plans/payment, transactions, QR, PWA/Web Push and multi-product availability remain paused behind their Root/API gates. No account, fixture, business, payment or operational data was changed in this review.
+
+**Deployment:** GitHub commit `bde95a2` is the active source on `omni-v2-rebuild`; canonical `omni.sparkafrika.online` serves the validated Buyer shell. Evidence record: `/tmp/omni-canopy-a11y-observation.md`.
+
+**Next owner/action:** Owner supplies one fresh post-bde95a2 iPhone recording focused on search-dock keyboard behavior and reveal completion; Manus then reconciles that evidence before deciding whether the Species gate can close.
