@@ -579,3 +579,14 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** This is a safe persistence-refresh seam, not automated Lomé/Aflao ingestion. A scheduled/bulk importer still requires bounded region queries, rate limits, run reconciliation and operator review. Browser notification permission is still not server Push delivery: persistent `PushSubscription`, VAPID/provider configuration, delivery retries and unsubscribe/rotation remain open.
 
 **Next smallest action:** Run the full production validation and commit this seam; then choose one dedicated infrastructure gate—persistent OSM batch ingestion or Push subscription storage—rather than presenting either as complete prematurely.
+
+
+## Bounded OSM batch checkpoint — 2026-08-25
+
+**Published:** The authenticated operator surface now exposes a bounded `operator-import-batch` contract for 1–100 OpenStreetMap facilities. The route validates the complete payload before writing, reuses the existing authenticated single-facility import seam, preserves source-reference deduplication and safe refresh behavior, and returns per-item `created`/existing results plus a batch summary.
+
+**Security boundary:** The batch still requires an authenticated active Omni operator. It accepts only OpenStreetMap input, requires attribution, bounds names and source references, validates geographic coordinates, and cannot claim, certify, publish offers or create transactions. A failure during later item processing may leave earlier items recorded; each item is independently auditable through the existing operator-run records.
+
+**Validation:** Full test suite passes 131/131 tests, client boundary is clean and server TypeScript validation passes. Production client build remains the next release check. No live batch was executed and no production data was mutated.
+
+**Decision:** This is a usable field-import seam for controlled Lomé/Aflao batches, not an automated scheduler or global OSM population. Region-specific Overpass retrieval, rate limiting, deduplication review, retries and operator reconciliation remain required before unattended ingestion.

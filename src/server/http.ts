@@ -96,6 +96,41 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
 
   try {
     const repository = createTrunkRepository();
+    if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import-batch') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni operator before importing public facilities.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const provider = input.provider === 'openstreetmap' ? 'openstreetmap' : '';
+      const attribution = typeof input.attribution === 'string' ? input.attribution.trim() : '';
+      const items = Array.isArray(input.items) ? input.items : [];
+      if (provider !== 'openstreetmap' || !attribution || items.length === 0 || items.length > 100) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide OpenStreetMap attribution and between 1 and 100 bounded facilities.'));
+        return true;
+      }
+      const normalized = items.map((item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) throw new ApiInputError('Each batch facility must be an object.');
+        const value = item as Record<string, unknown>;
+        const sourceRef = typeof value.sourceRef === 'string' ? value.sourceRef.trim() : '';
+        const name = typeof value.name === 'string' ? value.name.trim() : '';
+        const category = value.category === null || value.category === undefined ? null : String(value.category).trim() || null;
+        const address = value.address === null || value.address === undefined ? null : String(value.address).trim() || null;
+        const latitude = Number(value.latitude);
+        const longitude = Number(value.longitude);
+        if (!sourceRef || !name || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || sourceRef.length > 180 || name.length > 180) {
+          throw new ApiInputError('Each batch facility needs a bounded source reference, name and valid coordinates.');
+        }
+        return { sourceRef, name, category, address, latitude, longitude };
+      });
+      const results = [];
+      for (const item of normalized) {
+        results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
+      }
+      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, results } });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
