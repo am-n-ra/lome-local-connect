@@ -48,7 +48,8 @@ Les utilisateurs existants, identités Auth, données historiques, branches Neon
 ### Déploiement
 
 - **Release V4 caméra/pins :** `6399b68`
-- **Deployment READY :** `dpl_7gg9Rxv5mR9whTgUw42WHCVaMVaQ`
+- **Release V4.1 monochrome/motion :** `792c858`
+- **Deployment READY V4.1 :** `dpl_2A1htHsJkwkdsSXWLK92xABYLrAQ`
 - **Domaine canonique :** [omni.sparkafrika.online](https://omni.sparkafrika.online/)
 - **Branche :** `omni-v2-rebuild`
 - **Fonctions :** exactement 12, runtime Node attendu
@@ -67,4 +68,6 @@ La rotation est désormais conçue pour rester active lorsque l’utilisateur é
 
 Ce document enregistre un **checkpoint V4.1 partiellement prouvé**, pas une acceptation. Le baseline source est maintenant passé : `git diff --check`, **122 tests dans 18 fichiers**, build TypeScript/Vite, `check:boundary` propre et bundling de exactement 12 fonctions Vercel; l’avertissement de chunk supérieur à 500 kB reste non bloquant. Une preuve locale isolée `390×844` a confirmé les trois contrôles permanents, l’input mobile calculé à `16px`, `visualViewport.scale=1`, l’absence de bande visuelle de zone approximative, la présence du statut screen-reader, zéro overlay HTML `.map-pin`, la continuité de rotation pendant focus recherche/Options/compte, la bascule `2.35 globe → 3.35 mercator → 2.35 globe → 1.35 globe` et un drag tactile synthétique conservant le bearing. Une preuve locale `1024×880` a confirmé la rotation idle, le drag globe à axe vertical, la conservation du centre et la reprise idle hors carte. Les screenshots locaux montrent également le correctif de séparation de l’alerte et des trois contrôles.
 
-Restent non prouvés : un appareil iOS/Android réel, la permission réelle du navigateur propriétaire, une preuve touch native non synthétique, les pins source-backed pendant un mouvement avec un résultat réel, la matrice Authenticated Buyer/Seller/Reviewer complète, la résilience remote-tile/performance et le déploiement canonique V4.1. Aucun statut `verified` Species ne doit être attribué avant ces preuves.
+Le déploiement canonique V4.1 `dpl_2A1htHsJkwkdsSXWLK92xABYLrAQ` est maintenant READY, issu du commit `792c858`, avec les aliases canoniques et le runtime Node à 12 fonctions. Le smoke check live a confirmé `globe / 1.35 / rotating` → `mercator / 4.35 / paused` → `globe / 2.35 / paused`, centre conservé, basemap `monochrome` et trois contrôles permanents.
+
+Restent non prouvés : un appareil iOS/Android réel, la permission réelle du navigateur propriétaire, une preuve touch native non synthétique, les pins source-backed pendant un mouvement avec un résultat réel, la matrice Authenticated Buyer/Seller/Reviewer complète et la résilience remote-tile/performance. Aucun statut `verified` Species ne doit être attribué avant ces preuves.

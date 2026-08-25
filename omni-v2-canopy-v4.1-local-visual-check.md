@@ -46,3 +46,15 @@ The expanded local mobile proof now passes all assertions: canvas mounted, three
 ## Final mobile scale checkpoint
 
 The final `390×844` proof also reported `visualViewport.scale=1`. Together with the computed `16px` search input and the stylesheet selector covering `.search-pill`, `.options-popover`, and `.omni-sheet` inputs/selects/textareas, this is bounded evidence against browser input zoom in the supported headless mobile context. It is still not a physical iOS device proof.
+
+
+## Canonical V4.1 smoke check — 2026-08-25
+
+The GitHub-triggered V4.1 deployment is live on `https://omni.sparkafrika.online/`. The canonical page reports `Carte active`, mounts one MapLibre canvas, renders the white-field grayscale globe and shows the three controls together: `Zoom arrière`, `Zoom avant` and `Utiliser ma localisation`. The search dock remains separated at the bottom. The loaded page has real public facility names and a signed-in account label, but no business action was taken. The location status is non-obstructive while the permission-aware attempt is in progress, and no visible approximate-zone band is present in the sampled frame.
+
+This smoke check confirms the release is serving the V4.1 visual/control correction. It does not replace the bounded local touch proof or prove the owner’s physical-device permission and native pin-movement behavior.
+
+
+## Canonical projection smoke
+
+On the live canonical deployment, the read-only zoom sequence recorded `globe / 1.35 / rotating` → `mercator / 4.35 / paused` → `globe / 2.35 / paused`. The center longitude stayed unchanged during the control-driven projection sequence, the basemap remained `monochrome`, and the three controls remained present. No facility CTA, availability request, claim, seller action or reviewer action was used.
