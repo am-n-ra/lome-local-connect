@@ -1,5 +1,5 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, LogIn, LogOut, MapPin, PackageSearch, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { cancelFacilityClaim, createFacilityClaimDraft, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerAvailabilityQueue, importPublicFacility, listPublicFacilities, markNotificationSeen, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, submitFacilityClaim, uploadFacilityEvidence } from './api';
 import { TrunkMap } from './TrunkMap';
@@ -129,6 +129,7 @@ export function TrunkApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showAllResults, setShowAllResults] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
+  const [nearbyCollapsed, setNearbyCollapsed] = useState(false);
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
@@ -165,6 +166,7 @@ export function TrunkApp() {
         setSelectedFacility(null);
         setSelectedProductId(null);
         setNearbyOpen(false);
+        setNearbyCollapsed(false);
         setShowAllResults(false);
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
       } else if (target === 'close') setPanel('none');
@@ -780,6 +782,7 @@ export function TrunkApp() {
     setCommittedQuery(query.trim());
     setShowAllResults(true);
     setNearbyOpen(true);
+    setNearbyCollapsed(false);
     setOptionsOpen(false);
     setMenuOpen(false);
     setError('');
@@ -797,6 +800,7 @@ export function TrunkApp() {
     setCommittedQuery(query.trim());
     setShowAllResults(true);
     setNearbyOpen(true);
+    setNearbyCollapsed(false);
     setOptionsOpen(false);
     setError('');
   };
@@ -820,6 +824,7 @@ export function TrunkApp() {
     setBounds(undefined);
     setShowAllResults(false);
     setNearbyOpen(false);
+    setNearbyCollapsed(false);
     setOptionsOpen(false);
     setMenuOpen(false);
   };
@@ -835,9 +840,15 @@ export function TrunkApp() {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   };
 
+  const collapseNearbyResults = () => {
+    clearFacilityFocus();
+    setNearbyCollapsed(true);
+  };
+
   const closeNearbyResults = () => {
     clearFacilityFocus();
     setNearbyOpen(false);
+    setNearbyCollapsed(false);
     setShowAllResults(false);
   };
 
@@ -1053,7 +1064,7 @@ export function TrunkApp() {
       window.removeEventListener('resize', updateDockBand);
       app.style.removeProperty('--nearby-sheet-offset');
     };
-  }, [mapState, nearbyOpen, showAllResults, visibleFacilities.length]);
+  }, [mapState, nearbyOpen, nearbyCollapsed, showAllResults, visibleFacilities.length]);
 
   const searchRevealKey = committedQuery.trim() && mapState === 'ready'
     ? `${searchRevealRevision}|${committedQuery}|${JSON.stringify(appliedOptions)}|${facilities.map((facility) => facility.id).join(',')}`
@@ -1092,7 +1103,7 @@ export function TrunkApp() {
             <button className="pill-options" type="button" aria-expanded={optionsOpen} aria-controls="search-options" aria-label={optionsOpen ? 'Fermer les options' : 'Ouvrir les options'} onClick={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }}><ChevronDown size={17} className={optionsOpen ? 'chevron-up' : ''} /></button>
           </form>
         </div>
-        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} onCollapse={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); }} showAll={showAllResults} />}
+        {nearbyOpen && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} collapsed={nearbyCollapsed} onCollapse={collapseNearbyResults} onExpand={() => setNearbyCollapsed(false)} onClose={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); setNearbyCollapsed(false); }} showAll={showAllResults} />}
       </>}
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim') { closeFacilityContext(); return; } setPanel('none'); }} />}
@@ -1110,14 +1121,16 @@ export function TrunkApp() {
   );
 }
 
-const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapState: 'loading' | 'ready' | 'empty' | 'error'; committedQuery: string; showAll: boolean; onCollapse: () => void; onNewSearch: () => void; onRefine: () => void; onOpenFacility: (facility: PublicFacility) => void; onVerify: (facility: PublicFacility) => void; onShowAll: () => void }>(function NearbySheet(props, ref) {
-  return <section ref={ref} className={`nearby-sheet nearby-state-${props.mapState}`} aria-label="Facilités proches" aria-busy={props.mapState === 'loading'}>
+const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapState: 'loading' | 'ready' | 'empty' | 'error'; committedQuery: string; collapsed: boolean; showAll: boolean; onCollapse: () => void; onExpand: () => void; onClose: () => void; onNewSearch: () => void; onRefine: () => void; onOpenFacility: (facility: PublicFacility) => void; onVerify: (facility: PublicFacility) => void; onShowAll: () => void }>(function NearbySheet(props, ref) {
+  const resultLabel = props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Résultats proches';
+  return <section ref={ref} className={`nearby-sheet nearby-state-${props.mapState}${props.collapsed ? ' is-collapsed' : ''}`} aria-label={props.collapsed ? `${resultLabel}, repliés` : 'Facilités proches'} aria-busy={props.mapState === 'loading'}>
+    {props.collapsed ? <div className="nearby-collapsed-bar"><div className="nearby-collapsed-copy"><span className="section-kicker">Omni</span><strong>{resultLabel}</strong><small>{props.facilities.length} résultat{props.facilities.length === 1 ? '' : 's'} disponible{props.facilities.length === 1 ? '' : 's'}</small></div><button className="nearby-expand" type="button" aria-expanded="false" aria-label="Réouvrir les facilités proches" onClick={props.onExpand}><ChevronUp size={16} /></button></div> : <>
     <button className="sheet-handle-button" type="button" aria-expanded="true" aria-label="Replier les facilités proches" onClick={props.onCollapse}><span className="sheet-handle" /></button>
     <div className="nearby-heading"><div><span className="section-kicker">Omni</span><h1>{props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Proche de vous'}</h1></div><div className="nearby-heading-actions"><button type="button" className="see-all" onClick={props.onShowAll} disabled={props.showAll || !props.facilities.length}>Voir tout</button><button type="button" className="nearby-collapse" aria-expanded="true" aria-label="Replier la grille des facilités" onClick={props.onCollapse}><ChevronDown size={15} className="chevron-up" /></button></div></div>
     {props.mapState === 'loading' && <div key={`loading-${props.committedQuery}`} className="nearby-empty nearby-transition" role="status"><span className="loading-dot" /><span>{props.committedQuery ? `Recherche de « ${props.committedQuery} »…` : 'Recherche de la zone…'}</span></div>}
     {props.mapState === 'error' && <div key="error" className="nearby-empty nearby-transition" role="alert"><strong>Résultats non actualisés</strong><span>La carte continue de fonctionner. Réessayez la recherche ou déplacez la carte.</span></div>}
     {props.mapState === 'empty' && <div key="empty" className="nearby-empty nearby-transition"><strong>{props.committedQuery ? 'Aucun résultat ici' : 'Aucun lieu dans cette vue'}</strong><span>{props.committedQuery ? 'Essayez un autre commerce, produit ou filtre.' : 'Déplacez la carte ou ajustez votre recherche.'}</span></div>}
-    {props.mapState === 'ready' && <><div className="nearby-result-toolbar" aria-label="Actions des résultats"><button type="button" className="result-toolbar-button" onClick={props.onNewSearch}><Search size={14} /> Nouvelle recherche</button><button type="button" className="result-toolbar-button secondary" onClick={props.onRefine}>Affiner</button><button type="button" className="result-toolbar-button secondary" onClick={props.onCollapse}>Retour à la carte</button></div><div key={`ready-${props.committedQuery}-${props.facilities.map((facility) => facility.id).join('-')}`} className="nearby-rail nearby-transition" tabIndex={0} aria-label="Résultats proches">{props.facilities.map((facility) => <article className="nearby-card" key={facility.id}>
+    {props.mapState === 'ready' && <><div className="nearby-result-toolbar" aria-label="Actions des résultats"><button type="button" className="result-toolbar-button" onClick={props.onNewSearch}><Search size={14} /> Nouvelle recherche</button><button type="button" className="result-toolbar-button secondary" onClick={props.onRefine}>Affiner</button><button type="button" className="result-toolbar-button secondary" onClick={props.onClose}>Retour à la carte</button></div><div key={`ready-${props.committedQuery}-${props.facilities.map((facility) => facility.id).join('-')}`} className="nearby-rail nearby-transition" tabIndex={0} aria-label="Résultats proches">{props.facilities.map((facility) => <article className="nearby-card" key={facility.id}>
       <button className="nearby-card-main" type="button" onClick={() => props.onOpenFacility(facility)}>
         <span className="facility-card-icon"><MapPin size={17} /></span>
         <span className="nearby-card-copy"><span className="status-pill">{publicBadge(facility)}</span><strong>{facility.name}</strong><small>{facility.category} · Lieu local</small></span>
@@ -1125,6 +1138,7 @@ const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapS
       </button>
       <button className="card-cta" type="button" disabled={facility.productCount === 0} onClick={() => props.onVerify(facility)}>{facility.productCount ? 'Vérifier la disponibilité' : 'Voir le lieu'}</button>
       </article>)}</div></>}
+    </>}
   </section>;
 });
 

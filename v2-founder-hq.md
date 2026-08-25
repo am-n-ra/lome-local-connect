@@ -285,3 +285,13 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Boundary:** This clarifies the earlier signal and is not a new blocker. It does not prove physical-device gesture behavior, OS permission UX, screen-reader output, dense native-pin coverage or benchmark-grade performance. No business CTA or write path was opened.
 
 **Next gate:** Continue with real-device touch/input/permission and real assistive-technology evidence if available, then reconcile dense native-pin movement and performance observations before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
+
+## Canonical globe arrival snapshot checkpoint — 2026-08-25
+
+**Status:** `partial / bounded canonical globe arrival snapshot verified; Species and release Rings remain open`.
+
+**Evidence:** A fresh canonical view showed the approved white field, dark ocean and light-continent globe without a result sheet or additional HTML map overlays. The state probe reported `projection="globe"`, `cameraMode="resting_globe"`, `rotation="rotating"`, `motion="full"`, a mounted MapLibre canvas and the existing query preserved in the search dock. The visual/state observation is recorded in `/tmp/omni-canopy-a11y-observation.md`.
+
+**Boundary:** This is a visual/state snapshot only. It does not prove physical-device touch, OS permission UX, real screen-reader output, dense native-pin behavior or benchmark-grade performance. No business CTA or write path was opened.
+
+**Next gate:** Obtain real-device and assistive-technology evidence if available, then reconcile dense native-pin movement and remote performance before any Species decision. Keep Global Root `review`, Species and release Rings open, and all Root/API-paused tracks unchanged.
