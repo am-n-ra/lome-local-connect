@@ -244,6 +244,22 @@ export interface NotificationSummary {
   createdAt: string;
   seenAt: string | null;
 }
+export interface WebPushSubscriptionInput {
+  authUserId: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  userAgent: string | null;
+}
+export interface WebPushSubscriptionResult {
+  subscriptionId: string;
+  state: 'granted';
+  created: boolean;
+}
+export interface WebPushSubscriptionRevokeResult {
+  revoked: true;
+  endpoint: string;
+}
 
 export class TransactionPolicyError extends Error {
   constructor(message: string) {
@@ -722,6 +738,63 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { notificationId: String(row.id), seen: true };
     },
 
+    async upsertWebPushSubscription(input: WebPushSubscriptionInput): Promise<WebPushSubscriptionResult> {
+      if (!/^https:\/\//.test(input.endpoint) || input.endpoint.length > 2048 || !input.p256dh.trim() || !input.auth.trim() || (input.userAgent?.length ?? 0) > 512) {
+        throw new FieldPilotPolicyError('The Web Push subscription payload is invalid.');
+      }
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), upserted as (
+          insert into v2_web_push_subscriptions (account_id, endpoint, p256dh, auth, user_agent, permission_state, revoked_at, last_seen_at)
+          select id, ${input.endpoint}, ${input.p256dh.trim()}, ${input.auth.trim()}, ${input.userAgent?.trim() || null}, 'granted', null, now()
+          from account
+          on conflict (account_id, endpoint) do update set
+            p256dh = excluded.p256dh,
+            auth = excluded.auth,
+            user_agent = excluded.user_agent,
+            permission_state = 'granted',
+            revoked_at = null,
+            last_seen_at = now()
+          returning id, (xmax = 0) as created
+        )
+        select id, created from upserted
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The subscription account is not available.');
+      return { subscriptionId: String(row.id), state: 'granted', created: row.created === true };
+    },
+    async revokeWebPushSubscription(input: { authUserId: string; endpoint: string }): Promise<WebPushSubscriptionRevokeResult> {
+      if (!/^https:\/\//.test(input.endpoint) || input.endpoint.length > 2048) throw new FieldPilotPolicyError('The Web Push endpoint is invalid.');
+      const rows = await retryDatabase(() => sql`
+        update v2_web_push_subscriptions s
+        set permission_state = 'revoked', revoked_at = coalesce(revoked_at, now()), last_seen_at = now()
+        from v2_accounts a
+        where s.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.endpoint = ${input.endpoint}
+          and s.permission_state = 'granted'
+        returning s.endpoint
+      `);
+      if (!(rows as Record<string, unknown>[])[0]) throw new FieldPilotPolicyError('The subscription is not available to this account.');
+      return { revoked: true, endpoint: input.endpoint };
+    },
+    async listWebPushSubscriptionStatus(input: { authUserId: string }): Promise<{ active: number }> {
+      const rows = await retryDatabase(() => sql`
+        select count(*)::int as active
+        from v2_web_push_subscriptions s
+        join v2_accounts a on a.id = s.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.permission_state = 'granted'
+          and s.revoked_at is null
+      `);
+      return { active: Number((rows as Record<string, unknown>[])[0]?.active ?? 0) };
+    },
     async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];

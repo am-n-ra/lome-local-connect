@@ -590,3 +590,14 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** Full test suite passes 131/131 tests, client boundary is clean and server TypeScript validation passes. Production client build remains the next release check. No live batch was executed and no production data was mutated.
 
 **Decision:** This is a usable field-import seam for controlled Lomé/Aflao batches, not an automated scheduler or global OSM population. Region-specific Overpass retrieval, rate limiting, deduplication review, retries and operator reconciliation remain required before unattended ingestion.
+
+
+## Push subscription registry checkpoint — 2026-08-25
+
+**Published:** Added migration `008_v2_web_push_subscriptions.sql` and authenticated server endpoints for subscribe, revoke and status. A subscription is scoped to the authenticated Omni account, keyed by endpoint, refreshes its public-key material on replay, supports revocation/rotation and exposes only an active count to the account. Endpoint and key material remain private and are never returned through public facility or Inbox APIs.
+
+**Security boundary:** The server rejects missing or malformed HTTPS endpoints, missing key material, oversized user agents and suspended or unknown accounts. Revocation is account-scoped. The registry does not send notifications, does not expose VAPID keys, and does not claim provider delivery; delivery, retries, dead-letter handling and provider configuration remain separate gates.
+
+**Validation:** Full suite remains 131/131 tests, client boundary is clean, server TypeScript validation passes and the production build succeeds. The migration is additive and has not been applied to the live database in this work block.
+
+**Decision:** Push has advanced from browser permission-only to a durable server contract, but remains `partial / configuration-gated` until migration application, client wiring, VAPID/provider configuration and a real delivery/revoke proof are completed.

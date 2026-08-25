@@ -154,6 +154,52 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/notifications/push' && url.searchParams.get('action') === 'subscribe') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before enabling device notifications.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const endpoint = typeof input.endpoint === 'string' ? input.endpoint.trim() : '';
+      const keys = input.keys && typeof input.keys === 'object' && !Array.isArray(input.keys) ? input.keys as Record<string, unknown> : {};
+      const p256dh = typeof keys.p256dh === 'string' ? keys.p256dh.trim() : '';
+      const auth = typeof keys.auth === 'string' ? keys.auth.trim() : '';
+      const userAgent = typeof input.userAgent === 'string' ? input.userAgent.trim() || null : null;
+      if (!endpoint || !p256dh || !auth || endpoint.length > 2048 || userAgent && userAgent.length > 512) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid browser Push subscription.'));
+        return true;
+      }
+      const result = await repository.upsertWebPushSubscription({ authUserId, endpoint, p256dh, auth, userAgent });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/notifications/push' && url.searchParams.get('action') === 'revoke') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before changing device notifications.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const endpoint = typeof input.endpoint === 'string' ? input.endpoint.trim() : '';
+      if (!endpoint) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide the subscription endpoint to revoke.'));
+        return true;
+      }
+      const result = await repository.revokeWebPushSubscription({ authUserId, endpoint });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/notifications/push' && url.searchParams.get('status') === '1') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before reading device notification status.'));
+        return true;
+      }
+      const result = await repository.listWebPushSubscriptionStatus({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('operator') === 'runs') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
