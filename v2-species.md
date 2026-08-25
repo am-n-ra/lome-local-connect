@@ -229,7 +229,7 @@ Use one readable sans-serif family, medium/semibold headings and regular support
 
 ## 11. Motion
 
-The first frame is calm. Idle globe/map movement is slow and interruptible. It must stop when the user touches the map, focuses search, opens the sheet, selects a facility, requests location or enters any active flow. Reduced-motion mode disables continuous movement and unnecessary sheet animation.
+The first frame is calm. Idle globe/map movement is slow and interruptible. Under the V4.2 amendment, it may stop only for direct map interaction, a native facility/cluster action or an explicit map control such as location/recenter; focusing search, opening Options or a sheet, opening J5/account, typing or entering a non-map flow must not stop it. Reduced-motion mode disables continuous movement and unnecessary sheet animation.
 
 Cards and the sheet may use a short ease-in transition to explain emergence, but do not animate every label, marker or status. Motion must never hide a state transition, delay an action or imply that data has become authoritative.
 
