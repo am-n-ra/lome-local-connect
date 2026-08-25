@@ -77,3 +77,15 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Decision:** `partial / materially advanced`, not Species-accepted and not production-ready. The next smallest action is to finish the focused provider/source readiness and real-result local-detail proof, then deploy and run a canonical read-only smoke. Do not treat the attached text’s worldwide OSM/Overpass enrichment or `4,067+` coverage statement as proven; that remains a separate Root/operations gate.
 
 **Preserved:** Users, Auth identities, historical data, Neon branches, the bounded submitted test claim, mono-product availability, privacy boundaries and paused OSM/PWA/payment/QR/transaction/multi-product work.
+
+## Final V4.3 release checkpoint — 2026-08-25
+
+**Active milestone:** Species/Canopy map-first Buyer experience remains the only active product milestone.
+
+**Current gate:** `partial / canonical map and bounded reveal proven; Species, Canopy and release Rings remain open`. Commit `2cab2d8` is deployed READY as `dpl_62FQ6GnjqnTMbJsMpbW1cya6sa41` through the GitHub-linked Vercel path, with canonical alias `omni.sparkafrika.online`, source `git` and exactly 12 Node functions.
+
+**Evidence:** The public worker/shared-module packaging fix restored the production Positron vector lifecycle. Canonical read-only smoke reached `Carte active`, showed the white-field/dark-ocean/light-continent globe, permanent minus/plus/recenter controls and map-only rotation, then the safe query `Marche de Hanoukope` settled to a local Lome/Aflao frame with streets, neighbourhood labels, boundaries/coastline and an anchored native point. The business CTA `Voir le lieu` and all write paths stayed untouched. Local 122-test, mobile `390×844` and desktop `1024×880` proofs remain green.
+
+**Decision / capacity:** Keep operational expansion displaced: OSM/Overpass worldwide coverage, Seller/Reviewer operational branches, PWA/Web Push, payment, QR, transactions and multi-product remain paused behind their own Root/API gates. Do not call Species or the whole product production-ready from this map ring alone.
+
+**Next owner/action:** Manus continues the smallest remaining Species/Canopy proof: authenticated compact keyboard/focus and recovery matrix, real-device touch/input/permission evidence, dense native-pin movement and remote-tile/performance observation. Founder HQ reviews the Ring only after those residual proofs are linked. Global Root remains `review`; multi-product remains `Root/API-blocked`.

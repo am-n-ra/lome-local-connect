@@ -60,6 +60,14 @@ Rester dans Species/Canopy. Le prochain plus petit gate doit produire la preuve 
 
 La sélection réelle de plusieurs produits doit rester derrière un mini-Root/API approuvé; elle ne doit pas être traitée comme une simple extension CSS. Les branches rôle, OSM, PWA/Web Push, paiements, QR, transactions et terrain restent en pause. **Species n’est pas accepté et Global Root reste `review`.**
 
+## Final V4.3 release reconciliation — 2026-08-25
+
+Le correctif V4.3 est maintenant dans le commit `2cab2d8` et le déploiement GitHub→Vercel READY `dpl_62FQ6GnjqnTMbJsMpbW1cya6sa41`, avec l’alias canonical `omni.sparkafrika.online`, source Git et exactement 12 fonctions Node. Le worker MapLibre et son module partagé sont publiés à des chemins same-origin stables; le timeout de readiness protège le chargement cold Positron sans masquer un échec durable.
+
+Le smoke read-only canonical a confirmé `Carte active`, le globe vectoriel Positron blanc/noir/gris, les contrôles permanents et la recherche publique bornée `Marche de Hanoukope`. Après la chorégraphie et le chargement des tuiles, la vue locale Lome/Aflao a montré rues, quartiers, contours, littoral et repère natif ancré; `Voir le lieu` est resté non invoqué. Les 122 tests/18 fichiers, build, `check:boundary`, mobile `390×844` et desktop `1024×880` sont passants.
+
+**Décision de gate:** `partial / canonical Canopy map and bounded reveal proven; Species, Canopy and Ring gates remain open`. Ne sont pas prouvés ici: l’a11y/focus complète en session authentifiée, le touch et l’input sur appareil réel, la résilience/performance distante au-delà de ce smoke, la densité mondiale, les branches Seller/Reviewer opérationnelles, la couverture OSM/Overpass mondiale et le multi-produit Root/API. Aucun utilisateur, identité, donnée historique, branche Neon ou contrat métier n’a été supprimé ou muté.
+
 ## Addendum Canopy V4.1 — 2026-08-25
 
 Le propriétaire a clarifié la référence : il s’agit de la carte historique Omni blanc/noir/gris, avec fond blanc, océans presque noirs, continents blancs/clairs et contours noirs/gris; la carte verte précédente n’est pas la direction cible. L’implémentation V4.1 met à jour la palette distante et le fallback honnête, supprime le wash vert/sepia et le halo coloré de sélection, conserve les pins visibles dans les couches MapLibre natives et ajoute le helper d’orbite autour d’un axe vertical.
