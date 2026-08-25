@@ -700,3 +700,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Validation:** A client type-closing regression was caught during validation, corrected, and the full suite was rerun successfully: 132/132 tests, clean client boundary, server typecheck and production build. The existing bundle-size warning remains unchanged.
 
 **Residual gates:** Free/Pro enforcement, billing, and VAPID/provider Push delivery remain separate and are not implied by this Admin tranche.
+
+
+## OSM batch client contract — 2026-08-25
+
+**Published:** Added a typed client method for the bounded authenticated OSM batch import endpoint. It accepts the existing operator payload shape and returns created/existing counts plus per-item results, preserving server-side validation and idempotent refresh.
+
+**Validation:** Full suite passes 132/132 tests, client boundary is clean, server typecheck passes and production build succeeds. This seam does not call Overpass or import data by itself; a dedicated Lomé/Aflao discovery-and-review interaction remains required before records are written.
+
+**Residual gate:** Add operator-facing region discovery, preview and explicit import confirmation, then capture a real Lomé/Aflao import run with attribution and reconciliation evidence.

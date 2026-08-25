@@ -190,6 +190,14 @@ export async function requestSellerAvailabilityResponse(input: {
 }
 
 
+export async function importPublicFacilityBatch(input: { token: string; items: Array<{ sourceRef: string; name: string; category?: string | null; address?: string | null; latitude: number; longitude: number }>; attribution: string }): Promise<ApiResult<{ imported: number; created: number; existing: number; results: PublicFacilityImportResult[] }>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?action=operator-import-batch', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ provider: 'openstreetmap', attribution: input.attribution, items: input.items }),
+  });
+  return parse(response);
+}
 export async function importPublicFacility(input: {
   provider: 'openstreetmap';
   attribution: string;
