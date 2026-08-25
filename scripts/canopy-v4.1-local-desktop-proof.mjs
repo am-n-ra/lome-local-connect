@@ -39,7 +39,7 @@ await page.mouse.up();
 await page.waitForTimeout(400);
 const afterDrag = await readFrame();
 await page.mouse.move(20, 20);
-await page.waitForTimeout(1800);
+await page.waitForTimeout(3400);
 const afterLeavingMap = await readFrame();
 await page.screenshot({ path: `${outputDir}/canopy-v4-1-desktop-monochrome.png`, fullPage: false });
 
