@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Crosshair, Minus, Plus } from 'lucide-react';
-import { Map, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
+import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { PublicFacility } from './types';
 import { GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
@@ -20,11 +21,12 @@ type Props = {
   contextSurfaceOpen?: boolean;
 };
 
-const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
-const FALLBACK_STYLE = '/omni-local-style.json';
 const SOURCE = 'omni-v2-facilities';
+
+if (typeof window !== 'undefined') setWorkerUrl(maplibreWorkerUrl);
 
 function featureCollection(facilities: PublicFacility[]) {
   return {
@@ -38,23 +40,12 @@ function featureCollection(facilities: PublicFacility[]) {
 }
 
 function applyCanopyPalette(map: Map) {
-  // Liberty’s Natural Earth raster is the low-zoom land silhouette. Keep it
-  // visible, but remove its warm/colored treatment so the reference remains a
-  // clean black-ocean/white-land globe instead of a green or sepia map.
-  try {
-    if (map.getLayer('natural_earth')) {
-      map.setLayoutProperty('natural_earth', 'visibility', 'visible');
-      map.setPaintProperty('natural_earth', 'raster-saturation', -1);
-      map.setPaintProperty('natural_earth', 'raster-contrast', 0.35);
-      map.setPaintProperty('natural_earth', 'raster-opacity', 0.92);
-    }
-  } catch {
-    // A partially loaded style may not expose every raster property yet.
-  }
+  // Positron is already vector-native: preserve its neutral land treatment and
+  // explicitly tune only the geographic primitives needed by the Omni reference.
   const paints: Array<[string, string, unknown]> = [
     ['background', 'background-color', '#ffffff'],
     ['background', 'background-opacity', 0],
-    ['water', 'fill-color', '#111111'],
+    ['water', 'fill-color', '#2d3335'],
     ['park', 'fill-color', '#fafafa'],
     ['park_outline', 'line-color', '#d2d2d2'],
     ['landuse_residential', 'fill-color', '#ffffff'],
@@ -112,10 +103,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   const revealRunningRef = useRef(false);
   const lastRevealKey = useRef<string | null>(null);
   const pointerInside = useRef(false);
-  const fallbackUsed = useRef(false);
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
-  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'fallback'>('loading');
+  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [mapRetryKey, setMapRetryKey] = useState(0);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [cameraModeState, setCameraModeState] = useState<CameraMode>('resting_globe');
   const [revealRunning, setRevealRunning] = useState(false);
@@ -290,13 +281,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
   }, []);
 
   useEffect(() => {
-    const readinessTimer = window.setTimeout(() => setMapStatus((current) => current === 'loading' ? 'fallback' : current), 8000);
-    return () => window.clearTimeout(readinessTimer);
-  }, []);
-
-  useEffect(() => {
     if (!container.current || mapRef.current) return;
-    let fallbackTimer: number | null = null;
+    initialStyleReady.current = false;
+    setMapStatus('loading');
+    let readinessTimer: number | null = null;
     const map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
@@ -388,9 +376,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       }, 900);
     };
     const configureStyle = () => {
+      if (!map.isStyleLoaded()) return;
       initialStyleReady.current = true;
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      if (!fallbackUsed.current) setMapStatus('ready');
+      if (readinessTimer !== null) window.clearTimeout(readinessTimer);
+      setMapStatus('ready');
       const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
@@ -553,17 +542,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       scheduleUserPosition();
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
-    map.on('error', () => {
-      // A tile or glyph error must not replace an otherwise healthy style before
-      // it finishes loading. The delayed timer below is the style-level fallback.
-      if (fallbackUsed.current || initialStyleReady.current) return;
-    });
-    fallbackTimer = window.setTimeout(() => {
-      if (!initialStyleReady.current && !fallbackUsed.current && mapRef.current === map) {
-        fallbackUsed.current = true;
-        setMapStatus('fallback');
-        map.setStyle(FALLBACK_STYLE);
-      }
+    readinessTimer = window.setTimeout(() => {
+      if (!initialStyleReady.current && mapRef.current === map) setMapStatus('error');
     }, 8000);
     let globeProjection = true;
     const syncProjection = () => {
@@ -579,8 +559,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     map.on('zoom', syncProjection);
     map.on('moveend', syncProjection);
     map.on('load', () => {
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
-      if (!fallbackUsed.current) setMapStatus('ready');
+      if (readinessTimer !== null) window.clearTimeout(readinessTimer);
+      setMapStatus('ready');
       configureStyle();
       globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
@@ -593,7 +573,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
@@ -650,7 +630,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
         target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
     }
-  }, [onBoundsChange, onSelect, scheduleUserPosition]);
+  }, [mapRetryKey, onBoundsChange, onSelect, scheduleUserPosition]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -765,7 +745,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
-      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'fallback' ? 'Carte en mode de secours' : 'Carte active'}</div>
+      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'error' ? 'Carte indisponible' : 'Carte active'}</div>
+      {mapStatus === 'error' && <div className="map-provider-error" role="alert"><span>La carte vectorielle est temporairement indisponible.</span><button type="button" onClick={() => { setMapStatus('loading'); setMapRetryKey((key) => key + 1); }}>Réessayer</button></div>}
       {locationState !== 'idle' && <div className="location-status-sr" role="status" aria-live="polite">{locationCopy.title}. {locationCopy.detail}</div>}
       <div className="map-controls" aria-label="Contrôles de carte">
         <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>

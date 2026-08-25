@@ -98,3 +98,14 @@ The read-only `Marche de Hanoukope` query reached a real result sheet with `Le m
 ## Final canonical alias verification — 2026-08-25
 
 The evidence-only commit `1345c959ebbdc772f7ef2a79b0ec595faaa65ecd` reached READY as deployment `dpl_DXfz3X7ybMo8TaWnvUWBGrUVfHtf`, with `omni.sparkafrika.online` among its aliases and the same exact 12-Node-function boundary. A second read-only arrival check on that latest alias reproduced `Carte active`, the white-field/near-black-globe/light-land treatment and permanent minus/plus/recenter controls. The previously recorded blank final high-zoom reveal remains unresolved; the gate stays `partial` and no Species acceptance is granted.
+
+
+## Addendum Canopy V4.3 — 2026-08-25
+
+La nouvelle référence textuelle du propriétaire confirme que le target n’est pas un simple raster monochrome, mais un globe MapLibre vectoriel: champ extérieur blanc, océans charbon, continents clairs, contours fins, rotation calme et progression monde → continent → pays → région/ville → local. Le highlight de sélection lourd et le chip littéral `Votre position` restent exclus.
+
+Le diagnostic a isolé la cause du précédent blanc Positron: le provider fonctionne dans le navigateur, mais le worker MapLibre n’était pas résolu dans le bundle Vite de l’application. V4.3 ajoute l’asset worker same-origin produit par Vite et l’enregistre avant le constructeur MapLibre. Dans le preview Omni, Positron atteint maintenant `load/idle`, charge ses glyphes/PBF, rend le globe Africa-facing et publie `Carte active`; aucune requête `/omni-local-style.json` n’est émise. La palette réutilise directement les couches vectorielles Positron, sans filtre d’inversion et sans Natural Earth raster.
+
+La révélation sépare désormais le contexte utilisateur autorisé pour les étapes monde→ville du cadrage final des résultats. Les tests locaux et preuves responsive restent verts: 122 tests/18 fichiers, build TypeScript/Vite, `check:boundary`, exactement 12 fonctions, mobile `390×844`, desktop `1024×880`, globe/mercator réversible, zoom Plus visible, drag à axe vertical, reprise idle et dock/contrôles sans chevauchement.
+
+**Décision de gate:** `partial / V4.3 localement prouvé, non déployé, non accepté`. Il reste à pousser puis vérifier le déploiement canonique, refaire le smoke read-only et prouver sur résultat réel les rues/quartiers et les pins natifs en mouvement. OSM/Overpass mondial, `4,067+` facilités, Seller, Reviewer, Auth complet, PWA, paiements, QR, transactions et multi-produit restent hors de ce gate.

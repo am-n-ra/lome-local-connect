@@ -62,3 +62,18 @@ The owner clarified that the target is the existing **white/black/gray map**, no
 The camera ownership is narrowed: search/options/Auth focus, J5/account and non-map navigation must not stop idle globe motion. Direct map gestures, native map feature actions and explicit map controls may stop it. The primary globe drag now uses a deterministic vertical-axis helper: horizontal movement changes longitude, vertical movement changes latitude within safe bounds, pitch remains zero and ordinary left drag does not introduce bearing drift. Minus, plus and explicit recenter render together from the first frame. The approximate-location band is removed visually while accessible status and permission-aware, non-recentering arrival behavior remain.
 
 The implementation checkpoint is **partial pending validation**. The full validation baseline, canonical monochrome screenshots, touch/axis proof, real location proof, native pin movement inspection, responsive/accessibility coverage and GitHub/Vercel release evidence must still be run before V4.1 can be verified. Species and Global Root remain open.
+
+
+## Canopy V4.3 reference-text checkpoint — 2026-08-25
+
+**Active milestone:** Species/Canopy map-first Buyer experience.
+
+**Current gate:** Replace the temporary Liberty/raster reference path with a genuinely loaded Positron-style vector globe while preserving the already-approved map-only motion, projection threshold, controls, location and Root/business boundaries.
+
+**Owner clarification:** The new reference text describes a full-screen MapLibre native globe with a quiet white outer field, dark ocean, light continents, fine boundaries, calm rotation and a visible world → continent → country → region/city → local progression. Omni inherits the composition and behavior but explicitly rejects the heavy selected-region highlight and literal `Votre position` chip.
+
+**Evidence:** In the local Omni preview, an explicit same-origin MapLibre worker changed the Positron path from `style.load`/blank to a usable `load/idle` lifecycle with Positron PBF/glyph resources, `Carte active`, a visible Africa-facing globe and no synthetic raster fallback request. Mobile `390×844` and desktop `1024×880` map/motion proofs pass, and the state probe shows the globe remains visible before and after direct drag/resume. The search-reveal helper now centers early stages on authorized user context when available and final framing on result context.
+
+**Decision:** `partial / materially advanced`, not Species-accepted and not production-ready. The next smallest action is to finish the focused provider/source readiness and real-result local-detail proof, then deploy and run a canonical read-only smoke. Do not treat the attached text’s worldwide OSM/Overpass enrichment or `4,067+` coverage statement as proven; that remains a separate Root/operations gate.
+
+**Preserved:** Users, Auth identities, historical data, Neon branches, the bounded submitted test claim, mono-product availability, privacy boundaries and paused OSM/PWA/payment/QR/transaction/multi-product work.

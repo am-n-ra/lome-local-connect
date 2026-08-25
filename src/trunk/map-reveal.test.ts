@@ -17,7 +17,8 @@ describe('map search reveal contract', () => {
   it('includes an explicitly authorized user position in the target and final frame', () => {
     const userPosition = { longitude: 0, latitude: 5 };
     const steps = buildSearchRevealSteps(facilities, userPosition);
-    expect(steps[0]?.center).toEqual([1, 6]);
+    expect(steps.slice(0, 5).every((step) => step.center[0] === 0 && step.center[1] === 5)).toBe(true);
+    expect(steps.at(-1)?.center).toEqual([1, 6]);
     expect(pointsForResultFraming(facilities, userPosition)).toHaveLength(3);
     expect(boundsOfPoints(pointsForResultFraming(facilities, userPosition))).toEqual([[0, 5], [2, 7]]);
   });

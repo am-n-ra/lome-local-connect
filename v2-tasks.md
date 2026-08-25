@@ -375,3 +375,20 @@ The owner confirmed the map reference as the existing Omni black-ocean/white-lan
 | RING-001 | V4.2 reference correction is materially advanced but parent Canopy/Species acceptance is not requested or granted. | `todo` | Complete residual evidence and Founder HQ gate decision. |
 
 The search-reveal contract now protects the origin/main-inspired progression `world 1.05 → continent 2.15 → country 5.35 → region 8.25 → city/zone 11.25 → local result framing 14.2`, crossing the V4 globe/mercator threshold `2.4`. Source validation passes with 122 tests across 18 files, exact 12-function bundling and a clean client boundary. Local mobile/desktop proof assertions pass, and screenshots provide the first actual reference-matched map frames. The parent Species, Buyer Heartwood, Global Root and release Rings remain open; multi-product availability remains blocked behind Root/API.
+
+
+## 17. 2026-08-25 — Canopy V4.3 vector-globe reference checkpoint
+
+The owner’s latest reference text clarifies that the intended map is a **MapLibre-native Positron-style vector globe**: white outer field, dark ocean, light continents, fine contours, calm physical orbit, and progressive world → continent → country → region/city → local zoom. The reference’s heavy selected-region highlight and literal `Votre position` chip remain excluded. The new implementation must not silently substitute the synthetic raster fallback.
+
+| Task ID | V4.3 update | Status | Remaining evidence / next action |
+|---|---|---|---|
+| CANOPY-001 | Trunk now uses Positron vector style with a Vite-managed same-origin MapLibre worker, and compact/desktop local frames visibly render the requested Africa-facing globe. | `partial` | Canonical deployment and owner review of the new visual reference. |
+| CANOPY-002 | Provider readiness is truthful: `style.load` is not treated as active until the usable `load/idle` path; provider failure presents retry instead of `/omni-local-style.json`. | `verified / parent open` | Canonical failure/retry observation and production monitoring. |
+| CANOPY-003 | Search reveal keeps `world 1.05 → continent 2.15 → country 5.35 → region 8.25 → city/zone 11.25 → results 14.2`; early stages use the authorized user context when available and final framing uses result context. | `partial` | Real canonical fixture reveal with visible local roads and source-backed pins. |
+| CANOPY-004 | Positron layer palette is vector-native; the prior globe inversion and Liberty Natural Earth raster treatment are removed. Local compact and desktop motion proofs pass with no fallback request. | `partial` | Local streets/neighborhood readability and performance on the final reveal. |
+| CANOPY-005 | Permanent minus/plus/recenter, map-only rotation ownership, vertical-axis drag, mobile 16px input and no visible location chip/band remain preserved. | `verified / parent open` | Authenticated compact/a11y matrix, real-device touch and full negative sweep. |
+| CANOPY-006 | The attached text’s dynamic worldwide OSM/Overpass enrichment is recorded as a separate future operations/Root dependency; no global coverage or 4,067+ facility claim is made from this visual pass. | `deferred` | Reopen only after the OSM/importer Root gate is explicitly scheduled. |
+| RING-001 | V4.3 is materially advanced but Species, Buyer Heartwood, Global Root and release Rings remain open. | `todo` | Deploy the implementation, run canonical read-only smoke, then decide the residual vector-detail gate. |
+
+The exact next smallest action is a GitHub-triggered canonical deployment of the worker/Positron source change, followed by a read-only smoke that records only visible map state, projection, controls, result labels and local vector detail. No availability, claim, Seller, Reviewer, transaction, payment, QR, PWA, OSM or multi-product action is permitted in this gate.

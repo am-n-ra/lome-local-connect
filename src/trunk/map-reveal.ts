@@ -47,10 +47,13 @@ export function buildSearchRevealSteps(
 ): SearchRevealStep[] {
   const validFacilities = facilities.filter(validPoint);
   if (!validFacilities.length) return [];
-  const target = centerOfPoints(userPosition ? [...validFacilities, userPosition] : validFacilities);
+  const contextCenter = userPosition && validPoint(userPosition)
+    ? [userPosition.longitude, userPosition.latitude] as [number, number]
+    : centerOfPoints(validFacilities);
+  const resultCenter = centerOfPoints(userPosition ? [...validFacilities, userPosition] : validFacilities);
   return [
-    ...REVEAL_STAGES.map((stage) => ({ ...stage, center: target })),
-    { kind: 'results', label: 'Facilités trouvées', center: target, zoom: 14.2, pause: 0 },
+    ...REVEAL_STAGES.map((stage) => ({ ...stage, center: contextCenter })),
+    { kind: 'results', label: 'Facilités trouvées', center: resultCenter, zoom: 14.2, pause: 0 },
   ];
 }
 

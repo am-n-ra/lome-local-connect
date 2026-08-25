@@ -104,3 +104,12 @@ Automatic arrival location may add an in-memory neutral marker without recenteri
 The next proof must show the reference-matched globe at desktop and compact widths, visible minus/plus/recenter together, no heavy selected-region highlight, no location chip, direct-map-only rotation ownership, progressive continent-to-local reveal, reversible projection, local streets/neighborhood detail after reveal, and native pins remaining geographically anchored during camera movement. It must remain read-only and must not change the mono-product availability contract.
 
 OSM importer/field-pilot expansion, PWA/Web Push, payments, QR, transactions, new roles, destructive migrations and the multi-product Root/API decision remain outside this ring.
+
+
+## Canopy V4.3 vector-reference amendment — 2026-08-25
+
+The latest owner reference confirms the intended Canopy is a **native vector globe**, not a raster approximation. The preferred visual composition is a quiet white outer field, dark charcoal oceans, light continents and fine geographic contours, with labels and roads introduced progressively as the camera moves from world to continent, country, region/city and local context. The reference’s heavy selected-region highlight and literal `Votre position` chip remain explicitly excluded.
+
+The MapLibre worker is a load-bearing part of this visual contract. The controller must set a stable same-origin worker URL before constructing the map, and `style.load` alone must not publish `Carte active`; readiness requires the usable loaded/idle path with the vector source available. Provider failure must expose an honest retry state rather than silently switching to `/omni-local-style.json` or any other raster substitute. This is a Canopy/loader decision only and does not change Root/API, Auth, privacy, trust, availability, Seller, Reviewer, transaction or data-preservation boundaries.
+
+V4.3 acceptance remains gated on a compact and desktop settled vector globe, reversible projection, progressive reveal, visible local vector detail and native geographically anchored facility features when the bounded real data path is available. OSM/Overpass expansion, worldwide coverage claims, PWA/Web Push, payments, QR, transactions, destructive migration and multi-product availability remain outside this ring.
