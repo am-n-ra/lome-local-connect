@@ -69,3 +69,38 @@ Idle globe rotation is now owned strictly by the map interaction surface. Search
 The visible `Zone approximative détectée` banner is removed from the compact surface. Automatic location remains permission-aware, in-memory and non-recentering; explicit `Utiliser ma localisation` remains the only arrival recenter action. This is a client-only Canopy amendment with no database, API, Auth, migration or Root impact.
 
 **V4.1 gate remains open** until monochrome visual frames, direct-map-only pause proof, touch/axis proof, always-visible controls, non-obstructive location behavior, reversible projection, native pin movement and the existing accessibility/responsive/performance matrix are recorded.
+
+
+## Canopy V4.2 reference amendment — 2026-08-25
+
+### Mini-seed
+The Buyer should feel that Omni opens onto a readable world map and then guides the eye into the user’s geographic context: world/globe, continent, country, region or city, and finally local public facilities. The owner’s supplied Africa-globe image is the visual reference for this map surface. The target is the map’s composition and behavior, not the dark selection treatment or the literal `Votre position` chip shown in the reference.
+
+### Reference-matched visual DNA
+
+| Element | V4.2 direction | Explicit rejection |
+|---|---|---|
+| Field outside the globe | White, quiet and untextured | No gray wash or green map treatment |
+| Ocean | Near-black charcoal with a clean silhouette | No pale water or raster haze dominating the globe |
+| Land | White or very light gray, with subtle relief only where it improves legibility | No green landcover, sepia wash or heavy gray land highlight |
+| Country/continent boundaries | Fine charcoal or mid-gray lines, legible but restrained | No thick dark selected-region highlight |
+| Roads/labels | Suppressed at globe scale; progressively introduced only at local scale | No global road clutter |
+| Public-facility markers | Neutral native MapLibre pins/rings, subordinate to geography | No sticker-like HTML overlays, ownership/trust implication or colored halo |
+| User position | Small neutral in-map marker with optional accessible name only | No permanent `Votre position` chip and no heavy accuracy halo |
+| Motion | Slow longitudinal orbit around a stable vertical axis when resting | No pause from typing, menus or non-map navigation |
+
+### Camera choreography
+
+The V4.2 reveal inherits the existing origin/main sequence as a behavioral precedent: `Continent` at approximately zoom `2.15`, `Pays` at `5.35`, `Région` at `8.25`, `Ville / zone` at `11.25`, and a final local framing at approximately `14.2` or a fit-bounds result frame. The exact labels are implementation detail; the acceptance requirement is an observable geographic progression with a readable pause at each scale and no camera reset after direct map interaction.
+
+Projection remains automatic and reversible at the Canopy V4 threshold `2.4`: globe below the threshold and mercator at or above it. The reveal must therefore cross the projection threshold deliberately rather than spending the entire continent/country choreography in a pixelated globe. At local zoom, the vector map must expose streets/neighborhood context and source-backed native facility features.
+
+### Location treatment
+
+Automatic arrival location may add an in-memory neutral marker without recentering the user’s current view. An explicit recenter control may focus the camera on the user location. A browser-derived approximate/network estimate must never create a visible explanatory band over the map; it remains an accessible status and a subdued marker only when product state requires it. The reference label `Votre position` is not part of the required UI.
+
+### Acceptance and non-goals
+
+The next proof must show the reference-matched globe at desktop and compact widths, visible minus/plus/recenter together, no heavy selected-region highlight, no location chip, direct-map-only rotation ownership, progressive continent-to-local reveal, reversible projection, local streets/neighborhood detail after reveal, and native pins remaining geographically anchored during camera movement. It must remain read-only and must not change the mono-product availability contract.
+
+OSM importer/field-pilot expansion, PWA/Web Push, payments, QR, transactions, new roles, destructive migrations and the multi-product Root/API decision remain outside this ring.

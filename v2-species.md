@@ -301,3 +301,12 @@ The owner clarified that the intended map is the established Omni **white/black/
 Idle globe motion belongs exclusively to the map interaction surface. Search typing/focus, Options, J5/account and non-map navigation do not stop the globe. Direct map touch/pointer/wheel/pinch/rotate, native facility/cluster actions and explicit map controls may stop it. Primary left-drag orbits around a stable vertical axis: horizontal movement changes longitude responsively, vertical movement changes latitude within a bounded range, pitch remains zero and ordinary left drag does not create unintended bearing drift. Minus, plus and explicit recenter remain visible together in stable order.
 
 The approximate-zone banner is not part of the compact visual Species. Permission-aware location may still render a distinct in-memory marker and accessible status, but automatic arrival does not recenter and must not cover useful mobile map space. Only explicit recenter moves the camera.
+
+
+## 19. Canopy V4.2 amendment — Africa-globe reference, 2026-08-25
+
+The owner confirmed that the visual reference is the existing Omni globe showing Africa in a black-ocean/white-land composition, with fine charcoal geographic boundaries and a quiet white field outside the globe. The reference is authoritative for the map’s visual composition and zoom behavior. Its heavy dark selected-region highlight and the literal `Votre position` chip are explicitly excluded.
+
+The inherited camera choreography is continent → country → region/city → local facilities. At globe scale the world should remain legible and sparse; as the camera crosses into local mercator scale, streets, neighborhoods and boundaries should become progressively readable. Public facility features remain native MapLibre source/layers and geographically anchored during every camera transform. The user-position treatment is a small neutral in-map marker with accessible semantics, not a permanent visual label.
+
+This amendment supersedes only the prior map visual details that were too washed out or too green. It does not change role, Auth, trust, availability, claim, seller, reviewer, Inbox or Root/API contracts. The Species gate remains open until the reference-matched frames and progressive reveal are proven at compact and desktop widths with no overlap and no fabricated geography.

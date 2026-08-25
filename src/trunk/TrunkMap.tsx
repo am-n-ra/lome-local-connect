@@ -38,11 +38,30 @@ function featureCollection(facilities: PublicFacility[]) {
 }
 
 function applyCanopyPalette(map: Map) {
+  // Liberty’s Natural Earth raster is the low-zoom land silhouette. Keep it
+  // visible, but remove its warm/colored treatment so the reference remains a
+  // clean black-ocean/white-land globe instead of a green or sepia map.
+  try {
+    if (map.getLayer('natural_earth')) {
+      map.setLayoutProperty('natural_earth', 'visibility', 'visible');
+      map.setPaintProperty('natural_earth', 'raster-saturation', -1);
+      map.setPaintProperty('natural_earth', 'raster-contrast', 0.35);
+      map.setPaintProperty('natural_earth', 'raster-opacity', 0.92);
+    }
+  } catch {
+    // A partially loaded style may not expose every raster property yet.
+  }
   const paints: Array<[string, string, unknown]> = [
     ['background', 'background-color', '#ffffff'],
+    ['background', 'background-opacity', 0],
     ['water', 'fill-color', '#111111'],
+    ['park', 'fill-color', '#fafafa'],
+    ['park_outline', 'line-color', '#d2d2d2'],
+    ['landuse_residential', 'fill-color', '#ffffff'],
     ['landcover_grass', 'fill-color', '#ffffff'],
     ['landcover_wood', 'fill-color', '#f5f5f5'],
+    ['landcover_ice', 'fill-color', '#ffffff'],
+    ['landcover_wetland', 'fill-color', '#f7f7f7'],
     ['landcover_sand', 'fill-color', '#fafafa'],
     ['boundary_2', 'line-color', '#2b2b2b'],
     ['boundary_3', 'line-color', '#6d6d6d'],
@@ -59,6 +78,13 @@ function applyCanopyPalette(map: Map) {
       // A fallback or partially loaded style may not contain every vector layer.
     }
   }
+}
+
+function rewriteOpenFreeMapGlyphUrl(url: string) {
+  return url
+    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Bold/g, 'Noto%20Sans%20Bold')
+    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Regular/g, 'Noto%20Sans%20Regular')
+    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Italic/g, 'Noto%20Sans%20Italic');
 }
 
 function waitForMapMove(map: Map, timeout = 1500) {
@@ -274,6 +300,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     const map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
+      transformRequest: (url, resourceType) => ({
+        url: resourceType === 'Glyphs' ? rewriteOpenFreeMapGlyphUrl(url) : url,
+      }),
       center: [1.22, 6.13],
       zoom: 1.35,
       minZoom: 1,
@@ -399,8 +428,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, rev
     canvasContainer.addEventListener('mouseenter', handleCanvasEnter);
     canvasContainer.addEventListener('mouseleave', handleCanvasLeave);
     const handleWindowMove = (event: Event) => {
-      const target = event.target;
-      const isOnCanvas = target instanceof Node && canvasContainer.contains(target);
+      const pointer = event as MouseEvent;
+      const bounds = canvasContainer.getBoundingClientRect();
+      const isOnCanvas = Number.isFinite(pointer.clientX) && Number.isFinite(pointer.clientY)
+        ? pointer.clientX >= bounds.left && pointer.clientX <= bounds.right && pointer.clientY >= bounds.top && pointer.clientY <= bounds.bottom
+        : event.target instanceof Node && canvasContainer.contains(event.target);
       if (isOnCanvas) {
         if (!pointerInside.current) handleCanvasEnter();
         return;

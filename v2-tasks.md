@@ -359,3 +359,19 @@ The wide production gesture proof passed free left-drag center change, right-but
 | HEART-005 | Mobile 16px entry, compact geometry, named controls and no-overflow checks pass; authenticated compact, touch and full keyboard/focus matrix remain. | `partial` |
 
 Multi-product availability remains `blocked / Root/API decision required`; no grouped selection, basket, batch request or mutation was added. Global Root remains `review`, and no release Ring is closed.
+
+
+## 16. 2026-08-25 — Canopy V4.2 Africa-globe reference checkpoint
+
+The owner confirmed the map reference as the existing Omni black-ocean/white-land globe with a white surrounding field and restrained charcoal/gray geographic boundaries. The green/sepia treatment, heavy dark selection highlight and permanent `Votre position` chip are excluded. The implementation keeps the existing source-backed MapLibre facility path and adds the reference-matched globe treatment without changing any business or Root/API contract.
+
+| Task ID | V4.2 update | Status | Remaining evidence |
+|---|---|---|---|
+| CANOPY-001 | Species/Canopy map direction reconciled with the supplied Africa-globe reference; local settled screenshots at 390×844 and 1024×880 show black ocean, light land, white field, neutral marker and no location chip. | `partial` | Owner review plus canonical post-commit visual frame. |
+| CANOPY-002 | Permanent minus/plus/recenter remain visible; compact control/error overlap is corrected; settled mobile and desktop geometry remains bounded. | `partial` | Authenticated compact and real-device safe-area matrix. |
+| CANOPY-003 | Map-only rotation, vertical-axis drag, idle resume outside map, 16px inputs and screen-reader-only location status remain covered; reveal step contract updated. | `partial` | Device-native touch/input zoom and full keyboard/screen-reader traversal. |
+| CANOPY-004 | The globe filter and provider comparison were audited. Liberty remains the visible release-safe path; Positron from `origin/main` was tested but direct-controller style loading did not reach loaded vector tiles and was not retained. | `partial` | Remote-tile reliability, local vector streets/boundaries after reveal and performance review. |
+| CANOPY-005 | No heavy highlight, no permanent location chip, no visible HTML facility-pin overlay and no public-trust semantics were introduced. | `partial` | Real-result native pin movement, focus/back recovery and negative-state sweep. |
+| RING-001 | V4.2 reference correction is materially advanced but parent Canopy/Species acceptance is not requested or granted. | `todo` | Complete residual evidence and Founder HQ gate decision. |
+
+The search-reveal contract now protects the origin/main-inspired progression `world 1.05 → continent 2.15 → country 5.35 → region 8.25 → city/zone 11.25 → local result framing 14.2`, crossing the V4 globe/mercator threshold `2.4`. Source validation passes with 122 tests across 18 files, exact 12-function bundling and a clean client boundary. Local mobile/desktop proof assertions pass, and screenshots provide the first actual reference-matched map frames. The parent Species, Buyer Heartwood, Global Root and release Rings remain open; multi-product availability remains blocked behind Root/API.

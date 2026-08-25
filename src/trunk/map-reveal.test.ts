@@ -10,7 +10,7 @@ describe('map search reveal contract', () => {
   it('builds world-to-results steps around source-backed results', () => {
     const steps = buildSearchRevealSteps(facilities);
     expect(steps.map((step) => step.kind)).toEqual(['world', 'continent', 'country', 'region', 'city', 'results']);
-    expect(steps.map((step) => step.zoom)).toEqual([1.05, 1.85, 2.75, 3.8, 5.25, 6.2]);
+    expect(steps.map((step) => step.zoom)).toEqual([1.05, 2.15, 5.35, 8.25, 11.25, 14.2]);
     expect(steps.every((step) => step.center[0] === 1.5 && step.center[1] === 6.5)).toBe(true);
   });
 

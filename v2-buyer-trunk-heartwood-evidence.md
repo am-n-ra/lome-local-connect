@@ -181,3 +181,12 @@ The V4.1 source baseline now passes `git diff --check`, **122 tests across 18 fi
 The canonical V4.1 deployment `dpl_2A1htHsJkwkdsSXWLK92xABYLrAQ` is READY for commit `792c858`, with the canonical aliases and exactly 12 Node functions. The live read-only smoke check confirmed `globe / 1.35 / rotating` → `mercator / 4.35 / paused` → `globe / 2.35 / paused`, center retention, `basemap=monochrome` and the three permanent controls.
 
 This remains a partial checkpoint. A real iOS/Android input/gesture check, owner-browser permission proof, source-backed pins during a real result movement, the authenticated compact Buyer/Seller/Reviewer matrix, full keyboard/focus proof and remote-tile/performance review remain open. Multi-product availability remains `blocked / Root/API decision required`; no business mutation was performed.
+
+
+## 2026-08-25 — Canopy V4.2 reference-globe checkpoint
+
+The Buyer map visual was reconciled with the owner-provided Africa-globe reference. The implementation keeps the real Liberty/OpenFreeMap path, uses the existing Natural Earth globe silhouette with globe-only grayscale/inversion/brightness treatment, and preserves a white application field. Local settled screenshots at `390×844` and `1024×880` show a visible near-black ocean, light land, restrained relief, no green/sepia wash, no heavy selected-region halo and no permanent `Votre position` chip. The neutral user marker remains in-map and non-obstructive.
+
+The reveal helper now protects the reference progression with zoom stages `1.05 → 2.15 → 5.35 → 8.25 → 11.25 → 14.2`, crossing the `2.4` globe/mercator threshold before local result framing. The same local proof confirms the three permanent map controls, 16px mobile text input, default viewport scale, no visible approximate-location band, direct-map-only rotation ownership, vertical-axis drag, idle resume outside the map, reversible projection and zero visible HTML pin overlays.
+
+This is **bounded local visual/runtime evidence**, not a full Heartwood closure. The actual local geographic silhouette is raster-derived at globe scale; source-backed vector roads/boundaries and native facility pins during a real result movement still require inspection after reveal. Device-native touch/input zoom, real owner permission, authenticated compact/focus/recovery, keyboard traversal and remote-tile/performance evidence remain open. The mono-product availability contract and all business mutation boundaries are unchanged.

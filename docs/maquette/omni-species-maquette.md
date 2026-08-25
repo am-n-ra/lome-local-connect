@@ -191,3 +191,12 @@ The map visual target is the established Omni **white/black/gray reference**, no
 The globe’s idle orbit is paused only by a direct map interaction or an explicit map control. Search/options/Auth typing and focus, J5/account and non-map navigation do not stop it. Direct touch/pointer drag, wheel/pinch/rotate, facility/cluster activation and map controls do. Primary globe drag preserves a stable vertical axis: horizontal movement orbits longitude, vertical movement changes latitude within safe bounds, pitch stays zero and ordinary left drag does not add unintended bearing drift.
 
 The map-control group shows `Zoom arrière`, `Zoom avant` and `Utiliser ma localisation` together from the first frame, in stable order. The visible approximate-zone banner is removed from compact composition; location status remains accessible and non-obstructive, automatic arrival remains non-recentering, and only explicit recenter moves the camera.
+
+
+## 14. Canopy V4.2 visual amendment — Africa-globe reference, 2026-08-25
+
+The supplied Africa-globe image is now the explicit map visual reference for the Canopy. Its target composition is a clean white field around a readable globe, near-black ocean silhouette, white/light continents and fine charcoal country/continent boundaries. The reference’s thick dark selected-region highlight and literal `Votre position` chip are not inherited.
+
+The camera experience inherits the origin/main behavior: a calm world view progresses through continent, country, region/city and local facility context. The projection must cross from globe to normal mercator before local geography becomes dense, and zooming back out returns to the globe without resetting the released camera. At local scale, streets and neighborhoods are visible when the remote vector style provides them; the honest fallback never fabricates them.
+
+The compact user marker is a small neutral in-map point with accessible semantics and no permanent explanatory chip. Public facility pins and cluster rings remain native/source-backed and visually subordinate to the geography. The maquette acceptance proof must show this map at compact and desktop widths, with safe spacing around the fixed right-side controls and bottom dock, no heavy highlight, no green wash and no visible location band.

@@ -14,9 +14,18 @@ const context = await browser.newContext({
   reducedMotion: 'no-preference',
 });
 const page = await context.newPage();
-await page.goto(url, { waitUntil: 'networkidle' });
+const mapNetwork = [];
+page.on('response', (response) => {
+  const responseUrl = response.url();
+  if (/openfreemap|\.pbf|styles\//i.test(responseUrl)) mapNetwork.push({ url: responseUrl, status: response.status() });
+});
+page.on('requestfailed', (request) => {
+  const requestUrl = request.url();
+  if (/openfreemap|\.pbf|styles\//i.test(requestUrl)) mapNetwork.push({ url: requestUrl, failed: request.failure()?.errorText ?? 'failed' });
+});
+await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.locator('.maplibregl-canvas').waitFor({ state: 'visible', timeout: 15000 });
-await page.waitForTimeout(1600);
+await page.waitForTimeout(12000);
 
 const readFrame = async () => page.evaluate(() => {
   const stage = document.querySelector('.map-stage');
@@ -99,6 +108,7 @@ await page.screenshot({ path: `${outputDir}/canopy-v4-1-mobile-monochrome.png`, 
 const report = {
   url,
   viewport: { width: 390, height: 844 },
+  mapNetwork,
   syntheticLocation: 'permission granted in isolated context; coordinates not persisted',
   initial,
   afterIdle,

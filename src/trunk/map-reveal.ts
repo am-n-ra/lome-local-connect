@@ -12,11 +12,11 @@ export type SearchRevealStep = {
 };
 
 const REVEAL_STAGES: ReadonlyArray<Pick<SearchRevealStep, 'kind' | 'label' | 'zoom' | 'pause'>> = [
-  { kind: 'world', label: 'Le monde', zoom: 1.05, pause: 180 },
-  { kind: 'continent', label: 'Le continent', zoom: 1.85, pause: 180 },
-  { kind: 'country', label: 'Le pays', zoom: 2.75, pause: 180 },
-  { kind: 'region', label: 'La région', zoom: 3.8, pause: 180 },
-  { kind: 'city', label: 'La ville', zoom: 5.25, pause: 220 },
+  { kind: 'world', label: 'Le monde', zoom: 1.05, pause: 320 },
+  { kind: 'continent', label: 'Le continent', zoom: 2.15, pause: 560 },
+  { kind: 'country', label: 'Le pays', zoom: 5.35, pause: 620 },
+  { kind: 'region', label: 'La région', zoom: 8.25, pause: 680 },
+  { kind: 'city', label: 'La ville / zone', zoom: 11.25, pause: 720 },
 ];
 
 function validPoint(point: RevealPoint) {
@@ -50,7 +50,7 @@ export function buildSearchRevealSteps(
   const target = centerOfPoints(userPosition ? [...validFacilities, userPosition] : validFacilities);
   return [
     ...REVEAL_STAGES.map((stage) => ({ ...stage, center: target })),
-    { kind: 'results', label: 'Facilités trouvées', center: target, zoom: 6.2, pause: 0 },
+    { kind: 'results', label: 'Facilités trouvées', center: target, zoom: 14.2, pause: 0 },
   ];
 }
 

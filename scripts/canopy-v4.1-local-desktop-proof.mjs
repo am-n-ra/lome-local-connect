@@ -8,9 +8,9 @@ await fs.mkdir(outputDir, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ viewport: { width: 1024, height: 880 }, reducedMotion: 'no-preference' });
 const page = await context.newPage();
-await page.goto(url, { waitUntil: 'networkidle' });
+await page.goto(url, { waitUntil: 'domcontentloaded' });
 await page.locator('.maplibregl-canvas').waitFor({ state: 'visible', timeout: 15000 });
-await page.waitForTimeout(1600);
+await page.waitForTimeout(12000);
 
 const readFrame = () => page.evaluate(() => {
   const stage = document.querySelector('.map-stage');
@@ -41,6 +41,7 @@ const afterDrag = await readFrame();
 await page.mouse.move(20, 20);
 await page.waitForTimeout(3400);
 const afterLeavingMap = await readFrame();
+await page.waitForTimeout(1200);
 await page.screenshot({ path: `${outputDir}/canopy-v4-1-desktop-monochrome.png`, fullPage: false });
 
 const report = {
