@@ -5,12 +5,12 @@ import { cancelFacilityClaim, createFacilityClaimDraft, getAvailabilityResponses
 import { TrunkMap } from './TrunkMap';
 import { dockBandOffset } from './layout-contract';
 import type { AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest } from './types';
+import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
 type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer';
 type AuthMode = 'sign-in' | 'sign-up';
-type SessionUser = { id: string; email: string | null; name: string | null };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 export type EscapeTarget = 'facility' | 'seller-queue' | 'close' | 'none';
@@ -175,8 +175,8 @@ export function TrunkApp() {
   useEffect(() => {
     let active = true;
     authClient?.getSession().then((result) => {
-      const data = result.data as { user?: { id?: string; email?: string | null; name?: string | null } } | null | undefined;
-      if (active && data?.user?.id) setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
+      const user = sessionUserFromAuthResult(result);
+      if (active && user) setSessionUser(user);
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
@@ -977,9 +977,9 @@ export function TrunkApp() {
         : await authClient.signIn.email({ email: authEmail, password: authPassword });
       if (result.error) throw new Error(result.error.message);
       const session = await authClient.getSession();
-      const data = session.data as { user?: { id?: string; email?: string | null; name?: string | null } } | null | undefined;
-      if (!data?.user?.id) throw new Error('Auth succeeded but no active session was returned.');
-      setSessionUser({ id: data.user.id, email: data.user.email ?? null, name: data.user.name ?? null });
+      const user = sessionUserFromAuthResult(session);
+      if (!user) throw new Error('Auth succeeded but no active session was returned.');
+      setSessionUser(user);
       setAppliedOptions(draftOptions);
       setAuthState('idle');
       const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : authReturn === 'field-pilot' ? 'field-pilot' : authReturn === 'claim' ? 'claim' : authReturn === 'inbox' ? 'inbox' : authReturn === 'reviewer' ? 'reviewer' : 'none';
