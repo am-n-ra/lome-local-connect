@@ -1008,3 +1008,8 @@ Cette preuve confirme le déploiement du code, pas encore la preuve appareil de 
 Après nettoyage des processus Vite obsolètes, la vérification locale finale a confirmé `138/138` tests, `pnpm build` réussi avec exactement 12 fonctions Vercel et `check:boundary` propre. Le bundle client reste volumineux (`1,759.48 kB` non gzip) et conserve un warning de chunk non bloquant.
 
 Le code Seller Scanner est déployé sur l’origine canonique via le déploiement production `dpl_EpmitUvxKZgGBhWoe7BdER88v1Ma`; le checkpoint documentaire suivant est `dpl_DDroE2JXrjSnzqKLLfjgDVhJqRM8`. La preuve appareil réelle de `BarcodeDetector`, les permissions caméra, le flux complet avec comptes Buyer/Seller réels et les états de transaction post-fulfilment restent non prouvés et doivent rester ouverts dans Rings.
+
+
+## Canonical smoke — 2026-08-26
+
+L’origine `https://omni.sparkafrika.online/` répond `HTTP/2 200`. L’endpoint public `GET /api/v2/public/facilities` répond `HTTP 200` avec `ok: true` et un payload de facilités publiques. Cette observation confirme la disponibilité HTTP canonique et la lecture publique ; elle ne constitue pas une preuve authentifiée du flux Buyer/Seller ni une preuve appareil de la caméra.
