@@ -723,6 +723,45 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   font-weight: 700;
 }
 
+.seller-fact-id {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.transaction-rating {
+  display: grid;
+  gap: 12px;
+}
+
+.rating-score {
+  display: flex;
+  gap: 8px;
+}
+
+.rating-score button {
+  width: 36px;
+  height: 36px;
+  border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent);
+  border-radius: 999px;
+  background: var(--sheet);
+  color: var(--muted);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rating-score button.active,
+.rating-score button:hover,
+.rating-score button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--sheet);
+}
+
 .seller-transaction-panel select,
 .transaction-handoff select {
   width: 100%;
