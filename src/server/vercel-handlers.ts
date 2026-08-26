@@ -17,6 +17,11 @@ export async function facilityDetailHandler(req: any, res: any) {
   await handleApi(req, res, `/api/v2/facilities/${id}`, url);
 }
 
+export async function adminSellerActivationsHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/admin/seller-activations');
+  await handleApi(req, res, '/api/v2/admin/seller-activations', url);
+}
+
 export async function availabilityHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/availability');
   await handleApi(req, res, '/api/v2/availability', url);
