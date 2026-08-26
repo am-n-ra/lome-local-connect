@@ -780,3 +780,20 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Residual gates:** The next status-changing operation is the labelled demo transaction’s external-payment path and requires explicit owner authorization. If authorized, proceed as `pay_on_delivery` demo state only: Buyer declaration, Seller confirmation, Seller fulfilment and Buyer receipt, without claiming actual payment settlement. Real Push/VAPID delivery, Free/Pro billing and entitlement enforcement, physical-device Species/Canopy certification and other global release gates remain open. Full proof record: `/home/ubuntu/omni-buyer-seller-qr-production-proof.md`.
 
 **Review trigger:** Re-open this ring if the QR actor contract changes, if the Vercel-linked Neon branch changes, if the fixture is ever treated as real business data, or before any payment/fulfilment mutation beyond the explicitly authorized demo sequence.
+
+
+## Buyer/Seller payment and fulfilment checkpoint — 2026-08-26
+
+**Gate result:** le parcours borné Buyer → Seller → QR → déclaration de paiement démo → confirmation Seller → fulfilment est vérifié sur l’origine canonique et la branche Neon réellement utilisée par Vercel. Ce résultat ne constitue pas une preuve de paiement réel ni une readiness globale.
+
+**Scope and safety:** seules les identités `demo@buyer.omni` et `demo@seller.omni`, la facilité explicitement non réelle `Omni Demo Seller Hub` (`20000000-0000-0000-0000-000000000101`) et le produit `Root proof demo product` (`30000000-0000-0000-0000-000000000101`) ont été utilisés. Aucun compte réel, secret, mot de passe, JWT ou jeton QR brut n’a été exposé ou modifié.
+
+**Payment proof:** après l’état `qr_verified`, Buyer a déclaré `pay_on_delivery` avec HTTP 200. Seller a accusé réception de la déclaration avec HTTP 200, faisant passer la transaction à `payment_confirmed`. Cette opération enregistre un état de démonstration; elle ne traite ni ne règle un paiement.
+
+**Fulfilment proof:** la transition Seller `payment_confirmed → fulfilment_pending` a d’abord révélé une erreur PostgreSQL de paramètre non typé. Les commits `0ed5cb6` et `61b49f9` ont typé les comparaisons d’état, le rôle acteur et la métadonnée JSON. Après déploiement READY `dpl_BZSSBpAQ1NoqNVaAHu8VdYV9Kram`, les deux transitions Seller ont répondu HTTP 200: `payment_confirmed → fulfilment_pending`, puis `fulfilment_pending → fulfilled`. La réconciliation Neon en lecture seule a confirmé la séquence complète `intent_created → qr_ready → qr_verified → payment_declared → payment_confirmed → fulfilment_pending → fulfilled`, une déclaration `pay_on_delivery` avec accusé Seller, `replay_count: 1`, et deux membres Buyer/Seller. Le bundle reste à exactement 12 fonctions Vercel; les tests sont à `136/136`.
+
+**Evidence class:** `verified / bounded operational proof` pour la transaction de démonstration. Le contrat actuel reste Seller-only pour la vérification QR; l’essai Buyer a correctement été rejeté par HTTP 409. La preuve de receipt Buyer, rating/closure, Push/VAPID réel, Free/Pro/billing et entitlements, certification physique Species/Canopy, décision de claim et activation réelle d’un vendeur reste séparée.
+
+**Current decision:** ne pas qualifier Omni de globalement production-ready. La prochaine mutation de cette transaction serait la confirmation Buyer `fulfilled → received`, qui exige une nouvelle session Buyer et n’a pas été exécutée afin d’éviter une reconnexion supplémentaire sans nécessité opérationnelle.
+
+**Review trigger:** rouvrir ce checkpoint si le contrat QR change, si la branche Vercel/Neon change, si la fixture est traitée comme une activité réelle, ou avant toute transition de paiement/fulfilment sur des données non explicitement démo.
