@@ -126,6 +126,14 @@ export interface QrVerificationResult {
   netAmountMinor?: number;
 }
 
+export interface TransactionRatingResult {
+  ratingId: string;
+  transactionId: string;
+  score: number;
+  note: string | null;
+  state: 'rated';
+}
+
 export interface TransactionTransitionResult {
   accepted: true;
   transactionId: string;

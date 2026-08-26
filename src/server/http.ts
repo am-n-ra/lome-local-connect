@@ -582,6 +582,32 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/transaction-ratings') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before rating a transaction.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const score = typeof input.score === 'number' ? input.score : Number.NaN;
+      const note = typeof input.note === 'string' ? input.note : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !Number.isInteger(score) || score < 1 || score > 5 || note.length > 500) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction, a score from 1 to 5 and a note of 500 characters or fewer.'));
+        return true;
+      }
+      const result = await repository.submitTransactionRating({
+        authUserId,
+        transactionId,
+        score,
+        note,
+        correlationId,
+        now: new Date().toISOString(),
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/external-payment-confirmations') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

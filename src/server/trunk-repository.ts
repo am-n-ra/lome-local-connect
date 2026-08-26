@@ -120,6 +120,14 @@ export interface TransactionTransitionPersistenceResult {
   actorRole: 'buyer' | 'seller';
 }
 
+export interface TransactionRatingPersistenceResult {
+  ratingId: string;
+  transactionId: string;
+  score: number;
+  note: string | null;
+  state: 'rated';
+}
+
 export type ExternalPaymentMethod = 'cash' | 'mobile_money' | 'pay_on_delivery';
 
 export interface ExternalPaymentDeclarationPersistenceResult {
@@ -1456,6 +1464,69 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         method: row.method as ExternalPaymentMethod,
         buyerAccountId: String(row.buyer_account_id),
       };
+    },
+
+    async submitTransactionRating(input: {
+      authUserId: string;
+      transactionId: string;
+      score: number;
+      note: string | null;
+      correlationId: string;
+      now: string;
+    }): Promise<TransactionRatingPersistenceResult> {
+      const note = input.note?.trim() || null;
+      if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
+        throw new TransactionPolicyError('A rating score between 1 and 5 is required.');
+      }
+      if (note && note.length > 500) throw new TransactionPolicyError('The rating note must be 500 characters or fewer.');
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          join v2_transaction_members m on m.account_id = a.id and m.role = 'buyer'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and m.transaction_id = ${input.transactionId}::uuid
+        ), locked as (
+          select s.transaction_id, a.actor_account_id,
+            coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') as current_state
+          from v2_transaction_snapshots s
+          join actor a on true
+          where s.transaction_id = ${input.transactionId}::uuid
+          for update of s
+        ), eligible as (
+          select * from locked where current_state in ('received', 'rated')
+        ), inserted_rating as (
+          insert into v2_ratings (transaction_id, buyer_account_id, score, note, created_at)
+          select e.transaction_id, e.actor_account_id, ${input.score}, ${note}, ${input.now}::timestamptz
+          from eligible e
+          where e.current_state = 'received'
+          on conflict (transaction_id) do nothing
+          returning id, transaction_id, score, note
+        ), rated_event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select e.transaction_id, e.actor_account_id, 'rated', jsonb_build_object('score', r.score), ${input.now}::timestamptz
+          from eligible e
+          join v2_ratings r on r.transaction_id = e.transaction_id
+          where e.current_state = 'received'
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ), audited as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'transaction_rated', 'transaction', e.transaction_id::text, ${input.correlationId}, 'buyer_submitted_rating', ${input.now}::timestamptz
+          from eligible e
+          where e.current_state in ('received', 'rated')
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select r.id, r.transaction_id, r.score, r.note
+        from v2_ratings r
+        join eligible e on e.transaction_id = r.transaction_id
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new TransactionPolicyError('Rating is available only after the Buyer confirms receipt.');
+      return { ratingId: String(row.id), transactionId: String(row.transaction_id), score: Number(row.score), note: row.note === null || row.note === undefined ? null : String(row.note), state: 'rated' };
     },
 
     async transitionTransaction(input: {
