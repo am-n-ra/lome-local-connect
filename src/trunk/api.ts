@@ -92,7 +92,7 @@ export async function rebindDemoSeller(input: { token: string }): Promise<ApiRes
 }
 
 export async function getTransaction(input: { transactionId: string; token: string }): Promise<ApiResult<import('./types').TransactionSnapshotResult>> {
-  const response = await fetchWithRecovery(`/api/v2/transactions/${encodeURIComponent(input.transactionId)}`, {
+  const response = await fetchWithRecovery(`/api/v2/transaction-transitions?action=snapshot&transactionId=${encodeURIComponent(input.transactionId)}`, {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<import('./types').TransactionSnapshotResult>(response);

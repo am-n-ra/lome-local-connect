@@ -72,7 +72,7 @@ describe('listPublicFacilities search contract', () => {
 
     await getTransaction({ transactionId: 'tx-1', token: 'session-token' });
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v2/transactions/tx-1', { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } });
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/transaction-transitions?action=snapshot&transactionId=tx-1', { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } });
   });
 
   it('posts a Buyer purchase intent with idempotency', async () => {
