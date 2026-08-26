@@ -1180,6 +1180,56 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', netPriceMinor: input.priceMinor - discount };
     },
 
+    async updateSellerProductDraft(input: {
+      authUserId: string;
+      productId: string;
+      name: string;
+      description: string | null;
+      unit: string;
+      priceMinor: number;
+      currency: string;
+      discountKind: 'percentage' | 'fixed';
+      discountValueMinor: number;
+    }): Promise<{ productId: string; publicationState: 'draft'; netPriceMinor: number }> {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) throw new SellerCataloguePolicyError('INVALID_INPUT');
+      if (input.discountKind === 'percentage' && input.discountValueMinor > 90) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      if (input.discountKind === 'fixed' && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      const rows = await retryDatabase(() => sql`
+        update v2_products p
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, updated_at = now()
+        from v2_facilities f join v2_accounts a on a.id = f.account_id
+        where p.id = ${input.productId}::uuid and p.facility_id = f.id
+          and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+          and p.publication_state = 'draft'
+        returning p.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_NOT_EDITABLE');
+      const discount = input.discountKind === 'percentage' ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
+      return { productId: String(row.id), publicationState: 'draft', netPriceMinor: input.priceMinor - discount };
+    },
+
+    async transitionSellerProduct(input: { authUserId: string; productId: string; to: 'published' | 'archived' }): Promise<{ productId: string; publicationState: 'published' | 'archived' }> {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select p.id, p.facility_id, p.publication_state, f.commercial_plan
+          from v2_products p join v2_facilities f on f.id = p.facility_id join v2_accounts a on a.id = f.account_id
+          where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+        ), published_count as (
+          select count(*)::int as count from v2_products p where p.facility_id = (select facility_id from owned) and p.publication_state = 'published'
+        ), changed as (
+          update v2_products p set publication_state = ${input.to}, updated_at = now()
+          where p.id = (select id from owned)
+            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and (((select commercial_plan from owned) = 'pro_active') or (select count from published_count) < 5))
+              or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
+          returning p.id, p.publication_state
+        ) select * from changed
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_LIMIT_REACHED');
+      return { productId: String(row.id), publicationState: String(row.publication_state) as 'published' | 'archived' };
+    },
+
     async getSellerAvailabilityQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: Array<{
       id: string;
       facilityId: string;

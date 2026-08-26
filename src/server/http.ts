@@ -674,6 +674,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    const sellerProductMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})$/i);
+    if (sellerProductMatch && (req.method === 'PATCH' || req.method === 'POST')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller before changing an offer.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const productId = sellerProductMatch[1];
+      if (req.method === 'POST') {
+        const to = input.to === 'published' || input.to === 'archived' ? input.to : null;
+        if (!to) throw new ApiInputError('Choose a valid publication transition.');
+        const result = await repository.transitionSellerProduct({ authUserId, productId, to });
+        json(res, 200, { ok: true, correlationId, data: result });
+        return true;
+      }
+      const name = typeof input.name === 'string' ? input.name : '';
+      const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
+      const unit = typeof input.unit === 'string' ? input.unit : 'unit';
+      const currency = typeof input.currency === 'string' ? input.currency : '';
+      const discountKind = input.discountKind === 'percentage' || input.discountKind === 'fixed' ? input.discountKind : null;
+      const priceMinor = Number(input.priceMinor);
+      const discountValueMinor = Number(input.discountValueMinor);
+      if (!name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor)) throw new ApiInputError('A valid product name, price, currency and reduction are required.');
+      const result = await repository.updateSellerProductDraft({ authUserId, productId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/seller/catalogue') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

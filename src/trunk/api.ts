@@ -106,6 +106,16 @@ export async function createSellerProductDraft(input: { token: string; facilityI
   return parse(response);
 }
 
+export async function updateSellerProductDraft(input: { token: string; productId: string; name: string; description?: string | null; unit?: string; priceMinor: number; currency: string; discountKind: 'percentage' | 'fixed'; discountValueMinor: number }): Promise<ApiResult<{ productId: string; publicationState: 'draft'; netPriceMinor: number }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}`, { method: 'PATCH', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ name: input.name, description: input.description ?? null, unit: input.unit ?? 'unit', priceMinor: input.priceMinor, currency: input.currency, discountKind: input.discountKind, discountValueMinor: input.discountValueMinor }) });
+  return parse(response);
+}
+
+export async function transitionSellerProduct(input: { token: string; productId: string; to: 'published' | 'archived' }): Promise<ApiResult<{ productId: string; publicationState: 'published' | 'archived' }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ to: input.to }) });
+  return parse(response);
+}
+
 export async function getSellerCatalogue(input: { token: string }): Promise<ApiResult<SellerCatalogueResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
