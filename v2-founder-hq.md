@@ -1001,3 +1001,10 @@ Le QR transactionnel est émis par le Buyer. Le Seller UI ne propose plus d’é
 Le commit `386dcb08dd562ee6c03ff614fd6d1fef219218c0` (`feat(transaction): migrate seller scanner to buyer QR snapshot`) a été poussé sur `omni-v2-rebuild` et déployé par Vercel en production sous `dpl_EpmitUvxKZgGBhWoe7BdER88v1Ma`. L’état est `READY`, avec les alias canoniques `https://omni.sparkafrika.online/`, `https://omniviewer.vercel.app/` et `https://lome-local-connect.vercel.app/`, et 12 fonctions Node.
 
 Cette preuve confirme le déploiement du code, pas encore la preuve appareil de la caméra ni le règlement de paiement Omni. Les limites Heartwood restent ouvertes : test caméra/permission sur iPhone réel, identity/membership négatifs, expiration/rejeu, mauvais acteur, chat transactionnel, avis post-fulfilment et vérification utilisateur sur l’origine canonique.
+
+
+## Heartwood verification — 2026-08-26
+
+Après nettoyage des processus Vite obsolètes, la vérification locale finale a confirmé `138/138` tests, `pnpm build` réussi avec exactement 12 fonctions Vercel et `check:boundary` propre. Le bundle client reste volumineux (`1,759.48 kB` non gzip) et conserve un warning de chunk non bloquant.
+
+Le code Seller Scanner est déployé sur l’origine canonique via le déploiement production `dpl_EpmitUvxKZgGBhWoe7BdER88v1Ma`; le checkpoint documentaire suivant est `dpl_DDroE2JXrjSnzqKLLfjgDVhJqRM8`. La preuve appareil réelle de `BarcodeDetector`, les permissions caméra, le flux complet avec comptes Buyer/Seller réels et les états de transaction post-fulfilment restent non prouvés et doivent rester ouverts dans Rings.
