@@ -1510,7 +1510,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ),
         inserted as (
           insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
-          select e.transaction_id, e.actor_account_id, ${input.to}, jsonb_build_object('from', e.current_state, 'actor_role', ${input.actorRole}), ${input.now}::timestamptz
+          select e.transaction_id, e.actor_account_id, ${input.to}::text, jsonb_build_object('from', e.current_state, 'actor_role', ${input.actorRole}::text), ${input.now}::timestamptz
           from eligible e
           where e.current_state <> ${input.to}
           on conflict (transaction_id, state) do nothing
