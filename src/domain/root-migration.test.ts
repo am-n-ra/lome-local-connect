@@ -6,7 +6,8 @@ const migration = readFileSync(resolve(process.cwd(), 'db/migrations/003_v2_root
 const eventIdempotencyMigration = readFileSync(resolve(process.cwd(), 'db/migrations/004_v2_event_idempotency.sql'), 'utf8');
 const sellerResponseMigration = readFileSync(resolve(process.cwd(), 'db/migrations/005_v2_seller_response_idempotency.sql'), 'utf8');
 const pushSubscriptionMigration = readFileSync(resolve(process.cwd(), 'db/migrations/008_v2_web_push_subscriptions.sql'), 'utf8');
-const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}\n${sellerResponseMigration}\n${pushSubscriptionMigration}`;
+const commercialMigration = readFileSync(resolve(process.cwd(), 'db/migrations/009_v2_facility_offer_entitlements.sql'), 'utf8');
+const reviewedMigrations = `${migration}\n${eventIdempotencyMigration}\n${sellerResponseMigration}\n${pushSubscriptionMigration}\n${commercialMigration}`;
 
 describe('Root guardrail migration review', () => {
   it('contains no destructive schema or data operation', () => {
@@ -29,6 +30,14 @@ describe('Root guardrail migration review', () => {
     expect(sellerResponseMigration).toContain('ADD COLUMN IF NOT EXISTS idempotency_key');
     expect(migration).toContain('verified_at IS NULL');
     expect(migration).toContain('expires_at > p_now');
+  });
+
+  it('defines additive commercial offer and facility entitlement guards', () => {
+    expect(commercialMigration).toContain('add column if not exists discount_kind');
+    expect(commercialMigration).toContain("discount_kind IN ('percentage', 'fixed')");
+    expect(commercialMigration).toContain('v2_products_active_offer_idx');
+    expect(commercialMigration).toContain('add column if not exists price_minor');
+    expect(commercialMigration).toContain('renewal_opt_in boolean not null default false');
   });
 
   it('defines the account-scoped Push subscription registry without public exposure', () => {
