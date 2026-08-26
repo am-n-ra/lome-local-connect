@@ -707,3 +707,63 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   color: #7b4b28;
   background: rgba(250, 237, 223, 0.92);
 }
+
+
+/* Live UI pass: keep the application anchored to the visual viewport and let
+   surfaces opt into keyboard-aware positioning without moving the map itself. */
+.omni-stage-viewport { --omni-vvh: 100svh; --omni-keyboard: 0px; }
+.omni-stage-viewport.species-app { height: var(--omni-vvh); min-height: var(--omni-vvh); }
+.omni-stage-viewport.map-stage { height: 100%; min-height: var(--omni-vvh); }
+.omni-keyboard-aware { transition: bottom .22s var(--ease), transform .22s var(--ease); }
+.search-anchor.omni-keyboard-aware { bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom)) + var(--omni-keyboard, 0px)); }
+.omni-sheet-enter { animation: omni-sheet-enter .28s var(--ease) both; }
+.omni-card-enter { animation: omni-card-enter .34s var(--ease) both; }
+.omni-step-enter { animation: omni-step-enter .24s var(--ease) both; }
+.omni-stagger > * { animation: omni-card-enter .34s var(--ease) both; }
+.omni-stagger > *:nth-child(2) { animation-delay: 35ms; }
+.omni-stagger > *:nth-child(3) { animation-delay: 70ms; }
+.omni-stagger > *:nth-child(4) { animation-delay: 105ms; }
+.omni-stagger > *:nth-child(5) { animation-delay: 140ms; }
+.omni-stagger > *:nth-child(6) { animation-delay: 175ms; }
+.omni-skeleton-stack { display: grid; gap: 9px; width: 100%; }
+.omni-skeleton { display: block; min-height: 12px; border-radius: 999px; background: linear-gradient(100deg, #edf3ef 22%, #f9fcfa 45%, #edf3ef 68%); background-size: 220% 100%; animation: omni-shimmer 1.35s ease-in-out infinite; }
+.omni-skeleton.short { width: 58%; }
+.omni-skeleton.tiny { width: 34%; min-height: 9px; }
+.omni-progress-track { width: min(220px, 42vw); height: 4px; overflow: hidden; border-radius: 999px; background: rgba(34,34,34,.14); }
+.omni-progress-track > span { display: block; width: 38%; height: 100%; border-radius: inherit; background: #222; animation: omni-progress 1.35s ease-in-out infinite; }
+.omni-user-marker-ring { animation: omni-user-breathe 2.8s ease-in-out infinite; }
+.omni-pressable { transition: transform .16s var(--ease), box-shadow .16s var(--ease); }
+.omni-pressable:active { transform: scale(.97); }
+.button-spinner { width: 13px; height: 13px; flex: 0 0 auto; border: 2px solid rgba(255,255,255,.45); border-top-color: currentColor; border-radius: 50%; animation: spin 700ms linear infinite; }
+.secondary-button .button-spinner { border-color: rgba(31,88,72,.22); border-top-color: currentColor; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@keyframes omni-shimmer { to { background-position: -220% 0; } }
+@keyframes omni-progress { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(300%); } }
+@keyframes omni-sheet-enter { from { opacity: 0; transform: translate(-50%, 18px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes omni-card-enter { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes omni-step-enter { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes omni-user-breathe { 0%, 100% { box-shadow: 0 0 0 5px rgba(17,17,17,.10), 0 4px 10px rgba(0,0,0,.18); } 50% { box-shadow: 0 0 0 9px rgba(17,17,17,.04), 0 4px 10px rgba(0,0,0,.18); } }
+@media (max-width: 620px) {
+  .omni-sheet { max-height: min(calc(var(--omni-vvh, 100dvh) - 24px), 88dvh); padding-bottom: max(18px, var(--safe-bottom)); }
+  .search-pill, .pill-submit, .pill-options { min-height: 44px; }
+  .pill-submit, .pill-options { width: 38px; height: 38px; }
+  .nearby-collapsed-bar { padding-bottom: max(10px, var(--safe-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .omni-sheet-enter, .omni-card-enter, .omni-step-enter, .omni-stagger > *, .omni-skeleton, .omni-progress-track > span, .omni-user-marker-ring { animation: none !important; }
+}
+
+@media (max-width: 620px) {
+  .omni-sheet.omni-keyboard-aware, .nearby-sheet.omni-keyboard-aware { bottom: var(--omni-keyboard, 0px); }
+  .omni-sheet.omni-keyboard-aware { max-height: min(calc(var(--omni-vvh, 100dvh) - 12px), 92dvh); }
+}
+
+button[aria-busy="true"] { position: relative; }
+button[aria-busy="true"]::before { width: 12px; height: 12px; flex: 0 0 auto; content: ""; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin 700ms linear infinite; }
+.primary-button[aria-busy="true"]::before { border-color: rgba(255,255,255,.5); border-right-color: transparent; }
+@media (prefers-reduced-motion: reduce) { button[aria-busy="true"]::before { animation: none; } }
+
+.availability-sheet { overscroll-behavior: contain; }
+.availability-sheet .step-content { display: flex; flex-direction: column; }
+.availability-sheet .step-content > .primary-button { position: sticky; z-index: 2; bottom: -1px; margin-top: auto; box-shadow: 0 -10px 18px rgba(255,255,255,.86); }
+.stepper.omni-stagger > span, .stepper.omni-stagger > i { animation: omni-card-enter .28s var(--ease) both; }

@@ -797,3 +797,20 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Current decision:** ne pas qualifier Omni de globalement production-ready. La prochaine mutation de cette transaction serait la confirmation Buyer `fulfilled → received`, qui exige une nouvelle session Buyer et n’a pas été exécutée afin d’éviter une reconnexion supplémentaire sans nécessité opérationnelle.
 
 **Review trigger:** rouvrir ce checkpoint si le contrat QR change, si la branche Vercel/Neon change, si la fixture est traitée comme une activité réelle, ou avant toute transition de paiement/fulfilment sur des données non explicitement démo.
+
+
+## Buyer UI canopy checkpoint — 2026-08-26
+
+**Status:** `verified / source and build proof; responsive browser proof partial`.
+
+**Slice:** la passe UI vivante Buyer a été reprise sur l’architecture réellement active (`TrunkMap.tsx` / `TrunkApp.tsx`), sans créer de composants concurrents à partir des anciens noms `MapCanvas`, `CleanBuyerMapStage` ou `CleanBuyerSearchDock` absents de ce checkout.
+
+**Changed:** `src/hooks/use-viewport-insets.ts` publie `--omni-vvh`, `--omni-keyboard`, `--keyboard-inset` et expose le signal `data-keyboard-open`; `useScrollLock` protège les feuilles. `TrunkApp` applique l’ancrage clavier, le blur hors dock, les entrées/staggers, les skeletons et `aria-busy` aux actions asynchrones. `TrunkMap` ajoute l’anneau du marqueur utilisateur et remplace le texte de révélation par une barre de progression accessible. L’onboarding Buyer garde ses quatre étapes avec une action principale sticky.
+
+**Proof:** `pnpm test` passe avec `136/136`; `pnpm build` réussit et regroupe exactement 12 fonctions Vercel. Le smoke browser local à `1280×1100` a confirmé `omni-stage-viewport`, `search-anchor omni-keyboard-aware`, les variables visual viewport et l’absence d’état clavier ouvert au repos. Les animations ajoutées sont neutralisées avec `prefers-reduced-motion: reduce`.
+
+**Boundary:** la preuve responsive visuelle multi-écrans reste `partial`: le shell local a affiché le fallback provider de carte dans cette session et les captures Playwright ont fait crasher le Chromium sandbox avant de produire des images fiables. Cela ne constitue pas une preuve de panne de la carte en production. Le prochain contrôle doit observer l’origine canonique après déploiement aux largeurs `320/390/768/1280`, clavier ouvert, blur hors dock, scroll lock et carte réellement chargée.
+
+**Preserved:** aucune logique métier, route serveur, autorisation, donnée Neon, identité, utilisateur réel, secret, paiement ou transaction n’a été modifié. Les artefacts non suivis `canopy-v4-1-proof/`, `pnpm-lock.yaml` et `pnpm-workspace.yaml` restent exclus.
+
+**Next gate:** commit source-only, déploiement Vercel READY puis capture responsive production; ne pas reclasser Omni globalement production-ready tant que Push/VAPID, Free/Pro/billing, entitlements et les autres gates produit restent ouvertes.
