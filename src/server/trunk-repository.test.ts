@@ -895,6 +895,8 @@ describe('field pilot registry Root seam', () => {
     expect(queries[2]).toContain('f.account_id is null');
     expect(queries[2]).toContain("f.trust_state = 'unclaimed'");
     expect(queries[2]).toContain('on conflict (source_id, source_ref) do update');
+    expect(queries[2]).toContain("md5(");
+    expect(queries[2]).toContain('on conflict (correlation_id) do update');
   });
   it('rejects invalid import coordinates before reaching Neon', async () => {
     const call = stubSql([]);

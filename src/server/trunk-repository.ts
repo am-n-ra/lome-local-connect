@@ -378,7 +378,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ), run as (
           insert into v2_operator_runs
             (operator_account_id, operation, provider, west, south, east, north, outcome, result_count, correlation_id, finished_at)
-          select ${String(actor.id)}::uuid, 'public_import', ${input.provider}, ${input.longitude}, ${input.latitude}, ${input.longitude}, ${input.latitude}, 'success', 1, ${input.correlationId}, now()
+          select ${String(actor.id)}::uuid, 'public_import', ${input.provider}, ${input.longitude}, ${input.latitude}, ${input.longitude}, ${input.latitude}, 'success', 1,
+            md5(${String(actor.id)} || ':public_import:' || ${input.provider} || ':' || ${input.sourceRef.trim()})::uuid, now()
+          on conflict (correlation_id) do update
+            set west = excluded.west,
+                south = excluded.south,
+                east = excluded.east,
+                north = excluded.north,
+                outcome = excluded.outcome,
+                result_count = excluded.result_count,
+                finished_at = excluded.finished_at
           returning id
         )
         select run.id as run_id, selected.id as facility_id, selected.created
