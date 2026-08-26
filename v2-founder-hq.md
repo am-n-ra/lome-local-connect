@@ -747,3 +747,19 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Next owner/action:** équipe Omni, ouvrir la session reviewer Kheir sur l’origine canonique, vérifier le rôle `reviewer:active` sur `br-dawn-hill-am5amy22`, puis documenter un état autorisé vide ou une revue de claim de test sans toucher aux comptes actifs. Revenir à la carte terrain pour enregistrer de nouvelles présences seulement avec des références OSM et une validation humaine appropriées.
 
 **Review trigger:** réouvrir ce ring si la branche Vercel change, si le provider Overpass devient indisponible de façon persistante, si une facilité importée reçoit un propriétaire, ou si la précision de localisation terrain est insuffisante sur un appareil réel.
+
+## Reviewer/Admin production checkpoint — 2026-08-26
+
+**Gate result:** le rôle applicatif `reviewer:active` est maintenant vérifié sur la branche Neon réellement utilisée par Vercel, et la surface Reviewer est accessible sur l’origine canonique. Le statut Neon Auth `admin` reste séparé du rôle métier Omni.
+
+**Role proof:** le compte Omni de Kheir `7bd0f09d-a0d1-446c-8c92-2941a6cd37cf` est lié à l’identité Neon Auth `6dfee45e-a86a-4e57-b2fd-ae203aa5e309`, non suspendu, avec `reviewer / active`. La mutation a été effectuée après confirmation explicite; aucune identité Neon Auth, aucun mot de passe et aucun compte actif n’ont été modifiés.
+
+**Canonical session proof:** après prise en main navigateur sur `https://omni.sparkafrika.online/`, l’échange du cookie HttpOnly vers un JWT court a retourné le `sub` Kheir attendu en mémoire בלבד; la valeur sensible n’est pas consignée dans les sorties utilisateur. La file claims a répondu HTTP 200 et `authorized: true`. L’interface a montré le claim de test `Marche de Hanoukope`, état `verification_submitted`, avec une preuve `identity`. Aucune décision de certification n’a été envoyée.
+
+**Admin routing correction:** la première ouverture Reviewer révélait une erreur de chargement de la file d’activation. Le diagnostic Vercel a montré que l’ajout d’un treizième Serverless Function dépassait la limite Hobby de 12 et avait produit un déploiement ERROR. Le commit `b008b34` a supprimé cette fonction séparée, réacheminé la lecture de la queue vers la fonction publique existante et les écritures Admin vers la fonction facility-detail existante. Le déploiement `dpl_kNvvfYbMDvczFZcKPvsNFceXaxZi` est READY et porte les alias canoniques.
+
+**Admin proof:** sur le déploiement corrigé, la queue Reviewer et la queue d’activation répondent HTTP 200 avec `authorized: true`; la file d’activation comporte une facilité éligible. L’interface affiche `1 facilité éligible`, `seller_ready` et un contrôle `Suspendre`. Aucun claim n’a été certifié, aucun vendeur n’a été activé, suspendu ou réactivé.
+
+**Evidence class and residuals:** ce ring est `verified / read-only operational proof` pour le rôle Reviewer, la queue claims et l’exposition de la queue Admin. Il ne ferme pas la readiness globale: les parcours Buyer/Seller/QR, Push/VAPID, Free/Pro/billing, l’activation vendeur réelle et les tests de décision Reviewer restent des gates séparées. Toute décision sur le claim ou tout changement de statut vendeur doit recevoir une confirmation explicite et cibler des données de test sûres.
+
+**Next smallest action:** poursuivre avec la preuve Buyer/Seller/QR de bout en bout sur la même origine et la même branche Neon, sans revenir à la branche primaire ni aux previews Vercel hashées.
