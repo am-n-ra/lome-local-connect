@@ -814,3 +814,12 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Preserved:** aucune logique métier, route serveur, autorisation, donnée Neon, identité, utilisateur réel, secret, paiement ou transaction n’a été modifié. Les artefacts non suivis `canopy-v4-1-proof/`, `pnpm-lock.yaml` et `pnpm-workspace.yaml` restent exclus.
 
 **Next gate:** commit source-only, déploiement Vercel READY puis capture responsive production; ne pas reclasser Omni globalement production-ready tant que Push/VAPID, Free/Pro/billing, entitlements et les autres gates produit restent ouvertes.
+
+
+## Buyer UI production smoke amendment — 2026-08-26
+
+**Evidence update:** après le déploiement `74b8d7f`, l’origine canonique a été ouverte avec succès dans le navigateur stable. À `1024×880`, le globe monochrome a atteint `mapStatus: ready` et `projection: globe`; la scène exposait `204` boutons de facilités accessibles. Le dock a accepté la saisie de `marché` sans faire disparaître la scène. Le DOM a confirmé `omni-stage-viewport`, `search-anchor omni-keyboard-aware`, `data-keyboard-open=false`, `--omni-vvh: 880px` et `--omni-keyboard: 0px` au repos.
+
+**Boundary:** le contrôle final du clic hors dock/blur a été interrompu lorsque le contexte navigateur est redevenu indisponible; les captures Playwright multi-contextes ont également fait crasher Chromium dans le sandbox. La preuve responsive `320/390/768/1280`, clavier ouvert, scroll lock et blur complet reste donc `partial`, sans être requalifiée artificiellement. Le globe et le smoke de production sont observés; la panne locale précédente n’est pas retenue comme panne produit.
+
+**Decision:** conserver le milestone UI Buyer en `source/build verified + production smoke observed + responsive visual proof partial`. Ne pas modifier de logique métier ni de données; ne pas déclarer la readiness globale tant que les gates Push/VAPID, Free/Pro/billing, entitlements et les autres preuves de release ne sont pas fermées.
