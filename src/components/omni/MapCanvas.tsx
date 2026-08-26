@@ -301,7 +301,23 @@ function addOmniLayers(map: MapInstance, showFacilities: boolean) {
       paint: { "text-color": "#ffffff" },
     });
   }
+  if (!hasLayer(map, "omni-point-pulse")) {
+    map.addLayer({
+      id: "omni-point-pulse",
+      type: "circle",
+      source: "omni-facilities",
+      filter: ["!", ["has", "point_count"]],
+      layout: { visibility: showFacilities ? "visible" : "none" },
+      paint: {
+        "circle-color": "#e2793f",
+        "circle-radius": 14,
+        "circle-opacity": ["case", ["boolean", ["feature-state", "selected"], false], 0.25, 0],
+        "circle-blur": 0.35,
+      },
+    });
+  }
   if (!hasLayer(map, "omni-point-halo")) {
+
     map.addLayer({
       id: "omni-point-halo",
       type: "circle",
