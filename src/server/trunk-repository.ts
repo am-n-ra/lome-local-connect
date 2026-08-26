@@ -2041,7 +2041,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         with eligible as (
           select q.transaction_id, q.token_hash, a.id as actor_account_id,
-            s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor,
+            s.facility_id, s.product_id, p.name as product_name, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor,
             coalesce((
               select e.state
               from v2_transaction_events e
@@ -2051,6 +2051,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             ), 'intent_created') as current_state
           from v2_qr_tokens q
           join v2_transaction_snapshots s on s.transaction_id = q.transaction_id
+          join v2_products p on p.id = s.product_id
           join v2_transaction_members m on m.transaction_id = q.transaction_id and m.role = 'seller'
           join v2_accounts a on a.id = m.account_id
           where q.transaction_id = ${input.transactionId}::uuid
@@ -2094,9 +2095,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning entity_id
         )
         select u.transaction_id, u.verified_at, u.replay_count,
-          s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor
+          s.facility_id, s.product_id, p.name as product_name, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor
         from updated u
         join v2_transaction_snapshots s on s.transaction_id = u.transaction_id
+        join v2_products p on p.id = s.product_id
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
@@ -2108,6 +2110,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         nextReplayCount: Number(row.replay_count),
         facilityId: String(row.facility_id),
         productId: String(row.product_id),
+        productName: String(row.product_name ?? 'Offre catalogue'),
         quantity: Number(row.quantity),
         unitPriceMinor: Number(row.unit_price_minor),
         couponCode: row.coupon_code === null || row.coupon_code === undefined ? null : String(row.coupon_code),

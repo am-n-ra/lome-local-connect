@@ -211,6 +211,7 @@ export interface QrVerificationResult {
   nextReplayCount: number;
   facilityId?: string;
   productId?: string;
+  productName?: string;
   quantity?: number;
   unitPriceMinor?: number;
   couponCode?: string | null;

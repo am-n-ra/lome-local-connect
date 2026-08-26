@@ -119,6 +119,7 @@ export interface QrVerificationResult {
   reason?: string;
   facilityId?: string;
   productId?: string;
+  productName?: string;
   quantity?: number;
   unitPriceMinor?: number;
   couponCode?: string | null;
