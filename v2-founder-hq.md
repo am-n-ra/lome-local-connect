@@ -994,3 +994,10 @@ Le QR transactionnel est émis par le Buyer. Le Seller UI ne propose plus d’é
 **Limites :** la caméra n’est pas encore prouvée sur iPhone réel ; `BarcodeDetector` dépend du navigateur et de l’autorisation caméra. Le chat transactionnel, les avis post-fulfilment, le coupon métier complet et le paiement Wallet marchand ne sont pas déclarés livrés. Aucun compte ou rôle réel n’a été modifié.
 
 **Prochain gate :** preuve Heartwood/Rings sur identité Buyer/Seller, snapshot prix/coupon, expiration, rejeu, mauvais acteur et reprise manuelle, puis déploiement contrôlé sur l’origine canonique uniquement.
+
+
+## Rings checkpoint — production deployment Seller Scanner — 2026-08-26
+
+Le commit `386dcb08dd562ee6c03ff614fd6d1fef219218c0` (`feat(transaction): migrate seller scanner to buyer QR snapshot`) a été poussé sur `omni-v2-rebuild` et déployé par Vercel en production sous `dpl_EpmitUvxKZgGBhWoe7BdER88v1Ma`. L’état est `READY`, avec les alias canoniques `https://omni.sparkafrika.online/`, `https://omniviewer.vercel.app/` et `https://lome-local-connect.vercel.app/`, et 12 fonctions Node.
+
+Cette preuve confirme le déploiement du code, pas encore la preuve appareil de la caméra ni le règlement de paiement Omni. Les limites Heartwood restent ouvertes : test caméra/permission sur iPhone réel, identity/membership négatifs, expiration/rejeu, mauvais acteur, chat transactionnel, avis post-fulfilment et vérification utilisateur sur l’origine canonique.
