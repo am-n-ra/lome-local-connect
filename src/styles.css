@@ -696,3 +696,202 @@
     max-height: 94dvh;
   }
 }
+
+/* ============================================================
+   Omni v2 — couche « UI vivante » : viewport mobile, squelettes,
+   micro-animations. Tout est neutralisé en reduced-motion.
+   ============================================================ */
+
+:root {
+  --omni-vvh: 100dvh;
+  --omni-keyboard: 0px;
+  --omni-ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hauteur réelle du viewport visible : la scène ne se décale plus
+   quand le clavier mobile s'ouvre. */
+.omni-stage-viewport {
+  height: var(--omni-vvh, 100dvh);
+  min-height: var(--omni-vvh, 100dvh);
+}
+
+/* Les couches flottantes (dock, feuilles) se posent au-dessus du clavier. */
+.omni-keyboard-aware {
+  transform: translateY(calc(-1 * var(--omni-keyboard, 0px)));
+  transition: transform 220ms var(--omni-ease-soft);
+}
+
+/* --- Squelettes --------------------------------------------------- */
+.omni-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--omni-ink) 7%, var(--omni-paper));
+}
+
+.omni-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--omni-paper-bright) 85%, transparent) 50%,
+    transparent 100%
+  );
+  animation: omni-shimmer 1.35s ease-in-out infinite;
+}
+
+@keyframes omni-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* --- Entrées / feuilles ------------------------------------------- */
+@keyframes omni-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes omni-pop-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  70% {
+    transform: translateY(-2px) scale(1.012);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes omni-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.omni-sheet-enter {
+  animation: omni-rise-in 320ms var(--omni-ease-soft) both;
+}
+
+.omni-card-enter {
+  animation: omni-pop-in 340ms var(--omni-ease-soft) both;
+}
+
+.omni-step-enter {
+  animation: omni-slide-in 260ms var(--omni-ease-soft) both;
+}
+
+/* Apparition en cascade des cartes de résultats. */
+.omni-stagger > * {
+  animation: omni-pop-in 320ms var(--omni-ease-soft) both;
+}
+
+.omni-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.omni-stagger > *:nth-child(2) { animation-delay: 45ms; }
+.omni-stagger > *:nth-child(3) { animation-delay: 90ms; }
+.omni-stagger > *:nth-child(4) { animation-delay: 135ms; }
+.omni-stagger > *:nth-child(5) { animation-delay: 180ms; }
+.omni-stagger > *:nth-child(6) { animation-delay: 215ms; }
+.omni-stagger > *:nth-child(7) { animation-delay: 250ms; }
+.omni-stagger > *:nth-child(8) { animation-delay: 285ms; }
+
+/* --- Marqueur utilisateur vivant ---------------------------------- */
+.omni-user-marker-ring {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, 0);
+  border-radius: 999px;
+  background: color-mix(in oklab, #245646 26%, transparent);
+  animation: omni-breathe 2.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes omni-breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translate(-50%, 0) scale(0.72);
+  }
+  50% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(1.5);
+  }
+}
+
+/* --- Barre de progression de la révélation carte ------------------ */
+.omni-progress-track {
+  position: relative;
+  height: 3px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--omni-ink) 12%, transparent);
+}
+
+.omni-progress-track::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  width: 42%;
+  border-radius: 999px;
+  background: var(--omni-orange);
+  animation: omni-progress-sweep 1.15s ease-in-out infinite;
+}
+
+@keyframes omni-progress-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(255%);
+  }
+}
+
+/* --- Appui tactile ------------------------------------------------- */
+.omni-pressable {
+  transition:
+    transform 140ms var(--omni-ease-soft),
+    box-shadow 140ms ease;
+}
+
+.omni-pressable:active {
+  transform: scale(0.975);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omni-keyboard-aware,
+  .omni-sheet-enter,
+  .omni-card-enter,
+  .omni-step-enter,
+  .omni-stagger > *,
+  .omni-pressable {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .omni-skeleton::after,
+  .omni-user-marker-ring,
+  .omni-progress-track::after {
+    animation: none !important;
+  }
+}
