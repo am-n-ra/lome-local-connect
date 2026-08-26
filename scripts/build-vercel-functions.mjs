@@ -3,7 +3,6 @@ import { build } from 'esbuild';
 const entries = {
   'api/v2/public/facilities.js': 'src/server/vercel/public-facilities.ts',
   'api/v2/facilities/[id].js': 'src/server/vercel/facility-detail.ts',
-  'api/v2/admin/seller-activations.js': 'src/server/vercel/admin-seller-activations.ts',
   'api/v2/availability.js': 'src/server/vercel/availability.ts',
   'api/v2/purchase-intents.js': 'src/server/vercel/purchase-intents.ts',
   'api/v2/external-payment-confirmations.js': 'src/server/vercel/external-payment-confirmations.ts',

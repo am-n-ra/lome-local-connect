@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerAvailabilityQueue, getTransaction, issueQrToken, listPublicFacilities, rebindDemoSeller, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -81,6 +81,39 @@ describe('listPublicFacilities search contract', () => {
     await createPurchaseIntent({ responseId: 'response-1', token: 'session-token', idempotencyKey: 'intent-response-1' });
 
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/purchase-intents', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'intent-response-1' }, body: JSON.stringify({ responseId: 'response-1' }) });
+  });
+
+  it('reads the seller activation queue through the existing public function route', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { candidates: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getSellerActivationQueue({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?reviewer=seller-activations',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('posts seller account suspension through the existing facility detail function route', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', suspended: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await setSellerAccountSuspension({ accountId: 'account-1', suspended: true, reason: 'Controlled test reason', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/account-1?action=reviewer-seller-suspension',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ suspended: true, reason: 'Controlled test reason' }) },
+    );
+  });
+
+  it('posts seller activation through the existing facility detail function route', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', onboardingState: 'seller_ready', activated: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await activateSellerAccount({ accountId: 'account-1', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/account-1?action=reviewer-seller-activation',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({}) },
+    );
   });
 
   it('posts a Seller QR issuance and verification with the bearer token', async () => {

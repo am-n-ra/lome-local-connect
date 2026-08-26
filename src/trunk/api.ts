@@ -290,13 +290,13 @@ export async function reviewFacilityClaim(input: { requestId: string; outcome: R
 }
 
 export async function getSellerActivationQueue(input: { token: string }): Promise<ApiResult<{ candidates: Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string; suspended: boolean }> }>> {
-  const response = await fetchWithRecovery('/api/v2/admin/seller-activations', {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=seller-activations', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse(response);
 }
 export async function setSellerAccountSuspension(input: { accountId: string; suspended: boolean; reason: string; token: string }): Promise<ApiResult<{ accountId: string; suspended: boolean }>> {
-  const response = await fetchWithRecovery(`/api/v2/admin/seller-accounts/${encodeURIComponent(input.accountId)}`, {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.accountId)}?action=reviewer-seller-suspension`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ suspended: input.suspended, reason: input.reason }),
@@ -304,7 +304,7 @@ export async function setSellerAccountSuspension(input: { accountId: string; sus
   return parse(response);
 }
 export async function activateSellerAccount(input: { accountId: string; token: string }): Promise<ApiResult<{ accountId: string; onboardingState: 'seller_ready'; activated: true }>> {
-  const response = await fetchWithRecovery(`/api/v2/admin/seller-activations/${encodeURIComponent(input.accountId)}`, {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.accountId)}?action=reviewer-seller-activation`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({}),

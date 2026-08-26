@@ -364,6 +364,51 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'seller-activations') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized reviewer to view seller activation candidates.'));
+        return true;
+      }
+      const result = await repository.listSellerActivationQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'reviewer-seller-suspension') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized reviewer to change seller account status.'));
+        return true;
+      }
+      const accountId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const input = await parseRequestBody(req);
+      const suspended = input.suspended === true || input.suspended === false ? input.suspended : null;
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      if (!uuidPattern.test(accountId) || suspended === null || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid account status and bounded reason.'));
+        return true;
+      }
+      const result = await repository.setSellerAccountSuspension({ authUserId, accountId, suspended, reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'reviewer-seller-activation') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized reviewer to activate a seller account.'));
+        return true;
+      }
+      const accountId = pathname.slice('/api/v2/facilities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(accountId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid account identifier.'));
+        return true;
+      }
+      const result = await repository.activateSellerAccount({ authUserId, accountId, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/admin/seller-activations') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
