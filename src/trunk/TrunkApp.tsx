@@ -688,7 +688,7 @@ export function TrunkApp() {
     setOsmSelectedIds([]);
     setOsmBatchState('idle');
     setOsmBatchResult(null);
-    const bounds = region === 'lome' ? [-1.4, 5.9, 1.8, 6.5] as [number, number, number, number] : [1.0, 5.8, 1.8, 6.5] as [number, number, number, number];
+    const bounds = region === 'lome' ? [1.05, 5.95, 1.4, 6.35] as [number, number, number, number] : [1.05, 5.95, 1.35, 6.3] as [number, number, number, number];
     try {
       const items = await discoverFromOverpass(bounds);
       setOsmDiscoveryItems(items.slice(0, 100));
