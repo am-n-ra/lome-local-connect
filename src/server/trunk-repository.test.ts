@@ -1059,3 +1059,63 @@ describe('review and inbox Root seam', () => {
     expect(seenCall.queries[0]).toContain('seen_at = coalesce');
   });
 });
+
+describe('Buyer transaction rating persistence Root seam', () => {
+  it('persists a rating after receipt and returns the rated transaction payload', async () => {
+    const call = stubSql([{
+      id: 'rating-1',
+      transaction_id: 'transaction-1',
+      score: 5,
+      note: 'Très bonne expérience.',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.submitTransactionRating({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      score: 5,
+      note: ' Très bonne expérience. ',
+      correlationId: 'corr-rating-1',
+      now: '2026-08-26T20:00:00.000Z',
+    });
+
+    expect(result).toEqual({
+      ratingId: 'rating-1',
+      transactionId: 'transaction-1',
+      score: 5,
+      note: 'Très bonne expérience.',
+      state: 'rated',
+    });
+    expect(call.queries[0]).toContain('v2_ratings');
+    expect(call.queries[0]).toContain('v2_transaction_events');
+  });
+
+  it('rejects an invalid score before touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.submitTransactionRating({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      score: 6,
+      note: '',
+      correlationId: 'corr-rating-invalid',
+      now: '2026-08-26T20:00:00.000Z',
+    })).rejects.toBeInstanceOf(TransactionPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects rating when the transaction is not in received or rated state', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.submitTransactionRating({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      score: 4,
+      note: '',
+      correlationId: 'corr-rating-stale',
+      now: '2026-08-26T20:00:00.000Z',
+    })).rejects.toBeInstanceOf(TransactionPolicyError);
+  });
+});
