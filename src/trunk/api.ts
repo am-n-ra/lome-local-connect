@@ -128,7 +128,7 @@ export async function createPurchaseIntent(input: { responseId: string; token: s
 }
 
 export async function issueBuyerQrToken(input: { transactionId: string; token: string }): Promise<ApiResult<QrTokenIssueResult>> {
-  const response = await fetchWithRecovery('/api/v2/buyer-qr-issuances', {
+  const response = await fetchWithRecovery('/api/v2/qr-issuances?actor=buyer', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ transactionId: input.transactionId }),

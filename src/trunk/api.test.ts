@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -114,6 +114,14 @@ describe('listPublicFacilities search contract', () => {
       '/api/v2/facilities/account-1?action=reviewer-seller-activation',
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({}) },
     );
+  });
+
+  it('posts a Buyer QR issuance through the shared QR function route with an explicit actor marker', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { transactionId: 'tx-1', token: 'qr-token' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await issueBuyerQrToken({ transactionId: 'tx-1', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/qr-issuances?actor=buyer', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ transactionId: 'tx-1' }) });
   });
 
   it('posts a Seller QR issuance and verification with the bearer token', async () => {

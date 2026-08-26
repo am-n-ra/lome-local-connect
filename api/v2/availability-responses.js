@@ -2719,7 +2719,7 @@ async function handleApi(req, res, pathname, url) {
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === "POST" && pathname === "/api/v2/buyer-qr-issuances") {
+    if (req.method === "POST" && (pathname === "/api/v2/buyer-qr-issuances" || pathname === "/api/v2/qr-issuances" && url.searchParams.get("actor") === "buyer")) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the Buyer before showing a transaction QR code."));
