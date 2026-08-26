@@ -947,7 +947,62 @@ export function MapCanvas({
       mappableCount: geojson.features.length,
       visible: showFacilities && !revealRunning,
     });
+
+    // Apparition douce des pins quand un nouveau jeu de résultats arrive.
+    if (reducedMotionRef.current || !geojson.features.length) return;
+    let frame: number | null = null;
+    const start = performance.now();
+    const duration = 340;
+    const step = (time: number) => {
+      const progress = Math.min(1, (time - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      try {
+        map.setPaintProperty("omni-points", "circle-opacity", 0.2 + eased * 0.78);
+        map.setPaintProperty("omni-point-halo", "circle-opacity", eased * 0.9);
+        map.setPaintProperty("omni-pin-icons", "icon-opacity", eased);
+      } catch {
+        return;
+      }
+      if (progress < 1) frame = window.requestAnimationFrame(step);
+    };
+    frame = window.requestAnimationFrame(step);
+    return () => {
+      if (frame != null) window.cancelAnimationFrame(frame);
+    };
   }, [gl, facilities, mapReadyVersion, revealRunning, showFacilities]);
+
+  // Halo pulsé sur le pin sélectionné.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !readyRef.current || !selectedId || reducedMotion) return;
+    let frame: number | null = null;
+    const start = performance.now();
+    const loop = (time: number) => {
+      const phase = ((time - start) % 1800) / 1800;
+      try {
+        map.setPaintProperty("omni-point-pulse", "circle-radius", 14 + phase * 22);
+        map.setPaintProperty("omni-point-pulse", "circle-opacity", [
+          "case",
+          ["boolean", ["feature-state", "selected"], false],
+          Math.max(0, 0.32 * (1 - phase)),
+          0,
+        ]);
+      } catch {
+        return;
+      }
+      frame = window.requestAnimationFrame(loop);
+    };
+    frame = window.requestAnimationFrame(loop);
+    return () => {
+      if (frame != null) window.cancelAnimationFrame(frame);
+      try {
+        map.setPaintProperty("omni-point-pulse", "circle-opacity", 0);
+      } catch {
+        /* la carte peut déjà être démontée */
+      }
+    };
+  }, [mapReadyVersion, reducedMotion, selectedId]);
+
 
   useEffect(() => {
     const map = mapRef.current;
