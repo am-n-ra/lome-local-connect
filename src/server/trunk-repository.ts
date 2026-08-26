@@ -1489,7 +1489,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           join v2_transaction_members m on m.transaction_id = s.transaction_id
           join actor a on a.actor_account_id = m.account_id
           where s.transaction_id = ${input.transactionId}::uuid
-            and m.role = ${input.actorRole}
+            and m.role = ${input.actorRole}::text
           for update of s
         ),
         eligible as (
@@ -1498,13 +1498,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
              or (
                current_state = ${input.from}
                and (
-                 (${input.actorRole} = 'seller' and current_state = 'qr_ready' and ${input.to} = 'qr_verified')
-                 or (${input.actorRole} = 'buyer' and current_state = 'qr_verified' and ${input.to} = 'payment_declared')
-                 or (${input.actorRole} = 'seller' and current_state = 'payment_declared' and ${input.to} = 'payment_confirmed')
-                 or (${input.actorRole} = 'seller' and current_state = 'payment_confirmed' and ${input.to} = 'fulfilment_pending')
-                 or (${input.actorRole} = 'seller' and current_state = 'fulfilment_pending' and ${input.to} = 'fulfilled')
-                 or (${input.actorRole} = 'buyer' and current_state = 'fulfilled' and ${input.to} = 'received')
-                 or (${input.actorRole} = 'buyer' and current_state = 'received' and ${input.to} = 'rated')
+                 (${input.actorRole}::text = 'seller' and current_state = 'qr_ready' and ${input.to}::text = 'qr_verified')
+                 or (${input.actorRole}::text = 'buyer' and current_state = 'qr_verified' and ${input.to}::text = 'payment_declared')
+                 or (${input.actorRole}::text = 'seller' and current_state = 'payment_declared' and ${input.to}::text = 'payment_confirmed')
+                 or (${input.actorRole}::text = 'seller' and current_state = 'payment_confirmed' and ${input.to}::text = 'fulfilment_pending')
+                 or (${input.actorRole}::text = 'seller' and current_state = 'fulfilment_pending' and ${input.to}::text = 'fulfilled')
+                 or (${input.actorRole}::text = 'buyer' and current_state = 'fulfilled' and ${input.to}::text = 'received')
+                 or (${input.actorRole}::text = 'buyer' and current_state = 'received' and ${input.to}::text = 'rated')
                )
              )
         ),
@@ -1531,7 +1531,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         audited as (
           insert into v2_audit_events
             (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
-          select r.actor_account_id, 'transaction_state_transition', 'transaction', r.transaction_id::text, ${input.correlationId}, ${input.from} || '->' || ${input.to}, ${input.now}::timestamptz
+          select r.actor_account_id, 'transaction_state_transition', 'transaction', r.transaction_id::text, ${input.correlationId}, ${input.from}::text || '->' || ${input.to}::text, ${input.now}::timestamptz
           from result r
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
