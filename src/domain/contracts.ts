@@ -12,6 +12,16 @@ export type FacilityTrust =
   | 'suspended';
 
 export type FacilityPlan = 'free' | 'pro_active' | 'pro_expired';
+export type SupportedCurrency = 'XOF' | 'GHS' | 'EUR' | 'USD';
+export type DiscountKind = 'percentage' | 'fixed';
+
+export interface ProductOffer {
+  kind: DiscountKind;
+  valueMinor: number;
+  currency: SupportedCurrency;
+  validFrom?: string | null;
+  validUntil?: string | null;
+}
 export type SlotSource = 'free' | 'wallet' | 'workspace';
 export type SlotStatus = 'available' | 'assigned' | 'revoked';
 

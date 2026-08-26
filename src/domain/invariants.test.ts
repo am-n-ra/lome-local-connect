@@ -5,9 +5,14 @@ import {
   canCreateConfirmedTrust,
   canPublishFacility,
   confirmedWalletBalanceMinor,
+  discountAmountMinor,
+  displayCurrencyForCountry,
   hasFreeSlot,
+  netPriceMinor,
   nextTrustAfterSale,
   offerLimitFor,
+  SELLER_PRO_ANNUAL_PRICE_USD_MINOR,
+  SELLER_PRO_PRICE_USD_MINOR,
 } from './invariants';
 
 const baseFacility: Facility = {
@@ -50,6 +55,27 @@ describe('Nature Way Roots invariants', () => {
     expect(offerLimitFor('free', 'unclaimed')).toBe(0);
     expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 4)).toBe(true);
     expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 5)).toBe(false);
+  });
+
+  it('maps supported locations to the user-facing currency without silent conversion', () => {
+    expect(displayCurrencyForCountry('TG')).toBe('XOF');
+    expect(displayCurrencyForCountry('GH')).toBe('GHS');
+    expect(displayCurrencyForCountry('FR')).toBe('EUR');
+    expect(displayCurrencyForCountry(null)).toBe('USD');
+  });
+
+  it('requires a positive Seller-funded discount and keeps a non-zero net price', () => {
+    expect(discountAmountMinor(1000, 'percentage', 10)).toBe(100);
+    expect(netPriceMinor(1000, 'percentage', 10)).toBe(900);
+    expect(discountAmountMinor(1000, 'fixed', 250)).toBe(250);
+    expect(() => netPriceMinor(1000, 'percentage', 0)).toThrow('INVALID_DISCOUNT');
+    expect(() => netPriceMinor(1000, 'fixed', 1000)).toThrow('DISCOUNT_TOO_LARGE');
+  });
+
+  it('keeps Seller Pro facility-scoped at the confirmed price', () => {
+    expect(SELLER_PRO_PRICE_USD_MINOR).toBe(1000);
+    expect(SELLER_PRO_ANNUAL_PRICE_USD_MINOR).toBe(10000);
+    expect(offerLimitFor('pro_active', 'unconfirmed')).toBe(Number.POSITIVE_INFINITY);
   });
 
   it('creates confirmed trust only at three qualifying sales', () => {

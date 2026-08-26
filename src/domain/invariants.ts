@@ -1,13 +1,51 @@
 import type {
+  DiscountKind,
   Facility,
   FacilityPlan,
   FacilitySlot,
   FacilityTrust,
+  SupportedCurrency,
   WalletLedgerEntry,
 } from './contracts';
 
 export const FREE_OFFER_LIMIT = 5;
 export const CONFIRMED_SALES_THRESHOLD = 3;
+export const SELLER_PRO_PRICE_USD_MINOR = 1_000;
+export const SELLER_PRO_TERM_DAYS = 30;
+export const SELLER_PRO_ANNUAL_PRICE_USD_MINOR = 10_000;
+export const SUPPORTED_DISPLAY_CURRENCIES: readonly SupportedCurrency[] = ['XOF', 'GHS', 'EUR', 'USD'];
+
+export function displayCurrencyForCountry(countryCode: string | null | undefined): SupportedCurrency {
+  switch ((countryCode ?? '').trim().toUpperCase()) {
+    case 'TG':
+    case 'BJ':
+      return 'XOF';
+    case 'GH':
+      return 'GHS';
+    case 'FR':
+      return 'EUR';
+    default:
+      return 'USD';
+  }
+}
+
+export function discountAmountMinor(basePriceMinor: number, kind: DiscountKind, valueMinor: number): number {
+  if (!Number.isInteger(basePriceMinor) || basePriceMinor <= 0) throw new Error('INVALID_BASE_PRICE');
+  if (!Number.isInteger(valueMinor) || valueMinor <= 0) throw new Error('INVALID_DISCOUNT');
+  if (kind === 'percentage') {
+    if (valueMinor > 90) throw new Error('DISCOUNT_TOO_LARGE');
+    return Math.floor((basePriceMinor * valueMinor) / 100);
+  }
+  if (valueMinor >= basePriceMinor) throw new Error('DISCOUNT_TOO_LARGE');
+  return valueMinor;
+}
+
+export function netPriceMinor(basePriceMinor: number, kind: DiscountKind, valueMinor: number): number {
+  const amount = discountAmountMinor(basePriceMinor, kind, valueMinor);
+  const net = basePriceMinor - amount;
+  if (net <= 0) throw new Error('INVALID_NET_PRICE');
+  return net;
+}
 
 export function offerLimitFor(plan: FacilityPlan, trust: FacilityTrust): number {
   if (plan === 'pro_active') return Number.POSITIVE_INFINITY;
