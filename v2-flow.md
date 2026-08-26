@@ -407,3 +407,120 @@ The flow is ready for the Trunk when:
 5. protected transitions preserve context and public/private boundaries;
 6. no card, pin, menu item or CTA implies a transition it cannot perform;
 7. the first vertical slice has a testable state path from map arrival to availability comparison.
+
+## 16. 2026-08-26 — Confirmed post-intent handoff amendment
+
+The owner confirmed that the post-intent experience must be a real two-sided operational handoff, not only a payment-state demo. The following behavior is now the product direction for the next Species/Root reconciliation:
+
+```text
+eligible response
+→ buyer creates intent
+→ transaction and immutable snapshot created
+→ buyer sees transaction room
+→ buyer sees scoped chat, itinerary and Seller contact
+→ Seller receives an in-app intent notification (and Push only when configured/consented)
+→ Seller opens the notification or a safe transaction link
+→ both actors enter the same transaction-scoped room with role-specific actions
+→ Buyer presents a transaction-bound QR
+→ Seller opens Scan QR, grants camera permission, scans Buyer QR
+→ server verifies transaction/member/expiry/replay and routes Seller to the correct transaction
+→ buyer may declare the configured external payment method
+→ seller acknowledges or rejects according to the state contract
+→ seller fulfils; buyer confirms receipt; rating closes the journey
+```
+
+### Post-intent privacy and surface ownership
+
+Before intent, the public facility and comparison surfaces must not expose Seller contact, itinerary, private chat or a handoff QR. After `transaction_created`, the Buyer and Seller transaction members may access the transaction room. The Buyer sees the Seller’s approved contact and itinerary context; the Seller sees only the Buyer information needed for the authorized handoff and the role-specific transaction actions. Chat is scoped to that transaction and cannot advance state by itself.
+
+The Seller notification is a resumable entry point, not a second transaction. If the Seller does not see the notification, the Buyer may share a safe Omni transaction link or present the Buyer QR through an approved fallback. A shared link must never carry a raw token or bypass authentication; after sign-in it resolves only to a server-authorized transaction room. The manual or camera QR path must also resolve to the correct transaction without allowing a client-selected transaction ID to authorize access.
+
+### QR ownership correction
+
+The current deployed implementation issues the QR from the Seller workspace and accepts a pasted payload. That is inconsistent with this confirmed product direction. The Root change must move QR issuance/display to the Buyer transaction room after intent creation, while preserving server-issued, expiring and replay-safe tokens. The Seller’s primary handoff action becomes `Scanner le QR`, with explicit camera permission, live preview, QR detection, verification result, manual fallback and recovery for expired, replayed or mismatched codes. The Seller remains the actor that verifies the Buyer QR at handoff.
+
+### Omni discount and payment boundary
+
+Omni discounts belong to the **offer/transaction snapshot**, not to an untrusted client claim. The Buyer must see the base price, discount rule, discount amount and final payable amount before creating intent. The Seller response may propose an eligible offer, but the server validates the rule and snapshots the resulting commercial values at intent creation. V1 still does not route buyer money to the Seller: the Buyer may pay the Seller externally or use a future Omni platform charge only for approved Omni Wallet/plan purchases. A discounted external handoff does not create a Seller payout or settlement record.
+
+This amendment does not authorize payment-provider integration, Wallet recharge, coupon issuance or a discount engine by itself. Those require the commercial Root contract, provider configuration, webhook signature verification, idempotent reconciliation, refund/reversal handling and owner-approved prices before implementation.
+
+## 17. 2026-08-26 — Bulk Availability and global Wallet clarification
+
+### Search versus availability
+
+The Buyer does not pay for ordinary search or for the ordinary single-facility availability check. Search remains free for every Omni user. The product must not force a Buyer who searched `banane` to open ten facilities and repeat the same form ten times. After a search returns eligible facilities, the Buyer may select a **Bulk Availability** action, set quantity and other constraints once, and ask the eligible facilities in one operation.
+
+Budget may filter the Buyer’s discovery results and shape the Buyer’s own comparison request, but the Seller response surface receives the quantity and the relevant product/request context, not the Buyer’s private maximum budget unless a later approved policy explicitly says otherwise. Sellers answer only `available`, `partial` or `unavailable`, with any valid quantity and offer information allowed by the response contract.
+
+```text
+free search
+→ eligible multi-facility results
+→ bulk constraints (quantity, location/scope, optional budget/filter context)
+→ cost preview
+→ credit authorization
+→ one bulk availability job
+→ per-facility responses
+→ comparison
+```
+
+### Credit model
+
+Bulk is measured in **availability credits**, not a simple number of requests. The server estimates a cost from the targeted facility count and approved constraint/processing weight, persists that `credit_cost` before execution and consumes the allowance atomically. A Free account receives three included Bulk Availability operations per billing period, subject to the published cost/eligibility guardrail. A Pro account receives an included monthly credit allowance measured in units, not a fixed number of requests; heavier searches consume more units. Additional Bulk credits may be purchased from the Omni Wallet after the commercial price and unit schedule are approved. A cost preview must be visible before confirmation, and insufficient-credit recovery must preserve the query and constraints.
+
+The exact estimator, Free guardrail, Pro monthly allowance, overage unit price and period are Root decisions. The historical main-branch schema already records `credit_cost`, including a later compatibility rule allowing zero for manual/single-facility checks or approved Pro bulk paths, but these migrations are not part of the active V2 branch and must not be treated as deployed capability.[1]
+
+### Global Wallet and local currency
+
+The Omni Wallet is one logical account-level Wallet with internal ledger buckets for money and platform credits; the user does not manage disconnected wallets. The display and recharge currency is selected from the confirmed location context when possible: XOF for Togo/Benin and other configured CFA coverage, GHS for Ghana, EUR for France, and a safe fallback when location is unavailable. A currency conversion, supported-country and refund policy must be explicit before multi-currency recharge is enabled; Omni must never silently convert a balance.
+
+Subscriptions, Facility Slots and Bulk credit overages consume the appropriate internal allocation from the same Wallet. Auto-renewal is an explicit opt-in: at expiry, the server checks whether the Wallet has the exact amount in the subscription currency, consumes it idempotently and extends the entitlement. If funds are insufficient, the entitlement expires cleanly and the user receives a notice; no card is charged, no negative balance is created and no partial renewal is shown as successful.
+
+The Wallet is not Seller earnings. V1 has no Buyer-to-Seller settlement, Seller payout or withdrawal. FedaPay recharge is a platform funding boundary only. The reusable implementation found on `origin/main` is a legacy/vendor-scoped XOF deposit flow; it demonstrates hosted checkout, provider transaction lookup, signed webhook verification and idempotent crediting, but it is not wired into the current V2 account Wallet and requires a Root adaptation before reuse.[2]
+
+### Future agent boundary
+
+A future Omni agent may automate the same search, Bulk Availability and comparison operations that a Buyer can perform manually. It may consume the same Bulk/AI credit budgets and may recommend the closest, cheapest or otherwise user-selected option, but it may not invent a new authority, bypass availability limits, expose private contact before intent or alter a transaction state without the existing server contract.
+
+## References
+
+[1]: ./db/migrations/030_demand_credit_cost_allow_zero.sql "Historical Bulk Availability credit compatibility migration"
+[2]: ./src/lib/fedapay.server.ts on origin/main "Historical FedaPay checkout, reconciliation and signed-webhook implementation"
+
+## 18. 2026-08-26 — Seller-distributed facility QR and on-site offer handoff
+
+A Seller who wants to be presented as an active Omni offer partner must do more than receive availability requests. The Seller must maintain an Omni-readable catalogue and publish at least one active product/service offer or reduction. Omni generates a stable facility QR or link automatically; the Seller may expose it physically or share it socially, but distribution is voluntary. This QR is an acquisition and catalogue entry point, not a transaction credential.
+
+The public facility QR supports both first-time and returning users:
+
+```text
+public facility QR/link
+→ install or open Omni
+→ preserve facilityId + campaign/source + optional product context
+→ public facility/catalogue context
+→ select product + quantity
+→ validate active offer server-side
+→ create onsite_offer intent
+→ issue Buyer transaction QR
+→ Seller scans at counter
+→ Seller validates/accepts advantage
+→ Buyer pays Seller externally
+→ Seller confirms receipt/fulfilment in Omni
+```
+
+The facility QR may be printed at the entrance, counter or next to products when the Seller chooses to distribute it. It contains only a public facility reference and optional campaign/source metadata. When distributed, its source may attribute visits, offer activations, verified transactions and eligible reviews to the Seller’s channel. It must not contain a session, raw transaction token or private contact. If the user has not installed Omni, the destination may offer PWA installation or web continuation and must restore the facility context after authentication. If the user already has Omni, the link opens the facility directly instead of forcing global search.
+
+This on-site intent is distinct from `availability_request`: the Buyer is already facing the facility and is not asking remote Sellers whether the product exists. Omni validates the listed product, declared quantity, price, currency, active offer, reduction rule, limits and expiry, then creates an immutable offer snapshot. If the offer includes a coupon, the coupon is selected/issued server-side for the authenticated Buyer account, with its eligibility, consumption state and transaction binding recorded. The transaction QR carries only a server-verifiable reference to that transaction/coupon binding; it must never expose a reusable coupon secret or rely on client-supplied price/discount fields. If the product is not listed or the offer is unavailable, no transaction QR is created; the user may return to global discovery.
+
+At the counter, the Buyer may describe the action as paying with Omni, but V1 semantics are narrower: Omni validates and records the eligible offer and transaction; the Seller accepts the external payment method and receives the money outside Omni. The Seller’s scan proves QR/offer validity, not payment receipt. `external_payment_declared` and `seller_payment_acknowledged` remain separate events from `qr_verified` and `fulfilment_completed`.
+
+The Seller Scanner is the operational entry point and must route a successful verification directly to the correct transaction room. Verification resolves the server-side Buyer, facility, product, coupon/offer snapshot, amount and timestamps; it must not trust a QR payload as the source of truth. A Seller who missed the Inbox/Push event can reach the same transaction through Scanner or a secure authenticated deep link. Chat helps clarify the product or offer after intent; it does not prove payment and cannot advance fulfilment without the authorized Seller action.
+
+The two QR classes must remain separate:
+
+| QR class | Owner | Reader | Authority |
+|---|---|---|---|
+| Facility QR | Seller/Omni | Buyer | Public facility/catalogue entry; no private access |
+| Buyer transaction QR | Omni after account-bound offer/coupon binding | Seller | Expiring reference to the transaction/coupon binding; replay-safe verification; no raw coupon or private data |
+
+A facility without an active offer may remain publicly listed only as a clearly labelled non-offer facility. It must not be advertised as an active Omni discount partner, and its automatically generated QR must not promise a discount that the catalogue cannot fulfil. After an eligible fulfilment, the Buyer enters the review step; a review is tied to that transaction and cannot be created from a scan or abandoned intent alone. The QR is therefore an optional growth channel, while verified transactions and reviews build the Seller’s credibility.

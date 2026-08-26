@@ -1803,6 +1803,65 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    async issueBuyerQrToken(input: {
+      authUserId: string;
+      transactionId: string;
+      correlationId: string;
+    }): Promise<QrTokenIssuePersistenceResult> {
+      const token = randomBytes(32).toString('base64url');
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const rows = await retryDatabase(() => sql`
+        with buyer as (
+          select a.id as buyer_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        eligible as (
+          select s.transaction_id, m.account_id as buyer_account_id
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'buyer'
+          join buyer b on b.buyer_account_id = m.account_id
+          where s.transaction_id = ${input.transactionId}::uuid
+            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') = 'intent_created'
+        ),
+        inserted as (
+          insert into v2_qr_tokens (transaction_id, token_hash, expires_at)
+          select e.transaction_id, ${tokenHash}, ${expiresAt}::timestamptz
+          from eligible e
+          on conflict (transaction_id) do nothing
+          returning transaction_id, expires_at
+        ),
+        event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select i.transaction_id, e.buyer_account_id, 'qr_ready', jsonb_build_object('issuer', 'buyer'), now()
+          from inserted i
+          join eligible e on e.transaction_id = i.transaction_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.buyer_account_id, 'qr_issued', 'transaction', i.transaction_id::text, ${input.correlationId}, 'buyer_issued', now()
+          from inserted i
+          join eligible e on e.transaction_id = i.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id, expires_at from inserted
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new TransactionPolicyError('Buyer QR issuance requires an authorized buyer transaction in intent-created state.');
+      return {
+        transactionId: String(row.transaction_id),
+        token,
+        expiresAt: new Date(String(row.expires_at)).toISOString(),
+      };
+    },
+
     async issueQrToken(input: {
       authUserId: string;
       transactionId: string;
@@ -1978,6 +2037,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         with eligible as (
           select q.transaction_id, q.token_hash, a.id as actor_account_id,
+            s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor,
             coalesce((
               select e.state
               from v2_transaction_events e
@@ -1986,6 +2046,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               limit 1
             ), 'intent_created') as current_state
           from v2_qr_tokens q
+          join v2_transaction_snapshots s on s.transaction_id = q.transaction_id
           join v2_transaction_members m on m.transaction_id = q.transaction_id and m.role = 'seller'
           join v2_accounts a on a.id = m.account_id
           where q.transaction_id = ${input.transactionId}::uuid
@@ -2028,8 +2089,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
         )
-        select transaction_id, verified_at, replay_count
-        from updated
+        select u.transaction_id, u.verified_at, u.replay_count,
+          s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor
+        from updated u
+        join v2_transaction_snapshots s on s.transaction_id = u.transaction_id
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
@@ -2039,6 +2102,12 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         transactionId: String(row.transaction_id),
         verifiedAt: new Date(String(row.verified_at)).toISOString(),
         nextReplayCount: Number(row.replay_count),
+        facilityId: String(row.facility_id),
+        productId: String(row.product_id),
+        quantity: Number(row.quantity),
+        unitPriceMinor: Number(row.unit_price_minor),
+        couponCode: row.coupon_code === null || row.coupon_code === undefined ? null : String(row.coupon_code),
+        netAmountMinor: Number(row.net_amount_minor),
       };
     },
 
@@ -2050,6 +2119,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           s.facility_id,
           s.quantity,
           s.unit_price_minor,
+          s.coupon_code,
           s.net_amount_minor,
           m.role as actor_role,
           coalesce((
@@ -2077,6 +2147,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         facilityId: String(row.facility_id),
         quantity: Number(row.quantity),
         unitPriceMinor: Number(row.unit_price_minor),
+        couponCode: row.coupon_code === null || row.coupon_code === undefined ? null : String(row.coupon_code),
         netAmountMinor: Number(row.net_amount_minor),
       };
     },

@@ -319,3 +319,73 @@ The owner’s latest reference text sharpens the Africa-globe direction into a v
 The map controller must resolve its MapLibre worker to a stable same-origin build asset before map construction. `style.load` is an intermediate event, not sufficient proof that the vector source is usable; the user-visible active state requires the subsequent loaded/idle path with the vector source available. If the provider does not become usable, Omni shows an honest retry state and does not silently substitute the synthetic raster fallback. This corrects the prior implementation shortcut without changing Root, Auth, trust, availability, Seller, Reviewer or transaction contracts.
 
 The V4.3 Canopy proof remains partial until real result framing visibly exposes local streets/neighborhoods and source-backed native facility features during camera movement at compact and desktop widths. OSM/Overpass enrichment and worldwide coverage claims remain separately gated operations work. Automatic location stays in-memory and non-recentering; direct map interaction alone owns idle-motion pause; permanent minus/plus/recenter controls, mobile input sizing, selection clearing and all privacy boundaries remain inherited.
+
+## 21. Species amendment — Bulk Availability, Wallet and transaction handoff, 2026-08-26
+
+The Buyer value proposition is not “pay to ask one Seller whether a product exists.” Search remains open and free. The new visual focus is the **Bulk Availability composer** that appears contextually after a product search has produced multiple eligible facilities.
+
+### Buyer Bulk states
+
+| State | Primary surface | Required visual behavior |
+|---|---|---|
+| Search ready | Existing map and search dock | Search remains calm, free and unchanged; no quota language interrupts discovery. |
+| Multi-result selection | Result grid or bounded result sheet | Select all/none and individual facilities; show why a facility is eligible; preserve map and query. |
+| Bulk constraints | Bottom sheet on mobile, bounded floating panel on desktop | Quantity is prominent; budget/filter context is explicit; private maximum budget is not shown to Sellers by default. |
+| Cost preview | Sticky action footer | Show target facility count, estimated availability-credit cost, allowance remaining and the exact effect before confirmation. |
+| Running | Progress sheet with per-facility aggregate state | Show queued/responded/partial/failed counts; one failing facility does not erase successful responses. |
+| Comparison | Existing response grid extended | Compare availability, quantity, freshness, price/offer and Seller message; eligible intent remains the only private-room transition. |
+| Insufficient credit | Recovery sheet | Preserve search, selected facilities and constraints; offer Pro/Wallet path without pretending a charge succeeded. |
+
+A single-facility check uses the existing lightweight form and remains free. The Bulk action must not look like a hidden paywall: its cost is revealed before confirmation, and Free/Pro allowances are explained in plain language.
+
+### Seller states
+
+The Seller sees one incoming demand context per eligible facility, with product, quantity and response controls. The Buyer’s private maximum budget is not displayed by default. The Seller workspace keeps its professional hierarchy: facility context, demand queue, catalogue status, transaction room and scanner entry. A Seller response can be `available`, `partial` or `unavailable`; it must not imply payment, reservation or guaranteed fulfilment.
+
+### Wallet states
+
+The Wallet is a single account-level surface with a currency badge, available balance, platform-credit allocations and a clear “funds Omni capabilities only” explanation. Recharge, pending, confirmed, failed, expired, insufficient-funds and renewal-failed states are designed before a checkout CTA is exposed. Auto-renewal is an explicit toggle with a next renewal amount and currency; when the balance is insufficient, the UI explains expiry and recovery without moving the user into a hidden card flow.
+
+The display currency follows fresh supported location context. The UI must never show a silent conversion or combine XOF, GHS and EUR in one arithmetic balance without an approved conversion policy. If location is unavailable or unsupported, the user sees the fallback currency and can review the policy before recharging.
+
+### Transaction room and QR
+
+After intent creation the transaction room is the canonical surface for both members. The Buyer sees the immutable offer snapshot, scoped chat, approved Seller contact, itinerary and a transaction-bound QR. The Seller sees the same transaction context with Seller actions and receives an Inbox event; optional Push is only shown as enabled when device permission/configuration and delivery proof exist.
+
+The Seller’s scanner is an explicit action inside the Seller workspace. Its states are scanner-ready, permission explanation, camera preview, QR detected, verifying, verified/routed, expired, replayed, mismatch, malformed, denied and manual fallback. A safe authenticated transaction invitation is a second recovery path for a missed notification; it never contains a raw token.
+
+The approved direction is operationally symmetrical but privacy-scoped: both members can resume the room, neither public facility cards nor pre-intent comparison cards expose private contact, chat, route or QR, and chat never advances the transaction state. Seller payout, Buyer-to-Seller in-app settlement and card auto-charge remain outside V1.
+
+### Species gate
+
+This amendment is a new interaction pattern and therefore requires an approved maquette set for the Bulk composer, Wallet surface, transaction room and scanner states before those branches are coded. The existing monochrome globe/map Species remains inherited; this amendment does not authorize a dashboard replacement or a visual-only implementation without Root contracts.
+
+## 22. Species amendment — Seller-distributed facility entry and counter handoff, 2026-08-26
+
+The Seller surface has a second responsibility beyond answering remote requests: it must make Omni discoverable inside the facility. An active Omni offer partner therefore receives a printable facility QR/link surface, offer display guidance and a cashier-oriented verification entry.
+
+### Public facility entry
+
+The facility QR is a calm, printable invitation: `Scannez pour voir les offres Omni ici`. It is displayed at the entrance, on the counter or beside the relevant products. It opens a public facility/catalogue context and preserves the facility, campaign/source and optional product context through install, authentication and return. It is not a transaction QR and never opens private chat, contact or route data by itself.
+
+The landing experience is deliberately short. On mobile it presents the facility identity, the visible Omni offer, the active catalogue and a clear action such as `Voir les offres Omni`. If Omni is not installed, the same link may offer install or web continuation without losing the destination. A user already in Omni goes directly to the facility rather than back through global discovery.
+
+### On-site Buyer surface
+
+The on-site Buyer surface uses the existing map as context but moves the product decision into a focused facility sheet. It shows facility name/status, offer badge, product search within that facility, product cards, quantity, gross price, discount and net price. It does not show Bulk Availability controls because the Buyer is already at the facility and is not asking remote Sellers for evidence.
+
+The primary action is `Activer l’offre Omni`. After server validation, a compact confirmation state shows the immutable offer snapshot and `Présenter à la caisse`. The transaction QR is then shown with the facility, product, quantity, net price, expiry and a short instruction: `Le vendeur scanne ce code dans Omni.`
+
+### Seller cashier surface
+
+The Seller workspace has a persistent `Scanner Omni` action, reachable without opening the public catalogue. The scanner surface is designed as a focused operational flow: ready → permission explanation → camera preview → QR detected → verifying → verified. The verified card emphasizes what the cashier must act on: facility, product, quantity, gross price, discount, net price and expiry. It includes `Accepter l’avantage`, `Refuser` and, after physical payment, `Paiement reçu / Finaliser la vente`.
+
+The visual copy must distinguish validation from payment. A verified QR means that the transaction and offer are valid; it does not mean Omni transferred funds. The Buyer pays the Seller through the Seller’s accepted method. The Seller’s final action records acknowledgement and fulfilment in Omni. Expired, replayed, mismatched, malformed, denied-camera and manual-fallback states are explicit and non-destructive.
+
+### Seller activation contract in the Species
+
+A facility cannot be presented as an active Omni offer partner unless it has an owner/manager context, at least one active offer and a catalogue state that can be read by Buyers. Omni generates a facility QR/link for every eligible facility, but display, printing or social sharing by the Seller is voluntary. The Seller workspace must expose offer pause/edit, catalogue/product edit, QR/link sharing and cashier scanner entry as first-class actions. A public facility may remain map-visible without these capabilities only under a clearly different `listed / no active offer` state.
+
+After a fulfilled transaction, the Buyer enters a required post-transaction review step before the receipt/rating flow is considered complete, subject to an accessible skip/report path for abuse, privacy or inability to review. Reviews must be attached only to eligible transaction outcomes and must not be purchasable or generated from scans alone. Verified reviews, transaction count and offer activity strengthen the Seller credibility surface; failed, cancelled or unfulfilled attempts do not create a positive review.
+
+This amendment adds a distribution loop, not a dashboard. The map remains the discovery surface, the facility QR is the bridge from physical presence to Omni when the Seller chooses to distribute it, the Buyer offer sheet is the purchase decision surface and the Seller scanner is the counter handoff surface. Each surface inherits the Species spacing, monochrome map, safe-area behavior and restrained motion rules.

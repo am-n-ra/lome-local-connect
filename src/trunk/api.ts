@@ -112,6 +112,16 @@ export async function createPurchaseIntent(input: { responseId: string; token: s
   return parse<PurchaseIntentResult>(response);
 }
 
+export async function issueBuyerQrToken(input: { transactionId: string; token: string }): Promise<ApiResult<QrTokenIssueResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer-qr-issuances', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ transactionId: input.transactionId }),
+  });
+  return parse<QrTokenIssueResult>(response);
+}
+
+/** @deprecated Seller-issued QR is retained only for the bounded legacy path. New flows must use issueBuyerQrToken. */
 export async function issueQrToken(input: { transactionId: string; token: string }): Promise<ApiResult<QrTokenIssueResult>> {
   const response = await fetchWithRecovery('/api/v2/qr-issuances', {
     method: 'POST',

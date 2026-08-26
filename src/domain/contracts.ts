@@ -209,4 +209,10 @@ export interface QrVerificationResult {
   transactionId: string;
   verifiedAt: string;
   nextReplayCount: number;
+  facilityId?: string;
+  productId?: string;
+  quantity?: number;
+  unitPriceMinor?: number;
+  couponCode?: string | null;
+  netAmountMinor?: number;
 }

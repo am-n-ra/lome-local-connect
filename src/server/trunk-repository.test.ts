@@ -394,6 +394,37 @@ describe('QR issuance persistence Root seam', () => {
   });
 });
 
+describe('Buyer QR issuance persistence Root seam', () => {
+  it('issues a server-generated transaction token only for the authenticated buyer member', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      expires_at: '2026-08-23T00:10:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.issueBuyerQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-buyer-qr-1',
+    });
+    expect(result.transactionId).toBe('transaction-1');
+    expect(result.token).toHaveLength(43);
+    expect(result.expiresAt).toBe('2026-08-23T00:10:00.000Z');
+    expect(call.queries[0]).toContain("m.role = 'buyer'");
+    expect(call.queries[0]).toContain("'issuer', 'buyer'");
+    expect(call.queries[0]).toContain("'buyer_issued'");
+  });
+
+  it('rejects Buyer QR issuance when the authenticated account is not the transaction buyer', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.issueBuyerQrToken({
+      authUserId: 'auth-not-buyer',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-buyer-qr-2',
+    })).rejects.toBeInstanceOf(TransactionPolicyError);
+  });
+});
+
 describe('external payment confirmation persistence Root seam', () => {
   it('confirms a buyer declaration only for an authenticated seller member in payment-declared state', async () => {
     const call = stubSql([{
@@ -810,6 +841,12 @@ describe('QR persistence Root seam', () => {
       transaction_id: 'transaction-1',
       verified_at: '2026-08-23T00:00:00.000Z',
       replay_count: 1,
+      facility_id: 'facility-1',
+      product_id: 'product-1',
+      quantity: 2,
+      unit_price_minor: 1500,
+      coupon_code: 'WELCOME10',
+      net_amount_minor: 2700,
     }]);
     const repository = createTrunkRepository(call.sql);
 
@@ -825,6 +862,12 @@ describe('QR persistence Root seam', () => {
       transactionId: 'transaction-1',
       verifiedAt: '2026-08-23T00:00:00.000Z',
       nextReplayCount: 1,
+      facilityId: 'facility-1',
+      productId: 'product-1',
+      quantity: 2,
+      unitPriceMinor: 1500,
+      couponCode: 'WELCOME10',
+      netAmountMinor: 2700,
     });
     expect(call.queries[0]).toContain('update v2_qr_tokens q');
     expect(call.queries[0]).toContain('q.verified_at is null');

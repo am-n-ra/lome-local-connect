@@ -836,3 +836,161 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Launch decision:** Omni can now be presented to a small, explicitly labelled pilot group for **read-only discovery and feedback**: users can explore the public globe and OSM-derived facility catalogue, search facilities/products, inspect public result surfaces, use map controls and location permission where available, and review the Buyer/Seller/Reviewer/Admin surfaces only within their authorized roles. It is not yet appropriate to advertise unrestricted marketplace usage, real Seller operations, real payment, or general production readiness. The bounded demo transaction proves the vertical path through `fulfilled`, but it is not evidence of marketplace demand, real payment settlement or operational capacity.
 
 **Residual release gate:** The supplied video is observed evidence of the target behavior, and the canonical CSS contract is reproduced, but actual iPhone keyboard-open/close behavior, outside-dock blur and captures at `320/390/768/1280` remain partial until rechecked on a stable real device or mobile browser. Push/VAPID delivery, billing/Free-Pro entitlements, receipt/closure, real Seller activation, Reviewer decisions, operational monitoring, support/recovery and broader accessibility/performance evidence remain open. Founder HQ must keep the global release status `controlled / pilot-only`, not `production-ready`.
+
+## 2026-08-26 — Founder HQ re-alignment: role separation before Seller breadth
+
+**Active milestone:** rendre Omni présentable à un petit pilote explicitement borné, avec une navigation qui ne révèle aucune surface d’équipe à un compte ordinaire et un chemin Seller honnête vers un workspace opérationnel.
+
+**Current gate:** Nature Way Seed/Species/Root re-alignment. The active structural path is `product > role separation > Seller operational workspace`.
+
+**Evidence:** `v2-seed.md` section 12; `v2-seller-mini-cycle.md` sections 1–5 and 20–21; `src/trunk/TrunkApp.tsx` lines 1512–1516; `src/server/http.ts` lines 203–420 and 631–720; `db/migrations/001_v2_roots.sql` lines 7–18, 39–99, 135–180 and 183–280; `docs/plans-and-entitlements.md` lines 3–27. The bounded Buyer→Seller response/comparison proof remains valid, but it is not a complete Seller workspace or marketplace-readiness proof.
+
+**Capacity displacement:** pause broad Seller branches, billing/payment claims, chat, camera QR and global launch language. Spend the next slice on the authoritative role context/menu shell, then one dependency-ordered Seller Trunk slice. Preserve the deployed Buyer Canopy and bounded transaction proof as foundations.
+
+**Decision owner:** product owner/founder for seller onboarding policy, Free/Pro commercial rules, balance meaning, communication policy and QR actor contract; implementation owner for the role-context/menu hardening and evidence record.
+
+**Next smallest action:** finish the Seed/Species/Root capability matrix, obtain explicit decisions for unresolved business boundaries, then implement the server-backed role context and conditional menu entries without mutating real identities or roles.
+
+**Guardrail:** no account role provisioning, seller activation, billing, wallet spend, payout, chat, QR-camera flow or destructive migration without an explicit decision and a corresponding Root contract. The bounded `seller/demo-rebind` seam remains demo-only and must not be exposed as general onboarding.
+
+**Review trigger:** reopen this decision after the role-context negative tests pass and before the first Seller facility/product write is implemented; reopen again if onboarding policy, money semantics, communication/privacy policy or QR handoff actor changes.
+**Status:** `partial / review`; not a global production-readiness claim.
+
+## 2026-08-26 — Founder HQ owner confirmation: monetizable handoff, no Seller payouts
+
+**Decision accepted:** Seller applicants may self-claim a public or created facility, upload evidence and await manual Omni team verification. Certification and operational Seller activation remain separate. The owner also confirmed that the post-intent room must unlock scoped Buyer/Seller communication, itinerary and approved contact; the Seller receives an intent notification; the Buyer owns/displays the transaction QR; the Seller scans it at the physical handoff; and a safe authenticated link is a recovery path if the notification is missed.
+
+**Commercial direction:** Omni should generate revenue from day one through explicit Free/Pro plans and a rechargeable Omni Wallet. The Wallet funds Omni platform capabilities only. V1 does not process Buyer-to-Seller settlement and does not support Seller payouts or withdrawals. Exact benefits, prices, currency, provider, renewal, expiry, refund, reversal and entitlement rules remain a Root decision before billing code.
+
+**Flow correction:** the existing bounded implementation issues a QR from the Seller surface and accepts pasted payloads; that is not the confirmed product direction. The next Root must move QR issuance/display to the Buyer transaction room, retain server-issued expiring/replay-safe tokens, and add Seller scanner permission/live-preview/manual-fallback states. The current response/transaction demo remains bounded evidence, not full handoff readiness.
+
+**Capacity displacement:** pause cosmetic Seller expansion and broad launch language. Prioritize role context/menu hardening, then the Seller applicant → owned facility → catalogue vertical, then the transaction room/chat/route/QR branch, then Wallet/Free-Pro billing once commercial details are approved.
+
+**Owner / review trigger:** founder owns the unresolved commercial numbers, provider and policy details; implementation owner owns the Root contract and role shell. Reopen before any wallet spend, checkout, discount engine, chat persistence, QR issuance migration or Seller facility/product write.
+
+## 2026-08-26 — Founder HQ clarification: Bulk Availability is the monetized convenience
+
+**Decision accepted:** Search is free for every user, and ordinary single-facility availability checking is free. The Buyer should not repeat the same form across ten facilities after searching a product. Bulk Availability is the paid platform convenience: the Buyer selects eligible facilities, provides quantity and constraints once, receives a cost preview, and the server launches one weighted multi-facility availability operation.
+
+**Credit model:** Free includes three Bulk Availability operations per billing period under an approved cost guardrail. Pro is measured in a monthly availability-credit allowance, not a fixed number of requests; a 700-facility or otherwise heavier job consumes more units. Additional Bulk credits may be bought from the Omni Wallet. A future AI agent may automate the same manual operations and consume the same approved budgets; it may not bypass them.
+
+**Wallet model:** One global account-level Omni Wallet funds Pro, Facility Slots and additional platform credits. No fixed recharge packs are required. Auto-renewal is explicit opt-in and consumes the exact subscription amount from Wallet at expiry only if sufficient funds exist; no card is silently charged and no negative balance is created. Currency display is location-aware with XOF for Togo/Benin, GHS for Ghana and EUR for France where supported, with explicit fallback and no silent conversion.
+
+**Evidence and reconciliation:** `pasted_content_5.txt`; `v2-flow.md` section 17; `v2-seed.md` section 14; `v2-feature-list.md` lines 115–129; historical `origin/main` migrations 010, 019, 026 and legacy FedaPay modules. The historical branch has reusable FedaPay checkout, provider lookup, signed webhook and idempotent crediting patterns, but the active V2 branch has not integrated them into the account-level Wallet.
+
+**Current gate:** `Seed accepted / commercial model clarified; Root parameterization open`. The remaining Root decisions are the weighted cost estimator, Free guardrail semantics, Pro allowance, overage price, plan prices/duration, supported recharge currencies/conversion/refund rules, and secure provider configuration. No billing code or production claim follows from this decision alone.
+
+**Capacity displacement:** update Root and the Buyer Trunk sequence before further Seller breadth. The next product slice is Role Context/menu hardening, then Bulk Availability selection/cost preview/credit authorization, followed by the Seller Trunk and only then Wallet recharge/auto-renewal implementation.
+
+## 2026-08-26 — Founder HQ reframing: two distinct customer problems
+
+**Dispatch:** `/nature-way` — product Seed/Species/Root diagnosis before implementation.
+
+**Decision under review:** Omni is solving two related but distinct jobs. The first is **discover before moving**: search from home or elsewhere, filter, ask one facility for free or many facilities through credit-metered Bulk Availability, compare honest current responses and decide whether to travel. The second is **activate an Omni advantage on site**: scan a facility’s public QR, open its Omni catalogue, select a live product/offer and quantity, receive a server-snapshotted price/discount and present a Buyer transaction QR for Seller verification before paying the Seller externally.
+
+**Critical separation:** the on-site flow is not another availability request. It is an `onsite_facility_qr` → `onsite_offer` intent. The discovery flow is `discovery_availability` → eligible response → purchase intent. Both may enter a shared authorized transaction room, but their origin, snapshots, expiry, metrics and recovery states remain distinct.
+
+**QR policy:** a public Facility QR opens only public facility/catalogue context. A Buyer transaction QR is server-issued after an authorized intent or on-site offer, is transaction-bound, expiring and replay-safe, and is verified by the Seller. A shared external link is an authenticated resume path and must never expose a raw QR token.
+
+**Payment boundary:** in V1 the honest language is `Activer l’offre Omni`, `Profiter du prix Omni` or `Valider l’avantage chez le vendeur`, not `Payer avec Omni`. Omni may snapshot the Seller-funded discount, record Seller verification, record the external payment declaration and fulfilment, but it does not settle Buyer money to Sellers and does not provide Seller payout.
+
+**Evidence:** `v2-problem-model-and-flow-brainstorm-2026-08-26.md`; Seed section 15; Species section 21; Root section 13; current V2 feature list where TXN/QR/payment branches remain marked `todo`.
+
+**Current gate:** `Seed reframed / Species extension required / Root contract not yet final`. The next smallest action is to approve the two-flow maquette and then specify the origin/type fields, on-site offer snapshot, public-facility QR contract, shared transaction-room membership and separate metrics before coding.
+
+**Review trigger:** reopen if the team wants Omni Wallet to settle the Seller, wants to reserve stock, wants the public Facility QR to grant private transaction access, or wants to merge on-site offer activation with remote availability billing.
+
+## 2026-08-26 — Founder HQ proposal: Omni Verified Offer Network
+
+**Dispatch:** `/nature-way` — Seed/Species/Root product clarification before implementation.
+
+**Proposition évaluée:** chaque facilité qui veut être présentée comme partenaire d’offre Omni doit maintenir un catalogue exploitable, associer une offre ou réduction à chaque produit/service publié via Omni et afficher un QR ou lien Omni dans son espace physique. Ce QR devient un canal d’acquisition : le client peut découvrir la facilité sur la carte, ou déjà se trouver dans la boutique et entrer dans Omni en scannant l’affiche.
+
+**Valeur Buyer :** le Buyer à distance réduit les déplacements et les appels inutiles grâce à la recherche, la disponibilité simple ou la Bulk Availability puis la comparaison. Le Buyer déjà sur place obtient immédiatement la fiche, le catalogue, le prix normal, l’avantage Omni et une procédure vérifiable à la caisse, sans refaire une recherche multi-vendeurs.
+
+**Valeur Seller :** le Seller obtient une présence géographique, un canal d’acquisition physique, un catalogue contrôlable, des offres mesurables et un Scanner pour la caisse. En échange, il fournit une offre exploitable, un prix, une réduction, une personne responsable du handoff et un QR/lien effectivement affiché. Une facilité seulement importée d’OSM ne doit pas être appelée active offer partner.
+
+**Valeur Omni :** Omni obtient une distribution locale financée par les partenaires, une acquisition mesurable, des signaux d’intention et de conversion, ainsi qu’une base pour monétiser ses propres capacités — Pro, Facility Slots, Bulk Availability credits et Wallet — sans imposer immédiatement une commission ou un settlement marchand.
+
+**Flow hors facilité :** `search → eligible facilities → free single check or weighted Bulk Availability → comparison → eligible intent → chat/contact/itinerary/Buyer QR → Seller scan → external payment → Seller acknowledgement → fulfilment`.
+
+**Flow sur place :** `Seller QR display → Buyer scan → install/open Omni → facility catalogue → product/quantity → active offer validation → onsite_offer intent → immutable price/discount snapshot → Buyer QR → Seller Scanner → advantage accepted → Seller external payment → Seller Payment received/Finalise → fulfilment/receipt`.
+
+**Boundary de langage et de paiement :** « Payer avec Omni » peut rester une phrase de campagne comprise par le public, mais en V1 Omni valide l’avantage et la transaction ; le Seller encaisse par son moyen externe. Le scan QR prouve la validité de l’offre, pas le paiement. `seller_payment_acknowledged` et `fulfilment_completed` sont des événements séparés de `qr_verified`.
+
+**Current gate:** `Seed value model clarified / Species distribution and counter maquettes required / Root contracts open`. The next smallest action is to approve the four Species surfaces: printed facility QR/landing, on-site catalogue offer sheet, Buyer transaction QR and Seller cashier scanner. Then define `facility_qr`, `onsite_offer`, discount snapshot, source attribution, payment acknowledgement and conversion metrics before coding.
+
+**Review trigger:** reopen if the offer requirement creates unacceptable Seller onboarding friction, if a facility is shown as an active partner without a live offer/QR, if the public QR grants private access, or if campaign language implies Omni has settled Seller funds when it has not.
+
+## 2026-08-26 — Founder HQ correction: OSM conversion and Seller incentive
+
+**Dispatch:** `/nature-way` — Seed/Species/Root clarification before implementation.
+
+**OSM role corrected:** OSM is a map-population and field-conversion layer while Omni converts real Sellers. An OSM-listed facility is not automatically an active partner. The Seller has two equivalent entry paths: claim an indexed facility, or create a new facility with a location-assisted map pin that can be moved manually. Both paths converge on evidence submission, manual Omni review, certification/activation, catalogue, offers and QR distribution.
+
+**Active offer contract:** every product or service that a Seller chooses to publish through Omni must carry an active offer or reduction. A public facility may remain listed without an offer, but must not be labelled an active Omni offer partner. This keeps the map useful without promising benefits that a Seller has not configured.
+
+**QR proof and incentive question:** Omni generates the public facility QR after facility creation/claim. The Seller may publish or print it, display it in the shop and submit a contextual photo or link as evidence of distribution. The photo is a human-reviewed distribution signal, not proof of ownership or cryptographic proof. Stronger evidence may still be requested for higher-risk cases.
+
+**Recommended incentive:** the QR should not be an arbitrary burden. It should unlock the Active Offer Partner status: offer visibility, structured intents, Scanner, conversion statistics and eligibility for approved progression benefits. A possible 20-dollar programme should be a capped, non-transferable, non-withdrawable promotional Omni credit after certification and three genuinely eligible, server-verified transactions—not a guaranteed cash payout and not a reward for scans alone. Exact currency, budget, expiry, anti-abuse rules and entitlements remain open Commercial/Root decisions.
+
+**Value exchange:** the Seller supplies a verifiable offer and a physical/distributed Omni entry point; in return, Omni supplies discoverability, a catalogue/offer surface, a cashier verification tool and measurable acquisition. The Buyer receives either lower search uncertainty or an immediately usable on-site offer. Omni receives distribution, qualified usage signals and a defensible path to monetise Pro, Facility Slots and Bulk credits without Seller settlement in V1.
+
+**Current gate:** `Seed corrected / Species needs dual onboarding and certification maquettes / Root must define evidence, offer activation, progression and bonus ledger`. Next smallest action: approve the two entry paths and their shared state machine before coding Seller CRUD or QR surfaces.
+
+**Review trigger:** reopen if QR display is required before a Seller can see any value, if the 20-dollar benefit is communicated as withdrawable money, if three scans can trigger it without verified transactions, or if OSM-listed facilities are treated as certified Sellers.
+
+## 2026-08-26 — Founder HQ correction: QR as voluntary Seller growth loop
+
+**Decision:** the Seller must not be forced to display, print or publish the Omni facility QR, and the certification team must not require a photo proving that it was displayed. Certification verifies the Seller/facility, evidence of the claim or creation and the operational catalogue/offer conditions; QR distribution is a voluntary growth action.
+
+**Value exchange:** a Seller who distributes the QR can turn physical traffic into Omni traffic. A Buyer scans, sees the facility’s offer or reduction, activates an eligible transaction, presents the Buyer QR at the counter and completes the handoff. The completed transaction can then produce a verified review, increase the Seller’s visible transaction history and strengthen credibility for future map recommendations. A Seller who does not distribute the QR still receives discovery through Omni search and map recommendation, but does not receive the same attributed physical acquisition loop.
+
+**Review rule:** after an eligible fulfilled transaction, the Buyer is routed to the review step before the post-transaction journey is complete. The review must be tied to a real eligible transaction and must not be generated by a scan alone. An accessible skip/report path is retained for abuse, privacy or inability to review; a failed, cancelled or unfulfilled flow must not create a positive review or transaction count.
+
+**Corrected incentive model:** QR display is not a prerequisite for certification or Active Offer Partner status. It is an optional channel with measurable benefits: attributed visits, activated offers, verified transactions and eligible reviews. Any progression or 20-dollar programme must reward verified value — for example, certified transactions after the relevant threshold — not QR displays or scan volume. The benefit should remain a capped, non-transferable Omni credit until its commercial, legal and accounting terms are approved.
+
+**Current gate:** `Seed corrected / Species QR distribution and mandatory review states / Root credibility, attribution and bonus ledger`. The next smallest action is to define the review eligibility state, QR attribution fields and Seller credibility calculation before implementing the Seller Trunk surfaces.
+
+**Review trigger:** reopen if QR distribution becomes a certification gate, if a Seller receives no useful benefit from attributed transactions/reviews, if reviews can be created without fulfilment, or if the UI implies that Omni settles Seller funds.
+
+## 2026-08-26 — Founder HQ correction: public facility QR versus transaction QR
+
+**Decision:** the two QR objects must never be merged. The public facility QR is a discovery/catalogue entry point. It identifies only a public facility and optional campaign/source context. It does not represent a Buyer, a coupon, a price, a payment or a transaction, and it cannot open private chat, route, contact or transaction data.
+
+**Transaction contract:** after an eligible intent, Omni binds the applicable coupon/offer to the authenticated Buyer account and records an immutable transaction snapshot containing Buyer, Seller, facility, product, quantity, price, reduction, currency, place/context, timestamps, expiry and consumption state. The Buyer transaction QR is then generated as an expiring, replay-safe reference to that server-side binding. It is not the coupon itself and must not trust client-supplied price or discount fields.
+
+**Seller verification:** the Seller scans the Buyer transaction QR at the handoff. The server resolves the QR to the authorized transaction and returns only the fields needed for the cashier decision. `qr_verified`, `discount_acknowledged`, `seller_payment_acknowledged` and `fulfilment_completed` remain separate events. A QR scan never proves that Omni transferred money or that the Seller has been paid.
+
+**Current gate:** `Seed corrected / Species corrected / Root QR-coupon-transaction audit required`. Next smallest action: audit the existing V2 QR issuer/verifier and migrate the UI/backend contract so public facility QR, account-bound coupon and Buyer transaction QR have separate routes, permissions, payloads and tests.
+
+
+
+
+
+## 2026-08-26 — Trunk Buyer QR : émission Buyer branchée
+
+**Milestone actif :** séparer le QR public de facilité du QR transactionnel account-bound.
+
+**Livré :** `issueBuyerQrToken`, route `/api/v2/buyer-qr-issuances`, contrôle serveur de membership Buyer, événement `qr_ready` avec issuer Buyer, audit `buyer_issued`, bouton Buyer « Générer mon QR transactionnel » et composant `TransactionQrCard` qui encode localement le payload sans afficher le token brut. Le texte de handoff précise que le QR public de facilité ne remplace jamais le QR transactionnel.
+
+**Preuves :** 138/138 tests passants ; `pnpm build` réussi ; bundler Vercel maintenu à 12 fonctions.
+
+**Limites :** la vérification Seller utilise encore le chemin legacy manuel et doit être migrée vers la résolution serveur du snapshot/coupon ; caméra, chat transactionnel, avis post-fulfilment et mise à jour temps réel d’état restent ouverts. Le résultat est un Trunk partiel, pas une preuve de marketplace ou de paiement production-ready.
+
+**Prochaine action :** remplacer le Seller-issued QR legacy par le scanner Seller du QR Buyer, enrichir la réponse de vérification avec les champs de caisse autorisés, puis tester expiration, replay, mauvais Buyer/Seller, prix et offre account-bound.
+
+
+## Checkpoint — Seller Scanner Buyer QR et snapshot caisse — 2026-08-26
+
+**Milestone actif :** Heartwood du handoff QR, après le Trunk Buyer QR.
+
+Le QR transactionnel est émis par le Buyer. Le Seller UI ne propose plus d’émettre le QR legacy : son espace transaction expose un scanner caméra opportuniste via `BarcodeDetector`, une permission caméra explicite et une saisie manuelle de secours. Après vérification, le serveur résout le snapshot autoritatif et retourne les informations de caisse nécessaires : facilité, produit, quantité, prix unitaire, coupon/référence d’avantage et montant net.
+
+**Séparation conservée :** le QR public de facilité ouvre uniquement la découverte et le catalogue ; il ne peut pas vérifier une transaction. Le QR Buyer transactionnel est une référence expirable, account-bound par résolution serveur et protégée contre le rejeu. `qr_verified`, `seller_payment_acknowledged` et `fulfilment_completed` restent des événements distincts.
+
+**Preuves locales :** 138/138 tests passent, le build TypeScript/Vite passe, 12 fonctions Vercel sont conservées et `git diff --check` est propre. Le warning de chunk client supérieur à 500 KB reste non bloquant.
+
+**Limites :** la caméra n’est pas encore prouvée sur iPhone réel ; `BarcodeDetector` dépend du navigateur et de l’autorisation caméra. Le chat transactionnel, les avis post-fulfilment, le coupon métier complet et le paiement Wallet marchand ne sont pas déclarés livrés. Aucun compte ou rôle réel n’a été modifié.
+
+**Prochain gate :** preuve Heartwood/Rings sur identité Buyer/Seller, snapshot prix/coupon, expiration, rejeu, mauvais acteur et reprise manuelle, puis déploiement contrôlé sur l’origine canonique uniquement.

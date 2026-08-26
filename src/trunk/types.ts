@@ -117,6 +117,12 @@ export interface QrVerificationResult {
   verifiedAt?: string;
   nextReplayCount?: number;
   reason?: string;
+  facilityId?: string;
+  productId?: string;
+  quantity?: number;
+  unitPriceMinor?: number;
+  couponCode?: string | null;
+  netAmountMinor?: number;
 }
 
 export interface TransactionTransitionResult {
@@ -135,6 +141,7 @@ export interface TransactionSnapshotResult {
   facilityId: string;
   quantity: number;
   unitPriceMinor: number;
+  couponCode: string | null;
   netAmountMinor: number;
 }
 

@@ -718,6 +718,23 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer-qr-issuances') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the Buyer before showing a transaction QR code.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
+        return true;
+      }
+      const result = await repository.issueBuyerQrToken({ authUserId, transactionId, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/qr-issuances') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
