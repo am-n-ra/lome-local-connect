@@ -767,6 +767,8 @@ describe('purchase-intent persistence Root seam', () => {
     expect(call.queries).toHaveLength(2);
     expect(call.queries[0]).toContain("ar.status in ('available', 'partial', 'corrected')");
     expect(call.queries[0]).toContain('r.buyer_account_id');
+    expect(call.queries[0]).toContain('r.product_id');
+    expect(call.queries[0]).not.toContain('ar.product_id');
     expect(call.queries[0]).toContain('insert into v2_transaction_snapshots');
     expect(call.queries[0]).toContain('insert into v2_transaction_members');
     expect(call.queries[0]).toContain('insert into v2_transaction_events');

@@ -1888,7 +1888,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             r.buyer_account_id,
             f.account_id as seller_account_id,
             ar.facility_id,
-            ar.product_id,
+            r.product_id,
             least(r.requested_quantity, ar.quantity_available) as quantity,
             ar.price_minor,
             nullif(ar.offer_snapshot ->> 'coupon_code', '') as coupon_code,
