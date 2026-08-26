@@ -194,6 +194,29 @@ export interface SellerAvailabilityQueue {
   requests: SellerAvailabilityRequest[];
 }
 
+export type SellerCataloguePublicationState = 'draft' | 'pending_validation' | 'published' | 'sold_out' | 'archived';
+export type SellerCatalogueDiscountKind = 'percentage' | 'fixed';
+
+export interface SellerCatalogueProduct {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  name: string;
+  description: string | null;
+  unit: string;
+  priceMinor: number;
+  currency: string;
+  discountKind: SellerCatalogueDiscountKind | null;
+  discountValueMinor: number | null;
+  netPriceMinor: number | null;
+  publicationState: SellerCataloguePublicationState;
+}
+
+export interface SellerCatalogueResult {
+  authorized: boolean;
+  products: SellerCatalogueProduct[];
+}
+
 export interface OperatorRunSummary {
   id: string;
   operation: string;

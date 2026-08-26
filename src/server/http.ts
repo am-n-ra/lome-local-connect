@@ -674,6 +674,16 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/seller/catalogue') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to view your catalogue.'));
+        return true;
+      }
+      const result = await repository.listSellerCatalogue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

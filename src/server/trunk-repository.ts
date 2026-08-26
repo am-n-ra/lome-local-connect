@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, TransactionSnapshotResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueProduct, TransactionSnapshotResult } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -1058,6 +1058,61 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         throw new SellerAuthorizationPolicyError('The Seller demonstration fixture could not be safely rebound.');
       }
       return { authorized: true };
+    },
+
+    async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; products: SellerCatalogueProduct[] }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, products: [] };
+      const rows = await retryDatabase(() => sql`
+        select
+          p.id,
+          p.facility_id,
+          f.name as facility_name,
+          p.name,
+          p.description,
+          p.unit,
+          p.price_minor,
+          p.currency,
+          p.discount_kind,
+          p.discount_value_minor,
+          case
+            when p.discount_kind = 'percentage' and p.discount_value_minor between 1 and 90
+              then p.price_minor - floor((p.price_minor * p.discount_value_minor) / 100.0)
+            when p.discount_kind = 'fixed' and p.discount_value_minor > 0 and p.discount_value_minor < p.price_minor
+              then p.price_minor - p.discount_value_minor
+            else null
+          end as net_price_minor,
+          p.publication_state
+        from v2_products p
+        join v2_facilities f on f.id = p.facility_id
+        join v2_accounts a on a.id = f.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        order by f.name asc, p.updated_at desc, p.id desc
+      `);
+      const products = (rows as Record<string, unknown>[]).map((row) => ({
+        id: String(row.id),
+        facilityId: String(row.facility_id),
+        facilityName: String(row.facility_name),
+        name: String(row.name),
+        description: row.description === null ? null : String(row.description),
+        unit: String(row.unit),
+        priceMinor: Number(row.price_minor),
+        currency: String(row.currency),
+        discountKind: row.discount_kind === null ? null : row.discount_kind as SellerCatalogueProduct['discountKind'],
+        discountValueMinor: row.discount_value_minor === null ? null : Number(row.discount_value_minor),
+        netPriceMinor: row.net_price_minor === null ? null : Number(row.net_price_minor),
+        publicationState: String(row.publication_state) as SellerCatalogueProduct['publicationState'],
+      }));
+      return { authorized: true, products };
     },
 
     async getSellerAvailabilityQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: Array<{

@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, TransactionRatingResult, TransactionState, TransactionTransitionResult } from './types';
+import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionState, TransactionTransitionResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -95,6 +95,13 @@ export async function getSellerAvailabilityQueue(input: { token: string }): Prom
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<SellerAvailabilityQueue>(response);
+}
+
+export async function getSellerCatalogue(input: { token: string }): Promise<ApiResult<SellerCatalogueResult>> {
+  const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<SellerCatalogueResult>(response);
 }
 
 export async function rebindDemoSeller(input: { token: string }): Promise<ApiResult<{ authorized: true }>> {
