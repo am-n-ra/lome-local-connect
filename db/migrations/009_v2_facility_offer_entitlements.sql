@@ -5,7 +5,12 @@ alter table v2_products
   add column if not exists discount_kind text,
   add column if not exists discount_value_minor integer,
   add column if not exists offer_valid_from timestamptz,
-  add column if not exists offer_valid_until timestamptz;
+  add column if not exists offer_valid_until timestamptz,
+  add column if not exists idempotency_key text;
+
+create unique index if not exists v2_products_facility_idempotency_idx
+  on v2_products(facility_id, idempotency_key)
+  where idempotency_key is not null;
 
 DO $$
 BEGIN

@@ -58,6 +58,13 @@ export type QrVerificationPersistenceResult = QrVerificationResult | {
   reason: 'NOT_VERIFIED';
 };
 
+export class SellerCataloguePolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SellerCataloguePolicyError';
+  }
+}
+
 export class PurchaseIntentPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -1113,6 +1120,64 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         publicationState: String(row.publication_state) as SellerCatalogueProduct['publicationState'],
       }));
       return { authorized: true, products };
+    },
+
+    async createSellerProductDraft(input: {
+      authUserId: string;
+      facilityId: string;
+      name: string;
+      description: string | null;
+      unit: string;
+      priceMinor: number;
+      currency: string;
+      discountKind: 'percentage' | 'fixed';
+      discountValueMinor: number;
+      idempotencyKey: string;
+    }): Promise<{ productId: string; facilityId: string; publicationState: 'draft'; netPriceMinor: number }> {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) {
+        throw new SellerCataloguePolicyError('INVALID_INPUT');
+      }
+      if (input.discountKind === 'percentage' && input.discountValueMinor > 90) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      if (input.discountKind === 'fixed' && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+        ), owned_facility as (
+          select f.id, f.commercial_plan
+          from v2_facilities f
+          join seller s on s.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+        ), slot_check as (
+          select 1
+          from v2_facility_slots fs
+          join seller s on s.id = fs.account_id
+          where fs.facility_id = ${input.facilityId}::uuid
+            and fs.status = 'assigned'
+        ), inserted as (
+          insert into v2_products
+            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, idempotency_key, publication_state)
+          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.priceMinor}, ${input.currency.toUpperCase()}, ${input.discountKind}, ${input.discountValueMinor}, ${input.idempotencyKey}, 'draft'
+          from owned_facility of
+          where exists (select 1 from slot_check)
+          on conflict (facility_id, idempotency_key) do nothing
+          returning id, facility_id, name, publication_state, price_minor, discount_kind, discount_value_minor
+        )
+        select * from inserted
+        union all
+        select p.id, p.facility_id, p.name, p.publication_state, p.price_minor, p.discount_kind, p.discount_value_minor
+        from v2_products p
+        where p.facility_id = ${input.facilityId}::uuid and p.idempotency_key = ${input.idempotencyKey}
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
+      if (String(row.discount_kind) !== input.discountKind || Number(row.discount_value_minor) !== input.discountValueMinor || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
+      const discount = input.discountKind === 'percentage' ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
+      return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', netPriceMinor: input.priceMinor - discount };
     },
 
     async getSellerAvailabilityQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: Array<{

@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
@@ -36,7 +36,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -672,6 +672,30 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.getSellerAvailabilityQueue({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/seller/catalogue') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to create an offer.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const facilityId = typeof input.facilityId === 'string' ? input.facilityId : '';
+      const name = typeof input.name === 'string' ? input.name : '';
+      const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
+      const unit = typeof input.unit === 'string' ? input.unit : 'unit';
+      const currency = typeof input.currency === 'string' ? input.currency : '';
+      const discountKind = input.discountKind === 'percentage' || input.discountKind === 'fixed' ? input.discountKind : null;
+      const priceMinor = Number(input.priceMinor);
+      const discountValueMinor = Number(input.discountValueMinor);
+      const idempotencyKey = req.headers['idempotency-key'];
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        throw new ApiInputError('A valid facility, product, price, currency, reduction and idempotency key are required.');
+      }
+      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor, idempotencyKey });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/seller/catalogue') {
