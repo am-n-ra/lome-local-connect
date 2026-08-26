@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, TransactionState, TransactionTransitionResult } from './types';
+import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, TransactionState, TransactionTransitionResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -16,6 +16,21 @@ async function fetchWithRecovery(input: RequestInfo | URL, init?: RequestInit): 
     response = await fetch(input, init);
   }
   return response;
+}
+
+export async function getAccountCapabilities(input: { token: string }): Promise<ApiResult<AccountCapabilitiesResult>> {
+  const [seller, operator, reviewer] = await Promise.all([
+    getSellerAvailabilityQueue(input),
+    getOperatorRuns(input),
+    getReviewQueue(input),
+  ]);
+  const accountId = 'session-capabilities';
+  return { ok: true, correlationId: 'client-capabilities', data: {
+    accountId,
+    seller: seller.ok && seller.data?.authorized === true,
+    operator: operator.ok && operator.data?.authorized === true,
+    reviewer: reviewer.ok && reviewer.data?.authorized === true,
+  } };
 }
 
 export async function listPublicFacilities(bounds?: [number, number, number, number], query?: string, options?: SearchOptions): Promise<ApiResult<PublicFacility[]>> {

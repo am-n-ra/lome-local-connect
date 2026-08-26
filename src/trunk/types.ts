@@ -292,3 +292,11 @@ export interface ApiResult<T> {
   data?: T;
   error?: ApiFailure;
 }
+
+
+export interface AccountCapabilitiesResult {
+  accountId: string;
+  seller: boolean;
+  operator: boolean;
+  reviewer: boolean;
+}

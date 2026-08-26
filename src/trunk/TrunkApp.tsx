@@ -1,7 +1,7 @@
 import { FormEvent, forwardRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, PackageSearch, QrCode, Search, ShieldCheck, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerActivationQueue, getSellerAvailabilityQueue, importPublicFacility, importPublicFacilityBatch, issueBuyerQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, activateSellerAccount, setSellerAccountSuspension, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
+import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAccountCapabilities, getAvailabilityResponses, getTransaction, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerActivationQueue, getSellerAvailabilityQueue, importPublicFacility, importPublicFacilityBatch, issueBuyerQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, activateSellerAccount, setSellerAccountSuspension, submitFacilityClaim, transitionTransaction, uploadFacilityEvidence, verifyQrToken } from './api';
 import { TrunkMap } from './TrunkMap';
 import { TransactionQrCard } from './TransactionQrCard';
 import { SellerTransactionPanel } from './SellerTransactionPanel';
@@ -105,6 +105,7 @@ export function TrunkApp() {
   const [authState, setAuthState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [authError, setAuthError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  const [accountCapabilities, setAccountCapabilities] = useState<{ accountId: string; seller: boolean; operator: boolean; reviewer: boolean } | null>(null);
   const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityQueue | null>(null);
   const [sellerQueueState, setSellerQueueState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [sellerQueueError, setSellerQueueError] = useState('');
@@ -255,6 +256,19 @@ export function TrunkApp() {
     }).catch(() => undefined);
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (!sessionUser) {
+      setAccountCapabilities(null);
+      return () => { active = false; };
+    }
+    void getAuthToken().then((token) => token ? getAccountCapabilities({ token }) : null).then((result) => {
+      if (!active) return;
+      setAccountCapabilities(result?.ok ? result.data ?? null : null);
+    }).catch(() => { if (active) setAccountCapabilities(null); });
+    return () => { active = false; };
+  }, [sessionUser]);
 
   useEffect(() => {
     if (!committedQuery.trim()) return;
@@ -1517,7 +1531,7 @@ export function TrunkApp() {
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
         <div className="menu-brand"><img src="/omni-logo-compact.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button><button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button><button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}{installPrompt && !installed && <button className="menu-action" type="button" role="menuitem" onClick={() => void installOmni}><Download size={16} /> Installer Omni</button>}{installed && <div className="menu-install-note" role="status">Omni est installé sur cet appareil.</div>}
+        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button>{accountCapabilities?.operator && <button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button>}{accountCapabilities?.reviewer && <button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button>}<button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}{installPrompt && !installed && <button className="menu-action" type="button" role="menuitem" onClick={() => void installOmni}><Download size={16} /> Installer Omni</button>}{installed && <div className="menu-install-note" role="status">Omni est installé sur cet appareil.</div>}
         <button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><MapPin size={16} /> Réinitialiser la carte</button>
       </aside>}
 
