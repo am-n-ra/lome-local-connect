@@ -1563,13 +1563,17 @@ function createTrunkRepository(sql = database()) {
           join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'buyer'
           join buyer b on b.buyer_account_id = m.account_id
           where s.transaction_id = ${input.transactionId}::uuid
-            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') = 'intent_created'
+            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') in ('intent_created', 'qr_ready')
         ),
         inserted as (
-          insert into v2_qr_tokens (transaction_id, token_hash, expires_at)
-          select e.transaction_id, ${tokenHash}, ${expiresAt}::timestamptz
+          insert into v2_qr_tokens (transaction_id, token_hash, expires_at, verified_at, replay_count)
+          select e.transaction_id, ${tokenHash}, ${expiresAt}::timestamptz, null, 0
           from eligible e
-          on conflict (transaction_id) do nothing
+          on conflict (transaction_id) do update
+            set token_hash = excluded.token_hash,
+                expires_at = excluded.expires_at,
+                verified_at = null,
+                replay_count = 0
           returning transaction_id, expires_at
         ),
         event as (

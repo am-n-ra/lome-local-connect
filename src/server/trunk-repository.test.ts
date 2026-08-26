@@ -423,6 +423,24 @@ describe('Buyer QR issuance persistence Root seam', () => {
       correlationId: 'corr-buyer-qr-2',
     })).rejects.toBeInstanceOf(TransactionPolicyError);
   });
+
+  it('rotates an existing Buyer QR token safely when the prepared transaction is retried', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      expires_at: '2026-08-23T00:20:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.issueBuyerQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-buyer-qr-retry',
+    });
+    expect(result.transactionId).toBe('transaction-1');
+    expect(call.queries[0]).toContain("in ('intent_created', 'qr_ready')");
+    expect(call.queries[0]).toContain('on conflict (transaction_id) do update');
+    expect(call.queries[0]).toContain('verified_at = null');
+    expect(call.queries[0]).toContain('replay_count = 0');
+  });
 });
 
 describe('external payment confirmation persistence Root seam', () => {
