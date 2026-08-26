@@ -729,3 +729,21 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Applied after explicit confirmation:** Kheir's existing Omni account `2f1480bb-a0ac-4726-8651-aaf9dfa02157` now has `reviewer:active`. Junior's Omni account `ea00d0f2-d90f-42b8-81a5-b32fbffbf964` was created account-scoped from the Neon Auth identity and now has `operator:active`. Neon Auth roles and credentials were not modified.
 
 **Verification:** Both identities are non-banned and resolve to the expected Omni account and active role. The production OSM proof can now proceed after each account signs in to refresh its session.
+
+## Founder HQ amendment — production truth and field positioning — 2026-08-26
+
+**Active milestone:** rendre la fondation Omni réellement utilisable sur le terrain sans confondre une preuve partielle avec une readiness globale.
+
+**Current gate:** le ring OSM/terrain est vérifié; la prochaine gate reste la preuve reviewer/admin sur la branche Neon effectivement liée à Vercel.
+
+**Environment correction:** la production canonique `https://omni.sparkafrika.online/` utilise Neon `wild-moon-30984513`, branche `br-dawn-hill-am5amy22` (`omni-v2-rebuild`). Les rôles ou facilités observés sur la branche primaire `production` ne constituent pas une preuve de la production actuelle. Junior a été recréé/réconcilié sur cette branche avec `operator:active`; l’identité Neon Auth et les mots de passe n’ont pas été modifiés.
+
+**OSM proof:** les commits `ed764ed`, `ea27694`, `280fb14` et `490522b` ont borné les miroirs Overpass, ajouté un repli documenté, rendu les runs idempotents au niveau source et ciblé la fenêtre Lomé–Aflao. La preuve navigateur a observé l’import Lomé avec `100 created / 0 existing` et l’import Aflao avec `99 created / 1 existing`. La requête Neon en lecture seule a ensuite confirmé `202` runs OSM, `202` corrélations uniques, `200` références source et `200` facilités publiques non revendiquées; `153` facilités se trouvent dans le corridor côtier contrôlé. Cette preuve est `observed`, avec dépendance externe Overpass et couverture non exhaustive.
+
+**Field positioning ring:** le commit `394d828` ajoute dans « Inscrire une facilité » une carte de rues avec localisation courante comme défaut, fallback Lomé si la permission échoue, bouton « Ma position », pin déplaçable par glisser-déposer ou clic de carte, coordonnées techniques affichées en lecture secondaire et transmission au contrat serveur existant. Le contrôle browser en production a observé l’état fallback après une localisation lente, puis `Pin ajusté manuellement` avec mise à jour des coordonnées après clic. Le serveur conserve l’autorisation `operator:active`, la validation des bornes, l’attribution OSM et l’état `public_import` / `unclaimed`.
+
+**Evidence and residual gap:** `pnpm test` passe avec `133/133` tests et `pnpm build` réussit; le warning de bundle Vite supérieur à 500 kB demeure non bloquant. Le ring est `verified` pour la carte terrain et la population OSM, mais le produit global reste `partial`: la file reviewer/admin sur cette branche doit encore être ouverte avec Kheir, puis les parcours Buyer/Seller/QR, Push/VAPID et Free/Pro/billing doivent recevoir leurs propres preuves. Ne pas publier « production-ready » comme conclusion globale.
+
+**Next owner/action:** équipe Omni, ouvrir la session reviewer Kheir sur l’origine canonique, vérifier le rôle `reviewer:active` sur `br-dawn-hill-am5amy22`, puis documenter un état autorisé vide ou une revue de claim de test sans toucher aux comptes actifs. Revenir à la carte terrain pour enregistrer de nouvelles présences seulement avec des références OSM et une validation humaine appropriées.
+
+**Review trigger:** réouvrir ce ring si la branche Vercel change, si le provider Overpass devient indisponible de façon persistante, si une facilité importée reçoit un propriétaire, ou si la précision de localisation terrain est insuffisante sur un appareil réel.
