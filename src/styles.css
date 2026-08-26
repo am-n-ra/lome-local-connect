@@ -512,6 +512,34 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .field-pilot-form label { display: grid; gap: 6px; color: var(--ink-soft); font-size: 10px; font-weight: 800; }
 .field-pilot-form input { width: 100%; min-height: 41px; border: 1px solid #dfeae4; border-radius: 11px; padding: 0 10px; color: var(--ink); background: #fbfdfb; outline-color: var(--coral); font: inherit; font-size: 12px; }
 .field-pilot-form input::placeholder { color: #a9b8b2; }
+.field-pilot-location { display: grid; gap: 9px; margin: 2px 0 3px; padding: 11px; border: 1px solid rgba(31,88,72,.13); border-radius: 16px; background: #f8fbf9; box-shadow: 0 8px 22px rgba(42, 74, 63, .05); }
+.field-pilot-location-head, .field-pilot-location-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.field-pilot-location-head > div { display: grid; gap: 3px; }
+.field-pilot-location-head strong { color: var(--ink); font-size: 12px; }
+.field-pilot-locate-button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 32px; border: 1px solid rgba(31,88,72,.18); border-radius: 999px; padding: 0 9px; color: var(--forest); background: #fff; font-size: 10px; font-weight: 900; white-space: nowrap; }
+.field-pilot-locate-button:hover:not(:disabled) { border-color: var(--coral); color: #9e583a; }
+.field-pilot-location-map { position: relative; min-height: 248px; overflow: hidden; border: 1px solid #dfeae4; border-radius: 13px; background: #e9efec; }
+.field-pilot-location-map .maplibregl-canvas-container, .field-pilot-location-map .maplibregl-canvas { width: 100%; height: 100%; }
+.field-pilot-location-map .maplibregl-ctrl-top-right { top: 9px; right: 9px; }
+.field-pilot-location-map .maplibregl-ctrl-group { overflow: hidden; border: 1px solid rgba(31,88,72,.14); border-radius: 10px; box-shadow: 0 5px 12px rgba(42, 74, 63, .12); }
+.field-pilot-location-map .maplibregl-ctrl-group button { width: 31px; height: 31px; }
+.field-pilot-draggable-pin { position: relative; display: grid; width: 36px; height: 44px; place-items: center; padding: 0; border: 0; background: transparent; cursor: grab; }
+.field-pilot-draggable-pin:active { cursor: grabbing; }
+.field-pilot-draggable-pin:focus-visible { outline: 3px solid rgba(228,147,104,.60); outline-offset: 2px; border-radius: 10px; }
+.field-pilot-pin-core { position: relative; display: grid; width: 29px; height: 29px; place-items: center; border: 3px solid #fff; border-radius: 50% 50% 50% 0; background: #1d5144; box-shadow: 0 6px 13px rgba(25, 51, 44, .27); transform: rotate(-45deg); }
+.field-pilot-pin-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coral); transform: rotate(45deg); }
+.field-pilot-location-foot { color: var(--ink-soft); font-size: 10px; font-weight: 800; }
+.field-pilot-location-foot span { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
+.field-pilot-location-foot code { color: #6f827b; font-size: 9px; white-space: nowrap; }
+.field-pilot-location .privacy-note { margin: 0; }
+@media (min-width: 720px) {
+  .field-pilot-location-map { min-height: 286px; }
+}
+@media (max-width: 520px) {
+  .field-pilot-location { padding: 10px; }
+  .field-pilot-location-map { min-height: 220px; }
+  .field-pilot-location-foot { align-items: flex-start; flex-direction: column; gap: 3px; }
+}
 .field-pilot-sheet .seller-list-heading { margin-top: 18px; }
 .claim-success { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 11px; border-radius: 12px; color: #1f6b57; background: #e9f7ef; font-size: 10px; line-height: 1.45; }
 .claim-success svg { flex: 0 0 auto; margin-top: 1px; }
