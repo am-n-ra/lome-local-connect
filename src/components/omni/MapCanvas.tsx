@@ -115,6 +115,8 @@ function setFacilitiesVisibility(map: MapInstance, visible: boolean) {
   for (const layerId of [
     "omni-clusters",
     "omni-cluster-count",
+    "omni-point-pulse",
+
     "omni-point-halo",
     "omni-points",
     "omni-pin-icons",
