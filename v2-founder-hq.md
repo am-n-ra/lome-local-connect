@@ -763,3 +763,20 @@ The implementation checkpoint is **partial pending validation**. The full valida
 **Evidence class and residuals:** ce ring est `verified / read-only operational proof` pour le rôle Reviewer, la queue claims et l’exposition de la queue Admin. Il ne ferme pas la readiness globale: les parcours Buyer/Seller/QR, Push/VAPID, Free/Pro/billing, l’activation vendeur réelle et les tests de décision Reviewer restent des gates séparées. Toute décision sur le claim ou tout changement de statut vendeur doit recevoir une confirmation explicite et cibler des données de test sûres.
 
 **Next smallest action:** poursuivre avec la preuve Buyer/Seller/QR de bout en bout sur la même origine et la même branche Neon, sans revenir à la branche primaire ni aux previews Vercel hashées.
+
+
+## Buyer/Seller/QR production checkpoint — 2026-08-26
+
+**Status:** `verified / bounded partial operational proof; global readiness remains open`.
+
+**Scope:** The proof used only the explicitly labelled non-real fixture: `demo@buyer.omni`, `demo@seller.omni`, `Omni Demo Seller Hub` (`20000000-0000-0000-0000-000000000101`) and `Root proof demo product` (`30000000-0000-0000-0000-000000000101`). Real users, Neon Auth identities, passwords, JWTs, connection strings and QR raw tokens were not exposed or changed.
+
+**Proven on canonical production:** The Buyer availability request returned HTTP `201` with request `42de9214-43da-4c49-9065-a084068e45dd`; the Seller response returned HTTP `201` with response `ded7e034-4ade-4bc8-a91e-d73d65e9557c`, `available`, quantity `2`, price `1500` minor units; the Buyer purchase intent returned HTTP `201` with intent `92548817-fab6-444a-83e6-71441742f046` and transaction `dafeaf6e-9c2a-4c3d-b30a-1d134692d4f8`; and Seller QR issuance returned HTTP `201`. The deployed snapshot correction from commit `1f9abc7` kept the proof on the existing fused transaction function and the 12-function Hobby limit. The purchase-intent SQL correction from commit `743c0d7` changed the product source to `r.product_id`, after which the production intent succeeded.
+
+**QR evidence:** A Buyer-side verification attempt returned HTTP `409 / CONFLICT` and left the transaction at `qr_ready`. Under the currently implemented contract, the Seller session then verified the QR with HTTP `200`, `accepted: true` and `nextReplayCount: 1`; the same QR hash replay returned HTTP `409 / CONFLICT`. The Seller snapshot returned HTTP `200`, `actorRole: seller` and `state: qr_verified`. Neon read-only reconciliation on `br-dawn-hill-am5amy22` confirmed ordered states `intent_created → qr_ready → qr_verified`, one verified QR record with `replay_count: 1`, both transaction members and zero external payment declarations.
+
+**Decision and boundary:** This closes the bounded Buyer request → Seller availability → Buyer intent → Seller QR → Seller verification/replay-protection ring. It does not prove Buyer-authorized QR verification; the current server contract explicitly requires the Seller transaction member, so that product/API decision remains open rather than being silently relabelled. No payment declaration, confirmation, fulfilment, receipt, claim decision or seller status mutation was performed.
+
+**Residual gates:** The next status-changing operation is the labelled demo transaction’s external-payment path and requires explicit owner authorization. If authorized, proceed as `pay_on_delivery` demo state only: Buyer declaration, Seller confirmation, Seller fulfilment and Buyer receipt, without claiming actual payment settlement. Real Push/VAPID delivery, Free/Pro billing and entitlement enforcement, physical-device Species/Canopy certification and other global release gates remain open. Full proof record: `/home/ubuntu/omni-buyer-seller-qr-production-proof.md`.
+
+**Review trigger:** Re-open this ring if the QR actor contract changes, if the Vercel-linked Neon branch changes, if the fixture is ever treated as real business data, or before any payment/fulfilment mutation beyond the explicitly authorized demo sequence.
