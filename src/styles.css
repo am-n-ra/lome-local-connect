@@ -840,7 +840,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 /* Live UI pass: keep the application anchored to the visual viewport and let
    surfaces opt into keyboard-aware positioning without moving the map itself. */
 .omni-stage-viewport { --omni-vvh: 100svh; --omni-keyboard: 0px; }
-.omni-stage-viewport.species-app { height: 100svh; min-height: 100svh; max-height: 100svh; overflow: hidden; overscroll-behavior: none; }
+.omni-stage-viewport.species-app { position: fixed; inset: 0; width: 100%; height: 100svh; min-height: 100svh; max-height: 100svh; overflow: hidden; overscroll-behavior: none; overflow-anchor: none; }
 .omni-stage-viewport.map-stage { height: 100%; min-height: 100%; }
 .omni-keyboard-aware { transition: bottom .22s var(--ease), transform .22s var(--ease); }
 .search-anchor.omni-keyboard-aware { bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom)) + var(--omni-keyboard, 0px)); }
