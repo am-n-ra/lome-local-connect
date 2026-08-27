@@ -10,6 +10,7 @@
     { "source": "/api/v2/wallet", "destination": "/api/v2/seller/catalogue?omni_action=wallet" },
     { "source": "/api/v2/wallet/recharges", "destination": "/api/v2/seller/catalogue?omni_action=wallet-recharge" },
     { "source": "/api/v2/wallet/pro", "destination": "/api/v2/seller/catalogue?omni_action=wallet-pro" },
-    { "source": "/api/v2/fedapay/webhook", "destination": "/api/v2/seller/catalogue?omni_action=fedapay-webhook" }
+    { "source": "/api/v2/fedapay/webhook", "destination": "/api/v2/seller/catalogue?omni_action=fedapay-webhook" },
+    { "source": "/api/v2/transaction-messages", "destination": "/api/v2/seller/catalogue?omni_action=transaction-messages" }
   ]
 }

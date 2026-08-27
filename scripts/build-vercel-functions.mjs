@@ -9,7 +9,6 @@ const entries = {
   'api/v2/external-payment-declarations.js': 'src/server/vercel/external-payment-declarations.ts',
   'api/v2/qr-verifications.js': 'src/server/vercel/qr-verifications.ts',
   'api/v2/transaction-transitions.js': 'src/server/vercel/transaction-transitions.ts',
-  'api/v2/transaction-messages.js': 'src/server/vercel/transaction-messages.ts',
   'api/v2/availability-responses.js': 'src/server/vercel/availability-responses.ts',
   'api/v2/seller/availability-requests.js': 'src/server/vercel/seller-availability-requests.ts',
   'api/v2/seller/catalogue.js': 'src/server/vercel/seller-catalogue.ts',
