@@ -19,6 +19,8 @@ Omni V2 peut avancer vers une **exposition contrôlée**, mais ne doit pas encor
 
 La suite locale est verte avec **151 tests sur 151** et le build produit les **12 fonctions Vercel** prévues. Les commits récents couvrent les messages d’outcome de certification, la fixation du stage mobile pendant le clavier et la récupération du cache/service worker PWA.
 
+Le projet Vercel lié `omniview` est bien connecté au dépôt `am-n-ra/lome-local-connect`, sur l’équipe `Kheir's projects` au plan Hobby. Le déploiement de production correspondant au commit `12c4d1a` est `READY`, avec la branche `omni-v2-rebuild` et l’alias de branche `omniview-git-omni-v2-rebuild-kheirs-projects.vercel.app`. Le déploiement précédent du correctif PWA `ddc5f00` est également `READY`. Cette preuve établit la publication Git→Vercel ; elle ne prouve pas encore le comportement OS sur un téléphone réel.
+
 Ces éléments sont des preuves **observées localement**. Ils ne remplacent pas la preuve **manuelle sur appareil réel** de l’installation, du clavier, de la permission Push et du clic sur une notification.
 
 ## Critères de pause
