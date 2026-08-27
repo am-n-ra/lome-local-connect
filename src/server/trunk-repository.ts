@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueProduct, TransactionSnapshotResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionSnapshotResult } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -1067,7 +1067,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { authorized: true };
     },
 
-    async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; products: SellerCatalogueProduct[] }> {
+    async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; facilities: SellerCatalogueFacility[]; products: SellerCatalogueProduct[] }> {
       const authorizationRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
@@ -1076,7 +1076,34 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           and a.onboarding_state = 'seller_ready'
         limit 1
       `);
-      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, products: [] };
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, facilities: [], products: [] };
+      const facilityRows = await retryDatabase(() => sql`
+        select
+          f.id,
+          f.name,
+          coalesce(f.category, 'Autre') as category,
+          f.address,
+          'XOF' as currency,
+          count(p.id)::int as product_count
+        from v2_facilities f
+        join v2_accounts a on a.id = f.account_id
+        join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
+        left join v2_products p on p.facility_id = f.id and p.publication_state <> 'archived'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        group by f.id
+        order by f.name asc, f.id asc
+      `);
+      const facilities = (facilityRows as Record<string, unknown>[]).map((row) => ({
+        id: String(row.id),
+        name: String(row.name),
+        category: String(row.category),
+        address: row.address === null ? null : String(row.address),
+        currency: String(row.currency),
+        slotState: 'active' as const,
+        productCount: Number(row.product_count ?? 0),
+      }));
       const rows = await retryDatabase(() => sql`
         select
           p.id,
@@ -1119,9 +1146,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         netPriceMinor: row.net_price_minor === null ? null : Number(row.net_price_minor),
         publicationState: String(row.publication_state) as SellerCatalogueProduct['publicationState'],
       }));
-      return { authorized: true, products };
+            return { authorized: true, facilities, products };
     },
-
     async createSellerProductDraft(input: {
       authUserId: string;
       facilityId: string;

@@ -197,6 +197,16 @@ export interface SellerAvailabilityQueue {
 export type SellerCataloguePublicationState = 'draft' | 'pending_validation' | 'published' | 'sold_out' | 'archived';
 export type SellerCatalogueDiscountKind = 'percentage' | 'fixed';
 
+export interface SellerCatalogueFacility {
+  id: string;
+  name: string;
+  category: string;
+  address: string | null;
+  currency: string;
+  slotState: 'active' | 'missing';
+  productCount: number;
+}
+
 export interface SellerCatalogueProduct {
   id: string;
   facilityId: string;
@@ -214,6 +224,7 @@ export interface SellerCatalogueProduct {
 
 export interface SellerCatalogueResult {
   authorized: boolean;
+  facilities: SellerCatalogueFacility[];
   products: SellerCatalogueProduct[];
 }
 

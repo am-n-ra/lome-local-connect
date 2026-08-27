@@ -119,6 +119,12 @@ var AvailabilityPolicyError = class extends Error {
     this.name = "AvailabilityPolicyError";
   }
 };
+var SellerCataloguePolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "SellerCataloguePolicyError";
+  }
+};
 var PurchaseIntentPolicyError = class extends Error {
   constructor(message) {
     super(message);
@@ -892,6 +898,171 @@ function createTrunkRepository(sql = database()) {
       }
       return { authorized: true };
     },
+    async listSellerCatalogue(input) {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        limit 1
+      `);
+      if (!authorizationRows[0]) return { authorized: false, facilities: [], products: [] };
+      const facilityRows = await retryDatabase(() => sql`
+        select
+          f.id,
+          f.name,
+          coalesce(f.category, 'Autre') as category,
+          f.address,
+          'XOF' as currency,
+          count(p.id)::int as product_count
+        from v2_facilities f
+        join v2_accounts a on a.id = f.account_id
+        join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
+        left join v2_products p on p.facility_id = f.id and p.publication_state <> 'archived'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        group by f.id
+        order by f.name asc, f.id asc
+      `);
+      const facilities = facilityRows.map((row) => ({
+        id: String(row.id),
+        name: String(row.name),
+        category: String(row.category),
+        address: row.address === null ? null : String(row.address),
+        currency: String(row.currency),
+        slotState: "active",
+        productCount: Number(row.product_count ?? 0)
+      }));
+      const rows = await retryDatabase(() => sql`
+        select
+          p.id,
+          p.facility_id,
+          f.name as facility_name,
+          p.name,
+          p.description,
+          p.unit,
+          p.price_minor,
+          p.currency,
+          p.discount_kind,
+          p.discount_value_minor,
+          case
+            when p.discount_kind = 'percentage' and p.discount_value_minor between 1 and 90
+              then p.price_minor - floor((p.price_minor * p.discount_value_minor) / 100.0)
+            when p.discount_kind = 'fixed' and p.discount_value_minor > 0 and p.discount_value_minor < p.price_minor
+              then p.price_minor - p.discount_value_minor
+            else null
+          end as net_price_minor,
+          p.publication_state
+        from v2_products p
+        join v2_facilities f on f.id = p.facility_id
+        join v2_accounts a on a.id = f.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and a.onboarding_state = 'seller_ready'
+        order by f.name asc, p.updated_at desc, p.id desc
+      `);
+      const products = rows.map((row) => ({
+        id: String(row.id),
+        facilityId: String(row.facility_id),
+        facilityName: String(row.facility_name),
+        name: String(row.name),
+        description: row.description === null ? null : String(row.description),
+        unit: String(row.unit),
+        priceMinor: Number(row.price_minor),
+        currency: String(row.currency),
+        discountKind: row.discount_kind === null ? null : row.discount_kind,
+        discountValueMinor: row.discount_value_minor === null ? null : Number(row.discount_value_minor),
+        netPriceMinor: row.net_price_minor === null ? null : Number(row.net_price_minor),
+        publicationState: String(row.publication_state)
+      }));
+      return { authorized: true, facilities, products };
+    },
+    async createSellerProductDraft(input) {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      if (input.discountKind === "percentage" && input.discountValueMinor > 90) throw new SellerCataloguePolicyError("DISCOUNT_TOO_LARGE");
+      if (input.discountKind === "fixed" && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError("DISCOUNT_TOO_LARGE");
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+        ), owned_facility as (
+          select f.id, f.commercial_plan
+          from v2_facilities f
+          join seller s on s.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+        ), slot_check as (
+          select 1
+          from v2_facility_slots fs
+          join seller s on s.id = fs.account_id
+          where fs.facility_id = ${input.facilityId}::uuid
+            and fs.status = 'assigned'
+        ), inserted as (
+          insert into v2_products
+            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, idempotency_key, publication_state)
+          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.priceMinor}, ${input.currency.toUpperCase()}, ${input.discountKind}, ${input.discountValueMinor}, ${input.idempotencyKey}, 'draft'
+          from owned_facility of
+          where exists (select 1 from slot_check)
+          on conflict (facility_id, idempotency_key) do nothing
+          returning id, facility_id, name, publication_state, price_minor, discount_kind, discount_value_minor
+        )
+        select * from inserted
+        union all
+        select p.id, p.facility_id, p.name, p.publication_state, p.price_minor, p.discount_kind, p.discount_value_minor
+        from v2_products p
+        where p.facility_id = ${input.facilityId}::uuid and p.idempotency_key = ${input.idempotencyKey}
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
+      if (String(row.discount_kind) !== input.discountKind || Number(row.discount_value_minor) !== input.discountValueMinor || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError("IDEMPOTENCY_CONFLICT");
+      const discount = input.discountKind === "percentage" ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
+      return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: "draft", netPriceMinor: input.priceMinor - discount };
+    },
+    async updateSellerProductDraft(input) {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) throw new SellerCataloguePolicyError("INVALID_INPUT");
+      if (input.discountKind === "percentage" && input.discountValueMinor > 90) throw new SellerCataloguePolicyError("DISCOUNT_TOO_LARGE");
+      if (input.discountKind === "fixed" && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError("DISCOUNT_TOO_LARGE");
+      const rows = await retryDatabase(() => sql`
+        update v2_products p
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, updated_at = now()
+        from v2_facilities f join v2_accounts a on a.id = f.account_id
+        where p.id = ${input.productId}::uuid and p.facility_id = f.id
+          and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+          and p.publication_state = 'draft'
+        returning p.id
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_NOT_EDITABLE");
+      const discount = input.discountKind === "percentage" ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
+      return { productId: String(row.id), publicationState: "draft", netPriceMinor: input.priceMinor - discount };
+    },
+    async transitionSellerProduct(input) {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select p.id, p.facility_id, p.publication_state, f.commercial_plan
+          from v2_products p join v2_facilities f on f.id = p.facility_id join v2_accounts a on a.id = f.account_id
+          where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+        ), published_count as (
+          select count(*)::int as count from v2_products p where p.facility_id = (select facility_id from owned) and p.publication_state = 'published'
+        ), changed as (
+          update v2_products p set publication_state = ${input.to}, updated_at = now()
+          where p.id = (select id from owned)
+            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and (((select commercial_plan from owned) = 'pro_active') or (select count from published_count) < 5))
+              or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
+          returning p.id, p.publication_state
+        ) select * from changed
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_LIMIT_REACHED");
+      return { productId: String(row.id), publicationState: String(row.publication_state) };
+    },
     async getSellerAvailabilityQueue(input) {
       const sellerRows = await retryDatabase(() => sql`
         select a.id
@@ -1243,6 +1414,61 @@ function createTrunkRepository(sql = database()) {
         method: row.method,
         buyerAccountId: String(row.buyer_account_id)
       };
+    },
+    async submitTransactionRating(input) {
+      const note = input.note?.trim() || null;
+      if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
+        throw new TransactionPolicyError("A rating score between 1 and 5 is required.");
+      }
+      if (note && note.length > 500) throw new TransactionPolicyError("The rating note must be 500 characters or fewer.");
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          join v2_transaction_members m on m.account_id = a.id and m.role = 'buyer'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and m.transaction_id = ${input.transactionId}::uuid
+        ), locked as (
+          select s.transaction_id, a.actor_account_id,
+            coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') as current_state
+          from v2_transaction_snapshots s
+          join actor a on true
+          where s.transaction_id = ${input.transactionId}::uuid
+          for update of s
+        ), eligible as (
+          select * from locked where current_state in ('received', 'rated')
+        ), inserted_rating as (
+          insert into v2_ratings (transaction_id, buyer_account_id, score, note, created_at)
+          select e.transaction_id, e.actor_account_id, ${input.score}, ${note}, ${input.now}::timestamptz
+          from eligible e
+          where e.current_state = 'received'
+          on conflict (transaction_id) do nothing
+          returning id, transaction_id, score, note
+        ), rated_event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select e.transaction_id, e.actor_account_id, 'rated', jsonb_build_object('score', r.score), ${input.now}::timestamptz
+          from eligible e
+          join v2_ratings r on r.transaction_id = e.transaction_id
+          where e.current_state = 'received'
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ), audited as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'transaction_rated', 'transaction', e.transaction_id::text, ${input.correlationId}, 'buyer_submitted_rating', ${input.now}::timestamptz
+          from eligible e
+          where e.current_state in ('received', 'rated')
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select r.id, r.transaction_id, r.score, r.note
+        from v2_ratings r
+        join eligible e on e.transaction_id = r.transaction_id
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("Rating is available only after the Buyer confirms receipt.");
+      return { ratingId: String(row.id), transactionId: String(row.transaction_id), score: Number(row.score), note: row.note === null || row.note === void 0 ? null : String(row.note), state: "rated" };
     },
     async transitionTransaction(input) {
       const rows = await retryDatabase(() => sql`
@@ -1764,7 +1990,7 @@ function createTrunkRepository(sql = database()) {
       const rows = await retryDatabase(() => sql`
         with eligible as (
           select q.transaction_id, q.token_hash, a.id as actor_account_id,
-            s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor,
+            s.facility_id, s.product_id, p.name as product_name, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor,
             coalesce((
               select e.state
               from v2_transaction_events e
@@ -1774,6 +2000,7 @@ function createTrunkRepository(sql = database()) {
             ), 'intent_created') as current_state
           from v2_qr_tokens q
           join v2_transaction_snapshots s on s.transaction_id = q.transaction_id
+          join v2_products p on p.id = s.product_id
           join v2_transaction_members m on m.transaction_id = q.transaction_id and m.role = 'seller'
           join v2_accounts a on a.id = m.account_id
           where q.transaction_id = ${input.transactionId}::uuid
@@ -1817,9 +2044,10 @@ function createTrunkRepository(sql = database()) {
           returning entity_id
         )
         select u.transaction_id, u.verified_at, u.replay_count,
-          s.facility_id, s.product_id, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor
+          s.facility_id, s.product_id, p.name as product_name, s.quantity, s.unit_price_minor, s.coupon_code, s.net_amount_minor
         from updated u
         join v2_transaction_snapshots s on s.transaction_id = u.transaction_id
+        join v2_products p on p.id = s.product_id
         limit 1
       `);
       const row = rows[0];
@@ -1831,6 +2059,7 @@ function createTrunkRepository(sql = database()) {
         nextReplayCount: Number(row.replay_count),
         facilityId: String(row.facility_id),
         productId: String(row.product_id),
+        productName: String(row.product_name ?? "Offre catalogue"),
         quantity: Number(row.quantity),
         unitPriceMinor: Number(row.unit_price_minor),
         couponCode: row.coupon_code === null || row.coupon_code === void 0 ? null : String(row.coupon_code),
@@ -2047,7 +2276,7 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, "EVIDENCE_NOT_FOUND", error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
   return {
@@ -2583,6 +2812,32 @@ async function handleApi(req, res, pathname, url) {
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === "POST" && pathname === "/api/v2/transaction-ratings") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before rating a transaction."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const score = typeof input.score === "number" ? input.score : Number.NaN;
+      const note = typeof input.note === "string" ? input.note : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId) || !Number.isInteger(score) || score < 1 || score > 5 || note.length > 500) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction, a score from 1 to 5 and a note of 500 characters or fewer."));
+        return true;
+      }
+      const result = await repository.submitTransactionRating({
+        authUserId,
+        transactionId,
+        score,
+        note,
+        correlationId,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === "POST" && pathname === "/api/v2/external-payment-confirmations") {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -2646,6 +2901,68 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.getSellerAvailabilityQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerProductMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})$/i);
+    if (sellerProductMatch && (req.method === "PATCH" || req.method === "POST")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before changing an offer."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const productId = sellerProductMatch[1];
+      if (req.method === "POST") {
+        const to = input.to === "published" || input.to === "archived" ? input.to : null;
+        if (!to) throw new ApiInputError("Choose a valid publication transition.");
+        const result2 = await repository.transitionSellerProduct({ authUserId, productId, to });
+        json(res, 200, { ok: true, correlationId, data: result2 });
+        return true;
+      }
+      const name = typeof input.name === "string" ? input.name : "";
+      const description = input.description === null || input.description === void 0 ? null : typeof input.description === "string" ? input.description : "";
+      const unit = typeof input.unit === "string" ? input.unit : "unit";
+      const currency = typeof input.currency === "string" ? input.currency : "";
+      const discountKind = input.discountKind === "percentage" || input.discountKind === "fixed" ? input.discountKind : null;
+      const priceMinor = Number(input.priceMinor);
+      const discountValueMinor = Number(input.discountValueMinor);
+      if (!name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor)) throw new ApiInputError("A valid product name, price, currency and reduction are required.");
+      const result = await repository.updateSellerProductDraft({ authUserId, productId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/seller/catalogue") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to create an offer."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const facilityId = typeof input.facilityId === "string" ? input.facilityId : "";
+      const name = typeof input.name === "string" ? input.name : "";
+      const description = input.description === null || input.description === void 0 ? null : typeof input.description === "string" ? input.description : "";
+      const unit = typeof input.unit === "string" ? input.unit : "unit";
+      const currency = typeof input.currency === "string" ? input.currency : "";
+      const discountKind = input.discountKind === "percentage" || input.discountKind === "fixed" ? input.discountKind : null;
+      const priceMinor = Number(input.priceMinor);
+      const discountValueMinor = Number(input.discountValueMinor);
+      const idempotencyKey = req.headers["idempotency-key"];
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor) || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        throw new ApiInputError("A valid facility, product, price, currency, reduction and idempotency key are required.");
+      }
+      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor, idempotencyKey });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/seller/catalogue") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to view your catalogue."));
+        return true;
+      }
+      const result = await repository.listSellerCatalogue({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
