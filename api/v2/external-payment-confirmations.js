@@ -1553,6 +1553,76 @@ function createTrunkRepository(sql = database()) {
         actorRole: input.actorRole
       };
     },
+    async getWalletOverview(input) {
+      const walletRows = await retryDatabase(() => sql`
+        insert into v2_wallets (account_id)
+        select a.id
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        on conflict (account_id) do update set currency = v2_wallets.currency
+        returning id, account_id, currency
+      `);
+      const wallet = walletRows[0];
+      if (!wallet) return null;
+      const walletId = String(wallet.id);
+      const [balanceRows, entryRows, facilityRows] = await Promise.all([
+        retryDatabase(() => sql`
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          where e.wallet_id = ${walletId}::uuid and e.status = 'confirmed'
+        `),
+        retryDatabase(() => sql`
+          select id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at
+          from v2_wallet_ledger_entries
+          where wallet_id = ${walletId}::uuid
+          order by created_at desc, id desc
+          limit 20
+        `),
+        retryDatabase(() => sql`
+          select f.id as facility_id, f.name as facility_name, f.commercial_plan,
+                 coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
+                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
+          left join lateral (
+            select e.price_minor, e.billing_currency
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc
+            limit 1
+          ) last_entitlement on true
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          order by f.name asc, f.id asc
+        `)
+      ]);
+      const balance = balanceRows[0];
+      return {
+        walletId,
+        currency: String(wallet.currency ?? "USD"),
+        balanceMinor: Number(balance?.balance_minor ?? 0),
+        entries: entryRows.map((row) => ({
+          id: String(row.id),
+          kind: String(row.kind),
+          amountMinor: Number(row.amount_minor),
+          status: String(row.status),
+          reference: String(row.reference),
+          facilityId: row.facility_id === null || row.facility_id === void 0 ? null : String(row.facility_id),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+          confirmedAt: row.confirmed_at === null || row.confirmed_at === void 0 ? null : new Date(String(row.confirmed_at)).toISOString()
+        })),
+        facilities: facilityRows.map((row) => ({
+          facilityId: String(row.facility_id),
+          facilityName: String(row.facility_name),
+          plan: String(row.commercial_plan),
+          slotState: "active",
+          proPriceMinor: Number(row.pro_price_minor),
+          billingCurrency: String(row.billing_currency)
+        }))
+      };
+    },
     async unlockFacilityBonus(input) {
       const reference = `facility-bonus:${input.facilityId}`;
       const rows = await retryDatabase(() => sql`
@@ -2881,6 +2951,20 @@ async function handleApi(req, res, pathname, url) {
         correlationId,
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/wallet") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your Omni Wallet."));
+        return true;
+      }
+      const result = await repository.getWalletOverview({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, "FORBIDDEN", "Your account is not available for Wallet access."));
+        return true;
+      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

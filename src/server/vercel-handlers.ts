@@ -69,10 +69,14 @@ export async function sellerAvailabilityRequestsHandler(req: any, res: any) {
 
 export async function sellerCatalogueHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/seller/catalogue');
-  const demoRebind = url.searchParams.get('omni_action') === 'demo-rebind';
+  const action = url.searchParams.get('omni_action');
+  const demoRebind = action === 'demo-rebind';
+  const walletOverview = action === 'wallet';
   const productId = typeof req.query?.id === 'string' ? req.query.id : url.searchParams.get('id');
   const pathname = demoRebind
     ? '/api/v2/seller/demo-rebind'
+    : walletOverview
+      ? '/api/v2/wallet'
     : productId
       ? `/api/v2/seller/catalogue/${productId}`
       : '/api/v2/seller/catalogue';

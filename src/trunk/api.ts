@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionState, TransactionTransitionResult } from './types';
+import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionState, TransactionTransitionResult, WalletOverviewResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -90,6 +90,12 @@ export async function getAvailabilityResponses(input: { requestId: string; token
   return parse<AvailabilityResponsesResult>(response);
 }
 
+export async function getWalletOverview(input: { token: string }): Promise<ApiResult<WalletOverviewResult>> {
+  const response = await fetchWithRecovery('/api/v2/wallet', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<WalletOverviewResult>(response);
+}
 export async function getSellerAvailabilityQueue(input: { token: string }): Promise<ApiResult<SellerAvailabilityQueue>> {
   const response = await fetchWithRecovery('/api/v2/seller/availability-requests', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

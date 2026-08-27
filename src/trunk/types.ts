@@ -343,3 +343,30 @@ export interface AccountCapabilitiesResult {
   operator: boolean;
   reviewer: boolean;
 }
+
+export type WalletLedgerKind = 'recharge' | 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'coupon_credit' | 'bonus_grant' | 'bonus_spend' | 'reversal';
+export interface WalletLedgerSummary {
+  id: string;
+  kind: WalletLedgerKind;
+  amountMinor: number;
+  status: 'pending' | 'confirmed' | 'failed' | 'reversed';
+  reference: string;
+  facilityId: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+}
+export interface WalletFacilitySummary {
+  facilityId: string;
+  facilityName: string;
+  plan: 'free' | 'pro_active' | 'pro_expired';
+  slotState: 'active';
+  proPriceMinor: number;
+  billingCurrency: string;
+}
+export interface WalletOverviewResult {
+  walletId: string;
+  currency: string;
+  balanceMinor: number;
+  facilities: WalletFacilitySummary[];
+  entries: WalletLedgerSummary[];
+}

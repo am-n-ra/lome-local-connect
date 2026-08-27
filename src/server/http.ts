@@ -654,6 +654,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/wallet') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your Omni Wallet.'));
+        return true;
+      }
+      const result = await repository.getWalletOverview({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'Your account is not available for Wallet access.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/seller/demo-rebind') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

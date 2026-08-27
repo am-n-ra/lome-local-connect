@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionSnapshotResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -1814,6 +1814,77 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from: input.from,
         to: input.to,
         actorRole: input.actorRole,
+      };
+    },
+
+    async getWalletOverview(input: { authUserId: string }): Promise<WalletOverviewResult | null> {
+      const walletRows = await retryDatabase(() => sql`
+        insert into v2_wallets (account_id)
+        select a.id
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        on conflict (account_id) do update set currency = v2_wallets.currency
+        returning id, account_id, currency
+      `);
+      const wallet = (walletRows as Record<string, unknown>[])[0];
+      if (!wallet) return null;
+      const walletId = String(wallet.id);
+      const [balanceRows, entryRows, facilityRows] = await Promise.all([
+        retryDatabase(() => sql`
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          where e.wallet_id = ${walletId}::uuid and e.status = 'confirmed'
+        `),
+        retryDatabase(() => sql`
+          select id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at
+          from v2_wallet_ledger_entries
+          where wallet_id = ${walletId}::uuid
+          order by created_at desc, id desc
+          limit 20
+        `),
+        retryDatabase(() => sql`
+          select f.id as facility_id, f.name as facility_name, f.commercial_plan,
+                 coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
+                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
+          left join lateral (
+            select e.price_minor, e.billing_currency
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc
+            limit 1
+          ) last_entitlement on true
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          order by f.name asc, f.id asc
+        `),
+      ]);
+      const balance = (balanceRows as Record<string, unknown>[])[0];
+      return {
+        walletId,
+        currency: String(wallet.currency ?? 'USD'),
+        balanceMinor: Number(balance?.balance_minor ?? 0),
+        entries: (entryRows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.id),
+          kind: String(row.kind) as WalletOverviewResult['entries'][number]['kind'],
+          amountMinor: Number(row.amount_minor),
+          status: String(row.status) as WalletOverviewResult['entries'][number]['status'],
+          reference: String(row.reference),
+          facilityId: row.facility_id === null || row.facility_id === undefined ? null : String(row.facility_id),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+          confirmedAt: row.confirmed_at === null || row.confirmed_at === undefined ? null : new Date(String(row.confirmed_at)).toISOString(),
+        })),
+        facilities: (facilityRows as Record<string, unknown>[]).map((row) => ({
+          facilityId: String(row.facility_id),
+          facilityName: String(row.facility_name),
+          plan: String(row.commercial_plan) as WalletOverviewResult['facilities'][number]['plan'],
+          slotState: 'active' as const,
+          proPriceMinor: Number(row.pro_price_minor),
+          billingCurrency: String(row.billing_currency),
+        })),
       };
     },
 
