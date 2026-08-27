@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omni-shell-v1';
+const CACHE_NAME = 'omni-shell-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest', '/omni-logo-compact.png'];
 
 self.addEventListener('install', (event) => {
@@ -7,7 +7,10 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME && key.startsWith('omni-shell-')).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
+  );
 });
 
 self.addEventListener('fetch', (event) => {
