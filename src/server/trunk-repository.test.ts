@@ -45,7 +45,7 @@ describe('account context Root seam', () => {
       onboardingState: 'seller_ready',
       suspended: false,
       facilityCount: 2,
-      capabilities: { sellerWorkspace: true, operatorTools: false, reviewerWorkspace: true },
+      capabilities: { sellerWorkspace: true, operatorTools: false, reviewerWorkspace: true, adminTools: false },
     });
     expect(call.queries[0]).toContain("ar.status = 'active'");
     expect(call.queries[0]).not.toContain('select a.auth_user_id');

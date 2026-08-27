@@ -310,7 +310,7 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) return null;
-      const roles = Array.isArray(row.roles) ? row.roles.map(String).filter((role) => ["buyer", "seller", "operator", "reviewer"].includes(role)) : [];
+      const roles = Array.isArray(row.roles) ? row.roles.map(String).filter((role) => ["buyer", "seller", "admin", "operator", "reviewer"].includes(role)) : [];
       const suspended = row.suspended_at !== null;
       return {
         accountId: String(row.id),
@@ -321,9 +321,77 @@ function createTrunkRepository(sql = database()) {
         capabilities: {
           sellerWorkspace: !suspended && String(row.onboarding_state) === "seller_ready",
           operatorTools: !suspended && roles.includes("operator"),
-          reviewerWorkspace: !suspended && roles.includes("reviewer")
+          reviewerWorkspace: !suspended && roles.includes("reviewer"),
+          adminTools: !suspended && roles.includes("admin")
         }
       };
+    },
+    async listRoleManagementAccounts(input) {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select candidate.id as account_id, candidate.auth_user_id, candidate.onboarding_state, candidate.suspended_at,
+          count(distinct f.id)::int as facility_count,
+          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
+        from admin
+        cross join v2_accounts candidate
+        left join v2_account_roles ar on ar.account_id = candidate.id
+        left join v2_facilities f on f.account_id = candidate.id
+        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.suspended_at
+        order by candidate.created_at asc, candidate.id asc
+        limit 200
+      `);
+      const accounts = rows.map((row) => ({
+        accountId: String(row.account_id),
+        authUserId: String(row.auth_user_id),
+        roles: (Array.isArray(row.roles) ? row.roles.map(String) : []).filter((role) => ["buyer", "seller", "admin", "operator", "reviewer"].includes(role)),
+        onboardingState: String(row.onboarding_state),
+        suspended: row.suspended_at !== null,
+        facilityCount: Number(row.facility_count ?? 0)
+      }));
+      const authorized = accounts.length > 0;
+      return { authorized, accounts };
+    },
+    async setManagedStaffRole(input) {
+      if (!["operator", "reviewer"].includes(input.role) || !["active", "revoked"].includes(input.status) || input.reason.trim().length < 3 || input.reason.trim().length > 1e3) {
+        throw new FieldPilotPolicyError("A valid managed role, status and bounded reason are required.");
+      }
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select a.id, admin.id as admin_id
+          from v2_accounts a cross join admin
+          where a.id = ${input.accountId}::uuid
+            and a.suspended_at is null
+            and a.id <> admin.id
+        ), upserted as (
+          insert into v2_account_roles (account_id, role, status, granted_by_account_id, revoked_at)
+          select target.id, ${input.role}, ${input.status}, target.admin_id, case when ${input.status} = 'revoked' then now() else null end
+          from target
+          on conflict (account_id, role) do update set status = excluded.status, granted_by_account_id = excluded.granted_by_account_id, revoked_at = excluded.revoked_at
+          returning account_id, role, status
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select target.admin_id, case when ${input.status} = 'active' then 'staff_role_granted' else 'staff_role_revoked' end, 'account_role', upserted.account_id::text, ${input.correlationId}, ${input.reason.trim()}
+          from upserted join target on target.id = upserted.account_id
+          returning entity_id
+        )
+        select upserted.account_id, upserted.role, upserted.status
+        from upserted join audit on audit.entity_id = upserted.account_id::text
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the target account is unavailable.");
+      return { accountId: String(row.account_id), role: String(row.role), status: String(row.status) };
     },
     async createSellerFacility(input) {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180 || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
@@ -2869,6 +2937,40 @@ async function handleApi(req, res, pathname, url) {
         json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
         return true;
       }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/admin/role-management") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to manage staff roles."));
+        return true;
+      }
+      const result = await repository.listRoleManagementAccounts({ authUserId });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, "FORBIDDEN", "An active Omni Admin role is required for role management."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/admin/role-management") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to manage staff roles."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const accountId = typeof input.accountId === "string" ? input.accountId.trim() : "";
+      const role = input.role === "operator" || input.role === "reviewer" ? input.role : "";
+      const status = input.status === "active" || input.status === "revoked" ? input.status : "";
+      const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(accountId) || !role || !status || reason.length < 3 || reason.length > 1e3) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid account, managed role, status and bounded reason."));
+        return true;
+      }
+      const result = await repository.setManagedStaffRole({ authUserId, accountId, role, status, reason, correlationId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

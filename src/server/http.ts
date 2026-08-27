@@ -116,6 +116,40 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/admin/role-management') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to manage staff roles.'));
+        return true;
+      }
+      const result = await repository.listRoleManagementAccounts({ authUserId });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required for role management.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/admin/role-management') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to manage staff roles.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const accountId = typeof input.accountId === 'string' ? input.accountId.trim() : '';
+      const role = input.role === 'operator' || input.role === 'reviewer' ? input.role : '';
+      const status = input.status === 'active' || input.status === 'revoked' ? input.status : '';
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(accountId) || !role || !status || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid account, managed role, status and bounded reason.'));
+        return true;
+      }
+      const result = await repository.setManagedStaffRole({ authUserId, accountId, role, status, reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import-batch') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

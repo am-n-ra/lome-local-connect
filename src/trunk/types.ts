@@ -354,9 +354,24 @@ export interface ApiResult<T> {
 }
 
 
+export interface RoleManagementAccount {
+  accountId: string;
+  authUserId: string;
+  roles: Array<'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer'>;
+  onboardingState: string;
+  suspended: boolean;
+  facilityCount: number;
+}
+
+export interface RoleManagementResult {
+  accountId: string;
+  role: 'operator' | 'reviewer';
+  status: 'active' | 'revoked';
+}
+
 export interface AccountCapabilitiesResult {
   accountId: string;
-  roles: Array<'buyer' | 'seller' | 'operator' | 'reviewer'>;
+  roles: Array<'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer'>;
   onboardingState: string;
   suspended: boolean;
   facilityCount: number;
@@ -364,6 +379,7 @@ export interface AccountCapabilitiesResult {
     sellerWorkspace: boolean;
     operatorTools: boolean;
     reviewerWorkspace: boolean;
+    adminTools: boolean;
   };
 }
 
