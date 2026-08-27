@@ -136,6 +136,26 @@ export interface SellerConfirmationReward {
   unlockedAt: string | null;
 }
 
+export interface QualifyingSaleProof {
+  transactionId: string;
+  facilityId: string;
+  buyerConfirmed: boolean;
+  sellerVerified: boolean;
+  paymentDeclared: boolean;
+  sellerFulfilled: boolean;
+  buyerReceived: boolean;
+  cancelled: boolean;
+  fixture: boolean;
+}
+
+export interface QualifyingSaleEvaluation {
+  eligible: boolean;
+  reason: 'eligible' | 'wrong_facility' | 'missing_buyer_confirmation' | 'missing_seller_verification' | 'missing_payment_declaration' | 'missing_fulfilment' | 'missing_buyer_receipt' | 'cancelled' | 'fixture' | 'already_confirmed';
+  nextQualifyingSales: number;
+  confirmsFacility: boolean;
+  unlocksBonus: boolean;
+}
+
 export interface FacilitySlot {
   id: string;
   accountId: string;

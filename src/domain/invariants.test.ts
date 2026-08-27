@@ -7,6 +7,7 @@ import {
   confirmedWalletBalanceMinor,
   discountAmountMinor,
   displayCurrencyForCountry,
+  evaluateQualifyingSale,
   hasFreeSlot,
   netPriceMinor,
   nextTrustAfterSale,
@@ -88,6 +89,19 @@ describe('Nature Way Roots invariants', () => {
     expect(canCreateConfirmedTrust({ ...baseFacility, qualifyingSales: 2 })).toBe(false);
     expect(canCreateConfirmedTrust({ ...baseFacility, qualifyingSales: 3 })).toBe(true);
     expect(canCreateConfirmedTrust({ ...baseFacility, trust: 'certified', qualifyingSales: 3 })).toBe(false);
+  });
+
+  it('requires the complete verified transaction and excludes fixtures from the 3/3 milestone', () => {
+    const proof = {
+      transactionId: 'transaction-1', facilityId: 'facility-1', buyerConfirmed: true, sellerVerified: true,
+      paymentDeclared: true, sellerFulfilled: true, buyerReceived: true, cancelled: false, fixture: false,
+    } as const;
+    expect(evaluateQualifyingSale({ ...baseFacility, qualifyingSales: 2 }, proof)).toMatchObject({
+      eligible: true, reason: 'eligible', nextQualifyingSales: 3, confirmsFacility: true, unlocksBonus: true,
+    });
+    expect(evaluateQualifyingSale({ ...baseFacility, qualifyingSales: 2 }, { ...proof, fixture: true }).reason).toBe('fixture');
+    expect(evaluateQualifyingSale({ ...baseFacility, qualifyingSales: 2 }, { ...proof, facilityId: 'other' }).reason).toBe('wrong_facility');
+    expect(evaluateQualifyingSale({ ...baseFacility, qualifyingSales: 2 }, { ...proof, buyerReceived: false }).reason).toBe('missing_buyer_receipt');
   });
 
   it('provides one free slot and derives only confirmed wallet funds', () => {

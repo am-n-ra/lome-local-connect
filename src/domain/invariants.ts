@@ -6,6 +6,8 @@ import type {
   FacilityTrust,
   SupportedCurrency,
   WalletLedgerEntry,
+  QualifyingSaleEvaluation,
+  QualifyingSaleProof,
 } from './contracts';
 
 export const FREE_OFFER_LIMIT = 5;
@@ -65,6 +67,38 @@ export function canCreateConfirmedTrust(facility: Facility): boolean {
 
 export function nextTrustAfterSale(facility: Facility): FacilityTrust {
   return canCreateConfirmedTrust(facility) ? 'confirmed' : facility.trust;
+}
+
+export function evaluateQualifyingSale(
+  facility: Facility,
+  proof: QualifyingSaleProof,
+): QualifyingSaleEvaluation {
+  const unchanged = (reason: QualifyingSaleEvaluation['reason']): QualifyingSaleEvaluation => ({
+    eligible: false,
+    reason,
+    nextQualifyingSales: facility.qualifyingSales,
+    confirmsFacility: false,
+    unlocksBonus: false,
+  });
+  if (proof.facilityId !== facility.id) return unchanged('wrong_facility');
+  if (facility.qualifyingSales >= CONFIRMED_SALES_THRESHOLD || facility.commercialConfidence === 'confirmed') {
+    return unchanged('already_confirmed');
+  }
+  if (proof.fixture) return unchanged('fixture');
+  if (proof.cancelled) return unchanged('cancelled');
+  if (!proof.buyerConfirmed) return unchanged('missing_buyer_confirmation');
+  if (!proof.sellerVerified) return unchanged('missing_seller_verification');
+  if (!proof.paymentDeclared) return unchanged('missing_payment_declaration');
+  if (!proof.sellerFulfilled) return unchanged('missing_fulfilment');
+  if (!proof.buyerReceived) return unchanged('missing_buyer_receipt');
+  const nextQualifyingSales = Math.min(CONFIRMED_SALES_THRESHOLD, facility.qualifyingSales + 1);
+  return {
+    eligible: true,
+    reason: 'eligible',
+    nextQualifyingSales,
+    confirmsFacility: nextQualifyingSales >= CONFIRMED_SALES_THRESHOLD,
+    unlocksBonus: nextQualifyingSales >= CONFIRMED_SALES_THRESHOLD,
+  };
 }
 
 export function hasFreeSlot(slots: readonly FacilitySlot[]): boolean {
