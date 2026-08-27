@@ -61,3 +61,12 @@ L’intention pending existante de 10 000 F CFA a été reprise sans duplication
 ## Mise à jour — numéro sandbox officiel non reconnu
 
 Un nouvel essai a utilisé le scénario de succès documenté par FedaPay pour MTN Bénin. Le checkout a été atteint et la soumission traitée, mais FedaPay a répondu que le numéro de compte Mobile Money était introuvable. Aucun webhook d’approbation, crédit Wallet ou activation Pro n’a suivi. Le chemin positif reste bloqué par la configuration ou l’identité de test reconnue par l’environnement provider ; aucune réussite financière n’est revendiquée.
+
+
+## Vérification de configuration et observabilité — 2026-08-27
+
+Le code attend les variables serveur `FEDAPAY_ENV`, `FEDAPAY_SECRET_KEY` et `FEDAPAY_WEBHOOK_SECRET`; aucune valeur n’a été extraite ni exposée. Les métadonnées Vercel disponibles ne fournissent pas de lecture non secrète de ces valeurs. Les logs runtime de production sur les deux dernières heures ne contiennent aucune trace textuelle FedaPay, donc ils ne permettent pas de confirmer le mode Test ou Live.
+
+La vue d’erreurs Vercel sur 24 heures montre deux groupes : une `DeprecationWarning` Node `url.parse()` sur des routes Seller/facilities et des `v2_api_error` historiques couvrant plusieurs routes, dont une ancienne erreur de colonne `p.discount_kind` et une violation de corrélation opérateur. Ces éléments ne sont pas attribués au flux FedaPay dans la preuve actuelle et doivent rester des résidus séparés, à traiter dans un ring technique ultérieur si leur récurrence est confirmée.
+
+**Décision de gate :** ne pas retenter le paiement positif ni modifier les secrets depuis ce pass. Le propriétaire doit confirmer dans Vercel/FedaPay que `FEDAPAY_ENV` cible le serveur sandbox et que les clés test et le secret webhook appartiennent au même compte/environnement. Après cette vérification, reprendre avec un identifiant sandbox officiellement reconnu.
