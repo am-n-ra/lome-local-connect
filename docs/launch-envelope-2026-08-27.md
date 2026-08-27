@@ -23,6 +23,12 @@ Le projet Vercel lié `omniview` est bien connecté au dépôt `am-n-ra/lome-loc
 
 Ces éléments sont des preuves **observées localement**. Ils ne remplacent pas la preuve **manuelle sur appareil réel** de l’installation, du clavier, de la permission Push et du clic sur une notification.
 
+## Incident de release observé le 27 août 2026
+
+Le contrôle Vercel des erreurs runtime sur les dernières 24 heures a trouvé un groupe `v2_api_error` avec 13 occurrences sur 5 utilisateurs. Les routes concernées sont `/api/v2/seller/catalogue`, `/api/v2/transaction-transitions`, `/api/v2/purchase-intents`, `/api/v2/external-payment-confirmations` et `/api/v2/seller/demo-rebind`. Les symptômes observés incluent une colonne Neon absente (`p.discount_kind`), un paramètre SQL indéterminé (`$21`) et une collision d’idempotence sur `v2_purchase_intents.response_id`. Un groupe séparé contient 35 `DEP0169` de dépréciation Node sur 14 utilisateurs.
+
+Décision Nature Way : **ne pas élargir l’exposition** et ne pas déclarer la release production prête pour cohorte utilisateur tant que le groupe `v2_api_error` n’a pas été reproduit, corrigé ou explicitement borné avec preuve négative. Le problème est potentiellement commercial et transactionnel ; il doit être traité comme un gate Heartwood/Root avant tout nouveau polish mobile. Le propriétaire technique doit auditer les migrations et requêtes des routes concernées, puis fournir une preuve de retry/idempotence et de compatibilité schéma.
+
 ## Critères de pause
 
 La release doit être mise en pause si un rôle Buyer voit une action Seller/Admin, si une donnée de chat ou de preuve privée devient publique, si un paiement est traité comme Wallet sans webhook signé, si un QR transactionnel expiré est accepté, ou si une erreur mobile empêche le retour du dock et la récupération de la session.
