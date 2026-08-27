@@ -24,3 +24,19 @@ Calling `/api/v2/wallet` without an authenticated session returned HTTP `401` wi
 ## Residual gap
 
 The Wallet overview is currently a server/API vertical slice. The Seller workspace does not yet render the balance or expose a recharge/Pro-purchase action. The next branch must add the authenticated Wallet surface and a FedaPay configuration-gated recharge flow, while keeping transaction payment external and separate.
+
+## Seller UI proof — deployment `cd617c8`
+
+The production Seller workspace displays the new tab set `Demandes`, `Catalogue`, `Wallet`, and `QR transaction`. The browser session loaded the deployed bundle and the Wallet tab is reachable from the Seller navigation. The current session was not the demo Seller identity at the time of this observation, so the balance/facility data screen itself still requires the authenticated `demo@seller.omni` proof.
+
+## Authenticated Seller UI proof
+
+On the deployed Seller workspace, the Wallet tab rendered the live overview with:
+
+- Solde Omni: `$0.00` confirmed credits.
+- Facility: `Omni Demo Seller Hub`.
+- Plan: `Free · 5 offres maximum`.
+- Facility-scoped Pro price: `$10.00 / mois`.
+- Configuration-gated message: FedaPay recharge will only activate after configuration and verified webhook confirmation.
+
+The same screen explicitly states that transaction payments remain external, preserving the separation between Omni Wallet credits and V1 purchase payment declarations.
