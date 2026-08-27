@@ -44,3 +44,11 @@ The same screen explicitly states that transaction payments remain external, pre
 ## Heartwood proof
 
 The repository and domain test suite passed on 2026-08-27: 19 test files and 147 tests passed. Existing invariant coverage confirms that only confirmed Wallet entries contribute to the balance, spending cannot exceed confirmed funds, withdrawal-like transaction payment is not introduced, and slot purchase rules remain account-scoped. The new read surface is deployed separately from the external transaction payment state machine.
+
+## FedaPay recharge ring — deployment proof
+
+The FedaPay recharge code was deployed through Vercel deployment `dpl_4ywL8NDv3fvshxmv5UYRhDL6uYvh`, now `READY` and aliased to `omni.sparkafrika.online`. The deployment includes the additive recharge-intent migration, server-only provider adapter, authenticated pending-recharge route, and signed webhook route. A production probe was sent to `/api/v2/fedapay/webhook` without `X-FEDAPAY-SIGNATURE`; the response is being read from the browser session before accepting the webhook gate.
+
+The unsigned webhook probe was observed in production and returned HTTP `400` with code `WEBHOOK_INVALID`; no database reconciliation was attempted. A second non-financial recharge probe used a deliberately invalid amount (`50` minor units) and a synthetic token, so it cannot create a provider transaction or charge money; its server response remains to be read and recorded.
+
+The deliberate invalid recharge probe returned HTTP `401 AUTH_REQUIRED` because the synthetic Authorization value was not an authenticated Omni session. This proves the public route does not reach validation or FedaPay without a real session; an authenticated sandbox checkout remains unproven until the Seller browser session is available on the deployed build.
