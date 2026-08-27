@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
 
 type TransactionQrCardProps = {
   transactionId: string;
@@ -16,16 +15,18 @@ export function TransactionQrCard({ transactionId, token, expiresAt }: Transacti
     setImageUrl(null);
     setError('');
     const payload = JSON.stringify({ v: 1, transactionId, token });
-    void QRCode.toDataURL(payload, {
-      errorCorrectionLevel: 'M',
-      margin: 2,
-      width: 256,
-      color: { dark: '#101820', light: '#ffffff' },
-    }).then((url) => {
-      if (active) setImageUrl(url);
-    }).catch(() => {
-      if (active) setError('Le QR ne peut pas être affiché. Utilisez le mode de secours dans Omni.');
-    });
+    void import('qrcode')
+      .then(({ default: QRCode }) => QRCode.toDataURL(payload, {
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 256,
+        color: { dark: '#101820', light: '#ffffff' },
+      }))
+      .then((url) => {
+        if (active) setImageUrl(url);
+      }).catch(() => {
+        if (active) setError('Le QR ne peut pas être affiché. Utilisez le mode de secours dans Omni.');
+      });
     return () => {
       active = false;
     };
