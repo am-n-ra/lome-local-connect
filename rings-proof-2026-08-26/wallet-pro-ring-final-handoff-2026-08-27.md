@@ -70,3 +70,10 @@ Le code attend les variables serveur `FEDAPAY_ENV`, `FEDAPAY_SECRET_KEY` et `FED
 La vue d’erreurs Vercel sur 24 heures montre deux groupes : une `DeprecationWarning` Node `url.parse()` sur des routes Seller/facilities et des `v2_api_error` historiques couvrant plusieurs routes, dont une ancienne erreur de colonne `p.discount_kind` et une violation de corrélation opérateur. Ces éléments ne sont pas attribués au flux FedaPay dans la preuve actuelle et doivent rester des résidus séparés, à traiter dans un ring technique ultérieur si leur récurrence est confirmée.
 
 **Décision de gate :** ne pas retenter le paiement positif ni modifier les secrets depuis ce pass. Le propriétaire doit confirmer dans Vercel/FedaPay que `FEDAPAY_ENV` cible le serveur sandbox et que les clés test et le secret webhook appartiennent au même compte/environnement. Après cette vérification, reprendre avec un identifiant sandbox officiellement reconnu.
+
+
+## Reclassification du test sandbox — 2026-08-27
+
+Le propriétaire a confirmé que `FEDAPAY_ENV` était déjà réglé sur `sandbox` dans Vercel avant le dernier essai. Le déploiement `99e8c67` utilise donc la paire dédiée `FEDAPAY_SANDBOX_SECRET_KEY` / `FEDAPAY_SANDBOX_WEBHOOK_SECRET` selon le correctif `99e8c67`. Le checkout FedaPay a été créé puis soumis avec l’identité sandbox documentée ; le provider a toutefois répondu que le compte Mobile Money était introuvable. Cette preuve est classée **sandbox atteint, provider test non reconnu**. Elle ne constitue pas une preuve de crédit Wallet ni d’activation Pro positive.
+
+Le Wallet Seller vérifié après le retour affiche toujours `$0.00`, et `Omni Demo Seller Hub` reste Free. Aucun effet de bord n’est observé. Le prochain test doit utiliser une identité sandbox officiellement activée pour ce compte FedaPay, ou une autre méthode de paiement de test proposée dans le même environnement ; il ne faut pas modifier les variables live ni simuler le webhook.
