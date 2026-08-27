@@ -37,6 +37,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
+    "esbuild": "^0.28.2",
     "jsdom": "latest",
     "playwright": "^1.62.1",
     "tsx": "^4.23.12",
