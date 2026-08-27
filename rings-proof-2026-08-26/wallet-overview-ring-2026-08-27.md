@@ -52,3 +52,9 @@ The FedaPay recharge code was deployed through Vercel deployment `dpl_4ywL8NDv3f
 The unsigned webhook probe was observed in production and returned HTTP `400` with code `WEBHOOK_INVALID`; no database reconciliation was attempted. A second non-financial recharge probe used a deliberately invalid amount (`50` minor units) and a synthetic token, so it cannot create a provider transaction or charge money; its server response remains to be read and recorded.
 
 The deliberate invalid recharge probe returned HTTP `401 AUTH_REQUIRED` because the synthetic Authorization value was not an authenticated Omni session. This proves the public route does not reach validation or FedaPay without a real session; an authenticated sandbox checkout remains unproven until the Seller browser session is available on the deployed build.
+
+The Pro activation release `25c7824` is READY in production as deployment `dpl_ABPgqHdP71gVeZV4yDsKTP7e7n9v`. A public unauthenticated POST probe against `/api/v2/wallet/pro` used a zero UUID and synthetic idempotency reference; it cannot activate a real facility and was sent to verify the authentication boundary.
+
+## Production negative proof — insufficient Wallet funds
+
+On 2026-08-27, the logged-in Seller `demo@seller.omni` reached the authorized Seller workspace and Wallet tab. The facility `Omni Demo Seller Hub` showed `Free · 5 offres maximum`, confirmed balance `$0.00`, and Pro price `$10.00/month`. After explicit user confirmation, clicking `Passer en Pro` produced `POST /api/v2/wallet/pro` → HTTP `409`. The Vercel runtime log recorded `WalletPolicyError: Pro activation requires an assigned facility slot and sufficient confirmed Wallet funds.` The UI returned to the actionable button, preserved `$0.00` and `Free`, and displayed the same policy message. No debit or entitlement activation was observed. This proves the insufficient-funds rejection path; it does not yet prove a successful debit/activation.
