@@ -435,6 +435,12 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .seller-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 14px; padding: 4px; border-radius: 12px; background: #f0f5f1; }
 .seller-tabs button { min-height: 34px; border: 0; border-radius: 9px; color: var(--muted); background: transparent; font-size: 9px; font-weight: 900; }
 .seller-tabs button.active { color: var(--forest); background: #fff; box-shadow: 0 3px 10px rgba(34, 74, 59, .08); }
+.facility-qr-card { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 1rem; margin: .85rem 0; border: 1px solid rgba(148,163,184,.22); border-radius: 1rem; background: rgba(15,23,42,.55); }
+.facility-qr-card > div { display: grid; gap: .35rem; min-width: 0; }
+.facility-qr-card strong { color: #f8fafc; }
+.facility-qr-card img { flex: 0 0 auto; width: 132px; height: 132px; border-radius: .7rem; background: #fff; padding: .25rem; }
+@media (max-width: 480px) { .facility-qr-card { align-items: flex-start; flex-direction: column; } .facility-qr-card img { width: 160px; height: 160px; align-self: center; } }
+
 .seller-catalogue-preview { margin-top: 17px; }
 .catalogue-count { color: var(--muted-2); font-size: 9px; }
 .seller-catalogue-preview .empty-state { min-height: 145px; }
