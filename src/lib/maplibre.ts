@@ -183,3 +183,57 @@ export function applyPastelPalette(map: MapInstance) {
     }
   }
 }
+
+type StyleSpecLayer = {
+  id: string;
+  type: string;
+  paint?: Record<string, unknown>;
+};
+type StyleSpec = { layers?: StyleSpecLayer[]; glyphs?: string; [key: string]: unknown };
+
+/**
+ * Repaints the raw vector style JSON *before* MapLibre renders it, so the map
+ * never flashes the upstream blue-ocean palette while waiting for the
+ * post-load repaint pass.
+ */
+export function paintStyleSpec(style: StyleSpec): StyleSpec {
+  for (const layer of style.layers ?? []) {
+    const id = layer.id.toLowerCase();
+    const paint = (layer.paint ??= {});
+    if (layer.type === "background") {
+      paint["background-color"] = PASTEL.background;
+    } else if (layer.type === "fill" && /water|ocean|sea|river/.test(id)) {
+      paint["fill-color"] = PASTEL.water;
+    } else if (layer.type === "line" && /water|river|stream/.test(id)) {
+      paint["line-color"] = PASTEL.water;
+    } else if (
+      layer.type === "fill" &&
+      /park|wood|grass|forest|garden|pitch|golf|landcover|vegetation|cemetery/.test(id)
+    ) {
+      paint["fill-color"] = PASTEL.green;
+    } else if (layer.type === "fill" && /building/.test(id)) {
+      paint["fill-color"] = PASTEL.building;
+      paint["fill-outline-color"] = PASTEL.building;
+    }
+  }
+  if (typeof style.glyphs === "string") style.glyphs = rewriteOpenFreeMapGlyphUrl(style.glyphs);
+  return style;
+}
+
+let pastelStylePromise: Promise<StyleSpec> | null = null;
+
+/** Fetches the base vector style once per session and returns it pre-painted. */
+export function loadPastelStyle(): Promise<StyleSpec> {
+  pastelStylePromise ??= fetch(PASTEL_STYLE_URL)
+    .then((response) => {
+      if (!response.ok) throw new Error(`style ${response.status}`);
+      return response.json() as Promise<StyleSpec>;
+    })
+    .then(paintStyleSpec)
+    .catch((error: unknown) => {
+      pastelStylePromise = null;
+      throw error;
+    });
+  return pastelStylePromise;
+}
+
