@@ -1,23 +1,6 @@
-# Diagnostic production carte — 2026-08-27
 
-URL vérifiée : https://omni.sparkafrika.online/
+## UX debt ring observation — 2026-08-27 14:36 UTC
 
-Observations navigateur :
-- À l’ouverture, le shell affiche `Chargement de la carte…` avec un canvas MapLibre.
-- Après attente prolongée, le shell affiche `Carte indisponible — La carte vectorielle est temporairement indisponible. Réessayer`.
-- Aucun message console n’a été observé dans le contrôle initial.
-- Le DOM contient un canvas MapLibre de 1024×1100 pixels, rendu dans une surface de 1024×880 pixels.
-- Les ressources chargées incluent le style OpenFreeMap `https://tiles.openfreemap.org/styles/positron`, le TileJSON `https://tiles.openfreemap.org/planet`, les sprites et les glyphes.
-- Le style OpenFreeMap répond HTTP 200 et contient 55 layers, les sources `ne2_shaded` et `openmaptiles`, ainsi qu’un fond `rgb(242,243,240)`.
-- Le TileJSON `https://tiles.openfreemap.org/planet` répond HTTP 200 et fournit des tuiles vectorielles PBF sous `https://tiles.openfreemap.org/planet/20260823_080002_pt/{z}/{x}/{y}.pbf`.
-- La liste de ressources observée ne montre pas de requêtes `.pbf` ni de raster `natural_earth` après le chargement du style. Les ressources `planet`, sprites et glyphes apparaissent parfois deux fois.
-- Le canvas est au premier plan, transparent, sans élément blanc qui le recouvre.
+After commit `77a343c` was pushed to `omni-v2-rebuild`, GitHub reported the Vercel Preview check as completed/success. A fresh navigation to https://omni.sparkafrika.online/ showed the map canvas and controls immediately in the DOM, while the visible status initially remained `Chargement de la carte`. The screenshot still showed a predominantly white canvas during the observed initial window; final tile rendering was not yet confirmed in this single observation. The account orb was anonymous (`J5`) in the sandbox browser, so Admin menu visibility could not be tested without an authenticated browser session.
 
-Hypothèse à confirmer : le style est chargé mais aucune tuile de source ne se rend, possiblement à cause de la gestion de la source TileJSON/PMTiles, de l’initialisation MapLibre avec projection globe, ou d’un double montage/retry. Le statut d’erreur est déclenché après 20 secondes par le timer local lorsque `initialStyleReady` reste faux.
-
-Sources externes consultées :
-- https://omni.sparkafrika.online/
-- https://tiles.openfreemap.org/styles/positron
-- https://tiles.openfreemap.org/planet
-
-Cette note ne conclut pas encore à un correctif ; elle conserve uniquement les observations reproductibles.
+The new code now keeps the canvas visible during loading, only renders the user-position overlay once `mapStatus=ready`, applies a grayscale/contrast filter to the raster fallback, retries account capabilities after session synchronization delays, restores the `admin-roles` Auth return path, and embeds `FieldPilotLocationMap` in Seller facility creation. Further production proof must wait for final tile settle and an authenticated Admin session.

@@ -1703,6 +1703,12 @@ export function TrunkApp() {
       if (resumePanel === 'reviewer') {
         void loadReviewerQueue();
       }
+      if (resumePanel === 'admin-roles') {
+        setRoleMutationState('idle');
+        setRoleMutationError('');
+        setRoleMutationResult(null);
+        void loadRoleAccounts();
+      }
       if (query.trim()) setCommittedQuery(query.trim());
     } catch (caught) {
       setAuthState('error');
