@@ -136,6 +136,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [basemap, setBasemap] = useState<'vector' | 'raster'>('vector');
   const [mapRetryKey, setMapRetryKey] = useState(0);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [cameraModeState, setCameraModeState] = useState<CameraMode>('resting_globe');
@@ -314,6 +315,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     if (!container.current || mapRef.current) return;
     initialStyleReady.current = false;
     setMapStatus('loading');
+    setBasemap('vector');
     let readinessTimer: number | null = null;
     let fallbackTimer: number | null = null;
     let fallbackApplied = false;
@@ -585,6 +587,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     fallbackTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) {
         fallbackApplied = true;
+        setBasemap('raster');
         setMapStatus('loading');
         map.setStyle(FALLBACK_STYLE);
       }
@@ -789,10 +792,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
               ? { title: 'Localisation annulée', detail: 'Vous pouvez continuer à explorer la carte publique.' }
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
-  return (
-    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap="monochrome" data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
+      return (
+    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
-      {screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
+      {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
         {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
