@@ -40,3 +40,7 @@ On the deployed Seller workspace, the Wallet tab rendered the live overview with
 - Configuration-gated message: FedaPay recharge will only activate after configuration and verified webhook confirmation.
 
 The same screen explicitly states that transaction payments remain external, preserving the separation between Omni Wallet credits and V1 purchase payment declarations.
+
+## Heartwood proof
+
+The repository and domain test suite passed on 2026-08-27: 19 test files and 147 tests passed. Existing invariant coverage confirms that only confirmed Wallet entries contribute to the balance, spending cannot exceed confirmed funds, withdrawal-like transaction payment is not introduced, and slot purchase rules remain account-scoped. The new read surface is deployed separately from the external transaction payment state machine.
