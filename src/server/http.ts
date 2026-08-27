@@ -832,6 +832,27 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/seller/facilities') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to create a facility.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const name = typeof input.name === 'string' ? input.name : '';
+      const category = input.category === null || input.category === undefined ? null : typeof input.category === 'string' ? input.category : '';
+      const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
+      const address = input.address === null || input.address === undefined ? null : typeof input.address === 'string' ? input.address : '';
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+      const idempotencyKey = req.headers['idempotency-key'];
+      if (!name.trim() || name.length > 180 || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        throw new ApiInputError('A valid facility name, coordinates and idempotency key are required.');
+      }
+      const result = await repository.createSellerFacility({ authUserId, name, category, description, address, latitude, longitude, idempotencyKey });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/seller/catalogue') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

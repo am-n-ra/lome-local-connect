@@ -339,6 +339,63 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
+    async createSellerFacility(input: {
+      authUserId: string;
+      name: string;
+      category: string | null;
+      description: string | null;
+      address: string | null;
+      latitude: number;
+      longitude: number;
+      idempotencyKey: string;
+    }): Promise<{ facilityId: string; slotId: string; trustState: 'verification_draft'; created: boolean }> {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180 || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+        throw new SellerCataloguePolicyError('INVALID_INPUT');
+      }
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+        ), existing as (
+          select f.id as facility_id, fs.id as slot_id, false as created
+          from v2_facilities f
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
+          join seller s on s.id = f.account_id
+          where f.source_kind = 'created' and f.source_name = 'seller' and f.source_ref = ${input.idempotencyKey.trim()}
+          limit 1
+        ), available_slot as (
+          select fs.id, fs.account_id
+          from v2_facility_slots fs
+          join seller s on s.id = fs.account_id
+          where fs.status = 'available'
+          order by fs.created_at, fs.id
+          limit 1
+        ), inserted as (
+          insert into v2_facilities
+            (account_id, source_kind, source_name, source_ref, name, category, description, latitude, longitude, address, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.address?.trim() || null}, 'verification_draft'
+          from available_slot
+          where not exists (select 1 from existing)
+          returning id as facility_id
+        ), assigned as (
+          update v2_facility_slots fs
+          set status = 'assigned', facility_id = inserted.facility_id, assigned_at = now()
+          from inserted
+          where fs.id = (select id from available_slot)
+          returning fs.id as slot_id, fs.facility_id
+        )
+        select facility_id, slot_id, created from existing
+        union all
+        select assigned.facility_id, assigned.slot_id, true from assigned
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
+      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: 'verification_draft', created: row.created === true };
+    },
     async createPublicFacilityImport(input: PublicFacilityImportInput): Promise<PublicFacilityImportResult> {
       if (input.provider !== 'openstreetmap' || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
         throw new FieldPilotPolicyError('The public facility import payload is invalid.');

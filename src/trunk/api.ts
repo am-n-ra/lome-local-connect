@@ -119,6 +119,15 @@ export async function getSellerAvailabilityQueue(input: { token: string }): Prom
   return parse<SellerAvailabilityQueue>(response);
 }
 
+export async function createSellerFacility(input: { token: string; name: string; category?: string | null; description?: string | null; address?: string | null; latitude: number; longitude: number; idempotencyKey: string }): Promise<ApiResult<{ facilityId: string; slotId: string; trustState: 'verification_draft'; created: boolean }>> {
+  const response = await fetchWithRecovery('/api/v2/seller/facilities', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ name: input.name, category: input.category ?? null, description: input.description ?? null, address: input.address ?? null, latitude: input.latitude, longitude: input.longitude }),
+  });
+  return parse(response);
+}
+
 export async function createSellerProductDraft(input: { token: string; facilityId: string; name: string; description?: string | null; unit?: string; priceMinor: number; currency: string; discountKind: 'percentage' | 'fixed'; discountValueMinor: number; idempotencyKey: string }): Promise<ApiResult<{ productId: string; facilityId: string; publicationState: 'draft'; netPriceMinor: number }>> {
   const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
     method: 'POST',
