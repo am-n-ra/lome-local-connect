@@ -22,6 +22,18 @@ type Props = {
 };
 
 const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+const FALLBACK_STYLE = {
+  version: 8 as const,
+  sources: {
+    osm: {
+      type: 'raster' as const,
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [{ id: 'osm-raster', type: 'raster' as const, source: 'osm', paint: { 'raster-opacity': 1 } }],
+};
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
@@ -303,6 +315,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     initialStyleReady.current = false;
     setMapStatus('loading');
     let readinessTimer: number | null = null;
+    let fallbackTimer: number | null = null;
+    let fallbackApplied = false;
     const map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
@@ -564,12 +578,20 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       scheduleUserPosition();
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
-    // Positron can legitimately take longer than a local raster style on a cold
-    // production connection. Do not present a provider error before that window
-    // has elapsed; the map remains truthful and retryable if it still fails.
+    // Prefer the vector style, but recover automatically to a lightweight OSM
+    // raster style when the provider or its worker cannot render the first map.
+    // This keeps the map visible on cold/mobile networks instead of leaving a
+    // blank canvas while preserving retryability.
+    fallbackTimer = window.setTimeout(() => {
+      if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) {
+        fallbackApplied = true;
+        setMapStatus('loading');
+        map.setStyle(FALLBACK_STYLE);
+      }
+    }, 8_000);
     readinessTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map) setMapStatus('error');
-    }, 20_000);
+    }, 18_000);
     let globeProjection = true;
     const syncProjection = () => {
       const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
@@ -584,8 +606,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     };
     map.on('zoom', syncProjection);
     map.on('moveend', syncProjection);
+    map.on('styledata', configureStyle);
     map.on('load', () => {
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       setMapStatus('ready');
       configureStyle();
       globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
@@ -600,6 +624,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     window.addEventListener('resize', handleWindowResize);
     return () => {
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
