@@ -267,6 +267,19 @@ export interface ReviewClaimResult {
   facilityTrust: 'unconfirmed' | 'rejected' | 'verification_draft';
   version: number;
 }
+export interface AccountContextResult {
+  accountId: string;
+  roles: Array<'buyer' | 'seller' | 'operator' | 'reviewer'>;
+  onboardingState: string;
+  suspended: boolean;
+  facilityCount: number;
+  capabilities: {
+    sellerWorkspace: boolean;
+    operatorTools: boolean;
+    reviewerWorkspace: boolean;
+  };
+}
+
 export interface SellerActivationCandidate {
   accountId: string;
   authUserId: string;
@@ -339,6 +352,35 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
+    async getAccountContext(input: { authUserId: string }): Promise<AccountContextResult | null> {
+      const rows = await retryDatabase(() => sql`
+        select a.id, a.onboarding_state, a.suspended_at,
+          count(distinct f.id)::int as facility_count,
+          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
+        from v2_accounts a
+        left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
+        left join v2_facilities f on f.account_id = a.id
+        where a.auth_user_id = ${input.authUserId}
+        group by a.id, a.onboarding_state, a.suspended_at
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      const roles = Array.isArray(row.roles) ? row.roles.map(String).filter((role): role is AccountContextResult['roles'][number] => ['buyer', 'seller', 'operator', 'reviewer'].includes(role)) : [];
+      const suspended = row.suspended_at !== null;
+      return {
+        accountId: String(row.id),
+        roles,
+        onboardingState: String(row.onboarding_state),
+        suspended,
+        facilityCount: Number(row.facility_count ?? 0),
+        capabilities: {
+          sellerWorkspace: !suspended && String(row.onboarding_state) === 'seller_ready',
+          operatorTools: !suspended && roles.includes('operator'),
+          reviewerWorkspace: !suspended && roles.includes('reviewer'),
+        },
+      };
+    },
     async createSellerFacility(input: {
       authUserId: string;
       name: string;

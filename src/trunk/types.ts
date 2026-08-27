@@ -356,9 +356,15 @@ export interface ApiResult<T> {
 
 export interface AccountCapabilitiesResult {
   accountId: string;
-  seller: boolean;
-  operator: boolean;
-  reviewer: boolean;
+  roles: Array<'buyer' | 'seller' | 'operator' | 'reviewer'>;
+  onboardingState: string;
+  suspended: boolean;
+  facilityCount: number;
+  capabilities: {
+    sellerWorkspace: boolean;
+    operatorTools: boolean;
+    reviewerWorkspace: boolean;
+  };
 }
 
 export type WalletLedgerKind = 'recharge' | 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'coupon_credit' | 'bonus_grant' | 'bonus_spend' | 'reversal';

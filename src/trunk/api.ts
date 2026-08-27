@@ -19,18 +19,10 @@ async function fetchWithRecovery(input: RequestInfo | URL, init?: RequestInit): 
 }
 
 export async function getAccountCapabilities(input: { token: string }): Promise<ApiResult<AccountCapabilitiesResult>> {
-  const [seller, operator, reviewer] = await Promise.all([
-    getSellerAvailabilityQueue(input),
-    getOperatorRuns(input),
-    getReviewQueue(input),
-  ]);
-  const accountId = 'session-capabilities';
-  return { ok: true, correlationId: 'client-capabilities', data: {
-    accountId,
-    seller: seller.ok && seller.data?.authorized === true,
-    operator: operator.ok && operator.data?.authorized === true,
-    reviewer: reviewer.ok && reviewer.data?.authorized === true,
-  } };
+  const response = await fetchWithRecovery('/api/v2/account/context', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<AccountCapabilitiesResult>(response);
 }
 
 export async function listPublicFacilities(bounds?: [number, number, number, number], query?: string, options?: SearchOptions): Promise<ApiResult<PublicFacility[]>> {

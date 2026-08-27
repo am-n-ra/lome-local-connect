@@ -102,6 +102,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
 
   try {
     const repository = createTrunkRepository();
+    if (req.method === 'GET' && pathname === '/api/v2/account/context') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to load your Omni account context.'));
+        return true;
+      }
+      const result = await repository.getAccountContext({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account context is not available yet.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import-batch') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

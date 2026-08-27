@@ -296,6 +296,83 @@ var toProduct = (row) => ({
 });
 function createTrunkRepository(sql = database()) {
   return {
+    async getAccountContext(input) {
+      const rows = await retryDatabase(() => sql`
+        select a.id, a.onboarding_state, a.suspended_at,
+          count(distinct f.id)::int as facility_count,
+          coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
+        from v2_accounts a
+        left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
+        left join v2_facilities f on f.account_id = a.id
+        where a.auth_user_id = ${input.authUserId}
+        group by a.id, a.onboarding_state, a.suspended_at
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) return null;
+      const roles = Array.isArray(row.roles) ? row.roles.map(String).filter((role) => ["buyer", "seller", "operator", "reviewer"].includes(role)) : [];
+      const suspended = row.suspended_at !== null;
+      return {
+        accountId: String(row.id),
+        roles,
+        onboardingState: String(row.onboarding_state),
+        suspended,
+        facilityCount: Number(row.facility_count ?? 0),
+        capabilities: {
+          sellerWorkspace: !suspended && String(row.onboarding_state) === "seller_ready",
+          operatorTools: !suspended && roles.includes("operator"),
+          reviewerWorkspace: !suspended && roles.includes("reviewer")
+        }
+      };
+    },
+    async createSellerFacility(input) {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180 || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+        ), existing as (
+          select f.id as facility_id, fs.id as slot_id, false as created
+          from v2_facilities f
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
+          join seller s on s.id = f.account_id
+          where f.source_kind = 'created' and f.source_name = 'seller' and f.source_ref = ${input.idempotencyKey.trim()}
+          limit 1
+        ), available_slot as (
+          select fs.id, fs.account_id
+          from v2_facility_slots fs
+          join seller s on s.id = fs.account_id
+          where fs.status = 'available'
+          order by fs.created_at, fs.id
+          limit 1
+        ), inserted as (
+          insert into v2_facilities
+            (account_id, source_kind, source_name, source_ref, name, category, description, latitude, longitude, address, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.address?.trim() || null}, 'verification_draft'
+          from available_slot
+          where not exists (select 1 from existing)
+          returning id as facility_id
+        ), assigned as (
+          update v2_facility_slots fs
+          set status = 'assigned', facility_id = inserted.facility_id, assigned_at = now()
+          from inserted
+          where fs.id = (select id from available_slot)
+          returning fs.id as slot_id, fs.facility_id
+        )
+        select facility_id, slot_id, created from existing
+        union all
+        select assigned.facility_id, assigned.slot_id, true from assigned
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
+      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: "verification_draft", created: row.created === true };
+    },
     async createPublicFacilityImport(input) {
       if (input.provider !== "openstreetmap" || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
         throw new FieldPilotPolicyError("The public facility import payload is invalid.");
@@ -817,7 +894,7 @@ function createTrunkRepository(sql = database()) {
     },
     async listNotificationInbox(input) {
       const rows = await retryDatabase(() => sql`
-        select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at
+        select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at, e.payload
         from v2_notification_events e
         join v2_accounts a on a.id = e.recipient_account_id
         where a.auth_user_id = ${input.authUserId}
@@ -825,7 +902,11 @@ function createTrunkRepository(sql = database()) {
         order by e.created_at desc, e.id desc
         limit 100
       `);
-      return { notifications: rows.map((row) => ({ id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), state: String(row.state), createdAt: new Date(String(row.created_at)).toISOString(), seenAt: row.seen_at === null ? null : new Date(String(row.seen_at)).toISOString() })) };
+      return { notifications: rows.map((row) => {
+        const payload = row.payload && typeof row.payload === "object" ? row.payload : {};
+        const outcome = payload.outcome;
+        return { id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), state: String(row.state), createdAt: new Date(String(row.created_at)).toISOString(), seenAt: row.seen_at === null ? null : new Date(String(row.seen_at)).toISOString(), ...outcome === "certified" || outcome === "needs_more_evidence" || outcome === "rejected" ? { reviewOutcome: outcome } : {} };
+      }) };
     },
     async markNotificationSeen(input) {
       const rows = await retryDatabase(() => sql`
@@ -2777,6 +2858,20 @@ async function handleApi(req, res, pathname, url) {
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key");
   try {
     const repository = createTrunkRepository();
+    if (req.method === "GET" && pathname === "/api/v2/account/context") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to load your Omni account context."));
+        return true;
+      }
+      const result = await repository.getAccountContext({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === "POST" && pathname === "/api/v2/public/facilities" && url.searchParams.get("action") === "operator-import-batch") {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -3502,6 +3597,27 @@ async function handleApi(req, res, pathname, url) {
       if (!name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor)) throw new ApiInputError("A valid product name, price, currency and reduction are required.");
       const result = await repository.updateSellerProductDraft({ authUserId, productId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/seller/facilities") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to create a facility."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const name = typeof input.name === "string" ? input.name : "";
+      const category = input.category === null || input.category === void 0 ? null : typeof input.category === "string" ? input.category : "";
+      const description = input.description === null || input.description === void 0 ? null : typeof input.description === "string" ? input.description : "";
+      const address = input.address === null || input.address === void 0 ? null : typeof input.address === "string" ? input.address : "";
+      const latitude = Number(input.latitude);
+      const longitude = Number(input.longitude);
+      const idempotencyKey = req.headers["idempotency-key"];
+      if (!name.trim() || name.length > 180 || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        throw new ApiInputError("A valid facility name, coordinates and idempotency key are required.");
+      }
+      const result = await repository.createSellerFacility({ authUserId, name, category, description, address, latitude, longitude, idempotencyKey });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/seller/catalogue") {

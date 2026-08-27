@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+
+describe('account context contract', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the authenticated account context through one server endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', roles: ['buyer'], onboardingState: 'buyer_ready', suspended: false, facilityCount: 0, capabilities: { sellerWorkspace: false, operatorTools: false, reviewerWorkspace: false } } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getAccountCapabilities({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v2/account/context', { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } });
+  });
+});
 
 describe('listPublicFacilities search contract', () => {
   afterEach(() => vi.restoreAllMocks());
