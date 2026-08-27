@@ -1159,12 +1159,12 @@ function createTrunkRepository(sql = database()) {
       if (input.discountKind === "fixed" && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError("DISCOUNT_TOO_LARGE");
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, updated_at = now()
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id
           and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
-          and p.publication_state = 'draft'
-        returning p.id
+          and p.publication_state in ('draft', 'published')
+        returning p.id, p.publication_state
       `);
       const row = rows[0];
       if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_NOT_EDITABLE");
@@ -2455,6 +2455,61 @@ function createTrunkRepository(sql = database()) {
         netAmountMinor: Number(row.net_amount_minor)
       };
     },
+    async listTransactionMessages(input) {
+      const rows = await retryDatabase(() => sql`
+        select m.id, m.transaction_id, m.sender_account_id, m.body, m.created_at, m.seen_at,
+               tm.role as sender_role
+        from v2_transaction_messages m
+        join v2_transaction_members viewer on viewer.transaction_id = m.transaction_id
+        join v2_transaction_members tm on tm.transaction_id = m.transaction_id and tm.account_id = m.sender_account_id
+        join v2_accounts a on a.id = viewer.account_id
+        where m.transaction_id = ${input.transactionId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and viewer.role in ('buyer', 'seller')
+        order by m.created_at asc, m.id asc
+      `);
+      const mapped = rows.map((row) => ({
+        id: String(row.id),
+        transactionId: String(row.transaction_id),
+        senderRole: String(row.sender_role),
+        body: String(row.body),
+        createdAt: new Date(String(row.created_at)).toISOString(),
+        seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null
+      }));
+      return { transactionId: input.transactionId, messages: mapped };
+    },
+    async createTransactionMessage(input) {
+      const body = input.body.trim();
+      if (!body || body.length > 2e3) throw new TransactionPolicyError("MESSAGE_INVALID");
+      const rows = await retryDatabase(() => sql`
+        with sender as (
+          select m.account_id, m.role
+          from v2_transaction_members m
+          join v2_accounts a on a.id = m.account_id
+          where m.transaction_id = ${input.transactionId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        ), inserted as (
+          insert into v2_transaction_messages (transaction_id, sender_account_id, body)
+          select ${input.transactionId}::uuid, account_id, ${body}
+          from sender
+          returning id, transaction_id, sender_account_id, body, created_at, seen_at
+        )
+        select i.id, i.transaction_id, i.sender_account_id, i.body, i.created_at, i.seen_at, s.role as sender_role
+        from inserted i join sender s on s.account_id = i.sender_account_id
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("FORBIDDEN");
+      return {
+        id: String(row.id),
+        transactionId: String(row.transaction_id),
+        senderRole: String(row.sender_role),
+        body: String(row.body),
+        createdAt: new Date(String(row.created_at)).toISOString(),
+        seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null
+      };
+    },
     async getTransaction(input) {
       const rows = await retryDatabase(() => sql`
         select
@@ -3130,6 +3185,37 @@ async function handleApi(req, res, pathname, url) {
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if ((req.method === "GET" || req.method === "POST") && pathname === "/api/v2/transaction-messages") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to use the transaction chat."));
+        return true;
+      }
+      const transactionId = url.searchParams.get("transactionId")?.trim() ?? "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      if (req.method === "GET") {
+        const result2 = await repository.listTransactionMessages({ authUserId, transactionId });
+        if (!result2) {
+          json(res, 404, errorBody(correlationId, "NOT_FOUND", "The transaction was not found for this account."));
+          return true;
+        }
+        json(res, 200, { ok: true, correlationId, data: result2 });
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const body = typeof input.body === "string" ? input.body.trim() : "";
+      if (!body || body.length > 2e3) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Message must contain between 1 and 2000 characters."));
+        return true;
+      }
+      const result = await repository.createTransactionMessage({ authUserId, transactionId, body });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === "GET" && pathname.startsWith("/api/v2/transactions/")) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -3639,8 +3725,9 @@ async function sellerCatalogueHandler(req, res) {
   const walletRecharge = action === "wallet-recharge";
   const walletPro = action === "wallet-pro";
   const fedapayWebhook = action === "fedapay-webhook";
+  const transactionMessages = action === "transaction-messages";
   const productId = typeof req.query?.id === "string" ? req.query.id : url.searchParams.get("id");
-  const pathname = demoRebind ? "/api/v2/seller/demo-rebind" : walletOverview ? "/api/v2/wallet" : walletRecharge ? "/api/v2/wallet/recharges" : walletPro ? "/api/v2/wallet/pro" : fedapayWebhook ? "/api/v2/fedapay/webhook" : productId ? `/api/v2/seller/catalogue/${productId}` : "/api/v2/seller/catalogue";
+  const pathname = demoRebind ? "/api/v2/seller/demo-rebind" : walletOverview ? "/api/v2/wallet" : walletRecharge ? "/api/v2/wallet/recharges" : walletPro ? "/api/v2/wallet/pro" : transactionMessages ? "/api/v2/transaction-messages" : fedapayWebhook ? "/api/v2/fedapay/webhook" : productId ? `/api/v2/seller/catalogue/${productId}` : "/api/v2/seller/catalogue";
   await handleApi(req, res, pathname, url);
 }
 
