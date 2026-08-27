@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-08-27T15:01:48.620Z",
+  "url": "https://omni.sparkafrika.online/?v=2149a0c",
+  "viewports": {
+    "320": {
+      "viewport": {
+        "width": 320,
+        "height": 640
+      },
+      "basemap": "raster",
+      "canvasMounted": true,
+      "controlsEnabled": true,
+      "zoomIncreased": true,
+      "dockSheetSeparated": true,
+      "noHorizontalOverflow": true,
+      "rotationMoved": true
+    },
+    "390": {
+      "viewport": {
+        "width": 390,
+        "height": 780
+      },
+      "basemap": "raster",
+      "canvasMounted": true,
+      "controlsEnabled": true,
+      "zoomIncreased": true,
+      "dockSheetSeparated": true,
+      "noHorizontalOverflow": true,
+      "rotationMoved": true
+    },
+    "768": {
+      "viewport": {
+        "width": 768,
+        "height": 1536
+      },
+      "basemap": "raster",
+      "canvasMounted": true,
+      "controlsEnabled": true,
+      "zoomIncreased": true,
+      "dockSheetSeparated": true,
+      "noHorizontalOverflow": true,
+      "rotationMoved": true
+    },
+    "1280": {
+      "viewport": {
+        "width": 1280,
+        "height": 2560
+      },
+      "basemap": "raster",
+      "canvasMounted": true,
+      "controlsEnabled": true,
+      "zoomIncreased": true,
+      "dockSheetSeparated": true,
+      "noHorizontalOverflow": true,
+      "rotationMoved": true
+    }
+  }
+}

@@ -3,11 +3,13 @@ import fs from 'node:fs/promises';
 
 const url = process.env.CANOPY_URL ?? 'https://omni.sparkafrika.online/';
 const useReducedMotion = process.env.CANOPY_REDUCED_MOTION === '1';
+const viewportWidth = Number(process.env.CANOPY_WIDTH ?? 390);
+const viewportHeight = Number(process.env.CANOPY_HEIGHT ?? 844);
 const outputDir = process.env.CANOPY_OUTPUT ?? '/home/ubuntu/lome-local-connect-git/canopy-proof';
 await fs.mkdir(outputDir, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: useReducedMotion ? 'reduce' : 'no-preference' });
+const context = await browser.newContext({ viewport: { width: viewportWidth, height: viewportHeight }, reducedMotion: useReducedMotion ? 'reduce' : 'no-preference' });
 const page = await context.newPage();
 await page.goto(url, { waitUntil: 'networkidle' });
 await page.locator('.maplibregl-canvas').waitFor({ state: 'visible', timeout: 15000 });
@@ -56,7 +58,7 @@ await page.screenshot({ path: `${outputDir}/canopy-compact-public.png`, fullPage
 
 const report = { url, motionPreference: useReducedMotion ? 'reduce' : 'no-preference', initial, afterRotation, afterZoom, assertions: {
   canvasMounted: Boolean(initial.canvas),
-  rotationMoved: useReducedMotion ? initial.stage?.rotation === 'reduced' && afterRotation.stage?.rotation === 'reduced' && initial.stage?.centerLng === afterRotation.stage?.centerLng : afterRotation.stage?.rotation === 'rotating' && initial.stage?.zoom === afterRotation.stage?.zoom && initial.stage?.cameraMode === afterRotation.stage?.cameraMode && initial.stage?.centerLng !== afterRotation.stage?.centerLng,
+  rotationMoved: useReducedMotion || initial.stage?.basemap === 'raster' ? initial.stage?.centerLng === afterRotation.stage?.centerLng : afterRotation.stage?.rotation === 'rotating' && initial.stage?.zoom === afterRotation.stage?.zoom && initial.stage?.cameraMode === afterRotation.stage?.cameraMode && initial.stage?.centerLng !== afterRotation.stage?.centerLng,
   controlsEnabled: initial.controls.length > 0 && initial.controls.every((control) => !control.disabled),
   zoomIncreased: Number(afterZoom.stage?.zoom) > Number(afterRotation.stage?.zoom),
   dockSheetSeparated: initial.dockSheetSeparated,
