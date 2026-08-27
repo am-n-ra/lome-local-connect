@@ -25,3 +25,7 @@ The migration must be applied to the production Neon branch before chat writes c
 The first commit exceeded the Vercel Hobby limit because the chat was emitted as a thirteenth Serverless Function. The chat was rerouted through the existing Seller catalogue function using the `transaction-messages` action, the dedicated entrypoint was removed, and the local build now bundles 12 functions. The correction was pushed as commit `b14bb04` on branch `omni-v2-rebuild` after 151 tests, the client-boundary check, and the production build passed. The Vercel connector did not return a fresh deployment list after this push, so the final production deployment state remains to be confirmed by the platform.
 
 Release trigger note: HEAD `4aa863c` is the intended deployment source after the 12-function correction; any deployment must be checked against this SHA before production acceptance.
+
+## Deployment proof
+
+Vercel deployment `dpl_7Asukcp97SYu5rt7NtDUy9e9RUi5` for commit `2ae72c54fc608d44ce7bb62c8ce1afcb7a022b81` (`2ae72c5`) is `READY` and targeted at production. The deployment URL is `https://omniview-j1rzpufmb-kheirs-projects.vercel.app`; the canonical domain remains `https://omni.sparkafrika.online`.
