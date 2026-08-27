@@ -638,6 +638,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   color: var(--muted);
 }
 
+.transaction-chat { display: grid; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5eee8; }
+.transaction-chat-messages { display: grid; gap: 7px; max-height: 220px; overflow: auto; padding: 4px 0; }
+.transaction-chat-message { display: grid; gap: 3px; width: fit-content; max-width: min(88%, 420px); padding: 8px 10px; border-radius: 12px; color: var(--ink); background: #f0f5f1; font-size: 12px; line-height: 1.35; }
+.transaction-chat-message.mine { justify-self: end; color: #fff; background: #183f35; }
+.transaction-chat-message small { opacity: .68; font-size: 9px; }
+.transaction-chat-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.transaction-chat-form textarea { min-height: 42px; width: 100%; border: 1px solid #dfeae4; border-radius: 11px; padding: 9px 10px; color: var(--ink); background: #fbfdfb; outline-color: var(--coral); font: inherit; font-size: 12px; resize: vertical; }
 .transaction-handoff,
 .seller-transaction-panel {
   display: grid;

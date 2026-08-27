@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -1240,12 +1240,12 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (input.discountKind === 'fixed' && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, updated_at = now()
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id
           and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
-          and p.publication_state = 'draft'
-        returning p.id
+          and p.publication_state in ('draft', 'published')
+        returning p.id, p.publication_state
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_NOT_EDITABLE');
@@ -2688,6 +2688,61 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    async listTransactionMessages(input: { authUserId: string; transactionId: string }): Promise<{ transactionId: string; messages: TransactionMessage[] } | null> {
+      const rows = await retryDatabase(() => sql`
+        select m.id, m.transaction_id, m.sender_account_id, m.body, m.created_at, m.seen_at,
+               tm.role as sender_role
+        from v2_transaction_messages m
+        join v2_transaction_members viewer on viewer.transaction_id = m.transaction_id
+        join v2_transaction_members tm on tm.transaction_id = m.transaction_id and tm.account_id = m.sender_account_id
+        join v2_accounts a on a.id = viewer.account_id
+        where m.transaction_id = ${input.transactionId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and viewer.role in ('buyer', 'seller')
+        order by m.created_at asc, m.id asc
+      `);
+      const mapped = (rows as Record<string, unknown>[]).map((row) => ({
+        id: String(row.id),
+        transactionId: String(row.transaction_id),
+        senderRole: String(row.sender_role) as TransactionMessage['senderRole'],
+        body: String(row.body),
+        createdAt: new Date(String(row.created_at)).toISOString(),
+        seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null,
+      }));
+      return { transactionId: input.transactionId, messages: mapped };
+    },
+    async createTransactionMessage(input: { authUserId: string; transactionId: string; body: string }): Promise<TransactionMessage> {
+      const body = input.body.trim();
+      if (!body || body.length > 2000) throw new TransactionPolicyError('MESSAGE_INVALID');
+      const rows = await retryDatabase(() => sql`
+        with sender as (
+          select m.account_id, m.role
+          from v2_transaction_members m
+          join v2_accounts a on a.id = m.account_id
+          where m.transaction_id = ${input.transactionId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        ), inserted as (
+          insert into v2_transaction_messages (transaction_id, sender_account_id, body)
+          select ${input.transactionId}::uuid, account_id, ${body}
+          from sender
+          returning id, transaction_id, sender_account_id, body, created_at, seen_at
+        )
+        select i.id, i.transaction_id, i.sender_account_id, i.body, i.created_at, i.seen_at, s.role as sender_role
+        from inserted i join sender s on s.account_id = i.sender_account_id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new TransactionPolicyError('FORBIDDEN');
+      return {
+        id: String(row.id),
+        transactionId: String(row.transaction_id),
+        senderRole: String(row.sender_role) as TransactionMessage['senderRole'],
+        body: String(row.body),
+        createdAt: new Date(String(row.created_at)).toISOString(),
+        seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null,
+      };
+    },
     async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
       const rows = await retryDatabase(() => sql`
         select

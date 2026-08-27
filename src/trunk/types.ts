@@ -126,6 +126,20 @@ export interface QrVerificationResult {
   netAmountMinor?: number;
 }
 
+export interface TransactionMessage {
+  id: string;
+  transactionId: string;
+  senderRole: 'buyer' | 'seller';
+  body: string;
+  createdAt: string;
+  seenAt: string | null;
+}
+
+export interface TransactionMessagesResult {
+  transactionId: string;
+  messages: TransactionMessage[];
+}
+
 export interface TransactionRatingResult {
   ratingId: string;
   transactionId: string;

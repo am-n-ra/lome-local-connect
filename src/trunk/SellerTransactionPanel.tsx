@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, QrCode, ShieldCheck } from 'lucide-react';
-import type { QrVerificationResult, TransactionState } from './types';
+import type { QrVerificationResult, TransactionMessage, TransactionState } from './types';
+import { TransactionChat } from './TransactionChat';
 
 type CameraState = 'idle' | 'starting' | 'scanning' | 'unsupported' | 'error';
 
@@ -27,6 +28,12 @@ type SellerTransactionPanelProps = {
   transitionError: string;
   onAdvanceFulfilment: () => void;
   onAdvanceFulfilled: () => void;
+  chatMessages: TransactionMessage[];
+  chatState: 'idle' | 'loading' | 'error';
+  chatError: string;
+  chatSending: boolean;
+  onRefreshChat: () => void;
+  onSendChat: (body: string) => void;
 };
 
 function money(minor: number) {
@@ -110,6 +117,7 @@ export function SellerTransactionPanel(props: SellerTransactionPanelProps) {
     {props.verifyError && <div className="inline-error" role="alert">{props.verifyError}</div>}
     <button className="secondary-button wide omni-pressable" type="button" aria-busy={props.verifyState === 'loading'} disabled={props.verifyState === 'loading' || !props.qrPayload.trim()} onClick={props.onVerifyQr}>{props.verifyState === 'loading' ? 'Vérification serveur…' : 'Vérifier le QR Buyer'} <ShieldCheck size={16} /></button>
     {props.verifyState === 'success' && props.verification && <div className="seller-checkout-summary" role="status"><div className="seller-response-success"><CheckCircle2 size={22} /><div><strong>Transaction vérifiée</strong><p>Le snapshot serveur est chargé. Vérifiez le prix affiché avant d’accepter le paiement.</p></div></div><div className="seller-checkout-facts"><span><b>Produit</b><small>{props.verification.productName ?? 'Offre catalogue'}<em className="seller-fact-id">{props.verification.productId}</em></small></span><span><b>Quantité</b><small>{props.verification.quantity}</small></span><span><b>Prix unitaire</b><small>{money(props.verification.unitPriceMinor ?? 0)}</small></span><span><b>Réduction</b><small>{props.verification.couponCode ?? 'Aucune'}</small></span><span><b>Total net</b><small>{money(props.verification.netAmountMinor ?? 0)}</small></span></div></div>}
+    {props.transactionId && <TransactionChat token="session" transactionId={props.transactionId} actorRole="seller" messages={props.chatMessages} state={props.chatState} error={props.chatError} onRefresh={props.onRefreshChat} onSend={props.onSendChat} sending={props.chatSending} />}
     {props.transactionState === 'qr_verified' && <button className="primary-button omni-pressable" type="button" aria-busy={props.paymentState === 'loading'} disabled={props.paymentState === 'loading'} onClick={props.onConfirmPayment}>{props.paymentState === 'loading' ? 'Confirmation…' : 'Paiement reçu au comptoir'} <CheckCircle2 size={16} /></button>}
     {props.paymentState === 'success' && props.transactionState === 'payment_confirmed' && <div className="seller-response-success" role="status"><CheckCircle2 size={22} /><div><strong>Paiement confirmé</strong><p>Préparez maintenant la remise au Buyer.</p></div></div>}
     {props.paymentError && <div className="inline-error" role="alert">{props.paymentError}</div>}

@@ -3717,15 +3717,13 @@ function requestUrl(req, fallbackPath) {
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-async function qrIssuanceHandler(req, res) {
-  const url = requestUrl(req, "/api/v2/qr-issuances");
-  await handleApi(req, res, "/api/v2/qr-issuances", url);
+async function transactionMessagesHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/transaction-messages");
+  await handleApi(req, res, "/api/v2/transaction-messages", url);
 }
 
-// src/server/vercel/qr-issuances.ts
-async function handler(req, res) {
-  await qrIssuanceHandler(req, res);
-}
+// src/server/vercel/transaction-messages.ts
+var transaction_messages_default = transactionMessagesHandler;
 export {
-  handler as default
+  transaction_messages_default as default
 };

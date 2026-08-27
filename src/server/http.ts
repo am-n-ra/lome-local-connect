@@ -513,6 +513,37 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if ((req.method === 'GET' || req.method === 'POST') && pathname === '/api/v2/transaction-messages') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to use the transaction chat.'));
+        return true;
+      }
+      const transactionId = url.searchParams.get('transactionId')?.trim() ?? '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction.'));
+        return true;
+      }
+      if (req.method === 'GET') {
+        const result = await repository.listTransactionMessages({ authUserId, transactionId });
+        if (!result) {
+          json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'The transaction was not found for this account.'));
+          return true;
+        }
+        json(res, 200, { ok: true, correlationId, data: result });
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const body = typeof input.body === 'string' ? input.body.trim() : '';
+      if (!body || body.length > 2000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Message must contain between 1 and 2000 characters.'));
+        return true;
+      }
+      const result = await repository.createTransactionMessage({ authUserId, transactionId, body });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname.startsWith('/api/v2/transactions/')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

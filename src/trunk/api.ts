@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, ApiResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -230,6 +230,20 @@ export async function transitionTransaction(input: { transactionId: string; from
   return parse<TransactionTransitionResult>(response);
 }
 
+export async function getTransactionMessages(input: { transactionId: string; token: string }): Promise<ApiResult<TransactionMessagesResult>> {
+  const response = await fetchWithRecovery(`/api/v2/transaction-messages?transactionId=${encodeURIComponent(input.transactionId)}`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<TransactionMessagesResult>(response);
+}
+export async function sendTransactionMessage(input: { transactionId: string; body: string; token: string }): Promise<ApiResult<TransactionMessagesResult['messages'][number]>> {
+  const response = await fetchWithRecovery(`/api/v2/transaction-messages?transactionId=${encodeURIComponent(input.transactionId)}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ body: input.body }),
+  });
+  return parse<TransactionMessagesResult['messages'][number]>(response);
+}
 export async function submitTransactionRating(input: { transactionId: string; score: number; note: string; token: string }): Promise<ApiResult<TransactionRatingResult>> {
   const response = await fetchWithRecovery('/api/v2/transaction-ratings', {
     method: 'POST',
