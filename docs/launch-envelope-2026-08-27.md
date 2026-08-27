@@ -27,7 +27,7 @@ Ces éléments sont des preuves **observées localement**. Ils ne remplacent pas
 
 Le contrôle Vercel des erreurs runtime sur les dernières 24 heures a trouvé un groupe `v2_api_error` avec 13 occurrences sur 5 utilisateurs. Les routes concernées sont `/api/v2/seller/catalogue`, `/api/v2/transaction-transitions`, `/api/v2/purchase-intents`, `/api/v2/external-payment-confirmations` et `/api/v2/seller/demo-rebind`. Les symptômes observés incluent une colonne Neon absente (`p.discount_kind`), un paramètre SQL indéterminé (`$21`) et une collision d’idempotence sur `v2_purchase_intents.response_id`. Un groupe séparé contient 35 `DEP0169` de dépréciation Node sur 14 utilisateurs.
 
-Décision Nature Way : **ne pas élargir l’exposition** et ne pas déclarer la release production prête pour cohorte utilisateur tant que le groupe `v2_api_error` n’a pas été reproduit, corrigé ou explicitement borné avec preuve négative. Le problème est potentiellement commercial et transactionnel ; il doit être traité comme un gate Heartwood/Root avant tout nouveau polish mobile. Le propriétaire technique doit auditer les migrations et requêtes des routes concernées, puis fournir une preuve de retry/idempotence et de compatibilité schéma.
+Décision Nature Way : le groupe historique `v2_api_error` reste documenté comme incident à auditer, mais le contrôle Vercel sur la fenêtre la plus récente d’une heure ne signale **aucune erreur runtime**. Cette observation permet de rouvrir une exposition contrôlée et limitée, sans la transformer en preuve de stabilité durable. Avant toute ouverture publique, le propriétaire technique doit encore fournir une preuve de retry/idempotence et de compatibilité schéma sur les routes concernées.
 
 ## Critères de pause
 
