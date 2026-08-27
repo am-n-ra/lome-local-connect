@@ -2176,6 +2176,92 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    async activateFacilityPro(input: {
+      authUserId: string;
+      facilityId: string;
+      reference: string;
+      now: string;
+    }): Promise<FacilityProActivationPersistenceResult> {
+      if (!input.reference.trim() || input.reference.length > 180) throw new WalletPolicyError('Pro activation reference is invalid.');
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as account_id, w.id as wallet_id
+          from v2_accounts a
+          join v2_wallets w on w.account_id = a.id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state in ('seller_ready', 'complete')
+        ), facility as (
+          select f.id as facility_id, f.account_id,
+                 coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
+                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+          from v2_facilities f
+          join seller s on s.account_id = f.account_id
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
+          left join lateral (
+            select e.price_minor, e.billing_currency
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc
+            limit 1
+          ) last_entitlement on true
+          where f.id = ${input.facilityId}::uuid
+          for update of f
+        ), active_entitlement as (
+          select e.id, e.ends_at
+          from v2_facility_entitlements e
+          join facility f on f.facility_id = e.facility_id
+          where e.entitlement_kind = 'facility_pro' and e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          order by e.ends_at desc
+          limit 1
+        ), existing_spend as (
+          select e.id, e.wallet_id, e.amount_minor, e.facility_id
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.kind = 'facility_pro_spend' and e.reference = ${input.reference}
+          limit 1
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select s.wallet_id, 'facility_pro_spend', f.price_minor, 'confirmed', ${input.reference}, f.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from seller s cross join facility f cross join balance b
+          where b.balance_minor >= f.price_minor and not exists (select 1 from active_entitlement) and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, amount_minor, facility_id
+        ), effective_spend as (
+          select id, wallet_id, amount_minor, facility_id from spend
+          union all
+          select id, wallet_id, amount_minor, facility_id from existing_spend
+          limit 1
+        ), entitlement as (
+          insert into v2_facility_entitlements (facility_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select f.facility_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, false
+          from facility f join effective_spend s on s.facility_id = f.facility_id
+          where not exists (select 1 from active_entitlement)
+          returning id, facility_id, ends_at
+        ), updated as (
+          update v2_facilities f
+          set commercial_plan = 'pro_active', updated_at = ${input.now}::timestamptz
+          from entitlement e
+          where f.id = e.facility_id
+          returning f.id
+        )
+        select e.id as entitlement_id, e.facility_id, e.ends_at, s.id as spend_ledger_entry_id
+        from entitlement e join effective_spend s on s.facility_id = e.facility_id
+        union all
+        select ae.id as entitlement_id, f.facility_id, ae.ends_at, es.id as spend_ledger_entry_id
+        from active_entitlement ae cross join facility f left join existing_spend es on true
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new WalletPolicyError('Pro activation requires an assigned facility slot and sufficient confirmed Wallet funds.');
+      return { facilityId: String(row.facility_id), entitlementId: String(row.entitlement_id), endsAt: new Date(String(row.ends_at)).toISOString(), spendLedgerEntryId: String(row.spend_ledger_entry_id ?? '') };
+    },
+
     async respondAvailability(input: {
       authUserId: string;
       requestId: string;

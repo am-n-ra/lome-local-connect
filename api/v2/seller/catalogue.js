@@ -82,6 +82,119 @@ async function verifyPrivateEvidenceObjects(requestId, evidence) {
   return verified;
 }
 
+// src/server/fedapay-adapter.ts
+import { WebhookSignature } from "fedapay";
+var FedaPayConfigurationError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "FedaPayConfigurationError";
+  }
+};
+var FedaPayProviderError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "FedaPayProviderError";
+  }
+};
+function environment() {
+  const value = (process.env.FEDAPAY_ENV ?? "live").trim().toLowerCase();
+  if (value !== "sandbox" && value !== "live") {
+    throw new FedaPayConfigurationError("FEDAPAY_ENV must be sandbox or live.");
+  }
+  return value;
+}
+function secretKey() {
+  const value = process.env.FEDAPAY_SECRET_KEY?.trim();
+  if (!value) throw new FedaPayConfigurationError("FedaPay recharge is not configured.");
+  return value;
+}
+function baseUrl() {
+  return environment() === "sandbox" ? "https://sandbox-api.fedapay.com/v1" : "https://api.fedapay.com/v1";
+}
+function normalizeStatus(value) {
+  const status = String(value ?? "").toLowerCase();
+  if (status === "approved" || status === "transferred") return "approved";
+  if (status === "canceled" || status === "cancelled" || status === "expired") return "canceled";
+  if (status === "declined" || status === "failed") return "declined";
+  return "pending";
+}
+async function requestProvider(path, init) {
+  const response = await fetch(`${baseUrl()}${path}`, {
+    ...init,
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${secretKey()}`,
+      ...init.headers ?? {}
+    }
+  });
+  const text = await response.text();
+  let payload = null;
+  if (text) {
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      throw new FedaPayProviderError("FedaPay returned an invalid response.");
+    }
+  }
+  if (!response.ok) {
+    throw new FedaPayProviderError("FedaPay rejected the recharge request.");
+  }
+  return payload;
+}
+function transactionPayload(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return {};
+  const root = payload;
+  const nested = root["v1/transaction"];
+  return nested && typeof nested === "object" && !Array.isArray(nested) ? nested : root;
+}
+function isFedaPayConfigured() {
+  return Boolean(process.env.FEDAPAY_SECRET_KEY?.trim() && process.env.FEDAPAY_WEBHOOK_SECRET?.trim());
+}
+async function createFedaPayCheckout(input) {
+  if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
+    throw new FedaPayConfigurationError("Recharge amount must be a positive integer in minor units.");
+  }
+  if (input.currency.toUpperCase() !== "XOF") {
+    throw new FedaPayConfigurationError("FedaPay recharge currently supports XOF only.");
+  }
+  const created = await requestProvider("/transactions", {
+    method: "POST",
+    body: JSON.stringify({
+      description: input.description.slice(0, 180),
+      amount: input.amountMinor,
+      currency: { iso: input.currency.toUpperCase() },
+      callback_url: input.callbackUrl,
+      custom_metadata: { omni_recharge_id: input.rechargeId },
+      customer: {
+        email: input.customer.email ?? void 0,
+        firstname: input.customer.firstName ?? "Omni",
+        lastname: input.customer.lastName ?? "User"
+      }
+    })
+  });
+  const transaction = transactionPayload(created);
+  const transactionId = String(transaction.id ?? transaction.reference ?? "");
+  if (!transactionId) throw new FedaPayProviderError("FedaPay did not return a transaction identifier.");
+  const token = await requestProvider(`/transactions/${encodeURIComponent(transactionId)}/token`, {
+    method: "POST",
+    body: "{}"
+  });
+  const tokenPayload = token && typeof token === "object" && !Array.isArray(token) ? token : {};
+  const checkoutUrl = String(tokenPayload.url ?? "");
+  if (!checkoutUrl) throw new FedaPayProviderError("FedaPay did not return a checkout URL.");
+  return { transactionId, checkoutUrl, status: normalizeStatus(transaction.status) };
+}
+function verifyFedaPayWebhookSignature(rawBody, signature) {
+  const secret = process.env.FEDAPAY_WEBHOOK_SECRET?.trim();
+  if (!secret || !signature) return false;
+  try {
+    return WebhookSignature.verifyHeader(rawBody, signature, secret, 300);
+  } catch {
+    return false;
+  }
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -1684,6 +1797,117 @@ function createTrunkRepository(sql = database()) {
         facilityId: String(row.facility_id)
       };
     },
+    async createWalletRecharge(input) {
+      if (!Number.isInteger(input.amountMinor) || input.amountMinor < 100 || input.amountMinor > 1e8) {
+        throw new WalletPolicyError("Recharge amount must be between 100 and 100,000,000 minor units.");
+      }
+      const currency = input.currency.trim().toUpperCase();
+      if (currency !== "XOF" || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+        throw new WalletPolicyError("Recharge currency or idempotency key is invalid.");
+      }
+      if (!isFedaPayConfigured()) {
+        throw new WalletPolicyError("FedaPay recharge is not configured for this environment.");
+      }
+      const existingRows = await retryDatabase(() => sql`
+        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url
+        from v2_wallet_recharge_intents r
+        join v2_accounts a on a.id = r.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and r.idempotency_key = ${input.idempotencyKey}
+        limit 1
+      `);
+      const existing = existingRows[0];
+      if (existing) {
+        if (Number(existing.amount_minor) !== input.amountMinor || String(existing.currency) !== currency) {
+          throw new WalletPolicyError("The recharge idempotency key is already used with different terms.");
+        }
+        if (!existing.provider_transaction_id || !existing.checkout_url || String(existing.status) !== "pending") {
+          throw new WalletPolicyError("The existing recharge cannot be resumed automatically.");
+        }
+        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: "pending", providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url) };
+      }
+      const intentRows = await retryDatabase(() => sql`
+        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key)
+        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}
+        from v2_accounts a
+        join v2_wallets w on w.account_id = a.id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning id, account_id
+      `);
+      const intent = intentRows[0];
+      if (!intent) throw new WalletPolicyError("An active account Wallet is required for recharge.");
+      const checkout = await createFedaPayCheckout({
+        rechargeId: String(intent.id),
+        amountMinor: input.amountMinor,
+        currency,
+        description: "Recharge Omni Wallet",
+        callbackUrl: input.callbackUrl,
+        customer: input.customer
+      });
+      const updatedRows = await retryDatabase(() => sql`
+        update v2_wallet_recharge_intents
+        set provider_transaction_id = ${checkout.transactionId}, checkout_url = ${checkout.checkoutUrl}, updated_at = now()
+        where id = ${String(intent.id)}::uuid and status = 'pending'
+        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url
+      `);
+      const updated = updatedRows[0];
+      if (!updated) throw new WalletPolicyError("Recharge state changed while creating the provider checkout.");
+      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: "pending", providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url) };
+    },
+    async reconcileWalletRecharge(input) {
+      const providerTransactionId = input.providerTransactionId.trim();
+      const providerEventId = input.providerEventId.trim();
+      if (!providerTransactionId || !providerEventId || !Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
+        throw new WalletPolicyError("FedaPay webhook payload is invalid.");
+      }
+      const currency = input.currency.trim().toUpperCase();
+      if (currency !== "XOF") throw new WalletPolicyError("FedaPay webhook currency is not supported.");
+      const existingEventRows = await retryDatabase(() => sql`
+        select id from v2_wallet_recharge_intents where provider_event_id = ${providerEventId} limit 1
+      `);
+      if (existingEventRows[0]) return { status: "ignored" };
+      const intentRows = await retryDatabase(() => sql`
+        select r.id, r.account_id, r.wallet_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id
+        from v2_wallet_recharge_intents r
+        where r.provider_transaction_id = ${providerTransactionId}
+        limit 1
+      `);
+      const intent = intentRows[0];
+      if (!intent) throw new WalletPolicyError("FedaPay webhook does not match a pending Omni recharge.");
+      if (input.omniRechargeId && String(intent.id) !== input.omniRechargeId) throw new WalletPolicyError("FedaPay webhook reference does not match the Omni recharge.");
+      if (Number(intent.amount_minor) !== input.amountMinor || String(intent.currency).toUpperCase() !== currency) throw new WalletPolicyError("FedaPay webhook amount or currency does not match the Omni recharge.");
+      if (String(intent.status) !== "pending") return { status: String(intent.status) === "confirmed" ? "confirmed" : String(intent.status) === "failed" ? "failed" : "canceled", rechargeId: String(intent.id) };
+      const nextStatus = input.status === "approved" ? "confirmed" : input.status === "canceled" ? "canceled" : input.status === "declined" ? "failed" : "pending";
+      if (nextStatus === "pending") return { status: "pending", rechargeId: String(intent.id) };
+      const rows = await retryDatabase(() => sql`
+        with locked as (
+          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+          from v2_wallet_recharge_intents r
+          join v2_accounts a on a.id = r.account_id
+          where r.id = ${String(intent.id)}::uuid and r.status = 'pending' and a.suspended_at is null
+          for update of r
+        ), ledger as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select l.wallet_id, 'recharge', l.amount_minor, 'confirmed', ${`fedapay:${providerTransactionId}`}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from locked l
+          where ${nextStatus} = 'confirmed'
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id
+        ), updated as (
+          update v2_wallet_recharge_intents r
+          set status = ${nextStatus}, provider_event_id = ${providerEventId}, confirmed_at = case when ${nextStatus} = 'confirmed' then ${input.now}::timestamptz else null end, updated_at = ${input.now}::timestamptz
+          from locked l
+          where r.id = l.id
+          returning r.id
+        )
+        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id from updated u
+      `);
+      const row = rows[0];
+      if (!row) return { status: "ignored" };
+      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : void 0 };
+    },
     async spendWallet(input) {
       if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0 || !input.reference.trim()) {
         throw new WalletPolicyError("Wallet spend amount and reference are invalid.");
@@ -1747,6 +1971,86 @@ function createTrunkRepository(sql = database()) {
         status: "confirmed",
         facilityId: String(row.facility_id)
       };
+    },
+    async activateFacilityPro(input) {
+      if (!input.reference.trim() || input.reference.length > 180) throw new WalletPolicyError("Pro activation reference is invalid.");
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id as account_id, w.id as wallet_id
+          from v2_accounts a
+          join v2_wallets w on w.account_id = a.id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state in ('seller_ready', 'complete')
+        ), facility as (
+          select f.id as facility_id, f.account_id,
+                 coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
+                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+          from v2_facilities f
+          join seller s on s.account_id = f.account_id
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
+          left join lateral (
+            select e.price_minor, e.billing_currency
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc
+            limit 1
+          ) last_entitlement on true
+          where f.id = ${input.facilityId}::uuid
+          for update of f
+        ), active_entitlement as (
+          select e.id, e.ends_at
+          from v2_facility_entitlements e
+          join facility f on f.facility_id = e.facility_id
+          where e.entitlement_kind = 'facility_pro' and e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          order by e.ends_at desc
+          limit 1
+        ), existing_spend as (
+          select e.id, e.wallet_id, e.amount_minor, e.facility_id
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.kind = 'facility_pro_spend' and e.reference = ${input.reference}
+          limit 1
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join seller s on s.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select s.wallet_id, 'facility_pro_spend', f.price_minor, 'confirmed', ${input.reference}, f.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from seller s cross join facility f cross join balance b
+          where b.balance_minor >= f.price_minor and not exists (select 1 from active_entitlement) and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, amount_minor, facility_id
+        ), effective_spend as (
+          select id, wallet_id, amount_minor, facility_id from spend
+          union all
+          select id, wallet_id, amount_minor, facility_id from existing_spend
+          limit 1
+        ), entitlement as (
+          insert into v2_facility_entitlements (facility_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select f.facility_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, false
+          from facility f join effective_spend s on s.facility_id = f.facility_id
+          where not exists (select 1 from active_entitlement)
+          returning id, facility_id, ends_at
+        ), updated as (
+          update v2_facilities f
+          set commercial_plan = 'pro_active', updated_at = ${input.now}::timestamptz
+          from entitlement e
+          where f.id = e.facility_id
+          returning f.id
+        )
+        select e.id as entitlement_id, e.facility_id, e.ends_at, s.id as spend_ledger_entry_id
+        from entitlement e join effective_spend s on s.facility_id = e.facility_id
+        union all
+        select ae.id as entitlement_id, f.facility_id, ae.ends_at, es.id as spend_ledger_entry_id
+        from active_entitlement ae cross join facility f left join existing_spend es on true
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new WalletPolicyError("Pro activation requires an assigned facility slot and sufficient confirmed Wallet funds.");
+      return { facilityId: String(row.facility_id), entitlementId: String(row.entitlement_id), endsAt: new Date(String(row.ends_at)).toISOString(), spendLedgerEntryId: String(row.spend_ledger_entry_id ?? "") };
     },
     async respondAvailability(input) {
       if (!["available", "partial", "unavailable"].includes(input.status)) {
@@ -2346,7 +2650,7 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, "EVIDENCE_NOT_FOUND", error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
   return {
@@ -2354,13 +2658,17 @@ function toApiErrorResponse(correlationId, error) {
     body: errorBody(correlationId, "INTERNAL_RECOVERABLE", "The service is temporarily unavailable. Please try again.", true)
   };
 }
-async function parseRequestBody(req) {
+async function readRawBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  if (!chunks.length) return {};
+  return Buffer.concat(chunks).toString("utf8");
+}
+async function parseRequestBody(req) {
+  const raw = await readRawBody(req);
+  if (!raw) return {};
   let parsed;
   try {
-    parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    parsed = JSON.parse(raw);
   } catch {
     throw new ApiInputError("Request body must be valid JSON.");
   }
@@ -2954,6 +3262,85 @@ async function handleApi(req, res, pathname, url) {
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === "POST" && pathname === "/api/v2/fedapay/webhook") {
+      const rawBody = await readRawBody(req);
+      const signature = typeof req.headers["x-fedapay-signature"] === "string" ? req.headers["x-fedapay-signature"] : null;
+      if (!verifyFedaPayWebhookSignature(rawBody, signature)) {
+        json(res, 400, errorBody(correlationId, "WEBHOOK_INVALID", "FedaPay webhook signature is invalid."));
+        return true;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(rawBody);
+      } catch {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "FedaPay webhook body must be valid JSON."));
+        return true;
+      }
+      const eventId = String(payload.id ?? payload.event_id ?? "").trim();
+      const eventName = String(payload.name ?? payload.type ?? "").toLowerCase();
+      const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : payload.data && typeof payload.data === "object" && !Array.isArray(payload.data) ? payload.data : payload;
+      const transaction = object.transaction && typeof object.transaction === "object" && !Array.isArray(object.transaction) ? object.transaction : object;
+      const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === "object" && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata : {};
+      const status = eventName.includes("approved") ? "approved" : eventName.includes("declined") ? "declined" : eventName.includes("canceled") || eventName.includes("cancelled") ? "canceled" : "pending";
+      const result = await repository.reconcileWalletRecharge({
+        providerTransactionId: String(transaction.id ?? transaction.reference ?? "").trim(),
+        providerEventId: eventId || `${String(transaction.id ?? transaction.reference ?? "")}:${eventName}`,
+        status,
+        amountMinor: Number(transaction.amount),
+        currency: typeof transaction.currency === "string" ? transaction.currency : transaction.currency && typeof transaction.currency === "object" && !Array.isArray(transaction.currency) ? String(transaction.currency.iso ?? "") : "",
+        omniRechargeId: metadata.omni_recharge_id ? String(metadata.omni_recharge_id) : metadata.deposit_id ? String(metadata.deposit_id) : null,
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/wallet/recharges") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before recharging your Omni Wallet."));
+        return true;
+      }
+      const idempotencyKey = String(req.headers["idempotency-key"] ?? "").trim();
+      if (!idempotencyKey) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Idempotency-Key is required for Wallet recharge."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const customer = input.customer && typeof input.customer === "object" && !Array.isArray(input.customer) ? input.customer : {};
+      const result = await repository.createWalletRecharge({
+        authUserId,
+        amountMinor: Number(input.amountMinor),
+        currency: typeof input.currency === "string" ? input.currency : "",
+        idempotencyKey,
+        callbackUrl: typeof input.callbackUrl === "string" ? input.callbackUrl : "",
+        customer: {
+          email: typeof customer.email === "string" ? customer.email : null,
+          firstName: typeof customer.firstName === "string" ? customer.firstName : null,
+          lastName: typeof customer.lastName === "string" ? customer.lastName : null
+        }
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/wallet/pro") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before activating Omni Pro."));
+        return true;
+      }
+      const idempotencyKey = String(req.headers["idempotency-key"] ?? "").trim();
+      const input = await parseRequestBody(req);
+      const facilityId = typeof input.facilityId === "string" ? input.facilityId.trim() : "";
+      const reference = typeof input.reference === "string" ? input.reference.trim() : idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !reference || reference !== idempotencyKey) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A valid facility and matching Idempotency-Key are required."));
+        return true;
+      }
+      const result = await repository.activateFacilityPro({ authUserId, facilityId, reference, now: (/* @__PURE__ */ new Date()).toISOString() });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === "GET" && pathname === "/api/v2/wallet") {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -3234,8 +3621,11 @@ async function sellerCatalogueHandler(req, res) {
   const action = url.searchParams.get("omni_action");
   const demoRebind = action === "demo-rebind";
   const walletOverview = action === "wallet";
+  const walletRecharge = action === "wallet-recharge";
+  const walletPro = action === "wallet-pro";
+  const fedapayWebhook = action === "fedapay-webhook";
   const productId = typeof req.query?.id === "string" ? req.query.id : url.searchParams.get("id");
-  const pathname = demoRebind ? "/api/v2/seller/demo-rebind" : walletOverview ? "/api/v2/wallet" : productId ? `/api/v2/seller/catalogue/${productId}` : "/api/v2/seller/catalogue";
+  const pathname = demoRebind ? "/api/v2/seller/demo-rebind" : walletOverview ? "/api/v2/wallet" : walletRecharge ? "/api/v2/wallet/recharges" : walletPro ? "/api/v2/wallet/pro" : fedapayWebhook ? "/api/v2/fedapay/webhook" : productId ? `/api/v2/seller/catalogue/${productId}` : "/api/v2/seller/catalogue";
   await handleApi(req, res, pathname, url);
 }
 

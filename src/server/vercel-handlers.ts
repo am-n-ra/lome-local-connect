@@ -73,6 +73,7 @@ export async function sellerCatalogueHandler(req: any, res: any) {
   const demoRebind = action === 'demo-rebind';
   const walletOverview = action === 'wallet';
   const walletRecharge = action === 'wallet-recharge';
+  const walletPro = action === 'wallet-pro';
   const fedapayWebhook = action === 'fedapay-webhook';
   const productId = typeof req.query?.id === 'string' ? req.query.id : url.searchParams.get('id');
   const pathname = demoRebind
@@ -81,6 +82,8 @@ export async function sellerCatalogueHandler(req: any, res: any) {
       ? '/api/v2/wallet'
       : walletRecharge
         ? '/api/v2/wallet/recharges'
+        : walletPro
+          ? '/api/v2/wallet/pro'
         : fedapayWebhook
           ? '/api/v2/fedapay/webhook'
     : productId

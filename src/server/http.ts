@@ -720,6 +720,25 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/wallet/pro') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before activating Omni Pro.'));
+        return true;
+      }
+      const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+      const input = await parseRequestBody(req);
+      const facilityId = typeof input.facilityId === 'string' ? input.facilityId.trim() : '';
+      const reference = typeof input.reference === 'string' ? input.reference.trim() : idempotencyKey;
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !reference || reference !== idempotencyKey) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A valid facility and matching Idempotency-Key are required.'));
+        return true;
+      }
+      const result = await repository.activateFacilityPro({ authUserId, facilityId, reference, now: new Date().toISOString() });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/wallet') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
