@@ -46,3 +46,8 @@ La configuration FedaPay n’a pas été engagée dans une recharge sandbox dura
 
 [1]: https://omni.sparkafrika.online/ "Omni production"
 [2]: https://vercel.com/kheirs-projects/omniview/ABPgqHdP71gVeZV4yDsKTP7e7n9v "Vercel deployment for commit 25c7824"
+
+
+## Mise à jour de preuve — recharge pending
+
+Le déploiement `dpl_FitFn2HZtDd3pJ2sxYz8DSe4Q8pC` (`READY`, production) expose maintenant le parcours Seller de recharge Wallet en XOF. Avec `demo@seller.omni`, une intention de **10 000 F CFA** a été créée avec succès ; l’interface affiche l’état **pending** et un checkout FedaPay. Le solde reste `$0.00` et la facilité reste Free avant confirmation, ce qui prouve que la création du checkout ne crédite pas le Wallet et ne déclenche pas Pro. Le checkout n’a pas été payé et le webhook signé n’a pas encore été observé ; la confirmation financière reste donc non prouvée.

@@ -58,3 +58,12 @@ The Pro activation release `25c7824` is READY in production as deployment `dpl_A
 ## Production negative proof — insufficient Wallet funds
 
 On 2026-08-27, the logged-in Seller `demo@seller.omni` reached the authorized Seller workspace and Wallet tab. The facility `Omni Demo Seller Hub` showed `Free · 5 offres maximum`, confirmed balance `$0.00`, and Pro price `$10.00/month`. After explicit user confirmation, clicking `Passer en Pro` produced `POST /api/v2/wallet/pro` → HTTP `409`. The Vercel runtime log recorded `WalletPolicyError: Pro activation requires an assigned facility slot and sufficient confirmed Wallet funds.` The UI returned to the actionable button, preserved `$0.00` and `Free`, and displayed the same policy message. No debit or entitlement activation was observed. This proves the insufficient-funds rejection path; it does not yet prove a successful debit/activation.
+
+
+## Preuve recharge FedaPay pending — 2026-08-27
+
+Sur le déploiement production `6ec5d4f`, avec la session Seller autorisée `demo@seller.omni`, l’onglet Wallet a été utilisé pour sélectionner **10 000 F CFA** puis préparer une recharge. La requête a abouti à l’état **pending** : l’interface affiche `Recharge créée · 10 000 F CFA en attente de confirmation` et fournit un lien de checkout FedaPay. Le token du checkout n’est pas recopié dans ce ledger.
+
+Le solde Omni affiché reste **$0.00**, le plan de la facilité reste **Free**, et aucune activation Pro n’est déclenchée. Cela confirme la séparation entre création d’une intention de recharge et crédit confirmé. Le paiement FedaPay et la réconciliation webhook n’ont pas été exécutés dans ce pass ; aucune confirmation financière n’est donc revendiquée.
+
+**Classe de preuve :** observed / production / pending / manual browser proof. **Résultat :** passage réussi de la création d’intention, confirmation provider encore non prouvée. **Déploiement :** `dpl_FitFn2HZtDd3pJ2sxYz8DSe4Q8pC` (`READY`, production).
