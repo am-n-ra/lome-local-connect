@@ -11,7 +11,7 @@ const entries = {
   'api/v2/transaction-transitions.js': 'src/server/vercel/transaction-transitions.ts',
   'api/v2/availability-responses.js': 'src/server/vercel/availability-responses.ts',
   'api/v2/seller/availability-requests.js': 'src/server/vercel/seller-availability-requests.ts',
-  'api/v2/seller/demo-rebind.js': 'src/server/vercel/seller-demo-rebind.ts',
+  'api/v2/seller/catalogue.js': 'src/server/vercel/seller-catalogue.ts',
   'api/v2/qr-issuances.js': 'src/server/vercel/qr-issuances.ts',
 };
 

@@ -3145,13 +3145,16 @@ function requestUrl(req, fallbackPath) {
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-async function sellerDemoRebindHandler(req, res) {
-  const url = requestUrl(req, "/api/v2/seller/demo-rebind");
-  await handleApi(req, res, "/api/v2/seller/demo-rebind", url);
+async function sellerCatalogueHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/seller/catalogue");
+  const demoRebind = url.searchParams.get("omni_action") === "demo-rebind";
+  const productId = typeof req.query?.id === "string" ? req.query.id : url.searchParams.get("id");
+  const pathname = demoRebind ? "/api/v2/seller/demo-rebind" : productId ? `/api/v2/seller/catalogue/${productId}` : "/api/v2/seller/catalogue";
+  await handleApi(req, res, pathname, url);
 }
 
-// src/server/vercel/seller-demo-rebind.ts
-var seller_demo_rebind_default = sellerDemoRebindHandler;
+// src/server/vercel/seller-catalogue.ts
+var seller_catalogue_default = sellerCatalogueHandler;
 export {
-  seller_demo_rebind_default as default
+  seller_catalogue_default as default
 };

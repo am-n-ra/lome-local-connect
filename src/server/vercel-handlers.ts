@@ -67,9 +67,16 @@ export async function sellerAvailabilityRequestsHandler(req: any, res: any) {
   await handleApi(req, res, '/api/v2/seller/availability-requests', url);
 }
 
-export async function sellerDemoRebindHandler(req: any, res: any) {
-  const url = requestUrl(req, '/api/v2/seller/demo-rebind');
-  await handleApi(req, res, '/api/v2/seller/demo-rebind', url);
+export async function sellerCatalogueHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/seller/catalogue');
+  const demoRebind = url.searchParams.get('omni_action') === 'demo-rebind';
+  const productId = typeof req.query?.id === 'string' ? req.query.id : url.searchParams.get('id');
+  const pathname = demoRebind
+    ? '/api/v2/seller/demo-rebind'
+    : productId
+      ? `/api/v2/seller/catalogue/${productId}`
+      : '/api/v2/seller/catalogue';
+  await handleApi(req, res, pathname, url);
 }
 
 export async function qrIssuanceHandler(req: any, res: any) {

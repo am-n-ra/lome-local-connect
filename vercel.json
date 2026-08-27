@@ -4,6 +4,8 @@
   "outputDirectory": "dist",
   "rewrites": [
     { "source": "/auth", "destination": "/" },
-    { "source": "/auth/:path*", "destination": "/" }
+    { "source": "/auth/:path*", "destination": "/" },
+    { "source": "/api/v2/seller/catalogue/:id", "destination": "/api/v2/seller/catalogue?id=:id" },
+    { "source": "/api/v2/seller/demo-rebind", "destination": "/api/v2/seller/catalogue?omni_action=demo-rebind" }
   ]
 }
