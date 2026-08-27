@@ -1,232 +1,315 @@
-# Omni V2 — Species Master Prompt Pack
+# Omni V2 — Pack maître de prompts réalistes
 
-**Objectif :** générer les maquettes visuelles réalistes, modernes et cohérentes d’Omni avant toute nouvelle implémentation UI.
+## Direction artistique canonique
 
-## Mode d’emploi obligatoire
+Utiliser l’image fournie par le fondateur comme **référence visuelle absolue** pour toute la série. Le style recherché est une interface mobile premium, réaliste et immédiatement compréhensible : carte/globe géographique en relief avec frontières et noms de pays lisibles, lumière ivoire très douce, surfaces blanches flottantes avec ombres légères, typographie noire épaisse et moderne, vert Omni utilisé pour les actions principales et les confirmations, pictogrammes fins et reconnaissables.
 
-Générer les images dans l’ordre. Utiliser la première image validée comme **image de référence visuelle** pour toutes les suivantes. Conserver le même langage de marque, la même densité, les mêmes rayons, la même typographie, les mêmes icônes et la même logique de surfaces. Chaque image est une maquette d’interface mobile réaliste, pas une affiche marketing et pas une capture de navigateur.
+Omni doit évoquer le **premier moteur mondial de recherche de l’offre et de la demande locale** : la carte n’est pas une illustration, elle est le produit. L’interface doit être plus désirable qu’un marketplace classique, plus utile qu’une carte classique et aussi directe qu’un moteur de recherche. Le résultat doit ressembler à une vraie application mobile haut de gamme déjà prête à être utilisée.
 
-Utiliser une sortie **portrait 9:16**, idéalement 1440 × 2560 px, sans cadre de téléphone, sans navigateur et sans watermark. Les textes français placés entre guillemets doivent apparaître exactement et rester lisibles. Pour les textes secondaires non critiques, privilégier du texte lisible plutôt que du faux lorem ipsum.
+Conserver dans chaque image : le wordmark `Omni` en haut à gauche, l’avatar circulaire en haut à droite sur les écrans Buyer publics, la carte en arrière-plan lorsque le flow part de la découverte, les sheets blanches à grand rayon, le vert Omni cohérent, les contrôles tactiles larges, une hiérarchie très nette, des données lisibles et des textes français exacts.
 
-## Direction artistique verrouillée : Omni World Layer
+Format pour chaque image : **portrait mobile 9:16, 1440 × 2560 px, interface seule sans cadre de téléphone, sans navigateur, sans watermark**. Générer chaque écran séparément. Utiliser l’image de référence du fondateur, puis la première image approuvée comme référence additionnelle pour toutes les suivantes. Ne pas modifier la direction artistique entre les écrans.
 
-Omni est le **moteur mondial de recherche de l’offre et de la demande locale**. La carte/globe est son identité et sa landing, jamais une décoration. La direction visuelle est premium, contemporaine, calme et désirable : cartographie monochrome profonde ou ivoire selon l’état, lignes topographiques fines, pins lumineux, panneaux flottants à profondeur douce, typographie éditoriale forte pour les affirmations et sans-serif précise pour les données.
+## Règles de continuité
 
-Palette : noir graphite `#101312`, ivoire chaud `#F8FAF8`, blanc `#FFFFFF`, gris brume `#E7ECE8`, vert signal `#16A66A` uniquement pour un état confirmé, ambre `#E8A226` pour ancien/à vérifier, rouge discret `#C64D4D` uniquement pour erreur/blocage. Aucun gradient néon, aucune palette marketplace générique, aucun glassmorphism excessif.
+La carte Buyer est toujours la landing. Le globe peut être mondial en état initial puis zoomer vers Lomé ou la zone de recherche. La rotation lente existe uniquement dans l’état idle et s’arrête dès qu’un utilisateur touche, recherche, ouvre une sheet ou entre dans un flow.
 
-Règles de composition : carte/globe dominant sur les surfaces Buyer ; recherche comme geste principal ; sheets arrondies et généreuses ; une seule action primaire très claire ; navigation secondaire et contextuelle ; pas de dashboard Seller/Admin sur la landing ; pas de cartes produit artificiellement nombreuses ; les données de fraîcheur, quantité, budget, prix et confiance doivent rester lisibles.
+Le QR public d’une facilité sert uniquement à **découvrir la facilité et ses offres**. Le QR transactionnel est généré pour une intention précise et porte le coupon, la transaction, le prix et l’identité du Buyer. Ces deux objets doivent être visuellement impossibles à confondre.
 
-Règles de mouvement à représenter visuellement : globe lent uniquement en état idle ; arrêt au toucher ou à la recherche ; ouverture de sheet par montée courte et physique ; clavier qui redimensionne le dock sans déplacer brutalement toute la scène ; respect de `prefers-reduced-motion`.
+Une réponse automatique n’est visible que lorsque le stock Omni est frais. Une donnée ancienne montre clairement `Donnée ancienne` et déclenche une vérification Seller/temps réel. Une disponibilité manuelle reste gratuite. Le Bulk Facility est le service facturé au Buyer Pro avec crédits consommables.
 
-## Bloc négatif commun à ajouter à chaque prompt
+La certification manuelle et la confirmation commerciale sont séparées. Une facilité peut afficher `Certifiée Omni · Unconfirmed · 0/3`, puis `1/3`, `2/3`, et enfin `Confirmée · 3/3`. Le bonus Seller de 20 $ apparaît seulement après la troisième vente vérifiée sur **cette facilité** et sert à essayer Pro ou des services Omni éligibles.
 
-`No browser chrome, no device frame, no desktop monitor, no fake lorem ipsum, no unreadable microtext, no random English UI, no invented logo, no payment success before confirmation, no public QR confused with transaction QR, no Seller/Admin controls on Buyer landing, no excessive glassmorphism, no neon gradients, no stock photography, no generic ecommerce homepage, no dense dashboard, no duplicated buttons, no distorted typography, no watermark.`
+La recherche initiale doit survivre à l’authentification et à l’onboarding : `Recherche → Auth requise → Connexion/inscription → Onboarding → Recherche reprise → Résultats`.
 
 ---
 
-# A. Reference / brand DNA
+# 1. Landing, carte et première recherche
 
-## 01 — Buyer globe landing (master reference)
+### 01 — Landing globe/carte mondiale
 
-**Prompt :**
+Créer une maquette mobile réaliste de la landing Buyer Omni. Montrer un globe/carte en relief couvrant l’Afrique du Nord, l’Afrique de l’Ouest et l’Europe du Sud, avec frontières fines, noms de pays lisibles, pins blancs et verts répartis sur la carte, un signal vert plus lumineux sur Lomé. En haut : `Omni` et avatar circulaire. En bas : grande search bar blanche `Rechercher un commerce, un produit…`, bouton vert avec loupe et bouton secondaire `Explorer`. Ajouter une sheet élégante avec `Le monde local, à portée de recherche.` et `Trouvez ce qui est disponible autour de vous.` La carte doit occuper la majorité de l’écran et donner une impression de réseau mondial réel.
 
-`High-fidelity realistic mobile app UI mockup for Omni World Layer, the world's local supply-and-demand search engine. Primary Buyer landing, portrait 9:16. A beautiful living monochrome globe/map fills most of the screen, with subtle topographic streets and a few luminous facility pins around Lomé, Togo, plus faint global arcs suggesting the world supply layer. The map is the hero and identity. Top left: exact wordmark “Omni”. Top right: quiet circular profile icon. Bottom floating search dock with exact placeholder “Rechercher un commerce, un produit…” and a single green search action. A small secondary control “Explorer” with scan icon. Over the lower map, refined editorial line: “Le monde local, à portée de recherche.” Supporting line: “Trouvez ce qui est disponible autour de vous.” No role switcher, no dashboard, no product catalogue, no forced login. Modern premium black, ivory, mist gray, restrained signal green, native rounded controls, sophisticated global-product polish. ${NEGATIVE}`
+### 02 — Landing idle avec carte peuplée
 
-## 02 — Idle globe / empty supply state
+Même composition, globe légèrement plus éloigné, nombreuses facilités visibles mais légères, plusieurs pins neutres et trois pins verts dans la région de Lomé. Sheet réduite avec `Voir avant de bouger`, `Commencez par rechercher ce dont vous avez besoin.` La carte doit rester la vedette.
 
-`Use the approved Omni World Layer reference. Buyer landing in an early-network state: globe/map remains beautiful and alive but has only a few distant neutral pins and a quiet label “Le réseau se peuple”. Search dock remains dominant with “Rechercher un commerce, un produit…”. Add a calm supporting message “Commencez par chercher ce dont vous avez besoin.” Show no fake abundance. Include a subtle link “Voir les facilités non revendiquées”. Same typography, palette, surfaces, map treatment and exact French UI quality. ${NEGATIVE}`
+### 03 — Permission de localisation
 
-## 03 — Location permission sheet
+Carte mondiale visible derrière une grande sheet blanche. Titre exact `Voir les offres proches de vous ?`, icône localisation verte, texte `La localisation est facultative. Vous pouvez continuer sans la partager.`, bouton vert `Autoriser la localisation`, bouton contour `Continuer sans localisation`. Présenter cela comme une permission respectueuse et premium.
 
-`Use the approved reference. Monochrome globe dimmed behind a premium bottom sheet. Exact title “Voir les offres proches de vous ?”. Copy “La localisation est facultative. Vous pouvez continuer sans la partager.” Primary button “Autoriser la localisation”, secondary “Continuer sans localisation”. Show a small location glyph, generous safe-area bottom spacing, no invasive browser permission chrome. ${NEGATIVE}`
+### 04 — Localisation refusée
 
-## 04 — Location denied / recovery
+Carte utilisable en arrière-plan, sheet avec `La carte reste disponible`, texte `Autorisez la localisation quand vous voudrez voir les offres proches de vous.`, boutons `Autoriser la localisation` et `Continuer sans localisation`. Garder la search bar visible sous la sheet.
 
-`Use the approved reference. Buyer map remains usable after denial. Bottom sheet exact title “La carte reste disponible”, copy “Autorisez la localisation quand vous voudrez voir les offres proches de vous.” Buttons “Autoriser la localisation” and “Continuer sans localisation”. The design must feel respectful, not like an error. ${NEGATIVE}`
+### 05 — Search bar active avec clavier
 
-# B. Buyer search and discovery
+Carte partiellement visible dans la moitié supérieure, search bar agrandie et focus vert, texte exact `Riz parfumé 5 kg`, suggestions propres `Riz parfumé`, `Riz 5 kg`, `Produits autour de moi`. Montrer un clavier mobile discret qui ne pousse pas brutalement toute la scène vers le haut. Le dock s’ancre au-dessus du clavier.
 
-## 05 — Search focused with keyboard
+### 06 — Suggestions et recherche vocale/scan
 
-`Use the approved reference. Mobile Buyer map-first screen with search dock expanded and the on-screen keyboard visibly occupying the lower safe area without pushing the whole map violently upward. Search field focused, exact text “Riz parfumé 5 kg”, suggestion rows “Riz parfumé”, “Riz 5 kg”, “Produits autour de moi”. A compact close button and a visible clear action. Map stays partially visible above. Native, calm, direct. ${NEGATIVE}`
-
-## 06 — Auth prompt from unauthenticated search
-
-`Use the approved reference. Map and search results remain dimly visible behind a bottom sheet. Exact eyebrow “VOTRE RECHERCHE EST PRÊTE”. Title “Créez votre espace pour voir les offres.” Copy “Nous gardons « Riz parfumé 5 kg » et reprenons automatiquement après une connexion rapide.” Primary “Continuer avec Omni”, secondary “Explorer sans compte”. Explain identity without sounding like a generic login wall. ${NEGATIVE}`
-
-## 07 — Auth / sign in
-
-`Use the approved reference. Clean full-screen mobile auth page reached from a search, not a generic marketing page. Exact title “Un espace, une recherche reprise.” Inputs “Votre adresse e-mail” and “Mot de passe”. Buttons “Se connecter” and “Créer mon compte”. Small back link “Retour à la carte”. Show tiny context label “Recherche conservée : Riz parfumé 5 kg”. ${NEGATIVE}`
-
-## 08 — Onboarding step 1, location
-
-`Use the approved reference. Minimal guided onboarding screen, exact header “Bienvenue dans Omni”, progress “1/3”, title “Votre zone”, copy “Pour afficher les offres proches de vous.” A small map/location illustration, note “La localisation est facultative.” Sticky primary “Continuer”, secondary “Passer pour maintenant”. No role selection yet. ${NEGATIVE}`
-
-## 09 — Onboarding step 2, preserved search
-
-`Use the approved reference. Onboarding step “2/3”, exact title “Votre première recherche”, copy “Nous avons conservé votre recherche.” Show a refined search card with “Riz parfumé 5 kg”. Sticky primary “Continuer”, secondary “Passer pour maintenant”. Make continuity and trust visually obvious. ${NEGATIVE}`
-
-## 10 — Onboarding step 3, launch search
-
-`Use the approved reference. Onboarding step “3/3”, exact title “Votre espace”, copy “Retrouvez demandes, transactions et favoris.” Sticky primary “Lancer ma recherche”, secondary “Passer pour maintenant”. Include a subtle sparkle/continuity motif, never a generic app-tour carousel. ${NEGATIVE}`
-
-## 11 — Search results over map
-
-`Use the approved reference. Map remains primary; a rising results sheet titled “Résultats près de vous” with query “Riz parfumé 5 kg”. Filter chips “10 unités”, “Budget 10 $”, “À proximité”. Result card 1: “Omni Demo Seller Hub”, “9,50 $”, “Disponible · 10 unités”, “Observé il y a 2 min”. Result card 2: “Marché de Hanoukopé”, “9,80 $”, “Vérification nécessaire”. Add a restrained action “Vérifier plusieurs facilités · Bulk Facility”. ${NEGATIVE}`
-
-## 12 — No results / recovery
-
-`Use the approved reference. Buyer search state with query “Lait d’amande 1 L”, map still visible and an elegant empty sheet. Exact title “Aucun résultat exact”. Copy “Nous pouvons élargir la zone ou vérifier plusieurs facilités.” Buttons “Élargir la zone” and “Vérifier plusieurs facilités”. No fake results. ${NEGATIVE}`
-
-## 13 — Filters / currency
-
-`Use the approved reference. Filter sheet exact title “Affiner votre recherche”. Fields “Quantité demandée”, “Budget maximum”, “Zone”, “Devise affichée”. Show example “10 unités”, “10 $”, “Autour de moi”, “USD · selon votre localisation”. Primary “Appliquer les filtres”. Include a tiny explanation that Omni displays prices in the user’s local currency when available. ${NEGATIVE}`
-
-## 14 — Facility and products sheet
-
-`Use the approved reference. Map behind a large rounded facility sheet. Exact title “Omni Demo Seller Hub”, location “Lomé, Togo”, badges “Certifiée Omni” and “Unconfirmed · 2/3 ventes”. A clearly separated public QR block: “QR public de la facilité”, “Découvrir les offres, pas une transaction.” Product cards “Riz parfumé 5 kg · 9,50 $ · 10 disponibles · Donnée fraîche” and “Huile végétale 1 L · 3,20 $ · Donnée ancienne · 8 alloués”. Buttons “Vérifier la disponibilité” and “Ajouter au panier”. ${NEGATIVE}`
-
-## 15 — Public facility QR entry
-
-`Use the approved reference. Public QR discovery state over a dimmed map. Exact title “Découvrir cette facilité”, facility “Omni Demo Seller Hub”, badge “Offres Omni”, copy “Explorez les produits et les prix réservés Omni chez ce vendeur.” Primary “Voir les produits”, secondary “Rechercher ailleurs”. Mandatory distinction line: “QR public de la facilité — pas un QR de transaction.” No payment amount, no coupon, no transaction QR. ${NEGATIVE}`
-
-## 16 — Manual availability request
-
-`Use the approved reference. Buyer availability sheet exact eyebrow “DISPONIBILITÉ MANUELLE · GRATUITE”, title “Vérifier avant de bouger.” Product “Riz parfumé 5 kg”, fields “Quantité 10” and “Budget max 10 $”, badge “Donnée ancienne”, primary “Envoyer la demande”, secondary “Ajouter au panier”. Helper: “Le vendeur confirme la quantité exacte au moment de votre demande.” ${NEGATIVE}`
-
-## 17 — Bulk Facility request
-
-`Use the approved reference. Premium Buyer Pro sheet exact title “Voir plus. Appeler moins.” Badge “Buyer Pro · service facturé”. Quota card “842 crédits disponibles”. Request “Riz parfumé 5 kg · 10 unités · Budget 10 $”. Selection “12 facilités sélectionnées”. Cost “Cette demande : 12 crédits”. Primary “Lancer la vérification”, secondary “Acheter plus de crédits”. Explain “Les offres anciennes seront vérifiées en temps réel.” ${NEGATIVE}`
-
-# C. Buyer intent and transaction
-
-## 18 — Multi-product cart
-
-`Use the approved reference. Exact title “Votre sélection”, facility context “Omni Demo Seller Hub · Lomé”. Lines “Riz parfumé 5 kg × 10 · 95,00 $” and “Huile végétale 1 L × 2 · 6,40 $”. Green line “Offre Omni incluse”. Total “101,40 $”. Warning card “Le stock Omni sera revalidé avant l’achat.” Primary “Créer mon intention”, secondary “Modifier la sélection”. ${NEGATIVE}`
-
-## 19 — Intent created / pending verification
-
-`Use the approved reference. Exact title “On vérifie pour vous.” Reference “Intention créée · #OMNI-4827”. Status “Vérification en attente”. Timeline “Intention créée” completed, “Vérification” active, “Je veux acheter” pending. Copy “Vous ne serez engagé qu’après vérification.” Actions “Suivre la vérification” and “Annuler l’intention”. ${NEGATIVE}`
-
-## 20 — Verified availability decision
-
-`Use the approved reference. Exact title “Tout est prêt pour décider.” Facility, product, price “95,00 $”, badge “Vérifié maintenant”. Question “Souhaitez-vous acheter ?”. Primary “Je veux acheter”, secondary “Pas maintenant”. Small line “Votre transaction et votre QR seront créés après confirmation.” No payment controls. ${NEGATIVE}`
-
-## 21 — Transaction QR hub
-
-`Use the approved reference. Exact title “Votre passage est prêt.” Large highly realistic black-and-white QR code labeled “QR de transaction”, reference “OMNI-4827”, expiry “Expire dans 28 min”, facility and total “95,00 $”. Actions “Ouvrir le chat”, “Itinéraire”, “Contacts du vendeur”. Mandatory warning: “Ce QR est lié à cette transaction et à votre coupon — ne pas confondre avec le QR public de la facilité.” ${NEGATIVE}`
-
-## 22 — Transaction chat
-
-`Use the approved reference. Secure transaction chat screen exact header “Chat transactionnel · OMNI-4827”. Show system messages “QR vérifié”, “Transaction rattachée à Omni Demo Seller Hub”, Buyer and Seller bubbles, attachment button, itinerary shortcut, and a quiet transaction status rail. No generic social chat chrome. ${NEGATIVE}`
-
-## 23 — Payment and fulfilment
-
-`Use the approved reference. Exact title “Paiement à confirmer.” Timeline “QR vérifié” completed, “Paiement” active, “Retrait / livraison” pending. Payment choices “Mobile Money”, “Carte”, “Espèces déclarées”. Primary “Déclarer le paiement”. Helper “Le vendeur confirmera le paiement dans le chat.” No success state yet. ${NEGATIVE}`
-
-## 24 — Received, rating and closed
-
-`Use the approved reference. Exact title “Achat reçu. Merci à vous.” Status “Transaction clôturée”. Facility and total visible. Section “Votre avis est requis”, five large star controls, field “Partagez votre expérience”, primary “Publier mon avis”. Supporting line “Votre avis contribue à la confiance de cette facilité.” ${NEGATIVE}`
-
-# D. Seller lifecycle
-
-## 25 — Seller entry / role-aware menu
-
-`Use the approved reference. Contextual account menu, not visible on Buyer landing. Show Buyer identity, menu rows “Mes demandes”, “Wallet & Rewards”, “Devenir vendeur”, and only if server capability exists “Espace Seller”. No Admin option for an ordinary Buyer. Exact title “Votre espace”. ${NEGATIVE}`
-
-## 26 — Company list
-
-`Use the approved reference. Seller workspace exact title “Mes compagnies”. Cards “Demo Seller Group · 2 facilités · 1 certifiée · 1 confirmée” and “Kegue Services · 1 facilité · En revue”. Primary “Créer une compagnie”, secondary “Ajouter une facilité”. Explicit note “Le Pro est propre à chaque facilité.” ${NEGATIVE}`
-
-## 27 — Create company
-
-`Use the approved reference. Guided Seller screen exact title “Donnez un nom à votre activité.” Fields “Nom de la compagnie” and “Type d’activité”. Helper “Une compagnie peut gérer plusieurs facilités.” Primary “Créer la compagnie”. ${NEGATIVE}`
-
-## 28 — Create facility with map
-
-`Use the approved reference. Guided stepper exact header “Créer une facilité”, progress “1 Informations · 2 Localisation · 3 Preuves · 4 Vérifier”. Fields “Nom de la facilité”, “Type de commerce”, “Adresse publique”. Large grayscale map with draggable black pin, button “Utiliser ma position”, helper “Déplacez le pin jusqu’à l’entrée réelle”. Sticky primary “Continuer”. ${NEGATIVE}`
-
-## 29 — Claim unclaimed facility
-
-`Use the approved reference. Public facility sheet with badge “Non revendiquée”. Exact title “Vous gérez cet endroit ?”. Copy “Revendiquer une facilité existante vous permet de gérer ses offres sans créer une fiche en double.” Primary “Revendiquer cette facilité”. Show private evidence path but no Seller catalogue controls before approval. ${NEGATIVE}`
-
-## 30 — Claim evidence and review
-
-`Use the approved reference. Seller claim screen exact title “Prouver votre lien avec cette facilité”. Steps “Identité”, “Preuve privée”, “Revue Omni”. Upload card “Vos preuves restent privées”. Primary “Soumettre le claim”. States must be visually ready for “En revue”, “Preuve demandée”, “Rejeté — corriger”, “Certifié”. ${NEGATIVE}`
-
-## 31 — Certification and 3/3 progression
-
-`Use the approved reference. Seller facility detail exact title “Omni Demo Seller Hub”. Separate badges “Certifiée Omni” and “Unconfirmed”. Large progression “Ventes vérifiées 2/3”, copy “Encore 1 vente vérifiée pour débloquer 20 $”. After the third sale variant, replace with “Confirmée · 3/3”, green success, and card “Bonus de 20 $ débloqué pour essayer Omni Pro et les services Omni”. Show no transfer-to-bank language. ${NEGATIVE}`
-
-## 32 — Seller catalogue Free/Pro
-
-`Use the approved reference. Exact title “Vos offres”. Facility context visible. Free state badge “5/5 Free”, product cards with edit actions, primary “Ajouter un produit”, warning “La limite Free est atteinte”, secondary “Passer Pro · 10 $ / facilité”. Create/edit state must require an Omni discount in either percentage or fixed amount. ${NEGATIVE}`
-
-## 33 — Omni-allocated stock
-
-`Use the approved reference. Exact title “Stock alloué à Omni.” Product card “Riz parfumé 5 kg”, “10 alloués”, timestamp “Observé il y a 2 min”, action “Modifier”. Helper “Ce stock est distinct du stock global de votre activité.” Show a Pro-only card “Réponses automatiques” with “Stock frais” condition and an amber stale state. ${NEGATIVE}`
-
-## 34 — Seller availability queue
-
-`Use the approved reference. Exact title “Répondre au bon moment.” Incoming request “Riz parfumé 5 kg · ×10”, Buyer, age, status “À vérifier”. Copy “Stock Omni observé il y a 14 h. Une réponse temps réel est requise.” Actions “Disponible”, “Partiel”, “Indisponible”, “Demander plus d’informations”. Separate Bulk Facility queue card. ${NEGATIVE}`
-
-## 35 — Seller transaction / scan QR
-
-`Use the approved reference. Exact title “Vérifier puis accompagner.” Transaction reference “OMNI-4827”. Camera scan surface labeled “Scanner le QR Buyer”, status “QR de transaction attendu”. After scan variant: “Transaction rattachée”, product, amount, actions “Confirmer le paiement”, “Ouvrir le chat”, “Marquer comme remis”. Never display the public facility QR as a transaction. ${NEGATIVE}`
-
-## 36 — Seller Pro and 20 $ reward
-
-`Use the approved reference. Facility-scoped Pro page exact title “Plus de capacité pour cette facilité”. Price “10 $ / mois · cette facilité”. Show Free vs Pro comparison: “5 produits” vs “Produits illimités”, “Réponses manuelles” vs “Réponses automatiques sur stock frais”. Reward card “20 $ disponibles après 3 ventes vérifiées”, CTA “Utiliser pour essayer Pro”. ${NEGATIVE}`
-
-# E. Admin / Reviewer / system states
-
-## 37 — Admin review queue
-
-`Use the approved reference. Protected Admin/Reviewer workspace, not accessible from Buyer landing. Exact title “Revue Omni”, role badge “Reviewer”. Tabs “Nouvelles créations” and “Claims”. Cards with “À examiner”, evidence count and buttons “Ouvrir”. Note “Le compteur de ventes ne se modifie pas ici.” ${NEGATIVE}`
-
-## 38 — Evidence review decision
-
-`Use the approved reference. Exact title “Décider avec des preuves.” Private evidence viewer for a facility claim. Actions “Certifier la facilité”, “Demander une preuve”, “Rejeter avec motif”. Show audit timestamp and reviewer identity. No editing of sales count, stock or Wallet. ${NEGATIVE}`
-
-## 39 — Admin role management
-
-`Use the approved reference. Protected Admin screen exact title “Gestion des accès”. Rows for account, current role, actions “Attribuer operator”, “Attribuer reviewer”, “Retirer le rôle”. Show audit confirmation modal with reason required and warning “Chaque mutation est enregistrée.” No role controls for ordinary users. ${NEGATIVE}`
-
-## 40 — Universal loading / error / retry board
-
-`Create a polished Omni design-system board containing four realistic mobile states using the approved reference language: map loading with skeleton pins; network error “Impossible de charger la carte” with “Réessayer”; stale availability “Donnée ancienne — vérification nécessaire” with “Vérifier maintenant”; locked action “Disponible avec Buyer Pro” with “Voir Pro”. These are product states, not a collage or moodboard. ${NEGATIVE}`
-
-## 41 — Camera denied / QR recovery
-
-`Use the approved reference. Seller scan flow after camera permission denial. Exact title “La caméra est nécessaire pour scanner”. Copy “Vous pouvez autoriser la caméra dans les réglages ou utiliser le lien de transaction.” Buttons “Autoriser la caméra”, “Ouvrir un lien”, “Annuler”. Show no fake camera feed. ${NEGATIVE}`
-
-## 42 — Session expired / recovery
-
-`Use the approved reference. A transaction context remains behind a calm recovery sheet. Exact title “Votre session a expiré”. Copy “Votre recherche et votre transaction sont conservées.” Primary “Se reconnecter”, secondary “Retour au globe”. Make recovery and trust explicit. ${NEGATIVE}`
-
-## 43 — Responsive / keyboard / reduced motion reference board
-
-`Create a precise UI reference board showing the same Omni search dock at 320 px, 390 px, 768 px and 1280 px widths, plus a keyboard-open mobile state and a reduced-motion state. Keep the map-first hierarchy, safe areas, visible focus ring and no layout jump. Label widths clearly but keep the result as a professional design-system board, not a developer screenshot. ${NEGATIVE}`
+Carte en arrière-plan, search bar ouverte avec suggestions, petit contrôle latéral avec icônes loupe, micro et scan. Montrer les entrées `Rechercher un produit`, `Chercher une facilité`, `Scanner un QR public`. Garder une esthétique de moteur de recherche, pas de dashboard.
 
 ---
 
-# Validation checklist before returning images
+# 2. Authentification et onboarding contextuels
 
-| Test | Expected visual proof |
-|---|---|
-| Buyer-first | Chaque entrée publique commence par le globe/carte et la recherche |
-| Auth continuity | Une recherche saisie avant auth est visible et reprise après onboarding |
-| QR distinction | QR public = découverte ; QR transactionnel = coupon/transaction précise |
-| Availability | Frais = réponse automatique possible ; ancien = vérification temps réel |
-| Bulk | Service facturé au Buyer avec crédits/quotas visibles |
-| Company/facility | Plusieurs compagnies et facilités ; Pro propre à chaque facilité |
-| Claim/certification | Création ou claim, preuves privées, revue manuelle, statut Certified séparé |
-| Trust progression | `Certified + Unconfirmed 0/3 → 1/3 → 2/3 → Confirmed 3/3` |
-| Seller reward | Bonus unique de 20 $ après la troisième vente vérifiée sur cette facilité |
-| Permissions | Caméra/localisation demandées contextuellement, refus récupérable |
-| Roles | Seller/Admin invisibles sans capacité serveur correspondante |
-| States | Loading, empty, error, retry, locked, stale, expired, cancelled et recovery présents |
+### 07 — Prompt auth depuis une recherche non authentifiée
 
-## Format de retour recommandé
+Conserver la carte et le texte de recherche derrière une sheet. Titre `Votre recherche est prête`, texte `Nous gardons « Riz parfumé 5 kg » et reprenons automatiquement après une connexion rapide.`, bouton vert `Continuer avec Omni`, bouton secondaire `Explorer sans compte`. Montrer clairement que la recherche n’est pas perdue.
 
-Renvoyer les images avec leurs numéros dans les noms de fichiers, par exemple `01-buyer-globe-landing.png`, `06-auth-prompt.png`, `31-certification-3-of-3.png`. Ne pas recadrer les écrans et ne pas ajouter de cadre de téléphone. Après réception, les images seront comparées à ce pack, enregistrées dans le registre Species, puis la maquette HTML sera réalignée uniquement après validation du fondateur.
+### 08 — Connexion
+
+Écran auth mobile épuré, retour `Retour à la carte`, titre `Un espace, une recherche reprise.`, champ `Votre adresse e-mail`, champ `Mot de passe`, bouton `Se connecter`, bouton contour `Créer mon compte`, petit rappel `Recherche conservée : Riz parfumé 5 kg`.
+
+### 09 — Erreur d’authentification
+
+Même écran avec champs remplis, message doux mais lisible `Adresse e-mail ou mot de passe incorrect`, bouton `Réessayer`, lien `Mot de passe oublié ?`, recherche conservée dans un petit bandeau supérieur.
+
+### 10 — Onboarding 1/3
+
+Écran `Bienvenue dans Omni`, progression `1/3`, titre `Votre zone`, texte `Pour afficher les offres proches de vous.`, illustration carte minimaliste, bouton collant `Continuer`, action secondaire `Passer pour maintenant`.
+
+### 11 — Onboarding 2/3
+
+Progression `2/3`, titre `Votre première recherche`, texte `Nous avons conservé votre recherche.`, carte de recherche contenant `Riz parfumé 5 kg`, bouton `Continuer`, lien `Passer pour maintenant`.
+
+### 12 — Onboarding 3/3
+
+Progression `3/3`, titre `Votre espace`, texte `Retrouvez demandes, transactions et favoris.`, bouton vert `Lancer ma recherche`, bouton secondaire `Passer pour maintenant`.
+
+### 13 — Recherche reprise après onboarding
+
+Retour sur la carte zoomée vers Lomé avec la search bar remplie `Riz parfumé 5 kg`, sheet `Recherche reprise`, filtres visibles `10 unités`, `Budget 10 $`, `À proximité`, pins alignés sur les résultats.
+
+---
+
+# 3. Résultats, facilité, disponibilité et Bulk Facility
+
+### 14 — Résultats sur carte
+
+Carte de Lomé réaliste en fond, sheet `Résultats près de vous`, query `Riz parfumé 5 kg`, chips `10 unités`, `Budget 10 $`, `À proximité`. Deux cartes : `Omni Demo Seller Hub · 9,50 $ · Disponible · 10 unités · Observé il y a 2 min` et `Marché de Hanoukopé · 9,80 $ · Vérification nécessaire`. Action basse `Vérifier plusieurs facilités · Bulk Facility`.
+
+### 15 — Résultats liste complète
+
+Écran Buyer avec carte réduite en bandeau supérieur et une liste scrollable de facilités. Chaque carte affiche distance, prix net, quantité compatible, fraîcheur et statut. Garder une bascule élégante `Carte | Liste`.
+
+### 16 — Aucun résultat
+
+Carte visible, sheet `Aucun résultat exact`, query `Lait d’amande 1 L`, texte `Nous pouvons élargir la zone ou vérifier plusieurs facilités.`, boutons `Élargir la zone` et `Vérifier plusieurs facilités`. Aucun faux résultat.
+
+### 17 — Filtres et devise
+
+Sheet `Affiner votre recherche` avec `Quantité demandée`, `Budget maximum`, `Zone`, `Devise affichée`. Valeurs `10 unités`, `10 $`, `Autour de moi`, `USD · selon votre localisation`. Bouton `Appliquer les filtres`.
+
+### 18 — Fiche publique de facilité
+
+Carte locale derrière une grande sheet, titre `Omni Demo Seller Hub`, `Lomé, Togo`, badge `Certifiée Omni`, badge séparé `Unconfirmed · 2/3 ventes`, bouton partage. Section `QR public de la facilité` et sous-texte `Découvrir les offres, pas une transaction.`
+
+### 19 — Produits de la facilité
+
+Fiche scrollable avec `Offres Omni`. Cards : `Riz parfumé 5 kg · 9,50 $ · 10 disponibles · Donnée fraîche` et `Huile végétale 1 L · 3,20 $ · Donnée ancienne · 8 alloués`. Boutons `Vérifier la disponibilité` et `Ajouter au panier`.
+
+### 20 — Scan QR public
+
+Écran après scan d’un QR affiché dans une boutique. Sheet `Découvrir cette facilité`, `Omni Demo Seller Hub`, badge `Offres Omni`, texte `Explorez les produits et les prix réservés Omni chez ce vendeur.`, bouton `Voir les produits`. Bandeau très clair `QR public de la facilité — pas un QR de transaction.`
+
+### 21 — QR public invalide/expiré
+
+Écran de récupération avec carte floutée en arrière-plan, titre `Ce QR public n’est plus disponible`, texte `Recherchez cette facilité sur Omni ou retournez au globe.`, boutons `Rechercher sur Omni` et `Retour au globe`.
+
+### 22 — Disponibilité manuelle gratuite
+
+Sheet `Disponibilité manuelle · gratuite`, produit `Riz parfumé 5 kg`, champs `Quantité 10`, `Budget max 10 $`, badge `Donnée ancienne`, texte `Le vendeur confirme la quantité exacte au moment de votre demande.`, bouton `Envoyer la demande`, bouton `Ajouter au panier`.
+
+### 23 — Réponse fraîche automatique
+
+Écran de résultat avec badge vert `Disponible · réponse automatique`, `10 unités`, `Observé il y a 2 min`, texte `Stock Omni frais confirmé automatiquement`. Bouton `Continuer vers l’intention`.
+
+### 24 — Réponse ancienne et vérification temps réel
+
+Écran avec badge ambre `Donnée ancienne`, timestamp `Observé il y a 14 h`, texte `Une vérification en temps réel est nécessaire.`, bouton `Vérifier maintenant`, état d’attente `Le vendeur est sollicité`.
+
+### 25 — Bulk Facility Pro
+
+Sheet premium `Voir plus. Appeler moins.`, badge `Buyer Pro · service facturé`, carte `842 crédits disponibles`, `12 facilités sélectionnées`, `Riz parfumé 5 kg · 10 unités · Budget 10 $`, coût `Cette demande : 12 crédits`, bouton `Lancer la vérification`, bouton `Acheter plus de crédits`.
+
+### 26 — Bulk réponses partielles
+
+Carte en fond et sheet `Vérification en cours`, progression visible, `8 réponses reçues sur 12`, trois badges `Disponible`, plusieurs `À vérifier`, action `Voir les résultats partiels`, action `Annuler la demande`.
+
+### 27 — Bulk crédits insuffisants
+
+Sheet `Crédits insuffisants`, texte `Cette demande nécessite 12 crédits. Il vous en reste 4.`, boutons `Acheter des crédits` et `Modifier la demande`, prix du pack affiché dans la devise locale.
+
+---
+
+# 4. Panier, intent et transaction Buyer
+
+### 28 — Panier multi-produit
+
+Écran `Votre sélection`, contexte `Omni Demo Seller Hub · Lomé`, lignes `Riz parfumé 5 kg × 10 · 95,00 $` et `Huile végétale 1 L × 2 · 6,40 $`, ligne verte `Offre Omni incluse`, total `101,40 $`, alerte `Le stock Omni sera revalidé avant l’achat.`, bouton `Créer mon intention`.
+
+### 29 — Intent créée
+
+Écran `On vérifie pour vous.`, référence `Intention créée · #OMNI-4827`, status `Vérification en attente`, timeline `Intention créée → Vérification → Je veux acheter`, bouton `Suivre la vérification`, action `Annuler l’intention`.
+
+### 30 — Intent disponible partiellement
+
+Montrer `Disponibilité partielle`, quantité demandée 10, quantité confirmée 7, prix recalculé, actions `Réduire la quantité`, `Demander une autre facilité`, `Annuler`.
+
+### 31 — Disponibilité confirmée / décision
+
+Titre `Tout est prêt pour décider.`, badge vert `Vérifié maintenant`, facility, produit, prix `95,00 $`, question `Souhaitez-vous acheter ?`, bouton primaire exact `Je veux acheter`, bouton secondaire `Pas maintenant`, note `Votre transaction et votre QR seront créés après confirmation.`
+
+### 32 — QR transactionnel
+
+Écran `Votre passage est prêt.`, gros QR réaliste, label `QR de transaction`, référence `OMNI-4827`, expiration `Expire dans 28 min`, facility, total. Actions `Ouvrir le chat`, `Itinéraire`, `Contacts du vendeur`. Alerte explicite `Ce QR est lié à cette transaction et à votre coupon — pas le QR public de la facilité.`
+
+### 33 — Chat transactionnel
+
+Écran `Chat transactionnel · OMNI-4827`, messages système `QR vérifié`, `Transaction rattachée à Omni Demo Seller Hub`, messages Buyer/Seller, bouton pièce jointe, raccourcis `Itinéraire` et `Contacts`, rail de statut transactionnel.
+
+### 34 — Paiement à confirmer
+
+Titre `Paiement à confirmer.`, timeline `QR vérifié`, `Paiement`, `Retrait / livraison`, options `Mobile Money`, `Carte`, `Espèces déclarées`, bouton `Déclarer le paiement`, aide `Le vendeur confirmera le paiement dans le chat.`
+
+### 35 — Paiement échoué / retry
+
+Écran transactionnel avec status rouge discret `Paiement non confirmé`, texte `Le paiement n’a pas été confirmé. Vous pouvez réessayer ou contacter le vendeur.`, boutons `Réessayer`, `Ouvrir le chat`, `Annuler la transaction`.
+
+### 36 — Fulfilment et retrait
+
+Timeline `Paiement confirmé`, `Produit préparé`, `Prêt pour retrait`, carte facility avec itinéraire, bouton `Ouvrir l’itinéraire`, action `Contacter le vendeur`.
+
+### 37 — Réception et avis obligatoire
+
+Titre `Achat reçu. Merci à vous.`, badge `Transaction clôturée`, produit, prix, timeline complète, section `Votre avis est requis`, étoiles, champ `Partagez votre expérience`, bouton `Publier mon avis`.
+
+### 38 — Transaction expirée/annulée
+
+Écran recovery `Cette transaction a expiré`, référence, texte `Votre intention reste dans votre historique.`, boutons `Rechercher à nouveau`, `Retour au globe`, lien `Voir mes demandes`.
+
+---
+
+# 5. Compte Buyer, Wallet et Pro
+
+### 39 — Menu public non authentifié
+
+Menu minimal depuis la landing : `Se connecter`, `Créer un compte`, `Explorer le globe`, `Installer Omni`. Aucun Seller/Admin visible.
+
+### 40 — Menu Buyer authentifié
+
+Menu avec `Mes demandes`, `Transactions`, `Wallet & Rewards`, `Favoris`, `Devenir vendeur`, `Paramètres`. Aucun outil Seller/Admin si la capacité serveur n’existe pas.
+
+### 41 — Wallet Buyer et crédits Bulk
+
+Écran `Omni Wallet`, solde local, carte `Bulk crédits`, consommation récente, bouton `Recharger`, bouton `Voir Pro`. Montrer les états solde vide, recharge en attente, recharge réussie et recharge échouée.
+
+### 42 — Buyer Pro
+
+Comparaison Free/Pro : recherche locale, Bulk Facility, crédits mensuels, achat de crédits supplémentaires, prix `5 $ / mois` dans la devise et le contexte appropriés. CTA `Activer Buyer Pro`.
+
+---
+
+# 6. Seller : compte, compagnie, facilité, claim et catalogue
+
+### 43 — Entrée Seller
+
+Depuis le menu Buyer, écran `Devenir vendeur`, bénéfices de visibilité, offres Omni obligatoires, bouton `Commencer`. Si déjà Seller, écran `Espace Seller` avec le rôle explicitement affiché.
+
+### 44 — Liste des compagnies
+
+Titre `Mes compagnies`, cards `Demo Seller Group · 2 facilités · 1 certifiée · 1 confirmée` et `Kegue Services · 1 facilité · En revue`, boutons `Créer une compagnie`, `Ajouter une facilité`, note `Le Pro est propre à chaque facilité.`
+
+### 45 — Création compagnie
+
+Titre `Donnez un nom à votre activité.`, champs `Nom de la compagnie`, `Type d’activité`, texte `Une compagnie peut gérer plusieurs facilités.`, bouton `Créer la compagnie`, états erreur et doublon.
+
+### 46 — Création facilité avec carte
+
+Stepper `1 Informations · 2 Localisation · 3 Preuves · 4 Vérifier`, champs publics, carte réaliste avec pin déplaçable, bouton `Utiliser ma position`, aide `Déplacez le pin jusqu’à l’entrée réelle`, bouton collant `Continuer`.
+
+### 47 — Revue avant publication
+
+Résumé public/privé, nom, adresse, coordonnées, horaires, offre obligatoire, preuve privée, note `Les preuves restent privées`, boutons `Soumettre à la revue`, `Enregistrer le brouillon`.
+
+### 48 — Claim d’une facilité non revendiquée
+
+Fiche publique `Marché de Hanoukopé`, badge `Non revendiquée`, titre `Vous gérez cet endroit ?`, texte de bénéfice, bouton `Revendiquer cette facilité`, aucune gestion catalogue avant approbation.
+
+### 49 — Claim en revue / preuve demandée / rejet
+
+Écran à variantes avec timeline `Identité → Preuve privée → Revue Omni`, statuses `En revue`, `Preuve supplémentaire demandée`, `Rejeté — corriger`, `Certifié`. Boutons contextualisés.
+
+### 50 — Certification et progression 0/3, 1/3, 2/3
+
+Facility detail avec deux axes visuels distincts : badge `Certifiée Omni` et progression `Unconfirmed · Ventes vérifiées 2/3`. Texte `Encore 1 vente vérifiée pour débloquer 20 $`. Montrer les variantes 0/3, 1/3 et 2/3.
+
+### 51 — Confirmation 3/3 et bonus 20 $
+
+Même facility detail, badge vert `Confirmée · 3/3`, carte de succès `Bonus de 20 $ débloqué`, montant `20 $`, texte `Utilisez-le pour essayer Omni Pro et les services Omni éligibles`, bouton `Essayer Pro pour cette facilité`, historique Wallet/Rewards.
+
+### 52 — Catalogue Free à la limite
+
+Titre `Vos offres`, badge `5/5 Free`, cinq produits, boutons `Éditer`, `Ajouter un produit`, message `La limite Free est atteinte`, CTA `Passer Pro · 10 $ / facilité`. Chaque produit possède une offre Omni visible.
+
+### 53 — Catalogue Pro illimité
+
+Badge `Pro actif · cette facilité`, liste plus longue, action `Ajouter un produit`, édition d’une réduction en pourcentage ou montant fixe, validation du prix net et aperçu public.
+
+### 54 — Stock Omni alloué
+
+Titre `Stock alloué à Omni.`, produit, quantité allouée, timestamp `Observé il y a 2 min`, action `Modifier`, note `Ce stock est distinct du stock global de votre activité.`, décrémentation après transaction clôturée.
+
+### 55 — Réponses Seller
+
+Queue avec demande `Riz parfumé 5 kg · ×10`, status `À vérifier`, ancienneté, actions `Disponible`, `Partiel`, `Indisponible`, `Demander plus d’informations`, section Bulk Facility séparée.
+
+### 56 — Seller transaction et scan
+
+Écran `Vérifier puis accompagner.`, caméra encadrée `Scanner le QR Buyer`, variantes caméra refusée, QR invalide, QR expiré, transaction rattachée, boutons `Confirmer le paiement`, `Ouvrir le chat`, `Marquer comme remis`.
+
+### 57 — Seller Pro facility-scoped
+
+Titre `Plus de capacité pour cette facilité`, price `10 $ / mois · cette facilité`, comparaison Free/Pro, `5 produits` contre `Produits illimités`, `Réponses manuelles` contre `Réponses automatiques sur stock frais`, bonus de 20 $ comme moyen d’essai.
+
+---
+
+# 7. Admin, Reviewer et états système
+
+### 58 — Menu Admin protégé
+
+Écran visible uniquement pour un contexte Admin/Reviewer confirmé par le serveur. Badge `Admin` ou `Reviewer`, liens `Revue`, `Comptes`, `Audit`, retour vers le globe. Aucun accès équipe dans un menu Buyer ordinaire.
+
+### 59 — Queue créations et claims
+
+Titre `Revue Omni`, tabs `Nouvelles créations` et `Claims`, cards avec facilités, preuves, état `À examiner`, boutons `Ouvrir`. Note `Le compteur de ventes ne se modifie pas ici.`
+
+### 60 — Dossier de certification
+
+Titre `Décider avec des preuves.`, documents privés, historique, identité du Reviewer, boutons `Certifier la facilité`, `Demander une preuve`, `Rejeter avec motif`. Afficher la confirmation d’audit.
+
+### 61 — Gestion des rôles
+
+Titre `Gestion des accès`, comptes, rôles `operator`, `reviewer`, `admin`, actions `Attribuer`, `Retirer`, modal de confirmation avec motif obligatoire et texte `Chaque mutation est enregistrée.`
+
+### 62 — États système universels
+
+Créer une planche cohérente de quatre écrans : `Carte en cours de chargement` avec skeleton ; `Impossible de charger la carte` avec `Réessayer` ; `Donnée ancienne — vérification nécessaire` ; `Action disponible avec Pro`. Garder le style de la référence et des sorties explicites.
+
+### 63 — Offline, session expirée et reprise
+
+Variantes avec sheet `Vous êtes hors connexion`, `Votre session a expiré`, `Votre recherche et votre transaction sont conservées`, boutons `Réessayer`, `Se reconnecter`, `Retour au globe`.
+
+### 64 — Responsive et clavier
+
+Planche de référence montrant la même landing et search dock à 320, 390, 768 et 1280 px, plus état clavier ouvert. La carte garde sa présence, le dock se repositionne proprement, safe areas visibles, focus clair et aucun déplacement brutal.
+
+## Ordre de génération recommandé
+
+Générer d’abord `01`, puis faire valider la direction. Générer ensuite `03`, `05`, `07`, `08`, `10`, `11`, `12`, `13`, `14`, `18`, `20`, `22`, `25`, `28`, `29`, `31`, `32`, `33`, `34`, `37`. Après validation de ce tronc visuel Buyer, générer `43` à `57`, puis `58` à `64`.
+
+## Format des fichiers
+
+Utiliser les noms `01-buyer-globe-landing.png` jusqu’à `64-responsive-keyboard.png`. Renvoyer les images dans leur ordre numérique avec l’image de référence finale. À réception, elles seront enregistrées dans le registre Species, comparées écran par écran à cet inventaire et utilisées pour réaligner la maquette HTML sans improvisation.
