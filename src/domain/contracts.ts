@@ -12,6 +12,11 @@ export type FacilityTrust =
   | 'suspended';
 
 export type FacilityPlan = 'free' | 'pro_active' | 'pro_expired';
+export type FacilitySourceKind = 'created' | 'public_import' | 'claimed';
+export type FacilityClaimState = 'unclaimed' | 'claim_pending' | 'claimed' | 'claim_rejected' | 'evidence_requested';
+export type FacilityCertificationState = 'verification_draft' | 'under_review' | 'certified' | 'rejected';
+export type FacilityCommercialConfidence = 'not_confirmed' | 'confirmed';
+export type FacilityPublicationState = 'draft' | 'public_pending_review' | 'public_active' | 'paused' | 'archived';
 export type SupportedCurrency = 'XOF' | 'GHS' | 'EUR' | 'USD';
 export type DiscountKind = 'percentage' | 'fixed';
 
@@ -99,10 +104,36 @@ export interface Facility {
   id: string;
   accountId: string | null;
   companyId: string | null;
+  sourceKind: FacilitySourceKind;
   trust: FacilityTrust;
+  claimState: FacilityClaimState;
+  certificationState: FacilityCertificationState;
+  commercialConfidence: FacilityCommercialConfidence;
+  publicationState: FacilityPublicationState;
   plan: FacilityPlan;
   qualifyingSales: number;
+  bonusUnlockedAt: string | null;
   offerLimit: number;
+}
+
+export interface FacilityCompanyContext {
+  companyId: string;
+  companyName: string;
+  facilityId: string;
+  facilityName: string;
+  slotId: string | null;
+}
+
+export interface SellerConfirmationReward {
+  facilityId: string;
+  accountId: string;
+  qualifyingSales: number;
+  threshold: 3;
+  amountMinor: number;
+  reference: string;
+  status: 'locked' | 'available' | 'reserved' | 'spent' | 'reversed' | 'expired';
+  eligibleUses: readonly ('facility_pro' | 'omni_service')[];
+  unlockedAt: string | null;
 }
 
 export interface FacilitySlot {

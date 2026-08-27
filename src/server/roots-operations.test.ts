@@ -4,7 +4,11 @@ import { authorizeTransactionTransition, createIdempotentIntent, recordQualifyin
 
 const seller: ActorContext = { accountId: 'seller-1', roles: ['seller'], suspended: false };
 const buyer: ActorContext = { accountId: 'buyer-1', roles: ['buyer'], suspended: false };
-const facility: Facility = { id: 'facility-1', accountId: 'seller-1', companyId: null, trust: 'unconfirmed', plan: 'free', qualifyingSales: 2, offerLimit: 5 };
+const facility: Facility = {
+  id: 'facility-1', accountId: 'seller-1', companyId: null, sourceKind: 'created', trust: 'unconfirmed',
+  claimState: 'claimed', certificationState: 'certified', commercialConfidence: 'not_confirmed',
+  publicationState: 'public_active', plan: 'free', qualifyingSales: 2, bonusUnlockedAt: null, offerLimit: 5,
+};
 const slots: FacilitySlot[] = [{ id: 'free-1', accountId: 'seller-1', source: 'free', status: 'assigned', facilityId: 'facility-1' }];
 const wallet: WalletLedgerEntry[] = [{ id: 'wallet-1', walletId: 'wallet-1', kind: 'recharge', amountMinor: 1000, currency: 'USD', reference: 'fedapay-1', confirmedAt: '2026-08-22T00:00:00.000Z' }];
 

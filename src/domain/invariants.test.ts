@@ -19,9 +19,15 @@ const baseFacility: Facility = {
   id: 'facility-1',
   accountId: 'account-1',
   companyId: 'company-1',
+  sourceKind: 'created',
   trust: 'unconfirmed',
+  claimState: 'claimed',
+  certificationState: 'verification_draft',
+  commercialConfidence: 'not_confirmed',
+  publicationState: 'draft',
   plan: 'free',
   qualifyingSales: 0,
+  bonusUnlockedAt: null,
   offerLimit: FREE_OFFER_LIMIT,
 };
 

@@ -25,6 +25,7 @@ The existing root tables remain authoritative:
 - `v2_facilities.commercial_plan` is the fast read model (`free`, `pro_active`, `pro_expired`).
 - `v2_facility_entitlements` is the entitlement history and source of truth for facility-scoped Pro periods.
 - `v2_wallet_ledger_entries` is append-only for recharge, bonus, spend, reversal, and coupon-credit entries.
+- The Seller confirmation reward is an append-only `bonus` entry with a unique source reference for one facility and one completed three-sale milestone.
 
 Commercial fields added by migration 009 are additive. Currency is stored per ledger entry or entitlement in the transaction’s selected/display currency; UI display may localize XOF, GHS, or EUR, but a provider transaction must retain its original currency and minor-unit amount.
 
@@ -38,6 +39,16 @@ Commercial fields added by migration 009 are additive. Currency is stored per le
 6. Recharge confirmation is idempotent by provider reference and cannot mint balance twice.
 7. Provider, webhook, or browser retries must return the original result rather than create a second ledger entry.
 8. External transaction payment states and Omni Wallet states are separate state machines.
+9. The 20 USD Seller bonus is granted only once when the same facility reaches three eligible, verified, completed sales; the source facility and milestone reference are mandatory.
+10. A sale from another facility, an unverified, voided, or cancelled transaction, or a local-only fixture cannot advance the milestone or mint the bonus.
+11. The bonus is a confirmed Omni credit for eligible Pro/services use; it is not seller purchase money and cannot be silently treated as a seller payout.
+12. Granting, reserving, spending, reversing, expiring, or manually correcting the bonus is idempotent and auditable.
+
+## Seller confirmation reward flow
+
+After the server confirms the third eligible completed sale for one facility, it atomically records the facility milestone and creates one append-only 20 USD bonus ledger entry. The Seller sees the progress and the reward in Wallet/Rewards, with the originating facility and transaction references. The Seller must explicitly choose whether to use the credit for that facility’s Pro entitlement or another eligible Omni service. The reward must not alter the external payment state of any Buyer/Seller transaction.
+
+The exact display-currency conversion, expiry, eligible services, reservation semantics, refund/reversal behavior and whether unused value can be carried across facilities remain Root decisions and must be visible in the entitlement contract before release.
 
 ## V1 commercial flow
 
@@ -47,4 +58,4 @@ The first implementation should provide a server-authoritative read model and a 
 
 ## Acceptance gate
 
-The mini-root is accepted when the API contract exists for balance, ledger, facility plan, recharge creation, recharge confirmation, and Pro purchase; ownership, slot, balance, amount, currency, idempotency, and entitlement scope are enforced server-side; the Seller UI can inspect the result; and negative tests prove cross-account facility denial, unassigned-slot denial, insufficient-balance denial, duplicate-provider-reference idempotence, and Free-limit enforcement.
+The mini-root is accepted when the API contract exists for balance, ledger, facility plan, recharge creation, recharge confirmation, Pro purchase, eligible-sale milestone evaluation and 20 USD reward grant; ownership, slot, balance, amount, currency, idempotency, reward source, and entitlement scope are enforced server-side; the Seller UI can inspect the result; and negative tests prove cross-account facility denial, unassigned-slot denial, insufficient-balance denial, duplicate-provider-reference idempotence, duplicate-reward denial, wrong-facility sale denial, ineligible-sale denial, and Free-limit enforcement.
