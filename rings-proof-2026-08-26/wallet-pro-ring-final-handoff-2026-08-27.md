@@ -56,3 +56,8 @@ Le déploiement `dpl_FitFn2HZtDd3pJ2sxYz8DSe4Q8pC` (`READY`, production) expose 
 ## Mise à jour de preuve — échec contrôlé du checkout sandbox
 
 L’intention pending existante de 10 000 F CFA a été reprise sans duplication. Le checkout FedaPay sandbox a affiché **« Transaction échouée. Veuillez réessayer »** après la saisie du moyen de paiement de test. Aucun webhook d’approbation n’a été observé ; le Wallet est resté inchangé et Pro n’a pas été activé. Le numéro de téléphone et le token checkout ne sont pas conservés. Le comportement d’échec est prouvé ; le chemin positif `approved → webhook signé → crédit confirmé → Pro` reste le gate suivant.
+
+
+## Mise à jour — numéro sandbox officiel non reconnu
+
+Un nouvel essai a utilisé le scénario de succès documenté par FedaPay pour MTN Bénin. Le checkout a été atteint et la soumission traitée, mais FedaPay a répondu que le numéro de compte Mobile Money était introuvable. Aucun webhook d’approbation, crédit Wallet ou activation Pro n’a suivi. Le chemin positif reste bloqué par la configuration ou l’identité de test reconnue par l’environnement provider ; aucune réussite financière n’est revendiquée.

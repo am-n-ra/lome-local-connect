@@ -74,3 +74,10 @@ Le solde Omni affiché reste **$0.00**, le plan de la facilité reste **Free**, 
 Le checkout FedaPay de l’intention pending existante a été repris sans créer de nouvelle intention. Le moyen Mobile Money et le numéro de test ont été renseignés dans le checkout ; FedaPay a retourné l’état visible **« Transaction échouée. Veuillez réessayer »**. Le numéro et le token de checkout ne sont pas conservés dans le ledger.
 
 Aucun webhook d’approbation n’a donc été observé. Le Wallet Omni n’a pas été crédité et l’activation Pro n’a pas été déclenchée. **Classe de preuve :** observed / sandbox / failed-provider-attempt / manual browser proof. Cette étape confirme le comportement d’échec sans effet de bord ; elle ne prouve pas encore le chemin `approved → webhook signé → ledger confirmed → activation Pro`.
+
+
+## Résultat du scénario sandbox officiel — 2026-08-27
+
+Le scénario officiel de succès FedaPay a été tenté sur l’intention existante, avec l’opérateur MTN Bénin et le numéro sandbox documenté par FedaPay. Le checkout a accepté la soumission puis a retourné **« Transaction échouée. Le numéro de compte mobile money est introuvable »**. Aucun webhook d’approbation n’a été observé, aucun crédit Wallet n’a été créé et aucun entitlement Pro n’a été activé.
+
+**Classe de preuve :** observed / sandbox / provider-rejected-test-identity / manual browser proof. Ce résultat indique que le checkout atteint bien le provider, mais que l’identité de test n’est pas reconnue par l’environnement FedaPay actuellement utilisé ; il ne constitue pas une preuve du chemin positif. Une vérification de la configuration Test Mode et, si nécessaire, un moyen de test FedaPay compatible avec le compte provider sont requis avant une nouvelle tentative.
