@@ -414,7 +414,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       initialStyleReady.current = true;
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       setMapStatus('ready');
-      const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
+      const initialGlobe = !fallbackApplied && projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
       setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
@@ -590,6 +590,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         setBasemap('raster');
         setMapStatus('loading');
         map.setStyle(FALLBACK_STYLE);
+        map.setProjection({ type: 'mercator' });
+        map.resize();
       }
     }, 8_000);
     readinessTimer = window.setTimeout(() => {
@@ -597,7 +599,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     }, 18_000);
     let globeProjection = true;
     const syncProjection = () => {
-      const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
+      const wantsGlobe = !fallbackApplied && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
@@ -615,7 +617,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       setMapStatus('ready');
       configureStyle();
-      globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
+      globeProjection = !fallbackApplied && map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
     });
 
