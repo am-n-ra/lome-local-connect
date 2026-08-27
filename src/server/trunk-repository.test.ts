@@ -1111,6 +1111,10 @@ describe('Buyer transaction rating persistence Root seam', () => {
     });
     expect(call.queries[0]).toContain('v2_ratings');
     expect(call.queries[0]).toContain('v2_transaction_events');
+    expect(call.queries[0]).toContain("'closed'");
+    expect(call.queries[0]).toContain('qualifying_sales = least(3');
+    expect(call.queries[0]).toContain("'bonus_grant', 2000, 'confirmed'");
+    expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
   });
 
   it('rejects an invalid score before touching the database', async () => {
