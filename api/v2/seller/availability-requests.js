@@ -97,15 +97,24 @@ var FedaPayProviderError = class extends Error {
   }
 };
 function environment() {
-  const value = (process.env.FEDAPAY_ENV ?? "live").trim().toLowerCase();
+  const value = process.env.FEDAPAY_ENV?.trim().toLowerCase();
   if (value !== "sandbox" && value !== "live") {
-    throw new FedaPayConfigurationError("FEDAPAY_ENV must be sandbox or live.");
+    throw new FedaPayConfigurationError("FEDAPAY_ENV must be explicitly set to sandbox or live.");
   }
   return value;
 }
-function secretKey() {
-  const value = process.env.FEDAPAY_SECRET_KEY?.trim();
-  if (!value) throw new FedaPayConfigurationError("FedaPay recharge is not configured.");
+function selectedSecretKey() {
+  const env = environment();
+  const name = env === "sandbox" ? "FEDAPAY_SANDBOX_SECRET_KEY" : "FEDAPAY_SECRET_KEY";
+  const value = process.env[name]?.trim();
+  if (!value) throw new FedaPayConfigurationError(`FedaPay ${env} recharge is not configured.`);
+  return value;
+}
+function selectedWebhookSecret() {
+  const env = environment();
+  const name = env === "sandbox" ? "FEDAPAY_SANDBOX_WEBHOOK_SECRET" : "FEDAPAY_WEBHOOK_SECRET";
+  const value = process.env[name]?.trim();
+  if (!value) throw new FedaPayConfigurationError(`FedaPay ${env} webhook is not configured.`);
   return value;
 }
 function baseUrl() {
@@ -124,7 +133,7 @@ async function requestProvider(path, init) {
     headers: {
       accept: "application/json",
       "content-type": "application/json",
-      authorization: `Bearer ${secretKey()}`,
+      authorization: `Bearer ${selectedSecretKey()}`,
       ...init.headers ?? {}
     }
   });
@@ -149,7 +158,14 @@ function transactionPayload(payload) {
   return nested && typeof nested === "object" && !Array.isArray(nested) ? nested : root;
 }
 function isFedaPayConfigured() {
-  return Boolean(process.env.FEDAPAY_SECRET_KEY?.trim() && process.env.FEDAPAY_WEBHOOK_SECRET?.trim());
+  try {
+    environment();
+    selectedSecretKey();
+    selectedWebhookSecret();
+    return true;
+  } catch {
+    return false;
+  }
 }
 async function createFedaPayCheckout(input) {
   if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
@@ -186,10 +202,9 @@ async function createFedaPayCheckout(input) {
   return { transactionId, checkoutUrl, status: normalizeStatus(transaction.status) };
 }
 function verifyFedaPayWebhookSignature(rawBody, signature) {
-  const secret = process.env.FEDAPAY_WEBHOOK_SECRET?.trim();
-  if (!secret || !signature) return false;
+  if (!signature) return false;
   try {
-    return WebhookSignature.verifyHeader(rawBody, signature, secret, 300);
+    return WebhookSignature.verifyHeader(rawBody, signature, selectedWebhookSecret(), 300);
   } catch {
     return false;
   }

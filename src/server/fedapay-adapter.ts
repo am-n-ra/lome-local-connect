@@ -33,16 +33,26 @@ export class FedaPayProviderError extends Error {
 }
 
 function environment(): FedaPayEnvironment {
-  const value = (process.env.FEDAPAY_ENV ?? 'live').trim().toLowerCase();
+  const value = process.env.FEDAPAY_ENV?.trim().toLowerCase();
   if (value !== 'sandbox' && value !== 'live') {
-    throw new FedaPayConfigurationError('FEDAPAY_ENV must be sandbox or live.');
+    throw new FedaPayConfigurationError('FEDAPAY_ENV must be explicitly set to sandbox or live.');
   }
   return value;
 }
 
-function secretKey(): string {
-  const value = process.env.FEDAPAY_SECRET_KEY?.trim();
-  if (!value) throw new FedaPayConfigurationError('FedaPay recharge is not configured.');
+function selectedSecretKey(): string {
+  const env = environment();
+  const name = env === 'sandbox' ? 'FEDAPAY_SANDBOX_SECRET_KEY' : 'FEDAPAY_SECRET_KEY';
+  const value = process.env[name]?.trim();
+  if (!value) throw new FedaPayConfigurationError(`FedaPay ${env} recharge is not configured.`);
+  return value;
+}
+
+function selectedWebhookSecret(): string {
+  const env = environment();
+  const name = env === 'sandbox' ? 'FEDAPAY_SANDBOX_WEBHOOK_SECRET' : 'FEDAPAY_WEBHOOK_SECRET';
+  const value = process.env[name]?.trim();
+  if (!value) throw new FedaPayConfigurationError(`FedaPay ${env} webhook is not configured.`);
   return value;
 }
 
@@ -64,7 +74,7 @@ async function requestProvider<T>(path: string, init: RequestInit): Promise<T> {
     headers: {
       accept: 'application/json',
       'content-type': 'application/json',
-      authorization: `Bearer ${secretKey()}`,
+      authorization: `Bearer ${selectedSecretKey()}`,
       ...(init.headers ?? {}),
     },
   });
@@ -93,7 +103,14 @@ function transactionPayload(payload: unknown): Record<string, unknown> {
 }
 
 export function isFedaPayConfigured(): boolean {
-  return Boolean(process.env.FEDAPAY_SECRET_KEY?.trim() && process.env.FEDAPAY_WEBHOOK_SECRET?.trim());
+  try {
+    environment();
+    selectedSecretKey();
+    selectedWebhookSecret();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function createFedaPayCheckout(input: {
@@ -155,10 +172,9 @@ export async function fetchFedaPayTransaction(transactionId: string): Promise<Fe
 }
 
 export function verifyFedaPayWebhookSignature(rawBody: string, signature: string | null): boolean {
-  const secret = process.env.FEDAPAY_WEBHOOK_SECRET?.trim();
-  if (!secret || !signature) return false;
+  if (!signature) return false;
   try {
-    return WebhookSignature.verifyHeader(rawBody, signature, secret, 300);
+    return WebhookSignature.verifyHeader(rawBody, signature, selectedWebhookSecret(), 300);
   } catch {
     return false;
   }
