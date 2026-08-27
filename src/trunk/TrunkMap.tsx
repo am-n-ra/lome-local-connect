@@ -353,10 +353,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const scheduleRotation = (delay = 260) => {
       stopRotation();
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
+      if (fallbackApplied || window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
       rotationResumeTimer.current = window.setTimeout(() => {
         rotationResumeTimer.current = null;
-        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
+        if (fallbackApplied || window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe' || map.getZoom() >= GLOBE_TO_MERCATOR_ZOOM) return;
         setRotationState('rotating');
         let previousTime = performance.now();
         const frame = (time: number) => {
@@ -589,7 +589,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         fallbackApplied = true;
         setBasemap('raster');
         setMapStatus('loading');
+        map.stop();
+        rotating.current = false;
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
         map.setStyle(FALLBACK_STYLE);
+        map.jumpTo({ center: [1.22, 6.13], zoom: 2, bearing: 0, pitch: 0 });
         map.setProjection({ type: 'mercator' });
         map.resize();
       }
