@@ -5,6 +5,7 @@ import type { QrVerificationResult, TransactionState, WalletEntryKind } from '..
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
 import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import { createFedaPayCheckout, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -108,6 +109,23 @@ export interface WalletSpendPersistenceResult {
   amountMinor: number;
   status: 'confirmed';
   facilityId: string;
+}
+
+export interface WalletRechargePersistenceResult {
+  rechargeId: string;
+  accountId: string;
+  amountMinor: number;
+  currency: string;
+  status: 'pending';
+  providerTransactionId: string;
+  checkoutUrl: string;
+}
+
+export interface FacilityProActivationPersistenceResult {
+  facilityId: string;
+  entitlementId: string;
+  endsAt: string;
+  spendLedgerEntryId: string;
 }
 
 export interface FacilityBonusPersistenceResult {
@@ -1952,6 +1970,134 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         status: 'confirmed',
         facilityId: String(row.facility_id),
       };
+    },
+
+    async createWalletRecharge(input: {
+      authUserId: string;
+      amountMinor: number;
+      currency: string;
+      idempotencyKey: string;
+      callbackUrl: string;
+      customer: { email: string | null; firstName?: string | null; lastName?: string | null };
+    }): Promise<WalletRechargePersistenceResult> {
+      if (!Number.isInteger(input.amountMinor) || input.amountMinor < 100 || input.amountMinor > 100000000) {
+        throw new WalletPolicyError('Recharge amount must be between 100 and 100,000,000 minor units.');
+      }
+      const currency = input.currency.trim().toUpperCase();
+      if (currency !== 'XOF' || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+        throw new WalletPolicyError('Recharge currency or idempotency key is invalid.');
+      }
+      if (!isFedaPayConfigured()) {
+        throw new WalletPolicyError('FedaPay recharge is not configured for this environment.');
+      }
+      const existingRows = await retryDatabase(() => sql`
+        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url
+        from v2_wallet_recharge_intents r
+        join v2_accounts a on a.id = r.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and r.idempotency_key = ${input.idempotencyKey}
+        limit 1
+      `);
+      const existing = (existingRows as Record<string, unknown>[])[0];
+      if (existing) {
+        if (Number(existing.amount_minor) !== input.amountMinor || String(existing.currency) !== currency) {
+          throw new WalletPolicyError('The recharge idempotency key is already used with different terms.');
+        }
+        if (!existing.provider_transaction_id || !existing.checkout_url || String(existing.status) !== 'pending') {
+          throw new WalletPolicyError('The existing recharge cannot be resumed automatically.');
+        }
+        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: 'pending', providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url) };
+      }
+      const intentRows = await retryDatabase(() => sql`
+        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key)
+        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}
+        from v2_accounts a
+        join v2_wallets w on w.account_id = a.id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning id, account_id
+      `);
+      const intent = (intentRows as Record<string, unknown>[])[0];
+      if (!intent) throw new WalletPolicyError('An active account Wallet is required for recharge.');
+      const checkout = await createFedaPayCheckout({
+        rechargeId: String(intent.id),
+        amountMinor: input.amountMinor,
+        currency,
+        description: 'Recharge Omni Wallet',
+        callbackUrl: input.callbackUrl,
+        customer: input.customer,
+      });
+      const updatedRows = await retryDatabase(() => sql`
+        update v2_wallet_recharge_intents
+        set provider_transaction_id = ${checkout.transactionId}, checkout_url = ${checkout.checkoutUrl}, updated_at = now()
+        where id = ${String(intent.id)}::uuid and status = 'pending'
+        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url
+      `);
+      const updated = (updatedRows as Record<string, unknown>[])[0];
+      if (!updated) throw new WalletPolicyError('Recharge state changed while creating the provider checkout.');
+      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: 'pending', providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url) };
+    },
+
+    async reconcileWalletRecharge(input: {
+      providerTransactionId: string;
+      providerEventId: string;
+      status: 'pending' | 'approved' | 'declined' | 'canceled';
+      amountMinor: number;
+      currency: string;
+      omniRechargeId: string | null;
+      now: string;
+    }): Promise<{ status: 'pending' | 'confirmed' | 'failed' | 'canceled' | 'ignored'; rechargeId?: string; ledgerEntryId?: string }> {
+      const providerTransactionId = input.providerTransactionId.trim();
+      const providerEventId = input.providerEventId.trim();
+      if (!providerTransactionId || !providerEventId || !Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
+        throw new WalletPolicyError('FedaPay webhook payload is invalid.');
+      }
+      const currency = input.currency.trim().toUpperCase();
+      if (currency !== 'XOF') throw new WalletPolicyError('FedaPay webhook currency is not supported.');
+      const existingEventRows = await retryDatabase(() => sql`
+        select id from v2_wallet_recharge_intents where provider_event_id = ${providerEventId} limit 1
+      `);
+      if ((existingEventRows as Record<string, unknown>[])[0]) return { status: 'ignored' };
+      const intentRows = await retryDatabase(() => sql`
+        select r.id, r.account_id, r.wallet_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id
+        from v2_wallet_recharge_intents r
+        where r.provider_transaction_id = ${providerTransactionId}
+        limit 1
+      `);
+      const intent = (intentRows as Record<string, unknown>[])[0];
+      if (!intent) throw new WalletPolicyError('FedaPay webhook does not match a pending Omni recharge.');
+      if (input.omniRechargeId && String(intent.id) !== input.omniRechargeId) throw new WalletPolicyError('FedaPay webhook reference does not match the Omni recharge.');
+      if (Number(intent.amount_minor) !== input.amountMinor || String(intent.currency).toUpperCase() !== currency) throw new WalletPolicyError('FedaPay webhook amount or currency does not match the Omni recharge.');
+      if (String(intent.status) !== 'pending') return { status: String(intent.status) === 'confirmed' ? 'confirmed' : String(intent.status) === 'failed' ? 'failed' : 'canceled', rechargeId: String(intent.id) };
+      const nextStatus = input.status === 'approved' ? 'confirmed' : input.status === 'canceled' ? 'canceled' : input.status === 'declined' ? 'failed' : 'pending';
+      if (nextStatus === 'pending') return { status: 'pending', rechargeId: String(intent.id) };
+      const rows = await retryDatabase(() => sql`
+        with locked as (
+          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+          from v2_wallet_recharge_intents r
+          join v2_accounts a on a.id = r.account_id
+          where r.id = ${String(intent.id)}::uuid and r.status = 'pending' and a.suspended_at is null
+          for update of r
+        ), ledger as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select l.wallet_id, 'recharge', l.amount_minor, 'confirmed', ${`fedapay:${providerTransactionId}`}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from locked l
+          where ${nextStatus} = 'confirmed'
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id
+        ), updated as (
+          update v2_wallet_recharge_intents r
+          set status = ${nextStatus}, provider_event_id = ${providerEventId}, confirmed_at = case when ${nextStatus} = 'confirmed' then ${input.now}::timestamptz else null end, updated_at = ${input.now}::timestamptz
+          from locked l
+          where r.id = l.id
+          returning r.id
+        )
+        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id from updated u
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return { status: 'ignored' };
+      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : undefined };
     },
 
     async spendWallet(input: {

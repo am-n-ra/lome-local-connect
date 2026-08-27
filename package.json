@@ -21,6 +21,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@vercel/blob": "^2.8.0",
     "@vitejs/plugin-react": "latest",
+    "fedapay": "^1.2.5",
     "jose": "^6.2.10",
     "lucide-react": "latest",
     "maplibre-gl": "^6.5.0",

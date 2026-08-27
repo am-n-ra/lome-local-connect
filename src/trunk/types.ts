@@ -370,3 +370,18 @@ export interface WalletOverviewResult {
   facilities: WalletFacilitySummary[];
   entries: WalletLedgerSummary[];
 }
+export interface WalletRechargeResult {
+  rechargeId: string;
+  status: 'pending';
+  amountMinor: number;
+  currency: string;
+  checkoutUrl: string;
+  providerTransactionId: string;
+}
+export interface FacilityProActivationResult {
+  facilityId: string;
+  entitlementId: string;
+  plan: 'pro_active';
+  endsAt: string;
+  spendLedgerEntryId: string;
+}

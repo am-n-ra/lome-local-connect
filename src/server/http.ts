@@ -1,10 +1,11 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { ClaimEvidenceItem } from '../trunk/types';
+import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -36,7 +37,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -45,13 +46,18 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   };
 }
 
-export async function parseRequestBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+export async function readRawBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
-  if (!chunks.length) return {};
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+export async function parseRequestBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+  const raw = await readRawBody(req);
+  if (!raw) return {};
   let parsed: unknown;
   try {
-    parsed = JSON.parse(Buffer.concat(chunks).toString('utf8')) as unknown;
+    parsed = JSON.parse(raw) as unknown;
   } catch {
     throw new ApiInputError('Request body must be valid JSON.');
   }
@@ -652,6 +658,66 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         now: new Date().toISOString(),
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/fedapay/webhook') {
+      const rawBody = await readRawBody(req);
+      const signature = typeof req.headers['x-fedapay-signature'] === 'string' ? req.headers['x-fedapay-signature'] : null;
+      if (!verifyFedaPayWebhookSignature(rawBody, signature)) {
+        json(res, 400, errorBody(correlationId, 'WEBHOOK_INVALID', 'FedaPay webhook signature is invalid.'));
+        return true;
+      }
+      let payload: Record<string, unknown>;
+      try {
+        payload = JSON.parse(rawBody) as Record<string, unknown>;
+      } catch {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'FedaPay webhook body must be valid JSON.'));
+        return true;
+      }
+      const eventId = String(payload.id ?? payload.event_id ?? '').trim();
+      const eventName = String(payload.name ?? payload.type ?? '').toLowerCase();
+      const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object) ? payload.object as Record<string, unknown> : payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data) ? payload.data as Record<string, unknown> : payload;
+      const transaction = object.transaction && typeof object.transaction === 'object' && !Array.isArray(object.transaction) ? object.transaction as Record<string, unknown> : object;
+      const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === 'object' && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata as Record<string, unknown> : {};
+      const status = eventName.includes('approved') ? 'approved' : eventName.includes('declined') ? 'declined' : eventName.includes('canceled') || eventName.includes('cancelled') ? 'canceled' : 'pending';
+      const result = await repository.reconcileWalletRecharge({
+        providerTransactionId: String(transaction.id ?? transaction.reference ?? '').trim(),
+        providerEventId: eventId || `${String(transaction.id ?? transaction.reference ?? '')}:${eventName}`,
+        status,
+        amountMinor: Number(transaction.amount),
+        currency: typeof transaction.currency === 'string' ? transaction.currency : transaction.currency && typeof transaction.currency === 'object' && !Array.isArray(transaction.currency) ? String((transaction.currency as Record<string, unknown>).iso ?? '') : '',
+        omniRechargeId: metadata.omni_recharge_id ? String(metadata.omni_recharge_id) : metadata.deposit_id ? String(metadata.deposit_id) : null,
+        now: new Date().toISOString(),
+      });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/wallet/recharges') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before recharging your Omni Wallet.'));
+        return true;
+      }
+      const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+      if (!idempotencyKey) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Idempotency-Key is required for Wallet recharge.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const customer = input.customer && typeof input.customer === 'object' && !Array.isArray(input.customer) ? input.customer as Record<string, unknown> : {};
+      const result = await repository.createWalletRecharge({
+        authUserId,
+        amountMinor: Number(input.amountMinor),
+        currency: typeof input.currency === 'string' ? input.currency : '',
+        idempotencyKey,
+        callbackUrl: typeof input.callbackUrl === 'string' ? input.callbackUrl : '',
+        customer: {
+          email: typeof customer.email === 'string' ? customer.email : null,
+          firstName: typeof customer.firstName === 'string' ? customer.firstName : null,
+          lastName: typeof customer.lastName === 'string' ? customer.lastName : null,
+        },
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/wallet') {
