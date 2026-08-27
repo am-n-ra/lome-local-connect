@@ -128,3 +128,32 @@ Aucun écran ne doit afficher une certification ou une confirmation qui n’est 
 | Fixtures | Comment marquer les comptes et facilités de test pour empêcher les fausses preuves ? |
 
 **Handoff Species → Root :** la prochaine unité doit produire le schéma d’état, les invariants et les contrats API avant toute modification de l’interface existante.
+
+## 12. Maquettes visuelles générées — proposition à valider
+
+Un premier lot visuel a été généré dans `docs/species-mockups/`. Il constitue la proposition concrète de Species, mais ne devient pas le design verrouillé avant validation explicite du fondateur.
+
+| Fichier | Écran |
+|---|---|
+| `01-seller-facility-confirmation.png` | Facilité Seller certifiée, progression 2/3 et bonus en attente |
+| `02-seller-facilities-company.png` | Mes compagnies et rattachement des facilités |
+| `03-facility-claim-review.png` | Fiche publique non revendiquée et claim en revue |
+| `04-create-facility-map.png` | Création de facilité avec carte, pin déplaçable et permission de localisation |
+| `05-buyer-search-availability.png` | Recherche Buyer, fraîcheur, vérification et Bulk Facility |
+| `06-admin-review-queue.png` | Queue Admin/Reviewer séparant créations et claims |
+
+**Gate actuelle :** proposition visuelle, en attente d’acceptation ou de corrections du fondateur. Aucun nouveau code d’interface ne doit être écrit à partir de ces images avant la revue.
+
+## 13. Recentrage Buyer-first — nouvelle direction à valider
+
+La correction du fondateur réouvre la direction principale : Omni est présenté comme un moteur de recherche local. Le globe/carte est la landing et le premier élément d’identité ; les surfaces Seller et Admin sont des branches contextuelles, non la navigation principale.
+
+| Fichier | État de l’expérience |
+|---|---|
+| `00-buyer-globe-search-landing.png` | Landing globe/carte, recherche dominante, localisation explicite et aucune navigation de rôle |
+| `07-buyer-search-active-map.png` | Recherche active sur la carte avec résultats, fraîcheur, quantité, budget et Bulk Facility |
+| `08-public-qr-facility-entry.png` | Entrée par QR public d’une facilité, séparée visuellement du QR transactionnel |
+
+La première proposition de Seller/Company reste utile comme branche secondaire, mais ne doit plus dicter la présentation d’Omni à l’ouverture. La gate Species doit d’abord valider cette séquence Buyer : **ouvrir → voir le globe → rechercher ou scanner → comparer → vérifier → décider d’acheter**.
+
+**Statut :** nouvelle proposition visuelle, en attente de validation explicite du fondateur.
