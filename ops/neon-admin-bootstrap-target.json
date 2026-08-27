@@ -1,0 +1,9 @@
+{
+  "projectId": "wild-moon-30984513",
+  "branchId": "br-dawn-hill-am5amy22",
+  "databaseName": "neondb",
+  "sqlStatements": [
+    "insert into v2_account_roles (account_id, role, status, granted_by_account_id, revoked_at) values ('7bd0f09d-a0d1-446c-8c92-2941a6cd37cf', 'admin', 'active', null, null) on conflict (account_id, role) do update set status = 'active', revoked_at = null",
+    "insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason) values (null, 'admin_role_bootstrap', 'account_role', '7bd0f09d-a0d1-446c-8c92-2941a6cd37cf', 'bootstrap-admin-2026-08-27', 'Explicit initial Omni Admin bootstrap for verified Neon Auth identity kheirlissi@icloud.com')"
+  ]
+}

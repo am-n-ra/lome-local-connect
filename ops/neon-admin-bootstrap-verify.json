@@ -1,0 +1,6 @@
+{
+  "projectId": "wild-moon-30984513",
+  "branchId": "br-dawn-hill-am5amy22",
+  "databaseName": "neondb",
+  "sql": "select a.id as account_id, a.auth_user_id, ar.role, ar.status, ar.revoked_at, exists (select 1 from v2_audit_events ae where ae.event_type = 'admin_role_bootstrap' and ae.entity_type = 'account_role' and ae.entity_id = a.id::text and ae.correlation_id = 'bootstrap-admin-2026-08-27') as audit_recorded from v2_accounts a join v2_account_roles ar on ar.account_id = a.id where a.id = '7bd0f09d-a0d1-446c-8c92-2941a6cd37cf' and ar.role = 'admin'"
+}

@@ -1,0 +1,6 @@
+{
+  "projectId": "wild-moon-30984513",
+  "branchId": "br-dawn-hill-am5amy22",
+  "databaseName": "neondb",
+  "sql": "select a.id as account_id, a.auth_user_id, a.suspended_at is null as not_suspended, coalesce(array_agg(distinct ar.role) filter (where ar.status = 'active'), '{}') as active_roles, (a.suspended_at is null and bool_or(ar.role = 'admin' and ar.status = 'active')) as admin_tools_expected from v2_accounts a left join v2_account_roles ar on ar.account_id = a.id where a.id = '7bd0f09d-a0d1-446c-8c92-2941a6cd37cf' group by a.id, a.auth_user_id, a.suspended_at"
+}

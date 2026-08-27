@@ -1,15 +1,10 @@
-# Omni V2 — Admin role slice production check
 
-**As of:** 2026-08-27
+## Neon activation update — 2026-08-27
 
-## Evidence
+The Neon connector was restored. The Admin migration was applied to the target branch `br-dawn-hill-am5amy22` of project `wild-moon-30984513` after a successful temporary-branch test. The target schema now exposes the `v2_account_roles_role_check` constraint including `admin`, the `v2_account_roles_admin_active_idx` partial index, and the documented column/table comments.
 
-The `omni-v2-rebuild` branch contains commit `3fdf634`, which adds the additive `007_v2_admin_role_management.sql` migration, the server-backed Admin role-management routes, the client wrappers, the explicit `adminTools` capability, and the Admin role-management sheet. GitHub reports the Vercel Preview Comments check as completed successfully for the commit.
+Neon Auth lookup confirmed `kheirlissi@icloud.com` maps to Omni account `7bd0f09d-a0d1-446c-8c92-2941a6cd37cf`; it was not suspended and had no active Admin role before bootstrap. With user confirmation, the `admin` role was inserted and `admin_role_bootstrap` was recorded in `v2_audit_events` using correlation id `bootstrap-admin-2026-08-27`.
 
-Local validation passed with 154/154 Vitest tests, a clean client-boundary check, and a successful Vite/Vercel build producing 12 server functions.
+Post-bootstrap verification returned `role=admin`, `status=active`, `revoked_at=null`, `audit_recorded=true`. The capability query returned active roles `admin` and `reviewer`, `not_suspended=true`, and `admin_tools_expected=true`.
 
-The production root at `https://omni.sparkafrika.online/` remains reachable after the push. On initial navigation it showed the expected map loading state; after recovery, the map canvas, OpenStreetMap attribution, zoom/location controls, the globe/facilities surface, and the `Carte active` state were present. No production blank-map regression was observed during this check.
-
-## Residual gate
-
-The database migration has been committed but not applied to the production Neon branch in this session. Therefore the Admin UI is intentionally protected by the server-side `admin` role contract and will remain locked until the migration is applied and the bootstrap Admin account is explicitly granted `admin` in Neon. The Vercel MCP connector returned HTTP 403 during inspection, so deployment identity/status was confirmed only through the GitHub check and direct production observation.
+A fresh production browser check at `https://omni.sparkafrika.online/` showed the normal map loading state followed by the MapLibre canvas, OpenStreetMap attribution, zoom/location controls, and the existing public map surface. No production blank-map regression was observed. The authenticated Admin UI itself still requires a browser session for visual proof; the server/database role proof is complete.

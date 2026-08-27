@@ -1,0 +1,6 @@
+{
+  "projectId": "wild-moon-30984513",
+  "branchId": "br-dawn-hill-am5amy22",
+  "databaseName": "neondb",
+  "sql": "select table_schema, table_name from information_schema.tables where table_schema not in ('pg_catalog', 'information_schema') and (table_name ilike '%user%' or table_name ilike '%account%') order by table_schema, table_name"
+}
