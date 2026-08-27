@@ -21,6 +21,10 @@ Le build produit maintenant un chunk applicatif initial de **779.94 kB** et un c
 
 La suite reste à **151/151 tests**, le contrôle de frontière client est propre et le build génère toujours les **12 fonctions Vercel**. Le fallback de chargement de carte expose un état `role=status`, et le chargement différé est annulable côté QR pour éviter une mise à jour après démontage.
 
+## Mesure automatisée multi-largeurs
+
+Un smoke test Playwright local sur la version Vite a été exécuté aux largeurs 320, 390, 768 et 1280 px. Le First Contentful Paint observé était respectivement d’environ **240 ms**, **216 ms**, **232 ms** et **268 ms**, avec `domContentLoaded` entre **166 ms et 189 ms** après réponse locale. Le canvas MapLibre était présent et aucune erreur console/page n’a été observée sur ces quatre dimensions. Cette preuve est **locale et bounded** : elle ne représente pas la latence réseau, le CPU ou le comportement OS d’un téléphone réel.
+
 ## Limites et prochaine mesure
 
 Le découpage réduit le coût de démarrage, mais MapLibre reste un gros chunk lorsqu’une carte est réellement ouverte. Il faudra mesurer sur téléphone réel le temps jusqu’au premier écran utile, le temps jusqu’à la carte interactive, le coût réseau et l’effet de la récupération PWA. Le prochain ring ne doit pas sacrifier le rendu de la carte ni introduire une attente opaque.
