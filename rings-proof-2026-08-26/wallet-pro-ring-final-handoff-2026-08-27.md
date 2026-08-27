@@ -51,3 +51,8 @@ La configuration FedaPay n’a pas été engagée dans une recharge sandbox dura
 ## Mise à jour de preuve — recharge pending
 
 Le déploiement `dpl_FitFn2HZtDd3pJ2sxYz8DSe4Q8pC` (`READY`, production) expose maintenant le parcours Seller de recharge Wallet en XOF. Avec `demo@seller.omni`, une intention de **10 000 F CFA** a été créée avec succès ; l’interface affiche l’état **pending** et un checkout FedaPay. Le solde reste `$0.00` et la facilité reste Free avant confirmation, ce qui prouve que la création du checkout ne crédite pas le Wallet et ne déclenche pas Pro. Le checkout n’a pas été payé et le webhook signé n’a pas encore été observé ; la confirmation financière reste donc non prouvée.
+
+
+## Mise à jour de preuve — échec contrôlé du checkout sandbox
+
+L’intention pending existante de 10 000 F CFA a été reprise sans duplication. Le checkout FedaPay sandbox a affiché **« Transaction échouée. Veuillez réessayer »** après la saisie du moyen de paiement de test. Aucun webhook d’approbation n’a été observé ; le Wallet est resté inchangé et Pro n’a pas été activé. Le numéro de téléphone et le token checkout ne sont pas conservés. Le comportement d’échec est prouvé ; le chemin positif `approved → webhook signé → crédit confirmé → Pro` reste le gate suivant.

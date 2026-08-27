@@ -67,3 +67,10 @@ Sur le déploiement production `6ec5d4f`, avec la session Seller autorisée `dem
 Le solde Omni affiché reste **$0.00**, le plan de la facilité reste **Free**, et aucune activation Pro n’est déclenchée. Cela confirme la séparation entre création d’une intention de recharge et crédit confirmé. Le paiement FedaPay et la réconciliation webhook n’ont pas été exécutés dans ce pass ; aucune confirmation financière n’est donc revendiquée.
 
 **Classe de preuve :** observed / production / pending / manual browser proof. **Résultat :** passage réussi de la création d’intention, confirmation provider encore non prouvée. **Déploiement :** `dpl_FitFn2HZtDd3pJ2sxYz8DSe4Q8pC` (`READY`, production).
+
+
+## Résultat du checkout sandbox — 2026-08-27
+
+Le checkout FedaPay de l’intention pending existante a été repris sans créer de nouvelle intention. Le moyen Mobile Money et le numéro de test ont été renseignés dans le checkout ; FedaPay a retourné l’état visible **« Transaction échouée. Veuillez réessayer »**. Le numéro et le token de checkout ne sont pas conservés dans le ledger.
+
+Aucun webhook d’approbation n’a donc été observé. Le Wallet Omni n’a pas été crédité et l’activation Pro n’a pas été déclenchée. **Classe de preuve :** observed / sandbox / failed-provider-attempt / manual browser proof. Cette étape confirme le comportement d’échec sans effet de bord ; elle ne prouve pas encore le chemin `approved → webhook signé → ledger confirmed → activation Pro`.
