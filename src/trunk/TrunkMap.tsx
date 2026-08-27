@@ -593,6 +593,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         rotating.current = false;
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
+        map.once('style.load', () => {
+          if (!map.getSource('osm')) map.addSource('osm', { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap contributors' });
+          if (!map.getLayer('osm-raster')) map.addLayer({ id: 'osm-raster', type: 'raster', source: 'osm', paint: { 'raster-opacity': 1 } });
+          map.setProjection({ type: 'mercator' });
+          map.resize();
+          map.triggerRepaint();
+        });
         map.setStyle(FALLBACK_STYLE);
         map.jumpTo({ center: [1.22, 6.13], zoom: 2, bearing: 0, pitch: 0 });
         map.setProjection({ type: 'mercator' });
