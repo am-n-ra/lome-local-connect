@@ -1722,7 +1722,7 @@ function createTrunkRepository(sql = database()) {
           where e.current_state = 'received'
           on conflict (transaction_id) do nothing
           returning id, transaction_id, score, note
-        ), rated_event as (
+        ),         rated_event as (
           insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
           select e.transaction_id, e.actor_account_id, 'rated', jsonb_build_object('score', r.score), ${input.now}::timestamptz
           from eligible e
@@ -1730,7 +1730,43 @@ function createTrunkRepository(sql = database()) {
           where e.current_state = 'received'
           on conflict (transaction_id, state) do nothing
           returning transaction_id
-        ), audited as (
+        ),
+        closed_event as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select e.transaction_id, e.actor_account_id, 'closed', jsonb_build_object('reason', 'buyer_rating_completed'), ${input.now}::timestamptz
+          from eligible e
+          join v2_ratings r on r.transaction_id = e.transaction_id
+          where e.current_state in ('received', 'rated')
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        qualified_facility as (
+          update v2_facilities f
+          set qualifying_sales = least(3, f.qualifying_sales + 1),
+              trust_state = case when f.qualifying_sales + 1 >= 3 then 'confirmed' else f.trust_state end,
+              bonus_unlocked_at = case when f.qualifying_sales + 1 >= 3 then ${input.now}::timestamptz else f.bonus_unlocked_at end,
+              updated_at = ${input.now}::timestamptz
+          from v2_transaction_snapshots s
+          join closed_event c on c.transaction_id = s.transaction_id
+          where f.id = s.facility_id
+            and f.qualifying_sales < 3
+          returning f.id as facility_id, f.account_id, f.qualifying_sales
+        ),
+        bonus_wallet as (
+          select q.facility_id, q.account_id, w.id as wallet_id
+          from qualified_facility q
+          join v2_wallets w on w.account_id = q.account_id
+          where q.qualifying_sales >= 3
+        ),
+        bonus_grant as (
+          insert into v2_wallet_ledger_entries
+            (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select bw.wallet_id, 'bonus_grant', 2000, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from bonus_wallet bw
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, facility_id
+        ),
+        audited as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
           select e.actor_account_id, 'transaction_rated', 'transaction', e.transaction_id::text, ${input.correlationId}, 'buyer_submitted_rating', ${input.now}::timestamptz
           from eligible e
