@@ -323,6 +323,8 @@ export interface ReviewClaimResult {
   version: number;
 }
 
+export type ClaimReviewNotificationOutcome = 'certified' | 'needs_more_evidence' | 'rejected';
+
 export interface NotificationSummary {
   id: string;
   eventType: string;
@@ -331,6 +333,7 @@ export interface NotificationSummary {
   state: string;
   createdAt: string;
   seenAt: string | null;
+  reviewOutcome?: ClaimReviewNotificationOutcome;
 }
 
 export interface NotificationInboxResult {

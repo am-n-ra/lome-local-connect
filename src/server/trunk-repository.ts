@@ -928,7 +928,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     },
     async listNotificationInbox(input: { authUserId: string }): Promise<{ notifications: NotificationSummary[] }> {
       const rows = await retryDatabase(() => sql`
-        select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at
+        select e.id, e.event_type, e.entity_type, e.entity_id, e.state, e.created_at, e.seen_at, e.payload
         from v2_notification_events e
         join v2_accounts a on a.id = e.recipient_account_id
         where a.auth_user_id = ${input.authUserId}
@@ -936,7 +936,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by e.created_at desc, e.id desc
         limit 100
       `);
-      return { notifications: (rows as Record<string, unknown>[]).map((row) => ({ id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), state: String(row.state), createdAt: new Date(String(row.created_at)).toISOString(), seenAt: row.seen_at === null ? null : new Date(String(row.seen_at)).toISOString() })) };
+      return { notifications: (rows as Record<string, unknown>[]).map((row) => { const payload = row.payload && typeof row.payload === 'object' ? row.payload as Record<string, unknown> : {}; const outcome = payload.outcome; return { id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), state: String(row.state), createdAt: new Date(String(row.created_at)).toISOString(), seenAt: row.seen_at === null ? null : new Date(String(row.seen_at)).toISOString(), ...(outcome === 'certified' || outcome === 'needs_more_evidence' || outcome === 'rejected' ? { reviewOutcome: outcome } : {}) }; }) };
     },
 
     async markNotificationSeen(input: { authUserId: string; notificationId: string }): Promise<{ notificationId: string; seen: true }> {
