@@ -1,0 +1,501 @@
+/* ============================================================
+   Omni maquette UI — mobile-first map search (jalon UI-alignment)
+   Reuses V2BuyerMap for the map; this file styles the maquette
+   chrome: top profile switch, top-right menu, facility grid
+   (BELOW the dock) and the search dock with QR discovery + chevron.
+   ============================================================ */
+:root {
+  --mq-bg: #0f1418;
+  --mq-glass: rgba(255, 253, 250, 0.92);
+  --mq-glass-strong: rgba(255, 254, 252, 0.97);
+  --mq-ink: #1c2329;
+  --mq-ink-soft: #5b6670;
+  --mq-line: rgba(24, 31, 34, 0.12);
+  --mq-accent: #e86f2b;
+  --mq-accent-soft: rgba(232, 111, 43, 0.12);
+  --mq-radius: 18px;
+  --mq-safe-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+  --mq-safe-top: max(10px, env(safe-area-inset-top, 0px));
+}
+
+.mq-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100svh;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--mq-ink);
+  background: var(--mq-bg);
+}
+
+/* ---- Map scene (V2BuyerMap reuses these classes) ---- */
+.mq-map-scene { position: absolute; inset: 0; }
+.mq-map-scene .omni-map-wrap,
+.mq-map-scene .omni-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.mq-map-scene .maplibregl-map { font-family: inherit; }
+
+/* Custom map controls — kept clear of the centered dock/grid (right edge). */
+.mq-map-scene .omni-map-controls {
+  position: absolute;
+  top: calc(var(--mq-safe-top) + 76px);
+  right: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+.mq-map-scene .omni-map-controls button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--mq-glass-strong);
+  color: var(--mq-ink);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.16);
+  font-size: 18px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mq-map-scene .omni-map-controls button:active { transform: scale(0.96); }
+
+.mq-map-scene .omni-map-attribution {
+  position: absolute;
+  left: 12px;
+  bottom: var(--mq-safe-bottom);
+  z-index: 5;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(15, 20, 24, 0.45);
+  padding: 3px 8px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+/* ---- Top-left: Seller ↔ Buyer switch ---- */
+.mq-top-left {
+  position: absolute;
+  top: var(--mq-safe-top);
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.mq-mode-switch {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--mq-glass-strong);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+.mq-mode-switch button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mq-ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.mq-mode-switch button.active { background: var(--mq-ink); color: #fff; }
+.mq-mode-switch button.mq-mode-more { width: 30px; padding: 0; justify-content: center; color: var(--mq-ink-soft); }
+.mq-mode-switch button.mq-mode-more:hover { background: var(--mq-accent-soft); color: var(--mq-accent); }
+.mq-seller-note {
+  font-size: 12px;
+  color: #fff;
+  background: rgba(15, 20, 24, 0.6);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+/* ---- Top-right: Menu ---- */
+.mq-top-right {
+  position: absolute;
+  top: var(--mq-safe-top);
+  right: 12px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.mq-menu-button {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--mq-glass-strong);
+  color: var(--mq-ink);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.mq-menu-button:active { transform: scale(0.96); }
+
+/* ---- Popovers ---- */
+.mq-popover {
+  margin-top: 8px;
+  min-width: 220px;
+  max-width: 268px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--mq-glass-strong);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: mq-pop-in 0.16s ease both;
+}
+.mq-popover-left { align-self: flex-start; }
+.mq-popover-right { align-self: flex-end; }
+.mq-popover-title {
+  margin: 4px 10px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--mq-ink-soft);
+}
+.mq-popover-item {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  color: var(--mq-ink);
+}
+.mq-popover-item:hover { background: var(--mq-accent-soft); }
+.mq-popover-item.muted { opacity: 0.72; }
+.mq-popover-item strong { display: block; font-size: 14px; }
+.mq-popover-item small { display: block; font-size: 11px; color: var(--mq-ink-soft); margin-top: 1px; }
+.mq-popover-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: rgba(24, 31, 34, 0.06);
+  display: grid;
+  place-items: center;
+  color: var(--mq-accent);
+}
+.mq-check { color: var(--mq-accent); font-weight: 800; margin-left: auto; }
+.mq-popover-foot {
+  margin: 6px 10px 4px;
+  font-size: 11px;
+  color: var(--mq-ink-soft);
+  text-align: center;
+}
+
+/* ---- Status chip (lower-left, clear of dock/grid) ---- */
+.mq-status {
+  position: absolute;
+  left: 12px;
+  bottom: calc(var(--mq-safe-bottom) + 96px);
+  z-index: 5;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mq-ink-soft);
+  background: var(--mq-glass-strong);
+  padding: 5px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+/* ---- FACILITY GRID (BELOW the dock) — rounded, slides up/down ---- */
+.mq-grid {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  z-index: 12;
+  border-radius: var(--mq-radius) var(--mq-radius) 0 0;
+  background: var(--mq-glass);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 -4px 22px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  transition: max-height 0.32s cubic-bezier(0.32, 0.72, 0.24, 1);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--mq-safe-bottom);
+}
+.mq-grid.idle { max-height: 64px; }
+.mq-grid.revealed { max-height: 40vh; }
+
+.mq-grid-handle {
+  flex: 0 0 auto;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 10px 14px 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--mq-ink);
+  width: 100%;
+  text-align: left;
+}
+.mq-grid-handle-copy { flex: 1; min-width: 0; }
+.mq-grid-handle-copy strong { display: block; font-size: 13px; }
+.mq-grid-handle-copy small { display: block; font-size: 11px; color: var(--mq-ink-soft); }
+.mq-grid-handle-actions { display: flex; align-items: center; gap: 8px; }
+.mq-grid-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mq-accent);
+  background: var(--mq-accent-soft);
+  padding: 4px 9px;
+  border-radius: 999px;
+}
+.mq-grid-chip {
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mq-ink-soft);
+  background: rgba(24, 31, 34, 0.07);
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+
+.mq-grid-body { flex: 1; min-height: 0; overflow: hidden; }
+.mq-grid-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 42vw);
+  gap: 10px;
+  padding: 4px 14px 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.mq-grid-scroll::-webkit-scrollbar { display: none; }
+
+.mq-card {
+  border: 1px solid var(--mq-line);
+  background: #fff;
+  border-radius: 16px;
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--mq-ink);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 118px;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+.mq-card:active { transform: scale(0.98); }
+.mq-card.selected { border-color: var(--mq-accent); box-shadow: 0 0 0 2px var(--mq-accent-soft); }
+.mq-card-top { display: flex; align-items: center; gap: 6px; }
+.mq-card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--mq-accent-soft);
+  color: var(--mq-accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.mq-card-cat { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mq-ink-soft); }
+.mq-card-name { font-size: 14px; line-height: 1.2; }
+.mq-card-meta { font-size: 12px; color: var(--mq-accent); font-weight: 700; }
+.mq-card-distance { font-size: 10px; color: var(--mq-ink-soft); margin-top: auto; }
+
+.mq-grid-empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mq-ink-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.mq-grid-empty button { border: none; background: var(--mq-ink); color: #fff; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; }
+
+/* ---- SEARCH DOCK — pinned above grid, slides without covering map controls ---- */
+.mq-dock {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--dock-bottom, 84px));
+  width: min(620px, calc(100% - 24px));
+  z-index: 15;
+  background: var(--mq-glass-strong);
+  border: 1px solid var(--mq-line);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+  transition: bottom 0.32s cubic-bezier(0.32, 0.72, 0.24, 1);
+}
+.mq-dock-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+}
+.mq-dock-search-icon { color: var(--mq-ink-soft); flex: 0 0 auto; margin-left: 6px; }
+.mq-dock-row input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: var(--mq-ink);
+  padding: 6px 2px;
+}
+.mq-dock-row input::placeholder { color: var(--mq-ink-soft); }
+.mq-qr-button, .mq-chevron {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 12px;
+  background: var(--mq-accent-soft);
+  color: var(--mq-accent);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.16s, color 0.16s;
+}
+.mq-qr-button:hover, .mq-chevron:hover { background: var(--mq-accent); color: #fff; }
+.mq-chevron.open { background: var(--mq-ink); color: #fff; }
+.mq-submit {
+  flex: 0 0 auto;
+  border: none;
+  border-radius: 12px;
+  background: var(--mq-ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  height: 40px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+.mq-submit:active { transform: scale(0.97); }
+
+/* Constraints / filters slide in/out inside the dock */
+.mq-filters {
+  border-top: 1px solid var(--mq-line);
+  padding: 12px 14px 14px;
+  animation: mq-filter-in 0.22s ease both;
+}
+.mq-filters-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.mq-filters-title { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
+.mq-link { border: none; background: transparent; color: var(--mq-accent); font-size: 12px; font-weight: 700; cursor: pointer; }
+.mq-filters-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.mq-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 700; color: var(--mq-ink-soft); }
+.mq-field select,
+.mq-field input[type="text"],
+.mq-field input[inputmode="decimal"] {
+  border: 1px solid var(--mq-line);
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 14px;
+  color: var(--mq-ink);
+  background: #fff;
+}
+.mq-stepper { display: flex; align-items: center; border: 1px solid var(--mq-line); border-radius: 10px; height: 38px; }
+.mq-stepper button { border: none; background: transparent; width: 34px; font-size: 16px; font-weight: 800; cursor: pointer; color: var(--mq-ink); }
+.mq-stepper strong { flex: 1; text-align: center; }
+.mq-budget-toggle { display: flex; border: 1px solid var(--mq-line); border-radius: 10px; overflow: hidden; height: 38px; }
+.mq-budget-toggle button { flex: 1; border: none; background: transparent; font-size: 12px; font-weight: 700; color: var(--mq-ink-soft); cursor: pointer; }
+.mq-budget-toggle button.active { background: var(--mq-ink); color: #fff; }
+.mq-field-budget { grid-column: 1 / -1; }
+.mq-filters-note { margin-top: 12px; font-size: 11px; color: var(--mq-ink-soft); }
+
+/* ---- Facility mini-detail sheet (discovery level) ---- */
+.mq-sheet {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: var(--mq-safe-bottom);
+  width: min(560px, calc(100% - 20px));
+  max-height: 68vh;
+  overflow-y: auto;
+  z-index: 25;
+  background: var(--mq-glass-strong);
+  border-radius: 20px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.26);
+  padding: 10px 16px 18px;
+  animation: mq-sheet-in 0.28s ease both;
+}
+.mq-sheet-handle { width: 40px; height: 4px; border-radius: 999px; background: rgba(24, 31, 34, 0.18); margin: 2px auto 12px; }
+.mq-sheet-head { display: flex; align-items: center; gap: 10px; }
+.mq-sheet-head h2 { font-size: 18px; margin: 0; }
+.mq-card-icon { width: 30px; height: 30px; border-radius: 10px; background: var(--mq-accent-soft); color: var(--mq-accent); display: grid; place-items: center; flex: 0 0 auto; }
+.mq-icon-btn { margin-left: auto; border: none; background: rgba(24, 31, 34, 0.07); width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; cursor: pointer; color: var(--mq-ink); }
+.mq-sheet-kicker { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--mq-accent); }
+.mq-sheet-lede { font-size: 13px; color: var(--mq-ink-soft); line-height: 1.5; margin: 10px 0 14px; }
+.mq-product-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.mq-product {
+  border: 1px solid var(--mq-line);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: var(--mq-ink);
+}
+.mq-product strong { display: block; }
+.mq-product small { display: block; font-size: 11px; color: var(--mq-ink-soft); }
+.mq-product-detail h3 { margin: 6px 0 2px; font-size: 17px; }
+.mq-product-detail p { color: var(--mq-ink-soft); font-size: 13px; margin: 2px 0; }
+.mq-product-avail { color: var(--mq-accent) !important; font-weight: 700; }
+.mq-sheet-empty { font-size: 13px; color: var(--mq-ink-soft); padding: 8px 0; }
+.mq-primary {
+  margin-top: 14px;
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  background: var(--mq-ink);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 13px;
+  cursor: pointer;
+}
+.mq-sheet-foot { margin-top: 14px; font-size: 11px; color: var(--mq-ink-soft); text-align: center; }
+
+/* ---- Responsive: tablet/desktop keeps a wider but still docked layout ---- */
+@media (min-width: 800px) {
+  .mq-grid.revealed { max-height: 46vh; }
+  .mq-grid-scroll { grid-auto-columns: minmax(180px, 240px); }
+}
+
+/* ---- Reduced motion ---- */
+@media (prefers-reduced-motion: reduce) {
+  .mq-grid, .mq-dock, .mq-popover, .mq-filters, .mq-sheet { transition: none; animation: none; }
+}
+
+@keyframes mq-pop-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes mq-filter-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes mq-sheet-in { from { opacity: 0; transform: translate(-50%, 24px); } to { opacity: 1; transform: translate(-50%, 0); } }
