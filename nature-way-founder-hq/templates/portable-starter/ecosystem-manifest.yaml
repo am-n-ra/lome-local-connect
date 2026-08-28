@@ -1,0 +1,49 @@
+ecosystem_version: "1.0"
+venture_id: "venture-short-id"
+as_of: "YYYY-MM-DDTHH:MM:SS±HH:MM"
+timezone: "Region/City"
+
+enabled_companions:
+  - nature-way-founder-hq
+  - nature-way
+  - nature-way-venture-lifecycle
+  - nature-way-fundraising
+  - nature-way-opportunity-intelligence
+  - nature-way-founder-learning
+  - nature-way-sidereal-reflection # optional and private
+
+roles:
+  founder_hq_owner: "role-or-name"
+  product_owner: "role-or-name"
+  capital_owner: "role-or-name"
+  opportunity_owner: "role-or-name"
+  learning_owner: "role-or-name"
+
+current_state:
+  active_milestone: "One measurable venture outcome"
+  primary_authority: "nature-way | venture-lifecycle | fundraising | opportunity-intelligence | founder-learning"
+  current_gate: "Named stage or proof gate"
+  active_specialist: "/<skill-name>"
+  activation_status: "planned | activated | user invocation required | unavailable"
+  next_review: "YYYY-MM-DD"
+
+storage_policy:
+  portable_formats: ["markdown", "yaml", "csv"]
+  allowed_in_portable_kit: ["IDs", "summaries", "owners", "status", "dates", "access_classes"]
+  excluded_from_portable_kit: ["secrets", "birth_data", "raw_customer_data", "restricted_financial_data", "restricted_legal_data"]
+  evidence_storage: "Approved access-controlled source of truth"
+
+cadence:
+  daily: "Active milestone, current gate, top evidence need, blocked dependency"
+  weekly: "Proof, customer/commercial signal, capacity, opportunities, decisions, risks"
+  monthly: "Keep/change/pause/stop review and lifecycle/capital reconciliation"
+
+source_of_truth:
+  master_plan: "founder-hq-master-plan.md"
+  board: "founder-hq-board.md"
+  handoffs: "handoff-register.csv"
+  activation_manifest: "nature-way-founder-hq/references/ecosystem-activation-manifest.md"
+  orchestration_protocol: "nature-way-founder-hq/references/ecosystem-orchestration-protocol.md"
+  lifecycle: "lifecycle-index.csv"
+  opportunities: "opportunity-index.csv"
+  learning: "learning-index.csv"

@@ -1,0 +1,2 @@
+opportunity_id,name,category,source_confidence,status,fit_summary,deadline_timezone,owner,next_action,decision_record_id
+OPP-001,Opportunity name,grant,verify,watch,Unknown until qualified,YYYY-MM-DD Region/City,role-or-name,Verify official source,DEC-001
