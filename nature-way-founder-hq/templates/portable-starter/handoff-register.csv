@@ -1,2 +1,0 @@
-record_id,record_type,primary_authority,source_location_class,access_class,owner,as_of,freshness_status,dependency,next_review
-REC-001,proof,nature-way,approved-document-store,restricted,role-or-name,YYYY-MM-DD,unknown,Current product gate,YYYY-MM-DD
