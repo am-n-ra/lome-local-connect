@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Crosshair, Minus, Plus } from 'lucide-react';
+import { Crosshair, Minus, Plus, X } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // Bundle the MapLibre web worker from the SAME installed maplibre-gl package as the
@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // exact same build, so map tile/feature data deserializes correctly in production
 // (previously: blank map, "can't deserialize StructArrayLayout ..." in the console).
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import type { PublicFacility } from './types';
+import type { PublicFacility, RouteTarget } from './types';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
@@ -25,6 +25,8 @@ type Props = {
   onRevealStateChange?: (active: boolean) => void;
   revealKey?: string | null;
   contextSurfaceOpen?: boolean;
+  routeTarget?: RouteTarget | null;
+  onRouteClose?: () => void;
 };
 
 // Primary vector basemap: CARTO Positron GL. It is a muted-gray/mono style that
@@ -54,6 +56,13 @@ const FALLBACK_STYLE = {
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
+// Evergreen route trace (écran 10 — itinéraire in-app, décision propriétaire #2).
+// Straight two-point polyline from the user position to the facility: no external
+// routing API, no network call. Trace styling follows the v3 aesthetic: Evergreen
+// #234D40, dashed, rendered UNDER the pin layers so facilities stay tappable.
+const ROUTE_SOURCE = 'omni-v2-route';
+const ROUTE_COLOR = '#234D40';
+const EMPTY_ROUTE = { type: 'FeatureCollection' as const, features: [] };
 const MAPLIBRE_WORKER_URL = maplibreWorkerUrl;
 const GLOBE_SUPPRESSED_LABEL_LAYERS = [
   'label_country_1',
@@ -74,6 +83,29 @@ function featureCollection(facilities: PublicFacility[]) {
       properties: { id: facility.id, name: facility.name, trust: facility.trust, productCount: facility.productCount },
     })),
   };
+}
+
+function routeFeatureCollection(target: RouteTarget, origin: RevealPoint) {
+  return {
+    type: 'FeatureCollection' as const,
+    features: [{
+      type: 'Feature' as const,
+      geometry: { type: 'LineString' as const, coordinates: [[origin.longitude, origin.latitude], [target.longitude, target.latitude]] },
+      properties: { name: target.name },
+    }],
+  };
+}
+
+// Great-circle distance (haversine) formatted for the route status chip.
+function routeDistanceLabel(origin: RevealPoint, target: RouteTarget) {
+  const earthRadiusKm = 6371;
+  const startLat = (origin.latitude * Math.PI) / 180;
+  const endLat = (target.latitude * Math.PI) / 180;
+  const deltaLat = ((target.latitude - origin.latitude) * Math.PI) / 180;
+  const deltaLng = ((target.longitude - origin.longitude) * Math.PI) / 180;
+  const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(startLat) * Math.cos(endLat) * Math.sin(deltaLng / 2) ** 2;
+  const kilometers = 2 * earthRadiusKm * Math.asin(Math.min(1, Math.sqrt(a)));
+  return kilometers < 1 ? `${Math.round(kilometers * 1000)} m` : `${kilometers.toFixed(1).replace('.', ',')} km`;
 }
 
 function applyCanopyPalette(map: Map) {
@@ -144,7 +176,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -190,6 +222,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const locationRequest = useRef<number | null>(null);
   facilitiesRef.current = facilities;
   userPositionRef.current = userPosition;
+  // Route trace (itinéraire in-app): mirror the route target into a ref so
+  // addLayers can restore the trace after a style fallback without a remount,
+  // and keep one-shot geolocation + camera framing keyed per drawn route.
+  const routeTargetRef = useRef<RouteTarget | null>(routeTarget);
+  routeTargetRef.current = routeTarget;
+  const routeOriginRequestKey = useRef<string | null>(null);
+  const lastRouteDrawKey = useRef<string | null>(null);
+  const [routeStatus, setRouteStatus] = useState<string | null>(null);
 
   const updateScreenUserPosition = useCallback(() => {
     const map = mapRef.current;
@@ -765,6 +805,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         target.on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });
         target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
+      // Evergreen route trace source + dashed line layers (itinéraire in-app).
+      // Added through the same guarded pattern as the facility source: once per
+      // style load, before the pin layers, never a remount.
+      if (!target.getSource(ROUTE_SOURCE)) {
+        const currentRoute = routeTargetRef.current;
+        const currentOrigin = userPositionRef.current;
+        target.addSource(ROUTE_SOURCE, {
+          type: 'geojson',
+          data: currentRoute && currentOrigin ? routeFeatureCollection(currentRoute, currentOrigin) : EMPTY_ROUTE,
+        });
+        target.addLayer({ id: 'omni-route-casing', type: 'line', source: ROUTE_SOURCE, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ROUTE_COLOR, 'line-width': 6, 'line-opacity': 0.16 } }, 'omni-cluster-rings');
+        target.addLayer({ id: 'omni-route-line', type: 'line', source: ROUTE_SOURCE, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ROUTE_COLOR, 'line-width': 3.5, 'line-dasharray': [1.4, 1], 'line-opacity': 0.92 } }, 'omni-cluster-rings');
+      }
     }
     // Recreate ONLY on the explicit retry signal. Parent re-renders (bounds updates,
     // facility load, etc.) must never tear the map down — callbacks are read from refs.
@@ -861,6 +914,53 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
   }, [facilities, selectedId]);
 
+  // Evergreen route trace (écran 10): update the GeoJSON source data when the
+  // route target or the user position changes; clear it when closed. Camera
+  // framing happens once per drawn route, never on unrelated re-renders.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const source = map.getSource(ROUTE_SOURCE) as GeoJSONSource | undefined;
+    if (!source) return;
+    if (!routeTarget) {
+      source.setData(EMPTY_ROUTE);
+      routeOriginRequestKey.current = null;
+      lastRouteDrawKey.current = null;
+      setRouteStatus(null);
+      return;
+    }
+    const origin = userPositionRef.current;
+    if (origin && Number.isFinite(origin.latitude) && Number.isFinite(origin.longitude)) {
+      const drawKey = `${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}>${routeTarget.latitude.toFixed(5)},${routeTarget.longitude.toFixed(5)}`;
+      if (lastRouteDrawKey.current !== drawKey) {
+        lastRouteDrawKey.current = drawKey;
+        source.setData(routeFeatureCollection(routeTarget, origin));
+        setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct)`);
+        pauseMotion('interaction', false);
+        map.fitBounds(
+          [
+            [Math.min(origin.longitude, routeTarget.longitude), Math.min(origin.latitude, routeTarget.latitude)],
+            [Math.max(origin.longitude, routeTarget.longitude), Math.max(origin.latitude, routeTarget.latitude)],
+          ],
+          { padding: { top: 96, right: 76, bottom: 220, left: 76 }, maxZoom: 14, duration: 900, essential: true },
+        );
+      }
+      return;
+    }
+    // No live position yet: ask once for this route target, then report it
+    // gracefully instead of leaving the trace silently empty.
+    const requestKey = `${routeTarget.latitude.toFixed(5)},${routeTarget.longitude.toFixed(5)}`;
+    if (routeOriginRequestKey.current !== requestKey) {
+      routeOriginRequestKey.current = requestKey;
+      requestLocation(false);
+    }
+    setRouteStatus(
+      locationState === 'denied' || locationState === 'timeout' || locationState === 'unavailable' || locationState === 'cancelled'
+        ? 'Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire ».'
+        : 'Recherche de votre position pour tracer l’itinéraire…',
+    );
+  }, [routeTarget, userPosition, locationState]);
+
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'
     ? { title: 'Localisation en cours…', detail: 'La carte reste sur votre vue pendant la demande.' }
@@ -877,11 +977,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
       return (
-    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-rotation-owner="map-only">
+    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-route={routeTarget ? 'active' : 'idle'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {basemap === 'raster' && <div className="map-raster-fallback" aria-hidden="true">{Array.from({ length: 16 }, (_, index) => { const x = index % 4; const y = Math.floor(index / 4); return <img key={`${x}-${y}`} src={`https://tile.openstreetmap.org/2/${x}/${y}.png`} alt="" width="256" height="256" decoding="async" fetchPriority="high" />; })}</div>}
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
+      {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
         {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
