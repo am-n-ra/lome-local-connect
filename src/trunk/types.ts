@@ -108,7 +108,7 @@ export interface BuyerAvailabilityRequestList {
 }
 
 export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed';
-export type ExternalPaymentMethod = 'cash' | 'mobile_money' | 'pay_on_delivery';
+export type ExternalPaymentMethod = 'cash' | 'mobile_money';
 
 export interface PurchaseIntentResult {
   intentId: string;

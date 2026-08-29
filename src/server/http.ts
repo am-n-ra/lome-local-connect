@@ -733,7 +733,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const transactionId = typeof input.transactionId === 'string' ? input.transactionId : '';
       const method = input.method;
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidPattern.test(transactionId) || !['cash', 'mobile_money', 'pay_on_delivery'].includes(method as string)) {
+      if (!uuidPattern.test(transactionId) || !['cash', 'mobile_money'].includes(method as string)) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid transaction and supported external payment method.'));
         return true;
       }

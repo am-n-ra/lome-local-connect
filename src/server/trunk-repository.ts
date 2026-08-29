@@ -153,7 +153,7 @@ export interface TransactionRatingPersistenceResult {
   state: 'rated';
 }
 
-export type ExternalPaymentMethod = 'cash' | 'mobile_money' | 'pay_on_delivery';
+export type ExternalPaymentMethod = 'cash' | 'mobile_money';
 
 export interface ExternalPaymentDeclarationPersistenceResult {
   declarationId: string;
@@ -1814,7 +1814,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       correlationId: string;
       now: string;
     }): Promise<ExternalPaymentDeclarationPersistenceResult> {
-      if (!['cash', 'mobile_money', 'pay_on_delivery'].includes(input.method)) {
+      if (!['cash', 'mobile_money'].includes(input.method)) {
         throw new TransactionPolicyError('External payment method is not supported.');
       }
       const rows = await retryDatabase(() => sql`
