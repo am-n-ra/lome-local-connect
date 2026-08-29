@@ -11,6 +11,8 @@
     "test:watch": "vitest",
     "check:boundary": "node scripts/check-client-boundary.mjs",
     "proof:live-seller": "node scripts/prove-v2-live-seller.mjs",
+    "seed:demo": "node scripts/seed-demo-lome.mjs",
+    "seed:demo:emit": "node scripts/seed-demo-lome.mjs --emit-json",
     "server": "tsx server/index.ts",
     "build:server": "tsc --noEmit",
     "dev:full": "npm run build && npm run server"
