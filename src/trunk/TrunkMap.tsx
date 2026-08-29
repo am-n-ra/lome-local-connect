@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Crosshair, Minus, Plus } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// Bundle the MapLibre web worker from the SAME installed maplibre-gl package as the
+// main thread. Pointing setWorkerUrl at the package worker (instead of a pinned,
+// separately-committed static file) guarantees the worker and main thread share the
+// exact same build, so map tile/feature data deserializes correctly in production
+// (previously: blank map, "can't deserialize StructArrayLayout ..." in the console).
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { PublicFacility } from './types';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
@@ -48,7 +54,7 @@ const FALLBACK_STYLE = {
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
-const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
+const MAPLIBRE_WORKER_URL = maplibreWorkerUrl;
 const GLOBE_SUPPRESSED_LABEL_LAYERS = [
   'label_country_1',
   'label_country_2',
