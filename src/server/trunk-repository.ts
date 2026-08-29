@@ -356,17 +356,27 @@ export class WalletPolicyError extends Error {
   }
 }
 
-export const toProduct = (row: Record<string, unknown>): PublicProduct => ({
-  id: String(row.id),
-  facilityId: String(row.facility_id),
-  name: String(row.name),
-  description: row.description ? String(row.description) : null,
-  category: row.category ? String(row.category) : null,
-  unit: String(row.unit ?? 'unit'),
-  priceMinor: Number(row.price_minor),
-  currency: String(row.currency ?? 'USD'),
-  couponLabel: row.coupon_label ? String(row.coupon_label) : null,
-});
+export const toProduct = (row: Record<string, unknown>): PublicProduct => {
+  const priceMinor = Number(row.price_minor ?? 0);
+  const discountValueMinor = row.discount_value_minor === null || row.discount_value_minor === undefined ? 0 : Number(row.discount_value_minor);
+  const percentage = row.discount_kind === 'percentage' ? Math.round(discountValueMinor) : 0;
+  const discountAmount = percentage > 0 ? Math.floor((priceMinor * percentage) / 100) : 0;
+  const prixReduit = Math.max(0, priceMinor - discountAmount);
+  return {
+    id: String(row.id),
+    facilityId: String(row.facility_id),
+    name: String(row.name),
+    description: row.description ? String(row.description) : null,
+    category: row.category ? String(row.category) : null,
+    unit: String(row.unit ?? 'unit'),
+    couponLabel: row.coupon_label ? String(row.coupon_label) : null,
+    currency: String(row.currency ?? 'USD'),
+    stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === undefined ? 0 : Number(row.quantity_allocated_omni),
+    prixOriginal: priceMinor,
+    prixReduit,
+    pourcentageReduction: percentage,
+  };
+};
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
   return {
@@ -1140,11 +1150,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       return { active: Number((rows as Record<string, unknown>[])[0]?.active ?? 0) };
     },
-    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string): Promise<PublicFacility[]> {
+    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null }): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? '';
         const categoryText = category?.trim() ?? '';
+        const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
+        const quantiteMin = constraints?.quantiteMin ?? null;
+        const rayonKm = constraints?.rayonKm ?? null;
+        const centerLat = bounds ? (south + north) / 2 : null;
+        const centerLng = bounds ? (west + east) / 2 : null;
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
@@ -1165,6 +1180,23 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                   and (matched.name ilike '%' || ${queryText} || '%' or coalesce(matched.category, '') ilike '%' || ${queryText} || '%')
               ))
             and (${categoryText} = '' or coalesce(f.category, '') = ${categoryText})
+            ${quantiteMin === null ? sql`` : sql`and exists (
+              select 1 from v2_products avqp
+              where avqp.facility_id = f.id
+                and avqp.publication_state = 'published'
+                and avqp.quantity_allocated_omni >= ${quantiteMin}
+            )`}
+            ${budgetMaxMinor === null ? sql`` : sql`and exists (
+              select 1 from v2_products bpp
+              where bpp.facility_id = f.id
+                and bpp.publication_state = 'published'
+                and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor}
+            )`}
+            ${centerLng === null || centerLat === null || rayonKm === null ? sql`` : sql`and (
+              6371 * acos(
+                least(1, cos(radians(${centerLat})) * cos(radians(f.latitude)) * cos(radians(f.longitude) - radians(${centerLng})) + sin(radians(${centerLat})) * sin(radians(f.latitude)))
+              )
+            ) <= ${rayonKm}`}
           group by f.id
           order by f.trust_state = 'unclaimed', f.name
           limit 250
@@ -1190,7 +1222,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) return null;
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
-               p.price_minor, p.currency,
+               p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
+               p.quantity_allocated_omni,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
@@ -1319,6 +1352,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           p.currency,
           p.discount_kind,
           p.discount_value_minor,
+          p.quantity_allocated_omni,
           case
             when p.discount_kind = 'percentage' and p.discount_value_minor between 1 and 90
               then p.price_minor - floor((p.price_minor * p.discount_value_minor) / 100.0)
@@ -1342,11 +1376,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         name: String(row.name),
         description: row.description === null ? null : String(row.description),
         unit: String(row.unit),
-        priceMinor: Number(row.price_minor),
         currency: String(row.currency),
-        discountKind: row.discount_kind === null ? null : row.discount_kind as SellerCatalogueProduct['discountKind'],
-        discountValueMinor: row.discount_value_minor === null ? null : Number(row.discount_value_minor),
-        netPriceMinor: row.net_price_minor === null ? null : Number(row.net_price_minor),
+        stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === undefined ? 0 : Number(row.quantity_allocated_omni),
+        prixOriginal: Number(row.price_minor),
+        prixReduit: row.net_price_minor === null || row.net_price_minor === undefined ? Number(row.price_minor) : Number(row.net_price_minor),
+        pourcentageReduction: row.discount_kind === 'percentage' ? Math.round(Number(row.discount_value_minor ?? 0)) : 0,
         publicationState: String(row.publication_state) as SellerCatalogueProduct['publicationState'],
       }));
             return { authorized: true, facilities, products };
@@ -1357,17 +1391,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       name: string;
       description: string | null;
       unit: string;
-      priceMinor: number;
+      prixOriginal: number;
       currency: string;
-      discountKind: 'percentage' | 'fixed';
-      discountValueMinor: number;
+      pourcentageReduction: number;
+      stockLoueOmni: number;
       idempotencyKey: string;
-    }): Promise<{ productId: string; facilityId: string; publicationState: 'draft'; netPriceMinor: number }> {
-      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) {
+    }): Promise<{ productId: string; facilityId: string; publicationState: 'draft'; prixReduit: number }> {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) {
         throw new SellerCataloguePolicyError('INVALID_INPUT');
       }
-      if (input.discountKind === 'percentage' && input.discountValueMinor > 90) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
-      if (input.discountKind === 'fixed' && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id
@@ -1388,8 +1421,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and fs.status = 'assigned'
         ), inserted as (
           insert into v2_products
-            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, idempotency_key, publication_state)
-          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.priceMinor}, ${input.currency.toUpperCase()}, ${input.discountKind}, ${input.discountValueMinor}, ${input.idempotencyKey}, 'draft'
+            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
+          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
           from owned_facility of
           where exists (select 1 from slot_check)
           on conflict (facility_id, idempotency_key) do nothing
@@ -1404,9 +1437,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
-      if (String(row.discount_kind) !== input.discountKind || Number(row.discount_value_minor) !== input.discountValueMinor || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
-      const discount = input.discountKind === 'percentage' ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
-      return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', netPriceMinor: input.priceMinor - discount };
+      if (String(row.discount_kind) !== 'percentage' || Number(row.discount_value_minor) !== input.pourcentageReduction || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
+      return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', prixReduit: input.prixOriginal - discount };
     },
 
     async updateSellerProductDraft(input: {
@@ -1415,17 +1447,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       name: string;
       description: string | null;
       unit: string;
-      priceMinor: number;
+      prixOriginal: number;
       currency: string;
-      discountKind: 'percentage' | 'fixed';
-      discountValueMinor: number;
-    }): Promise<{ productId: string; publicationState: 'draft'; netPriceMinor: number }> {
-      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.priceMinor) || input.priceMinor <= 0 || !Number.isInteger(input.discountValueMinor) || input.discountValueMinor <= 0) throw new SellerCataloguePolicyError('INVALID_INPUT');
-      if (input.discountKind === 'percentage' && input.discountValueMinor > 90) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
-      if (input.discountKind === 'fixed' && input.discountValueMinor >= input.priceMinor) throw new SellerCataloguePolicyError('DISCOUNT_TOO_LARGE');
+      pourcentageReduction: number;
+      stockLoueOmni: number;
+    }): Promise<{ productId: string; publicationState: 'draft'; prixReduit: number }> {
+      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) throw new SellerCataloguePolicyError('INVALID_INPUT');
+      const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.priceMinor}, currency = ${input.currency.toUpperCase()}, discount_kind = ${input.discountKind}, discount_value_minor = ${input.discountValueMinor}, publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value_minor = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni}, publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id
           and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
@@ -1434,8 +1465,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_NOT_EDITABLE');
-      const discount = input.discountKind === 'percentage' ? Math.floor(input.priceMinor * input.discountValueMinor / 100) : input.discountValueMinor;
-      return { productId: String(row.id), publicationState: 'draft', netPriceMinor: input.priceMinor - discount };
+      return { productId: String(row.id), publicationState: 'draft', prixReduit: input.prixOriginal - discount };
     },
 
     async transitionSellerProduct(input: { authUserId: string; productId: string; to: 'published' | 'archived' }): Promise<{ productId: string; publicationState: 'published' | 'archived' }> {

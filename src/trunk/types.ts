@@ -2,6 +2,12 @@ export type PublicTrust = 'unclaimed' | 'certified' | 'unconfirmed' | 'confirmed
 
 export interface SearchOptions {
   category: string;
+  /** Search constraint: maximum reduced price in minor units (budget_max). */
+  budgetMaxMinor?: number | null;
+  /** Search constraint: minimum Omni-rented stock (quantité_min). */
+  quantiteMin?: number | null;
+  /** Search constraint: search radius in kilometres (rayon_km) from the viewport centre. */
+  rayonKm?: number | null;
 }
 
 export interface PublicFacility {
@@ -24,9 +30,16 @@ export interface PublicProduct {
   description: string | null;
   category: string | null;
   unit: string;
-  priceMinor: number;
-  currency: string;
   couponLabel: string | null;
+  currency: string;
+  /** Omni-rented stock (v3 stock_loué_omni) — drives availability filtering. */
+  stockLoueOmni: number;
+  /** Original (pre-discount) price in minor units (v3 prix_original). */
+  prixOriginal: number;
+  /** Discounted price in minor units (v3 prix_réduit) — always below prixOriginal. */
+  prixReduit: number;
+  /** Mandatory displayed discount percentage (v3 %réduction). */
+  pourcentageReduction: number;
 }
 
 export interface FacilityDetail extends PublicFacility {
@@ -209,7 +222,6 @@ export interface SellerAvailabilityQueue {
 }
 
 export type SellerCataloguePublicationState = 'draft' | 'pending_validation' | 'published' | 'sold_out' | 'archived';
-export type SellerCatalogueDiscountKind = 'percentage' | 'fixed';
 
 export interface SellerCatalogueFacility {
   id: string;
@@ -228,11 +240,11 @@ export interface SellerCatalogueProduct {
   name: string;
   description: string | null;
   unit: string;
-  priceMinor: number;
   currency: string;
-  discountKind: SellerCatalogueDiscountKind | null;
-  discountValueMinor: number | null;
-  netPriceMinor: number | null;
+  stockLoueOmni: number;
+  prixOriginal: number;
+  prixReduit: number;
+  pourcentageReduction: number;
   publicationState: SellerCataloguePublicationState;
 }
 

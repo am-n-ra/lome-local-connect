@@ -46,6 +46,9 @@ export async function listPublicFacilities(bounds?: [number, number, number, num
   if (bounds) ['west', 'south', 'east', 'north'].forEach((key, index) => params.set(key, String(bounds[index])));
   if (query?.trim()) params.set('q', query.trim());
   if (options?.category) params.set('category', options.category);
+  if (typeof options?.budgetMaxMinor === 'number') params.set('budget_max', String(options.budgetMaxMinor));
+  if (typeof options?.quantiteMin === 'number') params.set('quantite_min', String(options.quantiteMin));
+  if (typeof options?.rayonKm === 'number') params.set('rayon_km', String(options.rayonKm));
   const response = await fetchWithRecovery(`/api/v2/public/facilities?${params.toString()}`, { headers: { Accept: 'application/json' } });
   return parse<PublicFacility[]>(response);
 }
@@ -136,17 +139,17 @@ export async function createSellerFacility(input: { token: string; name: string;
   return parse(response);
 }
 
-export async function createSellerProductDraft(input: { token: string; facilityId: string; name: string; description?: string | null; unit?: string; priceMinor: number; currency: string; discountKind: 'percentage' | 'fixed'; discountValueMinor: number; idempotencyKey: string }): Promise<ApiResult<{ productId: string; facilityId: string; publicationState: 'draft'; netPriceMinor: number }>> {
+export async function createSellerProductDraft(input: { token: string; facilityId: string; name: string; description?: string | null; unit?: string; prixOriginal: number; currency: string; pourcentageReduction: number; stockLoueOmni: number; idempotencyKey: string }): Promise<ApiResult<{ productId: string; facilityId: string; publicationState: 'draft'; prixReduit: number }>> {
   const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
-    body: JSON.stringify({ facilityId: input.facilityId, name: input.name, description: input.description ?? null, unit: input.unit ?? 'unit', priceMinor: input.priceMinor, currency: input.currency, discountKind: input.discountKind, discountValueMinor: input.discountValueMinor }),
+    body: JSON.stringify({ facilityId: input.facilityId, name: input.name, description: input.description ?? null, unit: input.unit ?? 'unit', prixOriginal: input.prixOriginal, currency: input.currency, pourcentageReduction: input.pourcentageReduction, stockLoueOmni: input.stockLoueOmni }),
   });
   return parse(response);
 }
 
-export async function updateSellerProductDraft(input: { token: string; productId: string; name: string; description?: string | null; unit?: string; priceMinor: number; currency: string; discountKind: 'percentage' | 'fixed'; discountValueMinor: number }): Promise<ApiResult<{ productId: string; publicationState: 'draft'; netPriceMinor: number }>> {
-  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}`, { method: 'PATCH', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ name: input.name, description: input.description ?? null, unit: input.unit ?? 'unit', priceMinor: input.priceMinor, currency: input.currency, discountKind: input.discountKind, discountValueMinor: input.discountValueMinor }) });
+export async function updateSellerProductDraft(input: { token: string; productId: string; name: string; description?: string | null; unit?: string; prixOriginal: number; currency: string; pourcentageReduction: number; stockLoueOmni: number }): Promise<ApiResult<{ productId: string; publicationState: 'draft'; prixReduit: number }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}`, { method: 'PATCH', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ name: input.name, description: input.description ?? null, unit: input.unit ?? 'unit', prixOriginal: input.prixOriginal, currency: input.currency, pourcentageReduction: input.pourcentageReduction, stockLoueOmni: input.stockLoueOmni }) });
   return parse(response);
 }
 
