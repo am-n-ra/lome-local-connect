@@ -419,7 +419,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     let localFallbackApplied = false;
     let localReadinessTimer: number | null = null;
     let basemapKind: 'vector' | 'local' | 'raster' = 'vector';
-    const map = new Map({
+    let map: Map;
+    try {
+      map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
       transformRequest: (url, resourceType) => ({
@@ -435,6 +437,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       dragRotate: true,
       touchZoomRotate: true,
     });
+    } catch (err) {
+      console.error('Failed to initialize map:', err);
+      setMapStatus('error');
+      return;
+    }
     mapRef.current = map;
     const syncCameraPadding = () => {
       const sheet = document.querySelector<HTMLElement>('.nearby-sheet');
@@ -795,7 +802,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       globeGesture = null;
       if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
       locationRequest.current = null;
-      map.remove();
+      try { map.remove(); } catch (e) { console.error("Error removing map:", e); }
       mapRef.current = null;
     };
 

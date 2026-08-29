@@ -1057,7 +1057,9 @@ describe('claim Heartwood seam', () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);
     const previous = process.env.OMNI_EVIDENCE_STORAGE;
+    const prevBlob = process.env.BLOB_READ_WRITE_TOKEN;
     delete process.env.OMNI_EVIDENCE_STORAGE;
+    delete process.env.BLOB_READ_WRITE_TOKEN;
     await expect(repository.submitClaimEvidence({
       authUserId: 'auth-claimant', requestId: 'request-1', version: 1,
       evidence: [{ evidenceKind: 'facility', objectKey: 'private://omni/request-1/facility.jpg', checksum: 'sha256:abc' }],
@@ -1065,6 +1067,8 @@ describe('claim Heartwood seam', () => {
     })).rejects.toThrow('Private evidence storage is not configured');
     if (previous === undefined) delete process.env.OMNI_EVIDENCE_STORAGE;
     else process.env.OMNI_EVIDENCE_STORAGE = previous;
+    if (prevBlob === undefined) delete process.env.BLOB_READ_WRITE_TOKEN;
+    else process.env.BLOB_READ_WRITE_TOKEN = prevBlob;
     expect(call.queries).toHaveLength(0);
   });
 

@@ -131,3 +131,187 @@ export function FacilityCard({ facility, badge, onOpen, onVerify, price, verifyL
     </article>
   );
 }
+
+/* ----------------------------------------------------------------------------
+   FacilitySelectorChips — Rule 8 & Screen 19:
+   If the account has >1 visible Facility in seller mode, a horizontal chip selector
+   (one chip = one facility, label = facility name) appears just above the search dock.
+   ------------------------------------------------------------------------- */
+export function FacilitySelectorChips({
+  facilities,
+  selectedId,
+  onSelect,
+}: {
+  facilities: Array<{ id: string; name: string }>;
+  selectedId: string | null;
+  onSelect: (facilityId: string) => void;
+}) {
+  if (!facilities || facilities.length <= 1) return null;
+  return (
+    <div className="v3-facility-selector-bar" role="tablist" aria-label="Vos points de vente">
+      <div className="v3-facility-selector-scroll">
+        {facilities.map((facility) => {
+          const isSelected = facility.id === selectedId;
+          return (
+            <button
+              key={facility.id}
+              type="button"
+              role="tab"
+              aria-selected={isSelected}
+              className={`v3-facility-chip${isSelected ? ' active' : ''}`}
+              onClick={() => onSelect(facility.id)}
+            >
+              <span className="v3-chip-dot" aria-hidden="true" />
+              <span className="v3-chip-text">{facility.name}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   SellerCertificationProgress — Screen 18:
+   ContextPanel on unconfirmed pin: "X/3 ventes tracées" progress bar.
+   ------------------------------------------------------------------------- */
+export function SellerCertificationProgress({ verifiedSalesCount = 0 }: { verifiedSalesCount: number }) {
+  const current = Math.min(3, Math.max(0, verifiedSalesCount));
+  const percent = Math.round((current / 3) * 100);
+  return (
+    <div className="v3-certification-card">
+      <div className="v3-cert-head">
+        <span className="v3-cert-title">Certification du point de vente</span>
+        <span className="v3-cert-count">{current}/3 ventes tracées</span>
+      </div>
+      <div className="v3-cert-progress-track" role="progressbar" aria-valuenow={current} aria-valuemin={0} aria-valuemax={3}>
+        <div className="v3-cert-progress-fill" style={{ width: `${percent}%` }} />
+      </div>
+      <p className="v3-cert-note">
+        {current >= 3
+          ? 'Facilité confirmée ! Le badge vert est actif et les 20 $ de bienvenue sont débloqués.'
+          : `Encore ${3 - current} vente${3 - current > 1 ? 's' : ''} via QR code pour valider le statut Confirmé et débloquer les 20 $ de crédit.`}
+      </p>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   NeutralLockedCreditBadge — Screen 21 & Rules 5 & 21:
+   Welcome credit "20$ verrouillés jusqu'à confirmation" as a NEUTRAL badge (not orange).
+   ------------------------------------------------------------------------- */
+export function NeutralLockedCreditBadge({ amount = '20$' }: { amount?: string }) {
+  return (
+    <span className="v3-neutral-locked-badge">
+      <span className="v3-locked-icon" aria-hidden="true">🔒</span>
+      <span>{amount} verrouillés jusqu'à confirmation</span>
+    </span>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   ConfirmationStepper — Screen 12:
+   Vertical 4-step stepper (fullscreen/panel):
+   1. Paiement envoyé -> 2. Paiement reçu -> 3. Produit envoyé / préparé -> 4. Produit reçu
+   ------------------------------------------------------------------------- */
+export function ConfirmationStepper({ currentStep }: { currentStep: 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'rated' }) {
+  const steps = [
+    { key: 'payment_declared', label: 'Paiement envoyé (Acheteur)', desc: 'Espèces ou Mobile Money déclaré' },
+    { key: 'payment_confirmed', label: 'Paiement reçu (Vendeur)', desc: 'Vérifié et encaissé au comptoir' },
+    { key: 'fulfilment_pending', label: 'Produit préparé / remis', desc: 'Prêt pour la remise physique' },
+    { key: 'fulfilled', label: 'Produit reçu (Acheteur)', desc: 'Transaction validée et clôturée' },
+  ];
+
+  const stepOrder = ['payment_declared', 'payment_confirmed', 'fulfilment_pending', 'fulfilled', 'rated'];
+  const currentIndex = stepOrder.indexOf(currentStep);
+
+  return (
+    <div className="v3-stepper-vertical" aria-label="Progression de la transaction">
+      {steps.map((step, idx) => {
+        const isDone = currentIndex > idx;
+        const isCurrent = currentIndex === idx;
+        return (
+          <div key={step.key} className={`v3-step-item ${isDone ? 'done' : isCurrent ? 'current' : 'pending'}`}>
+            <div className="v3-step-marker" aria-hidden="true">
+              <span className="v3-step-dot" />
+              {idx < steps.length - 1 && <span className="v3-step-line" />}
+            </div>
+            <div className="v3-step-content">
+              <strong className="v3-step-label">{step.label}</strong>
+              <span className="v3-step-desc">{step.desc}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   ReviewStars — Screen 13:
+   5 Evergreen stars interactive rating component.
+   ------------------------------------------------------------------------- */
+export function ReviewStars({ score, onChange, readOnly }: { score: number; onChange?: (score: number) => void; readOnly?: boolean }) {
+  return (
+    <div className="v3-star-rating" role="radiogroup" aria-label="Notation de la transaction">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          disabled={readOnly}
+          role="radio"
+          aria-checked={score === star}
+          aria-label={`${star} étoile${star > 1 ? 's' : ''}`}
+          className={`v3-star-btn ${star <= score ? 'filled' : 'empty'}`}
+          onClick={() => onChange?.(star)}
+        >
+          ★
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------------------
+   PaymentMethodSelector — Screen 11:
+   ContextPanel / Sheet lists configured methods (cash, Mobile Money) with Evergreen radio.
+   ------------------------------------------------------------------------- */
+export function PaymentMethodSelector({
+  selected,
+  onSelect,
+}: {
+  selected: 'cash' | 'mobile_money';
+  onSelect: (method: 'cash' | 'mobile_money') => void;
+}) {
+  return (
+    <div className="v3-payment-options" role="radiogroup" aria-label="Modes de paiement">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected === 'cash'}
+        className={`v3-payment-row${selected === 'cash' ? ' active' : ''}`}
+        onClick={() => onSelect('cash')}
+      >
+        <span className="v3-radio-bullet" aria-hidden="true" />
+        <div className="v3-payment-info">
+          <strong>Espèces au comptoir</strong>
+          <span>Règlement direct en espèces sur place</span>
+        </div>
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={selected === 'mobile_money'}
+        className={`v3-payment-row${selected === 'mobile_money' ? ' active' : ''}`}
+        onClick={() => onSelect('mobile_money')}
+      >
+        <span className="v3-radio-bullet" aria-hidden="true" />
+        <div className="v3-payment-info">
+          <strong>Mobile Money</strong>
+          <span>Transfert direct (Wave, Orange Money, MTN MoMo, Moov)</span>
+        </div>
+      </button>
+    </div>
+  );
+}
+

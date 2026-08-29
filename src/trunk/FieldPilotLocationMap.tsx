@@ -89,7 +89,9 @@ export function FieldPilotLocationMap(props: Props) {
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
-    const map = new Map({
+    let map: Map;
+    try {
+      map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
       center: [position.longitude, position.latitude],
@@ -102,6 +104,11 @@ export function FieldPilotLocationMap(props: Props) {
       dragRotate: false,
       touchZoomRotate: true,
     });
+    } catch (err) {
+      console.error('Failed to initialize map:', err);
+      // setMapStatus('error');
+      return;
+    }
     mapRef.current = map;
     map.addControl(new NavigationControl({ showCompass: false, visualizePitch: false }), 'top-right');
 
@@ -142,7 +149,7 @@ export function FieldPilotLocationMap(props: Props) {
     return () => {
       marker.remove();
       markerRef.current = null;
-      map.remove();
+      try { map.remove(); } catch (e) { console.error("Error removing map:", e); }
       mapRef.current = null;
     };
     // This map is intentionally created once per sheet. The controlled coordinates

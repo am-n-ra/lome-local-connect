@@ -29,7 +29,7 @@ export function V2BuyerMap({ facilities, selectedId, onSelect, onBoundsChange, o
       for (const layer of ["facility-clusters", "facility-pins"]) { map.on("mouseenter", layer, () => { map.getCanvas().style.cursor = "pointer"; }); map.on("mouseleave", layer, () => { map.getCanvas().style.cursor = ""; }); }
     } emitBounds(map); const rotate = () => { if (rotating.current && !map.isMoving()) map.easeTo({ center: [map.getCenter().lng + 0.035, map.getCenter().lat], duration: 1200, essential: true }); window.setTimeout(rotate, 1400); }; window.setTimeout(rotate, 1400); });
     const observer = new ResizeObserver(() => map.resize()); observer.observe(container.current);
-    return () => { if (boundsTimer.current) window.clearTimeout(boundsTimer.current); observer.disconnect(); map.remove(); mapRef.current = null; };
+    return () => { if (boundsTimer.current) window.clearTimeout(boundsTimer.current); observer.disconnect(); try { map.remove(); } catch (e) { console.error("Error removing map:", e); } mapRef.current = null; };
   }, [onBoundsChange, onSelect]);
   useEffect(() => { const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined; source?.setData(collection(facilities)); }, [facilities]);
   useEffect(() => { const map = mapRef.current; if (map?.getLayer("facility-pins")) map.setPaintProperty("facility-pins", "circle-color", ["case", ["==", ["get", "id"], selectedId ?? ""], "#e86f2b", "#2c211b"]); if (map?.getLayer("facility-selected-halo")) map.setFilter("facility-selected-halo", ["==", ["get", "id"], selectedId ?? ""]); }, [selectedId]);
