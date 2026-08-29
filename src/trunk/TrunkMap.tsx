@@ -676,7 +676,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       target.addLayer({ id: 'omni-cluster-rings', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#d8d8d8', 'circle-radius': ['step', ['get', 'point_count'], 28, 10, 36, 30, 46], 'circle-stroke-color': '#777777', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.55, 'circle-opacity': 0.2 } });
       target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#222222', 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 23], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
       target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#222222', 'text-halo-width': 0.8 } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#111111', 'circle-radius': 7, 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.98 } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#F08F5A', 'circle-radius': 7, 'circle-stroke-color': '#F9F7F2', 'circle-stroke-width': 3, 'circle-opacity': 1 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
@@ -782,7 +782,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', '#111111');
+    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', '#F08F5A');
     if (!selectedId) return;
     const selected = facilities.find((facility) => facility.id === selectedId);
     if (!selected || map.isMoving()) return;

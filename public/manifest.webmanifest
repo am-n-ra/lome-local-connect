@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#f6f6f4",
-  "theme_color": "#f6f6f4",
+  "background_color": "#F9F9F7",
+  "theme_color": "#F9F9F7",
   "description": "Découvrir les facilités locales et vérifier une disponibilité avec Omni.",
   "icons": [
     {
