@@ -21,7 +21,18 @@ type Props = {
   contextSurfaceOpen?: boolean;
 };
 
-const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
+// Primary vector basemap: CARTO Positron GL. It is a muted-gray/mono style that
+// matches the v3 "style de carte gris muté" rule, serves real street-level data
+// at every zoom, supports the globe projection, needs no API token, and answers
+// with `access-control-allow-origin: *` (CORS-friendly) — unlike the previous
+// OpenFreeMap/OSM providers, which were fragile in the deployed/review
+// environment (CORS/403/TLS) and caused the owner's blank "carte ne s'affiche
+// pas" report.
+const REMOTE_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+// Self-hosted, network-independent vector style (muted mono globe). Guaranteed to
+// render even with zero external network/tile access — the "the map must always
+// display" safety net.
+const LOCAL_STYLE = '/omni-local-style.json';
 const FALLBACK_STYLE = {
   version: 8 as const,
   sources: {
@@ -136,7 +147,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [basemap, setBasemap] = useState<'vector' | 'raster'>('vector');
+  const [basemap, setBasemap] = useState<'vector' | 'local' | 'raster'>('vector');
   const [mapRetryKey, setMapRetryKey] = useState(0);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [cameraModeState, setCameraModeState] = useState<CameraMode>('resting_globe');
@@ -319,6 +330,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     let readinessTimer: number | null = null;
     let fallbackTimer: number | null = null;
     let fallbackApplied = false;
+    let localFallbackApplied = false;
+    let localReadinessTimer: number | null = null;
+    let basemapKind: 'vector' | 'local' | 'raster' = 'vector';
     const map = new Map({
       container: container.current,
       style: REMOTE_STYLE,
@@ -414,7 +428,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       initialStyleReady.current = true;
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       setMapStatus('ready');
-      const initialGlobe = !fallbackApplied && projectionForZoom(map.getZoom()) === 'globe';
+      const initialGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
       setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
@@ -580,19 +594,37 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       scheduleUserPosition();
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
-    // Prefer the vector style, but recover automatically to a lightweight OSM
-    // raster style when the provider or its worker cannot render the first map.
-    // This keeps the map visible on cold/mobile networks instead of leaving a
-    // blank canvas while preserving retryability.
-    fallbackTimer = window.setTimeout(() => {
-      if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) {
-        fallbackApplied = true;
+    // Prefer the reliable CARTO vector basemap, but recover automatically to the
+    // self-hosted, network-independent monochrome globe style when the provider or
+    // its worker cannot render the first map. This keeps a visible world globe
+    // (never a blank canvas) on cold/mobile networks or when an external tile host
+    // is blocked / CORS-fails in a deployed environment.
+    const switchToLocalGlobe = () => {
+      if (mapRef.current !== map || localFallbackApplied) return;
+      localFallbackApplied = true;
+      fallbackApplied = true;
+      basemapKind = 'local';
+      setBasemap('local');
+      setMapStatus('loading');
+      map.stop();
+      rotating.current = false;
+      cameraMode.current = 'manual_navigation';
+      setCameraModeState('manual_navigation');
+      map.once('style.load', () => {
+        map.setProjection({ type: 'globe' });
+        map.resize();
+        map.triggerRepaint();
+      });
+      map.setStyle(LOCAL_STYLE);
+      map.jumpTo({ center: [1.22, 6.13], zoom: 1.35, bearing: 0, pitch: 0 });
+      map.resize();
+      // Last resort: if even the local style fails to become ready, fall back to
+      // the declarative OSM raster style + <img> underlay, then surface an error.
+      localReadinessTimer = window.setTimeout(() => {
+        if (mapRef.current !== map || initialStyleReady.current) return;
+        basemapKind = 'raster';
         setBasemap('raster');
         setMapStatus('loading');
-        map.stop();
-        rotating.current = false;
-        cameraMode.current = 'manual_navigation';
-        setCameraModeState('manual_navigation');
         map.once('style.load', () => {
           if (!map.getSource('osm')) map.addSource('osm', { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256, attribution: '© OpenStreetMap contributors' });
           if (!map.getLayer('osm-raster')) map.addLayer({ id: 'osm-raster', type: 'raster', source: 'osm', paint: { 'raster-opacity': 1 } });
@@ -604,14 +636,24 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         map.jumpTo({ center: [1.22, 6.13], zoom: 2, bearing: 0, pitch: 0 });
         map.setProjection({ type: 'mercator' });
         map.resize();
-      }
-    }, 8_000);
+      }, 6_500);
+    };
+    fallbackTimer = window.setTimeout(() => {
+      if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) switchToLocalGlobe();
+    }, 6_500);
     readinessTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map) setMapStatus('error');
     }, 18_000);
+    // Escalate immediately on a fatal (non-tile) style error, e.g. the provider is
+    // down or blocked by TLS/CORS, so users never sit on a blank map waiting for
+    // the readiness timer.
+    map.on('error', (event) => {
+      const err = event as { error?: unknown; sourceId?: unknown; tile?: unknown };
+      if (!fallbackApplied && mapRef.current === map && !err?.sourceId && !err?.tile) switchToLocalGlobe();
+    });
     let globeProjection = true;
     const syncProjection = () => {
-      const wantsGlobe = !fallbackApplied && projectionForZoom(map.getZoom()) === 'globe';
+      const wantsGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
@@ -629,7 +671,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       setMapStatus('ready');
       configureStyle();
-      globeProjection = !fallbackApplied && map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
+      globeProjection = basemapKind !== 'raster' && map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
     });
 
@@ -642,6 +684,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     return () => {
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (localReadinessTimer !== null) window.clearTimeout(localReadinessTimer);
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
