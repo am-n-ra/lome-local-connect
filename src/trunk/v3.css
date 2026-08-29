@@ -445,6 +445,10 @@ h1, h2, h3, h4,
 .facility-actions { display: flex; gap: 12px; margin: 20px 0 4px; }
 .facility-actions .primary-button { margin-top: 0; flex: 1; min-height: 48px; }
 .facility-actions .secondary-button { flex: 0 0 auto; min-height: 48px; min-width: 132px; border: 1px solid #234D40; background: #F9F7F2; color: #234D40; }
+/* Écran 9 (QR vitrine) : « Partager » primaire + « Copier le lien » secondaire. */
+.qr-card-actions { display: flex; gap: 10px; margin: .35rem 0 0; }
+.qr-card-actions .primary-button { margin-top: 0; flex: 1; min-height: 46px; }
+.qr-card-actions .secondary-button { margin-top: 0; flex: 0 0 auto; min-height: 46px; min-width: 128px; border: 1px solid #234D40; background: #F9F7F2; color: #234D40; }
 /* Product rows on the full card: struck original + discounted + PriceBadge. */
 .facility-sheet .catalogue-item { border: 1px solid #EEEEEC; border-radius: 16px; background: #FFFFFF; }
 .facility-sheet .catalogue-item strong { color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 15px; }
