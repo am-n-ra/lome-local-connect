@@ -917,3 +917,22 @@ button[aria-busy="true"]::before { width: 12px; height: 12px; flex: 0 0 auto; co
 .wallet-recharge-card .primary-button { margin-top: 11px; }
 .wallet-checkout-link { gap: 7px; text-decoration: none; }
 @media (max-width: 420px) { .wallet-recharge-presets > div { grid-template-columns: 1fr; } }
+
+/* PR-I — écran 12: séquence de confirmation, stepper vertical 4 étapes.
+   Terminé = Evergreen plein, en cours = mis en évidence, à venir = contour gris. */
+.transaction-stepper { list-style: none; display: flex; flex-direction: column; margin: 18px 0 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 15px; background: var(--sheet); }
+.transaction-step { position: relative; display: flex; align-items: flex-start; gap: 10px; padding-bottom: 13px; }
+.transaction-step:last-child { padding-bottom: 0; }
+.transaction-step::before { content: ''; position: absolute; left: 10px; top: 24px; bottom: -1px; width: 2px; background: color-mix(in srgb, var(--ink) 14%, transparent); }
+.transaction-step.done::before { background: var(--forest, #234D40); }
+.transaction-step-mark { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid color-mix(in srgb, var(--ink) 24%, transparent); background: var(--sheet); color: var(--muted); font-size: 9px; font-weight: 900; }
+.transaction-step.done .transaction-step-mark { background: var(--forest, #234D40); border-color: var(--forest, #234D40); color: #F9F7F2; }
+.transaction-step.current .transaction-step-mark { border-color: var(--forest, #234D40); color: var(--forest, #234D40); box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest, #234D40) 14%, transparent); }
+.transaction-step-label { font-size: 11px; font-weight: 700; color: var(--muted); padding-top: 4px; }
+.transaction-step.done .transaction-step-label, .transaction-step.current .transaction-step-label { color: var(--ink); }
+
+/* PR-I — écran 13: 5 étoiles Evergreen sélectionnables (icônes, pas de chiffres nus). */
+.rating-stars { display: flex; gap: 4px; }
+.rating-stars button { display: inline-flex; padding: 4px; border: none; border-radius: 8px; background: transparent; color: color-mix(in srgb, var(--ink) 26%, transparent); cursor: pointer; }
+.rating-stars button.filled { color: var(--forest, #234D40); }
+.rating-stars button:focus-visible { outline: 3px solid color-mix(in srgb, var(--forest, #234D40) 40%, transparent); outline-offset: 2px; }
