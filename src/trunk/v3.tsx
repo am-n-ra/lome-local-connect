@@ -9,22 +9,11 @@ import type { PublicFacility } from './types';
 
 export type StatusVariant = 'available' | 'confirmed' | 'unconfirmed' | 'unclaimed';
 
-/** Discount percentage for a product when v3 fields exist (best-effort for
- *  the current trunk model; PR 3 migrates to the full v3 product model). */
-export function discountPercent(p: {
-  priceMinor: number;
-  discountKind?: string | null;
-  discountValueMinor?: number | null;
-  netPriceMinor?: number | null;
-}): number | null {
-  if (typeof p.netPriceMinor === 'number' && p.netPriceMinor < p.priceMinor) {
-    return Math.max(1, Math.round((1 - p.netPriceMinor / p.priceMinor) * 100));
-  }
-  if (p.discountKind === 'percentage' && typeof p.discountValueMinor === 'number') {
-    return Math.max(1, Math.round(p.discountValueMinor));
-  }
-  if (p.discountKind === 'fixed' && typeof p.discountValueMinor === 'number' && p.priceMinor > 0) {
-    return Math.max(1, Math.round((p.discountValueMinor / p.priceMinor) * 100));
+/** Discount percentage for a product (v3 %réduction — mandatory on every product). */
+export function discountPercent(p: { pourcentageReduction?: number | null; prixOriginal?: number; prixReduit?: number }): number | null {
+  if (typeof p.pourcentageReduction === 'number' && p.pourcentageReduction > 0) return Math.round(p.pourcentageReduction);
+  if (typeof p.prixOriginal === 'number' && typeof p.prixReduit === 'number' && p.prixOriginal > 0 && p.prixReduit < p.prixOriginal) {
+    return Math.max(1, Math.round((1 - p.prixReduit / p.prixOriginal) * 100));
   }
   return null;
 }

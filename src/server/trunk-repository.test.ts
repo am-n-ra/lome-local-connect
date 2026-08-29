@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, FieldPilotPolicyError, PurchaseIntentPolicyError, toProduct, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -58,8 +58,8 @@ describe('account context Root seam', () => {
   });
 });
 
-describe('public product boundary', () => {
-  it('does not expose allocated stock as a public catalogue fact', () => {
+describe('public product boundary (v3 model)', () => {
+  it('maps v3 fields without leaking internal columns', () => {
     const product = toProduct({
       id: 'product-1',
       facility_id: 'facility-1',
@@ -67,15 +67,49 @@ describe('public product boundary', () => {
       description: 'Fresh tomatoes',
       category: 'Fresh produce',
       unit: '1 kg',
-      price_minor: 1500,
+      price_minor: 2000,
       currency: 'XOF',
+      discount_kind: 'percentage',
+      discount_value_minor: 25,
       quantity_allocated_omni: 12,
       coupon_label: null,
     });
-
     expect(product).not.toHaveProperty('availableQuantity');
     expect(product).not.toHaveProperty('quantity_allocated_omni');
-    expect(product).toMatchObject({ id: 'product-1', facilityId: 'facility-1', name: 'Tomatoes', priceMinor: 1500 });
+    expect(product).not.toHaveProperty('priceMinor');
+    expect(product).not.toHaveProperty('discountKind');
+    expect(product).toMatchObject({
+      id: 'product-1',
+      facilityId: 'facility-1',
+      name: 'Tomatoes',
+      prixOriginal: 2000,
+      prixReduit: 1500,
+      pourcentageReduction: 25,
+      stockLoueOmni: 12,
+    });
+  });
+
+  it('computes a mandatory prixReduit and percent reduction from a percentage discount', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 3 });
+    expect(product.pourcentageReduction).toBe(10);
+    expect(product.prixReduit).toBe(4500);
+    expect(product.prixReduit).toBeLessThan(product.prixOriginal);
+    expect(product.stockLoueOmni).toBe(3);
+  });
+
+  it('a discount-less row maps to 0% (creation itself rejects discount-less products)', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    expect(product.pourcentageReduction).toBe(0);
+    expect(product.prixReduit).toBe(product.prixOriginal);
+  });
+
+  it('rejects a seller product draft without a mandatory reduction', async () => {
+    const repository = createTrunkRepository(stubSql([]).sql);
+    await expect(
+      repository.createSellerProductDraft({
+        authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 0, stockLoueOmni: 5, idempotencyKey: 'idem-discount-mandatory',
+      }),
+    ).rejects.toThrow(SellerCataloguePolicyError);
   });
 });
 

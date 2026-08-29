@@ -530,7 +530,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         ? [numberParam(url, 'west', -180), numberParam(url, 'south', -90), numberParam(url, 'east', 180), numberParam(url, 'north', 90)] as [number, number, number, number]
         : undefined;
       const category = url.searchParams.get('category')?.trim() || undefined;
-      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get('q') ?? undefined, category);
+      const hasBudget = url.searchParams.has('budget_max');
+      const hasQuantity = url.searchParams.has('quantite_min');
+      const hasRayon = url.searchParams.has('rayon_km');
+      const constraints = {
+        budgetMaxMinor: hasBudget ? numberParam(url, 'budget_max', 0) : undefined,
+        quantiteMin: hasQuantity ? numberParam(url, 'quantite_min', 0) : undefined,
+        rayonKm: hasRayon ? numberParam(url, 'rayon_km', 0) : undefined,
+      };
+      const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get('q') ?? undefined, category, constraints);
       json(res, 200, { ok: true, correlationId, data: facilities });
       return true;
     }
@@ -872,11 +880,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
       const unit = typeof input.unit === 'string' ? input.unit : 'unit';
       const currency = typeof input.currency === 'string' ? input.currency : '';
-      const discountKind = input.discountKind === 'percentage' || input.discountKind === 'fixed' ? input.discountKind : null;
-      const priceMinor = Number(input.priceMinor);
-      const discountValueMinor = Number(input.discountValueMinor);
-      if (!name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor)) throw new ApiInputError('A valid product name, price, currency and reduction are required.');
-      const result = await repository.updateSellerProductDraft({ authUserId, productId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor });
+      const prixOriginal = Number(input.prixOriginal);
+      const pourcentageReduction = Number(input.pourcentageReduction);
+      const stockLoueOmni = Number(input.stockLoueOmni);
+      if (!name.trim() || name.length > 180 || !currency || !Number.isInteger(prixOriginal) || prixOriginal <= 0 || !Number.isInteger(pourcentageReduction) || pourcentageReduction < 1 || pourcentageReduction > 90 || !Number.isInteger(stockLoueOmni) || stockLoueOmni < 0) throw new ApiInputError('A valid product name, currency, price and a mandatory percentage reduction are required.');
+      const result = await repository.updateSellerProductDraft({ authUserId, productId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -913,15 +921,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
       const unit = typeof input.unit === 'string' ? input.unit : 'unit';
       const currency = typeof input.currency === 'string' ? input.currency : '';
-      const discountKind = input.discountKind === 'percentage' || input.discountKind === 'fixed' ? input.discountKind : null;
-      const priceMinor = Number(input.priceMinor);
-      const discountValueMinor = Number(input.discountValueMinor);
+      const prixOriginal = Number(input.prixOriginal);
+      const pourcentageReduction = Number(input.pourcentageReduction);
+      const stockLoueOmni = Number(input.stockLoueOmni);
       const idempotencyKey = req.headers['idempotency-key'];
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !discountKind || !Number.isInteger(priceMinor) || !Number.isInteger(discountValueMinor) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
-        throw new ApiInputError('A valid facility, product, price, currency, reduction and idempotency key are required.');
+      if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !Number.isInteger(prixOriginal) || prixOriginal <= 0 || !Number.isInteger(pourcentageReduction) || pourcentageReduction < 1 || pourcentageReduction > 90 || !Number.isInteger(stockLoueOmni) || stockLoueOmni < 0 || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+        throw new ApiInputError('A valid facility, product, price, currency, mandatory reduction and idempotency key are required.');
       }
-      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, priceMinor, currency, discountKind, discountValueMinor, idempotencyKey });
+      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni, idempotencyKey });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
