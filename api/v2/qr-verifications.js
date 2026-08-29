@@ -4003,30 +4003,19 @@ async function handleApi(req, res, pathname, url) {
   }
 }
 
-// src/server/vercel/catch-all.ts
+// src/server/vercel-handlers.ts
 function requestUrl(req, fallbackPath) {
   const protocol = String(req.headers?.["x-forwarded-proto"] ?? "https");
   const host = String(req.headers?.host ?? "localhost");
   return new URL(String(req.url ?? fallbackPath), `${protocol}://${host}`);
 }
-function resolvePathname(pathname, url) {
-  if (pathname !== "/api/v2/seller/catalogue") return pathname;
-  const action = url.searchParams.get("omni_action");
-  const productId = url.searchParams.get("id");
-  if (action === "demo-rebind") return "/api/v2/seller/demo-rebind";
-  if (action === "wallet") return "/api/v2/wallet";
-  if (action === "wallet-recharge") return "/api/v2/wallet/recharges";
-  if (action === "wallet-pro") return "/api/v2/wallet/pro";
-  if (action === "fedapay-webhook") return "/api/v2/fedapay/webhook";
-  if (action === "transaction-messages") return "/api/v2/transaction-messages";
-  if (productId) return `/api/v2/seller/catalogue/${productId}`;
-  return "/api/v2/seller/catalogue";
+async function qrVerificationHandler(req, res) {
+  const url = requestUrl(req, "/api/v2/qr-verifications");
+  await handleApi(req, res, "/api/v2/qr-verifications", url);
 }
-async function handler(req, res) {
-  const url = requestUrl(req, "/api/v2");
-  const pathname = resolvePathname(url.pathname, url);
-  await handleApi(req, res, pathname, url);
-}
+
+// src/server/vercel/qr-verifications.ts
+var qr_verifications_default = qrVerificationHandler;
 export {
-  handler as default
+  qr_verifications_default as default
 };
