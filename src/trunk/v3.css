@@ -1,0 +1,469 @@
+/* ============================================================================
+   Omni v3 Design System — shared foundation (loads AFTER styles.css).
+   Tokens + named components (MenuIcon, RoleSwitch, SearchDock, FacilityPin,
+   ContextPanel, StatusBadge, PriceBadge, FilterChip, FacilityCard) applied to
+   the buyer-search surfaces (lot A, screens 1–5) and the app-wide palette.
+
+   Authoritative source: OMNI-V3-MASTER-PLAN.md §4 / DESIGN-SPEC-v3.md.
+   ========================================================================== */
+
+:root {
+  /* Fonts — display (Plus Jakarta Sans) + body (Hanken Grotesk). */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
+  color: #1A1C1B;
+
+  /* v3 palette (exact values). */
+  --v3-evergreen: #234D40;
+  --v3-evergreen-dark: #08362A;
+  --v3-cream: #F9F7F2;
+  --v3-accent: #F08F5A;
+  --v3-ink: #1A1C1B;
+  --v3-appbg: #F9F9F7;
+  --v3-surface-1: #FFFFFF;
+  --v3-surface-2: #F4F4F1;
+  --v3-surface-3: #EEEEEC;
+  --v3-surface-4: #E8E8E6;
+  --v3-surface-5: #E2E3E0;
+  --v3-outline: #717975;
+  --v3-outline-discrete: #C0C8C3;
+  --v3-l1-border: #EAE8E0;
+  --v3-l1-shadow: 0 0 0 1px #EAE8E0, 0 12px 24px rgba(26,28,27,0.08);
+  --v3-l2-shadow: 0 12px 40px 4px rgba(26,28,27,0.12);
+  --v3-light-green: #E3F0E9;
+
+  /* Remap the legacy token set to v3 equivalents so the whole app inherits. */
+  --ink: #1A1C1B;
+  --ink-soft: rgba(26, 28, 27, 0.6);
+  --muted: #6F7673;
+  --muted-2: #8A918D;
+  --map: #F9F9F7;
+  --sheet: #FFFFFF;
+  --forest: #234D40;
+  --forest-deep: #08362A;
+  --mint: #E3F0E9;
+  --mint-ink: #234D40;
+  --coral: #F08F5A;
+  --line: rgba(35, 77, 64, 0.14);
+  --glass: rgba(255, 255, 255, 0.9);
+  --shadow-soft: 0 12px 28px rgba(26, 28, 27, 0.10);
+  --shadow-sheet: 0 -6px 30px rgba(26, 28, 27, 0.08);
+  --sheet-height: min(62dvh, 560px);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { background: var(--v3-appbg); }
+body { background: var(--v3-appbg); }
+
+body, button, input, select, textarea {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4,
+.section-kicker,
+.nearby-heading h1,
+.nearby-collapsed-copy strong,
+.sheet-head h2,
+.facility-identity h2 {
+  font-family: var(--font-display);
+}
+
+/* Primary buttons: exactly #234D40 bg / #F9F7F2 (cream) text. */
+.primary-button {
+  background: #234D40;
+  color: #F9F7F2;
+}
+.primary-button:hover:not(:disabled) { background: #08362A; }
+
+/* Secondary: cream bg, evergreen text, 1px evergreen border. */
+.secondary-button,
+.result-toolbar-button.secondary,
+.map-error button,
+.map-provider-error button {
+  background: #F9F7F2;
+  color: #234D40;
+  border-color: #234D40;
+}
+
+.species-app { background: var(--v3-appbg); }
+.map-stage { background: #FFFFFF; }
+
+/* ============================================================================
+   MenuIcon — 48px cream circle, fixed top-right, 24px safe margin.
+   (applied to the existing account orb / menu trigger)
+   ========================================================================== */
+.account-orb,
+.menu-icon {
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  color: #234D40;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l1-shadow);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+}
+.species-topbar { top: calc(var(--safe-top, 12px)); }
+.omni-stage-viewport .species-topbar { top: calc(max(12px, env(safe-area-inset-top))); }
+.species-topbar { right: calc(var(--safe-right, 12px) + 24px); }
+/* keep role switch at left 24px; account orb at right 24px inline with menu */
+.omni-stage-viewport .species-topbar { right: 24px; left: 24px; }
+
+/* ============================================================================
+   RoleSwitch — "Acheter/Vendre" pill, fixed top-left.
+   ========================================================================== */
+.role-switch {
+  background: #F9F7F2;
+  border: 1px solid #EAE8E0;
+  box-shadow: var(--v3-l1-shadow);
+  padding: 4px;
+}
+.role-option {
+  color: rgba(26, 28, 27, 0.6);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  min-height: 32px;
+  padding: 0 16px;
+  border-radius: 999px;
+}
+.role-option.active {
+  background: #234D40;
+  color: #F9F7F2;
+}
+.role-option:not(.active):hover { color: #234D40; background: rgba(249, 247, 242, 0.9); }
+
+/* ============================================================================
+   SearchDock — pill ~92% width, 56px, cream, search left + filter right.
+   ========================================================================== */
+.search-anchor {
+  width: min(92%, 520px);
+  bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom)) + 12px);
+}
+.search-pill {
+  min-height: 56px;
+  padding: 7px 8px 7px 18px;
+  background: #F9F7F2;
+  border: 1px solid #EAE8E0;
+  border-radius: 999px;
+  box-shadow: var(--v3-l1-shadow);
+}
+.search-pill > svg { color: #234D40; }
+.search-pill input {
+  color: #1A1C1B;
+  font-family: var(--font-body);
+  font-size: 16px;
+}
+.search-pill input::placeholder { color: rgba(26, 28, 27, 0.6); }
+.pill-submit,
+.pill-options {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: #234D40;
+}
+.pill-submit { background: transparent; box-shadow: none; }
+.pill-submit svg { color: #234D40; }
+/* filter icon replaces the chevron affordance */
+.pill-options { border-radius: 999px; }
+.pill-options:hover { background: rgba(35, 77, 64, 0.08); }
+
+/* ============================================================================
+   FacilityPin — rendered as MapLibre circle layers (orange core, cream ring).
+   Selection highlight handled via a dedicated selected layer (see TrunkMap).
+   ========================================================================== */
+.map-pin-facility::before { border-color: #F9F7F2; background: #F08F5A; }
+.map-pin-cluster-core { background: #F08F5A; }
+
+/* ============================================================================
+   ContextPanel — floating card anchored above the selected pin (rule 3).
+   ========================================================================== */
+.context-panel {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  bottom: calc(var(--safe-bottom, 12px) + 108px);
+  width: min(92%, 520px);
+  transform: translateX(-50%);
+  border-radius: 24px;
+  padding: 20px;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l2-shadow);
+  animation: v3-lift .22s var(--ease, cubic-bezier(.23,1,.32,1));
+}
+.context-panel .context-notch {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #F9F7F2;
+  border-radius: 2px;
+}
+.context-panel .context-head { display: flex; align-items: flex-start; gap: 12px; }
+.context-panel .context-title { margin: 0; color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 28px; }
+.context-panel .context-meta { margin: 4px 0 0; color: rgba(26, 28, 27, 0.6); font-family: var(--font-body); font-size: 14px; line-height: 20px; }
+.context-panel .context-actions { display: flex; gap: 12px; margin-top: 16px; }
+.context-panel .context-actions .primary-button { margin-top: 0; min-height: 48px; flex: 1; }
+.context-panel .context-actions .context-outline {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #234D40;
+  border-radius: 999px;
+  background: #F9F7F2;
+  color: #234D40;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 20px;
+}
+.context-panel .context-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26, 28, 27, 0.06);
+  color: #1A1C1B;
+  display: grid;
+  place-items: center;
+}
+@keyframes v3-lift { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ============================================================================
+   StatusBadge — rule 6 colors.
+   ========================================================================== */
+.status-pill,
+.v3-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 24px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-pill,
+.v3-status.available,
+.v3-status.confirmed {
+  background: #E3F0E9;
+  color: #234D40;
+}
+.v3-status.unconfirmed {
+  background: transparent;
+  border: 1px solid #C0C8C3;
+  color: rgba(26, 28, 27, 0.6);
+}
+.v3-status.unclaimed {
+  background: transparent;
+  border: 1px dashed #C0C8C3;
+  color: rgba(26, 28, 27, 0.6);
+}
+
+/* ============================================================================
+   PriceBadge — "-XX%" orange pill (orange is reserved for this + pin core).
+   ========================================================================== */
+.v3-price {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  min-height: 24px;
+  border-radius: 999px;
+  background: #F08F5A;
+  color: #FFFFFF;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================================
+   FilterChip — pill; inactive cream+evergreen border, active evergreen.
+   ========================================================================== */
+.v3-chip {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #234D40;
+  border-radius: 999px;
+  background: #F9F7F2;
+  color: #234D40;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+}
+.v3-chip.active { background: #234D40; color: #F9F7F2; }
+.v3-chip.active:hover { background: #08362A; }
+
+/* Filter panel — overlay above the SearchDock. */
+.v3-filter-panel {
+  position: absolute;
+  z-index: 11;
+  left: 4%;
+  right: 4%;
+  bottom: calc(var(--safe-bottom, 12px) + 92px);
+  width: 92%;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 24px;
+  background: #FFFFFF;
+  box-shadow: var(--v3-l2-shadow);
+  animation: v3-sheet-lift .22s var(--ease, cubic-bezier(.23,1,.32,1));
+}
+.v3-filter-panel h3 { margin: 0; color: #1A1C1B; font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: -0.01em; }
+.v3-filter-section { margin-top: 20px; }
+.v3-filter-section > span { display: block; margin-bottom: 8px; color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 20px; }
+.v3-chip-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.v3-filter-apply { margin-top: 24px; }
+.v3-filter-apply .primary-button { margin-top: 0; }
+.v3-filter-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #F4F4F1;
+  color: #1A1C1B;
+  display: grid;
+  place-items: center;
+}
+@keyframes v3-sheet-lift { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ============================================================================
+   ResultsSheet (screen 3) — 62% height, "X facilités trouvées", 2-col grid.
+   ========================================================================== */
+.nearby-sheet:not(.is-collapsed) {
+  height: 62dvh;
+  max-height: 72dvh;
+  width: min(100%, 760px);
+  border-radius: 24px 24px 0 0;
+  background: #F9F9F7;
+  box-shadow: var(--v3-l2-shadow);
+}
+.nearby-heading { padding: 12px 20px 4px; }
+.nearby-heading h1 { color: #1A1C1B; font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: -0.01em; }
+.section-kicker { color: rgba(26, 28, 27, 0.6); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+.sheet-handle { width: 36px; height: 4px; background: #C0C8C3; }
+
+/* Results rail becomes a 2-column FacilityCard grid. */
+.v3-facility-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px 20px 24px;
+  overflow-y: auto;
+}
+.nearby-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 20px 24px; overflow-y: auto; }
+.nearby-rail::-webkit-scrollbar { display: none; }
+
+/* FacilityCard — 24px radius, 12px image, StatusBadge overlay, prices. */
+.v3-facility-card,
+.nearby-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #EEEEEC;
+  border-radius: 24px;
+  background: #FFFFFF;
+  box-shadow: var(--v3-l2-shadow);
+  overflow: hidden;
+  padding: 0;
+}
+.v3-facility-card .v3-card-cover {
+  position: relative;
+  height: 108px;
+  border-radius: 12px;
+  margin: 8px;
+  margin-bottom: 12px;
+  background:
+    radial-gradient(circle at 70% 25%, #E2E3E0, transparent 60%),
+    linear-gradient(135deg, #EEEEEC 0%, #E8E8E6 100%);
+  display: grid;
+  place-items: center;
+  color: #234D40;
+}
+.v3-facility-card .v3-card-cover .v3-status { position: absolute; top: 10px; right: 10px; background: rgba(249,247,242,.94); }
+.v3-facility-card .v3-card-body { display: grid; gap: 6px; padding: 0 14px 16px; }
+.v3-facility-card .v3-card-name { color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 28px; }
+.v3-facility-card .v3-card-meta { color: rgba(26, 28, 27, 0.6); font-family: var(--font-body); font-size: 14px; line-height: 20px; }
+.v3-facility-card .v3-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; }
+.v3-facility-card .v3-card-price { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #1A1C1B; }
+.v3-facility-card .v3-card-cta {
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #234D40;
+  color: #F9F7F2;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* ============================================================================
+   Full facility card / FacilitySheet (screen 5).
+   ========================================================================== */
+.facility-sheet { background: #F9F9F7; }
+.facility-cover {
+  height: 200px;
+  width: calc(100%);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 75% 22%, #E2E3E0, transparent 58%),
+    linear-gradient(135deg, #EEEEEC 0%, #E4E5E2 100%);
+  display: grid;
+  place-items: center;
+  color: #234D40;
+  margin-top: 14px;
+}
+.facility-sheet .facility-identity { margin-top: 20px; }
+.facility-sheet .facility-identity h2 { font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: -0.01em; color: #1A1C1B; }
+.facility-sheet .facility-identity p { color: rgba(26,28,27,0.6); font-size: 14px; line-height: 20px; }
+.facility-sheet .sheet-head { padding-top: 6px; }
+.facility-actions { display: flex; gap: 12px; margin: 20px 0 4px; }
+.facility-actions .primary-button { margin-top: 0; flex: 1; min-height: 48px; }
+.facility-actions .secondary-button { flex: 0 0 auto; min-height: 48px; min-width: 132px; border: 1px solid #234D40; background: #F9F7F2; color: #234D40; }
+/* Product rows on the full card: struck original + discounted + PriceBadge. */
+.facility-sheet .catalogue-item { border: 1px solid #EEEEEC; border-radius: 16px; background: #FFFFFF; }
+.facility-sheet .catalogue-item strong { color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 15px; }
+.facility-sheet .catalogue-item small { color: rgba(26,28,27,0.6); font-size: 13px; }
+.v3-product-price { display: flex; align-items: center; gap: 8px; }
+.v3-product-price .price-original { text-decoration: line-through; color: rgba(26,28,27,0.5); }
+.v3-product-price .price-net { font-family: var(--font-display); font-weight: 700; color: #1A1C1B; }
+
+/* Maps stay neutral/mono per spec. */
+.map-canvas .maplibregl-canvas { filter: grayscale(1) saturate(0) contrast(1.12) brightness(1.04); }
+
+/* Desktop: sheets float with full radius. */
+@media (min-width: 900px) {
+  .omni-sheet { border-radius: 24px; bottom: 24px; }
+  .nearby-sheet:not(.is-collapsed) { border-radius: 24px; bottom: 24px; max-height: calc(100dvh - 120px); height: auto; min-height: 0; }
+}
+
+/* --- rule-5 alignment: keep orange for discount badge / pin core only. --- */
+.menu-icon { pointer-events: auto; }
+.see-all { color: #234D40; }
+.see-all:hover { color: #08362A; }
+.text-button { color: #234D40; }
+.text-button:hover { color: #08362A; }
+.menu-action svg { color: #234D40; }
+.product-icon { color: #234D40; }
+.facility-identity-icon { color: #234D40; background: #E3F0E9; }
+.filter-clear { align-self: flex-start; margin-top: 12px; }
