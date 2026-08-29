@@ -104,3 +104,7 @@ export async function qrIssuanceHandler(req: any, res: any) {
   const url = requestUrl(req, '/api/v2/qr-issuances');
   await handleApi(req, res, '/api/v2/qr-issuances', url);
 }
+export async function accountContextHandler(req: any, res: any) {
+  const url = requestUrl(req, '/api/v2/account/context');
+  await handleApi(req, res, '/api/v2/account/context', url);
+}
