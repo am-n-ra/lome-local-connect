@@ -65,25 +65,29 @@ export function BuyerProPlansModal(props: BuyerProPlansModalProps) {
         <div className="buyer-pro-hero">
           <div className="buyer-pro-badge">
             <Sparkles size={16} />
-            <span>Accès prioritaire</span>
+            <span>Crédits de disponibilité en masse</span>
           </div>
           <p className="sheet-lede">
-            Obtenez des réponses ultra-rapides et débloquez les vérifications groupées en temps réel sur l&apos;ensemble du réseau Omni.
+            Obtenez des réponses ultra-rapides et vérifiez simultanément plusieurs facilités grâce à vos crédits de disponibilité en masse.
           </p>
+          <div className="credits-counter-card">
+            <span className="credits-label">Crédits de disponibilité restants</span>
+            <strong className="credits-value">10 vérifications</strong>
+          </div>
         </div>
 
         <div className="buyer-pro-benefits">
+          <div className="buyer-benefit-item">
+            <CheckCircle2 size={16} className="benefit-icon" />
+            <span>Vérification simultanée en masse sur plusieurs facilités</span>
+          </div>
           <div className="buyer-benefit-item">
             <CheckCircle2 size={16} className="benefit-icon" />
             <span>Demandes prioritaires traitées en moins de 5 minutes</span>
           </div>
           <div className="buyer-benefit-item">
             <CheckCircle2 size={16} className="benefit-icon" />
-            <span>Réservations instantanées et alertes de réapprovisionnement</span>
-          </div>
-          <div className="buyer-benefit-item">
-            <CheckCircle2 size={16} className="benefit-icon" />
-            <span>Historique étendu et export des reçus de transaction</span>
+            <span>Alertes de réapprovisionnement et suivi de stock en temps réel</span>
           </div>
         </div>
 
@@ -125,7 +129,7 @@ export function BuyerProPlansModal(props: BuyerProPlansModalProps) {
             props.onClose();
           }}
         >
-          Souscrire à la formule {BUYER_PRO_PLANS.find((p) => p.id === selectedPlan)?.title} <ArrowRight size={16} />
+          Acheter des crédits ({BUYER_PRO_PLANS.find((p) => p.id === selectedPlan)?.title}) <ArrowRight size={16} />
         </button>
 
         <button className="secondary-button wide omni-pressable" type="button" onClick={props.onClose}>

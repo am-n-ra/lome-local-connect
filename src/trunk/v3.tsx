@@ -4,7 +4,7 @@
    need an unlisted component, reuse the closest one here.
    ========================================================================== */
 import type { FormEvent, ReactNode, Ref } from 'react';
-import { ArrowRight, MapPin, QrCode, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowRight, Building2, MapPin, QrCode, Search, SlidersHorizontal, Store, X } from 'lucide-react';
 import type { PublicFacility } from './types';
 
 export type StatusVariant = 'available' | 'confirmed' | 'unconfirmed' | 'unclaimed';
@@ -21,7 +21,7 @@ export function discountPercent(p: { pourcentageReduction?: number | null; prixO
 /** Map a facility trust + catalogue state to a rule-6 StatusBadge variant. */
 export function facilityStatus(f: { trust: string; productCount: number }): { variant: StatusVariant; label: string } {
   if (f.trust === 'confirmed') return f.productCount > 0 ? { variant: 'confirmed', label: 'Disponible' } : { variant: 'confirmed', label: 'Confirmée' };
-  if (f.trust === 'unconfirmed' || f.trust === 'certified') return { variant: 'unconfirmed', label: 'À confirmer' };
+  if (f.trust === 'unconfirmed') return { variant: 'unconfirmed', label: 'À confirmer' };
   return { variant: 'unclaimed', label: 'Non revendiqué' };
 }
 
@@ -169,7 +169,7 @@ export function FacilityCard({ facility, badge, onOpen, onVerify, price, verifyL
   return (
     <article className="v3-facility-card" onClick={onOpen} style={{ cursor: 'pointer' }}>
       <div className="v3-card-cover" aria-hidden="true">
-        <MapPin size={26} />
+        <span className="v3-card-store-badge"><Store size={18} /></span>
         <StatusBadge variant={badge.variant}>{badge.label}</StatusBadge>
       </div>
       <div className="v3-card-body">

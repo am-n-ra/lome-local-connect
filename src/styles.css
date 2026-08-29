@@ -1057,6 +1057,11 @@ button[aria-busy="true"]::before { width: 12px; height: 12px; flex: 0 0 auto; co
 .instore-product-card .primary-button { font-size: 12px; padding: 8px 14px; }
 .instore-product-card .primary-button.added { background: #1f8a53; }
 
+/* Credits counter card */
+.credits-counter-card { margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: #e8f3ee; border: 1px solid #c2e0d3; display: flex; justify-content: space-between; align-items: center; }
+.credits-label { font-size: 12px; font-weight: 600; color: #234D40; }
+.credits-value { font-size: 14px; font-weight: 800; color: #234D40; }
+
 /* Responsive adjustments across mobile & small devices */
 @media (max-width: 480px) {
   .omni-sheet { width: 100% !important; max-width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }

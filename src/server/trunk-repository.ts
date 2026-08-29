@@ -18,7 +18,7 @@ function database(): ReturnType<typeof neon> {
   return neon(url);
 }
 
-const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'certified', 'unconfirmed', 'confirmed']);
+const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'unconfirmed', 'confirmed']);
 
 const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   id: String(row.id),

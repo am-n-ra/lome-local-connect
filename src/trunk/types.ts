@@ -1,4 +1,4 @@
-export type PublicTrust = 'unclaimed' | 'certified' | 'unconfirmed' | 'confirmed';
+export type PublicTrust = 'unclaimed' | 'unconfirmed' | 'confirmed';
 
 export interface SearchOptions {
   category: string;

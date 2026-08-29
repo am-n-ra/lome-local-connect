@@ -70,8 +70,7 @@ function planLabel(plan: FacilityDetail['plan']) {
 
 function trustLabel(trust: PublicTrust) {
   if (trust === 'confirmed') return 'Confirmée par 3 ventes Omni';
-  if (trust === 'unconfirmed') return 'Vendeur certifié';
-  if (trust === 'certified') return 'Facilité certifiée';
+  if (trust === 'unconfirmed') return 'À confirmer';
   return 'Lieu public · non revendiqué';
 }
 
@@ -1941,7 +1940,7 @@ const NearbySheet = forwardRef<HTMLElement, { facilities: PublicFacility[]; mapS
   return <section ref={ref} className={`nearby-sheet omni-sheet-enter nearby-state-${props.mapState}${props.collapsed ? ' is-collapsed' : ''}`} aria-label={props.collapsed ? `${resultLabel}, repliés` : 'Facilités proches'} aria-busy={props.mapState === 'loading'}>
     {props.collapsed ? <div className="nearby-collapsed-bar"><div className="nearby-collapsed-copy"><span className="section-kicker">Omni</span><strong>{resultLabel}</strong><small>{props.facilities.length} résultat{props.facilities.length === 1 ? '' : 's'} disponible{props.facilities.length === 1 ? '' : 's'}</small></div><button className="nearby-expand" type="button" aria-expanded="false" aria-label="Réouvrir les facilités proches" onClick={props.onExpand}><ChevronUp size={16} /></button></div> : <>
     <button className="sheet-handle-button" type="button" aria-expanded="true" aria-label="Replier les facilités proches" onClick={props.onCollapse}><span className="sheet-handle" /></button>
-    <div className="nearby-heading"><div><span className="section-kicker">{props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Résultats proches'}</span><h1>{props.facilities.length} facilité{props.facilities.length === 1 ? '' : 's'} trouvée{props.facilities.length === 1 ? '' : 's'}</h1></div><div className="nearby-heading-actions"><button type="button" className="see-all" onClick={props.onShowAll} disabled={props.showAll || !props.facilities.length}>Voir tout</button><button type="button" className="nearby-collapse" aria-expanded="true" aria-label="Replier la grille des facilités" onClick={props.onCollapse}><ChevronDown size={15} className="chevron-up" /></button></div></div>
+    <div className="nearby-heading"><div><span className="section-kicker">{props.committedQuery ? `Résultats pour « ${props.committedQuery} »` : 'Résultats proches'}</span><h1>{props.facilities.length} facilité{props.facilities.length === 1 ? '' : 's'} trouvée{props.facilities.length === 1 ? '' : 's'}</h1></div><div className="nearby-heading-actions"><button type="button" className="see-all" onClick={props.onShowAll} disabled={props.showAll || !props.facilities.length}>Voir tout</button></div></div>
     {props.mapState === 'loading' && <div key={`loading-${props.committedQuery}`} className="nearby-empty nearby-transition" role="status"><OmniSkeleton lines={2} className="nearby-loading-skeleton" /><span>{props.committedQuery ? `Recherche de « ${props.committedQuery} »…` : 'Recherche de la zone…'}</span></div>}
     {props.mapState === 'error' && <div key="error" className="nearby-empty nearby-transition" role="alert"><strong>Résultats non actualisés</strong><span>La carte continue de fonctionner. Réessayez la recherche ou déplacez la carte.</span></div>}
     {props.mapState === 'empty' && <div key="empty" className="nearby-empty nearby-transition"><strong>{props.committedQuery ? 'Aucun résultat ici' : 'Aucun lieu dans cette vue'}</strong><span>{props.committedQuery ? 'Essayez un autre commerce, produit ou filtre.' : 'Déplacez la carte ou ajustez votre recherche.'}</span></div>}

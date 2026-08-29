@@ -216,7 +216,7 @@ function database() {
   if (!url) throw new Error("V2_DATABASE_URL is not configured for the server runtime.");
   return neon(url);
 }
-var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "certified", "unconfirmed", "confirmed"]);
+var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
 var toFacility = (row) => ({
   id: String(row.id),
   name: String(row.name),
