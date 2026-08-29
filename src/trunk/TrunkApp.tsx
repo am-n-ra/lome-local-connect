@@ -6,6 +6,7 @@ const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) 
 import { TransactionQrCard } from './TransactionQrCard';
 import { TransactionChat } from './TransactionChat';
 import { SellerTransactionPanel } from './SellerTransactionPanel';
+import { canNativeShare, copyTextToClipboard, facilityPublicUrl } from './qr-share';
 const FieldPilotLocationMap = lazy(() => import('./FieldPilotLocationMap').then(({ FieldPilotLocationMap: Component }) => ({ default: Component })));
 import { dockBandOffset } from './layout-contract';
 import { discoverFromOverpass, type DiscoveryFacility } from '../lib/public-discovery';
@@ -1845,7 +1846,7 @@ export function TrunkApp() {
       </header>
 
       {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
-        <div className="menu-brand"><img src="/omni-logo-compact.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'See before you move'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
+        <div className="menu-brand"><img src="/omni-logo-compact.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'Voir avant de vous déplacer'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
         <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
         {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button>{accountCapabilities?.capabilities.operatorTools && <button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button>}{accountCapabilities?.capabilities.reviewerWorkspace && <button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button>}{accountCapabilities?.capabilities.adminTools && <button className="menu-action" type="button" role="menuitem" onClick={openAdminRoles}><ShieldCheck size={16} /> Gestion des rôles</button>}<button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}{installPrompt && !installed && <button className="menu-action" type="button" role="menuitem" onClick={() => void installOmni}><Download size={16} /> Installer Omni</button>}{installed && <div className="menu-install-note" role="status">Omni est installé sur cet appareil.</div>}
         {sessionUser && accountCapabilitiesState === 'loading' && <div className="menu-loading" role="status">Vérification des accès d’équipe…</div>}{sessionUser && accountCapabilitiesState === 'error' && <div className="menu-loading menu-loading-error" role="status">Les accès d’équipe n’ont pas pu être chargés. Fermez puis rouvrez le menu.</div>}<button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><Search size={16} /> Effacer la recherche</button>
@@ -2006,8 +2007,9 @@ function SellerWalletPanel(props: { wallet: WalletOverviewResult | null; state: 
 
 function SellerFacilityQrCard(props: { facility: SellerCatalogueFacility }) {
   const [dataUrl, setDataUrl] = useState('');
-  const [copied, setCopied] = useState(false);
-  const publicUrl = `${window.location.origin}/?facility=${encodeURIComponent(props.facility.id)}`;
+  const [feedback, setFeedback] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+  const feedbackTimer = useRef<number | null>(null);
+  const publicUrl = facilityPublicUrl(window.location.origin, props.facility.id);
   useEffect(() => {
     let cancelled = false;
     setDataUrl('');
@@ -2017,8 +2019,29 @@ function SellerFacilityQrCard(props: { facility: SellerCatalogueFacility }) {
       .catch(() => { if (!cancelled) setDataUrl(''); });
     return () => { cancelled = true; };
   }, [publicUrl]);
-  const copyLink = async () => { try { await navigator.clipboard.writeText(publicUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { setCopied(false); } };
-  return <div className="facility-qr-card"><div><span className="section-kicker">QR de facilité</span><strong>Faire découvrir {props.facility.name}</strong><p className="privacy-note">Ce QR ouvre la fiche publique. Il ne crée pas et ne vérifie aucune transaction.</p><button className="secondary-button" type="button" onClick={copyLink}>{copied ? 'Lien copié' : 'Copier le lien public'}</button></div>{dataUrl && <img src={dataUrl} alt={`QR public de ${props.facility.name}`} width={132} height={132} />}</div>;
+  useEffect(() => () => { if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current); }, []);
+  const showFeedback = (tone: 'ok' | 'error', text: string) => {
+    if (feedbackTimer.current !== null) window.clearTimeout(feedbackTimer.current);
+    setFeedback({ tone, text });
+    feedbackTimer.current = window.setTimeout(() => { feedbackTimer.current = null; setFeedback(null); }, 2400);
+  };
+  const copyLink = async () => {
+    if (await copyTextToClipboard(publicUrl)) showFeedback('ok', 'Lien copié');
+    else showFeedback('error', 'Copie impossible sur cet appareil.');
+  };
+  const shareLink = async () => {
+    if (canNativeShare()) {
+      try {
+        await navigator.share({ title: `Omni · ${props.facility.name}`, url: publicUrl });
+        return;
+      } catch (error) {
+        // Feuille de partage annulée par l'utilisateur : rien à signaler.
+        if ((error as DOMException | undefined)?.name === 'AbortError') return;
+      }
+    }
+    await copyLink();
+  };
+  return <div className="facility-qr-card"><div><span className="section-kicker">QR de facilité</span><strong>Faire découvrir {props.facility.name}</strong><p className="privacy-note">Ce QR ouvre la fiche publique. Il ne crée pas et ne vérifie aucune transaction.</p><div className="qr-card-actions"><button className="primary-button omni-pressable" type="button" onClick={shareLink}>Partager</button><button className="secondary-button" type="button" onClick={copyLink}>Copier le lien</button></div>{feedback && <div className={feedback.tone === 'ok' ? 'seller-response-success' : 'inline-error'} role={feedback.tone === 'ok' ? 'status' : 'alert'}>{feedback.tone === 'ok' && <CheckCircle2 size={17} />}{feedback.text}</div>}</div>{dataUrl && <img src={dataUrl} alt={`QR public de ${props.facility.name}`} width={132} height={132} />}</div>;
 }
 
 function SellerFacilityCreator(props: { state: 'idle' | 'loading' | 'error' | 'success'; error: string; result: { facilityId: string; slotId: string; trustState: 'verification_draft'; created: boolean } | null; onCreate: (input: { name: string; category: string; description: string; address: string; latitude: number; longitude: number }) => void; onOpenCreated?: (facilityId: string) => void }) {
