@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, QrCode, ShieldCheck } from 'lucide-react';
 import type { QrVerificationResult, TransactionMessage, TransactionState } from './types';
 import { TransactionChat } from './TransactionChat';
+import { TransactionStepper } from './transaction-visuals';
 
 type CameraState = 'idle' | 'starting' | 'scanning' | 'unsupported' | 'error';
 
@@ -106,6 +107,7 @@ export function SellerTransactionPanel(props: SellerTransactionPanelProps) {
 
   return <div className="seller-transaction-panel">
     <div className="notice-card"><strong>Scanner le QR transactionnel Buyer</strong><p>Le Buyer vous présente son QR. Omni vérifie côté serveur la transaction, l’offre et le snapshot lié au compte Buyer. Le QR public de facilité ne peut pas remplacer ce QR.</p></div>
+    <TransactionStepper state={props.transactionState} />
     <div className="seller-scanner-actions">
       <button className="primary-button omni-pressable" type="button" onClick={() => void startCamera()} disabled={cameraState === 'starting' || cameraState === 'scanning'} aria-busy={cameraState === 'starting'}><QrCode size={16} />{cameraState === 'starting' ? 'Ouverture de la caméra…' : cameraState === 'scanning' ? 'QR recherché dans le cadre…' : 'Scanner avec la caméra'}</button>
       {cameraState === 'scanning' && <button className="secondary-button omni-pressable" type="button" onClick={stopCamera}>Arrêter la caméra</button>}
