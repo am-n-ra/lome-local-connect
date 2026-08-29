@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { MaquetteApp } from './components/v2/MaquetteApp';
+import { TrunkApp } from './trunk/TrunkApp';
 import './styles.css';
 
 if ('serviceWorker' in navigator) {
@@ -13,6 +13,6 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <MaquetteApp />
+    <TrunkApp />
   </StrictMode>,
 );
