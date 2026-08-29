@@ -699,7 +699,7 @@ async function executeSeed() {
   const sql = neon(url);
   for (const statement of DEMO_SEED_STATEMENTS) {
     try {
-      await runWithRetry(() => sql(statement.sql));
+      await runWithRetry(() => sql.query(statement.sql));
       console.log(`✓ ${statement.label}`);
     } catch (error) {
       console.error(`✗ ${statement.label}\n  ${error?.message ?? error}`);
@@ -709,7 +709,7 @@ async function executeSeed() {
   console.log('\n— Verification —');
   for (const statement of DEMO_VERIFY_STATEMENTS) {
     try {
-      const rows = await runWithRetry(() => sql(statement.sql));
+      const rows = await runWithRetry(() => sql.query(statement.sql));
       console.log(`\n[${statement.label}]`);
       console.table(rows);
     } catch (error) {
