@@ -28,5 +28,5 @@ const server = createServer(async (req, res) => {
   createReadStream(filePath).pipe(res);
 });
 
-const port = Number(process.env.PORT ?? 4173);
-server.listen(port, '127.0.0.1', () => console.log(`Omni V2 server listening on http://127.0.0.1:${port}`));
+const port = Number(process.env.PORT ?? 3000);
+server.listen(port, '0.0.0.0', () => console.log(`Omni V2 server listening on http://0.0.0.0:${port}`));
