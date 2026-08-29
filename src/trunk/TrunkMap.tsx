@@ -118,11 +118,17 @@ function setGlobeContextLabelVisibility(map: Map, visible: boolean) {
   }
 }
 
-function rewriteOpenFreeMapGlyphUrl(url: string) {
-  return url
-    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Bold/g, 'Noto%20Sans%20Bold')
-    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Regular/g, 'Noto%20Sans%20Regular')
-    .replace(/Open(?:%20|\\s)Sans(?:%20|\\s)Italic/g, 'Noto%20Sans%20Italic');
+function rewriteGlyphUrl(url: string) {
+  // CARTO's font host (tiles.basemaps.cartocdn.com/fonts) does NOT send CORS
+  // headers in the deployed environment, so every label glyph request is blocked
+  // ("Access ... had been blocked by CORS policy") and MapLibre falls back to
+  // rendering each codepoint locally as a raw digit
+  // ("Unable to load glyph range ... Rendering codepoint U+0030 locally instead").
+  // Route glyph requests to the CORS-enabled openmaptiles font CDN
+  // (annotated with access-control-allow-origin: *), which serves the same
+  // Open Sans / Noto Sans / Montserrat families the CARTO style and the Omni
+  // cluster layers declare. Font names are preserved, so no style edits needed.
+  return url.replace(/^https:\/\/[^/]+\/fonts\//, 'https://fonts.openmaptiles.org/');
 }
 
 function waitForMapMove(map: Map, timeout = 1500) {
@@ -141,6 +147,19 @@ function waitForMapMove(map: Map, timeout = 1500) {
 export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
+  // Hold the latest callback identities in refs so the map-creation effect below
+  // does NOT re-run when the parent re-renders. (TrunkApp passes handleMapPinSelect
+  // and onRevealStateChange as fresh closures each render.) If the effect depended
+  // on those, every parent re-render — e.g. the `setBounds` update that follows
+  // any map pan/zoom via onBoundsChange — would tear down and recreate the whole
+  // MapLibre map at the initial zoom (1.35), which is exactly the reported
+  // "zoom does not explore / it snaps back to the world view" regression.
+  const onSelectRef = useRef(onSelect);
+  const onBoundsChangeRef = useRef(onBoundsChange);
+  const onRevealStateChangeRef = useRef(onRevealStateChange);
+  onSelectRef.current = onSelect;
+  onBoundsChangeRef.current = onBoundsChange;
+  onRevealStateChangeRef.current = onRevealStateChange;
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
   const cameraMode = useRef<CameraMode>('resting_globe');
@@ -343,7 +362,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       container: container.current,
       style: REMOTE_STYLE,
       transformRequest: (url, resourceType) => ({
-        url: resourceType === 'Glyphs' ? rewriteOpenFreeMapGlyphUrl(url) : url,
+        url: resourceType === 'Glyphs' ? rewriteGlyphUrl(url) : url,
       }),
       center: [1.22, 6.13],
       zoom: 1.35,
@@ -458,7 +477,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       const key = next.map((value) => value.toFixed(4)).join(',');
       if (key === lastBoundsKey.current) return;
       lastBoundsKey.current = key;
-      onBoundsChange?.(next);
+      onBoundsChangeRef.current?.(next);
     };
 
     const canvasContainer = map.getCanvasContainer();
@@ -738,7 +757,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         const facility = facilitiesRef.current.find((item) => item.id === id);
         if (facility) {
           pauseMotion('interaction', false);
-          onSelect(facility);
+          onSelectRef.current(facility);
           target.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(target.getZoom(), 5.2), duration: 700 });
         }
       });
@@ -747,7 +766,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
     }
-  }, [mapRetryKey, onBoundsChange, onSelect, scheduleUserPosition]);
+    // Recreate ONLY on the explicit retry signal. Parent re-renders (bounds updates,
+    // facility load, etc.) must never tear the map down — callbacks are read from refs.
+  }, [mapRetryKey]);
 
   useEffect(() => {
     const map = mapRef.current;
