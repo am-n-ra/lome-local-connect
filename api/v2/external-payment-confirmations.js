@@ -310,6 +310,7 @@ function createTrunkRepository(sql = database()) {
       const rows = await retryDatabase(() => sql`
         select a.id, a.onboarding_state, a.suspended_at,
           count(distinct f.id)::int as facility_count,
+          coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
           coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
         from v2_accounts a
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
@@ -328,6 +329,7 @@ function createTrunkRepository(sql = database()) {
         onboardingState: String(row.onboarding_state),
         suspended,
         facilityCount: Number(row.facility_count ?? 0),
+        ownedFacilityIds: Array.isArray(row.facility_ids) ? row.facility_ids.map(String) : [],
         capabilities: {
           sellerWorkspace: !suspended && String(row.onboarding_state) === "seller_ready",
           operatorTools: !suspended && roles.includes("operator"),
@@ -1642,7 +1644,7 @@ function createTrunkRepository(sql = database()) {
       };
     },
     async declareExternalPayment(input) {
-      if (!["cash", "mobile_money", "pay_on_delivery"].includes(input.method)) {
+      if (!["cash", "mobile_money"].includes(input.method)) {
         throw new TransactionPolicyError("External payment method is not supported.");
       }
       const rows = await retryDatabase(() => sql`
@@ -3620,7 +3622,7 @@ async function handleApi(req, res, pathname, url) {
       const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
       const method = input.method;
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidPattern.test(transactionId) || !["cash", "mobile_money", "pay_on_delivery"].includes(method)) {
+      if (!uuidPattern.test(transactionId) || !["cash", "mobile_money"].includes(method)) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction and supported external payment method."));
         return true;
       }

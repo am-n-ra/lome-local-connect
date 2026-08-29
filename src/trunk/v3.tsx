@@ -4,7 +4,7 @@
    need an unlisted component, reuse the closest one here.
    ========================================================================== */
 import type { FormEvent, ReactNode, Ref } from 'react';
-import { MapPin, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowRight, MapPin, QrCode, Search, SlidersHorizontal, X } from 'lucide-react';
 import type { PublicFacility } from './types';
 
 export type StatusVariant = 'available' | 'confirmed' | 'unconfirmed' | 'unclaimed';
@@ -49,14 +49,67 @@ export function RoleSwitch({ role, onBuyer, onSeller }: { role: 'buyer' | 'selle
 }
 
 /* ----------------------------------------------------------------------------
-   SearchDock — pill ~92%, cream, search icon left, filter icon right.
+   SearchDock — pill ~92%, cream, search icon left, scan & filter icons right.
    ------------------------------------------------------------------------- */
-export function SearchDock({ query, onQuery, onSubmit, onFilters, filtersActive, inputRef }: { query: string; onQuery: (v: string) => void; onSubmit: (e: FormEvent) => void; onFilters: () => void; filtersActive?: boolean; inputRef?: Ref<HTMLInputElement> }) {
+export function SearchDock({
+  query,
+  onQuery,
+  onSubmit,
+  onFilters,
+  onScanQr,
+  filtersActive,
+  inputRef,
+}: {
+  query: string;
+  onQuery: (v: string) => void;
+  onSubmit: (e: FormEvent) => void;
+  onFilters: () => void;
+  onScanQr?: () => void;
+  filtersActive?: boolean;
+  inputRef?: Ref<HTMLInputElement>;
+}) {
   return (
     <form className="search-pill" aria-label="Recherche Omni" onSubmit={onSubmit}>
       <Search size={17} aria-hidden="true" />
-      <input ref={inputRef} value={query} onChange={(event) => onQuery(event.target.value)} placeholder="Rechercher un commerce, un produit…" aria-label="Rechercher un commerce ou un produit" />
-      <button className="pill-options" type="button" aria-expanded={!!filtersActive} aria-controls="search-options" aria-label={filtersActive ? 'Fermer les filtres' : 'Ouvrir les filtres'} onClick={onFilters}><SlidersHorizontal size={18} /></button>
+      <input
+        ref={inputRef}
+        value={query}
+        onChange={(event) => onQuery(event.target.value)}
+        placeholder="Rechercher un commerce, un produit…"
+        aria-label="Rechercher un commerce ou un produit"
+      />
+      {query.trim().length > 0 && (
+        <button
+          className="pill-submit"
+          type="submit"
+          aria-label="Lancer la recherche"
+          title="Lancer la recherche"
+        >
+          <ArrowRight size={17} />
+        </button>
+      )}
+      {onScanQr && (
+        <button
+          className="pill-qr"
+          type="button"
+          aria-label="Scanner le QR d’une facilité"
+          title="Scanner un QR code"
+          onClick={onScanQr}
+        >
+          <QrCode size={18} />
+        </button>
+      )}
+      <button
+        className="pill-options"
+        type="button"
+        aria-expanded={!!filtersActive}
+        aria-controls="search-options"
+        aria-label={filtersActive ? 'Fermer les filtres' : 'Ouvrir les filtres'}
+        title="Filtres de recherche"
+        onClick={onFilters}
+      >
+        <SlidersHorizontal size={18} />
+      </button>
     </form>
   );
 }
@@ -114,7 +167,7 @@ export function FilterChip({ active, onClick, children }: { active?: boolean; on
    ------------------------------------------------------------------------- */
 export function FacilityCard({ facility, badge, onOpen, onVerify, price, verifyLabel }: { facility: PublicFacility; badge: { variant: StatusVariant; label: string }; onOpen: () => void; onVerify: () => void; price?: ReactNode; verifyLabel?: string }) {
   return (
-    <article className="v3-facility-card">
+    <article className="v3-facility-card" onClick={onOpen} style={{ cursor: 'pointer' }}>
       <div className="v3-card-cover" aria-hidden="true">
         <MapPin size={26} />
         <StatusBadge variant={badge.variant}>{badge.label}</StatusBadge>
@@ -124,7 +177,7 @@ export function FacilityCard({ facility, badge, onOpen, onVerify, price, verifyL
         <div className="v3-card-meta">{facility.category || 'Lieu local'}{facility.productCount > 0 ? ` · ${facility.productCount} offre${facility.productCount === 1 ? '' : 's'}` : ''}</div>
         <div className="v3-card-foot">
           {price}
-          <button className="v3-card-cta" type="button" onClick={onVerify}>{verifyLabel ?? (facility.productCount > 0 ? 'Vérifier' : 'Voir')}</button>
+          <button className="v3-card-cta" type="button" onClick={(event) => { event.stopPropagation(); onVerify(); }}>{verifyLabel ?? (facility.productCount > 0 ? 'Vérifier' : 'Voir')}</button>
         </div>
       </div>
       <button className="sr-only" type="button" onClick={onOpen}>Ouvrir la fiche de {facility.name}</button>

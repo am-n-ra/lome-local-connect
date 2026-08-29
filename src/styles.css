@@ -936,3 +936,135 @@ button[aria-busy="true"]::before { width: 12px; height: 12px; flex: 0 0 auto; co
 .rating-stars button { display: inline-flex; padding: 4px; border: none; border-radius: 8px; background: transparent; color: color-mix(in srgb, var(--ink) 26%, transparent); cursor: pointer; }
 .rating-stars button.filled { color: var(--forest, #234D40); }
 .rating-stars button:focus-visible { outline: 3px solid color-mix(in srgb, var(--forest, #234D40) 40%, transparent); outline-offset: 2px; }
+
+/* Buyer Pro Plans Modal */
+.buyer-pro-sheet { width: min(480px, calc(100vw - 24px)); }
+.buyer-pro-hero { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.buyer-pro-badge { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; padding: 4px 10px; border-radius: 999px; background: var(--mint); color: var(--forest-deep); font-size: 11px; font-weight: 700; }
+.buyer-pro-benefits { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #fafcfb; margin-bottom: 16px; }
+.buyer-benefit-item { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--ink); }
+.buyer-benefit-item .benefit-icon { color: var(--forest); flex-shrink: 0; }
+.buyer-pro-plans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+@media (max-width: 480px) { .buyer-pro-plans-grid { grid-template-columns: 1fr; } }
+.buyer-plan-card { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--sheet); text-align: left; transition: all 0.2s ease; cursor: pointer; }
+.buyer-plan-card:hover { border-color: var(--forest); }
+.buyer-plan-card.active { border-color: var(--forest); background: #f4f9f6; box-shadow: 0 4px 14px rgba(31, 88, 72, 0.12); }
+.buyer-plan-card .plan-tag { position: absolute; top: -10px; right: 10px; padding: 2px 8px; border-radius: 999px; background: var(--coral); color: #fff; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+.buyer-plan-card .plan-header { display: flex; flex-direction: column; gap: 2px; }
+.buyer-plan-card .plan-header strong { font-size: 14px; color: var(--ink); }
+.buyer-plan-card .plan-price { font-size: 15px; font-weight: 800; color: var(--forest); }
+.buyer-plan-card .plan-price small { font-size: 10px; font-weight: 600; color: var(--muted); }
+.buyer-plan-card .plan-description { font-size: 11px; color: var(--muted); margin: 0; line-height: 1.35; }
+
+/* Onboarding Sheet */
+.onboarding-sheet { width: min(480px, calc(100vw - 24px)); text-align: center; }
+.onboarding-head { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px; }
+.skip-button { font-size: 13px; font-weight: 600; color: var(--muted); padding: 4px 8px; }
+.onboarding-slide-content { display: flex; flex-direction: column; align-items: center; padding: 16px 8px 24px; }
+.onboarding-illustration { display: flex; align-items: center; justify-content: center; width: 84px; height: 84px; border-radius: 28px; background: #e8f3ee; color: var(--forest); margin-bottom: 20px; box-shadow: 0 8px 24px rgba(35, 77, 64, 0.08); }
+.v3-onboard-icon { color: var(--forest); }
+.onboarding-badge { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 999px; background: #f0f5f2; color: var(--forest); font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.03em; }
+.onboarding-title { font-size: 20px; font-weight: 800; color: var(--ink); line-height: 1.25; margin: 0 0 10px 0; }
+.onboarding-text { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0; max-width: 380px; }
+.onboarding-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
+.onboard-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--line); border: none; padding: 0; cursor: pointer; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.onboard-dot.active { width: 24px; background: var(--forest); }
+.onboarding-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+
+/* Omni Wallet Sheet */
+.omni-wallet-sheet { width: min(480px, calc(100vw - 24px)); }
+.wallet-hero-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: 20px; background: linear-gradient(145deg, #234D40 0%, #19382e 100%); color: #F9F7F2; margin-bottom: 20px; box-shadow: 0 10px 30px rgba(35, 77, 64, 0.2); }
+.wallet-balance-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.wallet-balance-label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.85; }
+.wallet-balance-amount { font-size: 32px; font-weight: 800; letter-spacing: -0.02em; }
+.wallet-balance-amount .currency { font-size: 18px; font-weight: 600; opacity: 0.85; }
+.wallet-subtext { font-size: 12px; color: #d8e5df; line-height: 1.4; margin: 0; }
+.wallet-hero-card .primary-button { background: #F9F7F2; color: #234D40; border: none; font-weight: 700; }
+.wallet-hero-card .primary-button:hover { background: #ffffff; }
+
+.wallet-recharge-form { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1.5px solid var(--line); border-radius: 16px; background: #fafcfb; margin-bottom: 20px; }
+.recharge-form-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: var(--ink); }
+.preset-chips { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 400px) { .preset-chips { grid-template-columns: repeat(4, 1fr); } }
+.preset-chip { padding: 8px 6px; border-radius: 10px; border: 1px solid var(--line); background: #fff; font-size: 11px; font-weight: 700; color: var(--ink); text-align: center; cursor: pointer; transition: all 0.15s ease; }
+.preset-chip:hover { border-color: var(--forest); }
+.preset-chip.active { border-color: var(--forest); background: var(--forest); color: #fff; }
+.recharge-input-label { display: flex; flex-direction: column; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.recharge-input-label input { padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; font-size: 16px; font-weight: 700; color: var(--ink); background: #fff; }
+.payment-method-pills { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.operator-pill { padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: #fff; font-size: 12px; font-weight: 700; color: var(--ink); cursor: pointer; text-align: center; transition: all 0.15s ease; }
+.operator-pill.active { border-color: var(--forest); background: #f2f7f4; color: var(--forest); }
+
+.wallet-history-section { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+.wallet-history-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--muted); }
+.wallet-transaction-list { display: flex; flex-direction: column; gap: 8px; }
+.wallet-tx-row { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--sheet); }
+.tx-icon-bubble { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0; }
+.tx-icon-bubble.credit { background: #e8f6ef; color: #1f8a53; }
+.tx-icon-bubble.debit { background: #fdf0eb; color: var(--coral); }
+.tx-icon-bubble.locked { background: #f0f2f1; color: var(--muted); }
+.tx-details { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.tx-label { font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-date { font-size: 11px; color: var(--muted); }
+.tx-amount { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.tx-amount.credit { color: #1f8a53; }
+.tx-amount.debit { color: var(--ink); }
+
+/* Company Onboarding Sheet */
+.company-onboarding-sheet { width: min(480px, calc(100vw - 24px)); }
+.company-stepper-pills { display: flex; gap: 8px; margin-bottom: 16px; }
+.company-step-pill { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; background: #f0f2f1; font-size: 12px; font-weight: 700; color: var(--muted); flex: 1; justify-content: center; }
+.company-step-pill.active { background: #234D40; color: #F9F7F2; }
+.company-step-pill.done { background: #e8f3ee; color: #234D40; }
+.company-form { display: flex; flex-direction: column; gap: 14px; }
+.form-subtext { font-size: 13px; color: var(--muted); line-height: 1.45; margin: 0 0 4px 0; }
+.mini-map-picker { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #f8faf9; }
+.mini-map-header { display: flex; align-items: center; gap: 6px; padding: 10px 12px; font-size: 12px; font-weight: 700; color: var(--ink); background: #f0f4f2; border-bottom: 1px solid var(--line); }
+.mini-map-box { height: 110px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at center, #e2ebe6 0%, #d8e5df 100%); position: relative; }
+.mini-map-pin-indicator { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: #234D40; color: #F9F7F2; font-size: 11px; font-weight: 700; box-shadow: 0 4px 12px rgba(35,77,64,0.25); }
+.form-actions-row { display: flex; gap: 10px; width: 100%; }
+
+/* Seller Scanner Sheet */
+.seller-scanner-sheet { width: min(480px, calc(100vw - 24px)); }
+.camera-viewfinder-container { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 16px; }
+.camera-viewfinder-box { width: 100%; height: 210px; border-radius: 20px; background: #111a17; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.camera-viewfinder-box.flashlight-on { background: #24332e; box-shadow: inset 0 0 40px rgba(255,255,255,0.15); }
+.viewfinder-frame { width: 160px; height: 160px; border: 2px dashed rgba(249, 247, 242, 0.4); border-radius: 16px; position: relative; }
+.viewfinder-laser { position: absolute; left: 10px; right: 10px; top: 50%; height: 2px; background: var(--coral); box-shadow: 0 0 8px var(--coral); animation: laser-scan 2s infinite ease-in-out; }
+@keyframes laser-scan { 0%, 100% { top: 15%; } 50% { top: 85%; } }
+.viewfinder-controls { position: absolute; bottom: 12px; right: 12px; }
+.flash-toggle-btn { width: 38px; height: 38px; border-radius: 999px; border: none; background: rgba(255,255,255,0.2); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; }
+.flash-toggle-btn.active { background: #F08F5A; color: #fff; }
+.scanner-instruction { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+
+/* In-Store Scan Sheet */
+.instore-scan-sheet { width: min(480px, calc(100vw - 24px)); }
+.instore-facility-hero { padding: 14px; border-radius: 16px; background: #f2f7f4; border: 1px solid #dce8e2; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+.facility-meta-row { display: flex; justify-content: space-between; align-items: center; }
+.facility-category-label { font-size: 12px; font-weight: 700; color: var(--forest); display: flex; align-items: center; gap: 4px; }
+.instore-note { font-size: 12px; color: var(--muted); margin: 0; line-height: 1.4; }
+.instore-products-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.instore-product-card { padding: 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--sheet); display: flex; flex-direction: column; gap: 10px; }
+.product-info-block { display: flex; flex-direction: column; gap: 4px; }
+.product-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.product-pricing { display: flex; align-items: center; gap: 8px; }
+.discounted-price { font-size: 15px; font-weight: 800; color: var(--forest); }
+.original-price { font-size: 12px; color: var(--muted); text-decoration: line-through; }
+.product-actions-block { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.quantity-stepper { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px; background: #fff; }
+.quantity-stepper button { border: none; background: transparent; padding: 2px 4px; cursor: pointer; color: var(--ink); }
+.quantity-stepper span { font-size: 13px; font-weight: 800; min-width: 18px; text-align: center; }
+.instore-product-card .primary-button { font-size: 12px; padding: 8px 14px; }
+.instore-product-card .primary-button.added { background: #1f8a53; }
+
+/* Responsive adjustments across mobile & small devices */
+@media (max-width: 480px) {
+  .omni-sheet { width: 100% !important; max-width: 100% !important; border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
+  .species-topbar { padding: 12px 14px; }
+  .search-dock, .search-pill { width: calc(100% - 24px) !important; }
+  .v3-facility-grid { grid-template-columns: 1fr !important; }
+  .onboarding-title { font-size: 18px; }
+  .wallet-balance-amount { font-size: 26px; }
+}
+
+

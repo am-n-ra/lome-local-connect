@@ -214,20 +214,36 @@ h1, h2, h3, h4,
 }
 .search-pill input::placeholder { color: rgba(26, 28, 27, 0.6); }
 .pill-submit,
+.pill-qr,
 .pill-options {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border: 0;
   background: transparent;
   color: #234D40;
   display: grid;
   place-items: center;
+  border-radius: 9999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, transform 0.15s ease, color 0.15s ease;
 }
-.pill-submit { background: transparent; box-shadow: none; }
-.pill-submit svg { color: #234D40; }
-/* filter icon replaces the chevron affordance */
-.pill-options { border-radius: 9999px; }
-.pill-options:hover { background: rgba(35, 77, 64, 0.08); }
+.pill-submit {
+  background: #234D40;
+  color: #F9F7F2;
+  box-shadow: 0 2px 8px rgba(35, 77, 64, 0.25);
+}
+.pill-submit svg {
+  color: #F9F7F2;
+}
+.pill-submit:hover {
+  background: #18372E;
+  transform: scale(1.04);
+}
+.pill-qr:hover,
+.pill-options:hover {
+  background: rgba(35, 77, 64, 0.08);
+}
 
 /* ============================================================================
    FacilityPin — rendered as MapLibre circle layers (orange core, cream ring).
