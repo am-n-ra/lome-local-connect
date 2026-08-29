@@ -472,3 +472,21 @@ h1, h2, h3, h4,
 .product-icon { color: #234D40; }
 .facility-identity-icon { color: #234D40; background: #E3F0E9; }
 .filter-clear { align-self: flex-start; margin-top: 12px; }
+
+/* ============================================================================
+   Payment method rows (screen 11 — Options de paiement).
+   Full-row selectable options with Evergreen radio indicator (reuse of the
+   .radio-dot pattern); the « Confirmer le choix » action keeps the standard
+   .primary-button (Règle 9). No new colors (Règle 5: no orange here).
+   ========================================================================== */
+.payment-method-picker > span { font-weight: 800; }
+.payment-method-rows { display: grid; gap: 8px; }
+.payment-method-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 9px; width: 100%; padding: 11px 12px; border: 1px solid var(--v3-outline-discrete); border-radius: 12px; color: var(--v3-ink); background: var(--v3-surface-1); text-align: left; cursor: pointer; transition: border-color .16s ease, background-color .16s ease; }
+.payment-method-row:hover { border-color: var(--v3-outline); }
+.payment-method-row:focus-visible { outline: 2px solid var(--v3-evergreen); outline-offset: 2px; }
+.payment-method-row.selected { border-color: var(--v3-evergreen); background: var(--v3-light-green); }
+.payment-method-row .radio-dot { border-color: var(--v3-outline-discrete); }
+.payment-method-row.selected .radio-dot { border: 4px solid var(--v3-evergreen); }
+.payment-method-row > span:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
+.payment-method-row strong { font-family: var(--font-display); font-weight: 600; font-size: 13px; line-height: 18px; color: var(--v3-ink); }
+.payment-method-row small { font-family: var(--font-body); font-weight: 400; font-size: 12px; line-height: 16px; color: var(--ink-soft); }
