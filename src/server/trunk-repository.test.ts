@@ -37,7 +37,7 @@ function stubSql(rows: Record<string, unknown>[]): { sql: SqlStub; queries: stri
 
 describe('account context Root seam', () => {
   it('returns only active role capabilities and safe account state', async () => {
-    const call = stubSql([{ id: 'account-1', onboarding_state: 'seller_ready', suspended_at: null, facility_count: 2, roles: ['buyer', 'seller', 'reviewer', 'revoked'] }]);
+    const call = stubSql([{ id: 'account-1', onboarding_state: 'seller_ready', suspended_at: null, facility_count: 2, facility_ids: ['facility-1', 'facility-2'], roles: ['buyer', 'seller', 'reviewer', 'revoked'] }]);
     const repository = createTrunkRepository(call.sql);
     await expect(repository.getAccountContext({ authUserId: 'auth-user-1' })).resolves.toEqual({
       accountId: 'account-1',
@@ -45,6 +45,7 @@ describe('account context Root seam', () => {
       onboardingState: 'seller_ready',
       suspended: false,
       facilityCount: 2,
+      ownedFacilityIds: ['facility-1', 'facility-2'],
       capabilities: { sellerWorkspace: true, operatorTools: false, reviewerWorkspace: true, adminTools: false },
     });
     expect(call.queries[0]).toContain("ar.status = 'active'");

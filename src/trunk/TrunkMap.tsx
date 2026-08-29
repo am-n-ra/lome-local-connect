@@ -11,6 +11,7 @@ import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&ur
 import type { PublicFacility, RouteTarget } from './types';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { pinFeatureCollection, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
@@ -27,6 +28,8 @@ type Props = {
   contextSurfaceOpen?: boolean;
   routeTarget?: RouteTarget | null;
   onRouteClose?: () => void;
+  // Facilities owned by the signed-in account (rule 7 Evergreen pin ring).
+  ownedFacilityIds?: string[] | null;
 };
 
 // Primary vector basemap: CARTO Positron GL. It is a muted-gray/mono style that
@@ -63,6 +66,12 @@ const SOURCE = 'omni-v2-facilities';
 const ROUTE_SOURCE = 'omni-v2-route';
 const ROUTE_COLOR = '#234D40';
 const EMPTY_ROUTE = { type: 'FeatureCollection' as const, features: [] };
+// Rule 7 (v3 spec): a soft shadow under the selected pin (ombre 12 %).
+// MapLibre circles have no box-shadow, so this is a blurred black circle
+// layer revealed only through the `selected` feature-state.
+const PIN_SHADOW_COLOR = '#1A1A1A';
+const PIN_SHADOW_OPACITY = 0.12;
+const SELECTED_STATE: ['boolean', unknown, ...unknown[]] = ['boolean', ['feature-state', 'selected'], false];
 const MAPLIBRE_WORKER_URL = maplibreWorkerUrl;
 const GLOBE_SUPPRESSED_LABEL_LAYERS = [
   'label_country_1',
@@ -74,15 +83,19 @@ const GLOBE_SUPPRESSED_LABEL_LAYERS = [
 
 if (typeof window !== 'undefined') setWorkerUrl(MAPLIBRE_WORKER_URL);
 
-function featureCollection(facilities: PublicFacility[]) {
-  return {
-    type: 'FeatureCollection' as const,
-    features: facilities.map((facility) => ({
-      type: 'Feature' as const,
-      geometry: { type: 'Point' as const, coordinates: [facility.longitude, facility.latitude] },
-      properties: { id: facility.id, name: facility.name, trust: facility.trust, productCount: facility.productCount },
-    })),
-  };
+// Rule 7 selected-pin emphasis: mirror `selectedId` into the pin source's
+// feature-state so the data-driven paint (scale 1.3 + soft shadow) updates in
+// place — no layer re-creation, no map remount. Returns the id whose state is
+// now set, so callers can track it across style reloads.
+function applyPinEmphasis(map: Map, selectedId: string | null, previousId: string | null): string | null {
+  if (!map.getSource(SOURCE)) return previousId;
+  try {
+    if (previousId && previousId !== selectedId) map.setFeatureState({ source: SOURCE, id: previousId }, { selected: false });
+    if (selectedId) map.setFeatureState({ source: SOURCE, id: selectedId }, { selected: true });
+  } catch {
+    return previousId;
+  }
+  return selectedId;
 }
 
 function routeFeatureCollection(target: RouteTarget, origin: RevealPoint) {
@@ -176,7 +189,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, ownedFacilityIds = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -222,6 +235,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const locationRequest = useRef<number | null>(null);
   facilitiesRef.current = facilities;
   userPositionRef.current = userPosition;
+  // Rule 7 (owned-pin Evergreen ring): mirror the owned ids and the selected
+  // id into refs so addLayers/configureStyle can restore the correct ring and
+  // emphasis after a style fallback without a remount.
+  const ownedFacilityIdsRef = useRef(ownedFacilityIds);
+  ownedFacilityIdsRef.current = ownedFacilityIds;
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+  const lastEmphasizedIdRef = useRef<string | null>(null);
   // Route trace (itinéraire in-app): mirror the route target into a ref so
   // addLayers can restore the trace after a style fallback without a remount,
   // and keep one-shot geolocation + camera framing keyed per drawn route.
@@ -504,7 +525,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       syncCameraPadding();
       addLayers(map);
       const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
-      source?.setData(featureCollection(facilitiesRef.current));
+      source?.setData(pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current));
+      // A re-added source loses per-feature state: restore the selected-pin
+      // emphasis so a style fallback never drops the rule 7 highlight.
+      lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
       setZoom(map.getZoom());
       setBearing(map.getBearing());
       scheduleUserPosition();
@@ -777,14 +801,21 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
     function addLayers(target: Map) {
       if (target.getSource(SOURCE)) return;
-      target.addSource(SOURCE, { type: 'geojson', data: featureCollection(facilitiesRef.current), cluster: true, clusterMaxZoom: 8, clusterRadius: 48 });
+      // promoteId lets feature-state target pins by facility id (rule 7
+      // selected-pin emphasis) without numeric feature ids.
+      target.addSource(SOURCE, { type: 'geojson', data: pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current), cluster: true, clusterMaxZoom: 8, clusterRadius: 48, promoteId: 'id' });
       // Facilities and clusters are visible MapLibre features, so the basemap and public presence
       // reproject in the same render cycle during drag, rotate and zoom. The accessible HTML list
       // below is only the keyboard fallback; it is not a second visual marker renderer.
       target.addLayer({ id: 'omni-cluster-rings', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#d8d8d8', 'circle-radius': ['step', ['get', 'point_count'], 28, 10, 36, 30, 46], 'circle-stroke-color': '#777777', 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.55, 'circle-opacity': 0.2 } });
       target.addLayer({ id: 'omni-clusters', type: 'circle', source: SOURCE, filter: ['has', 'point_count'], paint: { 'circle-color': '#222222', 'circle-radius': ['step', ['get', 'point_count'], 15, 10, 19, 30, 23], 'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2, 'circle-opacity': 0.96 } });
       target.addLayer({ id: 'omni-cluster-count', type: 'symbol', source: SOURCE, filter: ['has', 'point_count'], layout: { 'text-field': '{point_count_abbreviated}', 'text-size': 11, 'text-font': ['Noto Sans Bold'] }, paint: { 'text-color': '#ffffff', 'text-halo-color': '#222222', 'text-halo-width': 0.8 } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': '#F08F5A', 'circle-radius': 7, 'circle-stroke-color': '#F9F7F2', 'circle-stroke-width': 3, 'circle-opacity': 1 } });
+      // Rule 7 (v3 spec): owned pins wear the full Evergreen outer ring,
+      // third-party pins the Cream ring, orange core in both cases. The
+      // selected pin is emphasised in place (scale 1.3 + soft 12% shadow)
+      // through the `selected` feature-state — never a layer re-creation.
+      target.addLayer({ id: 'omni-pin-shadow', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_SHADOW_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-blur': 0.8, 'circle-translate': [0, 2], 'circle-opacity': ['case', SELECTED_STATE, PIN_SHADOW_OPACITY, 0] } });
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_CORE_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-stroke-color': ['case', ['boolean', ['get', 'owned'], false], PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR], 'circle-stroke-width': ['case', SELECTED_STATE, pinRingWidthPx(true), pinRingWidthPx(false)], 'circle-opacity': 1 } });
       target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
@@ -898,14 +929,18 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
-    source?.setData(featureCollection(facilities));
+    source?.setData(pinFeatureCollection(facilities, ownedFacilityIds));
     scheduleUserPosition();
-  }, [facilities, scheduleUserPosition]);
+  }, [facilities, ownedFacilityIds, scheduleUserPosition]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', '#F08F5A');
+    // Rule 7: mirror the selection into feature-state for the scale/shadow
+    // emphasis (and clear the previous pin). Re-runs on data changes too,
+    // because a GeoJSON setData can drop per-feature state.
+    lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedId, lastEmphasizedIdRef.current);
+    if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', PIN_CORE_COLOR);
     if (!selectedId) return;
     const selected = facilities.find((facility) => facility.id === selectedId);
     if (!selected || map.isMoving()) return;

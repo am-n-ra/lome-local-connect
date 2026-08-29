@@ -1837,7 +1837,7 @@ export function TrunkApp() {
 
   return (
     <main ref={appRef} className={`omni-stage-viewport ${mainClass}`} data-auth={authClient ? 'configured' : 'missing'}>
-      <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} /></Suspense>
+      <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
       <header className="species-topbar">
         <RoleSwitch role={panel === 'seller-entry' ? 'seller' : 'buyer'} onBuyer={() => { setMenuOpen(false); setOptionsOpen(false); setPanel('none'); }} onSeller={openSellerEntry} />

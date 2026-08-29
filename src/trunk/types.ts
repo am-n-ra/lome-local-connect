@@ -387,6 +387,9 @@ export interface AccountCapabilitiesResult {
   onboardingState: string;
   suspended: boolean;
   facilityCount: number;
+  // Facilities owned by the signed-in account (rule 7 Evergreen pin ring).
+  // Optional so stale cached responses without the field stay assignable.
+  ownedFacilityIds?: string[];
   capabilities: {
     sellerWorkspace: boolean;
     operatorTools: boolean;

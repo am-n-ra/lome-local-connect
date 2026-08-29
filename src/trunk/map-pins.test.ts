@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupProjectedFacilities, type ProjectedFacility } from './map-pins';
+import { groupProjectedFacilities, pinFeatureCollection, pinRadiusPx, pinRingColor, pinRingWidthPx, PIN_RADIUS_PX, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR, PIN_RING_WIDTH_PX, PIN_SELECTED_SCALE, type ProjectedFacility } from './map-pins';
 import type { PublicFacility } from './types';
 
 function facility(id: string, longitude: number, latitude: number): PublicFacility {
@@ -53,5 +53,37 @@ describe('groupProjectedFacilities', () => {
     ], 48);
 
     expect(pins[0]).toMatchObject({ kind: 'cluster', longitude: 1.2, latitude: 6.2 });
+  });
+});
+
+describe('rule 7 pin anatomy (owned ring + selected emphasis)', () => {
+  it('gives owned pins the Evergreen ring and third-party pins the Cream ring', () => {
+    expect(pinRingColor(true)).toBe(PIN_RING_OWNED_COLOR);
+    expect(pinRingColor(false)).toBe(PIN_RING_THIRD_PARTY_COLOR);
+    expect(pinRingColor(true)).toBe('#234D40');
+    expect(pinRingColor(false)).toBe('#F9F7F2');
+  });
+
+  it('emphasises the selected pin by the spec scale (1.3), core and ring together', () => {
+    expect(PIN_SELECTED_SCALE).toBe(1.3);
+    expect(pinRadiusPx(false)).toBe(PIN_RADIUS_PX);
+    expect(pinRingWidthPx(false)).toBe(PIN_RING_WIDTH_PX);
+    expect(pinRadiusPx(true)).toBeCloseTo(PIN_RADIUS_PX * PIN_SELECTED_SCALE);
+    expect(pinRingWidthPx(true)).toBeCloseTo(PIN_RING_WIDTH_PX * PIN_SELECTED_SCALE);
+  });
+
+  it('marks only owned facilities on the pin features', () => {
+    const facilities = [facility('owned-1', 1.2, 6.1), facility('other-1', 1.5, 6.2)];
+    const collection = pinFeatureCollection(facilities, ['owned-1']);
+    expect(collection.type).toBe('FeatureCollection');
+    expect(collection.features).toHaveLength(2);
+    expect(collection.features[0].properties).toMatchObject({ id: 'owned-1', owned: true });
+    expect(collection.features[1].properties).toMatchObject({ id: 'other-1', owned: false });
+  });
+
+  it('treats a missing or empty ownership list as no owned facility', () => {
+    const facilities = [facility('a', 1.2, 6.1)];
+    expect(pinFeatureCollection(facilities, null).features[0].properties.owned).toBe(false);
+    expect(pinFeatureCollection(facilities, []).features[0].properties.owned).toBe(false);
   });
 });

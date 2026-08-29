@@ -273,6 +273,9 @@ export interface AccountContextResult {
   onboardingState: string;
   suspended: boolean;
   facilityCount: number;
+  // Ids of the facilities owned by this account (rule 7 Evergreen pin ring).
+  // Owned data only — no product, stock or revenue detail leaves the server.
+  ownedFacilityIds: string[];
   capabilities: {
     sellerWorkspace: boolean;
     operatorTools: boolean;
@@ -384,6 +387,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         select a.id, a.onboarding_state, a.suspended_at,
           count(distinct f.id)::int as facility_count,
+          coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
           coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
         from v2_accounts a
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
@@ -402,6 +406,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         onboardingState: String(row.onboarding_state),
         suspended,
         facilityCount: Number(row.facility_count ?? 0),
+        ownedFacilityIds: Array.isArray(row.facility_ids) ? row.facility_ids.map(String) : [],
         capabilities: {
           sellerWorkspace: !suspended && String(row.onboarding_state) === 'seller_ready',
           operatorTools: !suspended && roles.includes('operator'),

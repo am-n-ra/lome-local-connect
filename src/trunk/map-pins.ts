@@ -20,6 +20,47 @@ type ScreenPinGroup = {
   latitude: number;
 };
 
+// ── Rule 7 (design system v3): pin anatomy ────────────────────────────────
+// The pin core stays orange in both cases; the outer ring discriminates
+// ownership — Evergreen #234D40 for a facility owned by the signed-in
+// account, Cream/white for a third-party facility. Never invert
+// (spec: « Jamais inverser »).
+export const PIN_CORE_COLOR = '#F08F5A';
+export const PIN_RING_OWNED_COLOR = '#234D40';
+export const PIN_RING_THIRD_PARTY_COLOR = '#F9F7F2';
+export const PIN_RADIUS_PX = 7;
+export const PIN_RING_WIDTH_PX = 3;
+export const PIN_SELECTED_SCALE = 1.3;
+
+export function pinRingColor(owned: boolean): string {
+  return owned ? PIN_RING_OWNED_COLOR : PIN_RING_THIRD_PARTY_COLOR;
+}
+
+// Spec « Sélectionné : scale 1.3 » — applied to the circle radius and its
+// ring width so the whole pin (core + ring) scales uniformly in place.
+export function pinRadiusPx(selected: boolean): number {
+  return selected ? PIN_RADIUS_PX * PIN_SELECTED_SCALE : PIN_RADIUS_PX;
+}
+
+export function pinRingWidthPx(selected: boolean): number {
+  return selected ? PIN_RING_WIDTH_PX * PIN_SELECTED_SCALE : PIN_RING_WIDTH_PX;
+}
+
+// GeoJSON source data for the map pins. Ownership is a plain per-feature
+// property so the ring color stays a data-driven paint expression: updating
+// ownership is a setData, never a map remount or a layer re-creation.
+export function pinFeatureCollection(facilities: PublicFacility[], ownedFacilityIds?: string[] | null) {
+  const owned = new Set(ownedFacilityIds ?? []);
+  return {
+    type: 'FeatureCollection' as const,
+    features: facilities.map((facility) => ({
+      type: 'Feature' as const,
+      geometry: { type: 'Point' as const, coordinates: [facility.longitude, facility.latitude] },
+      properties: { id: facility.id, name: facility.name, trust: facility.trust, productCount: facility.productCount, owned: owned.has(facility.id) },
+    })),
+  };
+}
+
 export function groupProjectedFacilities(projected: ProjectedFacility[], radius = 48): ScreenPin[] {
   const groups: ScreenPinGroup[] = [];
   for (const candidate of projected) {
