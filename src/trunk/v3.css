@@ -490,3 +490,15 @@ h1, h2, h3, h4,
 .payment-method-row > span:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
 .payment-method-row strong { font-family: var(--font-display); font-weight: 600; font-size: 13px; line-height: 18px; color: var(--v3-ink); }
 .payment-method-row small { font-family: var(--font-body); font-weight: 400; font-size: 12px; line-height: 16px; color: var(--ink-soft); }
+
+/* ============================================================================
+   Route status chip (écran 10 — Itinéraire in-app).
+   Pill above the search dock: Evergreen trace status + distance estimate and a
+   close action. Tokens only (Règle 5 — no new colors, no orange here).
+   ========================================================================== */
+.route-status-chip { position: absolute; z-index: 6; bottom: calc(var(--safe-bottom, 14px) + 78px); left: 50%; display: flex; align-items: center; gap: 8px; width: max-content; max-width: min(92%, 430px); transform: translateX(-50%); padding: 8px 8px 8px 13px; border: 1px solid var(--v3-outline-discrete); border-radius: 999px; color: var(--v3-ink); background: var(--v3-cream); box-shadow: var(--v3-l1-shadow); font-size: 12px; font-weight: 600; line-height: 16px; }
+.route-status-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-status-chip button { display: grid; place-items: center; flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; color: var(--v3-evergreen); background: var(--v3-light-green); cursor: pointer; }
+.route-status-chip button:focus-visible { outline: 2px solid var(--v3-evergreen); outline-offset: 2px; }
+.route-status-chip[data-state="unavailable"] { border-color: var(--v3-outline); }
+.route-status-chip[data-state="unavailable"] button { color: var(--v3-ink); background: var(--v3-surface-3); }

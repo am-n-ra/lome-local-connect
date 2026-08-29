@@ -436,3 +436,10 @@ export interface FacilityProActivationResult {
   endsAt: string;
   spendLedgerEntryId: string;
 }
+
+/** Cible du tracé itinéraire in-app (écran 10 — tracé Evergreen sur la carte). */
+export interface RouteTarget {
+  longitude: number;
+  latitude: number;
+  name: string;
+}
