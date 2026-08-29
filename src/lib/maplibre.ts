@@ -1,8 +1,22 @@
 import { useEffect, useState } from "react";
 
+/**
+ * Vite bundles the standalone MapLibre web worker and returns its asset URL.
+ * We register it explicitly (instead of relying on MapLibre's default inline
+ * blob worker) because the default worker breaks in the production build when
+ * maplibre-gl is loaded through a dynamic import: the inline worker blob ends
+ * up referencing a different set of bundled class definitions than the main
+ * thread, producing `can't deserialize StructArrayLayout...` and a blank map.
+ * maplibre-gl/dist/maplibre-gl-csp-worker.js is a self-contained classic
+ * worker script, so `?url` emits it verbatim as a static asset.
+ */
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-csp-worker?url";
+
 type MapLibreGlobal = {
   Map: new (options: Record<string, unknown>) => MapInstance;
   Marker: new (options?: Record<string, unknown>) => MarkerInstance;
+  /** Registers the web worker URL before the first Map is constructed. */
+  setWorkerUrl?: (value: string) => void;
 };
 
 export type MapMouseEvent = {
@@ -72,7 +86,12 @@ function loadMapLibre(): Promise<MapLibreGlobal> {
   const importPromise = (async () => {
     await import("maplibre-gl/dist/maplibre-gl.css");
     const mod = await import("maplibre-gl");
-    return (mod.default ?? mod) as unknown as MapLibreGlobal;
+    const lib = (mod.default ?? mod) as unknown as MapLibreGlobal;
+    // Point MapLibre at the bundled standalone worker so the production build
+    // uses a worker that matches this main-thread bundle (fixes the blank map
+    // caused by `can't deserialize StructArrayLayout...` in production).
+    if (typeof lib.setWorkerUrl === "function") lib.setWorkerUrl(maplibreWorkerUrl);
+    return lib;
   })();
   loader = Promise.race([
     importPromise,
