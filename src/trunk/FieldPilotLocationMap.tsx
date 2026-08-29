@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Crosshair, LocateFixed } from 'lucide-react';
 import { Map, Marker, NavigationControl, setWorkerUrl } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+// Bundle the MapLibre web worker from the installed maplibre-gl package so it always
+// matches the main-thread bundle (fixes blank map / "can't deserialize StructArrayLayout"
+// in production).
+import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
 const REMOTE_STYLE = 'https://tiles.openfreemap.org/styles/positron';
-const MAPLIBRE_WORKER_URL = '/maplibre-gl-worker.mjs';
+const MAPLIBRE_WORKER_URL = maplibreWorkerUrl;
 const FALLBACK_POSITION = { latitude: 6.13, longitude: 1.22 };
 
 type PositionState = 'requesting' | 'current' | 'approximate' | 'manual' | 'fallback' | 'denied' | 'unavailable' | 'timeout';
