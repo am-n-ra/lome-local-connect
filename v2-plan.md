@@ -1,42 +1,100 @@
 # Omni V2 — Nature Way Implementation Plan
 
-**Document ID:** `OMNI-V2-PLAN-002`
-**Status:** Active Buyer Trunk execution plan; Seed and Buyer Species approved; Root residuals remain under review
+**Document ID:** `OMNI-V2-PLAN-003`
+**Status:** Active Execution Plan — Grounded in Founder Intent Brief (31 Aug 2026), Species 08 (Search & Demand), and V1 Screen & State Contract
 **Method:** Nature Way
-**Authority chain:** [`v2-seed.md`](./v2-seed.md) → [`v2-species.md`](./v2-species.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md)
+**Authority chain:** [`docs/omni-v1-intent-brief.md`](./docs/omni-v1-intent-brief.md) → [`v2-seed.md`](./v2-seed.md) → [`docs/omni-species-08-search-and-demand.md`](./docs/omni-species-08-search-and-demand.md) → [`v2-species.md`](./v2-species.md) → [`docs/omni-v1-screen-and-state-specification.md`](./docs/omni-v1-screen-and-state-specification.md) → [`docs/omni-v1-complete-product-mockup.md`](./docs/omni-v1-complete-product-mockup.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md)
 
-> This document is not a second product specification. It turns the authoritative Seed, Species, Root System and Flow into a dependency-ordered growth plan. Each unit uses the full vertical-slice standard at the depth its structure requires.
+> This document turns the authoritative Seed, Intent Brief, Species 08 (Search & Demand), Screen & State Specification, Complete Product Mockup, and Root System into a dependency-ordered growth plan and development backlog. Each unit uses the vertical-slice standard across UI, server authority, and data invariants.
 
-## 1. Delivery posture
+## 1. Delivery posture & Core Law
 
-Omni will be rebuilt as a clean implementation surface. The current prototype branch is reference evidence and salvageable infrastructure, not the visual or state authority. Existing Neon Auth identities, legacy records and approved database boundaries remain protected. No destructive reset is part of this plan.
+Omni makes the real-world supply around a user **geographically discoverable, queryable, verifiable, and actionable**:
+```text
+NEED → SEARCH → CONSTRAINTS → RELEVANT SUPPLY → AVAILABILITY SIGNAL → SELECT OPTION → PURCHASE INTENT → OMNI COUPON/QR → TRANSACTION → FULFILLMENT → OUTCOME
+```
 
-The product is not built as “frontend first, backend later,” “all dashboards first” or “all APIs first.” Each delivered unit contains its contract, data, server operation, UI, integration, hardening and proof. A later branch may reuse a proven adapter only after it passes the current Root System and Species contracts.
+### Three Levels of Truth
+1. **Level 1 — Existence:** Omni knows supply exists (discovery layer).
+2. **Level 2 — Availability:** Omni has real-time / allocated / seller-confirmed evidence that supply can satisfy the specific demand.
+3. **Level 3 — Transaction:** Purchase intent is locked, generating the atomized transaction, coupon instance, and opaque verification QR.
+
+Omni never collapses uncertainty into false certainty, and never requires sellers to become full e-commerce or maintain complete POS inventory syncing to participate.
 
 ## 2. Structural growth path
 
 ```text
 Omni product
-├── Seed: identity, promise, actors, laws, scope
-├── Species: map-first visual and interaction blueprint
+├── Seed: identity, promise, actors, laws, scope (Intent Brief 31 Aug 2026)
+├── Species: map-first visual and interaction blueprint (Species 08 + Complete Mockup)
 ├── Root System: domains, persistence, server authority, security, recovery
-├── Trunk: map → search → facility → catalogue → availability → comparison
-│   ├── trunk flow: arrival and location
-│   ├── trunk flow: search and discovery
-│   ├── trunk flow: facility and catalogue
-│   └── trunk flow: availability and comparison
-├── Heartwood: harden the complete buyer trunk
+├── Trunk: map → search (DemandQuery) → facility → catalogue → availability → comparison
+│   ├── trunk flow: arrival and location (B01)
+│   ├── trunk flow: search & structured constraints (B02, B03, B04)
+│   ├── trunk flow: facility & adjacent catalogue (B05, B06, B07)
+│   └── trunk flow: multi-product availability & comparison (B08, B09, B10, B11)
+├── Heartwood: harden the complete buyer trunk & DemandQuery engine
 ├── Branches
-│   ├── trust and facility verification
-│   ├── seller map-first operations
-│   ├── wallet, slots and facility Pro
-│   ├── purchase intent and transaction room
-│   ├── QR, external payment and fulfilment
-│   ├── resume, notifications and PWA completion
-│   └── admin, analytics and operations
+│   ├── Branch A: Trust, claim & facility verification (X01, X02, S02)
+│   ├── Branch B: Seller map-first operations & allocated stock (S01, S03–S07, S13–S15)
+│   ├── Branch C: Omni Wallet, slots, credit packs & Facility Pro
+│   ├── Branch D: Purchase intent & transaction room (B12, B13, S08, S09)
+│   ├── Branch E: QR verification, external payment & fulfilment (B14–B17, S10–S12)
+│   ├── Branch F: Resume, saved demands, notifications & PWA (B18–B20, X03, X04)
+│   └── Branch G: Admin, data correction, demand signals & operations (X05)
 ├── Canopy: holistic quality, performance and accessibility
-└── Rings: release certification and future iteration
+└── Rings: release certification and pilot deployment
 ```
+
+## 3. V1 Screen & State Registry
+
+The implementation is structured around the authoritative 40+ screen surfaces:
+
+### Buyer Surfaces (B01–B20)
+* **B01 Map Home:** Default calm canvas, search dock, user location, visible pins.
+* **B02 Search:** Natural language & manual search activation over background map.
+* **B03 Search Constraints:** Structured constraints extraction (Quantity, Budget, Distance, Timing, Fulfillment).
+* **B04 Search Results:** Horizontal bottom carousel/sheet on mobile, split panel on desktop.
+* **B05 Facility Preview:** Quick inspection sheet (identity, distance, hours, offer preview) with contact/itinerary locked.
+* **B06 Facility Page:** Spatial representation (Hero → Identity → Status → Location → Actions → Products → Services → Offers → Content → About).
+* **B07 Product Selection:** Multi-product selection basket for availability requests (not a checkout cart).
+* **B08 Availability Builder:** Structured request formulation for 1 facility with multiple items and constraints.
+* **B09 Availability Pending:** Waiting state with background notifications support.
+* **B10 Availability Result:** Seller/allocated response (Available, Partial, Unavailable, Alternative) with timestamps.
+* **B11 Multi-Facility Comparison:** Normalized ranking of candidate responses for bulk/multi requests.
+* **B12 Purchase Intent:** The atomic transition gateway ("Je veux acheter").
+* **B13 Transaction Room:** Contextual workspace with bound items, coupon, status timeline, and transactional chat.
+* **B14 Transaction QR:** Server-issued opaque authorization/coupon token with delivery inside or outside Omni.
+* **B15 Payment:** External payment method selection (Cash, Mobile Money, Delivery) and buyer declaration.
+* **B16 Fulfilment:** Coordination of pickup or seller/buyer delivery.
+* **B17 Completed Transaction:** Final completed state, receipt, and optional non-blocking rating.
+* **B18 Transaction History:** Chronological log of past transactions and deep-linkable rooms.
+* **B19 Saved Searches / Demands:** Persistent demand objects with refresh capabilities.
+* **B20 Buyer Account:** Profile, demands, transactions, wallet credits, and role switcher.
+
+### Seller Surfaces (S01–S15)
+* **S01 Seller Home:** Mobile-first operational cockpit (Today's requests, active orders, stock alerts, Scan QR).
+* **S02 Facility:** Facility management, opening hours, Online/Offline, Mobile live-discovery toggle.
+* **S03 Product List:** Quick catalogue overview (5 items on Free tier, unlimited on Pro).
+* **S04 Product Editor:** Item naming, photos, base price, Omni discount, and allocated stock.
+* **S05 Omni Allocated Stock:** Management of `quantity_allocated_omni` independent of physical inventory.
+* **S06 Availability Requests:** Incoming demand queue prioritized by freshness, quantity, and distance.
+* **S07 Availability Response:** Fast response interface (Available, Partial, Unavailable, Alternative).
+* **S08 Orders:** Active order lifecycle tracking.
+* **S09 Seller Transaction:** Authorized seller view of canonical server-side transaction.
+* **S10 QR Scanner:** Live camera scanner and manual code entry fallback.
+* **S11 Payment Confirmation:** Seller authoritative acknowledgement of external payment ("Paiement reçu").
+* **S12 Fulfilment:** Status updates (Preparing, Ready, Sent, Handed over).
+* **S13 Offers & Discounts:** Definition of mandatory Omni promotional advantages.
+* **S14 Automation:** Operational rules for Manual, Assisted, and Automatic availability responses.
+* **S15 Seller Account:** Facility management, subscription, wallet, and role switcher.
+
+### Shared & System Surfaces (X01–X05)
+* **X01 Facility Claim:** Ownership claim workflow for discovered/unclaimed facilities.
+* **X02 Verification & Certification:** Identity and facility verification pipeline leading to Certified status.
+* **X03 Contextual Notifications:** Deep-linkable operational push/in-app events.
+* **X04 Search Demand Signal:** Demand capture for unmatched queries.
+* **X05 Error & Recovery States:** Idempotent retry, expired QR recovery, offline caching, and fail-safe handling.
 
 This is a structural path, not a fixed number of implementation tickets. Any branch, flow or operation may recurse into its own Seed → Species → Root System → Trunk → Heartwood → Branches → Canopy → Ring cycle when it has independent decisions, states, failure modes or proof gates.
 

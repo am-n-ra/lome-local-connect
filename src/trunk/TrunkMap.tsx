@@ -869,56 +869,40 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     revealToken.current = token;
     revealRunningRef.current = true;
     onRevealStateChange?.(true);
-    cameraMode.current = 'search_reveal';
-    setCameraModeState('search_reveal');
     setRevealRunning(true);
-    setRevealLabel('Recherche mondiale');
     rotating.current = false;
     if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
     if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
-    const steps = buildSearchRevealSteps(facilities, userPositionRef.current);
+
     const isStale = () => token !== revealToken.current;
-    const wait = (duration: number) => new Promise<void>((resolve) => window.setTimeout(resolve, duration));
-    const finish = async () => {
+    
+    // Cadrage fluide direct et élégant sans étapes artificielles ni stéthoscope
+    const finish = () => {
       if (isStale()) return;
       const finalPoints = pointsForResultFraming(facilities, userPositionRef.current);
       const finalBounds = boundsOfPoints(finalPoints);
       cameraMode.current = 'result_framing';
       setCameraModeState('result_framing');
-      setRevealLabel('Facilités trouvées');
+      
       if (finalBounds) {
         const [[west, south], [east, north]] = finalBounds;
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
-          map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 800, essential: true });
+          map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
         } else {
-          map.fitBounds(finalBounds, { padding: { top: 120, right: 76, bottom: 230, left: 76 }, maxZoom: RESULT_MAX_ZOOM, duration: 900, essential: true });
+          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left: 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
         }
-        await waitForMapMove(map, 1500);
       }
-      if (isStale()) return;
+      
       revealRunningRef.current = false;
       onRevealStateChange?.(false);
       setRevealRunning(false);
       setRevealLabel(null);
-      cameraMode.current = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM ? 'resting_globe' : 'manual_navigation';
-      setCameraModeState(cameraMode.current);
-      if (cameraMode.current === 'resting_globe') {
-        rotating.current = true;
-        setRotationState('idle');
-      }
+      cameraMode.current = 'manual_navigation';
+      setCameraModeState('manual_navigation');
     };
-    const run = async () => {
-      map.stop();
-      for (const step of steps) {
-        if (isStale()) return;
-        setRevealLabel(step.label);
-        map.flyTo({ center: step.center, zoom: step.zoom, duration: 650, speed: 0.55, curve: 1.12, essential: true });
-        await waitForMapMove(map, 1250);
-        await wait(step.pause);
-      }
-      await finish();
-    };
-    void run();
+
+    finish();
+
     return () => {
       if (token === revealToken.current) {
         revealToken.current += 1;
@@ -926,10 +910,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         onRevealStateChange?.(false);
         setRevealRunning(false);
         setRevealLabel(null);
-        if (cameraMode.current === 'search_reveal') {
-          cameraMode.current = 'manual_navigation';
-          setCameraModeState('manual_navigation');
-        }
       }
     };
   }, [facilities, onRevealStateChange, revealKey]);
@@ -1021,7 +1001,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       return (
     <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-route={routeTarget ? 'active' : 'idle'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
-      {basemap === 'raster' && <div className="map-raster-fallback" aria-hidden="true">{Array.from({ length: 16 }, (_, index) => { const x = index % 4; const y = Math.floor(index / 4); return <img key={`${x}-${y}`} src={`https://tile.openstreetmap.org/2/${x}/${y}.png`} alt="" width="256" height="256" decoding="async" fetchPriority="high" />; })}</div>}
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
       {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}

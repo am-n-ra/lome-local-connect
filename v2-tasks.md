@@ -1,9 +1,9 @@
 # Omni V2 — Nature Way Task Backlog
 
-**Document ID:** `OMNI-V2-TASKS-002`
-**Status:** Regenerated backlog for the Seed-derived rebuild
+**Document ID:** `OMNI-V2-TASKS-003`
+**Status:** Regenerated backlog aligned with Intent Brief (31 Aug 2026), Species 08 (Search & Demand), and V1 Screen & State Contract
 **Method:** Nature Way
-**Authority chain:** [`v2-seed.md`](./v2-seed.md) → [`v2-species.md`](./v2-species.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md) → [`v2-plan.md`](./v2-plan.md) → [`v2-feature-list.md`](./v2-feature-list.md)
+**Authority chain:** [`docs/omni-v1-intent-brief.md`](./docs/omni-v1-intent-brief.md) → [`v2-seed.md`](./v2-seed.md) → [`docs/omni-species-08-search-and-demand.md`](./docs/omni-species-08-search-and-demand.md) → [`v2-species.md`](./v2-species.md) → [`docs/omni-v1-screen-and-state-specification.md`](./docs/omni-v1-screen-and-state-specification.md) → [`docs/omni-v1-complete-product-mockup.md`](./docs/omni-v1-complete-product-mockup.md) → [`docs/omni-v1-full-product-mockup.md`](./docs/omni-v1-full-product-mockup.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md) → [`v2-plan.md`](./v2-plan.md) → [`v2-feature-list.md`](./v2-feature-list.md)
 
 > This backlog tracks the new implementation surface. Existing prototype commits and proof remain historical reference evidence; they do not automatically satisfy the rewritten Seed, Species, Root System or Trunk gates.
 

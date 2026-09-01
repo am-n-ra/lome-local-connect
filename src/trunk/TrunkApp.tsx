@@ -1,5 +1,5 @@
 import { FormEvent, Suspense, forwardRef, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, PackageSearch, QrCode, Search, ShieldCheck, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, Menu, PackageSearch, QrCode, Search, ShieldCheck, User, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAccountCapabilities, getAvailabilityResponses, getTransaction, getTransactionMessages, sendTransactionMessage, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerActivationQueue, getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, createWalletRecharge, activateFacilityPro, createSellerProductDraft, createSellerFacility, updateSellerProductDraft, transitionSellerProduct, importPublicFacility, importPublicFacilityBatch, issueBuyerQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, activateSellerAccount, setSellerAccountSuspension, submitFacilityClaim, submitTransactionRating, transitionTransaction, uploadFacilityEvidence, verifyQrToken, getRoleManagementAccounts, setManagedStaffRole } from './api';
 const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) => ({ default: Component })));
@@ -22,7 +22,15 @@ import { OmniWalletModal } from './OmniWalletModal';
 import { CompanyFacilityOnboardingModal } from './CompanyFacilityOnboardingModal';
 import { SellerScannerModal } from './SellerScannerModal';
 import { DirectInStoreScanSheet } from './DirectInStoreScanSheet';
-import { Sparkles, Wallet, Compass, Building2 } from 'lucide-react';
+import { LiquidSearchDock, type StructuredDemand } from '../components/ui/LiquidSearchDock';
+import { LiquidResultCarousel } from '../components/ui/LiquidResultCarousel';
+import { LiquidFacilitySheet } from '../components/ui/LiquidFacilitySheet';
+import { LiquidTransactionRoom, type LiquidTransactionDetails } from '../components/ui/LiquidTransactionRoom';
+import { LiquidSellerCockpit } from '../components/ui/LiquidSellerCockpit';
+import { LiquidPreviewShowcase } from '../components/ui/LiquidPreviewShowcase';
+import { CleanMenuDrawer } from '../components/ui/CleanMenuDrawer';
+import { GlassSurface, GlassButton, GlassBadge } from '../components/ui/LiquidGlass';
+import { Sparkles, Wallet, Compass, Building2, Eye } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -119,6 +127,7 @@ export function TrunkApp() {
   const [buyerRequestsError, setBuyerRequestsError] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
+  const [liquidShowcaseOpen, setLiquidShowcaseOpen] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>(undefined);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading');
   const [detailState, setDetailState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -1334,10 +1343,6 @@ export function TrunkApp() {
 
   const beginSearch = (event?: FormEvent) => {
     event?.preventDefault();
-    if (!sessionUser) {
-      openAuth('sign-in');
-      return;
-    }
     facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
@@ -1352,10 +1357,6 @@ export function TrunkApp() {
   };
 
   const applyOptions = () => {
-    if (!sessionUser) {
-      openAuth('sign-in');
-      return;
-    }
     facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
@@ -1888,28 +1889,126 @@ export function TrunkApp() {
     <main ref={appRef} className={`omni-stage-viewport ${mainClass}`} data-auth={authClient ? 'configured' : 'missing'}>
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
-      <header className="species-topbar">
-        <RoleSwitch role={panel === 'seller-entry' ? 'seller' : 'buyer'} onBuyer={() => { setMenuOpen(false); setOptionsOpen(false); setPanel('none'); }} onSeller={openSellerEntry} />
-        <MenuIcon initials={sessionUser ? (sessionUser.name?.slice(0, 2).toUpperCase() || 'OM') : 'J5'} expanded={menuOpen} onClick={() => { setMenuOpen((open) => !open); setOptionsOpen(false); }} />
+      {/* Barre supérieure Apple Cream Glass / Liquid Glass */}
+      <header className="fixed top-4 inset-x-0 z-30 flex items-center justify-between px-4 max-w-5xl mx-auto pointer-events-none">
+        {/* Switch Acheter / Vendre (En haut à gauche - Capsule Cream Glass) */}
+        <div className="pointer-events-auto bg-[#FAF8F5]/90 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] rounded-full p-1 flex items-center transition-all">
+          <div className="flex items-center p-0.5 rounded-full bg-black/[0.03]">
+            <button
+              id="switch-buy-tab"
+              type="button"
+              onClick={() => { setMenuOpen(false); setOptionsOpen(false); setPanel('none'); }}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                panel !== 'seller-entry'
+                  ? 'bg-[#234D40] text-white shadow-xs'
+                  : 'text-black/60 hover:text-black'
+              }`}
+            >
+              Acheter
+            </button>
+            <button
+              id="switch-sell-tab"
+              type="button"
+              onClick={openSellerEntry}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                panel === 'seller-entry'
+                  ? 'bg-[#234D40] text-white shadow-xs'
+                  : 'text-black/60 hover:text-black'
+              }`}
+            >
+              Vendre
+            </button>
+          </div>
+        </div>
+
+        {/* Menu (En haut à droite - Bouton discret contenant connexion et options) */}
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            id="omni-main-menu-btn"
+            type="button"
+            onClick={() => { setMenuOpen((open) => !open); setOptionsOpen(false); }}
+            className="w-10 h-10 rounded-full bg-[#FAF8F5]/90 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] flex items-center justify-center font-bold text-xs text-[#234D40] hover:bg-white transition-all active:scale-95"
+            aria-label="Menu Omni"
+            title="Menu Omni"
+          >
+            {sessionUser ? (
+              <span className="w-7 h-7 rounded-full bg-[#234D40] text-white flex items-center justify-center text-[10px] font-bold">
+                {sessionUser.name?.slice(0, 2).toUpperCase() || 'OM'}
+              </span>
+            ) : (
+              <Menu className="w-4 h-4 text-[#234D40]" />
+            )}
+          </button>
+        </div>
       </header>
 
-      {menuOpen && <aside id="omni-menu" className="account-menu" role="menu" aria-label="Menu Omni">
-        <div className="menu-brand"><img src="/omni-logo-compact.png" alt="" /><div><strong>omni</strong><small>{sessionUser ? 'Votre espace' : 'Voir avant de vous déplacer'}</small></div><button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer le menu"><X size={16} /></button></div>
-        <p>{sessionUser ? 'Votre compte est prêt pour vérifier les disponibilités.' : 'Explorez les lieux publics. Créez votre compte pour rechercher et vérifier.'}</p>
-        {!sessionUser ? <button className="menu-action" type="button" role="menuitem" onClick={() => openAuth('sign-in')}><LogIn size={16} /> Se connecter ou créer un compte</button> : <><button className="menu-action" type="button" role="menuitem" onClick={openBuyerRequests}><Clock3 size={16} /> Mes demandes</button><button className="menu-action" type="button" role="menuitem" onClick={openInbox}><Clock3 size={16} /> Inbox Omni</button><button className="menu-action" type="button" role="menuitem" onClick={() => { setMenuOpen(false); setPanel('wallet'); }}><Wallet size={16} /> Portefeuille Omni</button><button className="menu-action" type="button" role="menuitem" onClick={() => { setMenuOpen(false); setPanel('buyer-pro-plans'); }}><Sparkles size={16} /> Formules Acheteur Pro</button><button className="menu-action" type="button" role="menuitem" onClick={() => { setMenuOpen(false); setPanel('company-onboarding'); }}><Building2 size={16} /> Créer une compagnie / point de vente</button><button className="menu-action" type="button" role="menuitem" onClick={() => { setMenuOpen(false); setPanel('seller-scanner'); }}><QrCode size={16} /> Scanner un QR client (Vendeur)</button>{accountCapabilities?.capabilities.operatorTools && <button className="menu-action" type="button" role="menuitem" onClick={openFieldPilot}><MapPin size={16} /> Outils terrain Omni</button>}{accountCapabilities?.capabilities.reviewerWorkspace && <button className="menu-action" type="button" role="menuitem" onClick={openReviewer}><ShieldCheck size={16} /> Revue des claims</button>}{accountCapabilities?.capabilities.adminTools && <button className="menu-action" type="button" role="menuitem" onClick={openAdminRoles}><ShieldCheck size={16} /> Gestion des rôles</button>}<button className="menu-action" type="button" role="menuitem" onClick={signOut}><LogOut size={16} /> Se déconnecter</button></>}<button className="menu-action" type="button" role="menuitem" onClick={() => { setMenuOpen(false); setPanel('onboarding'); }}><Compass size={16} /> Guide de découverte</button>{installPrompt && !installed && <button className="menu-action" type="button" role="menuitem" onClick={() => void installOmni}><Download size={16} /> Installer Omni</button>}{installed && <div className="menu-install-note" role="status">Omni est installé sur cet appareil.</div>}
-        {sessionUser && accountCapabilitiesState === 'loading' && <div className="menu-loading" role="status">Vérification des accès d’équipe…</div>}{sessionUser && accountCapabilitiesState === 'error' && <div className="menu-loading menu-loading-error" role="status">Les accès d’équipe n’ont pas pu être chargés. Fermez puis rouvrez le menu.</div>}<button className="menu-action secondary" type="button" role="menuitem" onClick={resetSearch}><Search size={16} /> Effacer la recherche</button>
-      </aside>}
+      {/* Menu Omni Élégant & Dédié */}
+      <CleanMenuDrawer
+        isOpen={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        sessionUser={sessionUser}
+        accountCapabilitiesState={accountCapabilitiesState}
+        accountCapabilities={accountCapabilities}
+        installPrompt={Boolean(installPrompt)}
+        installed={installed}
+        onOpenAuth={(mode) => openAuth(mode)}
+        onOpenBuyerRequests={openBuyerRequests}
+        onOpenInbox={openInbox}
+        onOpenWallet={() => { setMenuOpen(false); setPanel('wallet'); }}
+        onOpenBuyerProPlans={() => { setMenuOpen(false); setPanel('buyer-pro-plans'); }}
+        onOpenCompanyOnboarding={() => { setMenuOpen(false); setPanel('company-onboarding'); }}
+        onOpenSellerScanner={() => { setMenuOpen(false); setPanel('seller-scanner'); }}
+        onOpenFieldPilot={openFieldPilot}
+        onOpenReviewer={openReviewer}
+        onOpenAdminRoles={openAdminRoles}
+        onOpenOnboarding={() => { setMenuOpen(false); setPanel('onboarding'); }}
+        onInstallOmni={() => void installOmni()}
+        onSignOut={signOut}
+        onResetSearch={resetSearch}
+      />
 
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={retryPublicFacilities}>Réessayer</button></div>}
 
-      {panel === 'none' && <>
-        <div className="search-anchor omni-keyboard-aware">
-          {optionsOpen && <SearchOptionsPopover category={draftOptions.category} categoryOptions={categoryOptions} setCategory={(category) => setDraftOptions({ category })} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} rayon={rayon} setRayon={setRayon} onClear={clearOptions} onApply={applyOptions} onClose={() => setOptionsOpen(false)} />}
-          <SearchDock query={query} onQuery={setQuery} onSubmit={beginSearch} onFilters={() => { setOptionsOpen((open) => !open); setMenuOpen(false); }} onScanQr={() => { setPanel('qr-scan'); setOptionsOpen(false); setMenuOpen(false); }} filtersActive={optionsOpen} inputRef={searchInputRef} />
+      {/* Surface d'accueil Acheteur Liquid Glass (B01 - B04) */}
+      {panel === 'none' && (
+        <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none flex flex-col justify-end pb-3">
+          {/* Carrousel des résultats B04 (affiché UNIQUEMENT lors d'une recherche active avec mot-clé ou catégorie explicite) */}
+          {(Boolean(committedQuery.trim()) || (Boolean(appliedOptions.category) && appliedOptions.category !== 'all' && appliedOptions.category !== 'Tous')) && (
+            <LiquidResultCarousel
+              facilities={visibleFacilities}
+              selectedFacilityId={selectedFacility?.id ?? null}
+              onSelectFacility={(fac) => {
+                void selectFacility(fac as PublicFacility);
+              }}
+              onCheckAvailability={(fac) => {
+                void selectFacility(fac as PublicFacility, true);
+              }}
+              onShowRoute={(fac) => {
+                setRouteTarget({ longitude: fac.longitude, latitude: fac.latitude, name: fac.name });
+              }}
+            />
+          )}
+
+          {/* Barre de recherche Liquid Glass (B01 - B03) */}
+          <div className="pt-2">
+            <LiquidSearchDock
+              onSearch={(demand) => {
+                setQuery(demand.rawQuery);
+                setQuantity(demand.quantity || 1);
+                if (demand.maxBudget) {
+                  setBudgetMode('maximum');
+                  setBudget(demand.maxBudget.toString());
+                }
+                if (demand.maxDistanceKm) {
+                  setRayon(demand.maxDistanceKm.toString());
+                }
+                beginSearch();
+              }}
+              onScanQr={() => setPanel('qr-scan')}
+            />
+          </div>
         </div>
-        {nearbyOpen && !revealActive && <NearbySheet ref={nearbySheetRef} facilities={visibleFacilities} mapState={mapState} committedQuery={committedQuery} collapsed={nearbyCollapsed} onCollapse={collapseNearbyResults} onExpand={() => setNearbyCollapsed(false)} onClose={closeNearbyResults} onNewSearch={openNewSearch} onRefine={() => { setOptionsOpen(true); setMenuOpen(false); }} onOpenFacility={(facility) => selectFacility(facility)} onVerify={(facility) => selectFacility(facility, true)} onShowAll={() => { setShowAllResults(true); setNearbyOpen(true); setNearbyCollapsed(false); }} showAll={showAllResults} />}
-        {pinContext && !nearbyOpen && !optionsOpen && !menuOpen && <ContextPanel title={pinContext.name} category={pinContext.category} meta="Lieu local" onVerify={() => { const f = pinContext; setPinContext(null); selectFacility(f, true); }} onOpen={() => { const f = pinContext; setPinContext(null); selectFacility(f); }} onClose={() => { setPinContext(null); setSelectedFacility(null); }} />}
-      </>}
+      )}
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') { closeFacilityContext(); return; } setPanel('none'); }} />}
       {panel === 'qr-scan' && <FacilityQrScannerModal onScan={(facilityId) => { setPanel('none'); void selectFacilityById(facilityId); }} onClose={() => setPanel('none')} sampleFacilities={visibleFacilities} />}
@@ -1928,9 +2027,23 @@ export function TrunkApp() {
       {panel === 'company-onboarding' && <CompanyFacilityOnboardingModal onClose={() => setPanel('none')} onComplete={(data) => { void createSellerFacilityFromWorkspace({ name: data.facilityName, category: data.category, description: data.companyName, address: data.address, latitude: data.lat, longitude: data.lng }); setPanel('none'); }} />}
       {panel === 'seller-scanner' && <SellerScannerModal onClose={() => setPanel('none')} onScanSuccess={(code) => { setSellerQrPayload(code); setPanel('seller-entry'); setSellerTab('transaction'); }} />}
       {panel === 'instore-scan' && selectedFacility && <DirectInStoreScanSheet facility={selectedFacility} products={'products' in selectedFacility ? selectedFacility.products : []} onClose={() => setPanel('facility')} />}
-      {panel === 'facility' && <FacilitySheet facility={selectedFacility} state={detailState} error={error} claimState={claimState} claimError={claimError} claimResult={claimResult} onClaim={startFacilityClaim} onOpenClaim={openClaimDraft} onClose={closeFacilityContext} onVerify={openAvailability} onShowRoute={showRouteToSelectedFacility} />}
+      {panel === 'facility' && selectedFacility && (
+        <LiquidFacilitySheet
+          facility={selectedFacility}
+          isOpen={panel === 'facility'}
+          onClose={closeFacilityContext}
+          onRequestAvailability={(fac, productIds) => {
+            if (productIds.length > 0) {
+              setSelectedProductId(productIds[0]);
+            }
+            openAvailability();
+          }}
+          onShowRoute={() => showRouteToSelectedFacility()}
+        />
+      )}
       {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} evidence={claimEvidence} storageAvailable={claimStorageAvailable} uploadState={claimUploadState} uploadProgress={claimUploadProgress} uploadError={claimUploadError} submitState={claimSubmitState} submitError={claimSubmitError} actionState={claimActionState} actionError={claimActionError} onUpload={(kind, file) => void uploadClaimEvidence(kind, file)} onRemoveEvidence={removeClaimEvidence} onSubmit={submitClaimEvidence} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
       {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} purchaseIntent={purchaseIntent} purchaseIntentState={purchaseIntentState} purchaseIntentError={purchaseIntentError} buyerQrState={buyerQrState} buyerQrError={buyerQrError} buyerQrResult={buyerQrResult} onIssueBuyerQr={() => void issueBuyerQr()} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} paymentState={paymentState} paymentError={paymentError} transactionState={buyerTransactionState} onDeclarePayment={() => void declareBuyerPayment()} onMarkReceived={() => void markBuyerReceived()} ratingScore={ratingScore} setRatingScore={setRatingScore} ratingNote={ratingNote} setRatingNote={setRatingNote} ratingState={ratingState} ratingError={ratingError} onSubmitRating={() => void submitBuyerRating()} onChooseResponse={(responseId) => void createIntentFromResponse(responseId)} onRefreshResponses={() => void refreshResponses()} chatMessages={transactionMessages} chatState={transactionMessagesState} chatError={transactionMessagesError} chatSending={transactionMessageSending} onRefreshChat={() => void loadTransactionChat(purchaseIntent?.transactionId ?? '')} onSendChat={(body) => void sendTransactionChatMessage(purchaseIntent?.transactionId ?? '', body)} onClose={() => setPanel('facility')} onSubmit={submitAvailability} onShowRoute={showRouteToSelectedFacility} />}
+      {liquidShowcaseOpen && <LiquidPreviewShowcase onDismiss={() => setLiquidShowcaseOpen(false)} />}
     </main>
   );
 }
@@ -2029,7 +2142,174 @@ function SearchOptionsPopover(props: { category: string; categoryOptions: string
 }
 
 function AuthSheet(props: { mode: AuthMode; setMode: (mode: AuthMode) => void; email: string; setEmail: (value: string) => void; password: string; setPassword: (value: string) => void; name: string; setName: (value: string) => void; state: 'idle' | 'loading' | 'error'; error: string; onSubmit: (event: FormEvent) => void; onClose: () => void }) {
-  return <section className="omni-sheet omni-sheet-enter omni-keyboard-aware auth-sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title"><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Compte Omni</span><h2 id="auth-title">{props.mode === 'sign-in' ? 'Recherchez avec certitude' : 'Commencez à voir avant de bouger'}</h2></div><button type="button" onClick={props.onClose} aria-label="Fermer"><X size={18} /></button></div><p className="sheet-lede">La carte publique reste ouverte. Votre compte débloque la recherche catalogue et la vérification de disponibilité.</p><form onSubmit={props.onSubmit} className="auth-form">{props.mode === 'sign-up' && <label>Prénom<input value={props.name} onChange={(event) => props.setName(event.target.value)} placeholder="Votre prénom" autoComplete="name" /></label>}<label>Email<input type="email" required value={props.email} onChange={(event) => props.setEmail(event.target.value)} placeholder="vous@exemple.com" autoComplete="email" /></label><label>Mot de passe<input type="password" required minLength={8} value={props.password} onChange={(event) => props.setPassword(event.target.value)} placeholder="8 caractères minimum" autoComplete={props.mode === 'sign-in' ? 'current-password' : 'new-password'} /></label>{props.error && <div className="inline-error" role="alert">{props.error}</div>}<button className="primary-button omni-pressable" type="submit" aria-busy={props.state === 'loading'} disabled={props.state === 'loading'}>{props.state === 'loading' ? 'Connexion…' : props.mode === 'sign-in' ? 'Se connecter' : 'Créer mon compte'}</button></form><button className="text-button auth-switch" type="button" onClick={() => props.setMode(props.mode === 'sign-in' ? 'sign-up' : 'sign-in')}>{props.mode === 'sign-in' ? 'Nouveau sur Omni ? Créer un compte' : 'Déjà un compte ? Se connecter'}</button></section>;
+  const setDemoAccount = (demoEmail: string, demoPass: string, demoName: string) => {
+    props.setEmail(demoEmail);
+    props.setPassword(demoPass);
+    props.setName(demoName);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in duration-200">
+      <div 
+        className="w-full max-w-md bg-white/95 backdrop-blur-2xl rounded-3xl border border-white/80 shadow-[0_24px_48px_rgba(0,0,0,0.2)] p-6 flex flex-col gap-4 text-black"
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="auth-title"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-[#234D40] text-white flex items-center justify-center font-bold text-sm">
+              <LogIn className="w-4 h-4 text-[#86EFAC]" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold tracking-wider text-[#234D40] uppercase">Compte Omni</span>
+              <h2 id="auth-title" className="text-base font-bold text-black/90">
+                {props.mode === 'sign-in' ? 'Connexion' : 'Créer un compte'}
+              </h2>
+            </div>
+          </div>
+          <button 
+            type="button" 
+            onClick={props.onClose} 
+            className="w-8 h-8 rounded-full bg-black/[0.05] hover:bg-black/[0.1] flex items-center justify-center text-black/70 transition-colors"
+            aria-label="Fermer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex items-center bg-black/[0.04] p-1 rounded-xl border border-black/[0.05]">
+          <button
+            type="button"
+            onClick={() => props.setMode('sign-in')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+              props.mode === 'sign-in'
+                ? 'bg-[#234D40] text-white shadow-sm'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Se connecter
+          </button>
+          <button
+            type="button"
+            onClick={() => props.setMode('sign-up')}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+              props.mode === 'sign-up'
+                ? 'bg-[#234D40] text-white shadow-sm'
+                : 'text-black/60 hover:text-black'
+            }`}
+          >
+            Créer un compte
+          </button>
+        </div>
+
+        {/* Demo Fast Selection */}
+        <div className="bg-emerald-50/70 border border-emerald-200/60 rounded-2xl p-3 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-[#234D40] uppercase tracking-wide flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#F08F5A]" />
+              Comptes démo rapides
+            </span>
+            <span className="text-[10px] text-black/50">1 clic pour tester</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setDemoAccount('buyer1@omni.test', 'Password123!', 'Acheteur Test')}
+              className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white border border-emerald-200 text-[#234D40] hover:bg-emerald-100/50 transition-all shadow-xs"
+            >
+              👤 Acheteur
+            </button>
+            <button
+              type="button"
+              onClick={() => setDemoAccount('seller1@omni.test', 'Password123!', 'Kossi Électronique')}
+              className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white border border-emerald-200 text-[#234D40] hover:bg-emerald-100/50 transition-all shadow-xs"
+            >
+              🏪 Vendeur Lomé
+            </button>
+            <button
+              type="button"
+              onClick={() => setDemoAccount('operator1@omni.test', 'Password123!', 'Opérateur Omni')}
+              className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white border border-emerald-200 text-[#234D40] hover:bg-emerald-100/50 transition-all shadow-xs"
+            >
+              🗺️ Opérateur
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={props.onSubmit} className="flex flex-col gap-3">
+          {props.mode === 'sign-up' && (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-bold text-black/70">Nom ou Prénom</label>
+              <input
+                value={props.name}
+                onChange={(event) => props.setName(event.target.value)}
+                placeholder="Ex. Jean Koffi"
+                autoComplete="name"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-black/15 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#234D40]/30 focus:border-[#234D40]"
+              />
+            </div>
+          )}
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-black/70">Adresse Email</label>
+            <input
+              type="email"
+              required
+              value={props.email}
+              onChange={(event) => props.setEmail(event.target.value)}
+              placeholder="vous@exemple.com"
+              autoComplete="email"
+              className="w-full px-3.5 py-2.5 rounded-xl border border-black/15 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#234D40]/30 focus:border-[#234D40]"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-bold text-black/70">Mot de passe</label>
+            <input
+              type="password"
+              required
+              minLength={8}
+              value={props.password}
+              onChange={(event) => props.setPassword(event.target.value)}
+              placeholder="8 caractères minimum"
+              autoComplete={props.mode === 'sign-in' ? 'current-password' : 'new-password'}
+              className="w-full px-3.5 py-2.5 rounded-xl border border-black/15 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#234D40]/30 focus:border-[#234D40]"
+            />
+          </div>
+
+          {props.error && (
+            <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium" role="alert">
+              {props.error}
+            </div>
+          )}
+
+          <button
+            className="w-full mt-1 py-3 rounded-xl bg-[#234D40] text-white font-bold text-sm shadow-[0_4px_16px_rgba(35,77,64,0.3)] hover:bg-[#1A382F] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+            type="submit"
+            aria-busy={props.state === 'loading'}
+            disabled={props.state === 'loading'}
+          >
+            {props.state === 'loading' ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                <span>Chargement…</span>
+              </>
+            ) : props.mode === 'sign-in' ? (
+              'Se connecter'
+            ) : (
+              'Créer mon compte'
+            )}
+          </button>
+        </form>
+
+        <p className="text-[11px] text-center text-black/50">
+          En continuant, vous acceptez les conditions de service et la politique de confidentialité Omni.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 type SellerOfferMutationFields = { facilityId?: string; name: string; description?: string; unit?: string; prixOriginal: number; currency: string; pourcentageReduction: number; stockLoueOmni: number };

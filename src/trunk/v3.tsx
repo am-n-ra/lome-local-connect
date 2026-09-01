@@ -176,7 +176,7 @@ export function FacilityCard({ facility, badge, onOpen, onVerify, price, verifyL
         <div className="v3-card-name">{facility.name}</div>
         <div className="v3-card-meta">{facility.category || 'Lieu local'}{facility.productCount > 0 ? ` · ${facility.productCount} offre${facility.productCount === 1 ? '' : 's'}` : ''}</div>
         <div className="v3-card-foot">
-          {price}
+          {price || <span className="v3-card-distance">{facility.address || facility.category || 'Point de vente'}</span>}
           <button className="v3-card-cta" type="button" onClick={(event) => { event.stopPropagation(); onVerify(); }}>{verifyLabel ?? (facility.productCount > 0 ? 'Vérifier' : 'Voir')}</button>
         </div>
       </div>
