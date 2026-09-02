@@ -9,6 +9,8 @@ description: Run the Nature Way ecosystem as a founder headquarters and active d
 
 Treat every named `references/` or `templates/` resource as a required input when its stated trigger applies. Load the exact file or directory before performing the dependent work, then include a **Resource Receipt** in the phase output: `Loaded`, `Template instantiated`, and `Not loaded / reason`. Do not claim to have followed a resource that was not loaded. If a required resource is unavailable, state the gap and stop before the gate it controls.
 
+For every active Founder HQ gate, load [references/intra-skill-execution-controller.md](references/intra-skill-execution-controller.md) and instantiate [templates/intra-skill-plan.md](templates/intra-skill-plan.md) for the local work. Record the local plan ID in the Master Plan and require its task/proof handoff before closing the gate.
+
 Use this skill as the **front door, plan owner, and active dispatch layer** to the Nature Way ecosystem. It creates one Founder HQ Master Plan, then delegates execution to the specialist skill that owns each gate. It does not create competing specialist plans, perform a specialist skill’s work, or treat existing code as permission to continue implementation. It identifies the current objective and gate, activates the next specialist in sequence, and synchronizes each returned plan/task/proof handoff so product, capital, opportunity, and personal reflection work do not drift into separate stories.
 
 ## Founder HQ Master Plan
@@ -18,16 +20,6 @@ Before any substantive venture work, create or reconcile one **Founder HQ Master
 Use the sequence `HQ plan → specialist activation → specialist gate → returned evidence → HQ reconciliation → next specialist`. Keep only one gate and one specialist active at a time unless two independent tracks have separate owners, dependencies, capacity, and proof. Do not mark a gate complete because a specialist was named; close it only after the specialist’s Activation Receipt, Resource Receipt, evidence, residual gap, owner, and next action are returned.
 
 Create the plan with [templates/founder-hq-master-plan.md](templates/founder-hq-master-plan.md). Read [references/ecosystem-orchestration-protocol.md](references/ecosystem-orchestration-protocol.md) before starting a new venture, resuming stale work, or changing the active milestone.
-
-## Intra-skill planning and subtask execution
-
-Founder HQ must plan its own bounded work with the same discipline it expects from every specialist. Before substantive work inside a gate, create or reconcile a local plan under the controlling Master Plan; do not create a competing plan. Use the structural path `HQ milestone > gate > specialist > slice > task > subtask` and extend it only when a child has its own objective, dependency, decision, state transition, failure mode, owner, or proof gate. Stop at the smallest coherent unit that can be executed, reviewed, and proven without losing context.
-
-Treat a **slice** as one end-to-end outcome or bounded evidence packet, a **task** as one coherent change or proof contribution with one owner, and a **subtask** as an atomic predecessor of that parent task. Keep dependencies explicit, mark only capacity-supported work `in_progress`, and attach acceptance, expected proof, risk/debt boundary, owner, and re-plan trigger to every executable unit. A child may be `done` only with recorded proof; a parent may be `done` only when its own acceptance and gate proof are complete, even if every child is closed.
-
-Use the status flow `todo → ready → in_progress → review → verified → done`, with `blocked`, `partial`, `manual`, and `deferred` when accurate. Re-plan when evidence contradicts an assumption, intent or a material decision changes, a dependency or capacity limit changes, a risk appears, or the gate condition fails. Preserve valid evidence, reopen only affected descendants, reconcile the controlling artifact first, and report added, removed, deferred, and reopened work. Read [references/intra-skill-planning-protocol.md](references/intra-skill-planning-protocol.md) before creating a nested plan, splitting a task, or returning a specialist handoff.
-
-Every local-plan or specialist return must include the active structural path, gate and decision condition, completed task/subtask IDs, proof IDs or links with an as-of time, residual gap or blocker, owner, next smallest action, capacity impact, re-plan trigger, and Resource Receipt. Founder HQ copies these control fields into the Master Plan and leaves detailed evidence in the owning artifact.
 
 ## Non-negotiable dispatch protocol
 
@@ -45,15 +37,15 @@ Only call a route `activated` when the specialist skill is actually available in
 
 ## Product and existing-project guardrail
 
-Route every request to build, design, develop, refactor, migrate, repair, integrate, launch, or extend a product to **`/nature-way`** before making implementation recommendations or touching code. Nature Way must inspect the repository and authoritative artifacts, diagnose the actual structural path and phase, and decide whether Seed, Species/maquette, Root System, Trunk, Heartwood, Branches, Canopy, or Rings work is current.
+Route every request to build, design, develop, refactor, migrate, repair, integrate, launch, or extend a product to **`/nature-way`** before making implementation recommendations or touching code. Nature Way must inspect the repository and authoritative artifacts, create or reconcile a **System Dependency Map**, diagnose the actual structural path and phase, and decide whether Seed, Species/maquette, Root System, Trunk, Heartwood, Branches, Canopy, or Rings work is current. The map must identify what has to exist, be authorized, be populated, and be proven before the most visible child capability can be truthful.
 
-Treat existing code, a prototype, screenshots, or a prior task list as evidence to inspect—not evidence that product framing, a visual maquette, contracts, security, or proof are complete. Preserve valid work, but reopen a missing, stale, or unaccepted Seed, Species, or Root gate before further implementation. If the current product direction is not explicitly accepted, stop for the art-direction and maquette decision rather than coding forward blindly.
+Treat existing code, a prototype, screenshots, or a prior task list as evidence to inspect—not evidence that product framing, a visual maquette, contracts, security, or proof are complete. Preserve valid work, but reopen a missing, stale, or unaccepted Seed, Species, Root, or prerequisite-parent gate before further implementation. If a visible surface is already built while its upstream parents are missing, mark it as an `orphaned leaf`, preserve only what is honest, and rebase the next slice on the highest-leverage missing parent. If the current product direction is not explicitly accepted, stop for the art-direction and maquette decision rather than coding forward blindly.
 
 ## The six companions
 
 | Need | Route to | Authority |
 |---|---|---|
-| Build, fix, launch, scale, or prove a product and its operations | **Nature Way** | Product, data, security, release, customer, and proof gates. |
+| Build, fix, launch, scale, or prove a product and its operations | **Nature Way** | Product, causal dependency, data, security, release, customer, and proof gates. |
 | Identify the current venture stage, validate demand, test a demo, establish distribution, or frame the next milestone | **Nature Way Venture Lifecycle** | Lifecycle stage, validation, distribution, retention/economics, and scaling-readiness gates. |
 | Prepare for a raise, investor process, data room, deck, or closing | **Nature Way Fundraising** | Capital claims, readiness, data room, raise process, and post-close rhythm. |
 | Discover or assess a grant, program, partner, pilot, procurement, credit, or other external path | **Nature Way Opportunity Intelligence** | Source verification, fit, capacity, terms, status, and decline rules. |
@@ -109,7 +101,7 @@ For each new request, first identify its **primary authority**, then any seconda
 
 | New item | Primary dispatch | Required first action / typical secondary route |
 |---|---|---|
-| “Should we build/launch/change this?”, or any feature/code/UI request | `/nature-way` | Diagnose the product phase and gates before implementation; use Opportunity or Fundraising only if a commitment changes. |
+| “Should we build/launch/change this?”, or any feature/code/UI request | `/nature-way` | Build/reconcile the System Dependency Map and diagnose the product phase before implementation; use Opportunity or Fundraising only if a commitment changes. |
 | “I have an idea/problem; what must be true before we build?” | `/nature-way-venture-lifecycle` | Diagnose problem evidence and next proof, then hand the selected product slice to `/nature-way`. |
 | “What stage are we really at, what must be proven next, or how do we find distribution?” | `/nature-way-venture-lifecycle` | Run the stage/distribution gate; hand a required product slice to `/nature-way`. |
 | “Can we raise or talk to investors?” | `/nature-way-fundraising` | Check Nature Way proof and capacity before capital claims or process. |

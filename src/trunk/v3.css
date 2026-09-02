@@ -1,0 +1,1463 @@
+/* ============================================================================
+   Omni v3 Design System — shared foundation (loads AFTER styles.css).
+   Tokens + named components (MenuIcon, RoleSwitch, SearchDock, FacilityPin,
+   ContextPanel, StatusBadge, PriceBadge, FilterChip, FacilityCard) applied to
+   the buyer-search surfaces (lot A, screens 1–5) and the app-wide palette.
+
+   Authoritative source: OMNI-V3-MASTER-PLAN.md §4 / DESIGN-SPEC-v3.md.
+   ========================================================================== */
+
+:root {
+  /* Fonts — display (Plus Jakarta Sans) + body (Hanken Grotesk). */
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-body);
+  color: #1A1C1B;
+
+  /* v3 palette (exact values). */
+  --v3-evergreen: #234D40;
+  --v3-evergreen-dark: #08362A;
+  --v3-cream: #F9F7F2;
+  --v3-accent: #F08F5A;
+  --v3-ink: #1A1C1B;
+  --v3-appbg: #F9F9F7;
+  --v3-surface-1: #FFFFFF;
+  --v3-surface-2: #F4F4F1;
+  --v3-surface-3: #EEEEEC;
+  --v3-surface-4: #E8E8E6;
+  --v3-surface-5: #E2E3E0;
+  --v3-outline: #717975;
+  --v3-outline-discrete: #C0C8C3;
+  --v3-l1-border: #EAE8E0;
+  --v3-l1-shadow: 0 0 0 1px #EAE8E0, 0 12px 24px rgba(26,28,27,0.08);
+  --v3-l2-shadow: 0 12px 40px 4px rgba(26,28,27,0.12);
+  --v3-light-green: #E2E3E0;
+
+  /* Remap the legacy token set to v3 equivalents so the whole app inherits. */
+  --ink: #1A1C1B;
+  --ink-soft: rgba(26, 28, 27, 0.6);
+  --muted: #6F7673;
+  --muted-2: #8A918D;
+  --map: #F9F9F7;
+  --sheet: #FFFFFF;
+  --forest: #234D40;
+  --forest-deep: #08362A;
+  --mint: #E2E3E0;
+  --mint-ink: #234D40;
+  --coral: #F08F5A;
+  --line: rgba(35, 77, 64, 0.14);
+  --glass: rgba(255, 255, 255, 0.9);
+  --shadow-soft: 0 12px 28px rgba(26, 28, 27, 0.10);
+  --shadow-sheet: 0 -6px 30px rgba(26, 28, 27, 0.08);
+  --sheet-height: min(62dvh, 560px);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { background: var(--v3-appbg); }
+body { background: var(--v3-appbg); }
+
+body, button, input, select, textarea {
+  font-family: var(--font-body);
+}
+
+h1, h2, h3, h4,
+.section-kicker,
+.nearby-heading h1,
+.nearby-collapsed-copy strong,
+.sheet-head h2,
+.facility-identity h2 {
+  font-family: var(--font-display);
+}
+
+/* Primary buttons: exactly #234D40 bg / #F9F7F2 (cream) text. */
+.primary-button {
+  background: #234D40;
+  color: #F9F7F2;
+  border-radius: 12px;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  gap: 8px;
+}
+/* Except pills in docks/chips which are handled separately */
+.search-pill .primary-button { border-radius: 9999px; }
+
+.primary-button:hover:not(:disabled) { background: #08362A; }
+
+/* Secondary: cream bg, evergreen text, 1px evergreen border. */
+.secondary-button,
+.result-toolbar-button.secondary,
+.map-error button,
+.map-provider-error button {
+  background: #F9F7F2;
+  color: #234D40;
+  border: 1px solid #234D40;
+  border-radius: 12px;
+  min-height: 48px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.species-app { background: var(--v3-appbg); }
+.map-stage { background: #FFFFFF; }
+/* Map fills the app viewport (full width, 100% height => well above the v3
+   min 55% rule). Reinforced here so a reskin can never collapse it to 0-height. */
+.omni-stage-viewport.map-stage,
+.omni-stage-viewport .map-stage { width: 100vw; height: 100svh; }
+.omni-stage-viewport .map-canvas { width: 100%; height: 100%; }
+
+/* ============================================================================
+   MenuIcon — 48px cream circle, fixed top-right, 24px safe margin.
+   (applied to the existing account orb / menu trigger)
+   ========================================================================== */
+.account-orb,
+.menu-icon {
+  position: absolute;
+  top: calc(var(--safe-top, 24px) + 24px);
+  right: 24px;
+  z-index: 50;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  color: #234D40;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l1-shadow);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  display: grid;
+  place-items: center;
+}
+.species-topbar { 
+  position: absolute;
+  top: 0; left: 0; width: 100%;
+  pointer-events: none;
+}
+.species-topbar * { pointer-events: auto; }
+
+/* ============================================================================
+   RoleSwitch — "Acheter/Vendre" pill, fixed top-left.
+   ========================================================================== */
+.role-switch {
+  position: absolute;
+  top: calc(var(--safe-top, 24px) + 24px);
+  left: 24px;
+  z-index: 50;
+  background: #F9F7F2;
+  border: 1px solid #EAE8E0;
+  box-shadow: var(--v3-l1-shadow);
+  padding: 4px;
+  border-radius: 9999px;
+  display: flex;
+}
+.role-option {
+  color: rgba(26, 28, 27, 0.6);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  min-height: 40px;
+  padding: 0 20px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+}
+.role-option.active {
+  background: #234D40;
+  color: #F9F7F2;
+}
+.role-option:not(.active):hover { color: #234D40; background: rgba(249, 247, 242, 0.9); }
+
+/* ============================================================================
+   SearchDock — pill ~92% width, 56px, cream, search left + filter right.
+   ========================================================================== */
+.search-anchor {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 40;
+  width: min(92%, 520px);
+  bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom, 0px)) + 24px);
+  transition: bottom 0.2s cubic-bezier(.23,1,.32,1);
+}
+.search-pill {
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 7px 8px 7px 18px;
+  background: #F9F7F2;
+  border: 1px solid #EAE8E0;
+  border-radius: 9999px;
+  box-shadow: var(--v3-l1-shadow);
+  gap: 12px;
+}
+.search-pill > svg { color: #234D40; flex-shrink: 0; }
+.search-pill input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #1A1C1B;
+  font-family: var(--font-body);
+  font-size: 16px;
+  outline: none;
+}
+.search-pill input::placeholder { color: rgba(26, 28, 27, 0.6); }
+.pill-submit,
+.pill-qr,
+.pill-options {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  background: transparent;
+  color: #234D40;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.pill-submit {
+  background: #234D40;
+  color: #F9F7F2;
+  box-shadow: 0 2px 8px rgba(35, 77, 64, 0.25);
+}
+.pill-submit svg {
+  color: #F9F7F2;
+}
+.pill-submit:hover {
+  background: #18372E;
+  transform: scale(1.04);
+}
+.pill-qr:hover,
+.pill-options:hover {
+  background: rgba(35, 77, 64, 0.08);
+}
+
+/* ============================================================================
+   FacilityPin — rendered as MapLibre circle layers (orange core, cream ring).
+   Selection highlight handled via a dedicated selected layer (see TrunkMap).
+   ========================================================================== */
+.map-pin-facility::before { border-color: #F9F7F2; background: #F08F5A; }
+.map-pin-cluster-core { background: #F08F5A; }
+
+/* ============================================================================
+   ContextPanel — floating card anchored above the selected pin (rule 3).
+   ========================================================================== */
+.context-panel {
+  position: absolute;
+  z-index: 9;
+  left: 50%;
+  bottom: calc(var(--safe-bottom, 12px) + 108px);
+  width: min(92%, 520px);
+  transform: translateX(-50%);
+  border-radius: 24px;
+  padding: 20px;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l2-shadow);
+  animation: v3-lift .22s var(--ease, cubic-bezier(.23,1,.32,1));
+}
+.context-panel .context-notch {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #F9F7F2;
+  border-radius: 2px;
+}
+.context-panel .context-head { display: flex; align-items: flex-start; gap: 12px; }
+.context-panel .context-title { margin: 0; color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 20px; line-height: 28px; }
+.context-panel .context-meta { margin: 4px 0 0; color: rgba(26, 28, 27, 0.6); font-family: var(--font-body); font-size: 14px; line-height: 20px; }
+.context-panel .context-actions { display: flex; gap: 12px; margin-top: 16px; }
+.context-panel .context-actions .primary-button { margin-top: 0; min-height: 48px; flex: 1; }
+.context-panel .context-actions .context-outline {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid #234D40;
+  border-radius: 12px;
+  background: #F9F7F2;
+  color: #234D40;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 20px;
+}
+.context-panel .context-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(26, 28, 27, 0.06);
+  color: #1A1C1B;
+  display: grid;
+  place-items: center;
+}
+@keyframes v3-lift { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ============================================================================
+   StatusBadge — rule 6 colors.
+   ========================================================================== */
+.status-pill,
+.v3-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  min-height: 24px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.status-pill,
+.v3-status.available,
+.v3-status.confirmed {
+  background: #E2E3E0;
+  color: #234D40;
+}
+.v3-status.unconfirmed {
+  background: transparent;
+  border: 1px solid #C0C8C3;
+  color: rgba(26, 28, 27, 0.6);
+}
+.v3-status.unclaimed {
+  background: transparent;
+  border: 1px dashed #C0C8C3;
+  color: rgba(26, 28, 27, 0.6);
+}
+
+/* ============================================================================
+   PriceBadge — "-XX%" orange pill (orange is reserved for this + pin core).
+   ========================================================================== */
+.v3-price {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  min-height: 24px;
+  border-radius: 9999px;
+  background: #F08F5A;
+  color: #FFFFFF;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+}
+
+/* ============================================================================
+/* ============================================================================
+   FilterChip — pill; inactive Cream + Evergreen border, active Evergreen.
+   ========================================================================== */
+.v3-chip-row {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px;
+  scrollbar-width: none;
+}
+.v3-chip-row::-webkit-scrollbar { display: none; }
+.v3-chip {
+  display: inline-flex; align-items: center;
+  padding: 0 16px; min-height: 40px;
+  border-radius: 9999px;
+  background: #F9F7F2;
+  border: 1px solid #234D40;
+  color: #234D40;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.v3-chip.active {
+  background: #234D40;
+  color: #F9F7F2;
+}
+
+/* ============================================================================
+   FacilityCard (ResultsSheet) — 24px radius, 12px image overlay.
+   ========================================================================== */
+.v3-facility-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 0 20px 20px;
+  overflow-y: auto;
+}
+@media (min-width: 640px) {
+  .v3-facility-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.v3-facility-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(26,28,27,0.04);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #EEEEEC;
+}
+.v3-card-cover {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0 8px;
+  background: transparent;
+}
+.v3-card-store-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #E3F0E9;
+  color: #234D40;
+}
+.v3-card-name {
+  font-family: var(--font-display);
+  font-weight: 600; font-size: 18px; line-height: 24px;
+  color: #1A1C1B;
+}
+.v3-card-meta {
+  font-family: var(--font-body);
+  font-size: 14px; color: rgba(26,28,27,0.6);
+  line-height: 20px;
+}
+.v3-card-foot {
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 8px;
+  margin-top: auto;
+}
+.v3-card-cta {
+  background: transparent; border: 0; color: #234D40;
+  font-family: var(--font-display); font-weight: 700; font-size: 15px;
+  text-decoration: underline; padding: 0;
+}
+.v3-product-price { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.v3-product-price .price-original { text-decoration: line-through; color: rgba(26,28,27,0.6); font-size: 14px; }
+.v3-product-price .price-net { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: #1A1C1B; }
+
+/* ============================================================================
+   FacilitySheet (Screen 5 context exception) — 75dvh sheet.
+   ========================================================================== */
+.facility-sheet.omni-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 75dvh;
+  border-radius: 24px 24px 0 0;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l2-shadow);
+  padding: 20px;
+  z-index: 60;
+  transform: translateY(0);
+  transition: transform 0.3s var(--ease);
+  overflow-y: auto;
+}
+.facility-sheet .sheet-handle {
+  width: 36px; height: 4px; background: #C0C8C3; border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+.catalogue-list {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.catalogue-item {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(26,28,27,0.04);
+  display: flex; gap: 12px;
+}
+.catalogue-item .product-icon {
+  width: 40px; height: 40px; border-radius: 8px; background: #F4F4F1;
+  display: grid; place-items: center; color: #234D40; flex-shrink: 0;
+}
+.catalogue-item > span:nth-child(2) {
+  flex: 1; display: flex; flex-direction: column; gap: 4px;
+}
+.catalogue-item strong {
+  font-family: var(--font-display); font-weight: 600; font-size: 16px; color: #1A1C1B;
+}
+.catalogue-item small {
+  font-family: var(--font-body); font-size: 14px; color: rgba(26,28,27,0.6);
+}
+
+/* ============================================================================
+   ResultsSheet (NearbySheet) — 62dvh sheet.
+   ========================================================================== */
+.nearby-sheet {
+  position: absolute;
+  bottom: 0; left: 0; width: 100%;
+  height: 62dvh;
+  border-radius: 24px 24px 0 0;
+  background: #F9F7F2;
+  box-shadow: var(--v3-l2-shadow);
+  z-index: 30;
+  display: flex; flex-direction: column;
+}
+.nearby-sheet .sheet-handle-button {
+  background: transparent; border: 0; width: 100%; height: 28px;
+  display: grid; place-items: center; padding: 8px 0; cursor: pointer;
+}
+.nearby-sheet .sheet-handle-button:hover .sheet-handle {
+  background: #234D40;
+}
+.nearby-sheet .sheet-handle,
+.sheet-handle {
+  width: 40px; height: 5px; background: #C0C8C3; border-radius: 999px;
+  transition: background-color 0.16s ease;
+}
+.nearby-heading {
+  padding: 12px 20px 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.nearby-heading h1 {
+  margin: 2px 0 0;
+  color: #1A1C1B;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 28px;
+  letter-spacing: -0.01em;
+}
+.section-kicker {
+  display: block;
+  color: rgba(26, 28, 27, 0.6);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.see-all {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #E3F0E9;
+  color: #234D40;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+}
+.see-all:hover:not(:disabled) {
+  background: #234D40;
+  color: #F9F7F2;
+}
+.see-all:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.nearby-result-toolbar {
+  padding: 4px 20px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.nearby-result-toolbar::-webkit-scrollbar {
+  display: none;
+}
+.result-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  border: 1px solid #234D40;
+  background: #234D40;
+  color: #F9F7F2;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.16s ease;
+}
+.result-toolbar-button:hover {
+  background: #08362A;
+  border-color: #08362A;
+}
+.result-toolbar-button.secondary {
+  background: #FFFFFF;
+  color: #234D40;
+  border: 1px solid #E2E3E0;
+}
+.result-toolbar-button.secondary:hover {
+  background: #E3F0E9;
+  border-color: #234D40;
+}
+.nearby-collapsed-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 20px; height: 100%; cursor: pointer; background: #F9F7F2;
+  border-top: 1px solid #EAEAE6; border-radius: 24px 24px 0 0;
+}
+
+/* ============================================================================
+   Filters Panel (SearchOptionsPopover)
+   ========================================================================== */
+.v3-filter-panel {
+  position: absolute;
+  bottom: calc(var(--safe-bottom, 0px) + 96px); /* Above the SearchDock */
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(92%, 520px);
+  background: #F9F7F2;
+  border-radius: 24px;
+  padding: 20px;
+  box-shadow: var(--v3-l2-shadow);
+  z-index: 45;
+}
+.v3-filter-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 0; background: rgba(26,28,27,0.06); color: #1A1C1B;
+  display: grid; place-items: center;
+}
+.v3-filter-panel h3 { margin: 0 0 20px; font-size: 20px; font-weight: 700; }
+.v3-filter-section { margin-bottom: 20px; }
+.v3-filter-section > span { display: block; font-weight: 600; margin-bottom: 12px; font-size: 14px; color: #1A1C1B; }
+.v3-filter-apply { margin-top: 32px; display: flex; }
+.v3-filter-apply .primary-button { flex: 1; }
+.filter-clear { margin-top: 16px; width: 100%; background: transparent; border: 0; text-align: center; color: rgba(26,28,27,0.6); font-size: 15px; font-weight: 600; font-family: var(--font-display); }
+
+/* ============================================================================
+   FilterChip — pill; inactive cream+evergreen border, active evergreen.
+   ========================================================================== */
+.v3-chip {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #234D40;
+  border-radius: 999px;
+  background: #F9F7F2;
+  color: #234D40;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+}
+.v3-chip.active { background: #234D40; color: #F9F7F2; }
+.v3-chip.active:hover { background: #08362A; }
+
+/* Filter panel — overlay above the SearchDock. */
+.v3-filter-panel {
+  position: absolute;
+  z-index: 11;
+  left: 4%;
+  right: 4%;
+  bottom: calc(var(--safe-bottom, 12px) + 92px);
+  width: 92%;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 24px;
+  background: #FFFFFF;
+  box-shadow: var(--v3-l2-shadow);
+  animation: v3-sheet-lift .22s var(--ease, cubic-bezier(.23,1,.32,1));
+}
+.v3-filter-panel h3 { margin: 0; color: #1A1C1B; font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: -0.01em; }
+.v3-filter-section { margin-top: 20px; }
+.v3-filter-section > span { display: block; margin-bottom: 8px; color: #1A1C1B; font-family: var(--font-display); font-weight: 600; font-size: 15px; line-height: 20px; }
+.v3-chip-row { display: flex; flex-wrap: wrap; gap: 12px; }
+.v3-filter-apply { margin-top: 24px; }
+.v3-filter-apply .primary-button { margin-top: 0; }
+.v3-filter-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #F4F4F1;
+  color: #1A1C1B;
+  display: grid;
+  place-items: center;
+}
+@keyframes v3-sheet-lift { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ============================================================================
+   ResultsSheet (screen 3) — 62% height, "X facilités trouvées", 2-col grid.
+   ========================================================================== */
+.nearby-sheet:not(.is-collapsed) {
+  height: 62dvh;
+  max-height: 72dvh;
+  width: min(100%, 760px);
+  border-radius: 24px 24px 0 0;
+  background: #F9F9F7;
+  box-shadow: var(--v3-l2-shadow);
+}
+.nearby-heading { padding: 12px 20px 4px; }
+.nearby-heading h1 { color: #1A1C1B; font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 30px; letter-spacing: -0.01em; }
+.section-kicker { color: rgba(26, 28, 27, 0.6); font-family: var(--font-body); font-size: 12px; font-weight: 700; letter-spacing: 0.05em; }
+.sheet-handle { width: 36px; height: 4px; background: #C0C8C3; }
+
+/* Results rail becomes a responsive FacilityCard grid. */
+.v3-facility-grid,
+.nearby-rail {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px 20px 24px;
+  overflow-y: auto;
+}
+@media (min-width: 640px) {
+  .v3-facility-grid,
+  .nearby-rail {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.nearby-rail::-webkit-scrollbar { display: none; }
+
+/* FacilityCard — 20px radius, clean store identity header. */
+.v3-facility-card,
+.nearby-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #E2E3E0;
+  border-radius: 18px;
+  background: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  padding: 14px 16px;
+  gap: 10px;
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+.v3-facility-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-color: #C0C8C3;
+}
+.v3-facility-card .v3-card-cover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  margin: 0;
+}
+.v3-facility-card .v3-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
+  flex: 1;
+}
+.v3-facility-card .v3-card-name {
+  color: #1A1C1B;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  line-height: 22px;
+}
+.v3-facility-card .v3-card-meta {
+  color: rgba(26, 28, 27, 0.6);
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 18px;
+}
+.v3-facility-card .v3-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 10px;
+  border-top: 1px solid #F4F4F1;
+}
+.v3-facility-card .v3-card-distance,
+.v3-facility-card .v3-card-price {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  color: #234D40;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v3-facility-card .v3-card-cta {
+  border: 0;
+  border-radius: 999px;
+  height: 34px;
+  padding: 0 16px;
+  background: #234D40;
+  color: #F9F7F2;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 34px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: auto;
+  transition: background-color 0.16s ease;
+}
+.v3-facility-card .v3-card-cta:hover {
+  background: #08362A;
+}
+
+/* ============================================================================
+   Full facility card / FacilitySheet (screen 5).
+   ========================================================================== */
+/* Écran 9 (QR vitrine) : « Partager » primaire + « Copier le lien » secondaire. */
+.qr-card-actions { display: flex; gap: 10px; margin: .35rem 0 0; }
+.qr-card-actions .primary-button { margin-top: 0; flex: 1; min-height: 46px; }
+.qr-card-actions .secondary-button { margin-top: 0; flex: 0 0 auto; min-height: 46px; min-width: 128px; border: 1px solid #234D40; background: #F9F7F2; color: #234D40; }
+/* Product rows on the full card: struck original + discounted + PriceBadge. */
+.v3-product-price { display: flex; align-items: center; gap: 8px; }
+.v3-product-price .price-original { text-decoration: line-through; color: rgba(26,28,27,0.5); }
+.v3-product-price .price-net { font-family: var(--font-display); font-weight: 700; color: #1A1C1B; }
+
+/* Maps stay neutral/mono per spec. */
+.map-canvas .maplibregl-canvas { filter: grayscale(1) saturate(0) contrast(1.12) brightness(1.04); }
+
+/* Desktop: sheets float with full radius. */
+@media (min-width: 900px) {
+  .omni-sheet { border-radius: 24px; bottom: 24px; }
+  .nearby-sheet:not(.is-collapsed) { border-radius: 24px; bottom: 24px; max-height: calc(100dvh - 120px); height: auto; min-height: 0; }
+}
+
+/* --- rule-5 alignment: keep orange for discount badge / pin core only. --- */
+.menu-icon { pointer-events: auto; }
+.see-all { color: #234D40; }
+.see-all:hover { color: #08362A; }
+.text-button { color: #234D40; }
+.text-button:hover { color: #08362A; }
+.menu-action svg { color: #234D40; }
+.product-icon { color: #234D40; }
+.facility-identity-icon { color: #234D40; background: #E3F0E9; }
+.filter-clear { align-self: flex-start; margin-top: 12px; }
+
+/* ============================================================================
+   Payment method rows (screen 11 — Options de paiement).
+   Full-row selectable options with Evergreen radio indicator (reuse of the
+   .radio-dot pattern); the « Confirmer le choix » action keeps the standard
+   .primary-button (Règle 9). No new colors (Règle 5: no orange here).
+   ========================================================================== */
+.payment-method-picker > span { font-weight: 800; }
+.payment-method-rows { display: grid; gap: 8px; }
+.payment-method-row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 9px; width: 100%; padding: 11px 12px; border: 1px solid var(--v3-outline-discrete); border-radius: 12px; color: var(--v3-ink); background: var(--v3-surface-1); text-align: left; cursor: pointer; transition: border-color .16s ease, background-color .16s ease; }
+.payment-method-row:hover { border-color: var(--v3-outline); }
+.payment-method-row:focus-visible { outline: 2px solid var(--v3-evergreen); outline-offset: 2px; }
+.payment-method-row.selected { border-color: var(--v3-evergreen); background: var(--v3-light-green); }
+.payment-method-row .radio-dot { border-color: var(--v3-outline-discrete); }
+.payment-method-row.selected .radio-dot { border: 4px solid var(--v3-evergreen); }
+.payment-method-row > span:nth-child(2) { display: grid; min-width: 0; gap: 2px; }
+.payment-method-row strong { font-family: var(--font-display); font-weight: 600; font-size: 13px; line-height: 18px; color: var(--v3-ink); }
+.payment-method-row small { font-family: var(--font-body); font-weight: 400; font-size: 12px; line-height: 16px; color: var(--ink-soft); }
+
+/* ============================================================================
+   Route status chip (écran 10 — Itinéraire in-app).
+   Pill above the search dock: Evergreen trace status + distance estimate and a
+   close action. Tokens only (Règle 5 — no new colors, no orange here).
+   ========================================================================== */
+.route-status-chip { position: absolute; z-index: 6; bottom: calc(var(--safe-bottom, 14px) + 78px); left: 50%; display: flex; align-items: center; gap: 8px; width: max-content; max-width: min(92%, 430px); transform: translateX(-50%); padding: 8px 8px 8px 13px; border: 1px solid var(--v3-outline-discrete); border-radius: 999px; color: var(--v3-ink); background: var(--v3-cream); box-shadow: var(--v3-l1-shadow); font-size: 12px; font-weight: 600; line-height: 16px; }
+.route-status-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.route-status-chip button { display: grid; place-items: center; flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; color: var(--v3-evergreen); background: var(--v3-light-green); cursor: pointer; }
+.route-status-chip button:focus-visible { outline: 2px solid var(--v3-evergreen); outline-offset: 2px; }
+.route-status-chip[data-state="unavailable"] { border-color: var(--v3-outline); }
+.route-status-chip[data-state="unavailable"] button { color: var(--v3-ink); background: var(--v3-surface-3); }
+
+/* ============================================================================
+   Lot B — Flow disponibilité et transaction
+   ========================================================================== */
+.omni-step-enter { animation: v3-fade-up 0.3s var(--ease) forwards; }
+@keyframes v3-fade-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.transaction-rating {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100svh;
+  background: var(--v3-appbg); z-index: 95; padding: calc(var(--safe-top, 24px) + 40px) 24px;
+  display: flex; flex-direction: column;
+}
+.rating-stars { display: flex; gap: 8px; justify-content: center; margin: 32px 0; }
+.rating-stars svg { color: var(--v3-evergreen); cursor: pointer; }
+
+
+/* ============================================================================
+   Lot B — Flow disponibilité et transaction (Omni v3)
+   ========================================================================== */
+
+/* 8. Chat transactionnel (Exception Règle 2 : Plein écran autorisé) */
+.transaction-chat {
+  background: var(--v3-surface-2);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 4px 12px rgba(26,28,27,0.04);
+  margin-bottom: 24px;
+}
+.transaction-chat .chat-header {
+  background: var(--v3-cream);
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--v3-l1-border);
+  font-family: var(--font-display);
+  font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.transaction-chat .chat-messages {
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 300px; overflow-y: auto;
+}
+.transaction-chat .chat-message {
+  padding: 12px 16px;
+  border-radius: 16px;
+  max-width: 85%;
+  font-size: 14px;
+}
+.transaction-chat .chat-message[data-origin="system"] {
+  background: transparent; color: var(--v3-outline);
+  text-align: center; font-size: 13px; align-self: center;
+  border: 1px solid var(--v3-l1-border);
+}
+.transaction-chat .chat-message[data-origin="me"] {
+  background: var(--v3-evergreen); color: var(--v3-cream);
+  align-self: flex-end; border-bottom-right-radius: 4px;
+}
+.transaction-chat .chat-message[data-origin="other"] {
+  background: var(--v3-surface-3); color: var(--v3-ink);
+  align-self: flex-start; border-bottom-left-radius: 4px;
+}
+.transaction-chat .chat-composer {
+  display: flex; padding: 12px; background: var(--v3-cream);
+  border-top: 1px solid var(--v3-l1-border); gap: 8px;
+}
+.transaction-chat .chat-composer input {
+  flex: 1; border: 1px solid var(--v3-l1-border);
+  border-radius: 9999px; padding: 0 16px;
+  background: var(--v3-surface-1); outline: none;
+}
+.transaction-chat .chat-composer button {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--v3-evergreen); color: var(--v3-cream);
+  border: 0; display: grid; place-items: center;
+}
+
+/* 9. QR généré overlay (Écran plein) */
+.transaction-qr-card {
+  background: var(--v3-cream);
+  border-radius: 24px; padding: 24px;
+  box-shadow: var(--v3-l2-shadow);
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  margin-bottom: 24px;
+}
+.transaction-qr-card .qr-svg {
+  background: #FFF; padding: 16px; border-radius: 16px;
+  margin-bottom: 16px;
+}
+.transaction-qr-card code {
+  font-family: monospace; font-size: 16px; font-weight: 700;
+  letter-spacing: 2px; color: var(--v3-evergreen);
+}
+
+/* 12. Séquence de confirmation (TransactionStepper) */
+.transaction-stepper {
+  display: flex; flex-direction: column; gap: 0;
+  margin-bottom: 32px;
+  background: var(--v3-surface-1);
+  padding: 24px; border-radius: 24px;
+}
+.stepper-step {
+  display: flex; align-items: flex-start; gap: 16px;
+  position: relative; padding-bottom: 24px;
+}
+.stepper-step:last-child { padding-bottom: 0; }
+.stepper-step:not(:last-child)::before {
+  content: ''; position: absolute;
+  top: 24px; left: 11px; width: 2px; height: calc(100% - 24px);
+  background: var(--v3-l1-border);
+}
+.stepper-step .step-indicator {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--v3-outline-discrete);
+  background: var(--v3-surface-1);
+  position: relative; z-index: 2;
+}
+.stepper-step[data-status="active"] .step-indicator {
+  border-color: var(--v3-evergreen);
+  background: var(--v3-evergreen);
+  box-shadow: 0 0 0 4px var(--v3-light-green);
+}
+.stepper-step[data-status="completed"] .step-indicator {
+  border-color: var(--v3-evergreen);
+  background: var(--v3-evergreen);
+}
+.stepper-step .step-content {
+  flex: 1; margin-top: 2px;
+}
+.stepper-step .step-content strong {
+  display: block; font-family: var(--font-display); font-size: 15px; color: var(--v3-ink);
+}
+.stepper-step .step-content small {
+  display: block; font-size: 13px; color: var(--v3-outline);
+}
+
+/* 13. Avis post-transaction */
+.transaction-rating {
+  background: var(--v3-surface-1); padding: 24px;
+  border-radius: 24px; margin-bottom: 24px;
+}
+.transaction-rating .rating-stars {
+  display: flex; gap: 8px; justify-content: center; margin: 24px 0;
+}
+.transaction-rating .rating-stars button {
+  background: transparent; border: 0; color: var(--v3-outline-discrete);
+  padding: 0; margin: 0; cursor: pointer; transition: color 0.2s;
+}
+.transaction-rating .rating-stars button:hover,
+.transaction-rating .rating-stars button[data-active="true"] {
+  color: var(--v3-evergreen);
+}
+
+/* ============================================================================
+   Omni v3 — Lot C & Seller Extensions
+   ========================================================================== */
+
+/* Facility Selector Chips (Rule 8 & Screen 19) */
+.v3-facility-selector-bar {
+  position: absolute;
+  bottom: calc(var(--safe-bottom, 24px) + 76px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 16px;
+}
+.v3-facility-selector-scroll {
+  display: flex;
+  gap: 8px;
+  max-width: 600px;
+  overflow-x: auto;
+  padding: 4px 8px;
+  pointer-events: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  background: rgba(249, 247, 242, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 9999px;
+  box-shadow: var(--v3-l1-shadow);
+  border: 1px solid var(--v3-l1-border);
+}
+.v3-facility-selector-scroll::-webkit-scrollbar { display: none; }
+
+.v3-facility-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 9999px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid var(--v3-outline-discrete);
+  background: var(--v3-surface-1);
+  color: var(--v3-ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.v3-facility-chip .v3-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--v3-outline-discrete);
+}
+.v3-facility-chip.active {
+  background: var(--v3-evergreen);
+  color: var(--v3-cream);
+  border-color: var(--v3-evergreen);
+}
+.v3-facility-chip.active .v3-chip-dot {
+  background: var(--v3-accent);
+}
+
+/* Seller Certification Progress Card (Screen 18) */
+.v3-certification-card {
+  background: var(--v3-surface-2);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 14px 0;
+  border: 1px solid var(--v3-l1-border);
+}
+.v3-cert-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.v3-cert-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--v3-ink);
+}
+.v3-cert-count {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--v3-evergreen);
+}
+.v3-cert-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 9999px;
+  background: var(--v3-surface-4);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.v3-cert-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--v3-evergreen);
+  transition: width 0.3s ease;
+}
+.v3-cert-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--v3-outline);
+}
+
+/* Neutral Locked Credit Badge (Screen 21 & rule 5/21) */
+.v3-neutral-locked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  color: #4A524D;
+  background: var(--v3-surface-3);
+  border: 1px solid var(--v3-outline-discrete);
+}
+
+/* Confirmation Stepper Vertical (Screen 12) */
+.v3-stepper-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 16px 0;
+}
+.v3-step-item {
+  display: flex;
+  gap: 12px;
+  position: relative;
+  min-height: 52px;
+}
+.v3-step-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 20px;
+}
+.v3-step-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--v3-outline-discrete);
+  background: var(--v3-surface-1);
+  margin-top: 3px;
+  transition: all 0.2s ease;
+}
+.v3-step-line {
+  flex: 1;
+  width: 2px;
+  background: var(--v3-surface-4);
+  margin: 4px 0;
+}
+.v3-step-item.done .v3-step-dot {
+  background: var(--v3-evergreen);
+  border-color: var(--v3-evergreen);
+}
+.v3-step-item.done .v3-step-line {
+  background: var(--v3-evergreen);
+}
+.v3-step-item.current .v3-step-dot {
+  background: var(--v3-evergreen);
+  border-color: var(--v3-evergreen);
+  box-shadow: 0 0 0 3px rgba(35, 77, 64, 0.2);
+}
+.v3-step-content {
+  flex: 1;
+  padding-bottom: 12px;
+}
+.v3-step-label {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v3-ink);
+}
+.v3-step-item.pending .v3-step-label {
+  color: var(--v3-outline);
+}
+.v3-step-desc {
+  display: block;
+  font-size: 12px;
+  color: var(--v3-outline);
+  margin-top: 2px;
+}
+
+/* Star Rating (Screen 13) */
+.v3-star-rating {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+.v3-star-btn {
+  background: transparent;
+  border: 0;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 28px;
+  line-height: 1;
+  color: var(--v3-outline-discrete);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.v3-star-btn:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+.v3-star-btn.filled {
+  color: var(--v3-evergreen);
+}
+
+/* Payment Options (Screen 11) */
+.v3-payment-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 14px 0;
+}
+.v3-payment-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--v3-surface-1);
+  border: 1px solid var(--v3-outline-discrete);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.v3-payment-row.active {
+  border-color: var(--v3-evergreen);
+  background: rgba(35, 77, 64, 0.04);
+}
+.v3-payment-row .v3-radio-bullet {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--v3-outline-discrete);
+  position: relative;
+  flex-shrink: 0;
+}
+.v3-payment-row.active .v3-radio-bullet {
+  border-color: var(--v3-evergreen);
+}
+.v3-payment-row.active .v3-radio-bullet::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--v3-evergreen);
+}
+.v3-payment-info strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v3-ink);
+}
+.v3-payment-info span {
+  display: block;
+  font-size: 12px;
+  color: var(--v3-outline);
+  margin-top: 2px;
+}
+
+/* ============================================================================
+   Global Input & Responsiveness Safeguards (Production Ready)
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root, main.species-app {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 22px;
+  color: #1A1C1B;
+  background-color: #FFFFFF;
+  border: 1px solid var(--v3-outline-discrete, #E2E3E0);
+  border-radius: 12px;
+  padding: 10px 14px;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: #234D40;
+  box-shadow: 0 0 0 3px rgba(35, 77, 64, 0.15);
+}
+
+.money-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.money-input input {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+/* Backdrops & Modal Overlay Containers */
+.sheet-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  background: rgba(26, 28, 27, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 0;
+}
+
+@media (min-width: 640px) {
+  .sheet-backdrop {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+/* Floating Desktop Panels for Search & Facility context */
+@media (min-width: 900px) {
+  .nearby-sheet:not(.is-collapsed) {
+    left: 24px !important;
+    transform: none !important;
+    width: 420px !important;
+    border-radius: 24px !important;
+    bottom: 24px !important;
+    max-height: calc(100dvh - 140px) !important;
+    box-shadow: var(--v3-l2-shadow) !important;
+  }
+  .facility-sheet.omni-sheet {
+    left: 24px !important;
+    transform: none !important;
+    width: 440px !important;
+    border-radius: 24px !important;
+    bottom: 24px !important;
+    height: auto !important;
+    max-height: calc(100dvh - 140px) !important;
+    box-shadow: var(--v3-l2-shadow) !important;
+  }
+  .account-menu {
+    top: calc(var(--safe-top, 24px) + 72px) !important;
+    right: 24px !important;
+  }
+}
+
+/* Robust Responsive Overflow Guards */
+.nearby-sheet,
+.v3-filter-panel,
+.omni-sheet,
+.account-menu,
+.options-popover {
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .nearby-sheet:not(.is-collapsed) {
+    width: 100% !important;
+    left: 0 !important;
+    transform: none !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+  .v3-filter-panel {
+    width: calc(100% - 16px) !important;
+    left: 8px !important;
+    right: 8px !important;
+    transform: none !important;
+  }
+  .omni-sheet {
+    width: 100% !important;
+    left: 0 !important;
+    transform: none !important;
+    border-radius: 24px 24px 0 0 !important;
+  }
+  .account-menu {
+    right: 8px !important;
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+  }
+  .v3-card-name, .nearby-collapsed-copy strong, .facility-card-title {
+    overflow-wrap: anywhere;
+  }
+}
+
+

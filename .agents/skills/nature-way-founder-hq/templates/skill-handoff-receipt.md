@@ -16,7 +16,7 @@
 | Relevant artifacts and proof | `<links or IDs; include as-of dates>` |
 | Dependencies and constraints | `<capacity, data, timing, platform, risk>` |
 | Secondary route | `<only if needed>` |
-| Expected specialist return | `<gate, evidence, residual gap, owner, next action, Resource Receipt, active structural path, completed task/subtask IDs, capacity impact, re-plan trigger>` |
+| Expected specialist return | `<gate, evidence, residual gap, owner, next action>` |
 
 ## Specialist resource receipt
 
@@ -25,12 +25,6 @@
 | Loaded | `<references/...>` |
 | Template instantiated | `<templates/... or not applicable>` |
 | Not loaded / reason | `<path and blocking reason, or none>` |
-
-## Task-tree return
-
-| Active structural path | Completed task/subtask IDs | Residual gap or blocker | Capacity impact | Re-plan trigger |
-|---|---|---|---|---|
-| `<HQ > gate > specialist > slice > task/subtask>` | `<IDs or none>` | `<gap/blocker>` | `<hours, owner, or displaced work>` | `<event>` |
 
 ## Dispatch result
 

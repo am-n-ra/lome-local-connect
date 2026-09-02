@@ -1,0 +1,48 @@
+# Omni V2 — Availability Repository Root Evidence
+
+**Document ID:** `OMNI-V2-ROOT-AVAILABILITY-REPOSITORY-001`  
+**Method:** Nature Way — Phase 2, Root System  
+**Observed:** 2026-08-23  
+**Status:** `partial`
+
+## Scope
+
+This record covers the current server repository path and explicitly user-confirmed live browser proofs for `POST /api/v2/availability`. It does not claim inventory availability, reservation, payment, marketplace adoption or Trunk approval. The first live proof landed on production/default; after the Vercel binding correction, the bounded replay proof landed on the persistent V2 development branch.
+
+## Implemented boundary
+
+`src/server/trunk-repository.ts#createAvailabilityRequest` now performs the selection and provisioning work through one PostgreSQL statement built from the following guarded sequence:
+
+1. `valid_selection` requires the requested product to belong to the requested facility, be `published`, and belong to a facility whose trust state is `certified`, `unconfirmed` or `confirmed`.
+2. The `account` CTE upserts one `v2_accounts` row by the authenticated Neon Auth user ID only when the selection is valid.
+3. The `wallet` CTE ensures one account-level `v2_wallets` row through the existing unique account constraint.
+4. `request_insert` creates the non-reserving availability request with a stable idempotency key and the validated product/facility pair.
+5. The request result returns either the newly inserted row or the existing row for the same buyer account and idempotency key.
+6. The repository compares the stored response shape with the replay input. A changed product, facility, quantity, budget mode or budget amount is rejected instead of silently reusing a response for a different request.
+
+The HTTP boundary maps repository policy rejection to a non-retryable `409 POLICY_REJECTED`, malformed JSON/object bodies to `400 INVALID_INPUT`, and unexpected errors to a generic retryable `500 INTERNAL_RECOVERABLE` without returning raw database/runtime details.
+
+## Executable local evidence
+
+The focused tests use an injectable tagged-SQL seam and do not connect to Neon or create fixtures:
+
+| Check | Result |
+|---|---|
+| Guarded selection, account upsert, wallet upsert and request idempotency clauses are present in the actual repository query | Pass |
+| Repeating the same repository call returns the same canonical request result | Pass |
+| Invalid/unpublished/out-of-scope selection returns a policy rejection and the statement gates account provisioning on valid selection | Pass |
+| Reusing an idempotency key with a different request shape is rejected | Pass |
+| Malformed JSON and array bodies are typed input errors | Pass |
+| Policy rejection maps to HTTP conflict; unexpected internal details are redacted | Pass |
+
+The current full local validation checkpoint is **12 Vitest files / 75 tests passing, production build passing, 10 Vercel functions bundled and `Client boundary: clean`.
+
+## Live authenticated proofs — 2026-08-23
+
+The first explicitly confirmed browser proof submitted `Tomatoes` at `Cotonou Fresh Hub` twice and landed on production/default; it remains recorded as a bounded environment-mismatch fixture in the ledger. No rollback or delete was performed because destructive cleanup is prohibited without a separately scoped decision.
+
+After `V2_DATABASE_URL` was bound to persistent V2 and the latest Git-integrated deployment was redeployed, the authenticated browser submitted `Kente tote bag` at `Atelier Kegue`, quantity `1`, with no budget ceiling. The exact same flow was submitted a second time. Both submissions returned the same user-visible `DEMANDE ENVOYÉE` / `En attente de la disponibilité` state.
+
+Aggregate-only Neon checks on persistent V2 branch `br-dawn-hill-am5amy22` then showed exactly one availability request, one distinct buyer account, one distinct idempotency key, status `submitted`, one linked V2 account and one linked account-level wallet. Totals on that branch were one account, one wallet and one availability request. This proves the real bearer-backed writer reached persistent V2 and that the two sequential browser submissions collapsed to one request with idempotent Auth-to-account/wallet provisioning. No IDs, key values, emails, bearer tokens or passwords were recorded. No inventory availability, reservation, payment, QR, seller confirmation or Trunk success is claimed by this buyer proof. The separate persistent-V2 demo seller/transaction evidence is recorded in [`v2-root-demo-transaction-evidence.md`](./v2-root-demo-transaction-evidence.md) and remains bounded fixture data, not a live buyer proof.
+
+The disposable database branch still provides separate migration/guardrail evidence, including labeled account and transaction fixtures, but those records cannot be used to claim this repository path is live or user-authorized. See [`v2-root-fixture-ledger.md`](./v2-root-fixture-ledger.md) and [`v2-root-disposable-migration-evidence.md`](./v2-root-disposable-migration-evidence.md).

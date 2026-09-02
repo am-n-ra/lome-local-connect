@@ -9,6 +9,8 @@ description: "A founder-autonomous full-stack product delivery method modeled on
 
 Treat every named `references/` or `templates/` resource as a required input when its stated trigger applies. Load the exact file or directory before performing the dependent work, then include a **Resource Receipt** in the phase output: `Loaded`, `Template instantiated`, and `Not loaded / reason`. Do not claim to have followed a resource that was not loaded. If a required resource is unavailable, state the gap and stop before the gate it controls.
 
+For every material product gate, load [references/intra-skill-execution-controller.md](references/intra-skill-execution-controller.md) and instantiate [templates/intra-skill-plan.md](templates/intra-skill-plan.md). Create the local plan before coding, keep its task tree synchronized with the Founder HQ handoff, and return its Resource Receipt, evidence, blockers, and task changes at the end of the pass.
+
 ## Founder HQ integration
 
 When a venture has simultaneous product, capital, opportunity, and founder-rhythm work, begin with **Nature Way Founder HQ** to identify the active milestone, capacity, primary authority, and next gate. Nature Way remains the authority for product, data, security, release, customer, and proof decisions; do not replace its gates with a board summary.
@@ -20,6 +22,23 @@ At the end of every material ring, publish a compact handoff snapshot: current p
 ## Core idea
 
 Grow software like a healthy tree. Roots support the trunk, the trunk carries the branches, and only then does the canopy expand. Never build a visible interface without the data and logic that powers it, and never build backend logic without the interface and evidence that expose it. The default unit of delivery is a **complete vertical slice**: interface, data, server, integration, hardening and proof are present together.
+
+## Causal prerequisite architecture
+
+Before selecting the most visible screen or the first requested feature, construct a **System Dependency Map**. Ask for every capability: **what must exist, be authorized, be populated, and be proven before this capability can exist truthfully?** Represent the answer as directed prerequisites, not as a decorative feature list.
+
+Classify the system’s actors and load-bearing parents before the entry surface: governance/operations, provider or seller onboarding, canonical catalog and availability, buyer/discovery experience, transaction/fulfillment, and measurement/support. The default dependency logic is:
+
+| Child capability | Preconditions that must exist first |
+|---|---|
+| Seller/product is visible | Operator authority, seller identity/approval, product schema, catalogue ownership, availability/status rules, and a verified publish path. |
+| Buyer searches the map | Canonical records, geospatial/query contract, visibility/permission rules, freshness policy, empty/error states, and at least one real supply record. |
+| Buyer starts a transaction | Authorized buyer/seller identities, availability reservation, price/terms authority, transaction state machine, failure/retry/recovery path, and operator visibility. |
+| Product scales beyond the first slice | Observability, support/admin controls, reconciliation, migration/rollback, cost boundary, and evidence that the core path remains healthy. |
+
+Build order follows the dependency graph and the first truthful end-to-end path, not the order of screens in a pitch or the popularity of the entry interface. When a downstream surface is already built, keep it as an explicit **orphaned leaf**: inspect it, preserve valid work, but do not expand it until its missing parents are planned and connected. Read [references/prerequisite-architecture.md](references/prerequisite-architecture.md) and use [templates/system-dependency-map.md](templates/system-dependency-map.md) before a new multi-actor product, marketplace, map, admin/operator flow, or any project where the first visible screen hides upstream supply or governance.
+
+At each dependency edge, record the upstream owner, source of truth, command/state transition, permission boundary, proof, and failure/recovery behavior. A missing parent blocks the child gate. A feature is not complete because its screen renders; it is complete when its parents, edge contracts, state transitions, operations and evidence form a coherent chain.
 
 Nature Way prevents two recurring failures:
 
@@ -53,12 +72,6 @@ At the structural level being executed, identify:
 Use an explicit structural path such as `product > feature > flow > state > operation > subtask`. Recurse to whatever depth the work genuinely requires. Continue decomposing while a nested unit has its own meaningful objective, dependency, design decision, contract, state transition, failure mode, owner or proof gate. Stop at the smallest coherent unit that can be implemented, reviewed and proven without losing context.
 
 Different branches may have different depths. A checkout, transaction, map, Auth or payment flow may require several nested cycles; a genuinely simple one-endpoint change may need only a brief mini-seed, mini-root, mini-trunk and direct proof. Do not force ceremony onto trivial work, and do not keep complex work artificially shallow.
-
-## Intra-skill plan and task tree
-
-Before substantive work inside any phase or nested unit, create or reconcile a local plan under the controlling product artifact. Use the structural path `product > feature > flow > state > operation > task > subtask`; extend it only when the child has its own objective, dependency, decision, state transition, failure mode, owner, or proof gate. Attach acceptance, expected proof, risk/debt boundary, owner, and re-plan trigger to every executable unit.
-
-Use `todo → ready → in_progress → review → verified → done`, with `blocked`, `partial`, `manual`, or `deferred` when accurate. A child requires proof to close, and a parent requires its own acceptance and gate proof even when all children are complete. Re-plan when evidence, intent, dependencies, capacity, risk, or a gate condition changes; preserve valid evidence, reopen only affected descendants, reconcile the controlling artifact first, and report the task-tree changes. Read [references/intra-skill-planning-protocol.md](references/intra-skill-planning-protocol.md) when creating a nested plan, splitting a task, or preparing a handoff.
 
 ## Growth phases
 
@@ -124,14 +137,14 @@ For a consequential architecture, API, schema, integration, or deployment decisi
 
 ### Phase 3 — Trunk: one complete core journey
 
-Select the highest-value journey from the Seed and implement it vertically, matching the Species blueprint:
+Select the highest-leverage **dependency chain**, not merely the most visible or attractive journey, from the Seed and System Dependency Map. Implement it vertically, matching the Species blueprint:
 
 1. Build the authoritative server operation against the real database or explicitly bounded adapter.
 2. Build the actual screens and states that call the operation, not a clickable illusion.
 3. Wire the UI, API, database, Auth and deployment in production-like conditions.
 4. Prove the journey with representative data and at least one browser or integration test.
 
-A trunk that exists only as a backend, frontend mockup or fixture-driven illusion is a broken stem. Do not branch until the core journey works from UI to database, matches the agreed blueprint and respects its privacy and authorization boundaries.
+For multi-actor systems, a trunk must include the minimum upstream parent chain that makes the visible journey truthful. For a marketplace/map, this may require operator authority, seller onboarding, catalog creation, visibility rules, and then buyer discovery before the buyer-facing path can be accepted. A trunk that exists only as a backend, frontend mockup or fixture-driven illusion is a broken stem. Do not branch until the core journey works from UI to database, matches the agreed blueprint and respects its privacy and authorization boundaries.
 
 ### Phase 4 — Heartwood: harden the trunk
 

@@ -9,13 +9,7 @@ description: Discover, verify, qualify, prioritize, track, and decline grants, a
 
 Treat every named `references/` or `templates/` resource as a required input when its stated trigger applies. Load the exact file or directory before performing the dependent work, then include a **Resource Receipt** in the phase output: `Loaded`, `Template instantiated`, and `Not loaded / reason`. Do not claim to have followed a resource that was not loaded. If a required resource is unavailable, state the gap and stop before the gate it controls.
 
-## Intra-skill plan and task tree
-
-Before substantive work inside this skill’s active gate, create or reconcile a local plan under the controlling Founder HQ Master Plan or specialist artifact. Use the structural path `HQ milestone > gate > specialist > slice > task > subtask`. Add a child only when it has its own objective, dependency, decision, state transition, failure mode, owner, or proof gate; stop at the smallest coherent unit that can be executed, reviewed, and proven without losing context.
-
-Treat a **slice** as one end-to-end outcome or bounded evidence packet, a **task** as one coherent change or proof contribution with one owner, and a **subtask** as an atomic predecessor of that parent task. Keep dependencies, acceptance, expected proof, risk/debt boundary, owner, capacity impact, and re-plan trigger explicit. Use `todo → ready → in_progress → review → verified → done`, with `blocked`, `partial`, `manual`, or `deferred` when accurate. A child requires proof to close; a parent also requires its own acceptance and gate proof.
-
-Re-plan when evidence contradicts an assumption, intent or a material decision changes, a dependency or capacity limit changes, a risk appears, or the gate condition fails. Preserve valid evidence, reopen only affected descendants, reconcile the controlling artifact first, and report added, removed, deferred, and reopened work. Every specialist return must include the active structural path, completed task/subtask IDs, proof IDs or links with an as-of time, residual gap or blocker, owner, next smallest action, capacity impact, re-plan trigger, and Resource Receipt. Read [references/intra-skill-planning-protocol.md](references/intra-skill-planning-protocol.md) when creating a nested plan, splitting a task, or preparing a handoff.
+For every active opportunity gate, load [references/intra-skill-execution-controller.md](references/intra-skill-execution-controller.md) and instantiate [templates/intra-skill-plan.md](templates/intra-skill-plan.md). Create the local dependency-aware task tree before scanning, qualifying, or pursuing an opportunity, then return its evidence, blockers, and task changes to Founder HQ.
 
 ## Founder HQ integration
 

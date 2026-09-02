@@ -29,19 +29,9 @@
 | T-01 | S-01 | `<phase>` / `/<skill>` | `<coherent task>` | `<predecessor>` | `<owner>` | `todo` | `<criterion + proof>` | `<risk/debt>` | `<event>` |
 | ST-01 | T-01 | `<phase>` / `/<skill>` | `<atomic prerequisite>` | `<predecessor>` | `<owner>` | `todo` | `<criterion + proof>` | `<risk/debt>` | `<event>` |
 
-## Intra-skill planning notes
-
-Use the structural path `HQ milestone > gate > specialist > slice > task > subtask` for work performed inside Founder HQ or inside an active specialist gate. Add a child only when it has a distinct objective, dependency, decision, state transition, failure mode, owner, or proof gate. Keep the local plan subordinate to this Master Plan and link to the owning artifact rather than duplicating detailed evidence.
-
-| Local plan ID | Parent ID | Structural path | Objective | Depends on | Owner | Status | Acceptance / proof | Capacity impact | Re-plan trigger |
-|---|---|---|---|---|---|---|---|---|---|
-| `<ID>` | `<parent>` | `<HQ > gate > ... > task/subtask>` | `<atomic objective>` | `<predecessor>` | `<owner>` | `<status>` | `<criterion + proof ID/link>` | `<hours or slot displaced>` | `<event>` |
-
-A child is not complete merely because its checklist is finished; record proof. A parent is not complete merely because its children are done; prove the parent acceptance and gate condition. Use `blocked`, `partial`, `manual`, and `deferred` honestly, and reopen only affected descendants when re-planning.
-
 ## Active-control rules
 
-Only the current gate and its ready work may be active. A downstream specialist remains `planned` until the current specialist returns its required handoff and Founder HQ reconciles the plan. `activated` means real control was transferred; a printed route is not activation. `done` requires evidence, not effort or an attractive output. Before substantive work inside a gate, instantiate or reconcile the local planning notes above and include the active path, completed task/subtask IDs, proof as of time, residual gap, next action, capacity impact, and re-plan trigger in the return handoff.
+Only the current gate and its ready work may be active. A downstream specialist remains `planned` until the current specialist returns its required handoff and Founder HQ reconciles the plan. `activated` means real control was transferred; a printed route is not activation. `done` requires evidence, not effort or an attractive output.
 
 ## Reconciliation log
 

@@ -1,17 +1,30 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - TanStack devtools (dev-only, first), tanstackStart, viteReact, tailwindcss, tsConfigPaths,
-//     nitro (build-only using cloudflare as a default target), VITE_* env injection, @ path alias,
-//     React/TanStack dedupe, error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { handleApi } from "./src/server/http";
 
 export default defineConfig({
-  // Pin Vercel's SSR target so deployment uses the platform function adapter.
-  nitro: { preset: "vercel" },
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
+  plugins: [
+    react(),
+    tailwindcss(),
+    {
+      name: "api-server",
+      configureServer(server) {
+        server.middlewares.use(async (req, res, next) => {
+          if (req.url && req.url.startsWith("/api/v2")) {
+            const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
+            const handled = await handleApi(req, res, url.pathname, url);
+            if (handled) return;
+          }
+          next();
+        });
+      },
+    },
+  ],
+  server: {
+    port: 3000,
+    host: "0.0.0.0",
+    allowedHosts: true,
   },
 });
+

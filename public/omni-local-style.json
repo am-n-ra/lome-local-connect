@@ -1,0 +1,15 @@
+{
+  "version": 8,
+  "name": "Omni V1 Local Fallback — Monochrome",
+  "projection": {"type": "globe"},
+  "sources": {
+    "water": {"type": "geojson", "data": {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {}, "geometry": {"type": "Polygon", "coordinates": [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]]}}]}},
+    "land": {"type": "geojson", "data": {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {}, "geometry": {"type": "Polygon", "coordinates": [[[-180,-60],[-180,85],[-120,85],[-60,70],[-20,70],[20,70],[60,75],[120,75],[180,85],[180,-60],[120,-60],[60,-60],[0,-60],[-60,-60],[-120,-60],[-180,-60]]]}}]}}
+  },
+  "layers": [
+    {"id":"background","type":"background","paint":{"background-color":"#ffffff"}},
+    {"id":"water","type":"fill","source":"water","paint":{"fill-color":"#111111","fill-opacity":1}},
+    {"id":"land","type":"fill","source":"land","paint":{"fill-color":"#ffffff","fill-outline-color":"#2b2b2b","fill-opacity":0.98}},
+    {"id":"land-line","type":"line","source":"land","paint":{"line-color":"#6d6d6d","line-width":1.4,"line-opacity":0.92}}
+  ]
+}

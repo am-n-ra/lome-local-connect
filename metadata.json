@@ -1,0 +1,11 @@
+{
+  "name": "Omni — Voir avant de bouger",
+  "description": "Plateforme locale d'infrastructures et de commerce de proximité",
+  "requestFramePermissions": [
+    "geolocation",
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

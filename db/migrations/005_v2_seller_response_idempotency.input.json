@@ -1,0 +1,12 @@
+{
+  "projectId": "wild-moon-30984513",
+  "branchId": "br-dawn-hill-am5amy22",
+  "databaseName": "neondb",
+  "sqlStatements": [
+    "ALTER TABLE public.v2_availability_responses ADD COLUMN IF NOT EXISTS idempotency_key text",
+    "CREATE UNIQUE INDEX IF NOT EXISTS v2_availability_response_idempotency_unique ON public.v2_availability_responses(responder_account_id, idempotency_key) WHERE idempotency_key IS NOT NULL",
+    "CREATE UNIQUE INDEX IF NOT EXISTS v2_transaction_event_state_unique ON public.v2_transaction_events(transaction_id, state)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS v2_audit_action_idempotency_unique ON public.v2_audit_events(correlation_id, event_type, entity_type, entity_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS v2_qr_transaction_unique ON public.v2_qr_tokens(transaction_id)"
+  ]
+}

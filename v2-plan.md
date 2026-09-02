@@ -1,0 +1,309 @@
+# Omni V2 — Nature Way Implementation Plan
+
+**Document ID:** `OMNI-V2-PLAN-003`
+**Status:** Active Execution Plan — Grounded in Founder Intent Brief (31 Aug 2026), Species 08 (Search & Demand), and V1 Screen & State Contract
+**Method:** Nature Way
+**Authority chain:** [`docs/omni-v1-intent-brief.md`](./docs/omni-v1-intent-brief.md) → [`v2-seed.md`](./v2-seed.md) → [`docs/omni-species-08-search-and-demand.md`](./docs/omni-species-08-search-and-demand.md) → [`v2-species.md`](./v2-species.md) → [`docs/omni-v1-screen-and-state-specification.md`](./docs/omni-v1-screen-and-state-specification.md) → [`docs/omni-v1-complete-product-mockup.md`](./docs/omni-v1-complete-product-mockup.md) → [`v2-roots.md`](./v2-roots.md) → [`v2-flow.md`](./v2-flow.md)
+
+> This document turns the authoritative Seed, Intent Brief, Species 08 (Search & Demand), Screen & State Specification, Complete Product Mockup, and Root System into a dependency-ordered growth plan and development backlog. Each unit uses the vertical-slice standard across UI, server authority, and data invariants.
+
+## 1. Delivery posture & Core Law
+
+Omni makes the real-world supply around a user **geographically discoverable, queryable, verifiable, and actionable**:
+```text
+NEED → SEARCH → CONSTRAINTS → RELEVANT SUPPLY → AVAILABILITY SIGNAL → SELECT OPTION → PURCHASE INTENT → OMNI COUPON/QR → TRANSACTION → FULFILLMENT → OUTCOME
+```
+
+### Three Levels of Truth
+1. **Level 1 — Existence:** Omni knows supply exists (discovery layer).
+2. **Level 2 — Availability:** Omni has real-time / allocated / seller-confirmed evidence that supply can satisfy the specific demand.
+3. **Level 3 — Transaction:** Purchase intent is locked, generating the atomized transaction, coupon instance, and opaque verification QR.
+
+Omni never collapses uncertainty into false certainty, and never requires sellers to become full e-commerce or maintain complete POS inventory syncing to participate.
+
+## 2. Structural growth path
+
+```text
+Omni product
+├── Seed: identity, promise, actors, laws, scope (Intent Brief 31 Aug 2026)
+├── Species: map-first visual and interaction blueprint (Species 08 + Complete Mockup)
+├── Root System: domains, persistence, server authority, security, recovery
+├── Trunk: map → search (DemandQuery) → facility → catalogue → availability → comparison
+│   ├── trunk flow: arrival and location (B01)
+│   ├── trunk flow: search & structured constraints (B02, B03, B04)
+│   ├── trunk flow: facility & adjacent catalogue (B05, B06, B07)
+│   └── trunk flow: multi-product availability & comparison (B08, B09, B10, B11)
+├── Heartwood: harden the complete buyer trunk & DemandQuery engine
+├── Branches
+│   ├── Branch A: Trust, claim & facility verification (X01, X02, S02)
+│   ├── Branch B: Seller map-first operations & allocated stock (S01, S03–S07, S13–S15)
+│   ├── Branch C: Omni Wallet, slots, credit packs & Facility Pro
+│   ├── Branch D: Purchase intent & transaction room (B12, B13, S08, S09)
+│   ├── Branch E: QR verification, external payment & fulfilment (B14–B17, S10–S12)
+│   ├── Branch F: Resume, saved demands, notifications & PWA (B18–B20, X03, X04)
+│   └── Branch G: Admin, data correction, demand signals & operations (X05)
+├── Canopy: holistic quality, performance and accessibility
+└── Rings: release certification and pilot deployment
+```
+
+## 3. V1 Screen & State Registry
+
+The implementation is structured around the authoritative 40+ screen surfaces:
+
+### Buyer Surfaces (B01–B20)
+* **B01 Map Home:** Default calm canvas, search dock, user location, visible pins.
+* **B02 Search:** Natural language & manual search activation over background map.
+* **B03 Search Constraints:** Structured constraints extraction (Quantity, Budget, Distance, Timing, Fulfillment).
+* **B04 Search Results:** Horizontal bottom carousel/sheet on mobile, split panel on desktop.
+* **B05 Facility Preview:** Quick inspection sheet (identity, distance, hours, offer preview) with contact/itinerary locked.
+* **B06 Facility Page:** Spatial representation (Hero → Identity → Status → Location → Actions → Products → Services → Offers → Content → About).
+* **B07 Product Selection:** Multi-product selection basket for availability requests (not a checkout cart).
+* **B08 Availability Builder:** Structured request formulation for 1 facility with multiple items and constraints.
+* **B09 Availability Pending:** Waiting state with background notifications support.
+* **B10 Availability Result:** Seller/allocated response (Available, Partial, Unavailable, Alternative) with timestamps.
+* **B11 Multi-Facility Comparison:** Normalized ranking of candidate responses for bulk/multi requests.
+* **B12 Purchase Intent:** The atomic transition gateway ("Je veux acheter").
+* **B13 Transaction Room:** Contextual workspace with bound items, coupon, status timeline, and transactional chat.
+* **B14 Transaction QR:** Server-issued opaque authorization/coupon token with delivery inside or outside Omni.
+* **B15 Payment:** External payment method selection (Cash, Mobile Money, Delivery) and buyer declaration.
+* **B16 Fulfilment:** Coordination of pickup or seller/buyer delivery.
+* **B17 Completed Transaction:** Final completed state, receipt, and optional non-blocking rating.
+* **B18 Transaction History:** Chronological log of past transactions and deep-linkable rooms.
+* **B19 Saved Searches / Demands:** Persistent demand objects with refresh capabilities.
+* **B20 Buyer Account:** Profile, demands, transactions, wallet credits, and role switcher.
+
+### Seller Surfaces (S01–S15)
+* **S01 Seller Home:** Mobile-first operational cockpit (Today's requests, active orders, stock alerts, Scan QR).
+* **S02 Facility:** Facility management, opening hours, Online/Offline, Mobile live-discovery toggle.
+* **S03 Product List:** Quick catalogue overview (5 items on Free tier, unlimited on Pro).
+* **S04 Product Editor:** Item naming, photos, base price, Omni discount, and allocated stock.
+* **S05 Omni Allocated Stock:** Management of `quantity_allocated_omni` independent of physical inventory.
+* **S06 Availability Requests:** Incoming demand queue prioritized by freshness, quantity, and distance.
+* **S07 Availability Response:** Fast response interface (Available, Partial, Unavailable, Alternative).
+* **S08 Orders:** Active order lifecycle tracking.
+* **S09 Seller Transaction:** Authorized seller view of canonical server-side transaction.
+* **S10 QR Scanner:** Live camera scanner and manual code entry fallback.
+* **S11 Payment Confirmation:** Seller authoritative acknowledgement of external payment ("Paiement reçu").
+* **S12 Fulfilment:** Status updates (Preparing, Ready, Sent, Handed over).
+* **S13 Offers & Discounts:** Definition of mandatory Omni promotional advantages.
+* **S14 Automation:** Operational rules for Manual, Assisted, and Automatic availability responses.
+* **S15 Seller Account:** Facility management, subscription, wallet, and role switcher.
+
+### Shared & System Surfaces (X01–X05)
+* **X01 Facility Claim:** Ownership claim workflow for discovered/unclaimed facilities.
+* **X02 Verification & Certification:** Identity and facility verification pipeline leading to Certified status.
+* **X03 Contextual Notifications:** Deep-linkable operational push/in-app events.
+* **X04 Search Demand Signal:** Demand capture for unmatched queries.
+* **X05 Error & Recovery States:** Idempotent retry, expired QR recovery, offline caching, and fail-safe handling.
+
+This is a structural path, not a fixed number of implementation tickets. Any branch, flow or operation may recurse into its own Seed → Species → Root System → Trunk → Heartwood → Branches → Canopy → Ring cycle when it has independent decisions, states, failure modes or proof gates.
+
+## 3. Global gates
+
+| Gate | Entry condition | Exit condition |
+|---|---|---|
+| Seed | Product direction is disputed, incomplete or stale | Identity, core promise, laws, success and non-goals are approved |
+| Species | Seed is approved | Visual blueprint, wireframes, surface ownership and responsive rules are approved |
+| Root System | Seed and Species are approved | Data/API/auth/security/recovery contracts and migration boundaries are executable |
+| Trunk | Root System is executable | Buyer core journey works UI-to-database and matches Species |
+| Heartwood | Trunk happy path works | Buyer trunk survives failure, duplicate, refresh, back, lock, expiry and responsive/accessibility proof |
+| Branch | Heartwood is stable | One feature is complete end-to-end and integrated without regressions |
+| Canopy | Required branches are complete | Cross-product quality, performance, accessibility and operational pass succeeds |
+| Ring | Canopy is complete | Release evidence, rollback, known limits and acceptance decision are recorded |
+
+Never advance because a document sounds complete. Advance because the exit evidence exists.
+
+## 4. Phase 0 — Seed
+
+**Outcome:** a stable product identity from which all architecture and implementation decisions grow.
+
+Use [`v2-seed.md`](./v2-seed.md) as the authority. Verify the map-first search-engine identity, the core journey, public/protected boundary, facility trust lifecycle, account capacity, per-facility Pro, facility-scoped bonus, one Wallet and first-release non-goals.
+
+**Seed proof:** owner approval of the six locked decisions, no unresolved critical ambiguity, explicit build-now/manual/deferred scope and a named failure the product must not ship.
+
+## 5. Phase 1 — Species
+
+**Outcome:** an approved visual maquette and interaction blueprint that prevents the UI from being improvised during logic implementation.
+
+Use [`v2-species.md`](./v2-species.md) as the authority. First reproduce the supplied Canva result frame: pale spatial map, upper-left Acheter/Vendre switch, small upper-right account/credit indicator, right-side plus/location controls, the search dock in its own band above the lower result surface, full-width rounded white bottom sheet, centered grab handle, Proche de vous/Voir tout row, one complete facility/product card, partial next card and one dark-green availability CTA. Also prove the map-only state with the same dock anchored to the bottom safe area. Only after both dock states are faithful may responsive extensions add states without changing their hierarchy.
+
+**Species proof:** the complete static maquette and S00–S34 state inventory in [`docs/maquette/omni-species-maquette.md`](./docs/maquette/omni-species-maquette.md), including the exact reference-result frame, map-only bottom dock, separated result dock, focused dock with right-side submit, options surface, facility/catalogue, availability, Auth, account-owned navigation, guest Account, authenticated Account, context Resume, comparison, intent review, intent created, contact/itinerary unlock, transaction, seller, wallet, globe, local map, cluster, trust-marker, facility-focus, route and map-recovery compositions; approved design tokens; and a 320/375/768/1280 proof matrix proving that extensions inherit the frame rather than replacing it with a dashboard or overlapping the result grid.
+
+## 6. Phase 2 — Root System
+
+**Outcome:** server-authoritative architecture that can bear the Trunk.
+
+Use [`v2-roots.md`](./v2-roots.md) and [`v2-flow.md`](./v2-flow.md). Implement or verify:
+
+1. clean browser/server boundary and typed result/error envelopes;
+2. Neon Auth identity linking and actor/role context without identity deletion;
+3. domain-owned persistence for facilities, trust, catalogue, availability, entitlements, wallet, transactions, QR, audit and analytics;
+4. database constraints and server checks for trust, stock, slots, wallet, coupon, intent and QR invariants;
+5. idempotency keys, correlation IDs and append-only audit/ledger foundations;
+6. public-data source adapter timeout/fallback/recovery boundary;
+7. map context snapshot, globe/local modes, pin/cluster semantics, trust-marker boundaries, protected route authorization and camera/context restoration;
+8. fixture factory with visitor, buyer, seller, admin, unclaimed, certified/unconfirmed, Pro, confirmed, stale, unavailable, wallet and QR cases;
+9. migration forward checks, preservation statement and recovery procedure.
+
+**Root System proof:** [`v2-root-system-proof.md`](./v2-root-system-proof.md) must record schema/constraint tests, authorization matrix, client-boundary check, idempotency/audit check, secret scan, map/route privacy review, camera-context recovery contract, recovery contract review and a runnable empty product shell. Documentation alone leaves the gate in `review`.
+
+## 7. Phase 3 — Trunk: buyer core
+
+**Outcome:** the product’s defining promise works from the map to availability comparison with real or explicitly bounded data.
+
+### 7.1 Trunk structural units
+
+| Unit | User-visible outcome | Required proof |
+|---|---|---|
+| `TRUNK-MAP` | Arrival shows a usable globe/map, public context, location and calm motion | Map canvas, camera ownership, location states, motion/reduced-motion and responsive geometry |
+| `TRUNK-SEARCH` | User searches a need through one dock and one Options disclosure | Auth boundary, Enter/button parity, query/options preservation, bounded discovery and honest errors |
+| `TRUNK-FACILITY` | User selects a facility and sees public detail without losing results | Pin/card semantics, source/trust distinction, back restoration and no private leakage |
+| `TRUNK-CATALOGUE` | User chooses an existing facility product rather than retyping it | Catalogue loading/empty/sold-out/closed/error states and no reservation/intent side effect |
+| `TRUNK-AVAILABILITY` | User completes Product → Scope → Constraints → Responses | Auth restoration, scope/constraint validation, freshness, non-reservation and response recovery |
+| `TRUNK-COMPARISON` | User can distinguish eligible options without premature contact or intent | Ordered response proof, stale/expired states and intent/contact locks |
+
+These units are nested Trunk work, not permission to build isolated UI pieces. The exact entry boundary, non-goals, invariants, context preservation and proof requirements are defined in [`v2-trunk-entry-boundary.md`](./v2-trunk-entry-boundary.md). The Trunk gate passes only when the complete chain is usable in production-like conditions.
+
+### 7.2 Trunk acceptance path
+
+```text
+arrival map
+→ public exploration
+→ search need
+→ discover facilities
+→ facility detail
+→ catalogue loading/ready
+→ product selected
+→ availability scope
+→ constraints
+→ authenticated submission
+→ responses or honest recovery
+→ comparison
+```
+
+The map remains mounted. Search typing never moves the camera. The buyer cannot create availability or intent from a public pin alone. Product selection does not reserve stock. The interface matches the Species blueprint at 320/375/768/1280 CSS pixels.
+
+**Trunk proof:** browser click-through with real/bounded server data, unit and integration tests, authorization negatives, no-reservation negative, empty/error/retry/cancel proof, context restoration and responsive visual evidence.
+
+## 8. Phase 4 — Heartwood: harden the buyer trunk
+
+**Outcome:** the buyer trunk is reliable outside the happy path.
+
+Run adversarial review and implement:
+
+- loading, empty, error, retry, cancel, locked, success and unavailable states for every Trunk surface;
+- duplicate-submit and concurrent-submit behavior;
+- refresh, back, Escape, close, keyboard and interrupted-session recovery;
+- Auth cancellation/error with exact context restoration;
+- stale availability, expired response and source timeout recovery;
+- public/private boundary tests for contact, itinerary, chat, QR, price, stock, trust and status;
+- mobile keyboard, safe-area, sheet-footer, focus and reduced-motion proof;
+- logging and analytics with no secret or unnecessary personal data.
+
+**Heartwood gate:** a browser or integration proof can intentionally trigger every critical failure and reach a safe next action. No unresolved blocker may be hidden behind a green visual state.
+
+## 9. Phase 5 — Branches
+
+Each branch runs its own nested mini-seed, mini-species when needed, mini-root, mini-trunk, mini-heartwood, mini-canopy and ring decision. Branches are sequenced by dependency.
+
+### Branch A — Trust and facility verification
+
+**Dependency:** Root System and public facility selection.
+**Outcome:** an owner can select an unclaimed facility or start a new facility request, submit evidence, and receive an audited outcome without claim-by-click.
+
+Implement evidence drafts, typed evidence categories, resume/edit/cancel, idempotent submit, admin queue, audited `certified`/`unconfirmed`/`rejected`/`needs_more_evidence`, optional channel invitation, three-sale confirmation and locked facility bonus. Pro remains separate from trust.
+
+**Gate:** claim-click negative test, evidence privacy/ownership tests, admin audit completeness, rejection/resubmission recovery and exactly-once three-sale progression.
+
+### Branch B — Seller map-first operations
+
+**Dependency:** Trust lifecycle and Trunk catalogue/availability contracts.
+**Outcome:** a seller manages one authorized facility in the same spatial language as the buyer.
+
+Implement facility context, open/closed state, hours, discovery mode, demand queue, automatic-response correction, product lifecycle, stock allocated to Omni, clear product form, guided coupon form and honest published/no-discount state. Keep account slots, facility limits, Pro, bonus and trust visibly separate.
+
+**Gate:** seller E2E, server stock/coupon constraints, response correction audit/notification, no-dead-action audit and responsive Species match.
+
+### Branch C — Wallet, slots and Facility Pro
+
+**Dependency:** Root ledger and seller facility identity.
+**Outcome:** one account-level Wallet reliably funds platform consumption and facility-scoped entitlements.
+
+Implement FedaPay recharge-only boundary, pending/confirmed/failed/cancelled/expired states, append-only ledger, reconciliation, slot purchase, facility Pro activation/expiry, platform spend, insufficient-funds recovery and non-withdrawable facility bonus unlock. Keep buyer-seller money and seller withdrawal absent.
+
+**Gate:** callback, ledger and reconciliation tests; failed-recharge recovery; server spend/entitlement checks; Pro-expiry and withdrawal-negative proof.
+
+### Branch D — Purchase intent and transaction room
+
+**Dependency:** Trunk comparison and seller operations.
+**Outcome:** an eligible response becomes one authorized, resumable transaction.
+
+Implement eligibility-gated idempotent intent creation, immutable snapshot, private contact/itinerary unlock, one transaction room, named timeline, actor-specific next action, transaction-scoped chat/system messages and resume bar/deep link.
+
+**Gate:** concurrent intent proof, snapshot immutability, unlock positive/negative proof, chat authorization and refresh/close/reopen recovery.
+
+### Branch E — QR, external payment and fulfilment
+
+**Dependency:** Transaction room and Wallet boundary.
+**Outcome:** buyer and seller complete a traceable physical/external handoff.
+
+Implement transaction-bound QR, expiry, replay-safe server verification, scanner-ready camera flow, explicit permission CTA, visible live preview, manual fallback, valid/expired/replayed/mismatch/malformed states, external method declaration, seller acknowledgement, pickup/delivery, receipt and rating.
+
+**Gate:** secure-origin camera proof, denial/manual fallback, replay and expiry proof, actor authorization, complete fulfilment E2E and negative proof that Omni does not process seller payout.
+
+### Branch F — Resume, notifications and PWA completion
+
+**Dependency:** Root identity, Heartwood recovery and transaction events.
+**Outcome:** the first mobile surface can be installed, relaunched and resumed without losing safe context.
+
+Implement manifest/icons/install metadata, service-worker policy, network/offline policy, transactional notifications, deep links, auth restoration, safe sign-out clearing and dynamic viewport/safe-area behavior.
+
+**Gate:** install/lifecycle check, notification recovery, offline mutation blocking, role/context restoration and four-width mobile/accessibility proof.
+
+### Branch G — Admin, analytics and operations
+
+**Dependency:** Trust, discovery, transaction and wallet events.
+**Outcome:** human operators can review trust and monitor the product without bypassing authority or collecting unnecessary data.
+
+Implement evidence queue and audit history, bounded source-import recovery, consent-aware event schema, funnel denominators, error/latency/availability monitoring, ledger anomaly visibility and runbooks for manual review/import/recovery.
+
+**Gate:** admin audit test, import recovery drill, analytics privacy/schema test, event completeness and production-log redaction.
+
+## 10. Phase 6 — Canopy
+
+After required branches work, perform the holistic pass across buyer, seller, admin and PWA surfaces:
+
+- reconcile every screen with the Species blueprint;
+- remove duplicate primitives, dead menu actions and contradictory labels;
+- validate hierarchy, spacing, typography, color, contrast, safe areas and card density;
+- certify 320/375/768/1280 widths with no horizontal overflow or overlay collisions;
+- test keyboard, screen-reader names, focus restoration, touch targets and reduced motion;
+- measure map, API, database and bundle performance;
+- verify loading, caching, source fallback, offline and recovery behavior;
+- finalize operational runbooks, support context and rollback procedure.
+
+Canopy may refine appearance and ergonomics. It may not introduce uncontracted business behavior.
+
+## 11. Phase 7 — Rings
+
+A release ring is accepted only when the release matrix is green or every exception is explicitly `partial`, `blocked`, `manual` or `deferred` with an owner and recovery plan.
+
+| Release gate | Required evidence |
+|---|---|
+| Buyer | Map, search, facility, catalogue, availability, comparison, Auth restore and resume |
+| Seller | Verification, facility operations, products, coupons, demand, scanner and fulfilment |
+| Trust | No claim-by-click, audited outcomes, three-sale confirmation and bonus lock/unlock |
+| Money | One Wallet, FedaPay boundary, ledger integrity, no payout/withdrawal |
+| Transaction | Idempotent intent, immutable snapshot, scoped room/chat and actor actions |
+| QR | Secure preview, denial fallback, valid/expired/replayed/mismatch/malformed outcomes |
+| Mobile | PWA lifecycle, safe areas, focus, no overflow and four-width proof |
+| Recovery | Empty, timeout, server error, offline, cancellation, duplicate, expiry and unauthorized |
+| Operations | Manual runbooks, analytics privacy, error/latency health and audit evidence |
+
+Record commit, deployment, environment, migrations, fixtures, tests, screenshots/traces, known limitations, rollback and acceptance owner. Do not call the product production-ready because a single branch or public map ring passed.
+
+## 12. Recommended execution order
+
+The Seed and Buyer Species approvals are recorded. The current bounded work package is the Buyer Trunk and its Heartwood: map → search → facility → catalogue → availability → pending/comparison. The global Root residuals remain visible and are not declared closed by the Buyer Trunk. After the Buyer Trunk ring, sequence Seller mini-species and Seller Operations, then the remaining trust, wallet, transaction, QR/handoff, PWA and operations branches.
+
+At every stop, report the current structural path, phase, changed surfaces, evidence, residual gaps and one next gate. If a requirement changes the Seed, Species or Root System, stop implementation and update the authority before continuing.

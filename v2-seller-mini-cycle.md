@@ -1,0 +1,220 @@
+# Omni V2 — Seller mini-cycle
+
+**Structural path:** `product > Seller Trunk > availability response`
+
+**Method:** Nature Way — mini-Seed → mini-Species → mini-Root → mini-Trunk → mini-Heartwood → ring
+
+**Status:** `partial — implementation deployed; canonical seller bearer proof pending`
+
+**Parent authority:** [`v2-seed.md`](./v2-seed.md) → [`v2-species.md`](./v2-species.md) → [`v2-flow.md`](./v2-flow.md) → [`docs/maquette/omni-species-maquette.md`](./docs/maquette/omni-species-maquette.md)
+
+**Inherited Buyer gate:** Buyer Trunk and Heartwood are recorded as `partial`, with the Buyer pending/no-response state and corrected response read proven. Seller work is now authorized only to create the bounded response needed to complete the real Buyer/Seller cross-flow; this does not close global Root.
+
+## 1. Mini-Seed
+
+The Seller mini-cycle gives an authenticated, server-authorized seller one honest way to see and answer a bounded Buyer availability request for an owned facility and an eligible published catalogue product. The core journey is:
+
+```text
+authorized seller context
+→ owned facility context
+→ bounded incoming request queue
+→ request detail and response form
+→ server-authoritative availability response
+→ visible response status and audit confirmation
+```
+
+The seller promise is narrow: a seller can respond to demand they are authorized to operate, without changing public trust, catalogue ownership, inventory truth, wallet state, purchase intent or transaction state. A response is not a reservation, a sale, a payment, a QR issuance or a facility claim.
+
+### Success criteria
+
+The mini-cycle is successful when an official Auth-backed seller session is accepted only when the server binds it to a non-suspended seller-ready account; the seller sees only requests for an owned facility and matching published product; an available, partial or unavailable response is submitted through the real protected operation; the server validates quantity, price, scope and idempotency; the seller sees the persisted response state; and the Buyer’s existing response read can observe the eligible comparison-safe facts.
+
+### Non-goals
+
+This mini-cycle does not implement facility claiming or certification, admin review, product creation or editing, catalogue publishing, coupons, wallet or Pro, QR scanning, payment declaration, transaction-room actions, buyer contact, route, chat, payout, withdrawal or a seller dashboard. Those remain separate branches and gates. No seller response will be created in the persistent bounded demo environment without a fresh explicit confirmation for that write.
+
+## 2. Mini-Species — inherited visual contract
+
+### 2.1 Inheritance decision
+
+The Seller surface inherits the approved Species rather than introducing a dashboard or a second navigation system. The deployed implementation now keeps the permanent MapLibre map mounted, uses the same near-white rounded contextual sheet, preserves the compact top role switch and J5 account owner, and adds only the bounded S14 rhythm: `Demandes` / `Catalogue`, request cards and a response form. The Catalogue tab is read-only in this mini-cycle; product lifecycle editing remains a later branch. The permanent MapLibre map remains mounted and dominant. The upper-left role switch shows `Vendre` as active, the upper-right J5/account control remains the sole account/navigation owner, map controls stay on the right, and contextual seller sheets remain separated from the bottom search/result dock. The seller workspace is a bounded sheet over the map, not a route replacement or generic admin rail.
+
+The existing Seller entry sheet is only an authorization boundary. It is retained as the locked/unauthorized state, but it must grow into the following small set of seller-owned states before the Seller Trunk ring can close.
+
+| Seller state | Surface composition | Seller action | Truth boundary |
+|---|---|---|---|
+| Seller arrival | Map remains visible; `Vendre` active; owned facility context is named only after server authorization | Open the seller workspace | Role selection never bypasses authorization or trust |
+| Seller authorization | Same white contextual sheet family as Buyer Auth/Facility; clear access state and one next action | Sign in, return to Buyer or retry authorization | Authenticated does not itself prove seller authorization |
+| Workspace ready | Bounded centered/mobile-bottom sheet over the map; facility identity, trust/status and a compact request count; two tabs or segmented controls only: `Demandes` and `Catalogue` | Open the request queue | Facility scope comes from the server, not a client-selected ID |
+| Request queue | Scrollable request cards inside the sheet; each card shows request age/freshness, facility, catalogue product, requested quantity, budget mode/value if allowed, expiry and status | Open one request | No private buyer identity, contact, itinerary or intent data is shown |
+| Response form | Request detail sheet; product and facility are read-only snapshot facts; status choice `Disponible`, `Partielle` or `Indisponible`; quantity and price inputs appear only where allowed; one submit action | Send or cancel a response | Server validates scope, product publication, allocation, status, quantity, price and idempotency |
+| Response accepted | Same sheet with persisted status, observed time and concise audit confirmation; no optimistic success before acknowledgement | Return to queue or Buyer flow | Acknowledgement means response persistence only, never sale or reservation |
+| Empty queue | Same sheet material; calm explanation and one refresh action | Refresh or return to map | Empty demand is not an error and does not create a placeholder request |
+| Error/retry | Same sheet; error is local to the request operation, with retry and safe return | Retry, cancel or return | Failed persistence never displays accepted status |
+| Expired/stale | Request and response freshness are visibly labelled; expired request cannot be answered | Return or refresh | Seller cannot revive an expired request by client state |
+| Unauthorized/locked | Current Seller entry boundary remains the visual gate; no queue or response form is rendered | Sign in, return to Buyer or request manual authorization | UI visibility is not permission; server remains authoritative |
+
+### 2.2 Spatial and interaction rules
+
+The sheet must preserve the parent safe zones: top role/account controls, right map controls, map attribution/status, bottom search dock when present, sheet handle, scrollable body and reachable footer. On mobile the workspace is bottom anchored; on desktop it is a bounded floating surface. The map is not hidden, and the seller queue never becomes a full-screen table.
+
+The Seller Trunk uses one primary action per state. The request card opens the response form; the response form submits one guarded operation; the accepted state offers return/refresh. Back, Escape and close return to the previous seller-safe state without erasing the selected request until the seller explicitly cancels. No seller state introduces a hamburger or second account menu.
+
+### 2.3 Responsive and accessibility inheritance
+
+The seller surface inherits the four Species widths: 320, 375, 768 and 1280 CSS pixels. At 320 and 375, one request card remains readable with the response footer reachable; at 768 and 1280, the sheet is bounded and centered while the map remains dominant. Buttons expose accessible names, status changes use live/alert semantics, the selected request is keyboard reachable, and reduced motion disables non-essential map rotation. The seller form never relies on color alone to distinguish `Disponible`, `Partielle` and `Indisponible`.
+
+## 3. Mini-Root — load-bearing contract
+
+### 3.1 Existing protected operation
+
+The Seller Trunk uses the existing protected operation defined in [`v2-root-seller-response.md`](./v2-root-seller-response.md):
+
+```text
+POST /api/v2/availability-responses
+```
+
+The request body contains `requestId`, `facilityId`, `productId`, `status`, `quantityAvailable`, `priceMinor` and an optional `sellerMessage`. The request includes an `Idempotency-Key`; the bearer session supplies the seller Auth identity. The client does not choose the seller account.
+
+### 3.2 Server invariants
+
+The server must require a non-suspended account bound to the authenticated Auth identity, `seller_ready` or `complete` onboarding, an owned facility, a published product belonging to that facility, and a Buyer request whose facility scope and product match the response. The persisted product allocation remains the upper bound for an available quantity. A response does not decrement or reserve stock.
+
+The allowed seller-selected statuses are `available`, `partial` and `unavailable`. Available and partial responses require a positive quantity and non-negative price; unavailable requires quantity zero and does not require a price. `corrected`, `stale`, `expired` and `no_response` are server/system outcomes, not direct seller inputs.
+
+The same request, facility, product, seller and idempotency key replay returns the original response. Reusing the key for a conflicting response is rejected. The operation records a response snapshot and audit event with a correlation ID. It must not mutate public-import ownership, trust state, stock, wallet balance, transaction state or Buyer request ownership.
+
+### 3.3 Seller queue read boundary
+
+The Seller Trunk needs a protected, seller-owned request-list/read seam before the form can be reached from the UI. The read must return only requests whose facility/product scope belongs to the authenticated seller account and only comparison-safe request facts: request ID, facility/product identity, requested quantity, budget mode/value if contractually permitted, request status, created/expiry times and freshness. It must not return Buyer email, phone, contact, itinerary, chat, raw Auth identifiers or unneeded private metadata.
+
+The read is a server-owned queue, not a local array and not a fixture-only list. The client may filter presentation state but cannot manufacture a demand request or mark one as answered.
+
+### 3.4 Authorization and bounded fixture boundary
+
+The UI must treat `Vendre` as an entry boundary until the seller session is both officially authenticated and server-authorized. A logged-in Buyer session with no seller binding remains locked. Any Seller Trunk browser proof uses the user-approved bounded demo environment, labeled demo identities/facility/product/request records and an explicit confirmation before each new write. No credentials, bearer tokens, raw Auth IDs, idempotency values or database secrets are recorded in code, logs, screenshots or evidence.
+
+## 4. Implementation evidence
+
+The protected Seller queue read is deployed at `GET /api/v2/seller/availability-requests`; it returns `401 AUTH_REQUIRED` without a bearer session and otherwise filters by the server-bound seller account, owned facility, published product and request scope. The Seller UI is map-mounted and uses the approved Buyer Species sheet primitives rather than a dashboard. Automated validation currently passes with 81 tests, 11 Vercel functions, the client-boundary scan and whitespace checks. Canonical browser interaction with the connected session is still pending because the browser extension timed out during the visual click pass; no Seller response write has been performed.
+
+## 5. Mini-Trunk definition of done
+
+The Seller Trunk may be called implemented only when the following path works through the deployed canonical surface with a real official seller session and the existing Buyer pending request:
+
+| Gate | Required result |
+|---|---|
+| Entry | `Vendre` opens the current authorization boundary without an Auth loop; an authorized seller reaches the workspace |
+| Scope | Workspace and queue show only the seller-owned facility and matching request/product |
+| Form | Seller can choose an allowed status and submit validated quantity/price/message |
+| Persistence | Protected POST returns server acknowledgement and the UI shows persisted response status |
+| Buyer visibility | Existing Buyer response read changes from pending/no-response to a comparison-safe response card after refresh |
+| Lock | Contact, itinerary, chat, QR, payment and intent remain unavailable in both Buyer and Seller Trunks |
+| Recovery | Duplicate submit, conflicting idempotency, invalid quantity/status, unauthorized seller, expired request and network failure have honest non-success states |
+| Proof | Automated tests, canonical browser proof, responsive inspection and a redacted evidence record exist |
+
+## 6. Mini-Heartwood and ring gate
+
+The Seller mini-Heartwood must cover duplicate and conflicting-key replay, seller/buyer actor separation, facility/product mismatch, allocation bounds, unavailable/partial validation, expired request handling, refresh after accepted response, back/Escape/close, interrupted Auth return, queue empty/error/retry, and no private-data leakage. QR, payment and transaction gates remain closed even if the response is accepted.
+
+The Seller ring decision is `partial` until the deployed official seller bearer path, queue read, response write, Buyer comparison refresh, negative authorization checks and responsive/accessibility evidence are recorded. When that ring is accepted, the parent may enter the cross-flow verification phase. The global Root remains `review` until the outstanding Auth lifecycle, live bearer, concurrency, recovery and other Root proofs are independently resolved.
+
+## References
+
+[1]: ./v2-seed.md "Omni V2 Seed"
+[2]: ./v2-species.md "Omni V2 Species"
+[3]: ./v2-flow.md "Omni V2 Flow and State Contract"
+[4]: ./docs/maquette/omni-species-maquette.md "Omni Species Maquette Contract"
+[5]: ./v2-root-seller-response.md "Seller Availability Response Mini-Root"
+
+
+## 7. Canonical Species alignment observation
+
+The READY deployment for commit `e2c6dee` is serving the canonical aliases, including `https://omni.sparkafrika.online`. A fresh canonical extraction shows the expected inherited arrival anatomy: `Acheter / Vendre` role switch, J5 account owner, right-side `+` and recenter controls, active map attribution, a separate search dock and the `Proche de vous` result sheet with facility cards. The protected Seller queue route independently returns `401 AUTH_REQUIRED` without a bearer session. The connected-browser extension timed out during the attempted interactive `Vendre` click, so the Seller sheet’s visual click-through remains unproven rather than being claimed as verified. No new bounded demo write was performed.
+
+
+## 8. Canonical connected-browser proof — unauthorized Seller boundary
+
+On the canonical deployment, the connected authenticated Buyer session opened `Vendre` successfully without an Auth loop. The captured surface preserves the permanent map, top role switch, right-side map controls, rounded contextual sheet, centered handle, close control and separated `Demandes / Catalogue` segmented rhythm. The queue then settled to the honest locked state: `Accès vendeur à vérifier` and `Aucune opération vendeur ouverte`, because this session has no server-bound seller profile. The handoff note remains visible and explicitly keeps stock response, contact, itinerary and QR locked. The map reported its documented fallback mode during this check; no location or seller data was fabricated. The Seller route’s interaction with an authorized session remains the next proof owner.
+
+
+## 9. Canonical connected-browser proof — seller authorization negative case
+
+A second official Auth-backed session was opened in the canonical browser and reached `Vendre` without an Auth loop. The protected queue read returned a successful response whose data remained `authorized: false` with an empty request list. The UI displayed `Accès vendeur à vérifier` and did not render request, product-response or private buyer data. This confirms that an authenticated identity is not treated as seller authorization. Cross-flow response proof is blocked until an officially authorized seller binding is available; no workaround using direct Auth SQL, hand-crafted tokens or client-selected account IDs is permitted.
+
+
+## 10. Explicitly approved bounded demo rebind
+
+Because the original demo Seller Auth identity was deleted and recreated, the user explicitly approved a temporary server-side rebinding path for this bounded environment. `POST /api/v2/seller/demo-rebind` accepts only the current official bearer session, checks the existing labeled `Omni Demo Seller Hub` fixture, rejects a session already bound to another Omni account, updates only that Seller demo account’s `auth_user_id`, and records a bounded audit event. It neither creates/deletes Neon Auth users nor accepts an account ID from the client. This is a demo-environment recovery seam, not a production onboarding or certification feature; it remains outside the global Root release claim and must not be used for arbitrary account transfers.
+
+
+## 11. Canonical connected-browser proof — bounded rebind and queue
+
+After the user’s explicit approval, the official Seller session invoked `Activer l’espace Seller de démo`. The deployed server acknowledged the bounded rebind, the sheet changed to `Contexte vendeur autorisé`, and the protected queue returned one request for `Root proof demo product` at `Omni Demo Seller Hub`, with requested quantity `2` and an existing `Réponse disponible` status. The UI remained map-mounted, used the Species sheet and segmented tabs, and kept the handoff lock visible. Because the request already has a persisted available response, no duplicate Seller response write was issued during this check; the next proof is Buyer-side refresh and comparison visibility.
+
+
+## 12. Canonical Seller request-detail inspection
+
+The authorized Seller queue opened the request detail in the Species-aligned response sheet. The map remains visible behind the bounded sheet, the facility/product request facts are read-only, the three allowed response statuses are explicit, the form scrolls to a reachable primary action, and the no-reservation lock is preserved. The queue row already carried `Réponse disponible`, but the detail surface still exposed a fresh submit form rather than a persisted-response state. To avoid a duplicate response mutation, no submit was issued; this is recorded as a Heartwood UI hardening item to render existing response status as read-only with a return/refresh action.
+
+
+## 13. Manus-computer Species audit
+
+A clean sandbox Manus-computer pass on the canonical alias confirms the arrival composition remains consistent with the approved Species: the real map canvas is dominant with pale geographic treatment, the compact `Acheter / Vendre` switch stays upper-left, J5 remains the sole account/navigation owner, right-side zoom/location controls retain their safe zone, and the search dock is visibly separated above the rounded `Proche de vous` result sheet. The labeled `Omni Demo Seller Hub` remains a normal catalogue card with one availability action; no public pin or card implies stock, trust or seller permission.
+
+Opening `Vendre` from this clean browser presents the same map-mounted rounded Auth sheet and does not fabricate Seller access for a guest session. This is a visual/negative proof only: the sandbox browser has no authenticated Seller session, so the authorized Seller workspace and response acknowledgement still require the user’s official session in the connected browser or a personal sign-in takeover. No credentials or secrets were entered or recorded.
+
+The authorized Seller screen previously captured in the canonical connected session remains the reference implementation: bounded map-mounted sheet, `Demandes / Catalogue` rhythm, facility trust context, scoped request cards, response form and visible no-reservation lock. The current cross-flow response write remains unrecorded after the earlier route failures; the latest code fix is deployed but requires one clean authenticated retry.
+
+## 14. 2026-08-23 response-route diagnosis
+
+The first canonical retry reached the deployed response route but returned a generic 500. Aggregate-only V2 inspection showed that the recent request, facility and product all exist, are published/eligible, unexpired and allocated. The deployed route was diagnosed with the Vercel runtime path plus a non-executing SQL plan check: the `v2_availability_responses` table does not contain `product_id`, but the Seller idempotency CTE selected `ar.product_id`. The CTE now derives product identity from the matched availability request, and the fix is committed/pushed as `c2586fa` and deployed READY. No direct database write was used for this diagnosis, and the response count remains unchanged at one existing response.
+
+The response endpoint’s UUID guard was also widened to accept any syntactically valid UUID, including the labeled deterministic V2 fixture IDs whose version nibble is zero; that earlier fix is committed as `9aee5ce`. The next proof owner is a single official Seller form submission against the already-created bounded Buyer request, followed by Buyer refresh and comparison-card inspection.
+
+## 15. Current Seller ring status
+
+Seller Trunk remains `partial`: the Species-aligned UI, authorized demo rebind, scoped queue, request detail, corrected persisted response and Buyer comparison card are now evidenced by the bounded cross-flow in section 19; Canopy spacing across all Seller widths, reduced-motion/focus coverage, concurrency, recovery, trust, QR and broader onboarding remain open. Global Root remains `review`.
+
+
+
+## 16. Authenticated Manus-computer Seller visual proof
+
+After the user personally authenticated the Seller profile in the Manus computer, the canonical deployment opened the map-mounted Seller sheet in the intended Species anatomy. The map/globe remains dominant behind the rounded bounded sheet; the upper-left `Acheter / Vendre` switch and upper-right account control remain visible; the sheet has the centered handle and close affordance; the `Demandes / Catalogue` segmented rhythm is compact and not a dashboard rail; the authorized context is explicit; the request card is readable; and the handoff lock continues to state that responding does not reserve stock or open contact, itinerary or QR.
+
+The live queue currently shows one request for `Root proof demo product` at `Omni Demo Seller Hub`, quantity 2, with `Réponse disponible`. The previously created quantity-1 demo request is no longer answerable in this queue because its response window expired before the corrected deployment could be retried; it did not receive a persisted response. No additional write was performed in this pass. The next cross-flow proof therefore requires a fresh explicit authorization for one new bounded Buyer request, followed by one Seller response.
+
+## 17. Fresh cross-flow attempt and response hardening
+
+After the user’s fresh confirmation, the corrected canonical Buyer flow created one new bounded request for `Root proof demo product` at `Omni Demo Seller Hub`, quantity 1, with no budget. The Seller queue immediately showed that request as `Sans réponse`; the already answered quantity-2 request was left untouched. The Seller form matched the Species anatomy and displayed `Disponible`, quantity 1 and price `15.00`.
+
+The Seller response was submitted exactly once. The canonical route returned a generic 500 after its built-in bounded retry, and the UI rendered `The service is temporarily unavailable. Please try again.` Aggregate-only Neon inspection showed one active eligible request, one authorized Seller row, one published product row and five allocated units; no response row was persisted for the fresh request. Vercel logs show the two bounded POST attempts and no persisted response was fabricated.
+
+A non-mutating SQL plan check confirmed the response CTE parses and resolves the partial unique idempotency index. The remaining patch removes parameterized `CASE` expressions from the eligible CTE and uses the already server-validated normalized quantity and price values directly, with a regression assertion. This patch is locally validated but not yet browser-proven; Seller persistence and the Buyer comparison card remain `partial` until a post-deployment retry succeeds. No QR, intent, contact, itinerary, payment or transaction action was opened. Global Root remains `review`.
+
+## 18. Instrumented retry gate and expiry
+
+The fresh ff9f4e0 cross-flow attempt reached the Seller response route twice through the client’s bounded recovery behavior and returned PostgreSQL `42804` both times. The safe log recorded only the route, `NeonDbError` class and code; no response row was persisted. The deployment `6205942` added redacted structured database fields for a future diagnosis and reached READY, but the fresh request’s 15-minute response window expired before a new Seller submission could be authorized and completed. The Seller queue now truthfully shows only the older quantity-2 request with `Réponse disponible`; the fresh request is not answerable and was not retried. Seller persistence and Buyer comparison remain `partial`; Global Root remains `review`.
+
+## 19. Canonical Buyer→Seller→Buyer proof
+
+After the quantity-cast correction was deployed in the canonical production alias, one new bounded Buyer request was created for the existing `Omni Demo Seller Hub` catalogue product, quantity 1, without a budget. The map-mounted Seller workspace displayed the fresh request as `Sans réponse` alongside the older answered request. The Seller response was submitted once as `Disponible`, quantity 1, price 15.00. The UI immediately rendered `Réponse déjà enregistrée` and exposed no duplicate action. Returning to Buyer through the J5-owned `Mes demandes` surface showed the latest request with one response; resuming it rendered a real `Disponible` / `Actualisée` comparison card for `Omni Demo Seller Hub` and `Root proof demo product`, quantity 1, `$15.00`, received time and `Intention encore verrouillée`. No reservation, contact, itinerary, QR, payment or transaction action was opened. This verifies the bounded response/comparison proof, while Seller Canopy, concurrency, broad onboarding and Global Root remain open; the Seller mini-ring remains `partial`.
+
+## 20. 2026-08-23 — Species/Canopy audit continuation
+
+The READY `48bf064` deployment was inspected in the authenticated Browser Sandbox without creating a new Buyer request or modifying a Seller response. The permanent MapLibre canvas remained dominant; the fallback status was honest; the public cluster/pin overlay remained visible behind the Seller sheet; the compact `Acheter / Vendre` switch, J5 owner control and right-side map controls stayed in their Species positions. The Seller surface remained a rounded map-mounted sheet rather than a dashboard rail.
+
+At the Browser Sandbox viewport reported as 1024×880, the Seller queue sheet measured 520×561 with 22px bottom clearance. Its header, authorization summary, tabs, request list and two request cards had no pairwise overlap; the sheet did not overlap the topbar or right-side map controls; document width matched the viewport. The `Catalogue` tab rendered one scoped published product in a 520×469 sheet, with no dashboard rail or horizontal overflow.
+
+Opening an existing answered request showed the incoming product, facility, quantity, budget, deadline and read-only `Réponse déjà enregistrée` state; no duplicate response, reservation, contact, itinerary, QR, payment or transaction action appeared. Pressing Escape on that request detail now returns to `Espace vendeur` with the queue intact, covered by `resolveEscape` tests and verified live on `48bf064`. This remains a one-authenticated-viewport Seller proof: four-width Seller capture, full Tab/Shift+Tab/focus-trap review, reduced-motion, location-denial/retry and interrupted-session evidence remain open. Seller mini-ring and Global Root remain `partial`/`review`.
+
+
+## 21. 2026-08-24 — Seller Species/Canopy audit final
+
+The final production deployment was published through the configured Manus Vercel connector, without a separate Vercel login. Deployment `dpl_9SxwK3RL6YD79x2x23Gbi1ggFScK` reached `READY` with the canonical aliases and the expected Node.js 12-function runtime shape.
+
+The authenticated Seller Browser Sandbox session remained map-mounted at 1024×880. The sheet showed two existing request cards, two scoped tabs (`Demandes · 2` / `Catalogue`), the seller authorization summary and the locked handoff note. Document width matched the viewport, no dashboard rail appeared and the right-side map controls stayed clear. Opening the already-answered first request displayed its read-only `Réponse déjà enregistrée` state; Escape returned to the Seller queue with both request cards intact. No response, Buyer request or persistent write was made.
+
+The broader responsive Buyer audit in the same production deployment covered 320×760, 375×812, 768×900, 1280×900, 1731×818 and 375×620 and passed all dock/grid/Options/control/overflow gates. Seller responsive proof remains independently captured only at the authenticated 1024×880 viewport in this slice; its four-width capture, full focus/Tab/Shift+Tab review, exact/approximate successful location proof, concurrency/interrupted-session recovery and broader Seller Ring remain open.
+
+Seller mini-ring remains **partial**. Global Root remains `review`; no release Ring or production-readiness claim is closed.

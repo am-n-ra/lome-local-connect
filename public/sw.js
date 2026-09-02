@@ -1,37 +1,50 @@
-const CACHE_NAME = "omni-shell-v1";
-const APP_SHELL = ["/", "/carte", "/offline.html", "/favicon.png", "/manifest.webmanifest"];
+const CACHE_NAME = 'omni-shell-v2';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/omni-logo-compact.png'];
 
-self.addEventListener("install", (event) => {
+self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME && key.startsWith('omni-shell-')).map((key) => caches.delete(key))))
       .then(() => self.clients.claim()),
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  const url = new URL(request.url);
-
-  if (request.method !== "GET" || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/_serverFn/") || url.pathname.startsWith("/api/")) return;
-  if (url.pathname.includes("/assets/") || url.pathname === "/" || url.pathname === "/carte") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok && response.type === "basic") {
-            const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-          }
-          return response;
-        })
-        .catch(() => caches.match(request).then((cached) => cached || caches.match("/offline.html"))),
-    );
-  }
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET' || new URL(event.request.url).origin !== self.location.origin) return;
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request).then((cached) => cached || caches.match('/'))),
+  );
 });
+
+self.addEventListener('push', (event) => {
+  let payload = { title: 'Omni', body: 'Une mise à jour est disponible.', url: '/' };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    if (event.data) payload.body = event.data.text();
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, {
+    body: payload.body,
+    icon: '/omni-logo-compact.png',
+    badge: '/omni-logo-compact.png',
+    data: { url: payload.url },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+    const existing = clients.find((client) => 'focus' in client);
+    if (existing) {
+      existing.navigate(url);
+      return existing.focus();
+    }
+    return self.clients.openWindow(url);
+  }));
+});
+

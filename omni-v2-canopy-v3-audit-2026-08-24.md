@@ -1,0 +1,39 @@
+# Omni V2 — Canopy V3 audit, 2026-08-24
+
+**Structural path:** produit → Species → Canopy → map interaction, arrival, search result recovery, product selection
+**Status:** `in_progress / audit recorded; no code change in this note`
+**Authority:** Nature Way, Founder HQ, `v2-species.md`
+
+## User-reported acceptance signals
+
+The current Canopy still feels too pale and too numeric at arrival. Manual map movement is constrained: a drag should rotate/pan the globe freely in the direction and magnitude chosen by the user, stop at the released camera position, and only later resume the resting axis when the pointer is no longer over the map. The browser is not requesting geolocation, so the user marker is not visible. After a result appears, the user needs a clear route to start another search and exit the result grid. Availability should support checking more than one product without pretending that the request is a reservation. Desktop and mobile should use the available space differently while inheriting Species materials and safe areas. The approved reference also has rings/circles around public markers and can zoom from globe to streets/neighborhood context.
+
+## Current V2 findings
+
+`TrunkMap.tsx` creates MapLibre with `cooperativeGestures: false`, `minZoom: 1`, `maxZoom: 18`, a globe projection and a raster OSM style. It attaches `pauseMotion()` to `mousedown`, `touchstart`, `wheel` and `dragstart`; that helper cancels the active reveal, stops the map if moving, and changes interaction state. The same component’s `dragend` and `zoomend` handlers currently set manual navigation, but they do not explicitly schedule a delayed idle resume after a manual drag. `handleCanvasEnter` pauses the globe, and the current overlay/window leave path is known to be sensitive to the browser harness. The implementation must preserve the camera reached by drag and must not call a reset or a reveal from an ordinary pointer interaction.
+
+The most likely cause of the weak drag is not a MapLibre gesture disable flag alone: the code also treats `mousedown` as a motion pause and has the map canvas beneath full-viewport overlays. The next proof must measure center/zoom/bearing before pointerdown, during a real drag and after pointerup. If the map’s native drag delta remains small, the correction should remove only the interfering interaction-side effect or adjust the globe interaction configuration; it must not synthesize fake movement or replace MapLibre gestures with an HTML pin layer.
+
+The current V2 location path calls `navigator.geolocation.getCurrentPosition` only from the explicit `Utiliser ma localisation` button. `origin/main` runs a guarded auto-attempt effect on arrival: it first checks `navigator.geolocation`, reads the browser permission state where available, prevents repeated prompts with `sessionStorage`, then calls its location request unless permission is denied. V2 therefore diverges from the reference arrival behavior. The safe V2 adaptation is a one-time, permission-aware arrival attempt with explicit denial/unavailable copy, no raw location in logs or documents, and session-scoped retention only if the user accepts.
+
+The current V2 arrival shows a visible cluster count (`4`) and a public facility pin. The user’s desired mental model is a living world of discoverable supply rather than a dashboard counter. The minimal Species extension should retain numeric accessibility labels and cluster semantics but make the visual state a calm ring/orbit or soft density marker, with a small contextual phrase such as `Présences publiques autour de vous` rather than a large numeric badge. The phrase must not imply stock, trust, ownership or permission. The marker ring should remain lighter than a selected facility marker.
+
+The current result path renders the search dock only when `panel === 'none'`, but it renders the `NearbySheet` only when `nearbyOpen` is true. In the supplied render block, a ready result sheet has a collapse handler and a `Voir tout` handler, yet no explicit visible `Nouvelle recherche` or `Retour à la carte` action inside the result sheet. `showAllResults` only expands the number of visible cards; it does not provide result-exit semantics. A minimal fix should keep the dock mounted while results are visible, add an explicit clear/new-search action and a truthful collapse/back-to-map action, and preserve the query only when the user chooses to continue.
+
+The current `AvailabilitySheet` step 1 exposes one radio-like `productId` and step 3 derives quantity from one selected product. Supporting more than one product is a meaningful nested mini-Root, not a visual-only tweak: the current request API and idempotency key are single-product shaped. The safe Canopy slice is to add a multi-selection visual/interaction contract only if the server request contract is extended together, or otherwise state the boundary and keep single-product submission explicit. No additional request should be submitted in this proof pass.
+
+## Origin/main reference findings
+
+`origin/main` uses MapLibre with native interaction enabled and attaches `pauseForInteraction` to `dragstart`, `zoomstart`, `rotatestart`, `mousedown`, `touchstart` and `wheel`. That function cancels reveal, stops idle rotation and sets `cameraMode` to `manual_navigation`; it does not reset the camera on interaction. The reference applies globe projection at low zoom, switches to Mercator as zoom increases, and controls rotation only while `cameraMode` remains `resting_globe`. It schedules idle rotation after a delay and keeps the current camera center when rotation resumes.
+
+`origin/main` also runs an arrival geolocation attempt through a permission-aware effect and retains a session-scoped location snapshot only for the approved browser path. Its map visual language includes a separate user marker with an outer ring, public facility rings and boundary/map layers that become richer as zoom increases. The V2 map currently has no street/neighborhood boundary-layer contract; V2 should not fabricate administrative labels. It can still rely on the real OSM raster at higher zoom, subject to remote-tile reliability proof.
+
+## Phase 1 decision and constraints
+
+Proceed with four sequenced mini-slices: (1) camera interaction and rotation ownership, (2) permission-aware arrival location, (3) Species visual/desktop-mobile arrival and result exit, and (4) a separately contracted multi-product availability decision. Preserve the existing global query search, single visible HTML pin renderer, public trust semantics, no-reservation boundary, exact 12-function build, and all user/database/evidence data.
+
+The first implementation should not claim the multi-product request is complete until the API shape, idempotency, server authorization and Buyer UI all agree. The smallest honest decision is to define the UI state and contract test first; if the backend remains single-product, label multi-product as `blocked / Root decision required` rather than pretending the Buyer can submit it.
+
+## Definition of done for this Canopy re-entry
+
+The map must accept a measurable manual drag/rotation and preserve the released camera; idle rotation must stop during interaction and resume only from the current position when the pointer leaves the map/context, with reduced-motion preserved. Arrival must make a guarded location request or show a clear permission-aware state. The arrival must feel like a living public discovery surface without stock/trust inference. A ready result must retain a way to start a new search and to leave/collapse the result grid. Any multi-product support must either be fully contracted end-to-end or be honestly recorded as a blocked Root decision. Desktop/mobile visual differences and residual gaps must be browser-proven at the widths actually measured.
