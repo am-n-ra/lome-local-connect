@@ -34,6 +34,9 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - Species blueprint: `docs/omni-species-blueprint-2026-08-27.md` (§4D Admin/Reviewer/Operator; §2 design system).
 - Existing prototype (buyer/seller/admin stubs): `docs/omni-species-html/index.html` + `app.js`. Design tokens in `:root` of index.html.
 
+## Branch rule (founder locked 2026-09-02)
+**Only `omni-v2-rebuild` is touched.** Never merge to `main`. "Merge" means "push prod branch"; feature branches merge into `omni-v2-rebuild` only if founder explicitly names one.
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 

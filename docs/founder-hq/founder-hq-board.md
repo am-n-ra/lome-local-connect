@@ -14,7 +14,11 @@
 | Release / operations | `omni-v2-rebuild` auto-deploys to Vercel prod; skills bundle merged (#75). No release decision is open. | Git, `vercel.json` | `frozen for product changes` | Founder HQ | Keep prod stable; docs-only PRs until Species and Root close. | Any UI/migration PR before Seed acceptance repeats the rushed pattern. |
 | Decisions | **Resolved 2026-09-02:** D-01 keep 9 internal trust states, derive public label, add operational state; D-02 Offer naming + `StockEvent` ledger; D-03 deterministic auto-availability in V1, `facility_pro`-gated; freshness 4 h fresh / 24 h expired (accepted recommendation); D-04 supply≠facility location deferred post-V1; D-05 seller entitlements per facility, buyer credits per account (accepted recommendation); D-06 one identity, buyer+seller capabilities, mode switch. **Open:** D-07 which existing maquettes survive — answered by the Species audit. | Intent Brief § Founder confirmation | `resolved except D-07` | Founder | Accept/reject maquette sets in build order. | Reopening any decision reopens Seed. |
 
+## Branch rule (founder locked 2026-09-02)
+
+Only `omni-v2-rebuild` is touched. Never merge to `main`. "Merge" = "push prod branch". Feature branches merge into `omni-v2-rebuild` only if founder explicitly names one.
+
 ## Current gate
 
 > **Gate 1 — closed** (founder confirmation 2026-09-02).  
-> **Gate 2 — Species — open.** Order of acceptance: Admin/operator → Seller → Buyer. Active: G-02a audit (ready→in_progress) then G-02b Admin/operator maquette set (planned→in_progress) with three new founder rules: **R-01** bottom simple control panel (reachable, not a full nav); **R-02** simple/direct first-visit admin; **R-03** map-contextual actions (admin actions reflected in the map). Handoff `HO-OMNI-03`. Root and Trunk stay planned; no code is authorized.
+> **Gate 2 — Species — open.** Order of acceptance: Admin/operator → Seller → Buyer. G-02a audit `done`; G-02b Admin/operator maquette set **ACCEPTED (founder 2026-09-02)**; **active: G-02c Seller maquette dispatched to Nature Way.** Branch rule locked (see above). Root and Trunk stay planned; no code is authorized.
