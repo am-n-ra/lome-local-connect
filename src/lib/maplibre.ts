@@ -72,7 +72,7 @@ function loadMapLibre(): Promise<MapLibreGlobal> {
   const importPromise = (async () => {
     await import("maplibre-gl/dist/maplibre-gl.css");
     const mod = await import("maplibre-gl");
-    return (mod.default ?? mod) as unknown as MapLibreGlobal;
+    return ((mod as { default?: unknown }).default ?? mod) as unknown as MapLibreGlobal;
   })();
   loader = Promise.race([
     importPromise,

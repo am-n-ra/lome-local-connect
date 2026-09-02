@@ -263,7 +263,7 @@ export function highlightBoundaryAtTarget(map: MapInstance, zoom: number, target
 
   const layerId = `${level.id}-fills`;
   const point = map.project([target.lng, target.lat]);
-  let feature = map.queryRenderedFeatures(point, { layers: [layerId] })[0];
+  let feature = map.queryRenderedFeatures(point, { layers: [layerId] })[0] as GeoJSONFeature | undefined;
 
   if (!feature && queryableMap.querySourceFeatures) {
     const sourceFeatures = queryableMap.querySourceFeatures(level.source);
