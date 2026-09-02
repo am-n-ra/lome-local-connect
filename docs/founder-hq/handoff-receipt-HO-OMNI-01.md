@@ -45,4 +45,14 @@
 
 ## Dispatch result
 
-`/nature-way` took control of Gate 1 in this session. Its local plan, Resource Receipt and return handoff are in `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-01.md`. Founder HQ waits at the dispatch boundary; no Species, Root, or code work is authorized until the founder confirms the Intent Brief.
+`/nature-way` took control of Gate 1 in this session. Its local plan, Resource Receipt and return handoff are in `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-01.md`. Founder HQ waited at the dispatch boundary; no Species, Root, or code work was authorized until the founder confirmed the Intent Brief.
+
+## Return and gate close (2026-09-02)
+
+| Field | Value |
+|---|---|
+| Founder return | All 7 questions answered (recorded in `docs/nature-way/omni-intent-brief-2026-09-02.md` § Founder confirmation). |
+| Gate result | Gate 1 **closed**. Decisions D-01…D-06 resolved; D-07 routed to the Species audit. |
+| Founder correction to the specialist's proposal | Do not start from the buyer transaction chain. Rebuild in order **Admin/team ops → Seller → Buyer**; only then prove with a seller + buyer + team operator completing their flows flawlessly. SDM slice selection rewritten accordingly. |
+| Next activation | `HO-OMNI-02` — `/nature-way` continues with Gate 2 (Species), same session, same Resource Receipt plus Species references. Ready task: G-02a audit of existing maquettes. |
+| Still not authorized | Root migrations, any application code, PR 2–6 of `OMNI-V3-MASTER-PLAN.md`. |

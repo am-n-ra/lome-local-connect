@@ -1,6 +1,6 @@
 # Intent Brief — Omni (V1 restart)
 
-> **Status:** draft — needs founder confirmation  
+> **Status:** founder-confirmed (2026-09-02; items 4 and 5 are Nature Way recommendations accepted by default)  
 > **As of:** 2026-09-02  
 > **Owner:** Founder (intent) / Nature Way (drafting)  
 > **Sources:** F1 = founder problem statement (voice transcript); MS = `OMNI — MASTER SYSTEM`; MV1 = `OMNI — MASTER V1`; REPO = `omni-v2-rebuild` @ `3c4bea1`; MP = `OMNI-V3-MASTER-PLAN.md`. Items marked **[inferred]** were not stated by the founder and must be confirmed or corrected.
@@ -19,7 +19,7 @@
 | Non-goals (V1) | Global multi-facility cart; AI agents; ads; in-app goods payment; full inventory management; social features; global scale; browser extension; OSM mass import beyond seeding the map. (F1, MV1 §65, §73, MS §199) |
 | Assumptions / unknowns | A-1 Sellers accept a mandatory discount on every Omni offer because it funds the traceable loop (F1) — medium confidence, review after 5 real sellers. A-2 Buyers will send availability requests rather than call (MV1 §33) — untested. A-3 Deterministic auto-availability from allocated stock is trustworthy enough within a freshness window (F1, MV1 §37) — untested. A-4 The Lomé pilot is the first geography **[inferred]**. A-5 One identity with buyer + seller capabilities (MV1 §11) vs role toggle (MP §3) — decision needed. |
 | Risk classification | **Elevated** — handles identity, seller payment details (displayed text), wallet ledger with real money reloads (FedaPay), location data, and production database with existing records. Qualified review required before any migration touching `v2_facilities.trust_state`, wallet ledger, or payment declaration semantics. |
-| Next proof and gate | Founder confirms this brief and decides D-01…D-07 (see `intra-skill-plan-NW-PROD-OMNI-01.md`). Then Species: audit existing maquettes against MV1 §75–77 screen architecture. |
+| Next proof and gate | Seed closed. Next gate: Species, in the founder's build order **Admin/team ops → Seller → Buyer**, auditing existing maquettes against MV1 §75–77 and the decisions below. |
 
 ## Contradictions requiring a founder decision
 
@@ -33,6 +33,16 @@
 | D-06 | Identity model | one account, buyer/seller sides | one identity, buyer and provider capabilities | same (§11) | `v2_account_roles` + role toggle in UI | Capability model in data; toggle is only a UI mode. |
 | D-07 | Existing Species artifacts | — | — | screen architecture §75–77 (map + search/scan/menu, floating switch) | ~20 `docs/omni-species-*` files and `docs/maquette` from 2026-08-27; MP v3 design system | Audit each against MV1 §75–77 in Species; nothing is pre-accepted. |
 
-## Founder confirmation
+## Founder confirmation (2026-09-02)
 
-`<Founder: confirm or correct each row above and decide D-01…D-07. Species does not open until this section is filled.>`
+| Question | Founder answer | Recorded decision |
+|---|---|---|
+| 1 · D-01 trust states | "keep" | Keep the 9-state internal lifecycle in `v2_facilities.trust_state`. Public label derived from it (`unclaimed` / `unconfirmed` / `confirmed`, `certified` shown as an internal review milestone only). Add a separate operational state (`open` / `closed` / `temporarily_off`) in Root. Do not collapse the DB to 3. |
+| 2 · D-02 ontology | "confirm" | Product → **Offer** in contracts and UI copy (tables keep their names). V1 adds a `StockEvent` ledger written on every allocation change and on transaction completion. Supply-location ≠ facility-location deferred to post-V1 (not needed for the Lomé pilot). |
+| 3 · D-03 auto-availability | "yes" | Deterministic automatic reply is **in V1**, gated by the facility's `facility_pro` entitlement: reply `available` when `quantity_allocated_omni ≥ requested` **and** the last seller stock confirmation is inside the freshness window; otherwise fall through to manual. |
+| 4 · freshness window | "recommend" | **Recommendation (accepted by default unless the founder objects):** a stock confirmation keeps allocation "fresh" for **4 hours**; `stale` from 4 h to 24 h (shown to buyers, auto-reply disabled, manual still possible); `expired` after 24 h (offer hidden from availability, still discoverable). Window is a facility-level setting with this default so it can be tuned per facility later without schema change. Replaces the hard-coded 10 minutes. |
+| 5 · D-04 free vs paid | "recommend" — accounts have several facilities, each with several offers | **Recommendation:** entitlements are **per facility** for sellers (matches `v2_facility_entitlements`): free = 1 company + 1 facility + 5 published offers per facility; extra facilities via purchased facility slots; **Seller Pro $10/month per facility** unlocks auto-availability and >5 offers on that facility. Buyer side is **per account**: free = unlimited single-facility checks + 3 bulk operations/month; **Buyer Pro $5/month** = 100 bulk credits/month, 1 credit = 1 bulk request regardless of how many facilities or offers it covers, extra credits purchasable while Pro is active. $20 onboarding credit stays locked until the facility is `confirmed`. All numbers are configuration, not code constants. |
+| 6 · D-05 auth boundary | "confirmed" | Anyone can browse the map and tap pins; constraint search, availability requests, scan-to-buy and seller mode require an account; the pending query is preserved through auth + onboarding. |
+| 7 · first proof / build order | Rebuild in dependency order — **team ops/admin → seller → buyer** — then prove with a seller + buyer + team completing their flows flawlessly | Build order becomes the Species and Trunk sequence: (1) Admin/operator surfaces (roles, claim review, operator runs, audit), (2) Seller (company/facility, claim, offers with allocation, availability inbox, auto-reply, wallet/pro), (3) Buyer (map, constraint search, availability, intent, QR, payment, fulfilment, rating). Trunk proof = one real seller, one non-team buyer and one team operator completing the full loop with no manual intervention. |
+
+D-06 (identity model) and D-07 (existing maquettes audited, none pre-accepted) stand as proposed. **Seed is closed. Species is open.**

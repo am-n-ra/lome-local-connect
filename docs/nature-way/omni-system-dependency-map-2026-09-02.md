@@ -3,7 +3,7 @@
 > **Map ID:** `SDM-OMNI-2026-09-02`  
 > **As of:** 2026-09-02 (UTC), repo `omni-v2-rebuild` @ `3c4bea1`  
 > **Maturity target:** pilot-ready (Lomé field pilot), then production-candidate  
-> **Map owner:** Nature Way (Gate 1)  
+> **Map owner:** Nature Way (built in Gate 1; slice selection revised at Gate 1 close, 2026-09-02)  
 > **Evidence basis:** static inspection of `db/migrations/001–012`, `src/server/http.ts`, `trunk-repository.ts`, `roots-operations.ts`, `ledger.ts`, `src/trunk/*`; `npm test` re-run this session (**29 files / 184 tests pass**), `npm run lint` (tsc) clean. Production behaviour at `omni.sparkafrika.online` and Neon data were **not** inspected; all `real` statuses below mean "code + tests exist", not "proven in production".
 
 Status vocabulary: `missing` (no code), `bounded` (exists with a manual/fixture/limited path), `real` (code + unit tests exist), `verified` (proven end-to-end with real actors and recorded evidence). No edge is `verified` yet.
@@ -57,16 +57,24 @@ Status vocabulary: `missing` (no code), `bounded` (exists with a manual/fixture/
 
 ## Phase diagnosis
 
-- **Actual phase:** **Seed reopened** with a mature Root/Trunk already present. This is an existing-project rescue, not a greenfield. Species was never founder-accepted (2026-08-28 dispatch says so; nothing since records acceptance). Root/Trunk/Heartwood code exists and is tested (184 tests) but was built against MP's framing, which the founder now replaces with MV1.
+- **Actual phase:** **Seed closed by founder confirmation (2026-09-02); Species open** over an existing Root/Trunk. This is an existing-project rescue, not a greenfield. Species was never founder-accepted (2026-08-28 dispatch says so; nothing since records acceptance). Root/Trunk/Heartwood code exists and is tested (184 tests) but was built against MP's framing, which the founder has replaced with MV1 + the D-01…D-07 decisions.
 - **Not the phase:** Canopy polish or PR 2 design-system work — visible-first work is exactly the rushed pattern.
 - **Highest-leverage missing parents:** (1) one agreed trust-state + operational-state model (D-01) — it gates claim UX, admin, badges and confirmation; (2) stock event on completion (E-07) — without it the founder's central promise ("transactions make availability better") is false; (3) deterministic auto-availability (E-10, D-03) — the founder's stated reason for allocated stock; (4) a founder-decided freshness window for availability (E-09 currently hard-codes 10 minutes).
 
 ## Slice selection
 
-> **Chosen first truthful chain (proposal, after founder confirms Seed):** `E-06 published offer with allocation → E-09 availability request answered (manual) → E-12 intent → E-13 QR verified → E-15/E-16 payment + fulfilment completed → E-07 stock event decrements allocation → E-05 qualifying_sales increments`, proven with **one real Lomé seller and one non-team buyer**.  
-> **Why this chain first:** it exercises every existing parent, exposes whether E-07 is actually implemented, produces the first real success signal, and requires no visual redesign.  
-> **Not active yet:** auto-availability (E-10), bulk credits (E-11), v3 re-skin, OSM discovery scale, agents, in-app payment.  
-> **Gate to unlock next:** founder-confirmed Intent Brief + D-01…D-07 decisions → Species audit of existing maquettes against MV1 §75–77.
+> **Founder decision (2026-09-02):** the earlier proposal to start from the buyer transaction chain is **superseded**. Omni is rebuilt in parent-before-child order; the buyer surface is not built before the seller surface, and the seller surface not before team ops/admin.
+>
+> **Rebuild order (Species, Root and Trunk all follow it):**
+> 1. **Admin / team ops** — E-01 authority + roles, E-04 claim review, E-05 trust lifecycle transitions + operational state, E-19 operator field runs, E-20 audit/measurement views.
+> 2. **Seller** — E-02 identity (seller capability), E-04 company/facility onboarding + claim, E-06 Offer with mandatory discount + Omni allocation, E-07 `StockEvent` ledger, E-09 manual availability inbox, E-10 deterministic auto-reply (`facility_pro`), E-18 wallet / per-facility entitlements, E-13 QR verification, E-15/E-16 seller side of payment + fulfilment, E-17 chat.
+> 3. **Buyer** — E-03 seeded public supply on the map, E-08 constraint search, E-09/E-10 availability request (per-account credits, E-11), E-12 intent, E-13 QR issuance, E-14 delayed contact/itinerary, E-15/E-16 buyer side, E-17 chat, ratings.
+> 4. **Integrated proof** — one real seller, one non-team buyer and one team operator complete `offer → availability → intent → QR → payment → fulfilment → StockEvent → qualifying_sales` flawlessly, with no manual intervention.
+>
+> **Why this order:** every buyer-facing edge has a seller or operator parent; every seller edge has an operator parent (roles, claim review, trust transitions). Building children first is how the existing code ended up with truthful-looking screens over unverified parents (E-07 missing, E-10 absent, E-09 hard-coded 10 min).  
+> **Distinction:** the *rebuild order* is the construction sequence; the *V1 transaction chain* above remains the runtime journey the final proof exercises.  
+> **Not active yet:** v3 re-skin as its own PR, OSM discovery scale, agents, in-app payment, global cart.  
+> **Gate to unlock next:** Species audit of existing maquettes (G-02a) → founder accepts Admin/operator maquette set (G-02b).
 
 ## Readiness rule
 
