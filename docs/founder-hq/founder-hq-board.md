@@ -17,4 +17,4 @@
 ## Current gate
 
 > **Gate 1 — closed** (founder confirmation 2026-09-02).  
-> **Gate 2 — Species — open.** Order of acceptance: Admin/operator → Seller → Buyer. Ready task: G-02a audit of existing maquettes. Root and Trunk stay planned; no code is authorized.
+> **Gate 2 — Species — open.** Order of acceptance: Admin/operator → Seller → Buyer. Active: G-02a audit (ready→in_progress) then G-02b Admin/operator maquette set (planned→in_progress) with three new founder rules: **R-01** bottom simple control panel (reachable, not a full nav); **R-02** simple/direct first-visit admin; **R-03** map-contextual actions (admin actions reflected in the map). Handoff `HO-OMNI-03`. Root and Trunk stay planned; no code is authorized.
