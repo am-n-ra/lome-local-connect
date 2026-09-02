@@ -158,6 +158,16 @@ export async function transitionSellerProduct(input: { token: string; productId:
   return parse(response);
 }
 
+export async function setProductAvailability(input: { token: string; productId: string; to: import('./types').ProductAvailabilityState; expiresInHours: number | null }): Promise<ApiResult<{ productId: string; availabilityState: string; previousState: string | null }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/availability`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ to: input.to, expiresInHours: input.expiresInHours }) });
+  return parse(response);
+}
+
+export async function getProductStockEvents(input: { token: string; productId: string }): Promise<ApiResult<{ authorized: boolean; events: import('./types').ProductStockEvent[] }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/stock-events`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
 export async function getSellerCatalogue(input: { token: string }): Promise<ApiResult<SellerCatalogueResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

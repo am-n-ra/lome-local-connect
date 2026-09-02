@@ -860,6 +860,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    const sellerAvailabilityMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/availability$/i);
+    if (sellerAvailabilityMatch && req.method === 'POST') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to set availability.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const to = typeof input.to === 'string' && ['en_stock', 'verifie', 'a_valider', 'bientot'].includes(input.to) ? input.to as 'en_stock' | 'verifie' | 'a_valider' | 'bientot' : null;
+      const expiresInHours = input.expiresInHours === null || input.expiresInHours === undefined ? null : Number(input.expiresInHours);
+      if (!to || (expiresInHours !== null && (!Number.isInteger(expiresInHours) || expiresInHours < 1 || expiresInHours > 720))) {
+        throw new ApiInputError('A valid availability state and optional expiry (1-720h) are required.');
+      }
+      const result = await repository.setProductAvailability({ authUserId, productId: sellerAvailabilityMatch[1], to, expiresInHours });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerStockEventsMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/stock-events$/i);
+    if (sellerStockEventsMatch && req.method === 'GET') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to view stock history.'));
+        return true;
+      }
+      const result = await repository.listProductStockEvents({ authUserId, productId: sellerStockEventsMatch[1] });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     const sellerProductMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})$/i);
     if (sellerProductMatch && (req.method === 'PATCH' || req.method === 'POST')) {
       const authUserId = await getAuthUserId(req.headers);

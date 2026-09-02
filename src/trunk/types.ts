@@ -233,6 +233,8 @@ export interface SellerCatalogueFacility {
   productCount: number;
 }
 
+export type ProductAvailabilityState = 'en_stock' | 'verifie' | 'a_valider' | 'bientot';
+
 export interface SellerCatalogueProduct {
   id: string;
   facilityId: string;
@@ -246,6 +248,18 @@ export interface SellerCatalogueProduct {
   prixReduit: number;
   pourcentageReduction: number;
   publicationState: SellerCataloguePublicationState;
+  availabilityState: ProductAvailabilityState;
+  availabilityExpiresAt: string | null;
+  availabilityProEligible: boolean;
+}
+
+export interface ProductStockEvent {
+  id: string;
+  fromState: ProductAvailabilityState | null;
+  toState: ProductAvailabilityState;
+  source: 'auto' | 'manual';
+  reason: string | null;
+  createdAt: string;
 }
 
 export interface SellerCatalogueResult {

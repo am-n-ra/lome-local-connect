@@ -1185,3 +1185,87 @@ describe('Buyer transaction rating persistence Root seam', () => {
     })).rejects.toBeInstanceOf(TransactionPolicyError);
   });
 });
+
+describe('Product availability Root seam (G-04 trunk)', () => {
+  it('rejects an invalid availability state before touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setProductAvailability({
+      authUserId: 'auth-seller-1',
+      productId: 'product-1',
+      to: 'epuise' as 'en_stock',
+      expiresInHours: null,
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects an invalid expiry window before touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setProductAvailability({
+      authUserId: 'auth-seller-1',
+      productId: 'product-1',
+      to: 'en_stock',
+      expiresInHours: 0,
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('writes availability state and logs a manual StockEvent when seller is pro-eligible', async () => {
+    const call = stubSql([{ id: 'product-1', from_state: 'a_valider' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setProductAvailability({
+      authUserId: 'auth-seller-1',
+      productId: 'product-1',
+      to: 'en_stock',
+      expiresInHours: 4,
+    });
+    expect(result).toEqual({ productId: 'product-1', availabilityState: 'en_stock', previousState: 'a_valider' });
+    expect(call.queries[0]).toContain('v2_product_stock_events');
+    expect(call.queries[0]).toContain('facility_pro');
+    expect(call.queries[0]).toContain('manual');
+  });
+
+  it('rejects when the seller has no facility_pro entitlement', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setProductAvailability({
+      authUserId: 'auth-seller-1',
+      productId: 'product-1',
+      to: 'en_stock',
+      expiresInHours: 4,
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+  });
+
+  it('lists StockEvent history newest first, bounded to 50', async () => {
+    const call = stubSql([{ id: 'event-1', from_state: 'a_valider', to_state: 'en_stock', source: 'manual', reason: null, created_at: '2026-09-02T12:00:00.000Z' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listProductStockEvents({ authUserId: 'auth-seller-1', productId: 'product-1' });
+    expect(result.authorized).toBe(true);
+    expect(result.events).toHaveLength(1);
+    expect(result.events[0]).toMatchObject({ toState: 'en_stock', fromState: 'a_valider', source: 'manual', reason: null });
+    expect(call.queries[0]).toContain('limit 50');
+  });
+
+  it('returns seller catalogue with availability fields after opportunistic expiry', async () => {
+    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, currency: 'XOF', product_count: 1 }];
+    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 3, net_price_minor: 4500, publication_state: 'published', availability_state: 'en_stock', availability_expires_at: '2026-09-02T16:00:00.000Z', availability_pro_eligible: true }];
+    const queries: string[] = [];
+    const seq = [[], [{ id: 'account-1' }], facilityRows, productRows];
+    let index = 0;
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      void values;
+      const rows = seq[Math.min(index, seq.length - 1)];
+      index += 1;
+      return Promise.resolve(rows);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+    const result = await repository.listSellerCatalogue({ authUserId: 'auth-seller-1' });
+    expect(result.authorized).toBe(true);
+    expect(result.products[0]).toMatchObject({ availabilityState: 'en_stock', availabilityProEligible: true });
+    expect(result.products[0].availabilityExpiresAt).toBe('2026-09-02T16:00:00.000Z');
+    expect(queries[0]).toContain('v2_expire_stale_availability');
+    expect(queries[3]).toContain('availability_state');
+  });
+});

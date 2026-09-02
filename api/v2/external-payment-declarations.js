@@ -1211,6 +1211,7 @@ function createTrunkRepository(sql = database()) {
       return { authorized: true };
     },
     async listSellerCatalogue(input) {
+      await retryDatabase(() => sql`select v2_expire_stale_availability()`).catch(() => []);
       const authorizationRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
@@ -1267,7 +1268,13 @@ function createTrunkRepository(sql = database()) {
               then p.price_minor - p.discount_value_minor
             else null
           end as net_price_minor,
-          p.publication_state
+          p.publication_state,
+          p.availability_state,
+          p.availability_expires_at,
+          (f.commercial_plan = 'pro_active' or exists (
+            select 1 from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+          )) as availability_pro_eligible
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
         join v2_accounts a on a.id = f.account_id
@@ -1288,7 +1295,10 @@ function createTrunkRepository(sql = database()) {
         prixOriginal: Number(row.price_minor),
         prixReduit: row.net_price_minor === null || row.net_price_minor === void 0 ? Number(row.price_minor) : Number(row.net_price_minor),
         pourcentageReduction: row.discount_kind === "percentage" ? Math.round(Number(row.discount_value_minor ?? 0)) : 0,
-        publicationState: String(row.publication_state)
+        publicationState: String(row.publication_state),
+        availabilityState: ["en_stock", "verifie", "a_valider", "bientot"].includes(String(row.availability_state)) ? String(row.availability_state) : "a_valider",
+        availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === void 0 ? null : new Date(String(row.availability_expires_at)).toISOString(),
+        availabilityProEligible: row.availability_pro_eligible === true
       }));
       return { authorized: true, facilities, products };
     },
@@ -1371,6 +1381,68 @@ function createTrunkRepository(sql = database()) {
       const row = rows[0];
       if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_LIMIT_REACHED");
       return { productId: String(row.id), publicationState: String(row.publication_state) };
+    },
+    async setProductAvailability(input) {
+      if (!["en_stock", "verifie", "a_valider", "bientot"].includes(input.to)) throw new SellerCataloguePolicyError("INVALID_INPUT");
+      if (input.expiresInHours !== null && (!Number.isInteger(input.expiresInHours) || input.expiresInHours < 1 || input.expiresInHours > 720)) throw new SellerCataloguePolicyError("INVALID_INPUT");
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select p.id, p.availability_state as from_state, a.id as account_id
+          from v2_products p
+          join v2_facilities f on f.id = p.facility_id
+          join v2_accounts a on a.id = f.account_id
+          where p.id = ${input.productId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state in ('seller_ready', 'complete')
+            and p.publication_state in ('draft', 'published')
+            and (f.commercial_plan = 'pro_active' or exists (
+              select 1 from v2_facility_entitlements e
+              where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+            ))
+        ), changed as (
+          update v2_products p
+          set availability_state = ${input.to},
+              availability_updated_at = now(),
+              availability_expires_at = case when ${input.expiresInHours}::int is null then null else now() + make_interval(hours => ${input.expiresInHours}::int) end
+          from owned
+          where p.id = owned.id
+          returning p.id, owned.from_state, owned.account_id
+        ), logged as (
+          insert into v2_product_stock_events (product_id, from_state, to_state, source, actor_account_id, reason)
+          select id, from_state, ${input.to}, 'manual', account_id, null from changed
+          returning product_id
+        )
+        select id, from_state from changed
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_PRO_REQUIRED");
+      return { productId: String(row.id), availabilityState: input.to, previousState: row.from_state === null ? null : String(row.from_state) };
+    },
+    async listProductStockEvents(input) {
+      const rows = await retryDatabase(() => sql`
+        select e.id, e.from_state, e.to_state, e.source, e.reason, e.created_at
+        from v2_product_stock_events e
+        join v2_products p on p.id = e.product_id
+        join v2_facilities f on f.id = p.facility_id
+        join v2_accounts a on a.id = f.account_id
+        where e.product_id = ${input.productId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        order by e.created_at desc, e.id desc
+        limit 50
+      `);
+      return {
+        authorized: true,
+        events: rows.map((row) => ({
+          id: String(row.id),
+          fromState: row.from_state === null ? null : String(row.from_state),
+          toState: String(row.to_state),
+          source: String(row.source) === "auto" ? "auto" : "manual",
+          reason: row.reason === null ? null : String(row.reason),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        }))
+      };
     },
     async getSellerAvailabilityQueue(input) {
       const sellerRows = await retryDatabase(() => sql`
@@ -3746,6 +3818,34 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.getSellerAvailabilityQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerAvailabilityMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/availability$/i);
+    if (sellerAvailabilityMatch && req.method === "POST") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to set availability."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const to = typeof input.to === "string" && ["en_stock", "verifie", "a_valider", "bientot"].includes(input.to) ? input.to : null;
+      const expiresInHours = input.expiresInHours === null || input.expiresInHours === void 0 ? null : Number(input.expiresInHours);
+      if (!to || expiresInHours !== null && (!Number.isInteger(expiresInHours) || expiresInHours < 1 || expiresInHours > 720)) {
+        throw new ApiInputError("A valid availability state and optional expiry (1-720h) are required.");
+      }
+      const result = await repository.setProductAvailability({ authUserId, productId: sellerAvailabilityMatch[1], to, expiresInHours });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerStockEventsMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/stock-events$/i);
+    if (sellerStockEventsMatch && req.method === "GET") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to view stock history."));
+        return true;
+      }
+      const result = await repository.listProductStockEvents({ authUserId, productId: sellerStockEventsMatch[1] });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
