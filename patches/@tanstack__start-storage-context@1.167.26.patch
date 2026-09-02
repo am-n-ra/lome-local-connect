@@ -1,0 +1,43 @@
+diff --git a/dist/esm/browser.js b/dist/esm/browser.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..83370acf97ba64bbdc29c09cb9fa475a45513a8a
+--- /dev/null
++++ b/dist/esm/browser.js
+@@ -0,0 +1,22 @@
++const GLOBAL_STORAGE_KEY = Symbol.for("tanstack-start:start-storage-context");
++const globalObj = globalThis;
++const defaultContext = {
++  startOptions: globalObj.__TSS_START_OPTIONS__ ?? { functionMiddleware: [] },
++  contextAfterGlobalMiddlewares: {},
++  executedRequestMiddlewares: new Set(),
++  handlerType: "serverFn",
++};
++const startStorage = globalObj[GLOBAL_STORAGE_KEY] ?? {
++  run: (_context, fn) => fn(),
++  getStore: () => defaultContext,
++};
++
++async function runWithStartContext(context, fn) {
++  return startStorage.run(context, fn);
++}
++
++function getStartContext() {
++  return startStorage.getStore() ?? defaultContext;
++}
++
++export { getStartContext, runWithStartContext };
+diff --git a/package.json b/package.json
+index 932898be8435620f89a43f992e7de8579dd327aa..1a6ff44904716bff4936ea6fad3d9772e1abdef5 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,10 @@
+   "types": "dist/esm/index.d.ts",
+   "exports": {
+     ".": {
++      "browser": {
++        "types": "./dist/esm/index.d.ts",
++        "default": "./dist/esm/browser.js"
++      },
+       "import": {
+         "types": "./dist/esm/index.d.ts",
+         "default": "./dist/esm/index.js"

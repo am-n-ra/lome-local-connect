@@ -1,0 +1,309 @@
+# Omni V1 UI Divergence Ledger
+
+**Status:** Phase 0 baseline and bounded execution ledger  
+**Date:** 2026-08-19  
+**Repository:** `am-n-ra/lome-local-connect`  
+**Baseline commit:** `15f46e3`  
+**Release baseline:** `partial`
+
+## Purpose
+
+This document is a finite derivative audit for the UI perfection program. The normative contracts remain [`OMNI_MASTER_PRODUCT_INTERFACE.md`](./OMNI_MASTER_PRODUCT_INTERFACE.md) and [`omni-continuity-v1-source-of-truth.md`](./omni-continuity-v1-source-of-truth.md). The prior implementation audit is evidence and prioritization input, not a competing source of truth.
+
+“Perfected” is defined here as **no known in-scope divergence with reproducible proof**, not as unlimited visual experimentation or completion of deferred V2 capabilities. The real MapLibre globe, source-backed facility discovery, existing discovery pins, server-authoritative transaction contracts, external buyer-seller payment model, and one-wallet model are preserved.
+
+## Baseline evidence
+
+| Check                        | Result                      | Evidence or limitation                                                                                                                                                                                       |
+| ---------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Git boundary                 | Pass                        | `HEAD=15f46e3`; only `.vercel/` and four temporary audit scripts are untracked. No tracked source changes were present at baseline.                                                                          |
+| Unit tests                   | Pass                        | 10 test files, 64 tests passed. Output: `/home/ubuntu/omni-ui-baseline-tests.txt`.                                                                                                                           |
+| TypeScript                   | Fail                        | `src/components/omni/CartePage.tsx:1002` passes `string \| undefined` as `resumeRequestId` to a prop requiring `string` under `exactOptionalPropertyTypes`. Output: `/home/ubuntu/omni-ui-baseline-tsc.txt`. |
+| Production build             | Pass                        | Vite/Nitro build completed. The build emitted existing `createServerFn().inputValidator()` deprecation warnings.                                                                                             |
+| Client boundary              | Pass                        | 43 JavaScript artifacts and 167 source files checked; no direct server import violation.                                                                                                                     |
+| Production/staging mutations | None                        | Phase 0 made no production or staging data mutation.                                                                                                                                                         |
+| Browser viewport matrix      | Not yet run in this program | Required widths are 320, 375, 390, 768, and 1280px.                                                                                                                                                          |
+| Device camera proof          | Not available in sandbox    | Must remain a separate HTTPS device/browser acceptance item.                                                                                                                                                 |
+
+## Precedence decision
+
+The current continuity contract resolves the apparent conflict between the older master scope table and the already-approved production direction. Omni continues to use the real MapLibre globe/map, global viewport-backed discovery, OSM-backed unclaimed facilities, the PWA shell, and real Neon/Postgres contracts. The master’s V1 gate still controls scope discipline: deferred AI automation, advertising, native mobile, mass import, offline sync, and seller withdrawals are not pulled into this UI program.
+
+The following user-facing rules are frozen for this execution: the map remains the scene; the search engine is the entry point; the facility is the supply object; availability precedes purchase intent; transaction chat/QR/payment/fulfilment are one recoverable flow; external payment is represented honestly; and a single rechargeable Omni Wallet is not a seller withdrawal account.
+
+## Divergence ledger
+
+Severity uses `P0` for a release-blocking contradiction or dead end, `P1` for a high-value V1 divergence, `P2` for a consistency/usability debt, and `P3` for a later polish item. Status distinguishes source-confirmed debt from items that still require browser or device proof.
+
+### A. Visual composition and shared primitives
+
+| ID      | Severity | Current evidence                                                                                                                                                          | Desired contract                                                                                                                       | Affected surface                                                               | Status                                         |
+| ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------- |
+| VIS-001 | P1 | `OmniMapShell`, `OverlayHost`, `OmniSheet`, and `OmniSheetSurface` coexist. `CartePage` still owns a large inline facility surface; the transaction chat remains a direct sheet because it is reserved for the transaction-surface slice. | One shared map shell, one overlay host, one responsive sheet pattern, and one focused transaction surface. | `CartePage.tsx`, `ChatPanel.tsx`, `OmniMapShell.tsx`, `OverlayHost.tsx`, `OmniPrimitives.tsx` | In progress; simple panels migrated in Phase 2 |
+| VIS-002 | P1 | `OmniSheet` now provides the shared scroll body, safe-area footer, touch-safe close control, and test hooks. Facility and transaction surfaces still require migration in their dedicated slices. | Every in-scope overlay uses internal scrolling, sticky action footer, safe-area insets, one-gesture close/back, and focus restoration. | Facility, availability, chat, orders, menu, wallet, seller panels | Foundation implemented; full viewport proof pending |
+| VIS-003 | P1       | Buyer and seller both have map-first primitives, but seller route still contains a large orchestration surface and many operational panels in one route.                  | A thin shared map workspace with lazy contextual sheets and no map recreation when an action changes.                                  | `src/routes/vendeur.tsx`, seller panels, `OmniActionDock.tsx`                  | Source-confirmed                               |
+| VIS-004 | P2       | Token and glass primitives exist, but several surfaces retain local layout classes and historical composition assumptions.                                                | Centralized Creamy Glass tokens and predictable spacing/typography/status rules; no new arbitrary colors.                              | `styles.css`, Omni components, seller panels                                   | Source-confirmed; full usage inventory pending |
+| VIS-005 | P1       | Transaction progress has a shared `TransactionProgress`, but the exact labels and readability across all transaction surfaces and widths are not yet proven in browser.   | `Intention`, `Offre`, `QR`, `Paiement`, and `Réception` remain visible and named at every required viewport.                           | `TransactionThreadCard.tsx`, `TransactionMessageThread.tsx`, transaction route | Browser proof pending                          |
+
+### B. Buyer discovery and convenience
+
+| ID      | Severity | Current evidence                                                                                                                                                                        | Desired contract                                                                                                                                                                            | Affected surface                                         | Status                                                                 |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| BUY-001 | P1       | `CartePage` still owns discovery, location, route replay, result selection, and overlays, making context restoration and change isolation fragile.                                      | Thin route orchestration with bounded map/search/location adapters and shared overlay ownership.                                                                                            | `CartePage.tsx`, `MapCanvas.tsx`                         | Source-confirmed                                                       |
+| BUY-002 | P1       | Search, structured parameters, coverage state, request state, and analytics are mixed in the dock composition.                                                                          | One primary search field; quantity/budget are optional refinements; Enter and the search button use one handler; typing never changes scene or mobile zoom.                                 | `SearchDock.tsx`, `SmartSearchBar.tsx`                   | Source-confirmed; browser proof pending                                |
+| BUY-003 | P1       | Facility detail historically mixes product display, coupons, claim, favorite, cart/direct intent, contact, and availability.                                                            | Facility sheet foregrounds searched product and trust state; claimed/certified facilities expose availability-first; unclaimed facilities cannot expose direct purchase or private contact. | `FacilityPanel.tsx`, `FacilityResultCard.tsx`            | Source-confirmed; trust-boundary browser proof partially certified     |
+| BUY-004 | P1       | Result-level availability and facility-level availability have previously been distinguishable only after opening multiple surfaces.                                                    | Copy and CTA must make single-facility versus grouped verification explicit before submission; the manual path must never trigger a Pro-only bulk error.                                    | `CartePage.tsx`, `DemandRequestPanel.tsx`                | Prior live fix certified; regression proof required after UI migration |
+| BUY-005 | P2       | Result rail and facility selection have been observed to restore in the current implementation, but narrow-width and back/focus behavior are not part of the current baseline evidence. | Closing a sheet returns to the same result rail, selected card, map framing, query, and focus without horizontal overflow.                                                                  | `ResultRail.tsx`, `FacilityPanel.tsx`, `OverlayHost.tsx` | Browser matrix pending                                                 |
+| BUY-006 | P2 | The baseline TypeScript contract rejected explicitly undefined resume identifiers under `exactOptionalPropertyTypes`. | Resume identifiers must be modeled as optional at the boundary or conditionally passed; the repository must typecheck before UI slices advance. | `CartePage.tsx`, `DemandRequestPanel.tsx` | Resolved in Phase 2; typecheck passes |
+
+### C. Transaction, QR, and payment presentation
+
+| ID      | Severity | Current evidence                                                                                                                                                                                          | Desired contract                                                                                                                                                                                         | Affected surface                                                               | Status                                               |
+| ------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| TXN-001 | P0       | The certified backend and transaction state machine exist, but the UI has accumulated historical fixes around QR verification, payment entry, rating, and resume behavior.                                | One transaction room derives all actions from server state and preserves exactly one role-specific primary action.                                                                                       | `TransactionThreadCard.tsx`, `TransactionMessageThread.tsx`, transaction route | Backend certified; UI regression matrix pending      |
+| TXN-002 | P1       | Camera scanner and manual fallback are separate concerns in the seller surface; prior browser evidence showed the preview can close or remain unavailable after permission depending on path.             | Preview stays mounted after permission, unavailable environments show a truthful fallback, manual/deep-link/camera verification converge on one protected server function, and tracks stop exactly once. | `CheckoutPanel.tsx`, `camera-scanner.ts`, `transaction.qr.tsx`                 | Source/unit/manual server proof exists; live device preview remains environment-blocked |
+| TXN-003 | P1       | Historical transaction surfaces can hide or compress state labels on narrow widths.                                                                                                                       | The named progress states remain readable and the room visibly distinguishes external payment selection, buyer declaration, seller confirmation, fulfilment, receipt, rating, and completion.            | Transaction progress/thread components                                         | Browser proof pending                                |
+| TXN-004 | P1       | Resume/deep-link behavior is implemented and staging-certified for the A–E loop, but the UI must retain map/result context when closing the room and restore the exact transaction after auth or restart. | Deep links, notifications, sign-out/re-authentication, app restart, and back/close all reopen the correct authorized transaction without duplicate creation.                                             | Transaction route, `CartePage`, notifications, orders/history                  | Staging evidence exists; UI matrix pending           |
+| TXN-005 | P2       | Copy and status wording have been corrected in several bounded fixes, but no single view has yet been declared the canonical visual vocabulary.                                                           | Use one French vocabulary across buyer and seller: `Intention`, `Offre`, `QR`, `Paiement`, `Réception`, plus truthful external-payment wording.                                                          | Transaction surfaces and notifications                                         | Source-confirmed; visual review pending              |
+
+### D. Seller workspace, forms, and account surfaces
+
+| ID       | Severity | Current evidence                                                                                                                                                        | Desired contract                                                                                                                                                                                | Affected surface                                                        | Status                                       |
+| -------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | -------------------------------------------- |
+| SELL-001 | P1       | `vendeur.tsx` still orchestrates auth, onboarding, map, catalogue, demands, scanner, coupons, wallet, plan, and settings concerns.                                      | Thin `SellerMapWorkspace` loads the shell first and lazy-loads contextual sheets without recreating the map.                                                                                    | `src/routes/vendeur.tsx`, `vendor.functions.ts`                         | Source-confirmed                             |
+| SELL-002 | P1       | `OmniActionDock` and the seller menu expose more conceptual surfaces than the strict V1 operational loop needs.                                                         | Primary seller actions are requests, products, scanner, facility/preview, and account/more; advanced Agent/Ads/analytics/import/automation/withdrawal entries are hidden or explicitly flagged. | `OmniActionDock.tsx`, `NavMenuSheet.tsx`, seller route                  | Source-confirmed; browser menu proof pending |
+| SELL-003 | P1       | Seller product and coupon panels exist but their first-use hierarchy and form clarity are not yet certified at narrow widths.                                           | Progressive essential-first forms for product, media, visibility, and basic coupon rules; clear validation and preview.                                                                         | `SellerProductForm.tsx`, `CouponsPanel.tsx`, `SellerOnboardingFlow.tsx` | Source-confirmed; browser proof pending      |
+| SELL-004 | P1       | Incoming-demand operation exists and was used in staging; `listDemandForFacility` now returns response metadata and `DemandPanel` exposes a seller-only correction path for eligible automatic responses. | One-gesture `Disponible`, `Partiel`, `Indisponible`; partial quantity/price overrides inline; immutable submitted response with clear status. | `RequestsPanel.tsx`, `DemandPanel.tsx` | Implemented in `fdd1c40`; authenticated seller/browser proof pending |
+| SELL-005 | P1       | Scanner surface has a camera CTA and manual fallback, but the camera viewport/lifecycle is not proven on a real HTTPS camera-capable client.                            | The camera area visibly shows the live stream after authorization and fails truthfully when unavailable; fallback remains available.                                                            | `CheckoutPanel.tsx`, `camera-scanner.ts`                                | Environment-blocked proof                    |
+| SELL-006 | P2       | Wallet and coupon surfaces exist, but account access, recharge states, internal allocations, and no-withdrawal language need one consistent entry and visual hierarchy. | Explain one rechargeable Omni Wallet, recharge-only FedaPay, internal use allocations, pending/approved/failed states, and no seller withdrawals.                                               | `BalanceSheet.tsx`, wallet panels, seller menu                          | Source-confirmed; browser/E2E proof pending  |
+
+### E. Responsive, accessibility, motion, and performance proof
+
+| ID       | Severity | Current evidence                                                                                                                                                                             | Desired contract                                                                                                                                 | Affected surface                                                  | Status                 |
+| -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ---------------------- |
+| RESP-001 | P0       | The required 320/375/390/768/1280 matrix has not been recorded for the current baseline.                                                                                                     | No page-level horizontal overflow; sheets, cards, docks, safe areas, focus, and sticky footers pass at every required width.                     | All buyer/seller surfaces                                         | Untested claim         |
+| RESP-002 | P1       | The map shell and safe-area classes exist, but interactions between result rail, dock, recenter controls, and sheets have known historical overlap risk.                                     | Dock, map controls, notifications, menu, result rail, and active sheet never cover each other or become unreachable.                             | `OmniMapShell`, `ResultRail`, `SearchDock`, `TopNav`, seller dock | Browser matrix pending |
+| RESP-003 | P1       | Map rotation/reveal/location logic is implemented, but pause/resume, reduced-motion, fast second-search cancellation, and marker semantics are not all captured in the current evidence set. | Motion is interruptible, reduced-motion safe, and never changes truthfulness of location or discovery markers.                                   | `MapCanvas.tsx`, map hooks, search choreography                   | Browser proof pending  |
+| RESP-004 | P2       | Seller shell currently has a large route-level payload and many panels; the exact first-render network/render cost has not been measured in this baseline.                                   | Shell-first loading, targeted lazy surfaces, map reuse, and no unnecessary refetch/re-render on tab changes.                                     | `vendeur.tsx`, vendor server functions                            | Profiling pending      |
+| RESP-005 | P2       | Existing components include accessible labels and focus rings, but a full keyboard/touch and reduced-motion audit has not been completed.                                                    | All controls are keyboard reachable, touch targets are at least 44px, statuses are not color-only, and reduced motion preserves semantic states. | Shared primitives and all surfaces                                | Audit pending          |
+
+### F. Proof and release discipline
+
+| ID        | Severity | Current evidence                                                                                     | Desired contract                                                                                                                     | Affected surface                    | Status                     |
+| --------- | -------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | -------------------------- |
+| PROOF-001 | P1       | Unit/build/client-boundary checks are available; browser and device matrices are incomplete.         | Every in-scope acceptance criterion records environment, fixture, action, result, artifact, and limitation.                          | Certification docs and test harness | In progress                |
+| PROOF-002 | P1       | A–E staging certification remains `partial` because live camera decode could not be recorded; the dedicated concurrent QR fan-out is now proven in isolated staging. | UI work must preserve `partial` until live camera proof is recorded; no “production-ready” claim follows from build success or server-only QR proof alone. | L3 certification handoff | Camera proof environment-blocked; QR fan-out verified |
+| PROOF-003 | P2       | Baseline emits existing `inputValidator()` deprecation warnings.                                     | Track warnings separately from UI correctness; do not mix broad API migration into the UI slices unless a bounded issue requires it. | Server function declarations        | Known non-blocking warning |
+
+## Implementation order derived from the ledger
+
+The first implementation slice is the shared foundation and typecheck repair because every later surface depends on predictable sheets, tokens, progress labels, and valid props. The second slice is buyer discovery and manual availability because it is the product’s primary entry path. The third is the shared transaction room and QR/payment presentation because it is the highest-risk user-visible flow. The fourth is the seller workspace and essential forms. The fifth is responsive/performance hardening followed by the adversarial verification matrix.
+
+No implementation may add a new global navigation system, replace the MapLibre globe, expose direct purchase from a facility, add seller withdrawals, or pull deferred Agent/Ads/automation scope into V1.
+
+## Phase 2 checkpoint
+
+The shared foundation now has a softened map-preserving sheet overlay, a 44px touch-safe French close control, explicit sheet body/footer data hooks, and a safe-area-aware sticky footer. `CartPanel`, `OrdersPanel`, `WishlistPanel`, and `NavMenuSheet` now use `OmniSheet`; transaction chat and the inline facility surface remain intentionally reserved for the transaction and buyer vertical slices. The `resumeRequestId`/`resumeResponseId` contract now accepts explicitly undefined values, removing the baseline TypeScript failure.
+
+Phase 2 validation passed: `pnpm exec tsc --noEmit`, 64/64 unit tests across 10 files, production build, client-boundary check, and `git diff --check`. Existing `createServerFn().inputValidator()` deprecation warnings remain non-blocking and outside this UI slice.
+
+## References
+
+[1]: ./OMNI_MASTER_PRODUCT_INTERFACE.md "Omni master product and interface contract"
+[2]: ./omni-continuity-v1-source-of-truth.md "Omni continuity V1 source of truth"
+[3]: ./omni-v1-ui-phase0-audit.md "Prior implementation audit and surface classification"
+[4]: ./omni-build-acceptance-matrix.md "Omni build acceptance matrix"
+
+## Phase 3 browser checkpoint
+
+The local buyer route at `http://localhost:8084/` rendered a real MapLibre canvas with the OpenFreeMap/OpenMapTiles attribution and a visible geographic globe. The initial dock showed only the search field, voice/search actions, location context, and the refinement chevron; quantity and budget were not displayed by default. Opening the chevron exposed quantity, budget, categories, radius, open-now, discount, and sort controls without changing the map scene. The browser session had location blocked, and the UI displayed `Localisation bloquée` with `Réessayer` and `Explorer le marché approximatif`, which is truthful for this sandbox.
+
+The browser captures are supporting interaction evidence only; the complete viewport matrix and facility-result path remain open.
+
+The browser then entered `ciment` and pressed Enter from the buyer dock. The app navigated to `/auth?redirectTo=%2Fcarte%3FpendingSearch%3D1`, showing the French `Connexion`/`Créer un compte` gate and preserving the pending-search redirect. This confirms the shared search submit path reaches the intended auth boundary rather than creating a partial or unauthenticated availability request.
+
+The non-production demo credentials were submitted through the auth gate and the page entered `Connexion…`; no production account or data was involved. A follow-up browser observation is required to confirm whether the pending query is restored after authentication.
+
+The authenticated replay could not complete in the sandbox: after the demo login submission, the auth page showed an embedded `This page didn't load` response while remaining on the auth route. This is an external auth/session-environment blocker for this local browser run, not evidence that the buyer UI lost the pending query. The public map shell and protected auth boundary remain verified; authenticated result/facility interaction requires the previously established staging-auth session or an available auth provider.
+
+Returning to `/` and selecting `Explorer le marché approximatif` kept the real MapLibre globe visible and removed the retry action while retaining the explicit `Localisation bloquée` context. The sandbox did not return visible facility cards during this short wait, so public discovery density and FacilitySheet selection remain unproven in this browser run.
+
+After waiting for the approximate-market request, the globe continued rotating and no facility rail appeared in the sandbox viewport. Browser console inspection showed only the React DevTools informational message and no application error. This leaves facility-card rendering as an untested/possibly data-dependent path in this local environment rather than a confirmed UI failure.
+
+## Phase 3 implementation checkpoint
+
+The buyer selected-facility surface now uses the shared `FacilitySheet` rather than the route-owned inline `OmniSheetSurface`. The sheet preserves the searched facility, media/product content, trust boundary, itinerary action, post-intent contact disclosure, manual availability CTA, and full-page facility link while inheriting the shared close, scroll-body, and sticky-footer behavior.
+
+Search refinements are collapsed by default; opening the chevron reveals quantity, budget, category, radius, availability, discount, and sorting controls. Explicit values remain preserved without forcing the panel open. The result-level CTA now says `Comparer les disponibilités`, while facility cards retain the single-facility availability path. Narrow cards use a viewport-safe width and the horizontal rail keeps snap scrolling.
+
+Phase 3 code validation passed: TypeScript, 64/64 unit tests across 10 files, production build, client-boundary check, and diff check. The browser verified the MapLibre globe, collapsed/expanded refinement behavior, protected search auth redirect, and public approximate-location copy. Authenticated facility-result replay was blocked by the sandbox auth-provider page-load failure; no production or staging mutation was made.
+
+## Phase 4 transaction-surface checkpoint
+
+The buyer ChatPanel now uses the shared `OmniSheet` while preserving its two modes: ordinary facility conversation with a sticky composer footer, and transaction context with the canonical `TransactionThreadCard` plus timeline polling. The transaction card now exposes stable `data-omni-transaction-room` and `data-omni-transaction-state` hooks, wraps event headers safely at narrow widths, and uses the French label `Paiement déclaré par l’acheteur`.
+
+Phase 4 validation for this bounded change passed: Prettier on the touched transaction files, TypeScript, 64/64 unit tests across 10 files. Existing server-function deprecation warnings remain non-blocking. Camera-device proof, seller transaction-room verification, and full authenticated browser replay remain separate acceptance work.
+
+## Phase 5 seller workspace checkpoint
+
+The seller primary action dock is now limited to five V1 actions: Facility overview, Catalogue, Demandes reçues, Scanner QR, and Compte. Omni Wallet and Coupons remain reachable from the new Compte surface and were not deleted or made inaccessible. The map-first shell, facility selector, online state, QR scanner, seller requests, product creation, coupon CRUD, Wallet recharge/allocation, and transaction operations remain in their existing routes and server boundaries.
+
+The formatter-only churn in `vendeur.tsx` was reverted before validation; the focused diff is 24 insertions and 7 deletions. TypeScript and the complete 64/64 unit suite pass. The production build/client-boundary gate must be rerun after this minimal diff before committing.
+
+## Phase 6 live accessibility checkpoint
+
+The live buyer map shell was measured in the browser at 1280×1100 CSS pixels: document `scrollWidth` equaled `clientWidth` (1280), so no document-level horizontal overflow was detected and no visible element exceeded the viewport bounds.
+
+The target-size audit found several controls below the 44×44 touch target: MapLibre zoom/location buttons at 40×40, the dock’s voice and search buttons at 34×34, and the location context chip at 193×29. The search input measured 566×20 inside its larger dock surface. These findings are actionable Phase 6 polish items; accessible names were present for the controls examined.
+
+The Phase 6 correction raised custom MapLibre zoom/recenter buttons and SmartSearchBar voice/search/image buttons to 44px minimum touch targets using local classes only; the globe projection, controls, and search/Enter handlers were not changed. Validation passed: diff check, TypeScript, 64/64 unit tests, production build, and standalone client-boundary check (`43` JavaScript artifacts and `168` source files scanned).
+
+Post-patch browser measurement confirmed `Zoom avant`, `Zoom arrière`, `Explorer le marché approximatif` (map control), `Recherche vocale`, and `Lancer la recherche` are all 44×44. The separate 193×29 `Explorer le marché approximatif` chip is a context/action text chip and remains visually compact; it is not the map control itself.
+
+## Phase 7 deployment checkpoint
+
+After pushing `main`, Vercel created production deployment `dpl_BMBsC1LBdDjmtdCGXfBq527eV3Eo` for source commit `89b15c0`; the deployment state is `READY`. The selected 24-hour grouped runtime-error query returned no runtime errors. This confirms the new UI commits are deployed and not producing observed runtime-error clusters; it does not replace authenticated E2E or mobile-camera evidence.
+
+## Proof-gap closure — My Browser preflight
+
+My Browser opened `https://omni.sparkafrika.online/` over HTTPS. The production buyer shell rendered the MapLibre globe, OpenFreeMap/OpenMapTiles attribution, zoom controls, recenter control, notification/menu controls, search dock, and the `3 transactions en cours` resume bar. After settling, the browser showed `Votre position`, `Zone cartographiée`, and `Position précise`. No login, camera permission, QR scan, or transaction mutation was performed during this preflight.
+
+## Proof-gap closure — authenticated buyer search checkpoint
+
+In My Browser on the production HTTPS origin, entering `ciment` and pressing Enter produced `3 résultats` and the grouped `Comparer les disponibilités` action while retaining the visible globe, exact-position marker, and `3 transactions en cours` resume bar. The session was already authenticated or otherwise authorized because the search did not redirect to `/auth`; no credentials were entered and no mutation was performed. The globe visibly transitioned from the resting view toward the search context. Facility-card opening and transaction resume remain the next checks.
+
+The authenticated buyer resume sheet opened from `3 transactions en cours` and displayed the named progress vocabulary `Intention`, `Offre`, `QR`, `Paiement`, and `Réception`, as well as transaction timeline events, external-payment wording (`Cash à la livraison`), and a transaction message area. The sheet was closed without mutation and the map/result context returned, with the globe now framed at the regional/country view and the `ciment` search plus `3 résultats` still present. Account names, transaction identifiers, and personal message content were intentionally not copied into this ledger.
+
+The production buyer search settled from `Recherche de la zone…` to a map-backed state showing the query, `3 résultats`, and a `Créer une demande` action. The current rendered viewport did not expose a visible FacilitySheet trigger, facility card, or selectable result element; the saved HTML contained the map shell and dock hooks but no facility-card/FacilitySheet hooks. This is an authenticated result-surface proof limitation to classify separately from the already-passed local implementation/build checks; no production mutation was performed.
+
+The comparison-control click became stale because the production page updated during the long discovery choreography. A fresh snapshot then showed the result scene had transitioned to `Dites-nous ce que vous cherchez` with `Créer une demande` and no `Comparer les disponibilités` control. The stale-element handling itself was safe and read-only; the authenticated facility-result path remains unproven on this production session.
+
+## Proof-gap closure — staging HTTPS browser environment
+
+A separate local Omni instance was started on port 8092 with a protected Neon staging connection string for project `old-unit-98112236`, branch `br-bitter-forest-a6e6nem5`; the known facility, product, and staging buyer were confirmed by a read-only query. The port was exposed through a temporary HTTPS hostname and the initial buyer HTML loaded, but My Browser’s interactive extension repeatedly returned HTTP 504 timeouts on post-load snapshots and direct seller-route access. No login, camera permission, QR verification, or staging transaction mutation was performed through this failed browser context. This is currently an environment/browser-proxy blocker for the live camera proof, not a code verification or code failure.
+
+The known-good production My Browser session opened `/vendeur` and was redirected to the seller sign-in gate. The seller route did not expose the scanner without seller authentication. The authentication page was opened for inspection only; no credentials were entered, copied, or inferred from page content. Seller camera-preview proof therefore requires a user-provided/authorized seller session in My Browser or a separate staging-auth browser context.
+
+The protected staging-auth manifest contains the previously created seller session, but My Browser’s interactive bridge returned repeated HTTP 504 timeouts on snapshot, keyword, and keyboard-focus operations after the seller auth page was reopened. The credentials were not entered, displayed, or copied into any evidence. The browser bridge, not the auth credentials or application code, is currently blocking automated seller login and camera proof.
+
+## Proof-gap closure — QR server-function replay and cleanup
+
+The single QR server-function replay was completed against isolated staging transaction `6709e01c-3fee-41ff-a773-9b75a7186d5a`, using the seller-owned facility `e9e5a9e4-316e-4cfc-aa03-99c4c29f98f2` and an authenticated staging seller session. The transaction reconciled to `qr_verified` with exactly one `seller_verified` event and no duplicate event group.
+
+A second fresh staging transaction, `4529349d-834a-41a2-be59-b39da23d9203`, was created in `qr_generated` state. Two simultaneous authenticated requests were sent through the same `redeemCheckout` server function with the same code. Both returned HTTP 200 successful Seroval result envelopes for the same transaction and amount. The database reconciled to `qr_verified`, with exactly one `seller_verified` event, one total event row, and no duplicate event groups. The second request therefore exercised the already-verified idempotent path without producing a duplicate side effect.
+
+The initial protected fixture contained a 32-character token that did not match the current short manual-code contract. The fixture was corrected only in isolated staging to an eight-character code generated from the application alphabet; no production code or production data was changed. This was a fixture-shape correction, not a camera-proof result.
+
+The authoritative seven-invariant script was rerun after the fan-out with cutoff `2026-08-18T00:00:00Z`. Every check returned zero and the aggregate result was `ok=true`: completed-without-review, active-without-intent-key, duplicate-active-intent-key, duplicate-coupon-redemption, approved-deposit-without-ledger, wallet-snapshot-drift, and legacy completed-without-review counts.
+
+After the proof, the temporary HTTPS trusted origin was removed from staging Neon Auth and the local staging app/JWKS servers on ports 8092/8094 were stopped. Protected proof harnesses, sessions, tokens, and connection strings remain outside the repository and were not committed. The release decision remains `partial` because the live HTTPS camera preview/decode still lacks admissible evidence; it is classified as an environment/browser-bridge blocker rather than a code failure.
+
+## 2026-08-20 continuation — location, seller, admin, and final validation checkpoint
+
+Migration 036 is now applied to the active Omni production branch. The new buyer-location path persists a privacy-minimal normalized discovery city after consent, uses rounded-grid caching and a server-side rate limit for reverse-geocoder calls, and feeds a shared server-only discovery-scope helper. The helper is used by both viewport/direct discovery and demand-target availability so the free boundary cannot be bypassed through manual or bulk availability. The free gate is city-accurate once a buyer location is resolved; unresolved buyers retain the documented legacy-market fallback until a consent/location replay is recorded.
+
+The seller map-first surface now exposes the backend controls introduced by Migration 035: manual availability open/closed state, fixed-facility Discovery mode with bounded duration, and server-authoritative Omni-visible allocation beside total stock. The seller account surface can update the owner’s company identity, and the active facility header shows company certification status. The admin queue joins company identity and renders distinct trust badges for admin certification versus earned QR confirmation; the existing rule that `confirmed` is earned automatically after three distinct-client QR transactions remains unchanged.
+
+The transaction-room continuation now reveals seller contact after intent/QR creation, while payment declaration, seller confirmation, fulfilment, receipt, rating, and completion remain state-gated. No new global navigation was introduced, MapLibre GL v5 globe projection and facility-pin behavior were preserved, and no seller withdrawal or in-app buyer payment was added.
+
+Final validation on the current `fdd1c40` source state passed: 11 test files and 69 tests, production build, client-boundary check, and diff check. Passive production smoke checks returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/auth`, and `/admin`. Deployment `dpl_4vZvh3547vYcSdt453CtyGMvnWoh` is `READY` for production. Read-only reconciliation on Omni production project `wild-moon-30984513`, branch `br-bitter-math-amrlbym6` found 2 companies, 7 company-linked facilities, 975 facilities with normalized city, zero allocation-over-real-stock rows, zero negative allocations, and zero persisted buyer discovery cities. The last count means no production buyer has completed the new consent/resolution path yet; it is a runtime-evidence gap, not a schema failure.
+
+The release remains **`partial`**. The live HTTPS camera preview/decode is still environment/browser-bridge blocked, and the authenticated responsive buyer/seller browser matrix—including facility-card selection—still needs runtime evidence. Existing isolated staging single/concurrent QR proof and seven-invariant evidence remain valid.
+
+## 2026-08-20 continuation — G-002 seller auto-response correction checkpoint
+
+Commit `fdd1c40` closes the implementation portion of G-002 without changing the availability contract. The seller demand payload now includes the response identity and response state (`kind`, availability, quantity, price, message, automatic flag, and correction timestamp) from the facility-scoped response. The seller panel renders an automatic-response notice and one-gesture `Corriger en partiel` / `Corriger en indisponible` actions; after correction it shows a notified/corrected state. The server mutation now authorizes only the facility owner and only an automatic response that has not already been corrected, preserving the controlled-transition boundary.
+
+The slice passed the full local validation gate: 11 test files and 69 tests, production build, client-boundary check, and `git diff --check`. It was pushed to `main` and deployed in Vercel production deployment `dpl_4vZvh3547vYcSdt453CtyGMvnWoh`, which is `READY` and serves `omni.sparkafrika.online`. This is implementation/deployment evidence, not authenticated seller UI proof; buyer notification delivery and a live seller replay remain to be observed.
+
+G-001, G-003, G-004, and G-005 remain open. G-001 is blocked by the My Browser HTTPS bridge timeout before camera interaction. G-003 still needs one consented production buyer replay to prove persisted city and consistent Free/Pro scope. G-004 and G-005 still need the authenticated 320/375/390/768/1280 buyer and seller matrix, including facility-card selection, back/close restoration, camera surface, and no-overflow evidence.
+
+
+## Phase 8 complete-UI continuation checkpoint — 2026-08-20
+
+The cumulative UI continuation added five bounded changes: buyer SearchDock touch-target and hierarchy refinement, result-rail summary and viewport-safe horizontal behavior, seller default map-first shell compaction, explicit transaction-room stage descriptions, truthful seller camera preview states, clearer seller product/coupon form copy, and buyer-facing wording that does not distinguish automatic from manual availability responses. The implementation commits are `d087b5f`, `52c3965`, `38bf00e`, `432074b`, and `80af399`.
+
+Local acceptance passed after the cumulative changes: `pnpm exec tsc --noEmit`, 11 test files / 69 tests, `pnpm build`, client-boundary check, and `git diff --check`. The latest Vercel production deployment is `dpl_8MB5eFpg264sDZRLJPtxYRbWmGho` for source commit `80af399`, with state `READY`. A read-only production smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, and `/admin`.
+
+These changes close implementation-level portions of `BUY-002`, `BUY-005`, `TXN-003`, `SELL-003`, and `TXN-002` but do not close their runtime proof requirements. The buyer and seller authenticated responsive matrix, facility-card selection/back restoration, real HTTPS camera preview/decode, production buyer city-consent replay, and authenticated transaction/scanner evidence remain open. The release remains `partial` and no production-ready claim is made from build or route smoke evidence alone.
+
+
+## 2026-08-21 clean-base implementation and deployment checkpoint
+
+PR #47 (`58061e9`), PR #48 (`5003f7f`), and PR #49 (`2637ed5c`) are merged into `main`. The approved clean-base implementation is now the primary buyer and seller route: buyer map/search, availability, transaction room, seller access gate, certification-first onboarding, map-first seller workspace, Scanner QR, catalogue, and Omni Wallet. `CleanScannerPanel` replaces the primary scanner surface. The legacy seller imports remain only for the rollback path and are not evidence that the legacy UI is the active production path.
+
+| Evidence item | Result | Interpretation |
+| --- | --- | --- |
+| Canonical main source | `2637ed5c`, merge of PR #49 | Clean-base scanner slice is on `main` |
+| Production deployment | Clean-base code deployment `dpl_HY3BBXhDjEjfxQRFb2tSoyriEZWN`, `READY`, source `2637ed5c`; documentation deployment `dpl_Ap3JZ1dqj2UpWjF1Wv2xSUcfWxDB`, `READY`, source `112db39` | Production deployment evidence passed |
+| Public route smoke | `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth`, `/admin` all HTTP 200 | Public reachability passed |
+| Brand asset | `/assets/omni-logo-D2pwBZcD.png` HTTP 200, PNG | Canonical logo asset served |
+| PWA manifest | `/manifest.webmanifest` HTTP 200 | Manifest availability passed |
+| HTTPS transport | Strict-Transport-Security present | Transport-header check passed |
+| Public seller gate | Clean access gate observed with certification-first copy and locked `$20` bonus | Unauthenticated seller entry passed |
+| Browser post-load stability | Post-load browser snapshot returned HTTP 504 in both available contexts | Environment limitation; not a code failure claim |
+
+The public evidence does not close `G-001`, `G-003`, `G-004`, or `G-005`. No seller credentials were entered, no camera permission was granted, no QR was decoded, no `redeemCheckout` mutation was executed, and no production or staging data was mutated during this checkpoint. The release therefore remains **`partial`**.
+
+`G-001` still requires an authorized seller session on a real HTTPS camera-capable browser: active preview after permission, real QR decode, successful protected redemption, exactly one `seller_verified` event, and replay-safe rejection. `G-003` still requires one consented production buyer replay proving persisted normalized `discovery_city` and Free/Pro scope. `G-004` and `G-005` still require the authenticated buyer/seller matrix at 320/375/390/768/1280 px, including result-card/facility selection, close/back restoration, and scanner viewport evidence.
+
+The supporting public evidence is recorded in `/home/ubuntu/omni-clean-scanner-delivery-2026-08-21.md` and `/home/ubuntu/omni-clean-scanner-browser-check-2026-08-21.md`; both remain outside the repository commit boundary.
+
+## 2026-08-21 — BUY-002 active clean dock conformance checkpoint
+
+The production-active `/carte` clean branch was audited and corrected. The prior `CleanBuyerMapStage` dock had only one primary search surface: it mixed search, location, loading/error and fallback actions, omitted the approved discovery/refinement row and structured quantity/budget row, and placed the result summary outside a mutually exclusive action/request row. The new `CleanBuyerSearchDock` now renders independently testable `primary`, `discovery`, `structured`, `context` and conditional `action` rows. It preserves route-authoritative query/category/filter/quantity state, keeps explicit quantity/budget values stable through active search and facility restoration, isolates optional filters behind `Affiner`, keeps untouched defaults quiet, and distinguishes loading, results, no-results request and error modes. The fallback `SearchDock` was aligned to the same shared filter/state contract.
+
+Evidence recorded: 12 unit test files / 72 tests passed; strict TypeScript passed; production build and client-boundary check passed (`44` JavaScript artifacts and `187` source files); `git diff --check` passed; isolated Chromium public `/carte` smoke completed at `320/375/390/768/1024/1280px` with no runtime error markers, no visible dock clipping in the contact sheet, and idle DOM markers for discovery/context/primary rows. The headless environment still shows a MapLibre loading placeholder, so facility pin rendering, final globe paint, live location marker, active refinement interactions, authenticated replay and facility back/close restoration remain unproven. Release status remains `partial`.
+
+
+## 2026-08-21 map/menu vertical slice and release checkpoint
+
+The canonical Map + Menu package was committed as `f258594` (`feat(ui): wire canonical map/menu action registry and role switch`) and pushed to `main`. It adds the typed `OmniMenuAction` registry, role-aware filtering, a privacy-safe expiring `MapContextSnapshot`, buyer/seller role switching, auth-gated context preservation, buyer search/facility restoration after auth return, and semantic menu markers. `MapLibre GL v5`, the globe projection, OpenFreeMap source, pins, clusters, and the map control group were not changed. The master interface contract now treats the map/menu chrome as V1 and records the map/menu state machines in §0.8.1.
+
+The first Vercel deployment for `f258594` failed because `vendeur.tsx` referenced two clean seller panels that were still untracked locally (`CleanDemandPanel` and `CleanCouponPanel`). No runtime defect in the map/menu code was identified. The missing production files and related seller/transaction corrections were isolated into commit `00940ad` (`feat(ui): complete seller demand/coupon panels and transaction itinerary`) and pushed separately. Vercel deployment `dpl_AzPZRQFjiWSna3aMehYezKuFzsc9` for `00940ad` is `READY`, production-targeted, and serves `https://omni.sparkafrika.online` through the project alias.
+
+Local release evidence for the combined main state: `pnpm build` passed, the client-boundary check scanned 46 JavaScript artifacts and 191 source files successfully, all 13 test files and 75 tests passed, and `git diff --check` passed. A passive HTTPS smoke matrix returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, and `/auth`.
+
+This checkpoint is **implementation and public-route evidence**, not complete release certification. The authenticated buyer/seller responsive matrix, real HTTPS camera preview and QR decode/replay, production buyer city-consent persistence, and authenticated transaction-loop proof remain open. The release remains `partial`; no production-ready claim is authorized from this checkpoint alone. The untracked `.vercel/` output and audit/demo scripts remain outside the commit boundary, and no secrets, proof harnesses, QR tokens, or database records were committed.
+
+## 2026-08-21 map/globe one-shot checkpoint
+
+The dedicated map/globe one-shot package is now converged from the canonical master and active code. The master patch is §0.8.2 and freezes the permanent MapLibre scene, horizontal resting rotation, explicit-search-only reveal, camera priority and cancellation, truthful exact/approximate/fallback location states, viewport/antimeridian/server-scope rules, black boundary emphasis, and the explicit limit that current boundary assets do not imply complete global coverage. The OSM scope gate now records bounded on-demand high-zoom backfill as V1 because that behavior is already active in `listFacilitiesInBounds`; world prepopulation remains out of scope.
+
+The implementation checkpoint is commit `b2ef062` (`feat(map): formalize globe camera and reveal contract`). It adds pure camera/reveal state helpers and focused tests, makes manual interaction cancel active reveal ownership and restore map layers, and exposes deterministic map/reveal DOM markers. MapLibre GL v5, OpenFreeMap, projection, pins, clusters, location persistence and transaction behavior were not replaced.
+
+One-shot artifacts are recorded outside the repository for this session: `omni-map-globe-audit-2026-08-21.md`, `omni-map-globe-brainstorm-2026-08-21.md`, `omni-map-globe-flow-spec-2026-08-21.md`, `omni-map-globe-data-schema-2026-08-21.md`, `omni-map-globe-build-prompt-2026-08-21.md`, `omni-map-globe-task-backlog-2026-08-21.md`, and `omni-map-globe-validation-2026-08-21.md`.
+
+Local proof passed with 14 test files / 78 tests, strict TypeScript, production build, client-boundary check (46 JavaScript artifacts and 193 source files), and `git diff --check`. Vercel deployment `dpl_8gsLi96bXhDzp4viZtkB9VXPXbcA` is `READY`, production-targeted, sourced from `b2ef062`; public HTTP 200 checks passed for `/`, `/carte`, `/vendeur`, `/onboarding` and `/auth`.
+
+The release remains **partial**. Real-device MapLibre paint/pin visibility, exact GPS consent and responsive authenticated overlay proof are still separate evidence gates; this checkpoint does not convert local or public route evidence into full production verification.
+
+## 2026-08-21 full UI and pre-verification checkpoint
+The one-shot full-UI audit identified and resolved the buyer-side split between `Affiner` and `Paramètres`: the active clean dock now exposes one `Options` chevron for categories, filters, quantity and budget, while untouched defaults remain quiet. Result cards now surface the catalog-matched product before the facility name when the server provides one. Public unclaimed facilities remain discoverable but do not expose availability, contact, purchase or ownership effects.
+
+The pre-verification authority debt was corrected as an additive vertical slice. `claimFacility` is now a compatibility name for idempotent verification-request creation and never assigns ownership or promotes status. Seller facility creation/claim preparation leaves the facility unclaimed until review. Admin facility status mutation cannot promote to certified or unconfirmed, and company status no longer cascades facility promotion. The new verification sheet and staff review queue make identity, relationship, facility and offer evidence explicit, with draft/resume/submit behavior and required decision reasons.
+
+Migration `037_preverification_ui_contract.sql` was isolated and validated before application. Migration ID `8f53f726-5e8c-4215-ba59-359600efc0ec` was applied to the active Omni branch `br-bitter-math-amrlbym6`; temporary validation branch `br-tiny-bird-aml38q03` was deleted after completion. Active-branch schema verification passed for both verification tables, `demand_requests.product_id`, and the related indexes.
+
+The map/globe projection and existing MapLibre v5 scene remain unchanged. Pin and cluster palette refinements are bounded to status/focus semantics; no claim is made that real-device rendering, exact GPS consent, authenticated responsive layout, camera/QR replay, or the full post-verification transaction loop has been proven. Status remains `partial`.
+
+## 2026-08-21 full UI and pre-verification deployment checkpoint
+Commit `7bc7344` is deployed to production as Vercel deployment `dpl_4iuJ1oGfJKJeDD2tAgaje7JmoxVY`, state `READY`. Public HTTPS smoke returned HTTP 200 for `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin` on `https://omni.sparkafrika.online`.
+
+The checkpoint certifies source/build/public-route availability, not the complete UI or transaction loop. Authenticated responsive buyer/seller evidence, live HTTPS camera preview and QR replay, exact location consent, and post-intent transaction proof remain open. Release status remains `partial`.
+
+## 2026-08-21 buyer discovery-to-availability one-shot checkpoint
+The missing buyer screen sequence is now explicit and implemented: result card/pin selects a facility; facility detail exposes `Voir les produits`; a dedicated catalogue highlights the matched product; product selection opens availability without retyping; availability uses named stages `Produit`, `Portée`, `Contraintes`, `Réponses`; comparison orders available/partial/unavailable answers; and only an eligible response exposes `Je veux acheter cette offre`.
+
+The selected catalog product is carried through auth context and persisted as `demand_requests.product_id` on request creation. Unclaimed facilities remain public-only and cannot receive controlled availability or purchase intent. The map/globe and one-chevron dock remain the same scene and camera-inert options surface.
+
+Commit `5f3bea9` is deployed and READY. Public route smoke is HTTP 200 across `/`, `/carte`, `/vendeur`, `/onboarding`, `/auth` and `/admin`. Authenticated responsive click-through, real-device catalog/product/availability proof and complete transaction-room proof remain pending; release remains `partial`.
+
+
+## 2026-08-21 — All V1 flows and locked-decisions checkpoint
+
+The canonical master now includes §0.8.4, and `docs/one-shot/` now contains the all-flows catalog, brainstorm, flow state machines, data schema, build prompt, task backlog and locked-decisions inventory. The new contract explicitly separates facility-card selection, catalogue selection, availability, comparison, purchase intent, authorized transaction room/chat, QR verification, external payment, fulfilment, receipt and rating.
+
+The transaction UI remains a single role-aware room. Chat is transaction-scoped, contact/itinerary/QR fields are absent before intent authorization, seller confirmation is separate from buyer payment declaration, and the Omni Wallet is separate from buyer-seller external payment. The active transaction message thread now exposes deterministic DOM markers for authorized scope, loading/error/sending/ready states without changing the server authorization contract.
+
+Local evidence: 14 test files / 78 tests, strict TypeScript, production build, client-boundary check and `git diff --check` passed. Remaining evidence is external: authenticated buyer/seller flow, responsive matrix, live camera/QR preview and replay, production location consent and complete production transaction-loop proof. Release status remains `partial`.
