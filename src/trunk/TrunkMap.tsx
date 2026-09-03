@@ -28,6 +28,9 @@ type Props = {
   contextSurfaceOpen?: boolean;
   routeTarget?: RouteTarget | null;
   onRouteClose?: () => void;
+  // R-03 map-contextual focus: an external surface (admin review, audit hop)
+  // asks the map to pan/zoom onto arbitrary coordinates without a pin click.
+  focusTarget?: { latitude: number; longitude: number; key: string } | null;
   // Facilities owned by the signed-in account (rule 7 Evergreen pin ring).
   ownedFacilityIds?: string[] | null;
 };
@@ -189,7 +192,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, ownedFacilityIds = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, ownedFacilityIds = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -935,6 +938,21 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     setCameraModeState('selected_facility');
     map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
   }, [facilities, selectedId]);
+
+  // R-03 map-contextual focus (admin review selection, audit hop-to-object):
+  // pan/zoom onto coordinates supplied by a contextual surface. Keyed on the
+  // focus key so identical coordinates can be re-requested for a new object.
+  const lastFocusKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusTarget) return;
+    if (lastFocusKeyRef.current === focusTarget.key) return;
+    lastFocusKeyRef.current = focusTarget.key;
+    rotating.current = false;
+    cameraMode.current = 'selected_facility';
+    setCameraModeState('selected_facility');
+    map.easeTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: Math.max(map.getZoom(), 14), duration: 900, essential: true });
+  }, [focusTarget]);
 
   // Evergreen route trace (écran 10): update the GeoJSON source data when the
   // route target or the user position changes; clear it when closed. Camera

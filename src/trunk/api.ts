@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, ApiResult, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, FacilityOperationalState, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -37,6 +37,37 @@ export async function setManagedStaffRole(input: { token: string; accountId: str
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ accountId: input.accountId, role: input.role, status: input.status, reason: input.reason }),
+  });
+  return parse(response);
+}
+
+export async function getAdminConsole(input: { token: string }): Promise<ApiResult<AdminConsoleResult>> {
+  const response = await fetchWithRecovery('/api/v2/admin/console', { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function listAdminAuditEvents(input: { token: string; eventType?: string; limit?: number }): Promise<ApiResult<AdminAuditListResult>> {
+  const params = new URLSearchParams();
+  if (input.eventType?.trim()) params.set('event_type', input.eventType.trim());
+  if (typeof input.limit === 'number') params.set('limit', String(input.limit));
+  const response = await fetchWithRecovery(`/api/v2/admin/audit-events?${params.toString()}`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function setFacilityOperationalState(input: { token: string; facilityId: string; state: FacilityOperationalState; reason: string }): Promise<ApiResult<{ facilityId: string; operationalState: FacilityOperationalState }>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/facilities/${encodeURIComponent(input.facilityId)}/operational-state`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ state: input.state, reason: input.reason }),
+  });
+  return parse(response);
+}
+
+export async function correctFacilitySalesCounter(input: { token: string; facilityId: string; qualifyingSales: number; reason: string }): Promise<ApiResult<{ facilityId: string; qualifyingSales: number; previousQualifyingSales: number }>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/facilities/${encodeURIComponent(input.facilityId)}/sales-counter`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ qualifyingSales: input.qualifyingSales, reason: input.reason }),
   });
   return parse(response);
 }

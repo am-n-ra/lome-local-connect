@@ -251,6 +251,8 @@ export interface ReviewQueueItem {
   facilityId: string;
   facilityName: string;
   facilityTrust: string;
+  latitude: number;
+  longitude: number;
   state: string;
   version: number;
   createdAt: string;
@@ -299,6 +301,47 @@ export interface RoleManagementResult {
   accountId: string;
   role: ManagedStaffRole;
   status: 'active' | 'revoked';
+}
+
+export type FacilityOperationalState = 'ouvert' | 'ferme' | 'temporairement_indisponible';
+
+export const FACILITY_OPERATIONAL_STATES: readonly FacilityOperationalState[] = ['ouvert', 'ferme', 'temporairement_indisponible'];
+
+export interface AdminConsoleResult {
+  authorized: boolean;
+  pendingClaims: number;
+  pendingActivations: number;
+  operatorRuns: number;
+  auditEventsToday: number;
+}
+
+export interface FacilityOperationalStateResult {
+  facilityId: string;
+  operationalState: FacilityOperationalState;
+}
+
+export interface SalesCounterCorrectionResult {
+  facilityId: string;
+  qualifyingSales: number;
+  previousQualifyingSales: number;
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  actorAccountId: string | null;
+  reason: string | null;
+  createdAt: string;
+  facilityName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface AdminAuditListResult {
+  authorized: boolean;
+  events: AdminAuditEvent[];
 }
 
 export interface SellerActivationCandidate {
@@ -481,6 +524,135 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the target account is unavailable.');
       return { accountId: String(row.account_id), role: String(row.role) as ManagedStaffRole, status: String(row.status) as 'active' | 'revoked' };
+    },
+
+    async getAdminConsole(input: { authUserId: string }): Promise<AdminConsoleResult> {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select
+          (select count(*)::int from admin) as is_admin,
+          (select count(*)::int from v2_verification_requests where state in ('submitted', 'admin_review')) as pending_claims,
+          (select count(distinct candidate.id)::int
+             from v2_accounts candidate
+             join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
+             where candidate.onboarding_state <> 'seller_ready' and candidate.suspended_at is null) as pending_activations,
+          (select count(*)::int from v2_discovery_runs where created_at >= now() - interval '7 days') as operator_runs,
+          (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row || Number(row.is_admin) === 0) return { authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0 };
+      return { authorized: true, pendingClaims: Number(row.pending_claims), pendingActivations: Number(row.pending_activations), operatorRuns: Number(row.operator_runs), auditEventsToday: Number(row.audit_today) };
+    },
+
+    async setFacilityOperationalState(input: { authUserId: string; facilityId: string; state: FacilityOperationalState; reason: string; correlationId: string }): Promise<FacilityOperationalStateResult> {
+      if (!FACILITY_OPERATIONAL_STATES.includes(input.state) || input.reason.trim().length < 3 || input.reason.trim().length > 1000) {
+        throw new FieldPilotPolicyError('A valid operational state and a bounded reason are required.');
+      }
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select f.id, admin.id as admin_id
+          from v2_facilities f cross join admin
+          where f.id = ${input.facilityId}::uuid
+        ), updated as (
+          update v2_facilities f
+          set operational_state = ${input.state}, updated_at = now()
+          from target
+          where f.id = target.id
+          returning f.id, f.operational_state, target.admin_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select updated.admin_id, 'facility_operational_state_changed', 'facility', updated.id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated
+          returning entity_id
+        )
+        select updated.id, updated.operational_state
+        from updated join audit on audit.entity_id = updated.id::text
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the facility is unavailable.');
+      return { facilityId: String(row.id), operationalState: String(row.operational_state) as FacilityOperationalState };
+    },
+
+    async correctFacilitySalesCounter(input: { authUserId: string; facilityId: string; qualifyingSales: number; reason: string; correlationId: string }): Promise<SalesCounterCorrectionResult> {
+      if (!Number.isInteger(input.qualifyingSales) || input.qualifyingSales < 0 || input.qualifyingSales > 3 || input.reason.trim().length < 3 || input.reason.trim().length > 1000) {
+        throw new FieldPilotPolicyError('A counter value between 0 and 3 and a bounded reason are required.');
+      }
+      // Exceptional bookkeeping only (A6): trust transitions stay system-driven on completed
+      // transactions (D-01); this correction never fabricates or revokes trust.
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select f.id, f.qualifying_sales as previous_sales, admin.id as admin_id
+          from v2_facilities f cross join admin
+          where f.id = ${input.facilityId}::uuid
+            and f.qualifying_sales <> ${input.qualifyingSales}
+        ), updated as (
+          update v2_facilities f
+          set qualifying_sales = ${input.qualifyingSales}, updated_at = now()
+          from target
+          where f.id = target.id
+          returning f.id, f.qualifying_sales, target.previous_sales, target.admin_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select updated.admin_id, 'facility_sales_counter_corrected', 'facility', updated.id::text, ${input.correlationId}, updated.previous_sales::text || ' -> ' || ${input.qualifyingSales}::text || ' : ' || ${input.reason.trim()}
+          from updated
+          returning entity_id
+        )
+        select updated.id, updated.qualifying_sales, updated.previous_sales
+        from updated join audit on audit.entity_id = updated.id::text
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized, the facility is unavailable, or the counter already holds that value.');
+      return { facilityId: String(row.id), qualifyingSales: Number(row.qualifying_sales), previousQualifyingSales: Number(row.previous_sales) };
+    },
+
+    async listAdminAuditEvents(input: { authUserId: string; eventType?: string; limit?: number }): Promise<AdminAuditListResult> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, events: [] };
+      const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
+      const eventType = input.eventType?.trim() ?? '';
+      const rows = eventType
+        ? await retryDatabase(() => sql`
+            select e.id, e.event_type, e.entity_type, e.entity_id, e.actor_account_id, e.reason, e.created_at,
+              f.name as facility_name, f.latitude, f.longitude
+            from v2_audit_events e
+            left join v2_facilities f on e.entity_type = 'facility' and f.id::text = e.entity_id
+            where e.event_type = ${eventType}
+            order by e.created_at desc, e.id desc
+            limit ${limit}
+          `)
+        : await retryDatabase(() => sql`
+            select e.id, e.event_type, e.entity_type, e.entity_id, e.actor_account_id, e.reason, e.created_at,
+              f.name as facility_name, f.latitude, f.longitude
+            from v2_audit_events e
+            left join v2_facilities f on e.entity_type = 'facility' and f.id::text = e.entity_id
+            order by e.created_at desc, e.id desc
+            limit ${limit}
+          `);
+      return { authorized: true, events: (rows as Record<string, unknown>[]).map((row) => ({ id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), actorAccountId: row.actor_account_id === null ? null : String(row.actor_account_id), reason: row.reason === null ? null : String(row.reason), createdAt: new Date(String(row.created_at)).toISOString(), facilityName: row.facility_name === null ? null : String(row.facility_name), latitude: row.latitude === null ? null : Number(row.latitude), longitude: row.longitude === null ? null : Number(row.longitude) })) };
     },
     async createSellerFacility(input: {
       authUserId: string;
@@ -885,7 +1057,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, requests: [] };
       const rows = await retryDatabase(() => sql`
-        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, vr.state, vr.version, vr.created_at, vr.submitted_at,
+        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, f.latitude, f.longitude, vr.state, vr.version, vr.created_at, vr.submitted_at,
           count(ve.id)::int as evidence_count, coalesce(array_agg(distinct ve.evidence_kind) filter (where ve.id is not null), '{}'::text[]) as evidence_kinds
         from v2_verification_requests vr
         join v2_facilities f on f.id = vr.facility_id
@@ -895,7 +1067,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by vr.submitted_at nulls last, vr.created_at asc, vr.id asc
         limit 100
       `);
-      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString(), evidenceCount: Number(row.evidence_count ?? 0), evidenceKinds: Array.isArray(row.evidence_kinds) ? row.evidence_kinds.map(String) : [] })) };
+      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), latitude: Number(row.latitude), longitude: Number(row.longitude), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString(), evidenceCount: Number(row.evidence_count ?? 0), evidenceKinds: Array.isArray(row.evidence_kinds) ? row.evidence_kinds.map(String) : [] })) };
     },
 
     async reviewFacilityClaim(input: { authUserId: string; requestId: string; outcome: ReviewOutcome; reason: string; correlationId: string }): Promise<ReviewClaimResult> {

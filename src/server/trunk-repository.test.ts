@@ -1269,3 +1269,117 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     expect(queries[3]).toContain('availability_state');
   });
 });
+
+function stubSqlSequence(sequence: Record<string, unknown>[][]): { sql: SqlStub; queries: string[] } {
+  const queries: string[] = [];
+  let index = 0;
+  const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+    queries.push(strings.raw.join('¦'));
+    void values;
+    const rows = sequence[Math.min(index, sequence.length - 1)];
+    index += 1;
+    return Promise.resolve(rows);
+  }) as SqlStub;
+  return { sql, queries };
+}
+
+describe('admin console Root seam (T-07a)', () => {
+  it('locks the console for a session without an active admin role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getAdminConsole({ authUserId: 'auth-user-1' })).resolves.toEqual({ authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0 });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain("ar.role = 'admin'");
+  });
+
+  it('maps real queue counts for an active admin', async () => {
+    const call = stubSql([{ is_admin: 1, pending_claims: 3, pending_activations: 2, operator_runs: 5, audit_today: 7 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getAdminConsole({ authUserId: 'auth-admin' })).resolves.toEqual({ authorized: true, pendingClaims: 3, pendingActivations: 2, operatorRuns: 5, auditEventsToday: 7 });
+    expect(call.queries[0]).toContain("state in ('submitted', 'admin_review')");
+    expect(call.queries[0]).toContain('v2_audit_events');
+  });
+});
+
+describe('facility operational state Root seam (T-07a, D-01)', () => {
+  it('rejects an invalid operational state before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setFacilityOperationalState({ authUserId: 'auth-admin', facilityId: 'facility-1', state: 'closed' as never, reason: 'motif valide', correlationId: 'corr-op-1' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.setFacilityOperationalState({ authUserId: 'auth-admin', facilityId: 'facility-1', state: 'ferme', reason: 'x', correlationId: 'corr-op-2' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('writes the operational state and its audit event in one guarded statement', async () => {
+    const call = stubSql([{ id: 'facility-1', operational_state: 'ferme' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setFacilityOperationalState({ authUserId: 'auth-admin', facilityId: 'facility-1', state: 'ferme', reason: 'Marché incendié, vérifié terrain', correlationId: 'corr-op-3' })).resolves.toEqual({ facilityId: 'facility-1', operationalState: 'ferme' });
+    expect(call.queries[0]).toContain('facility_operational_state_changed');
+    expect(call.queries[0]).toContain('v2_audit_events');
+    expect(call.queries[0]).toContain("ar.role = 'admin'");
+  });
+
+  it('rejects when the admin guard or the facility fails', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setFacilityOperationalState({ authUserId: 'auth-user-1', facilityId: 'facility-1', state: 'ouvert', reason: 'motif valide', correlationId: 'corr-op-4' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(1);
+  });
+});
+
+describe('sales counter correction Root seam (T-07a, A6 exceptional)', () => {
+  it('rejects out-of-range or fractional counters before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.correctFacilitySalesCounter({ authUserId: 'auth-admin', facilityId: 'facility-1', qualifyingSales: 4, reason: 'motif valide', correlationId: 'corr-cnt-1' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.correctFacilitySalesCounter({ authUserId: 'auth-admin', facilityId: 'facility-1', qualifyingSales: 1.5, reason: 'motif valide', correlationId: 'corr-cnt-2' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('corrects only the counter and never touches the trust state', async () => {
+    const call = stubSql([{ id: 'facility-1', qualifying_sales: 1, previous_sales: 3 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.correctFacilitySalesCounter({ authUserId: 'auth-admin', facilityId: 'facility-1', qualifyingSales: 1, reason: 'Double comptage vérifié en caisse', correlationId: 'corr-cnt-3' })).resolves.toEqual({ facilityId: 'facility-1', qualifyingSales: 1, previousQualifyingSales: 3 });
+    expect(call.queries[0]).toContain('facility_sales_counter_corrected');
+    expect(call.queries[0]).toContain('qualifying_sales');
+    expect(call.queries[0]).not.toContain('trust_state');
+  });
+
+  it('rejects a no-op correction or a failed admin guard', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.correctFacilitySalesCounter({ authUserId: 'auth-admin', facilityId: 'facility-1', qualifyingSales: 2, reason: 'motif valide', correlationId: 'corr-cnt-4' })).rejects.toThrow('already holds that value');
+    expect(call.queries).toHaveLength(1);
+  });
+});
+
+describe('admin audit log Root seam (T-07a)', () => {
+  it('locks the audit log for a session without an active admin role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listAdminAuditEvents({ authUserId: 'auth-user-1' })).resolves.toEqual({ authorized: false, events: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('returns reverse-chronological events with facility coordinates for the map hop', async () => {
+    const call = stubSqlSequence([
+      [{ id: 'account-admin' }],
+      [{ id: 'event-1', event_type: 'claim_reviewed', entity_type: 'facility', entity_id: 'facility-1', actor_account_id: 'account-admin', reason: 'Preuves suffisantes', created_at: '2026-09-03T10:00:00.000Z', facility_name: 'Marché Hedzranawoé', latitude: 6.17, longitude: 1.22 }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listAdminAuditEvents({ authUserId: 'auth-admin', eventType: 'claim_reviewed' });
+    expect(result.authorized).toBe(true);
+    expect(result.events).toEqual([{ id: 'event-1', eventType: 'claim_reviewed', entityType: 'facility', entityId: 'facility-1', actorAccountId: 'account-admin', reason: 'Preuves suffisantes', createdAt: '2026-09-03T10:00:00.000Z', facilityName: 'Marché Hedzranawoé', latitude: 6.17, longitude: 1.22 }]);
+    expect(call.queries[1]).toContain('where e.event_type');
+    expect(call.queries[1]).toContain('order by e.created_at desc');
+  });
+
+  it('bounds the requested limit between 1 and 100', async () => {
+    const call = stubSqlSequence([[{ id: 'account-admin' }], []]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listAdminAuditEvents({ authUserId: 'auth-admin', limit: 500 });
+    expect(result.authorized).toBe(true);
+    expect(result.events).toEqual([]);
+    expect(call.queries[1]).not.toContain('where e.event_type');
+  });
+});

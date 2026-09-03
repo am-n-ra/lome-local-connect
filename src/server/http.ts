@@ -150,6 +150,74 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/admin/console') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to open the team console.'));
+        return true;
+      }
+      const result = await repository.getAdminConsole({ authUserId });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required for the team console.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/admin/audit-events') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to read the audit log.'));
+        return true;
+      }
+      const eventType = url.searchParams.get('event_type') ?? undefined;
+      const limitParam = Number(url.searchParams.get('limit') ?? '50');
+      const result = await repository.listAdminAuditEvents({ authUserId, eventType, limit: Number.isFinite(limitParam) ? limitParam : 50 });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required for the audit log.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/facilities/') && pathname.endsWith('/operational-state')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to set a facility operational state.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/admin/facilities/'.length, -'/operational-state'.length);
+      const input = await parseRequestBody(req);
+      const state = typeof input.state === 'string' ? input.state.trim() : '';
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !['ouvert', 'ferme', 'temporairement_indisponible'].includes(state) || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility, operational state and bounded reason.'));
+        return true;
+      }
+      const result = await repository.setFacilityOperationalState({ authUserId, facilityId, state: state as 'ouvert' | 'ferme' | 'temporairement_indisponible', reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/facilities/') && pathname.endsWith('/sales-counter')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to correct a sales counter.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/admin/facilities/'.length, -'/sales-counter'.length);
+      const input = await parseRequestBody(req);
+      const qualifyingSales = Number(input.qualifyingSales);
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !Number.isInteger(qualifyingSales) || qualifyingSales < 0 || qualifyingSales > 3 || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility, a counter between 0 and 3 and a bounded reason.'));
+        return true;
+      }
+      const result = await repository.correctFacilitySalesCounter({ authUserId, facilityId, qualifyingSales, reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import-batch') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

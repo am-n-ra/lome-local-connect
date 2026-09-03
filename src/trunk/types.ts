@@ -325,12 +325,42 @@ export interface ReviewQueueItem {
   facilityId: string;
   facilityName: string;
   facilityTrust: string;
+  latitude: number;
+  longitude: number;
   state: string;
   version: number;
   createdAt: string;
   submittedAt: string | null;
   evidenceCount: number;
   evidenceKinds: string[];
+}
+
+export type FacilityOperationalState = 'ouvert' | 'ferme' | 'temporairement_indisponible';
+
+export interface AdminConsoleResult {
+  authorized: boolean;
+  pendingClaims: number;
+  pendingActivations: number;
+  operatorRuns: number;
+  auditEventsToday: number;
+}
+
+export interface AdminAuditEvent {
+  id: string;
+  eventType: string;
+  entityType: string;
+  entityId: string;
+  actorAccountId: string | null;
+  reason: string | null;
+  createdAt: string;
+  facilityName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface AdminAuditListResult {
+  authorized: boolean;
+  events: AdminAuditEvent[];
 }
 
 export interface ReviewQueueResult {
