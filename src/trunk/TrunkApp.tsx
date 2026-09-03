@@ -2087,7 +2087,7 @@ export function TrunkApp() {
         </button>
       </nav>
 
-      {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') { closeFacilityContext(); return; } setPanel('none'); }} />}
+
       {panel === 'qr-scan' && (
         <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Scanner un QR" style={{ height: '52%' }}>
           <div className="sheet-handle" />
