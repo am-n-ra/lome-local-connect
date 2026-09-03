@@ -21,6 +21,15 @@ Gate 2 — **Species**. Order of acceptance: **Admin/operator → Seller → Buy
 
 - **G-03 Root System (2026-09-02):** inspection report `docs/nature-way/omni-root-inspection-G03-2026-09-02.md`. **RD-1 (founder decision): v2-canonical — v2_* is the only root schema; public.* frozen for new tables.** Migration `038_v2_g03_root_gaps.sql` closes: RG-1 product availability state + freshness (D-02/D-03), RG-2 StockEvent ledger (S5), RG-3 saved searches (B19), claim requests ported to v2 (S1). **APPLIED: founder executed 038 on Neon SQL editor 2026-09-02, all statements success (manual proof class).**
 
+
+- **G-04 Trunk VERIFIED ON PROD (2026-09-02):** deployed to `omni.sparkafrika.online` (commit 8ef1400, bundle `index-rQmYubTH.js`).
+  - **Live test results with `demo@seller.omni` (Omni@2026):**
+    1. Neon Auth sign-in → JWT token issued (200 OK)
+    2. `GET /api/v2/seller/catalogue` returns 6 real products from "Omni Demo Seller Hub" with new G-03/G-04 fields (`availabilityState: 'a_valider'`, `availabilityProEligible: false`)
+    3. `POST /api/v2/seller/catalogue/:id/availability` rejects non-Pro facility with **409 Conflict** (D-04 entitlement guard verified on live prod)
+    4. `POST /api/v2/wallet/pro` validates wallet balance and slot rules on live prod
+    5. `GET /api/v2/seller/catalogue/:id/stock-events` route active and protected (401 without auth)
+  - Vercel build pipeline stabilized on `npm@10.9.8` with single maintained `package-lock.json`.
 - **G-04 Trunk — Seller availability loop (2026-09-02, commit 2d4b487):** product availability setter (facility_pro-gated per D-04), StockEvent history view (S5), opportunistic freshness expiry via v2_expire_stale_availability (D-03). Files: trunk-repository.ts (+setProductAvailability/listProductStockEvents, catalogue lists availability), http.ts (+2 routes), trunk/api.ts, trunk/types.ts, TrunkApp.tsx (catalogue availability control + Historique panel), +6 repository tests. **Proven:** 274/274 tests, build green, route dispatches locally. **Blocked:** prod omni.sparkafrika.online serves stale deploy (new routes NOT_FOUND while older routes 401) — Vercel not picking up omni-v2-rebuild pushes; — update 2026-09-02 21:45: npm pinned via packageManager=npm@10.9.8 (commit 3d3b3ec) after pnpm frozen-lockfile failure; prod still serves stale bundle (hash mismatch: prod Cg1UeOOH vs local C_BL1ui-); latest build log needed.
 - G-02d (Buyer maquette): **ACCEPTED (founder 2026-09-02)** — audit complete, PAYMENT/SAVED/ACCOUNT added. Species gate now closed across all four roles (Admin/Seller/Buyer/Operator). Next gate: **Root System (G-03)** — schema, contracts, invariants.
 - **Art direction locked (founder 2026-09-02): liquid glass** — inherit the REAL `LiquidGlass` tokens from `src/components/ui/LiquidGlass.tsx` (ink #1A1C1B, forest #234D40→#1A3B31, accent coral #F08F5A; surfaces bg-white/70..95 backdrop-blur-md..2xl border-white/40..80). **Logo = location pin with an eye inside, 3D-shaped** (SVG gradients + iris). All flows épurés/minimalistes, map-centric, contextual (surfaces = frosted overlays over the map, not separate dashboards).
