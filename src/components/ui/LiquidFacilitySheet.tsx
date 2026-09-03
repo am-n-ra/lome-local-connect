@@ -105,42 +105,29 @@ export function LiquidFacilitySheet({
                   <div
                     key={p.id}
                     onClick={() => toggleProduct(p.id)}
-                    className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
-                      isSelected
-                        ? 'bg-[#234D40]/5 border-[#234D40] shadow-sm'
-                        : 'bg-white/70 border-black/[0.06] hover:bg-white'
-                    }`}
+                    className={`omni-pitem${isSelected ? ' sel' : ''}`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors ${
-                          isSelected
-                            ? 'bg-[#234D40] border-[#234D40] text-white'
-                            : 'border-black/20 bg-white'
-                        }`}
-                      >
-                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                      </div>
+                    <span className="omni-pitem-thumb" />
+                    <span className={`omni-pitem-chk${isSelected ? ' on' : ''}`}>
+                      {isSelected ? '✓' : ''}
+                    </span>
 
-                      <div className="min-w-0">
-                        <div className="font-semibold text-sm text-[#1A1C1B] truncate">{p.name}</div>
-                        <div className="flex items-center gap-2 mt-0.5 text-xs">
-                          <span className="font-bold text-[#234D40]">
+                      <span className="min-w-0 flex-1">
+                        <b className="block text-[12px] text-[#0f0f0f] truncate">{p.name}</b>
+                        <small className="flex items-center gap-1.5 mt-0.5 text-[10px]">
+                          <span className="font-bold text-[#0f0f0f]">
                             {netPriceXof.toLocaleString('fr-FR')} {p.currency || 'XOF'}
                           </span>
                           {discount > 0 && (
-                            <span className="text-[10px] text-[#C0602E] font-semibold bg-[#F08F5A]/15 px-1.5 py-0.2 rounded">
-                              -{discount}% Omni
-                            </span>
+                            <span className="omni-pitem-disc">-{discount}% Omni</span>
                           )}
                           {originalPriceXof > netPriceXof && (
-                            <span className="text-[10px] text-black/40 line-through">
+                            <span className="text-black/40 line-through">
                               {originalPriceXof.toLocaleString('fr-FR')}
                             </span>
                           )}
-                        </div>
-                      </div>
-                    </div>
+                        </small>
+                      </span>
 
                     <div className="text-right flex-shrink-0">
                       <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
