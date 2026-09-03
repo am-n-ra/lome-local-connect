@@ -1995,12 +1995,6 @@ export function TrunkApp() {
               onSelectFacility={(fac) => {
                 void selectFacility(fac as PublicFacility);
               }}
-              onCheckAvailability={(fac) => {
-                void selectFacility(fac as PublicFacility, true);
-              }}
-              onShowRoute={(fac) => {
-                setRouteTarget({ longitude: fac.longitude, latitude: fac.latitude, name: fac.name });
-              }}
             />
           )}
 

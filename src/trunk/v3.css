@@ -1777,3 +1777,52 @@ textarea:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: #fff;
 }
+
+/* Maquette .hgrid / .hcard — RESULTS sheet facility cards */
+.omni-hgrid {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 auto 12px;
+  padding: 4px 2px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  max-width: min(96vw, 560px);
+}
+.omni-hgrid::-webkit-scrollbar { display: none; }
+.omni-hcard {
+  flex: 0 0 128px;
+  scroll-snap-align: start;
+  border: 1px solid #e6e6e6;
+  border-radius: 13px;
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+.omni-hcard.sel {
+  border-color: #0f0f0f;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+.omni-hcard-thumb {
+  height: 64px;
+  background: linear-gradient(135deg, #e9e9e9, #d6d6d6);
+  position: relative;
+}
+.omni-hcard-thumb.unclaimed {
+  background: repeating-linear-gradient(45deg, #f0f0f0 0 6px, #e2e2e2 6px 12px);
+}
+.omni-hcard-vmark {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2e8b6f;
+}
+.omni-hcard-body { padding: 7px; }
+.omni-hcard-body b { font-size: 12px; display: block; color: #0f0f0f; }
+.omni-hcard-body small { font-size: 9.5px; color: #6b6b6b; display: block; }
+.omni-hcard-trust { color: #2e8b6f !important; }
