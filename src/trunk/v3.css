@@ -1958,3 +1958,36 @@ textarea, input[type=text], input[type=number] textarea, input[type=text], input
 .status.ink .status.ink { color:#0F0F0F; background:#fff; border:1px solid #0F0F0F; }
 .status.gray .status.gray { color:#6B6B6B; background:#F7F7F7; }
 .status.dash .status.dash { color:#0F0F0F; background:#fff; border:1px dashed #0F0F0F; }
+
+/* Maquette purge: no blur overlays anywhere — chrome only liquid glass on pills */
+.map-canvas .maplibregl-canvas { filter: none !important; }
+
+/* Remove backdrop blur from any panel/sheet class (chatGPT: sheets are crisp on map) */
+*[class*="backdrop"], *[class*="sheet-backdrop"],
+.v3-filter-panel, .v3-facility-selector-scroll,
+.maquette-cardbox, .buyer-search-bar, .buyer-floating-dock,
+.context-sheet, .omni-sheet, .nearby-sheet, .facility-sheet,
+.account-menu, .options-popover, .stock-history-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Compact monochrome chip row replacing blurred selector scroll */
+.v3-facility-selector-scroll { background: #FFFFFF !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.v3-facility-selector-scroll .v3-facility-chip { background: #F7F7F7; color: #6B6B6B; }
+.v3-facility-selector-scroll .v3-facility-chip.active { background: #0F0F0F; color: #fff; }
+
+/* Filter panel = clean white sheet card without blur */
+.v3-filter-panel { background: #FFFFFF !important; border: 1px solid #E6E6E6 !important; color: #0F0F0F !important; box-shadow: 0 8px 24px rgba(0,0,0,0.08) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+
+/* Buyer search bar & dock = liquid glass only inside pills (kept samsung white-on-transparent) */
+.buyer-search-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.buyer-floating-dock { background: rgba(17,17,17,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+/* Glass pills keep subtle internal blur ONLY (never overlay other content) */
+.rolepill, .rolepill *,
+#omni-main-menu-btn, .maquette-status-pill, .buyer-chip { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+/* Restore chrome search bar/dock liquid glass (still monochrome/white/black) */
+.buyer-search-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.buyer-floating-dock { background: rgba(17,17,17,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
