@@ -16,10 +16,7 @@ import type { AccountCapabilitiesResult, RoleManagementAccount, AvailabilityResp
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useScrollLock, useViewportInsets } from '../hooks/use-viewport-insets';
 import { MenuIcon, RoleSwitch, SearchDock, StatusBadge, PriceBadge, FilterChip, FacilityCard, ContextPanel, facilityStatus, discountPercent, FacilitySelectorChips, SellerCertificationProgress, NeutralLockedCreditBadge, PaymentMethodSelector, ReviewStars } from './v3';
-import { FacilityQrScannerModal } from './FacilityQrScannerModal';
-import { BuyerProPlansModal } from './BuyerProPlansModal';
 import { OnboardingModal } from './OnboardingModal';
-import { OmniWalletModal } from './OmniWalletModal';
 import { CompanyFacilityOnboardingModal } from './CompanyFacilityOnboardingModal';
 import { SellerScannerModal } from './SellerScannerModal';
 import { DirectInStoreScanSheet } from './DirectInStoreScanSheet';
@@ -30,10 +27,8 @@ import { LiquidResultCarousel } from '../components/ui/LiquidResultCarousel';
 import { LiquidFacilitySheet } from '../components/ui/LiquidFacilitySheet';
 import { LiquidTransactionRoom, type LiquidTransactionDetails } from '../components/ui/LiquidTransactionRoom';
 import { LiquidSellerCockpit } from '../components/ui/LiquidSellerCockpit';
-import { LiquidPreviewShowcase } from '../components/ui/LiquidPreviewShowcase';
-import { CleanMenuDrawer } from '../components/ui/CleanMenuDrawer';
 import { GlassSurface, GlassButton, GlassBadge } from '../components/ui/LiquidGlass';
-import { Sparkles, Wallet, Compass, Building2, Eye } from 'lucide-react';
+import { Sparkles, Wallet, Compass, Building2, Eye, Home } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -1960,29 +1955,43 @@ export function TrunkApp() {
         ))}
       </header>
 
-      <CleanMenuDrawer
-        isOpen={menuOpen}
-        onClose={() => setMenuOpen(false)}
-        sessionUser={sessionUser}
-        accountCapabilitiesState={accountCapabilitiesState}
-        accountCapabilities={accountCapabilities}
-        installPrompt={Boolean(installPrompt)}
-        installed={installed}
-        onOpenAuth={(mode) => openAuth(mode)}
-        onOpenBuyerRequests={openBuyerRequests}
-        onOpenInbox={openInbox}
-        onOpenWallet={() => { setMenuOpen(false); setPanel('wallet'); }}
-        onOpenBuyerProPlans={() => { setMenuOpen(false); setPanel('buyer-pro-plans'); }}
-        onOpenCompanyOnboarding={() => { setMenuOpen(false); setPanel('company-onboarding'); }}
-        onOpenSellerScanner={() => { setMenuOpen(false); setPanel('seller-scanner'); }}
-        onOpenFieldPilot={openFieldPilot}
-        onOpenReviewer={openReviewer}
-        onOpenAdminRoles={openAdminRoles}
-        onOpenOnboarding={() => { setMenuOpen(false); setPanel('onboarding'); }}
-        onInstallOmni={() => void installOmni()}
-        onSignOut={signOut}
-        onResetSearch={resetSearch}
-      />
+      {menuOpen && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Menu Omni" style={{ height: '64%' }}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Espace</span>
+              <h2>Espace {activeRole === 'admin' || activeRole === 'operator' ? 'équipe Omni' : activeRole}</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="status ink">{activeRole === 'admin' || activeRole === 'operator' ? activeRole + ' · équipe' : activeRole}</span>
+              <button type="button" onClick={() => setMenuOpen(false)} aria-label="Fermer"><X size={16} /></button>
+            </div>
+          </div>
+          <div className="menugrid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 11 }}>
+            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); if (activeRole === 'seller') openSellerEntry(); else openBuyerRequests(); }}>
+              <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><Home size={15} /></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>Mon espace</b></span>
+            </button>
+            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); setPanel('wallet'); }}>
+              <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><Wallet size={15} /></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>Wallet</b></span>
+            </button>
+            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); setPanel('buyer-pro-plans'); }}>
+              <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><Compass size={15} /></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>Plans</b></span>
+            </button>
+            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); openAuth('sign-in'); }}>
+              <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><User size={15} /></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>Compte</b></span>
+            </button>
+            {sessionUser && <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); signOut(); }}>
+              <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><X size={15} /></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>Se déconnecter</b></span>
+            </button>}
+          </div>
+        </section>
+      )}
 
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={retryPublicFacilities}>Réessayer</button></div>}
 
@@ -2079,7 +2088,25 @@ export function TrunkApp() {
       </nav>
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') { closeFacilityContext(); return; } setPanel('none'); }} />}
-      {panel === 'qr-scan' && <FacilityQrScannerModal onScan={(facilityId) => { setPanel('none'); void selectFacilityById(facilityId); }} onClose={() => setPanel('none')} sampleFacilities={visibleFacilities} />}
+      {panel === 'qr-scan' && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Scanner un QR" style={{ height: '52%' }}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Scanner un QR</span>
+              <h2>Facilité publique</h2>
+            </div>
+            <button type="button" onClick={() => setPanel('none')} aria-label="Fermer"><X size={16} /></button>
+          </div>
+          <div className="maquette-cardbox" style={{ display: 'grid', placeItems: 'center', padding: 14 }}>
+            <div className="code" style={{ width: 150, height: 150, border: '12px solid #fff', outline: '1px solid #e6e6e6', background: 'repeating-conic-gradient(#111 0 8%, #fff 0 16%)', borderRadius: 16 }} />
+          </div>
+          <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#6b6b6b' }}>
+            QR public — découvrir les offres. ≠ QR transaction.
+          </p>
+          <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setPanel('none')}>Ouvrir la fiche</button>
+        </section>
+      )}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <MaquetteSellerSheet
   user={sessionUser}
@@ -2099,10 +2126,103 @@ export function TrunkApp() {
       {panel === 'admin-roles' && <AdminRoleManagementSheet accounts={roleAccounts} state={roleAccountsState} error={roleAccountsError} mutationState={roleMutationState} mutationError={roleMutationError} mutationResult={roleMutationResult} reason={roleReason} setReason={setRoleReason} onChangeRole={(accountId, role, status) => void changeManagedStaffRole(accountId, role, status)} onRefresh={() => void loadRoleAccounts()} onClose={() => setPanel('none')} />}
       {panel === 'reviewer' && <ReviewerSheet state={reviewerState} error={reviewerError} queue={reviewerQueue} selected={selectedReview} onSelect={setSelectedReview} outcome={reviewOutcome} setOutcome={setReviewOutcome} reason={reviewReason} setReason={setReviewReason} actionState={reviewActionState} actionError={reviewActionError} actionResult={reviewActionResult} onSubmit={submitReview} onRefresh={() => { void loadReviewerQueue(); void loadSellerActivationQueue(); }} onBack={() => { setSelectedReview(null); setReviewActionState('idle'); }} onClose={() => setPanel('none')} activationQueue={activationQueue} activationQueueState={activationQueueState} activationQueueError={activationQueueError} activationActionState={activationActionState} activationActionError={activationActionError} activationResult={activationResult} onActivateSeller={(accountId) => void activateSeller(accountId)} onActivationRefresh={() => void loadSellerActivationQueue()} statusActionState={statusActionState} statusActionError={statusActionError} onStatusChange={(accountId, suspended, reason) => void changeSellerStatus(accountId, suspended, reason)} />}
 
-      {panel === 'buyer-requests' && <BuyerRequestsSheet user={sessionUser} data={buyerRequests} state={buyerRequestsState} error={buyerRequestsError} onRefresh={() => void loadBuyerRequests()} onResume={(request) => void resumeBuyerRequest(request)} onClose={() => setPanel('none')} />}
-      {panel === 'buyer-pro-plans' && <BuyerProPlansModal onClose={() => setPanel('none')} />}
+      {panel === 'buyer-requests' && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Espace Buyer" style={{ height: '52%' }}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Espace Buyer</span>
+              <h2>Vos demandes &amp; transactions.</h2>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="status ink">Buyer</span>
+              <button type="button" onClick={() => setPanel('none')} aria-label="Fermer"><X size={16} /></button>
+            </div>
+          </div>
+          <div className="stat" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 9 }}>
+            <div className="maquette-stat-tile accent">
+              <small>Demandes actives</small>
+              <strong>{buyerRequests?.requests?.length ?? 0}</strong>
+            </div>
+            <div className="maquette-stat-tile">
+              <small>Transactions</small>
+              <strong>0</strong>
+            </div>
+          </div>
+          {buyerRequests?.requests?.length ? (
+            <div className="maquette-cardbox">
+              {buyerRequests.requests.slice(0, 3).map((req) => (
+                <div className="kv" key={req.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, padding: '5px 0', borderTop: '1px solid #e6e6e6', fontSize: 11 }}>
+                  <span style={{ color: '#6b6b6b' }}>{req.productName} ×{req.requestedQuantity}</span>
+                  <b className="status ok" style={{ fontWeight: 800 }}>Réponse reçue</b>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="tiny muted" style={{ textAlign: 'center', marginTop: 12, fontSize: 10, color: '#6b6b6b' }}>
+              Aucune demande active. Cherchez une facilité pour commencer.
+            </p>
+          )}
+          <div className="btnrow" style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setPanel('none'); setPanel('wallet'); }}>Wallet</button>
+            <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setPanel('none'); setPanel('buyer-pro-plans'); }}>Plans</button>
+          </div>
+        </section>
+      )}
+      {panel === 'buyer-pro-plans' && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Plans" style={{ height: '52%' }}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Plans</span>
+              <h2>Plans Buyer</h2>
+            </div>
+            <button type="button" onClick={() => setPanel('none')} aria-label="Fermer"><X size={16} /></button>
+          </div>
+          <div className="maquette-cardbox">
+            <div className="row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <b style={{ fontSize: 12 }}>Buyer Free</b>
+                <small style={{ display: 'block', fontSize: 9, color: '#6b6b6b' }}>Recherche + disponibilité vérifiée</small>
+              </div>
+              <span className="status gray">Actuel</span>
+            </div>
+          </div>
+          <div className="maquette-cardbox">
+            <div className="row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <b style={{ fontSize: 12 }}>Buyer Pro</b>
+                <small style={{ display: 'block', fontSize: 9, color: '#6b6b6b' }}>Alertes sauvegardées + priorité</small>
+              </div>
+              <span className="status ink">Supérieur</span>
+            </div>
+          </div>
+          <button className="btn" style={{ marginTop: 10 }} onClick={() => setPanel('none')}>Passer au niveau supérieur</button>
+        </section>
+      )}
       {panel === 'onboarding' && <OnboardingModal onClose={() => setPanel('none')} onComplete={() => setPanel('none')} />}
-      {panel === 'wallet' && <OmniWalletModal onClose={() => setPanel('none')} balanceMinor={sellerWallet?.balanceMinor ?? 16500} onRecharge={async (amount) => { setSellerRechargeAmount(amount.toString()); await startSellerWalletRecharge(); return true; }} />}
+      {panel === 'wallet' && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Wallet" style={{ height: '52%' }}>
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Wallet</span>
+              <h2>Votre solde</h2>
+            </div>
+            <button type="button" onClick={() => setPanel('none')} aria-label="Fermer"><X size={16} /></button>
+          </div>
+          <div className="maquette-cardbox" style={{ textAlign: 'center' }}>
+            <small style={{ fontSize: 10, color: '#6b6b6b' }}>Solde disponible</small>
+            <strong style={{ display: 'block', fontSize: 24, fontWeight: 800, color: '#0f0f0f', marginTop: 4 }}>
+              {Math.round((sellerWallet?.balanceMinor ?? 0) / 100).toLocaleString('fr-FR')} XOF
+            </strong>
+          </div>
+          <button className="btn" style={{ marginTop: 10 }} onClick={() => setPanel('none')}>Recharger via FedaPay</button>
+          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8, fontSize: 9, color: '#6b6b6b' }}>
+            Recharge externe — pas de paiement transaction (D-05).
+          </p>
+        </section>
+      )}
       {panel === 'company-onboarding' && <CompanyFacilityOnboardingModal onClose={() => setPanel('none')} onComplete={(data) => { void createSellerFacilityFromWorkspace({ name: data.facilityName, category: data.category, description: data.companyName, address: data.address, latitude: data.lat, longitude: data.lng }); setPanel('none'); }} />}
       {panel === 'seller-scanner' && <SellerScannerModal onClose={() => setPanel('none')} onScanSuccess={(code) => { setSellerQrPayload(code); setPanel('seller-entry'); setSellerTab('transaction'); }} />}
       {panel === 'instore-scan' && selectedFacility && <DirectInStoreScanSheet facility={selectedFacility} products={'products' in selectedFacility ? selectedFacility.products : []} onClose={() => setPanel('facility')} />}
@@ -2153,7 +2273,6 @@ export function TrunkApp() {
   onClose={() => setPanel('facility')}
   onSubmit={submitAvailability}
 />}
-      {liquidShowcaseOpen && <LiquidPreviewShowcase onDismiss={() => setLiquidShowcaseOpen(false)} />}
     </main>
   );
 }
