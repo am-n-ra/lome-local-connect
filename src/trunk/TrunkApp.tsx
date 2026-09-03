@@ -35,7 +35,7 @@ import { Sparkles, Wallet, Compass, Building2, Eye } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan';
+type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search';
 type AuthMode = 'sign-in' | 'sign-up';
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer' | 'admin-roles';
@@ -241,6 +241,7 @@ export function TrunkApp() {
   const [statusActionError, setStatusActionError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeRole, setActiveRole] = useState<'buyer' | 'seller' | 'admin' | 'operator'>('buyer');
   const [showAllResults, setShowAllResults] = useState(false);
   const [nearbyOpen, setNearbyOpen] = useState(false);
   const [pinContext, setPinContext] = useState<PublicFacility | null>(null);
@@ -1917,6 +1918,19 @@ export function TrunkApp() {
     }
   }, [mapState, nearbyOpen, nearbyCollapsed, revealActive, showAllResults, visibleFacilities.length]);
 
+  const availableRoles: Array<'buyer' | 'seller' | 'admin' | 'operator'> = ['buyer'];
+  if (accountCapabilities?.roles?.some((role) => role.toLowerCase().includes('seller'))) availableRoles.push('seller');
+  if (accountCapabilities?.roles?.some((role) => role.toLowerCase() === 'reviewer' || role.toLowerCase() === 'admin')) availableRoles.push('admin');
+  if (accountCapabilities?.roles?.some((role) => role.toLowerCase() === 'operator')) availableRoles.push('operator');
+  const rolePillLabel: Record<'buyer' | 'seller' | 'admin' | 'operator', string> = { buyer: 'Buyer', seller: 'Seller', admin: 'Admin', operator: 'Operator' };
+  const switchActiveRole = (role: 'buyer' | 'seller' | 'admin' | 'operator') => {
+    setActiveRole(role);
+    if (role === 'buyer') setPanel('none');
+    else if (role === 'seller') openSellerEntry();
+    else if (role === 'admin') openReviewer();
+    else openFieldPilot();
+  };
+
   const searchRevealKey = committedQuery.trim() && mapState === 'ready'
     ? `${searchRevealRevision}|${committedQuery}|${JSON.stringify(appliedOptions)}|${facilities.map((facility) => facility.id).join(',')}`
     : null;
@@ -1925,60 +1939,25 @@ export function TrunkApp() {
     <main ref={appRef} className={`omni-stage-viewport ${mainClass}`} data-auth={authClient ? 'configured' : 'missing'}>
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
-      {/* Barre supérieure Maquette (.rolepill & Menu Verre Liquide) */}
-      <header className="fixed top-3.5 inset-x-0 z-30 flex items-center justify-between px-4 max-w-5xl mx-auto pointer-events-none">
-        {/* Switch Acheter / Vendre Maquette */}
-        <div className="pointer-events-auto bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 flex items-center transition-all">
-          <div className="flex items-center gap-0.5">
-            <button
-              id="switch-buy-tab"
-              type="button"
-              onClick={() => { setMenuOpen(false); setOptionsOpen(false); setPanel('none'); }}
-              className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
-                panel !== 'seller-entry'
-                  ? 'bg-[#0f0f0f] text-white shadow-xs'
-                  : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
-              }`}
-            >
-              Acheter
-            </button>
-            <button
-              id="switch-sell-tab"
-              type="button"
-              onClick={openSellerEntry}
-              className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
-                panel === 'seller-entry'
-                  ? 'bg-[#0f0f0f] text-white shadow-xs'
-                  : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
-              }`}
-            >
-              Vendre
-            </button>
-          </div>
-        </div>
-
-        {/* Menu Maquette */}
-        <div className="pointer-events-auto flex items-center gap-2">
+      {/* Maquette: rolepill centered, dynamic roles (Buyer + capability roles) */}
+      <header className="fixed top-3.5 left-1/2 -translate-x-1/2 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
+        {availableRoles.map((role) => (
           <button
-            id="omni-main-menu-btn"
+            key={role}
+            id={`rolepill-${role}`}
             type="button"
-            onClick={() => { setMenuOpen((open) => !open); setOptionsOpen(false); }}
-            className="w-8 h-8 rounded-full bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] flex items-center justify-center font-bold text-xs text-[#0f0f0f] hover:bg-white transition-all active:scale-95"
-            aria-label="Menu Omni"
-            title="Menu Omni"
+            onClick={() => switchActiveRole(role)}
+            className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
+              activeRole === role
+                ? 'bg-[#0f0f0f] text-white shadow-xs'
+                : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
+            }`}
           >
-            {sessionUser ? (
-              <span className="w-6 h-6 rounded-full bg-[#0f0f0f] text-white flex items-center justify-center text-[9px] font-extrabold">
-                {sessionUser.name?.slice(0, 2).toUpperCase() || 'OM'}
-              </span>
-            ) : (
-              <Menu className="w-3.5 h-3.5 text-[#0f0f0f]" />
-            )}
+            {rolePillLabel[role]}
           </button>
-        </div>
+        ))}
       </header>
 
-      {/* Menu Omni Élégant & Dédié */}
       <CleanMenuDrawer
         isOpen={menuOpen}
         onClose={() => setMenuOpen(false)}
@@ -2025,26 +2004,82 @@ export function TrunkApp() {
             />
           )}
 
-          {/* Barre de recherche Liquid Glass (B01 - B03) */}
-          <div className="pt-2">
-            <LiquidSearchDock
-              onSearch={(demand) => {
-                setQuery(demand.rawQuery);
-                setQuantity(demand.quantity || 1);
-                if (demand.maxBudget) {
-                  setBudgetMode('maximum');
-                  setBudget(demand.maxBudget.toString());
-                }
-                if (demand.maxDistanceKm) {
-                  setRayon(demand.maxDistanceKm.toString());
-                }
-                beginSearch();
-              }}
-              onScanQr={() => setPanel('qr-scan')}
-            />
-          </div>
         </div>
       )}
+
+      {panel === 'search' && (
+        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Recherche Omni">
+          <div className="sheet-handle" />
+          <div className="sheet-head">
+            <div>
+              <span className="section-kicker">Recherche</span>
+              <h2>{activeRole === 'seller' ? 'Compagnie, facilité…' : activeRole === 'admin' || activeRole === 'operator' ? 'Claim, création, facilité…' : 'Que cherchez-vous ?'}</h2>
+            </div>
+            <button type="button" onClick={() => setPanel('none')} aria-label="Fermer la recherche"><X size={18} /></button>
+          </div>
+          <LiquidSearchDock
+            onSearch={(demand) => {
+              setQuery(demand.rawQuery);
+              setCommittedQuery(demand.rawQuery);
+              setQuantity(demand.quantity || 1);
+              if (demand.maxBudget) {
+                setBudgetMode('maximum');
+                setBudget(demand.maxBudget.toString());
+              }
+              if (demand.maxDistanceKm) {
+                setRayon(demand.maxDistanceKm.toString());
+              }
+              setPanel('none');
+              beginSearch();
+            }}
+            onScanQr={() => setPanel('qr-scan')}
+          />
+        </section>
+      )}
+
+      {/* Maquette: .navpill — dark floating dock, 3 buttons (search / role center / menu) */}
+      <nav className="omni-navpill" aria-label="Navigation Omni">
+        {panel !== 'none' && panel !== 'search' ? (
+          <button
+            type="button"
+            title="Retour"
+            className="navpill-btn"
+            onClick={() => { if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') closeFacilityContext(); else setPanel('none'); }}
+          >
+            <ArrowLeft size={18} />
+          </button>
+        ) : (
+          <button
+            type="button"
+            title="Recherche"
+            className={`navpill-btn${panel === 'search' ? ' active' : ''}`}
+            onClick={() => setPanel('search')}
+          >
+            <Search size={18} />
+          </button>
+        )}
+        <button
+          type="button"
+          title={activeRole === 'buyer' ? 'QR' : activeRole === 'seller' ? 'Stock' : 'À valider'}
+          className="navpill-btn center"
+          onClick={() => {
+            if (activeRole === 'buyer') setPanel('qr-scan');
+            else if (activeRole === 'seller') openSellerEntry();
+            else if (activeRole === 'admin') openReviewer();
+            else openFieldPilot();
+          }}
+        >
+          {activeRole === 'buyer' ? <QrCode size={20} /> : activeRole === 'seller' ? <PackageSearch size={20} /> : <ShieldCheck size={20} />}
+        </button>
+        <button
+          type="button"
+          title="Menu"
+          className="navpill-btn"
+          onClick={() => { setMenuOpen(true); }}
+        >
+          <Menu size={18} />
+        </button>
+      </nav>
 
       {panel !== 'none' && <div className="sheet-backdrop" onClick={() => { if (panel === 'auth') return; if (panel === 'availability') { setPanel('facility'); return; } if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') { closeFacilityContext(); return; } setPanel('none'); }} />}
       {panel === 'qr-scan' && <FacilityQrScannerModal onScan={(facilityId) => { setPanel('none'); void selectFacilityById(facilityId); }} onClose={() => setPanel('none')} sampleFacilities={visibleFacilities} />}
