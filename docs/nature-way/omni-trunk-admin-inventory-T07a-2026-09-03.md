@@ -53,4 +53,4 @@ Migration `039_v2_operational_state.sql`: `v2_facilities.operational_state text 
 
 ## Deploy ordering constraint (founder)
 
-`039_v2_operational_state.sql` must be applied on Neon **before** pushing `omni-v2-rebuild` to prod: the new routes reference `v2_facilities.operational_state`. Order: ① founder applies 039 on Neon SQL editor → ② founder pushes (push = prod deploy) → ③ G-04 browser + API proof of the admin chain on prod.
+~~039 must be applied before push~~ — **done 2026-09-03.** Exécuté cette session : push `omni-v2-rebuild` (ordre fondateur explicite) → routes admin 401 en ~60s → bundle prod `index-BCg5G0cM.js` === build local (guardrail T-07d vérifié). Reste : preuve navigateur/API admin complète avec identifiants `OMNI_PROOF_ADMIN_*` (e-mail/mot de passe fondateur), via `scripts/prove-v2-admin.mjs`.
