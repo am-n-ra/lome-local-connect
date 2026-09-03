@@ -8,11 +8,19 @@ type Props = {
   className?: string;
 };
 
-// Maquette RESULTS sheet: .hgrid of .hcard — thumb + verified dot, name + meta
+// Maquette RESULTS sheet: .sheet h-auto with .sheet-head + count + .hgrid of .hcard
 export function LiquidResultCarousel({ facilities, selectedFacilityId, onSelectFacility, className = '' }: Props) {
   if (facilities.length === 0) return null;
   return (
-    <div className={`pointer-events-auto ${className}`}>
+    <section className={`omni-sheet omni-sheet-enter context-sheet ${className}`} role="dialog" aria-modal="true" aria-label={`Résultats (${facilities.length})`}>
+      <div className="sheet-handle" />
+      <div className="sheet-head">
+        <div>
+          <span className="section-kicker">Résultats</span>
+          <h2>Facilités proches</h2>
+        </div>
+        <span className="maquette-status-pill gray">{facilities.length}</span>
+      </div>
       <div className="omni-hgrid" role="list">
         {facilities.map((fac) => {
           const isUnclaimed = fac.trust !== 'confirmed';
@@ -43,6 +51,6 @@ export function LiquidResultCarousel({ facilities, selectedFacilityId, onSelectF
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

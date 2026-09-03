@@ -1874,3 +1874,62 @@ textarea:focus-visible {
   padding: 1px 4px;
   border-radius: 999px;
 }
+
+/* ============================================================================
+   Maquette sheet base — monochrome, liquid glass on map (no blur overlay)
+   Override layer: neutralizes legacy v3 colors/shapes.
+   ========================================================================== */
+
+/* 1) Backdrop: remove blur — sheets are glass on the map */
+.sheet-backdrop {
+  background: rgba(26, 28, 27, 0.28) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* 2) Sheet base: white, black-border silhouette, maquette radius */
+.omni-sheet,
+.facility-sheet.omni-sheet,
+.nearby-sheet {
+  background: #ffffff !important;
+  border-radius: 24px 24px 0 0 !important;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.14) !important;
+  color: #0f0f0f !important;
+  border-top: 1px solid #e6e6e6 !important;
+}
+@media (min-width: 900px) {
+  .omni-sheet,
+  .facility-sheet.omni-sheet,
+  .nearby-sheet {
+    border-radius: 24px !important;
+  }
+}
+.omni-sheet .sheet-handle,
+.nearby-sheet .sheet-handle {
+  background: #e6e6e6 !important;
+}
+
+/* 3) Neutralize legacy green text/links inside sheets */
+.omni-sheet .text-button,
+.omni-sheet .see-all,
+.nearby-sheet .text-button,
+.nearby-sheet .see-all {
+  color: #0f0f0f !important;
+}
+.omni-sheet .text-button:hover,
+.omni-sheet .see-all:hover,
+.nearby-sheet .text-button:hover,
+.nearby-sheet .see-all:hover {
+  color: #6b6b6b !important;
+}
+
+/* 4) Product icon + icon-only secondary elements in monochrome */
+.omni-sheet .product-icon,
+.omni-sheet .menu-action svg,
+.omni-sheet .facility-identity-icon,
+.nearby-sheet .product-icon,
+.nearby-sheet .menu-action svg,
+.nearby-sheet .facility-identity-icon {
+  color: #0f0f0f !important;
+  background: #f7f7f7 !important;
+}

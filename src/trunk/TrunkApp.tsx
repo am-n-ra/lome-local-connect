@@ -1989,15 +1989,16 @@ export function TrunkApp() {
         <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none flex flex-col justify-end pb-3">
           {/* Carrousel des résultats B04 (affiché UNIQUEMENT lors d'une recherche active avec mot-clé ou catégorie explicite) */}
           {(Boolean(committedQuery.trim()) || (Boolean(appliedOptions.category) && appliedOptions.category !== 'all' && appliedOptions.category !== 'Tous')) && (
-            <LiquidResultCarousel
-              facilities={visibleFacilities}
-              selectedFacilityId={selectedFacility?.id ?? null}
-              onSelectFacility={(fac) => {
-                void selectFacility(fac as PublicFacility);
-              }}
-            />
+            <div className="pointer-events-auto !bottom-20 fixed inset-x-0 z-40">
+              <LiquidResultCarousel
+                facilities={visibleFacilities}
+                selectedFacilityId={selectedFacility?.id ?? null}
+                onSelectFacility={(fac) => {
+                  void selectFacility(fac as PublicFacility);
+                }}
+              />
+            </div>
           )}
-
         </div>
       )}
 
