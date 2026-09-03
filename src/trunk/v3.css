@@ -1991,3 +1991,52 @@ textarea, input[type=text], input[type=number] textarea, input[type=text], input
 /* Restore chrome search bar/dock liquid glass (still monochrome/white/black) */
 .buyer-search-bar { background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
 .buyer-floating-dock { background: rgba(17,17,17,0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+/* Maquette .fhero — facility hero photo */
+.omni-fhero {
+  height: 74px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #e7e7e7, #d2d2d2);
+  margin-top: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.omni-fhero.unclaimed {
+  background: repeating-linear-gradient(45deg, #efefef 0 8px, #e0e0e0 8px 16px);
+}
+.omni-fhero-tag {
+  position: absolute;
+  bottom: 7px;
+  left: 8px;
+  font-size: 8px;
+  font-weight: 800;
+  background: rgba(255,255,255,0.9);
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #0f0f0f;
+}
+.omni-facility-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+.omni-facility-meta-row .tiny { font-size: 10px; color: #6b6b6b; }
+.omni-label {
+  font-size: 9px;
+  color: #6b6b6b;
+  margin-top: 10px;
+  font-weight: 700;
+}
+.omni-plist {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+.omni-pitem-pr {
+  margin-left: auto;
+  font-weight: 800;
+  font-size: 10px;
+  color: #0f0f0f;
+}

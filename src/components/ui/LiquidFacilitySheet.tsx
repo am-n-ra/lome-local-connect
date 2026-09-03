@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { MapPin, Phone, Clock, ShieldCheck, Sparkles, Navigation, Check, Plus, Minus, ArrowRight, X, AlertTriangle } from 'lucide-react';
-import { GlassSurface, GlassButton, GlassBadge, GlassBottomDrawer } from './LiquidGlass';
-import type { FacilityDetail } from '../../trunk/types';
+import { useState } from 'react';
+import { MapPin, ShieldCheck, X, ArrowRight } from 'lucide-react';
+import type { FacilityDetail, PublicProduct } from '../../trunk/types';
 
-interface LiquidFacilitySheetProps {
+interface Props {
   facility: FacilityDetail | null;
   isOpen: boolean;
   onClose: () => void;
@@ -11,166 +10,138 @@ interface LiquidFacilitySheetProps {
   onShowRoute?: (facility: FacilityDetail) => void;
 }
 
-export function LiquidFacilitySheet({
-  facility,
-  isOpen,
-  onClose,
-  onRequestAvailability,
-  onShowRoute,
-}: LiquidFacilitySheetProps) {
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+const currency = (minor: number, ccy: string) => {
+  const major = Math.round(minor / 100);
+  return `${major.toLocaleString('fr-FR')} ${ccy || 'XOF'}`;
+};
+
+// Maquette FACILITY sheet (.sheet h-full) — exact match with accepted Species gate
+export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvailability }: Props) {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   if (!facility || !isOpen) return null;
 
   const isConfirmed = facility.trust === 'confirmed';
-  const products = facility.products || [];
+  const isUnclaimed = facility.trust === 'unclaimed';
+  const products: PublicProduct[] = facility.products || [];
+  const selCount = selectedIds.length;
 
-  const toggleProduct = (productId: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
+  const toggle = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
-  const handleStartAvailability = () => {
-    onRequestAvailability(facility, selectedProductIds);
-  };
+  const trustLabel = isConfirmed ? 'Vérifié' : isUnclaimed ? 'Non revendiquée' : 'À valider';
+  const trustClass = isConfirmed ? 'ok' : isUnclaimed ? 'dash' : 'gray';
 
   return (
-    <GlassBottomDrawer
-      isOpen={isOpen}
-      onClose={onClose}
-      id="liquid-facility-sheet"
-      title={
-        <div className="flex items-center gap-2">
-          <h3 className="font-display font-bold text-xl text-[#1A1C1B] truncate">{facility.name}</h3>
-          {isConfirmed ? (
-            <GlassBadge variant="emerald">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Certifié Omni</span>
-            </GlassBadge>
-          ) : (
-            <GlassBadge variant="slate">
-              <span>Vérifié</span>
-            </GlassBadge>
-          )}
-        </div>
-      }
-      subtitle={
-        <div className="flex items-center gap-1.5 text-xs text-black/60 mt-0.5">
-          <MapPin className="w-3.5 h-3.5 text-[#234D40]" />
-          <span>{facility.address || 'Lomé, Togo'}</span>
-          <span>•</span>
-          <span className="text-emerald-700 font-semibold">Ouvert</span>
-        </div>
-      }
-    >
-      <div className="space-y-4 pb-6">
-        {/* Règle anti-spam : Coordonnées verrouillées avant l'intention d'achat */}
-        <div className="p-3 bg-amber-500/10 rounded-2xl border border-amber-500/20 flex items-start gap-2.5">
-          <AlertTriangle className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 leading-relaxed">
-            <span className="font-semibold">Vérification de stock sans intermédiaire :</span> Les coordonnées directes et l'itinéraire guidé se déverrouillent dès la confirmation d'intention d'achat (*"Je veux acheter"*).
-          </div>
-        </div>
-
-        {/* Section Catalogue & Sélection Multi-Produits (Availability Basket - B07) */}
+    <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label={facility.name} style={{ height: '64%' }}>
+      <div className="sheet-handle" />
+      <div className="sheet-head">
         <div>
-          <div className="flex items-center justify-between mb-2">
-            <h4 className="font-semibold text-sm text-[#1A1C1B] flex items-center gap-1.5">
-              <span>Offres & Catalogue disponibles</span>
-              <span className="text-xs font-normal text-black/50">({products.length} articles)</span>
-            </h4>
-            {selectedProductIds.length > 0 && (
-              <span className="text-xs font-semibold text-[#234D40] bg-[#234D40]/10 px-2 py-0.5 rounded-full">
-                {selectedProductIds.length} sélectionné(s)
-              </span>
-            )}
+          <span className="section-kicker">Facilité</span>
+          <h2>{facility.name}</h2>
+        </div>
+        <span className={`status ${trustClass}`}>{trustLabel}</span>
+      </div>
+
+      {/* Buyer body: confirmed/unconfirmed facility with products */}
+      {!isUnclaimed && (
+        <>
+          <div className="omni-fhero">
+            <span className="omni-fhero-tag">Photo</span>
+          </div>
+          <div className="omni-facility-meta-row">
+            <span className="tiny muted">
+              <MapPin size={9} className="inline-block mr-0.5" />
+              {facility.address || 'Lomé, Togo'}
+            </span>
+            <span className="status ok">Ouvert</span>
           </div>
 
-          {products.length === 0 ? (
-            <div className="p-4 rounded-2xl bg-black/[0.02] border border-black/[0.06] text-center text-xs text-black/60">
-              Cet établissement n'a pas encore publié d'offres spécifiques, mais vous pouvez vérifier la disponibilité d'un besoin personnalisé.
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-              {products.map((p) => {
-                const isSelected = selectedProductIds.includes(p.id);
-                const discount = p.pourcentageReduction || 0;
-                const netPriceXof = Math.round((p.prixReduit || p.prixOriginal) / 100);
-                const originalPriceXof = Math.round(p.prixOriginal / 100);
-
-                return (
-                  <div
-                    key={p.id}
-                    onClick={() => toggleProduct(p.id)}
-                    className={`omni-pitem${isSelected ? ' sel' : ''}`}
-                  >
-                    <span className="omni-pitem-thumb" />
-                    <span className={`omni-pitem-chk${isSelected ? ' on' : ''}`}>
-                      {isSelected ? '✓' : ''}
-                    </span>
-
+          {products.length > 0 ? (
+            <>
+              <div className="omni-label">Produits — sélectionnez (panier de demande)</div>
+              <div className="omni-plist">
+                {products.map((p) => {
+                  const isSelected = selectedIds.includes(p.id);
+                  const discount = p.pourcentageReduction || 0;
+                  const netPrice = Math.round((p.prixReduit || p.prixOriginal) / 100);
+                  const origPrice = Math.round(p.prixOriginal / 100);
+                  return (
+                    <div
+                      key={p.id}
+                      className={`omni-pitem${isSelected ? ' sel' : ''}`}
+                      onClick={() => toggle(p.id)}
+                    >
+                      <span className="omni-pitem-thumb" />
+                      <span className={`omni-pitem-chk${isSelected ? ' on' : ''}`}>
+                        {isSelected ? '✓' : ''}
+                      </span>
                       <span className="min-w-0 flex-1">
                         <b className="block text-[12px] text-[#0f0f0f] truncate">{p.name}</b>
                         <small className="flex items-center gap-1.5 mt-0.5 text-[10px]">
                           <span className="font-bold text-[#0f0f0f]">
-                            {netPriceXof.toLocaleString('fr-FR')} {p.currency || 'XOF'}
+                            {netPrice.toLocaleString('fr-FR')} {p.currency || 'XOF'}
                           </span>
                           {discount > 0 && (
                             <span className="omni-pitem-disc">-{discount}% Omni</span>
                           )}
-                          {originalPriceXof > netPriceXof && (
+                          {origPrice > netPrice && (
                             <span className="text-black/40 line-through">
-                              {originalPriceXof.toLocaleString('fr-FR')}
+                              {origPrice.toLocaleString('fr-FR')}
                             </span>
                           )}
                         </small>
                       </span>
-
-                    <div className="text-right flex-shrink-0">
-                      <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                        {p.stockLoueOmni > 0 ? `${p.stockLoueOmni} dispo` : 'Stock alloué actif'}
-                      </span>
+                      <span className="omni-pitem-pr">{p.unit || 'unité'}</span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+              <button
+                className="btn ok"
+                style={{ marginTop: 10 }}
+                onClick={() => onRequestAvailability(facility, selectedIds)}
+              >
+                Demander la disponibilité ({selCount})
+              </button>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>
+                Contact vendeur &amp; chat débloqués après intention d'achat.
+              </p>
+            </>
+          ) : (
+            <p className="tiny muted" style={{ marginTop: 12, textAlign: 'center' }}>
+              Catalogue non publié. Cette facilité n'a pas encore d'offre publique.
+            </p>
           )}
-        </div>
+        </>
+      )}
 
-        {/* Bouton d'action principal */}
-        <div className="pt-2 flex items-center gap-2">
-          {onShowRoute && (
-            <GlassButton
-              variant="secondary"
-              size="lg"
-              onClick={() => onShowRoute(facility)}
-              className="flex-shrink-0"
-              title="Tracer l'itinéraire"
-            >
-              <Navigation className="w-5 h-5 text-[#234D40]" />
-            </GlassButton>
-          )}
-
-          <GlassButton
-            id="btn-liquid-check-availability"
-            variant="primary"
-            size="lg"
-            onClick={handleStartAvailability}
-            className="flex-1"
+      {/* Unclaimed body */}
+      {isUnclaimed && (
+        <>
+          <div className="omni-fhero unclaimed">
+            <span className="omni-fhero-tag">Non revendiquée</span>
+          </div>
+          <p className="sub" style={{ marginTop: 8 }}>
+            Cette facilité est découvrable mais n'a pas de gestionnaire. Vous pouvez la revendiquer.
+          </p>
+          <button
+            className="btn"
+            style={{ marginTop: 10 }}
+            onClick={() => onClose()}
           >
-            <span>
-              {selectedProductIds.length > 0
-                ? `Vérifier disponibilité (${selectedProductIds.length})`
-                : 'Vérifier la disponibilité'}
-            </span>
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </GlassButton>
-        </div>
-      </div>
-    </GlassBottomDrawer>
+            Revendiquer cette facilité
+          </button>
+          <button
+            className="btn ghost"
+            style={{ marginTop: 6 }}
+            onClick={() => onClose()}
+          >
+            La facilité n'est pas sur la carte ? Créer
+          </button>
+        </>
+      )}
+    </section>
   );
 }

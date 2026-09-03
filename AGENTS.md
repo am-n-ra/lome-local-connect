@@ -59,3 +59,4 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - French UI (vouvoiement). Mobile-first PWA. MapLibre only (no Google Maps). Neon Postgres. FedaPay for wallet reloads only.
 - Preserve existing DB records/identities by default; destructive migration needs a confirmed decision.
 - Maquette before pixels, contract before code. Evidence > optimism. No orphaned layers.
+* All UI must reference `docs/design.md` vocabulary (committed); legacy `omni-sheet`, `glass-*`, `liquid-*` aliases are retired — use `.sheet`, `.pitem`, `.hcard`, `.status`, `.btn`, `.cardbox`, `.searchdock`, `.chip`, `.compte`, `rolepill`, `.navpill` only. Trust accent `#2E8B6F/#EEF4F1` only for `.vmark` / `.status.ok`.
