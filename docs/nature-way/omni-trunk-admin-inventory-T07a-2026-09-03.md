@@ -53,4 +53,10 @@ Migration `039_v2_operational_state.sql`: `v2_facilities.operational_state text 
 
 ## Deploy ordering constraint (founder)
 
-~~039 must be applied before push~~ — **done 2026-09-03.** Exécuté cette session : push `omni-v2-rebuild` (ordre fondateur explicite) → routes admin 401 en ~60s → bundle prod `index-BCg5G0cM.js` === build local (guardrail T-07d vérifié). Reste : preuve navigateur/API admin complète avec identifiants `OMNI_PROOF_ADMIN_*` (e-mail/mot de passe fondateur), via `scripts/prove-v2-admin.mjs`.
+~~039 must be applied before push~~ — **done 2026-09-03.** Push exécuté (ordre fondateur explicite) → routes admin 401 en ~60s → bundle prod `index-BCg5G0cM.js` === build local (guardrail T-07d vérifié).
+
+## Prod proof — PASS (2026-09-03)
+
+`scripts/prove-v2-admin.mjs` run against `https://omni.sparkafrika.online` with founder admin account `kheirlissi@icloud.com` (roles admin+reviewer, both active — verified via 040 probe). Correlation ID `16e0997f-1826-46f5-b8af-200057f8a33c`. **9/9 PASS**: routes 401 without auth; console authorized; bounded integer counts; op-state transition `ouvert → temporairement_indisponible` accepted (admin-guarded); restored to `ouvert`; DB reflects restored state; audit log lists both events; audit event carries facility coordinates for the R-03 map hop; counter no-op rejected (guarded, never fabricated). Auth chain finding recorded in the script: Neon session token is opaque — sign-in returns a session cookie (`__Secure-neon-auth.session_token`) exchanged at `GET /token` for the JWKS-verified JWT.
+
+**T-07a CLOSED. Next: T-07b Seller slice.**

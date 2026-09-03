@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { createInternalNeonAuth } from '@neondatabase/auth';
 import { neon } from '@neondatabase/serverless';
 
 // T-07a admin chain proof (production-connected-demo only).
@@ -45,11 +44,25 @@ const sql = neon(process.env.OMNI_PROOF_DATABASE_URL);
 async function signIn(email, password) {
   let secret = password;
   try {
-    const auth = createInternalNeonAuth(authUrl);
-    const result = await auth.adapter.signIn.email({ email, password: secret });
-    const userId = result?.data?.user?.id;
+    const origin = baseUrl.origin;
+    const signinResponse = await fetch(`${authUrl}/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', origin, referer: `${origin}/auth` },
+      body: JSON.stringify({ email, password: secret }),
+    });
+    if (!signinResponse.ok) {
+      const text = await signinResponse.text();
+      console.error(`auth sign-in HTTP_${signinResponse.status}: ${text.slice(0, 300)}`);
+      throw new Error('AUTH_SIGN_IN_FAILED');
+    }
+    const data = await signinResponse.json();
+    const userId = data?.user?.id ?? data?.userId;
     if (typeof userId !== 'string' || !userId) throw new Error('AUTH_SIGN_IN_FAILED');
-    const token = await auth.getJWTToken();
+    // Session token is opaque; exchange it for the JWT the API verifies (JWKS).
+    const cookieHeader = signinResponse.headers.getSetCookie().map((cookie) => cookie.split(';')[0]).join('; ');
+    const tokenResponse = await fetch(`${authUrl}/token`, { headers: { cookie: cookieHeader, origin } });
+    const tokenData = tokenResponse.ok ? await tokenResponse.json() : null;
+    const token = tokenData?.token;
     if (typeof token !== 'string' || !token) throw new Error('AUTH_TOKEN_UNAVAILABLE');
     return { userId, token };
   } finally {
@@ -126,7 +139,9 @@ const auditEvent = auditEvents.find((event) => String(event.reason ?? '').includ
 step('audit event carries facility coordinates for the map hop', typeof auditEvent?.latitude === 'number' && typeof auditEvent?.longitude === 'number');
 
 // 5. Counter correction guard is reachable: no-op must be rejected, never fabricated.
-const noop = await call('POST', `/api/v2/admin/facilities/${fixture.id}/sales-counter`, admin.token, { qualifyingSales: 0, reason: `proof T-07a no-op ${correlationId}` });
+const counterRows = await sql`select coalesce(qualifying_sales, 0)::int as qualifying_sales from v2_facilities where id = ${fixture.id}`;
+const currentSales = Number(counterRows[0]?.qualifying_sales ?? 0);
+const noop = await call('POST', `/api/v2/admin/facilities/${fixture.id}/sales-counter`, admin.token, { qualifyingSales: currentSales, reason: `proof T-07a no-op ${correlationId}` });
 const noopIsReject = noop.status === 409 || (noop.status === 400 && String(noop.body?.error?.message ?? '').length > 0);
 step('counter no-op is rejected (guarded, never fabricated)', noopIsReject, `HTTP_${noop.status}`);
 
