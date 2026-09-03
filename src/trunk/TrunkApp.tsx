@@ -25,6 +25,7 @@ import { SellerScannerModal } from './SellerScannerModal';
 import { DirectInStoreScanSheet } from './DirectInStoreScanSheet';
 import { LiquidSearchDock, type StructuredDemand } from '../components/ui/LiquidSearchDock';
 import { SellerWorkspaceSheet as MaquetteSellerSheet } from '../components/ui/SellerWorkspaceSheet';
+import { AvailSheet as MaquetteAvailSheet } from '../components/ui/BuyerSheet';
 import { LiquidResultCarousel } from '../components/ui/LiquidResultCarousel';
 import { LiquidFacilitySheet } from '../components/ui/LiquidFacilitySheet';
 import { LiquidTransactionRoom, type LiquidTransactionDetails } from '../components/ui/LiquidTransactionRoom';
@@ -2120,7 +2121,38 @@ export function TrunkApp() {
         />
       )}
       {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} evidence={claimEvidence} storageAvailable={claimStorageAvailable} uploadState={claimUploadState} uploadProgress={claimUploadProgress} uploadError={claimUploadError} submitState={claimSubmitState} submitError={claimSubmitError} actionState={claimActionState} actionError={claimActionError} onUpload={(kind, file) => void uploadClaimEvidence(kind, file)} onRemoveEvidence={removeClaimEvidence} onSubmit={submitClaimEvidence} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
-      {panel === 'availability' && <AvailabilitySheet facility={selectedFacility} step={availabilityStep} setStep={setAvailabilityStep} productId={selectedProductId} setProductId={setSelectedProductId} quantity={quantity} setQuantity={setQuantity} budgetMode={budgetMode} setBudgetMode={setBudgetMode} budget={budget} setBudget={setBudget} state={requestState} error={error} result={availability} responseData={responseData} responseState={responseState} responseError={responseError} purchaseIntent={purchaseIntent} purchaseIntentState={purchaseIntentState} purchaseIntentError={purchaseIntentError} buyerQrState={buyerQrState} buyerQrError={buyerQrError} buyerQrResult={buyerQrResult} onIssueBuyerQr={() => void issueBuyerQr()} paymentMethod={paymentMethod} setPaymentMethod={setPaymentMethod} paymentState={paymentState} paymentError={paymentError} transactionState={buyerTransactionState} onDeclarePayment={() => void declareBuyerPayment()} onMarkReceived={() => void markBuyerReceived()} ratingScore={ratingScore} setRatingScore={setRatingScore} ratingNote={ratingNote} setRatingNote={setRatingNote} ratingState={ratingState} ratingError={ratingError} onSubmitRating={() => void submitBuyerRating()} onChooseResponse={(responseId) => void createIntentFromResponse(responseId)} onRefreshResponses={() => void refreshResponses()} chatMessages={transactionMessages} chatState={transactionMessagesState} chatError={transactionMessagesError} chatSending={transactionMessageSending} onRefreshChat={() => void loadTransactionChat(purchaseIntent?.transactionId ?? '')} onSendChat={(body) => void sendTransactionChatMessage(purchaseIntent?.transactionId ?? '', body)} onClose={() => setPanel('facility')} onSubmit={submitAvailability} onShowRoute={showRouteToSelectedFacility} />}
+      {panel === 'availability' && <MaquetteAvailSheet
+  facility={selectedFacility}
+  quantity={quantity}
+  setQuantity={setQuantity}
+  budgetMode={budgetMode}
+  setBudgetMode={setBudgetMode}
+  budget={budget}
+  setBudget={setBudget}
+  state={requestState}
+  error={error}
+  result={availability}
+  responseData={responseData}
+  responseState={responseState}
+  responseError={responseError}
+  purchaseIntent={purchaseIntent}
+  transactionState={buyerTransactionState}
+  buyerQrResult={buyerQrResult}
+  paymentMethod={paymentMethod}
+  setPaymentMethod={setPaymentMethod}
+  paymentState={paymentState}
+  paymentError={paymentError}
+  onIssueBuyerQr={() => void issueBuyerQr()}
+  onDeclarePayment={() => void declareBuyerPayment()}
+  onMarkReceived={() => void markBuyerReceived()}
+  chatMessages={transactionMessages}
+  chatSending={transactionMessageSending}
+  onSendChat={(body) => void sendTransactionChatMessage(purchaseIntent?.transactionId ?? '', body)}
+  onRefreshResponses={() => void refreshResponses()}
+  onChooseResponse={(responseId) => void createIntentFromResponse(responseId)}
+  onClose={() => setPanel('facility')}
+  onSubmit={submitAvailability}
+/>}
       {liquidShowcaseOpen && <LiquidPreviewShowcase onDismiss={() => setLiquidShowcaseOpen(false)} />}
     </main>
   );
