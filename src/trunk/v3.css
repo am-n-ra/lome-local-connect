@@ -1461,3 +1461,153 @@ textarea:focus-visible {
 }
 
 
+
+/* ============================================================================
+   Omni Species Maquette Alignment — Liquid Glass & Modern Monochromes (#2e8b6f)
+   Exact match for accepted design in docs/maquette/omni-species-maquette.html
+   ========================================================================== */
+
+:root {
+  --maquette-bg: #FFFFFF;
+  --maquette-ink: #0F0F0F;
+  --maquette-ink-soft: #6B6B6B;
+  --maquette-line: #E6E6E6;
+  --maquette-panel: #F7F7F7;
+  --maquette-accent: #2E8B6F;
+  --maquette-accent-soft: #EEF4F1;
+  --maquette-pill: #111111;
+  --maquette-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Seller Workspace & Cardbox layout */
+.seller-workspace-sheet {
+  background: var(--maquette-bg);
+  border-top: 1px solid var(--maquette-line);
+  box-shadow: 0 -12px 40px rgba(0,0,0,0.14);
+}
+
+.maquette-cardbox {
+  padding: 12px 14px;
+  border: 1px solid var(--maquette-line);
+  border-radius: 14px;
+  background: #FFFFFF;
+  margin-top: 10px;
+  text-align: left;
+}
+
+.maquette-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 12px 0 6px;
+}
+
+.maquette-stat-tile {
+  background: var(--maquette-panel);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--maquette-line);
+}
+
+.maquette-stat-tile.accent {
+  background: var(--maquette-accent-soft);
+  border-color: rgba(46, 139, 111, 0.2);
+}
+
+.maquette-stat-tile small {
+  font-size: 10px;
+  color: var(--maquette-ink-soft);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.maquette-stat-tile strong {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--maquette-ink);
+  font-family: var(--font-display);
+}
+
+.maquette-stat-tile.accent strong {
+  color: var(--maquette-accent);
+}
+
+.maquette-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.maquette-status-pill.ok {
+  color: #1F5C48;
+  background: var(--maquette-accent-soft);
+}
+
+.maquette-status-pill.ink {
+  color: #FFFFFF;
+  background: var(--maquette-ink);
+}
+
+.maquette-status-pill.gray {
+  color: var(--maquette-ink-soft);
+  background: var(--maquette-panel);
+  border: 1px solid var(--maquette-line);
+}
+
+.maquette-status-pill.dash {
+  color: var(--maquette-ink);
+  background: #FFFFFF;
+  border: 1px dashed var(--maquette-ink);
+}
+
+/* StockEvent ledger drawer */
+.stock-history-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--maquette-line);
+  border-radius: 16px;
+  background: var(--maquette-panel);
+}
+
+.stock-event-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid var(--maquette-line);
+  font-size: 11px;
+}
+
+.stock-event-row:first-of-type {
+  border-top: none;
+}
+
+.stock-event-row span {
+  color: var(--maquette-ink-soft);
+  font-size: 10.5px;
+}
+
+.stock-event-row b {
+  font-weight: 700;
+  color: var(--maquette-ink);
+}
+
+.availability-control select {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--maquette-line);
+  background: #FFF;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--maquette-accent);
+  outline: none;
+}
