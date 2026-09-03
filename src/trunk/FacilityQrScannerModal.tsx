@@ -214,7 +214,7 @@ export function FacilityQrScannerModal(props: {
       <div className="sheet-head">
         <div>
           <span className="section-kicker">Découverte Omni</span>
-          <h2 id="qr-scanner-title" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#1A1C1B' }}>
+          <h2 id="qr-scanner-title" style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0, color: '#0F0F0F' }}>
             Scanner un QR de facilité
           </h2>
         </div>
@@ -223,11 +223,11 @@ export function FacilityQrScannerModal(props: {
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, margin: '14px 0 16px', background: '#EAE8E0', padding: 4, borderRadius: 9999 }}>
+      <div style={{ display: 'flex', gap: 8, margin: '14px 0 16px', background: '#F7F7F7', padding: 4, borderRadius: 9999 }}>
         <button
           type="button"
           className={`role-option ${mode === 'camera' ? 'active' : ''}`}
-          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'camera' ? '#234D40' : 'transparent', color: mode === 'camera' ? '#F9F7F2' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
+          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'camera' ? '#0F0F0F' : 'transparent', color: mode === 'camera' ? '#fff' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
           onClick={() => setMode('camera')}
         >
           <Camera size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Caméra
@@ -235,7 +235,7 @@ export function FacilityQrScannerModal(props: {
         <button
           type="button"
           className={`role-option ${mode === 'upload' ? 'active' : ''}`}
-          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'upload' ? '#234D40' : 'transparent', color: mode === 'upload' ? '#F9F7F2' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
+          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'upload' ? '#0F0F0F' : 'transparent', color: mode === 'upload' ? '#fff' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
           onClick={() => setMode('upload')}
         >
           <Upload size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Fichier
@@ -243,7 +243,7 @@ export function FacilityQrScannerModal(props: {
         <button
           type="button"
           className={`role-option ${mode === 'manual' ? 'active' : ''}`}
-          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'manual' ? '#234D40' : 'transparent', color: mode === 'manual' ? '#F9F7F2' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
+          style={{ flex: 1, padding: '6px 12px', fontSize: 13, border: 0, borderRadius: 9999, background: mode === 'manual' ? '#0F0F0F' : 'transparent', color: mode === 'manual' ? '#fff' : '#1A1C1B', fontWeight: 600, cursor: 'pointer' }}
           onClick={() => setMode('manual')}
         >
           <QrCode size={14} style={{ display: 'inline', verticalAlign: '-2px', marginRight: 4 }} /> Saisie
@@ -280,7 +280,7 @@ export function FacilityQrScannerModal(props: {
       {mode === 'upload' && (
         <div style={{ padding: 24, textAlign: 'center', background: '#F9F7F2', border: '2px dashed #EAE8E0', borderRadius: 18 }}>
           <ImageIcon size={36} color="#234D40" style={{ margin: '0 auto 12px' }} />
-          <p style={{ margin: '0 0 12px', fontSize: 14, color: '#1A1C1B', fontWeight: 600 }}>
+          <p style={{ margin: '0 0 12px', fontSize: 14, color: '#0F0F0F', fontWeight: 600 }}>
             Déposez ou sélectionnez une photo du QR code
           </p>
           <label className="primary-button omni-pressable" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '10px 18px' }}>
@@ -292,7 +292,7 @@ export function FacilityQrScannerModal(props: {
 
       {mode === 'manual' && (
         <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#1A1C1B' }}>
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#0F0F0F' }}>
             Lien ou Identifiant de la facilité
             <input
               type="text"
