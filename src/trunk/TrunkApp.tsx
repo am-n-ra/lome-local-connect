@@ -2252,14 +2252,14 @@ function AuthSheet(props: { mode: AuthMode; setMode: (mode: AuthMode) => void; e
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
-              onClick={() => setDemoAccount('buyer1@omni.test', 'Password123!', 'Acheteur Test')}
+              onClick={() => setDemoAccount('demo@buyer.omni', 'Omni@2026', 'Acheteur Démo')}
               className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white border border-emerald-200 text-[#234D40] hover:bg-emerald-100/50 transition-all shadow-xs"
             >
               👤 Acheteur
             </button>
             <button
               type="button"
-              onClick={() => setDemoAccount('seller1@omni.test', 'Password123!', 'Kossi Électronique')}
+              onClick={() => setDemoAccount('demo@seller.omni', 'Omni@2026', 'Vendeur Démo')}
               className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white border border-emerald-200 text-[#234D40] hover:bg-emerald-100/50 transition-all shadow-xs"
             >
               🏪 Vendeur Lomé
