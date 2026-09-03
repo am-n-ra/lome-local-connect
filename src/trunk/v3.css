@@ -1611,3 +1611,130 @@ textarea:focus-visible {
   color: var(--maquette-accent);
   outline: none;
 }
+
+/* ============================================================================
+   Buyer Species Maquette Components (B01-B20)
+   Floating search dock, 3-icon bottom navigation, liquid-glass cards & sheets
+   ========================================================================== */
+
+/* Floating Search Bar */
+.buyer-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--maquette-line);
+  padding: 0 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.buyer-search-bar input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--maquette-ink);
+  font-weight: 500;
+}
+
+.buyer-search-bar input::placeholder {
+  color: var(--maquette-ink-soft);
+}
+
+/* Category Filter Chips */
+.buyer-chips-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 2px;
+}
+
+.buyer-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #FFFFFF;
+  border: 1px solid var(--maquette-line);
+  color: var(--maquette-ink-soft);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.15s var(--maquette-ease);
+}
+
+.buyer-chip.active {
+  background: var(--maquette-ink);
+  color: #FFFFFF;
+  border-color: var(--maquette-ink);
+}
+
+/* 3-Icon Bottom Floating Dock */
+.buyer-floating-dock {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(17, 17, 17, 0.92);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  z-index: 40;
+}
+
+.buyer-dock-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  transition: 0.15s ease;
+  border: none;
+  background: none;
+}
+
+.buyer-dock-btn.active,
+.buyer-dock-btn:hover {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.buyer-dock-btn.accent {
+  background: var(--maquette-accent);
+  color: #FFFFFF;
+}
+
+/* Results & Horizontal Grid */
+.buyer-results-grid {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding: 8px 0 16px;
+  scrollbar-width: none;
+}
+
+.buyer-facility-card {
+  min-width: 240px;
+  max-width: 280px;
+  scroll-snap-align: start;
+  border: 1px solid var(--maquette-line);
+  border-radius: 16px;
+  background: #FFFFFF;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
