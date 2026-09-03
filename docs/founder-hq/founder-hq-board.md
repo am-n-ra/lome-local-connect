@@ -1,13 +1,13 @@
 # Founder HQ Board — Omni
 
-**As of:** 2026-09-02 (UTC)  
+**As of:** 2026-09-03 (UTC)  
 **Plan:** `HQ-OMNI-2026-09-02` (`docs/founder-hq/founder-hq-master-plan.md`)  
 **Supersedes:** `v2-founder-hq.md` (2026-08-25) as the operating index. That file is kept as history.
 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
-| Active milestone | M-01: pilot-ready V1 loop derived from `OMNI — MASTER V1`. Seed confirmed 2026-09-02. Rebuild order fixed by the founder: **Admin/team ops → Seller → Buyer**, then a seller + buyer + team operator prove the loop. | Confirmed Intent Brief; HQ Master Plan | Gate 1 `done`; Gate 2 Species — `in_progress` (G-02a audit ready) | Founder + Nature Way | Nature Way audits existing maquettes, then presents the Admin/operator set for acceptance. | Do not resume PR 2–6 of `OMNI-V3-MASTER-PLAN.md`; no code until Species and Root pass. |
-| Product proof | Repository has a real Root/Trunk: 12 Neon migrations, server authority + ledger, availability request/response, purchase intent, QR issuance/verification, external payment declarations, wallet + FedaPay adapter, transaction messages, admin role. Claims of "155 tests green" and production READY are from 2026-08-29 docs; re-verification in progress this session. | `db/migrations/*`, `src/server/*`, `src/trunk/*`, `OMNI-V3-MASTER-PLAN.md §5` | `bounded / inherited; not re-accepted` | Nature Way | Reconcile code model against Master V1 ontology (SDM). | Existing code is evidence to inspect, not proof a gate passed. |
+| Active milestone | M-01: pilot-ready V1 loop derived from `OMNI — MASTER V1`. Seed confirmed 2026-09-02. Rebuild order fixed by the founder: **Admin/team ops → Seller → Buyer**, then a seller + buyer + team operator prove the loop. | Confirmed Intent Brief; HQ Master Plan | Gate 1–3 `done`; **Gate 4 Trunk — `active`** | Founder + Nature Way | Nature Way (HO-OMNI-04) identifies the founder's maquette artifact (accepted unified maquette vs new) and returns the Trunk execution sequence + proof plan. | Do not resume PR 2–6 of `OMNI-V3-MASTER-PLAN.md` beyond Trunk slices; a NEW founder maquette reopens Species before Trunk inherits from it. |
+| Product proof | Root applied: `038_v2_g03_root_gaps.sql` on Neon (founder, 2026-09-02, manual proof). Trunk: seller availability loop + stock events proven locally; **274/274 tests pass @ `deb5072` (observed 2026-09-03)**; SearchDock maquette-aligned rewrite @ `deb5072` (current HEAD). **Prod deploy current: `omni.sparkafrika.online` hash `index-DzG1YV4e.js` === local build (observed 2026-09-03) — 2026-09-02 stale-deploy blocker resolved.** | `db/migrations/038_*`, `src/server/*`, `src/trunk/*`, git `omni-v2-rebuild` | `in progress — Trunk slices Admin → Seller → Buyer` | Nature Way | T-07a: Admin slice inventory vs accepted A1–A8 maquette, close gaps, prove slice. | Existing code is evidence to inspect; slice proofs not yet recorded. |
 | Customer / commercial | Lomé field pilot intended; no live customer transaction evidence in repo beyond demo/bounded fixtures. | `v2-field-pilot-*.md`, `docs/omni-production-walkthrough-2026-08-27.md` | `unproven` | Founder | None until Trunk proof. | Do not present demo seed as marketplace traction. |
 | Capital / runway | Not in scope; no capital process active. | — | `inactive` | Founder | — | — |
 | Opportunity pipeline | None active. | — | `inactive` | — | — | — |
@@ -20,5 +20,7 @@ Only `omni-v2-rebuild` is touched. Never merge to `main`. "Merge" = "push prod b
 
 ## Current gate
 
-> **Gate 1 — closed** (founder confirmation 2026-09-02).  
-> **Gate 2 — Species — open.** Order of acceptance: Admin/operator → Seller → Buyer. G-02a audit `done`; G-02b Admin/operator maquette set **ACCEPTED (founder 2026-09-02)**; **active: G-02c Seller maquette dispatched to Nature Way.** Branch rule locked (see above). Root and Trunk stay planned; no code is authorized.
+> **Gate 1 — closed** (founder confirmation 2026-09-02).
+> **Gate 2 — Species — closed** (G-02a audit; G-02b/c/d all accepted 2026-09-02; unified master `docs/maquette/omni-species-maquette.html`).
+> **Gate 3 — Root — closed** (inspection `omni-root-inspection-G03-2026-09-02.md`; `038_v2_g03_root_gaps.sql` applied on Neon by founder).
+> **Gate 4 — Trunk — open.** Order Admin → Seller → Buyer, each slice proven before the next. Founder request 2026-09-03 (« développer la V1 », maquette de placement) dispatched to Nature Way as `HO-OMNI-04`. Branch rule locked (see above). Canopy/Rings stay planned.

@@ -1,9 +1,9 @@
-# Intra-Skill Plan — `/nature-way` — Omni Gate 1 (Seed reconciliation + SDM) → Gate 2 (Species)
+# Intra-Skill Plan — `/nature-way` — Omni Gate 1 (Seed reconciliation + SDM) → Gate 4 (Trunk)
 
 > **Plan ID:** `NW-PROD-OMNI-01`  
-> **Handoff ID:** `HO-OMNI-01` (from `docs/founder-hq/handoff-receipt-HO-OMNI-01.md`)  
-> **As of:** 2026-09-02 (UTC)  
-> **Gate owned:** Seed reconciliation + System Dependency Map (closed 2026-09-02) → Species (active, handoff `HO-OMNI-02`)  
+> **Handoff ID:** `HO-OMNI-01` (from `docs/founder-hq/handoff-receipt-HO-OMNI-01.md`); active handoff `HO-OMNI-04` (from `docs/founder-hq/handoff-receipt-HO-OMNI-04.md`)  
+> **As of:** 2026-09-03 (UTC)  
+> **Gate owned:** Seed (closed) → Species (closed 2026-09-02) → Root (closed 2026-09-02) → **Trunk (active, handoff `HO-OMNI-04`)**  
 > **Return to:** Founder HQ (`docs/founder-hq/founder-hq-master-plan.md`)
 
 ## Resource Receipt
@@ -30,7 +30,7 @@
 | 2 | Build SDM from repository evidence | Every V1 loop capability has an edge with status and proof | `omni-system-dependency-map-2026-09-02.md` | `done` |
 | 3 | Diagnose phase and orphaned leaves | Phase named; stale plan rows identified | SDM "Phase diagnosis" + "Existing-surface rescue" | `done` |
 | 4 | Founder confirmation of Seed | Founder confirms brief and decides D-01…D-07 | Founder reply recorded in Intent Brief "Founder confirmation" | `done` (2026-09-02) |
-| 5 | **Species — Gate 2** | Founder accepts maquette sets in order Admin/operator → Seller → Buyer; design system locked | Audit table + accepted sets | `active` |
+| 5 | **Trunk — Gate 4** | Locked order Admin → Seller → Buyer; each slice inventoried vs accepted maquette, gaps closed, proven (API + browser, 4 widths) before the next starts; integrated proof with one real seller + one non-team buyer + one team operator | Per-slice gap table + proof record | `active` |
 
 ## Task tree
 
@@ -40,13 +40,17 @@
 | T-02 | Gate 1 | Inspect repo schema, API, server, trunk; re-run tests | — | `done` | SDM evidence basis |
 | T-03 | Gate 1 | Cross-source contradiction table D-01…D-07 | T-01, T-02 | `done` | Intent Brief table |
 | T-04 | Gate 1 | Founder decisions | T-03 | `done` | Intent Brief § Founder confirmation |
-| T-05 | Gate 2 | Audit existing `docs/omni-species-*` + `docs/maquette` vs MV1 §75–77 and D-01…D-06: keep / revise / reject per screen; list missing admin screens | T-04 | `done` | `docs/nature-way/omni-species-audit-G02a-2026-09-02.md` — buyer/seller keep-with-revisions; admin stubs rejected; missing admin set is the gap |
-| T-05a | Gate 2 | Admin/operator maquette set: role management, claim/verification review, trust + operational state transitions, operator field runs, audit views; obeys R-01 (bottom simple control panel), R-02 (simple/direct first visit), R-03 (map-contextual actions) | T-05 | `ready` (pending founder acceptance) | `docs/nature-way/omni-admin-operator-maquette-set-G02b-2026-09-02.md` + `docs/maquette/omni-admin-operator-maquette.html` |
-| T-05b | Gate 2 | Seller maquette set: company/facility onboarding + claim, Offer editor (discount, allocation), StockEvent history, availability inbox + auto-reply setting, QR verification, payment/fulfilment, wallet + per-facility Pro | T-05a | `planned` | Founder acceptance |
-| T-05c | Gate 2 | Buyer maquette set: map, constraint search, facility sheet with trust label + open/closed, availability request (credits), intent, QR, delayed contact/itinerary, payment declaration, fulfilment, rating | T-05b | `planned` | Founder acceptance |
-| T-06 | Gate 3 (planned) | Root contracts: trust label derivation + operational state, Offer naming, StockEvent ledger, auto-availability rule, 4 h/24 h freshness, per-facility entitlements, per-account credits; non-destructive migration plan | T-05c | `planned` | — |
-| T-07 | Gate 4 (planned) | Trunk in order Admin → Seller → Buyer; each slice proven before the next | T-06 | `planned` | — |
-| T-08 | Gate 4 (planned) | Integrated proof: one real seller + one non-team buyer + one team operator complete the loop flawlessly | T-07 | `planned` | Proof record |
+| T-05 | Gate 2 | Audit existing `docs/omni-species-*` + `docs/maquette` vs MV1 §75–77 and D-01…D-06: keep / revise / reject per screen; list missing admin screens | T-04 | `done` | `docs/nature-way/omni-species-audit-G02a-2026-09-02.md` |
+| T-05a | Gate 2 | Admin/operator maquette set | T-05 | `done` (accepted 2026-09-02) | `docs/nature-way/omni-admin-operator-maquette-set-G02b-2026-09-02.md` + unified `docs/maquette/omni-species-maquette.html` |
+| T-05b | Gate 2 | Seller maquette set | T-05a | `done` (accepted 2026-09-02) | `docs/nature-way/omni-seller-maquette-set-G02c-2026-09-02.md` |
+| T-05c | Gate 2 | Buyer maquette set | T-05b | `done` (accepted 2026-09-02) | `docs/nature-way/omni-b02-buyer-audit-G02d-2026-09-02.md` |
+| T-06 | Gate 3 | Root contracts: availability state + freshness (RG-1), StockEvent ledger (RG-2), saved searches (RG-3), claim requests ported to v2 (S1); non-destructive migration | T-05c | `done` | Inspection `omni-root-inspection-G03-2026-09-02.md`; `038_v2_g03_root_gaps.sql` applied on Neon by founder 2026-09-02 (manual proof class) |
+| T-07 | Gate 4 | Trunk in order Admin → Seller → Buyer; each slice proven before the next | T-06 | `in_progress` | See T-07a–T-07d |
+| T-07a | T-07 | **Admin slice** — inventory current `admin.tsx`/role-pill surfaces vs accepted A1–A8 set (console équipe, file de revue, confiance + état opérationnel, activation/suspension, rôles, correction compteur, sorties opérateur, audit); close gaps; prove slice (API + browser, 320/375/768/1280) | T-06 | `ready` | Gap table + proof record |
+| T-07b | T-07 | **Seller slice** — onboarding/claim (S1 ported), Offer editor (discount/allocation), availability setter + freshness expiry (proven @ `2d4b487`), availability inbox + auto-reply, StockEvent history (S5, proven @ `2d4b487`), wallet/Pro, QR verification, fulfilment side, chat | T-07a | `planned` | Gap table + proof record |
+| T-07c | T-07 | **Buyer slice** — map + constraint search (SearchDock rewritten @ `deb5072`), saved searches (RG-3), availability request w/ per-account credits, intent, QR issuance, delayed contact/itinerary, payment declaration, fulfilment, rating, chat | T-07b | `planned` | Gap table + proof record |
+| T-07d | T-07 | **Deploy freshness guardrail** — prod bundle hash must match `omni-v2-rebuild` HEAD build before any slice proof is recorded as prod-verified | T-07 (parallel guardrail) | `done` (2026-09-03) | Prod `index-DzG1YV4e.js` === local build hash at `deb5072` (observed, this session) |
+| T-08 | Gate 4 | Integrated proof: one real seller + one non-team buyer + one team operator complete `offer → availability → intent → QR → payment → fulfilment → StockEvent → qualifying_sales` flawlessly | T-07a–T-07c | `planned` | Proof record |
 
 ## Reconciliation log
 
@@ -66,6 +70,7 @@
 | 2026-09-02 | Founder added **contextual micro-details**: horizontal result grid; search dock compact at first; green accent softened; facilities/products visuals; unclaimed facilities; back rule; comparison + bulk; role-contextual plans; role-scoped search. | Maquette rebuilt with all of the above (accent `#2e8b6f`). Verified. | — |
 | 2026-09-02 | Founder said **"accept but…"**: **transaction chat not properly represented**; **"verify availability" button not properly designed/responsive**; **result-grid sheet rises too high** (sheet heights must be contextual); **universal back to previous screen/sheet from anywhere, unless specifically locked (transaction)**; **spaces must be role-contextual** (Buyer ≠ Seller ≠ Admin). | Maquette rebuilt: CHAT sheet, consistent responsive buttons, contextual sheet heights, universal back via history stack, role-contextual homes. Verified. | — |
 | 2026-09-02 | Founder **refined the transaction flow & polish**: (1) **nothing overlays the bottom navigation dock**; (2) **transaction QR is the gateway** — the transaction room (chat + QR inside it) is where QR-verified → choose payment → tracking (state from intent → rating) happens; **only in there is there no backing off** (cancel/advance only); (3) **scrollbars hidden** (right-side scroll lines unaesthetic); (4) **modern icons** (SVG line icons, not unicode stickers), aligned with Omni V1 master. | Maquette rebuilt: single **TXN room sheet** (state-tracking timeline intent→rating + transaction chat + QR/payment advance), dock shows ✕ Annuler / ▦ QR / ≡ Menu inside the locked flow (no ‹). Scrollbars hidden (scrollbar-width:none, ::-webkit-scrollbar none). All nav/menu icons converted to inline SVG line icons. Verified in browser (pin → facility → select → availability → intent → TXN room with cancel/QR/menu dock). Pushed `omni-v2-rebuild`, opened PR → `main`. | G-02b pending founder visual acceptance of refined maquette. |
+| 2026-09-03 | HO-OMNI-04 (founder: « développer la V1 », maquette de placement). Evidence this session: `npm ci` + `npm test` → **44 files / 274 tests pass at `deb5072`** (observed); `npm run build` → `index-DzG1YV4e.js`; prod `omni.sparkafrika.online` serves **the same hash** → 2026-09-02 stale-deploy blocker **resolved**. `.fld` confirmed in `docs/design.md` vocabulary (l.61). | T-05a/b/c, T-06 → `done`; T-07 split into T-07a (Admin), T-07b (Seller), T-07c (Buyer), T-07d (deploy freshness guardrail, `done`); T-07a `ready`, T-07b/c `planned`. Plan header moved to Gate 4. | Trunk proceeds on the accepted unified maquette as visual authority. If the founder's mentioned maquette is a NEW artifact, Species reopens for audit before further Trunk inheritance. |
 
 ## Return handoff to Founder HQ (G-02a + G-02b pass, 2026-09-02)
 
@@ -102,3 +107,18 @@
 5. **D-04 Free vs paid** — Confirm: free = single-facility availability checks unlimited + 3 bulk operations/month; Buyer Pro $5 = bulk credits; Seller Pro $10 = auto-reply + >5 offers; facility slots purchasable; $20 credit locked until confirmed.
 6. **D-05 Auth boundary** — Confirm: anyone can browse the map and tap pins; constraint search, availability, scan-to-buy require an account; the query is preserved through auth + onboarding.
 7. **First proof** — Do you accept the proposed first truthful chain (one real Lomé seller + one non-team buyer completing availability → QR → external payment → fulfilment → stock event) as the Trunk milestone, before any v3 re-skin?
+
+## Return handoff to Founder HQ (G-04 Trunk diagnosis pass, 2026-09-03)
+
+| Field | Value |
+|---|---|
+| HQ plan ID | `HQ-OMNI-2026-09-02` |
+| Local plan ID | `NW-PROD-OMNI-01` |
+| Active gate | Gate 4 — Trunk (locked order Admin → Seller → Buyer) |
+| Closed/open/blocked/deferred | T-06 (Root) `done`; T-07d (deploy guardrail) `done`; T-07a (Admin slice inventory + proof) `ready`; T-07b/c, T-08 `planned`. Nothing `blocked`. |
+| Resource Receipt | Loaded: `nature-way/SKILL.md`; `nature-way/references/execution-controller.md`; `nature-way/references/intra-skill-execution-controller.md` (HQ copy); HQ `references/ecosystem-orchestration-protocol.md`. Template reconciled (not recreated): `templates/intra-skill-plan.md` → this file. Not loaded / reason: `autonomous-delivery-gates.md`, `proof-and-decision-ledger.md`, `launch-envelope.md`, `technical-lead-production-review.md`, `visual-and-logic-coherence-review.md` — required at slice-proof/maturity/release claims, not for this diagnosis pass; they will be loaded before T-07a proof and any T-08/release claim. |
+| Evidence (as-of 2026-09-03) | `npm test` 44 files / 274 tests pass @ `deb5072` (observed this session); build hash `index-DzG1YV4e.js` local === prod (observed this session) → prod deploy current with `omni-v2-rebuild` HEAD; Species closed via accepted unified maquette `docs/maquette/omni-species-maquette.html`; Root `038_v2_g03_root_gaps.sql` applied by founder on Neon (manual proof class). |
+| Residual gap | Per-slice Trunk truth vs accepted maquette is not yet inventoried (Admin first). Species-vs-Trunk coherence review not yet run on the Trunk app. Integrated proof (T-08) not started. Prod API re-verification of the G-04 routes (8ef1400-era checks) to be re-run during slice proofs. |
+| Decision needed from founder | Confirm the maquette of the 2026-09-03 message is the accepted unified `docs/maquette/omni-species-maquette.html`. If it is a NEW artifact, Species reopens (audit before Trunk inherits from it). Default until answered: proceed on the accepted maquette. |
+| Owner / next smallest action | Nature Way: T-07a — inventory current Admin surfaces (`admin.tsx`, role pill, sheets) against the accepted A1–A8 set and R-01/R-02/R-03; produce the Admin gap table; then close gaps and prove the slice (API + browser at 320/375/768/1280). No Buyer/Seller expansion before the Admin slice proof. |
+| Re-plan trigger | Founder declares a new maquette (Species re-audit); a slice proof fails; a D-01…D-07 decision reopens; prod hash diverges from HEAD again. |
