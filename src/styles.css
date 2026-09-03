@@ -202,7 +202,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .options-actions .primary-button { margin-top: 0; }
 
 .sheet-backdrop { position: absolute; z-index: 10; inset: 0; background: rgba(0,0,0,0.15); backdrop-filter: none; animation: fade-in .18s var(--ease); }
-.omni-sheet { position: absolute; z-index: 50; bottom: 0; left: 50%; display: flex; flex-direction: column; width: min(100%, 520px); max-height: min(88dvh, 720px); overflow: auto; transform: translateX(-50%); padding: 13px 17px max(60px, var(--safe-bottom)); border: 1px solid rgba(255,255,255,.96); border-bottom: 0; border-radius: 30px 30px 0 0; color: var(--ink); background: #FFFFFF; box-shadow: 0 -12px 40px rgba(0,0,0,0.14); backdrop-filter: none; animation: sheet-in .28s var(--ease); }
+.omni-sheet { position: absolute; z-index: 50; bottom: 0; left: 50%; display: flex; flex-direction: column; width: min(100%, 520px); max-height: min(88dvh, 720px); overflow: auto; transform: translateX(-50%); padding: 13px 17px max(70px, var(--safe-bottom)); border: 1px solid rgba(255,255,255,.96); border-bottom: 0; border-radius: 30px 30px 0 0; color: var(--ink); background: #FFFFFF; box-shadow: 0 -12px 40px rgba(0,0,0,0.14); backdrop-filter: none; animation: sheet-in .28s var(--ease); }
 .sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .sheet-head > button:last-child { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; color: var(--ink-soft); background: #eef4f0; }
 .sheet-head h2 { margin: 0; color: var(--ink); font-size: clamp(20px, 5vw, 28px); letter-spacing: -.06em; line-height: 1.04; }
