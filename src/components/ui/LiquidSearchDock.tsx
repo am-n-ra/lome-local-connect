@@ -145,31 +145,23 @@ export function LiquidSearchDock({
       {/* Barre de recherche Liquid Morphism pur type iOS (sans rectangle interne délimité) */}
       <form
         onSubmit={handleSubmit}
-        className="w-full bg-[#FAF8F5]/85 backdrop-blur-2xl border border-white/60 shadow-[0_16px_40px_rgba(0,0,0,0.08)] rounded-full px-4 py-2 flex items-center gap-3 transition-all duration-300 focus-within:bg-white/95 focus-within:shadow-[0_20px_50px_rgba(0,0,0,0.12)]"
+        className="w-full bg-white/95 backdrop-blur-xl border border-[#e6e6e6] shadow-[0_8px_24px_rgba(0,0,0,0.06)] rounded-full px-3 py-1.5 flex items-center gap-2.5 transition-all duration-200 focus-within:border-[#0f0f0f] focus-within:shadow-[0_12px_32px_rgba(0,0,0,0.1)]"
       >
-        {/* Bouton recherche réel à gauche */}
-        <button
-          type="submit"
-          disabled={isSearching || !query.trim()}
-          className="w-9 h-9 rounded-full bg-[#234D40] text-white flex items-center justify-center shadow-xs transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 flex-shrink-0"
-          title="Lancer la recherche"
-          aria-label="Rechercher"
-        >
+        <div className="w-7 h-7 flex items-center justify-center text-[#0f0f0f] flex-shrink-0">
           {isSearching ? (
-            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-[#0f0f0f] rounded-full animate-spin" />
           ) : (
             <Search className="w-4 h-4" />
           )}
-        </button>
+        </div>
 
-        {/* Champ de saisie fluide sans bordure rectangulaire interne */}
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Que cherchez-vous à proximité..."
-          className="flex-1 bg-transparent text-sm font-medium text-[#1A1C1B] placeholder:text-black/40 outline-none"
+          placeholder="Produit, service, commerce…"
+          className="flex-1 bg-transparent text-xs font-semibold text-[#0f0f0f] placeholder:text-[#6b6b6b] placeholder:font-normal outline-none"
         />
 
         {query && (
@@ -179,35 +171,40 @@ export function LiquidSearchDock({
               setQuery('');
               inputRef.current?.focus();
             }}
-            className="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-black/40 hover:text-black transition-colors flex-shrink-0"
+            className="w-5 h-5 rounded-full hover:bg-black/5 flex items-center justify-center text-black/40 hover:text-black transition-colors flex-shrink-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </button>
         )}
 
-        <div className="h-5 w-px bg-black/10 flex-shrink-0" />
+        <button
+          type="submit"
+          disabled={isSearching || !query.trim()}
+          className="px-3 h-7 rounded-full bg-[#0f0f0f] text-white text-[11px] font-bold flex items-center justify-center shadow-xs transition-all hover:bg-black active:scale-95 disabled:opacity-40 flex-shrink-0"
+          title="Lancer la recherche"
+        >
+          →
+        </button>
 
-        {/* Bouton filtres avancés */}
         <button
           type="button"
           onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-            showAdvanced ? 'bg-[#234D40] text-white' : 'hover:bg-black/5 text-black/60'
+          className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+            showAdvanced ? 'bg-[#0f0f0f] text-white' : 'hover:bg-black/5 text-[#6b6b6b]'
           }`}
-          title="Filtres"
+          title="Contraintes"
         >
-          <SlidersHorizontal className="w-4 h-4" />
+          <SlidersHorizontal className="w-3.5 h-3.5" />
         </button>
 
-        {/* Bouton QR Code épuré */}
         {onScanQr && (
           <button
             type="button"
             onClick={onScanQr}
-            className="w-9 h-9 rounded-full bg-black/5 hover:bg-black/10 flex items-center justify-center text-[#234D40] transition-all flex-shrink-0 active:scale-95"
+            className="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-[#0f0f0f] transition-all flex-shrink-0 active:scale-95"
             title="Scanner un QR code"
           >
-            <QrCode className="w-4 h-4" />
+            <QrCode className="w-3.5 h-3.5" />
           </button>
         )}
       </form>

@@ -1925,19 +1925,19 @@ export function TrunkApp() {
     <main ref={appRef} className={`omni-stage-viewport ${mainClass}`} data-auth={authClient ? 'configured' : 'missing'}>
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
-      {/* Barre supérieure Apple Cream Glass / Liquid Glass */}
-      <header className="fixed top-4 inset-x-0 z-30 flex items-center justify-between px-4 max-w-5xl mx-auto pointer-events-none">
-        {/* Switch Acheter / Vendre (En haut à gauche - Capsule Cream Glass) */}
-        <div className="pointer-events-auto bg-[#FAF8F5]/90 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] rounded-full p-1 flex items-center transition-all">
-          <div className="flex items-center p-0.5 rounded-full bg-black/[0.03]">
+      {/* Barre supérieure Maquette (.rolepill & Menu Verre Liquide) */}
+      <header className="fixed top-3.5 inset-x-0 z-30 flex items-center justify-between px-4 max-w-5xl mx-auto pointer-events-none">
+        {/* Switch Acheter / Vendre Maquette */}
+        <div className="pointer-events-auto bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 flex items-center transition-all">
+          <div className="flex items-center gap-0.5">
             <button
               id="switch-buy-tab"
               type="button"
               onClick={() => { setMenuOpen(false); setOptionsOpen(false); setPanel('none'); }}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+              className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
                 panel !== 'seller-entry'
-                  ? 'bg-[#234D40] text-white shadow-xs'
-                  : 'text-black/60 hover:text-black'
+                  ? 'bg-[#0f0f0f] text-white shadow-xs'
+                  : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
               }`}
             >
               Acheter
@@ -1946,10 +1946,10 @@ export function TrunkApp() {
               id="switch-sell-tab"
               type="button"
               onClick={openSellerEntry}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+              className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
                 panel === 'seller-entry'
-                  ? 'bg-[#234D40] text-white shadow-xs'
-                  : 'text-black/60 hover:text-black'
+                  ? 'bg-[#0f0f0f] text-white shadow-xs'
+                  : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
               }`}
             >
               Vendre
@@ -1957,22 +1957,22 @@ export function TrunkApp() {
           </div>
         </div>
 
-        {/* Menu (En haut à droite - Bouton discret contenant connexion et options) */}
+        {/* Menu Maquette */}
         <div className="pointer-events-auto flex items-center gap-2">
           <button
             id="omni-main-menu-btn"
             type="button"
             onClick={() => { setMenuOpen((open) => !open); setOptionsOpen(false); }}
-            className="w-10 h-10 rounded-full bg-[#FAF8F5]/90 backdrop-blur-2xl border border-white/80 shadow-[0_8px_24px_rgba(0,0,0,0.06)] flex items-center justify-center font-bold text-xs text-[#234D40] hover:bg-white transition-all active:scale-95"
+            className="w-8 h-8 rounded-full bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] flex items-center justify-center font-bold text-xs text-[#0f0f0f] hover:bg-white transition-all active:scale-95"
             aria-label="Menu Omni"
             title="Menu Omni"
           >
             {sessionUser ? (
-              <span className="w-7 h-7 rounded-full bg-[#234D40] text-white flex items-center justify-center text-[10px] font-bold">
+              <span className="w-6 h-6 rounded-full bg-[#0f0f0f] text-white flex items-center justify-center text-[9px] font-extrabold">
                 {sessionUser.name?.slice(0, 2).toUpperCase() || 'OM'}
               </span>
             ) : (
-              <Menu className="w-4 h-4 text-[#234D40]" />
+              <Menu className="w-3.5 h-3.5 text-[#0f0f0f]" />
             )}
           </button>
         </div>
