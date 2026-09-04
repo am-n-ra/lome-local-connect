@@ -1,7 +1,7 @@
 import { FormEvent, Suspense, forwardRef, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, Menu, PackageSearch, QrCode, Search, ShieldCheck, User, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { setProductAvailability, getProductStockEvents, listSavedSearches, deleteSavedSearch } from './api';
+import { setProductAvailability, getProductStockEvents, listSavedSearches, deleteSavedSearch, createSavedSearch } from './api';
 import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAccountCapabilities, getAvailabilityResponses, getTransaction, getTransactionMessages, sendTransactionMessage, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerActivationQueue, getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, createWalletRecharge, activateFacilityPro, createSellerProductDraft, createSellerFacility, updateSellerProductDraft, transitionSellerProduct, importPublicFacility, importPublicFacilityBatch, issueBuyerQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, activateSellerAccount, setSellerAccountSuspension, submitFacilityClaim, submitTransactionRating, transitionTransaction, uploadFacilityEvidence, verifyQrToken, getRoleManagementAccounts, setManagedStaffRole, getAdminConsole, listAdminAuditEvents, setFacilityOperationalState, correctFacilitySalesCounter } from './api';
 const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) => ({ default: Component })));
 import { TransactionQrCard } from './TransactionQrCard';
@@ -128,6 +128,8 @@ export function TrunkApp() {
   const [savedSearchesState, setSavedSearchesState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [savedSearchesError, setSavedSearchesError] = useState('');
   const [savedSearchDeletingId, setSavedSearchDeletingId] = useState<string | null>(null);
+  const [saveCurrentState, setSaveCurrentState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [saveCurrentError, setSaveCurrentError] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
   const [liquidShowcaseOpen, setLiquidShowcaseOpen] = useState(false);
@@ -543,6 +545,39 @@ export function TrunkApp() {
     } catch (caught) {
       setSavedSearchesError(caught instanceof Error ? caught.message : 'Cette recherche n’a pas pu être supprimée.');
       setSavedSearchDeletingId(null);
+    }
+  };
+
+  const saveCurrentSearch = async () => {
+    const queryToSave = query.trim() || committedQuery.trim();
+    if (!queryToSave) return;
+    if (!sessionUser) {
+      openAuth('sign-in', 'none');
+      return;
+    }
+    setSaveCurrentState('loading');
+    setSaveCurrentError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSaveCurrentState('error');
+        setSaveCurrentError('Votre session doit être réouverte pour enregistrer cette recherche.');
+        return;
+      }
+      const constraints: Record<string, unknown> = {};
+      if (budgetMode === 'maximum' && Number(budget) > 0) constraints.maxPrice = Number(budget);
+      const radiusValue = Number(rayon);
+      if (Number.isFinite(radiusValue) && radiusValue > 0) constraints.radiusKm = radiusValue;
+      const result = await createSavedSearch({ token, query: queryToSave, constraints });
+      if (!result.ok || !result.data) {
+        setSaveCurrentState('error');
+        setSaveCurrentError(result.error?.message ?? 'Cette recherche n’a pas pu être enregistrée.');
+        return;
+      }
+      setSaveCurrentState('success');
+    } catch (caught) {
+      setSaveCurrentState('error');
+      setSaveCurrentError(caught instanceof Error ? caught.message : 'Cette recherche n’a pas pu être enregistrée.');
     }
   };
 
@@ -2257,6 +2292,27 @@ export function TrunkApp() {
             }}
             onScanQr={() => setPanel('qr-scan')}
           />
+          {sessionUser && (
+            <div style={{ marginTop: 10 }}>
+              {saveCurrentState === 'success' ? (
+                <div className="seller-response-success" role="status">
+                  <CheckCircle2 size={18} />
+                  <div><strong>Recherche enregistrée</strong><p>Retrouvez-la dans Espace Buyer → Alertes.</p></div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className="secondary-button wide omni-pressable"
+                  aria-busy={saveCurrentState === 'loading'}
+                  disabled={saveCurrentState === 'loading' || !(query.trim() || committedQuery.trim())}
+                  onClick={() => void saveCurrentSearch()}
+                >
+                  {saveCurrentState === 'loading' ? 'Enregistrement…' : '+ Enregistrer la recherche courante'}
+                </button>
+              )}
+              {saveCurrentState === 'error' && <div className="inline-error" role="alert">{saveCurrentError}</div>}
+            </div>
+          )}
         </section>
       )}
 
