@@ -1893,7 +1893,48 @@ textarea:focus-visible {
   cursor: pointer;
 }
 
-/* Maquette V1.1 constraintZone — chips pleines avec pastille d'état (dot) */
+/* Maquette V1.1 roleswitch — sliding indicator behind active role */
+.omni-roleswitch {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #e8e8e6;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(15, 15, 15, 0.08);
+  white-space: nowrap;
+}
+.omni-role-ind {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  border-radius: 999px;
+  background: #0f0f0f;
+  transition: transform 0.28s cubic-bezier(0.23, 1, 0.32, 1), width 0.28s cubic-bezier(0.23, 1, 0.32, 1);
+  z-index: 0;
+}
+.omni-role-btn {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: none;
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #6b6b6b;
+  transition: color 0.2s var(--ease);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.omni-role-btn.on {
+  color: #fff;
+}
 .searchdock .constraintZone { margin-top: 9px; }
 .searchdock .constraintLabel { font-size: 10px; font-weight: 700; color: #6b6b6b; margin-bottom: 6px; text-transform: none; }
 .searchdock .chips { display: flex; flex-wrap: wrap; gap: 6px; }

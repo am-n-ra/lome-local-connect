@@ -89,6 +89,18 @@ export function TrunkApp() {
   // Itinéraire in-app (écran 10): cible du tracé Evergreen affiché sur la carte.
   const [routeTarget, setRouteTarget] = useState<RouteTarget | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  // V1.1: sélection produits propre à chaque facilité (SELECTIONS[facId]) — persiste au switch
+  const [facilitySelections, setFacilitySelections] = useState<Record<string, string[]>>({});
+  const toggleFacilityProduct = useCallback((facId: string, productId: string) => {
+    setFacilitySelections((prev) => {
+      const current = prev[facId] ?? [];
+      const next = current.includes(productId) ? current.filter((x) => x !== productId) : [...current, productId];
+      return { ...prev, [facId]: next };
+    });
+  }, []);
+  const clearFacilitySelection = useCallback((facId: string) => {
+    setFacilitySelections((prev) => { if (!prev[facId]) return prev; const next = { ...prev }; delete next[facId]; return next; });
+  }, []);
   const [quantity, setQuantity] = useState(1);
   const [budgetMode, setBudgetMode] = useState<'unlimited' | 'maximum'>('unlimited');
   const [budget, setBudget] = useState('');
@@ -2190,19 +2202,16 @@ export function TrunkApp() {
     <main ref={appRef} className={`omni-stage-viewport ${mainClass}`} data-auth={authClient ? 'configured' : 'missing'}>
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} focusTarget={focusTarget} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
-      {/* Maquette: rolepill centered, dynamic roles (Buyer + capability roles) */}
-      <header className="fixed top-3.5 left-1/2 -translate-x-1/2 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
+      {/* Maquette V1.1 roleswitch — sliding .ind indicator behind active role */}
+      <header className="omni-roleswitch z-30 pointer-events-auto">
+        <span className="omni-role-ind" style={{ transform: `translateX(${availableRoles.indexOf(activeRole) * 100}%)`, width: `${100 / availableRoles.length}%` }} aria-hidden="true" />
         {availableRoles.map((role) => (
           <button
             key={role}
             id={`rolepill-${role}`}
             type="button"
             onClick={() => switchActiveRole(role)}
-            className={`px-3 py-1 rounded-full text-[10.5px] font-extrabold transition-all duration-200 ${
-              activeRole === role
-                ? 'bg-[#0f0f0f] text-white shadow-xs'
-                : 'text-[#6b6b6b] hover:text-[#0f0f0f]'
-            }`}
+            className={`omni-role-btn${activeRole === role ? ' on' : ''}`}
           >
             {rolePillLabel[role]}
           </button>
@@ -2511,6 +2520,8 @@ export function TrunkApp() {
           facility={selectedFacility}
           isOpen={panel === 'facility'}
           onClose={closeFacilityContext}
+          selectedIds={selectedFacility ? (facilitySelections[selectedFacility.id] ?? []) : []}
+          onToggleProduct={(productId) => { if (selectedFacility) toggleFacilityProduct(selectedFacility.id, productId); }}
           onRequestAvailability={(fac, productIds) => {
             if (productIds.length > 0) {
               setSelectedProductId(productIds[0]);

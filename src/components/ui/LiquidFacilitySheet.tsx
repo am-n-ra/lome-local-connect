@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { MapPin } from 'lucide-react';
 import type { FacilityDetail, PublicProduct } from '../../trunk/types';
 
@@ -10,6 +9,8 @@ interface Props {
   onShowRoute?: (facility: FacilityDetail) => void;
   onClaim?: (facility: FacilityDetail) => void;
   onCreateFacility?: () => void;
+  selectedIds?: string[];
+  onToggleProduct?: (productId: string) => void;
 }
 
 const currency = (minor: number, ccy: string) => {
@@ -18,19 +19,17 @@ const currency = (minor: number, ccy: string) => {
 };
 
 // Maquette FACILITY sheet (.sheet h-full) — exact match with accepted Species gate
-export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvailability, onClaim, onCreateFacility }: Props) {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-
+// V1.1: selection persisted per-facility by parent (SELECTIONS[facId])
+export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvailability, onClaim, onCreateFacility, selectedIds: parentIds, onToggleProduct }: Props) {
   if (!facility || !isOpen) return null;
 
   const isConfirmed = facility.trust === 'confirmed';
   const isUnclaimed = facility.trust === 'unclaimed';
   const products: PublicProduct[] = facility.products || [];
+  const selectedIds = parentIds ?? [];
   const selCount = selectedIds.length;
 
-  const toggle = (id: string) => {
-    setSelectedIds((prev) => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
+  const toggle = (id: string) => { onToggleProduct?.(id); };
 
   const trustLabel = isConfirmed ? 'Vérifié' : isUnclaimed ? 'Non revendiquée' : 'À valider';
   const trustClass = isConfirmed ? 'ok' : isUnclaimed ? 'dash' : 'gray';
