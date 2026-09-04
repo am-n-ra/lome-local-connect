@@ -277,6 +277,8 @@ export function TrunkApp() {
   const [pinContext, setPinContext] = useState<PublicFacility | null>(null);
   const [nearbyCollapsed, setNearbyCollapsed] = useState(false);
   const [revealActive, setRevealActive] = useState(false);
+  // T-10q4: grid appears ONLY after globe reveal completes, not before
+  const [revealCompleted, setRevealCompleted] = useState(false);
   const [draftOptions, setDraftOptions] = useState<SearchOptions>(emptySearchOptions);
   const [appliedOptions, setAppliedOptions] = useState<SearchOptions>(emptySearchOptions);
   const [authReturn, setAuthReturn] = useState<AuthReturn>('none');
@@ -1631,7 +1633,9 @@ export function TrunkApp() {
     setAppliedOptions(draftOptions);
     setCommittedQuery(query.trim());
     setShowAllResults(true);
-    setNearbyOpen(true);
+    // T-10q4: do NOT open nearby grid yet — wait for globe reveal to complete first
+    setRevealCompleted(false);
+    setNearbyOpen(false);
     setNearbyCollapsed(false);
     setOptionsOpen(false);
     setMenuOpen(false);
@@ -1649,7 +1653,9 @@ export function TrunkApp() {
     setAppliedOptions({ ...draftOptions, budgetMaxMinor, quantiteMin, rayonKm });
     setCommittedQuery(query.trim());
     setShowAllResults(true);
-    setNearbyOpen(true);
+    // T-10q4: wait for globe reveal before showing grid
+    setRevealCompleted(false);
+    setNearbyOpen(false);
     setNearbyCollapsed(false);
     setOptionsOpen(false);
     setError('');
@@ -2112,7 +2118,14 @@ export function TrunkApp() {
 
   const mainClass = `species-app${optionsOpen ? ' options-is-open' : ''}${menuOpen ? ' menu-is-open' : ''}`;
   const visibleFacilities = facilities.slice(0, showAllResults ? 8 : 3);
-  const handleRevealStateChange = useCallback((active: boolean) => setRevealActive(active), []);
+  const handleRevealStateChange = useCallback((active: boolean) => {
+    setRevealActive(active);
+    if (!active) {
+      // Reveal just finished — NOW open the nearby grid
+      setRevealCompleted(true);
+      setNearbyOpen(true);
+    }
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(display-mode: standalone)');
@@ -2321,6 +2334,9 @@ export function TrunkApp() {
           )}
         </section>
       )}
+
+      {/* T-10q1: Bottom gradient blur — app lives above the dock */}
+      <div className="omni-bottom-gradient" aria-hidden="true" />
 
       {/* Maquette V1.1 .navpill — contextual dock (dockFor): 3 buttons re-derived
           from active sheet + role. Center is wider (46px) and gets accent dot when active.

@@ -346,6 +346,32 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; transform: scale(.82); } }
 @keyframes nearby-state-in { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+
+/* T-10q1: Bottom gradient blur — app lives above the dock.
+   Everything fades into a soft gradient before reaching the navpill,
+   giving the illusion content emerges from the dock. */
+.omni-bottom-gradient {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
+  z-index: 55; /* below navpill(60), above sheets(50) */
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.85) 30%, rgba(255,255,255,0.4) 65%, transparent 100%);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  mask-image: linear-gradient(to top, black 40%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 40%, transparent 100%);
+}
+@media (min-width: 900px) {
+  .omni-bottom-gradient {
+    width: min(100%, 560px);
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 24px 24px 0 0;
+  }
+}
 @media (min-width: 900px) {
   :root { --sheet-height: min(46dvh, 430px); }
   .species-topbar { top: 24px; left: 32px; right: 32px; }
@@ -356,7 +382,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .nearby-card { flex-basis: min(320px, 47%); }
   .search-anchor { width: min(54vw, 560px); bottom: var(--nearby-sheet-offset, 28px); }
   .map-controls { top: 22%; right: 32px; }
-  .omni-sheet { width: min(100%, 560px); left: 50%; transform: translateX(-50%); bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
+  .omni-sheet { width: min(100%, 560px); left: 50%; right: auto; transform: translateX(-50%); bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
   .sheet-backdrop { background: rgba(15, 15, 15, .14); }
 }
 
