@@ -27,7 +27,6 @@ import { AvailSheet as MaquetteAvailSheet } from '../components/ui/BuyerSheet';
 import { LiquidResultCarousel } from '../components/ui/LiquidResultCarousel';
 import { LiquidFacilitySheet } from '../components/ui/LiquidFacilitySheet';
 import { LiquidTransactionRoom, type LiquidTransactionDetails } from '../components/ui/LiquidTransactionRoom';
-import { LiquidSellerCockpit } from '../components/ui/LiquidSellerCockpit';
 import { GlassSurface, GlassButton, GlassBadge } from '../components/ui/LiquidGlass';
 import { Sparkles, Wallet, Compass, Building2, Eye, Home } from 'lucide-react';
 
