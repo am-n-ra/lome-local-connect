@@ -235,6 +235,18 @@ export interface SellerCatalogueFacility {
 
 export type ProductAvailabilityState = 'en_stock' | 'verifie' | 'a_valider' | 'bientot';
 
+export interface SavedSearch {
+  id: string;
+  query: string;
+  constraints: Record<string, unknown>;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SavedSearchListResult {
+  searches: SavedSearch[];
+}
+
 export interface SellerCatalogueProduct {
   id: string;
   facilityId: string;

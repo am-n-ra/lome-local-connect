@@ -66,6 +66,13 @@ export class SellerCataloguePolicyError extends Error {
   }
 }
 
+export class BuyerSearchPolicyError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BuyerSearchPolicyError';
+  }
+}
+
 export class PurchaseIntentPolicyError extends Error {
   constructor(message: string) {
     super(message);
@@ -1739,6 +1746,61 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           createdAt: new Date(String(row.created_at)).toISOString(),
         })),
       };
+    },
+
+    async listSavedSearches(input: { authUserId: string }): Promise<{ searches: Array<{ id: string; query: string; constraints: Record<string, unknown>; active: boolean; createdAt: string }> }> {
+      const rows = await retryDatabase(() => sql`
+        select s.id, s.query, s.constraints, s.active, s.created_at
+        from v2_saved_searches s
+        join v2_accounts a on a.id = s.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.active = true
+        order by s.created_at desc, s.id desc
+        limit 50
+      `);
+      return {
+        searches: (rows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.id),
+          query: String(row.query),
+          constraints: (typeof row.constraints === 'object' && row.constraints !== null ? row.constraints : {}) as Record<string, unknown>,
+          active: row.active === true,
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
+    async createSavedSearch(input: { authUserId: string; query: string; constraints: Record<string, unknown> }): Promise<{ id: string; query: string; createdAt: string }> {
+      const query = input.query.trim();
+      if (!query || query.length > 200) throw new BuyerSearchPolicyError('INVALID_INPUT');
+      const rows = await retryDatabase(() => sql`
+        insert into v2_saved_searches (account_id, query, constraints)
+        select a.id, ${query}, ${JSON.stringify(input.constraints ?? {})}::jsonb
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning id, query, created_at
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new BuyerSearchPolicyError('ACCOUNT_UNAVAILABLE');
+      return { id: String(row.id), query: String(row.query), createdAt: new Date(String(row.created_at)).toISOString() };
+    },
+
+    async deleteSavedSearch(input: { authUserId: string; searchId: string }): Promise<{ deleted: true }> {
+      const rows = await retryDatabase(() => sql`
+        update v2_saved_searches s
+        set active = false, updated_at = now()
+        from v2_accounts a
+        where s.id = ${input.searchId}::uuid
+          and a.id = s.account_id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.active = true
+        returning s.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new BuyerSearchPolicyError('NOT_FOUND');
+      return { deleted: true };
     },
 
     async getSellerAvailabilityQueue(input: { authUserId: string }): Promise<{ authorized: boolean; requests: Array<{

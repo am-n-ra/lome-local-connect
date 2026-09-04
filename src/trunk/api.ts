@@ -199,6 +199,21 @@ export async function getProductStockEvents(input: { token: string; productId: s
   return parse(response);
 }
 
+export async function listSavedSearches(input: { token: string }): Promise<ApiResult<import('./types').SavedSearchListResult>> {
+  const response = await fetchWithRecovery('/api/v2/saved-searches', { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function createSavedSearch(input: { token: string; query: string; constraints?: Record<string, unknown> }): Promise<ApiResult<{ id: string; query: string; createdAt: string }>> {
+  const response = await fetchWithRecovery('/api/v2/saved-searches', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ query: input.query, constraints: input.constraints ?? {} }) });
+  return parse(response);
+}
+
+export async function deleteSavedSearch(input: { token: string; searchId: string }): Promise<ApiResult<{ deleted: true }>> {
+  const response = await fetchWithRecovery(`/api/v2/saved-searches/${input.searchId}`, { method: 'DELETE', headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
 export async function getSellerCatalogue(input: { token: string }): Promise<ApiResult<SellerCatalogueResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/catalogue', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

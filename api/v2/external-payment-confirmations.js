@@ -253,6 +253,12 @@ var SellerCataloguePolicyError = class extends Error {
     this.name = "SellerCataloguePolicyError";
   }
 };
+var BuyerSearchPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "BuyerSearchPolicyError";
+  }
+};
 var PurchaseIntentPolicyError = class extends Error {
   constructor(message) {
     super(message);
@@ -1565,6 +1571,58 @@ function createTrunkRepository(sql = database()) {
           createdAt: new Date(String(row.created_at)).toISOString()
         }))
       };
+    },
+    async listSavedSearches(input) {
+      const rows = await retryDatabase(() => sql`
+        select s.id, s.query, s.constraints, s.active, s.created_at
+        from v2_saved_searches s
+        join v2_accounts a on a.id = s.account_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.active = true
+        order by s.created_at desc, s.id desc
+        limit 50
+      `);
+      return {
+        searches: rows.map((row) => ({
+          id: String(row.id),
+          query: String(row.query),
+          constraints: typeof row.constraints === "object" && row.constraints !== null ? row.constraints : {},
+          active: row.active === true,
+          createdAt: new Date(String(row.created_at)).toISOString()
+        }))
+      };
+    },
+    async createSavedSearch(input) {
+      const query = input.query.trim();
+      if (!query || query.length > 200) throw new BuyerSearchPolicyError("INVALID_INPUT");
+      const rows = await retryDatabase(() => sql`
+        insert into v2_saved_searches (account_id, query, constraints)
+        select a.id, ${query}, ${JSON.stringify(input.constraints ?? {})}::jsonb
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning id, query, created_at
+      `);
+      const row = rows[0];
+      if (!row) throw new BuyerSearchPolicyError("ACCOUNT_UNAVAILABLE");
+      return { id: String(row.id), query: String(row.query), createdAt: new Date(String(row.created_at)).toISOString() };
+    },
+    async deleteSavedSearch(input) {
+      const rows = await retryDatabase(() => sql`
+        update v2_saved_searches s
+        set active = false, updated_at = now()
+        from v2_accounts a
+        where s.id = ${input.searchId}::uuid
+          and a.id = s.account_id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and s.active = true
+        returning s.id
+      `);
+      const row = rows[0];
+      if (!row) throw new BuyerSearchPolicyError("NOT_FOUND");
+      return { deleted: true };
     },
     async getSellerAvailabilityQueue(input) {
       const sellerRows = await retryDatabase(() => sql`
@@ -3131,7 +3189,7 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, "EVIDENCE_NOT_FOUND", error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError || error instanceof BuyerSearchPolicyError) {
     return { status: 409, body: errorBody(correlationId, "POLICY_REJECTED", error.message) };
   }
   return {
@@ -3988,6 +4046,40 @@ async function handleApi(req, res, pathname, url) {
         json(res, 403, errorBody(correlationId, "FORBIDDEN", "Your account is not available for Wallet access."));
         return true;
       }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/saved-searches") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your saved searches."));
+        return true;
+      }
+      const result = await repository.listSavedSearches({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/saved-searches") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to save a search."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const query = typeof input.query === "string" ? input.query : "";
+      const constraints = typeof input.constraints === "object" && input.constraints !== null && !Array.isArray(input.constraints) ? input.constraints : {};
+      const result = await repository.createSavedSearch({ authUserId, query, constraints });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const savedSearchMatch = pathname.match(/^\/api\/v2\/saved-searches\/([0-9a-f-]{36})$/i);
+    if (savedSearchMatch && req.method === "DELETE") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to manage your saved searches."));
+        return true;
+      }
+      const result = await repository.deleteSavedSearch({ authUserId, searchId: savedSearchMatch[1] });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

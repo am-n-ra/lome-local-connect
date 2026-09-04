@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
@@ -37,7 +37,7 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
   }
-  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError) {
+  if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError || error instanceof BuyerSearchPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
   }
   return {
@@ -905,6 +905,40 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'Your account is not available for Wallet access.'));
         return true;
       }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/saved-searches') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your saved searches.'));
+        return true;
+      }
+      const result = await repository.listSavedSearches({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/saved-searches') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to save a search.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const query = typeof input.query === 'string' ? input.query : '';
+      const constraints = typeof input.constraints === 'object' && input.constraints !== null && !Array.isArray(input.constraints) ? input.constraints as Record<string, unknown> : {};
+      const result = await repository.createSavedSearch({ authUserId, query, constraints });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const savedSearchMatch = pathname.match(/^\/api\/v2\/saved-searches\/([0-9a-f-]{36})$/i);
+    if (savedSearchMatch && req.method === 'DELETE') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to manage your saved searches.'));
+        return true;
+      }
+      const result = await repository.deleteSavedSearch({ authUserId, searchId: savedSearchMatch[1] });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
