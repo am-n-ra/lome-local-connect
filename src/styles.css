@@ -340,7 +340,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lift-in { from { opacity: 0; transform: translate(-50%, 10px) scale(.98); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes options-lift-in { from { opacity: 0; transform: translate(0, 10px); } to { opacity: 1; transform: translate(0, 0); } }
-@keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 22px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 100%); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; transform: scale(.82); } }
 @keyframes nearby-state-in { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
@@ -857,7 +857,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .omni-map-loading .spinner { width: 24px; height: 24px; }
 .omni-keyboard-aware { transition: bottom .22s var(--ease), transform .22s var(--ease); }
 .search-anchor.omni-keyboard-aware { bottom: calc(var(--nearby-sheet-offset, var(--safe-bottom)) + var(--omni-keyboard, 0px)); }
-.omni-sheet-enter { animation: omni-sheet-enter .28s var(--ease) both; }
+.omni-sheet-enter { animation: omni-sheet-enter .32s var(--ease) both; }
 .omni-card-enter { animation: omni-card-enter .34s var(--ease) both; }
 .omni-step-enter { animation: omni-step-enter .24s var(--ease) both; }
 .omni-stagger > * { animation: omni-card-enter .34s var(--ease) both; }
@@ -880,7 +880,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @keyframes omni-shimmer { to { background-position: -220% 0; } }
 @keyframes omni-progress { 0% { transform: translateX(-120%); } 55%, 100% { transform: translateX(300%); } }
-@keyframes omni-sheet-enter { from { opacity: 0; transform: translate(-50%, 18px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes omni-sheet-enter { from { opacity: 0; transform: translate(-50%, 100%); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes omni-card-enter { from { opacity: 0; transform: translateY(8px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes omni-step-enter { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes omni-user-breathe { 0%, 100% { box-shadow: 0 0 0 5px rgba(17,17,17,.10), 0 4px 10px rgba(0,0,0,.18); } 50% { box-shadow: 0 0 0 9px rgba(17,17,17,.04), 0 4px 10px rgba(0,0,0,.18); } }

@@ -2191,7 +2191,7 @@ export function TrunkApp() {
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} focusTarget={focusTarget} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
       {/* Maquette: rolepill centered, dynamic roles (Buyer + capability roles) */}
-      <header className="fixed top-3.5 left-1/2 -translate-x-1/2 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
+      <header className="fixed top-3 left-3 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
         {availableRoles.map((role) => (
           <button
             key={role}

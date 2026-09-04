@@ -878,15 +878,27 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
 
     const isStale = () => token !== revealToken.current;
-    
-    // Cadrage fluide direct et élégant sans étapes artificielles ni stéthoscope
+
+    // Cinematic reveal: world → continent → country → region → city → results framing.
+    // Mirrors the accepted maquette search experience (globe zooms in progressively).
+    const steps = buildSearchRevealSteps(facilities, userPositionRef.current);
+    if (!steps.length) {
+      revealRunningRef.current = false;
+      onRevealStateChange?.(false);
+      setRevealRunning(false);
+      setRevealLabel(null);
+      return () => undefined;
+    }
+    cameraMode.current = 'search_reveal';
+    setCameraModeState('search_reveal');
+
     const finish = () => {
       if (isStale()) return;
       const finalPoints = pointsForResultFraming(facilities, userPositionRef.current);
       const finalBounds = boundsOfPoints(finalPoints);
       cameraMode.current = 'result_framing';
       setCameraModeState('result_framing');
-      
+
       if (finalBounds) {
         const [[west, south], [east, north]] = finalBounds;
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
@@ -895,7 +907,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left: 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
         }
       }
-      
+
       revealRunningRef.current = false;
       onRevealStateChange?.(false);
       setRevealRunning(false);
@@ -904,7 +916,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       setCameraModeState('manual_navigation');
     };
 
-    finish();
+    let chain: Promise<void> = Promise.resolve();
+    steps.forEach((step) => {
+      chain = chain.then(() => new Promise<void>((resolve) => {
+        if (isStale()) { resolve(); return; }
+        setRevealLabel(step.label);
+        map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
+        window.setTimeout(resolve, step.pause + 820);
+      }));
+    });
+    chain.then(() => { if (!isStale()) finish(); }).catch(() => undefined);
 
     return () => {
       if (token === revealToken.current) {

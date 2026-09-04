@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Search, SlidersHorizontal, QrCode, X } from 'lucide-react';
+import { Search, QrCode, X, ArrowRight } from 'lucide-react';
 
 export interface StructuredDemand {
   rawQuery: string;
@@ -15,10 +15,12 @@ interface Props {
   isSearching?: boolean;
 }
 
-// Maquette SEARCH sheet (.searchdock .fld) — exact match with accepted Species gate
+const DISTANCES = [2, 5, 10, 25] as const;
+
+// Maquette SEARCH sheet: .searchdock .fld — pill 34px, loupe + input + bouton « → »;
+// contraintes (chips) se révèlent à la frappe, pas un panneau séparé.
 export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Props) {
   const [query, setQuery] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [maxBudget, setMaxBudget] = useState('');
   const [maxDistance, setMaxDistance] = useState(5);
@@ -35,149 +37,68 @@ export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Pr
       maxDistanceKm: maxDistance,
       deliveryMode,
     });
-    setShowAdvanced(false);
   };
 
-  return (
-    <div className="w-full max-w-lg mx-auto px-4 pointer-events-auto flex flex-col items-center gap-2">
-      {/* Advanced constraints panel */}
-      {showAdvanced && (
-        <div className="w-full bg-white/95 border border-[#e6e6e6] shadow-[0_20px_40px_rgba(0,0,0,0.08)] rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3 pb-2 border-b border-black/5">
-            <span className="text-xs font-semibold text-[#0F0F0F]">Contraintes</span>
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(false)}
-              className="w-6 h-6 rounded-full hover:bg-black/5 flex items-center justify-center text-black/40"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-[11px] font-medium text-black/60 block mb-1">Quantité</label>
-              <div className="flex items-center bg-black/5 rounded-xl p-1">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-7 h-7 rounded-lg bg-white shadow-xs flex items-center justify-center text-xs font-bold"
-                >−</button>
-                <span className="flex-1 text-center text-xs font-semibold">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="w-7 h-7 rounded-lg bg-white shadow-xs flex items-center justify-center text-xs font-bold"
-                >+</button>
-              </div>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-black/60 block mb-1">Budget max (XOF)</label>
-              <input
-                type="number"
-                value={maxBudget}
-                onChange={(e) => setMaxBudget(e.target.value)}
-                placeholder="Illimité"
-                className="w-full h-9 bg-black/5 rounded-xl px-3 text-xs font-semibold outline-none"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-[11px] font-medium text-black/60 block mb-1">Rayon</label>
-              <select
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="w-full h-9 bg-black/5 rounded-xl px-2 text-xs font-semibold outline-none cursor-pointer"
-              >
-                <option value={2}>2 km</option>
-                <option value={5}>5 km</option>
-                <option value={10}>10 km</option>
-                <option value={25}>25 km</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-black/60 block mb-1">Mode</label>
-              <div className="flex bg-black/5 rounded-xl p-1">
-                {(['any', 'pickup'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setDeliveryMode(m)}
-                    className={`flex-1 h-7 rounded-lg text-[10px] font-semibold transition-all ${
-                      deliveryMode === m ? 'bg-white shadow-xs text-black' : 'text-black/60'
-                    }`}
-                  >
-                    {m === 'any' ? 'Tous' : 'Retrait'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleSubmit()}
-            className="w-full h-9 bg-[#0F0F0F] text-white rounded-xl text-xs font-semibold shadow-xs hover:bg-black transition-all"
-          >
-            Appliquer les critères
-          </button>
-        </div>
-      )}
+  const typing = query.trim().length > 0;
 
-      {/* Maquette .fld — input + submit arrow + filters + QR */}
-      <form
-        onSubmit={handleSubmit}
-        className="w-full bg-white/95 border border-[#e6e6e6] shadow-[0_8px_24px_rgba(0,0,0,0.06)] rounded-2xl p-1.5 flex items-center gap-2 transition-all duration-200 focus-within:border-[#0F0F0F] focus-within:shadow-[0_12px_32px_rgba(0,0,0,0.1)]"
-      >
-        <div className="w-7 h-7 flex items-center justify-center text-[#0F0F0F] flex-shrink-0">
-          {isSearching ? (
-            <div className="w-3.5 h-3.5 border-2 border-black/20 border-t-[#0F0F0F] rounded-full animate-spin" />
-          ) : (
-            <Search className="w-4 h-4" />
-          )}
-        </div>
+  return (
+    <div className="searchdock">
+      <form className="fld" onSubmit={handleSubmit}>
+        {isSearching ? (
+          <span className="w-3.5 h-3.5 border-2 border-black/20 border-t-[#0f0f0f] rounded-full animate-spin" aria-hidden="true" />
+        ) : (
+          <Search width={16} height={16} aria-hidden="true" />
+        )}
         <input
           ref={inputRef}
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Produit, service, commerce…"
-          className="flex-1 bg-transparent text-xs font-semibold text-[#0F0F0F] placeholder:text-[#6B6B6B] placeholder:font-normal outline-none"
+          aria-label="Recherche"
         />
         {query && (
-          <button
-            type="button"
-            onClick={() => { setQuery(''); inputRef.current?.focus(); }}
-            className="w-5 h-5 rounded-full hover:bg-black/5 flex items-center justify-center text-black/40"
-          >
-            <X className="w-3 h-3" />
+          <button type="button" onClick={() => { setQuery(''); inputRef.current?.focus(); }} aria-label="Effacer" className="fld-clear">
+            <X width={13} height={13} />
           </button>
         )}
-        <button
-          type="submit"
-          disabled={isSearching || !query.trim()}
-          className="px-3 h-7 rounded-full bg-[#0F0F0F] text-white text-[11px] font-bold flex items-center justify-center shadow-xs transition-all hover:bg-black active:scale-95 disabled:opacity-40 flex-shrink-0"
-        >
-          →
+        <button type="submit" className="fld-go" disabled={isSearching || !query.trim()} aria-label="Rechercher">
+          <ArrowRight width={14} height={14} />
         </button>
-        <button
-          type="button"
-          onClick={() => setShowAdvanced(!showAdvanced)}
-          className={`w-7 h-7 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-            showAdvanced ? 'bg-[#0F0F0F] text-white' : 'hover:bg-black/5 text-[#6B6B6B]'
-          }`}
-        >
-          <SlidersHorizontal className="w-3.5 h-3.5" />
-        </button>
-        {onScanQr && (
-          <button
-            type="button"
-            onClick={onScanQr}
-            className="w-7 h-7 rounded-full hover:bg-black/5 flex items-center justify-center text-[#0F0F0F] transition-all flex-shrink-0"
-          >
-            <QrCode className="w-3.5 h-3.5" />
-          </button>
-        )}
       </form>
+
+      {/* Maquette constraintZone: chips qui se révèlent à la frappe */}
+      {typing && (
+        <div className="constraintZone omni-sheet-enter">
+          <div className="constraintLabel">Contraintes (requête, pas engagement vendeur)</div>
+          <div className="chips">
+            <label className={`chip${quantity > 1 ? ' active' : ''}`}>
+              <span>Qté</span>
+              <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} aria-label="Quantité" />
+            </label>
+            <label className={`chip${maxBudget ? ' active' : ''}`}>
+              <span>Budget</span>
+              <input type="number" min={0} value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} placeholder="∞" aria-label="Budget maximum" />
+            </label>
+            <label className="chip select">
+              <span>Rayon</span>
+              <select value={maxDistance} onChange={(e) => setMaxDistance(Number(e.target.value))} aria-label="Rayon">
+                {DISTANCES.map((d) => <option key={d} value={d}>{d} km</option>)}
+              </select>
+            </label>
+            {(['any', 'pickup', 'delivery'] as const).map((m) => (
+              <button key={m} type="button" className={`chip${deliveryMode === m ? ' active' : ''}`} onClick={() => setDeliveryMode(m)}>
+                {m === 'any' ? 'Tous' : m === 'pickup' ? 'Retrait' : 'Livraison'}
+              </button>
+            ))}
+            {onScanQr && (
+              <button type="button" className="chip" onClick={onScanQr} aria-label="Scanner un QR">
+                <QrCode width={12} height={12} /> QR
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
