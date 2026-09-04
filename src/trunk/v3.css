@@ -2040,3 +2040,17 @@ textarea, input[type=text], input[type=number] textarea, input[type=text], input
   font-size: 10px;
   color: #0f0f0f;
 }
+
+/* Gate 5 (T-10b) — Salle transaction : timeline verticale conforme maquette
+   (.txntrack/.txstep). Passée = accent #2E8B6F, en cours = encre, à venir = neutre. */
+.txntrack { display: flex; flex-direction: column; gap: 0; margin: 8px 0; list-style: none; padding: 0; }
+.txstep { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--maquette-line); }
+.txstep:last-child { border-bottom: none; }
+.txstep .sdot { width: 10px; height: 10px; border-radius: 50%; background: var(--maquette-panel); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--maquette-line); justify-self: center; }
+.txstep.ok .sdot { background: var(--maquette-accent); box-shadow: 0 0 0 1px var(--maquette-accent); }
+.txstep.now .sdot { background: var(--maquette-ink); box-shadow: 0 0 0 1px var(--maquette-ink); }
+.txstep .txstep-body b { display: block; font-family: var(--font-display); font-size: 13px; color: var(--maquette-ink); }
+.txstep .txstep-body small { display: block; font-size: 11px; color: var(--maquette-ink-soft); }
+.txstep:not(.ok):not(.now) .txstep-body b { color: var(--maquette-ink-soft); }
+.txstep .go { color: var(--maquette-accent); display: grid; place-items: center; }
+.txstep.now .go { color: var(--maquette-ink); font-weight: 700; }

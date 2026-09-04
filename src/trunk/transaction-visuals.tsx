@@ -4,6 +4,7 @@
 import { Check, Star } from 'lucide-react';
 import type { TransactionState } from './types';
 import { TRANSACTION_STEPS, transactionProgress } from './transaction-steps';
+import { TRANSACTION_TIMELINE, transactionTimelineIndex, transactionTimelineComplete } from './transaction-timeline';
 
 // Écran 12 — stepper vertical 4 étapes: terminé = Evergreen plein,
 // en cours = mis en évidence, à venir = contour gris.
@@ -17,6 +18,25 @@ export function TransactionStepper(props: { state: TransactionState }) {
       return <li key={label} className={done ? 'done' : current ? 'current' : ''} aria-current={current ? 'step' : undefined}>
         <span className="transaction-step-mark" aria-hidden="true">{done ? <Check size={13} strokeWidth={3} /> : step}</span>
         <span className="transaction-step-label">{label}</span>
+      </li>;
+    })}
+  </ol>;
+}
+
+// Gate 5 (T-10b) — timeline verticale de la salle transaction, conforme à la
+// maquette acceptée (`.txntrack` / `.txstep`) : étapes empilées de l'intention
+// à l'avis. Passée = ✓ accent, en cours = → encre, à venir = neutre.
+export function TransactionTimeline(props: { state: TransactionState }) {
+  const current = transactionTimelineIndex(props.state);
+  const complete = transactionTimelineComplete(props.state);
+  return <ol className="txntrack" aria-label="Suivi de la transaction">
+    {TRANSACTION_TIMELINE.map((stage, index) => {
+      const done = complete || index < current;
+      const now = !complete && index === current;
+      return <li key={stage.key} className={`txstep${done ? ' ok' : ''}${now ? ' now' : ''}`} aria-current={now ? 'step' : undefined}>
+        <span className="sdot" aria-hidden="true" />
+        <span className="txstep-body"><b>{stage.label}</b><small>{stage.hint}</small></span>
+        <span className="go" aria-hidden="true">{done ? <Check size={13} strokeWidth={3} /> : now ? '→' : ''}</span>
       </li>;
     })}
   </ol>;
