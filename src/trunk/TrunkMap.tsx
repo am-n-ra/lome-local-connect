@@ -921,22 +921,32 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       chain = chain.then(() => new Promise<void>((resolve) => {
         if (isStale()) { resolve(); return; }
         setRevealLabel(step.label);
-        // V1.1 founder: globe spins slowly during the world phase (like searching)
+        // V1.1 founder: the globe phase spins. easeTo + setCenter per frame fight
+        // each other, so the world step runs its own rAF loop that lerps the
+        // zoom down to globe level while rotating the longitude.
         if (step.kind === 'world') {
           rotating.current = true;
-          const spin = () => {
-            if (isStale() || !rotating.current || !map) return;
-            const c = map.getCenter();
-            map.setCenter([c.lng + 0.35, c.lat]);
-            rotationFrame.current = window.requestAnimationFrame(spin);
+          const duration = step.pause + 820;
+          const startZoom = map.getZoom();
+          const startCenter = map.getCenter();
+          const startTime = performance.now();
+          const spin = (now: number) => {
+            if (isStale() || !rotating.current) return;
+            const t = Math.min(1, (now - startTime) / duration);
+            const eased = 1 - Math.pow(1 - t, 3);
+            map.jumpTo({
+              center: [startCenter.lng + t * 55, startCenter.lat],
+              zoom: startZoom + (step.zoom - startZoom) * eased,
+            });
+            if (t < 1) {
+              rotationFrame.current = window.requestAnimationFrame(spin);
+            } else {
+              rotating.current = false;
+              rotationFrame.current = null;
+              resolve();
+            }
           };
           rotationFrame.current = window.requestAnimationFrame(spin);
-          map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
-          window.setTimeout(() => {
-            rotating.current = false;
-            if (rotationFrame.current !== null) { window.cancelAnimationFrame(rotationFrame.current); rotationFrame.current = null; }
-            resolve();
-          }, step.pause + 820);
         } else {
           map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
           window.setTimeout(resolve, step.pause + 820);

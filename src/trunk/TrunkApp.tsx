@@ -1625,13 +1625,14 @@ export function TrunkApp() {
     }
   };
 
-  const beginSearch = (event?: FormEvent) => {
+  const beginSearch = (event?: FormEvent, explicitQuery?: string) => {
     event?.preventDefault();
+    const nextQuery = (explicitQuery ?? query).trim();
     facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
     setAppliedOptions(draftOptions);
-    setCommittedQuery(query.trim());
+    setCommittedQuery(nextQuery);
     setShowAllResults(true);
     // T-10q4: do NOT open nearby grid yet — wait for globe reveal to complete first
     setRevealCompleted(false);
@@ -2127,6 +2128,17 @@ export function TrunkApp() {
     }
   }, []);
 
+  // Fallback: when a committed search finishes without facilities there is no
+  // reveal to wait for — open the grid (empty/error state) instead of hanging.
+  useEffect(() => {
+    if (!committedQuery.trim()) return;
+    if (revealActive || revealCompleted) return;
+    if (mapState === 'empty' || mapState === 'error') {
+      setRevealCompleted(true);
+      setNearbyOpen(true);
+    }
+  }, [committedQuery, mapState, revealActive, revealCompleted]);
+
   useEffect(() => {
     const media = window.matchMedia('(display-mode: standalone)');
     const handleInstalled = () => setInstalled(media.matches || (navigator as Navigator & { standalone?: boolean }).standalone === true);
@@ -2297,7 +2309,6 @@ export function TrunkApp() {
           <LiquidSearchDock
             onSearch={(demand) => {
               setQuery(demand.rawQuery);
-              setCommittedQuery(demand.rawQuery);
               setQuantity(demand.quantity || 1);
               if (demand.maxBudget) {
                 setBudgetMode('maximum');
@@ -2307,7 +2318,9 @@ export function TrunkApp() {
                 setRayon(demand.maxDistanceKm.toString());
               }
               setPanel('none');
-              beginSearch();
+              // Pass the query explicitly: beginSearch reads state from the
+              // current render, so `query` would still be stale here.
+              beginSearch(undefined, demand.rawQuery);
             }}
             onScanQr={() => setPanel('qr-scan')}
           />

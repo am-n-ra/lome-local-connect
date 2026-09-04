@@ -138,7 +138,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .pill-options svg { transition: transform .18s var(--ease); }
 .pill-options .chevron-up { transform: rotate(180deg); }
 
-.nearby-sheet { z-index: 7; bottom: 0; left: 50%; display: flex; flex-direction: column; width: min(100%, 520px); height: auto; min-height: 0; max-height: min(420px, calc(100dvh - 170px)); transform: translateX(-50%); overflow: hidden; border-radius: 30px 30px 0 0; color: var(--ink); background: rgba(255,255,255,.98); box-shadow: var(--shadow-sheet); transition: max-height .22s var(--ease); }
+.nearby-sheet { z-index: 7; bottom: 0; left: 50%; display: flex; flex-direction: column; width: min(100%, 520px); height: auto; min-height: 0; max-height: min(420px, calc(100dvh - 170px)); translate: -50% 0; overflow: hidden; border-radius: 24px 24px 0 0; color: var(--ink); background: rgba(255,255,255,.98); box-shadow: var(--shadow-sheet); transition: max-height .22s var(--ease); }
 .nearby-sheet.is-collapsed { height: auto; min-height: 0; max-height: none; padding-bottom: 12px; }
 .sheet-handle-button { display: block; width: 100%; min-height: 19px; flex: 0 0 auto; border: 0; padding: 0; background: transparent; }
 .sheet-handle-button:focus-visible { outline-offset: -2px; }
@@ -342,47 +342,49 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @keyframes lift-in { from { opacity: 0; transform: translate(-50%, 10px) scale(.98); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes options-lift-in { from { opacity: 0; transform: translate(0, 10px); } to { opacity: 1; transform: translate(0, 0); } }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
-@media (min-width: 900px) { @keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 100%); } to { opacity: 1; transform: translate(-50%, 0); } } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; transform: scale(.82); } }
 @keyframes nearby-state-in { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 
 /* T-10q1: Bottom gradient blur — app lives above the dock.
    Everything fades into a soft gradient before reaching the navpill,
-   giving the illusion content emerges from the dock. */
+   giving the illusion content emerges from the dock. Kept discreet. */
 .omni-bottom-gradient {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 120px;
-  z-index: 55; /* below navpill(60), above sheets(50) */
+  height: 88px;
+  z-index: 6; /* above the map, below sheets(50)/navpill(60): the MAP fades toward the dock, UI stays crisp */
   pointer-events: none;
-  background: linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.85) 30%, rgba(255,255,255,0.4) 65%, transparent 100%);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  mask-image: linear-gradient(to top, black 40%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to top, black 40%, transparent 100%);
+  background: linear-gradient(to top, rgba(255,255,255,0.72) 0%, rgba(255,255,255,0.38) 45%, transparent 100%);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  mask-image: linear-gradient(to top, black 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%);
 }
 @media (min-width: 900px) {
+  /* Founder: full screen width on desktop, more discreet */
   .omni-bottom-gradient {
-    width: min(100%, 560px);
-    left: 50%;
-    transform: translateX(-50%);
-    border-radius: 24px 24px 0 0;
+    height: 72px;
+    background: linear-gradient(to top, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.22) 45%, transparent 100%);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
   }
 }
 @media (min-width: 900px) {
   :root { --sheet-height: min(46dvh, 430px); }
   .species-topbar { top: 24px; left: 32px; right: 32px; }
-  .nearby-sheet { bottom: 22px; width: min(70vw, 720px); height: auto; min-height: 0; max-height: min(430px, calc(100dvh - 150px)); border-radius: 30px; }
+  .nearby-sheet { bottom: 0; width: min(70vw, 720px); height: auto; min-height: 0; max-height: min(430px, calc(100dvh - 150px)); border-radius: 24px 24px 0 0; }
   .nearby-heading { padding-left: 22px; padding-right: 22px; }
   .nearby-result-toolbar { padding-left: 22px; padding-right: 22px; }
   .nearby-rail { gap: 14px; padding-left: 22px; padding-right: 22px; }
   .nearby-card { flex-basis: min(320px, 47%); }
   .search-anchor { width: min(54vw, 560px); bottom: var(--nearby-sheet-offset, 28px); }
   .map-controls { top: 22%; right: 32px; }
-  .omni-sheet { width: min(100%, 560px); left: 50%; right: auto; transform: translateX(-50%); bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
+  /* `translate` (not `transform`) so the sheet-in keyframes — which animate
+     `transform: translateY(...)` with fill-mode both — cannot clobber centering. */
+  .omni-sheet { width: min(100%, 560px); left: 50%; right: auto; translate: -50% 0; transform: none; bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
   .sheet-backdrop { background: rgba(15, 15, 15, .14); }
 }
 
