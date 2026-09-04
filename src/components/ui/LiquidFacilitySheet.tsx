@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, ShieldCheck, X, ArrowRight } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import type { FacilityDetail, PublicProduct } from '../../trunk/types';
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   onClose: () => void;
   onRequestAvailability: (facility: FacilityDetail, selectedProductIds: string[]) => void;
   onShowRoute?: (facility: FacilityDetail) => void;
+  onClaim?: (facility: FacilityDetail) => void;
+  onCreateFacility?: () => void;
 }
 
 const currency = (minor: number, ccy: string) => {
@@ -16,7 +18,7 @@ const currency = (minor: number, ccy: string) => {
 };
 
 // Maquette FACILITY sheet (.sheet h-full) — exact match with accepted Species gate
-export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvailability }: Props) {
+export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvailability, onClaim, onCreateFacility }: Props) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   if (!facility || !isOpen) return null;
@@ -129,14 +131,14 @@ export function LiquidFacilitySheet({ facility, isOpen, onClose, onRequestAvaila
           <button
             className="btn"
             style={{ marginTop: 10 }}
-            onClick={() => onClose()}
+            onClick={() => (onClaim ? onClaim(facility) : onClose())}
           >
             Revendiquer cette facilité
           </button>
           <button
             className="btn ghost"
             style={{ marginTop: 6 }}
-            onClick={() => onClose()}
+            onClick={() => (onCreateFacility ? onCreateFacility() : onClose())}
           >
             La facilité n'est pas sur la carte ? Créer
           </button>

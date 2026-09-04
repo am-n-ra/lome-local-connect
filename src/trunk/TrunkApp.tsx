@@ -1380,7 +1380,7 @@ export function TrunkApp() {
     setClaimSubmitError('');
     if (!sessionUser) {
       setClaimState('idle');
-      openAuth('sign-in', 'none');
+      openAuth('sign-in', 'claim');
       return;
     }
     try {
@@ -1401,6 +1401,7 @@ export function TrunkApp() {
       setClaimActionState('idle');
       setClaimActionError('');
       setClaimState('success');
+      setPanel('claim');
     } catch (caught) {
       setClaimState('error');
       setClaimError(caught instanceof Error ? caught.message : 'Cette facilité ne peut pas commencer une revendication.');
@@ -2515,6 +2516,10 @@ export function TrunkApp() {
             openAvailability();
           }}
           onShowRoute={() => showRouteToSelectedFacility()}
+          onClaim={(fac) => {
+            void startFacilityClaim({ id: fac.id, name: fac.name, category: fac.category, address: fac.address ?? null, latitude: fac.latitude, longitude: fac.longitude, trust: fac.trust, plan: 'free', productCount: fac.products?.length ?? 0 });
+          }}
+          onCreateFacility={() => setPanel('company-onboarding')}
         />
       )}
       {panel === 'claim' && <ClaimSheet facility={selectedFacility} draft={claimResult} evidence={claimEvidence} storageAvailable={claimStorageAvailable} uploadState={claimUploadState} uploadProgress={claimUploadProgress} uploadError={claimUploadError} submitState={claimSubmitState} submitError={claimSubmitError} actionState={claimActionState} actionError={claimActionError} onUpload={(kind, file) => void uploadClaimEvidence(kind, file)} onRemoveEvidence={removeClaimEvidence} onSubmit={submitClaimEvidence} onCancel={cancelClaimDraft} onClose={() => setPanel('facility')} />}
