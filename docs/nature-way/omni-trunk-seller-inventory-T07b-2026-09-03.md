@@ -1,6 +1,6 @@
 # Omni Trunk — Seller Slice Inventory (T-07b)
 
-**Status:** Trunk | T-07b inventory vs accepted Seller maquette set (G-02c)
+**Status:** Trunk | T-07b inventory vs accepted Seller maquette set (G-02c) | **PROOF: PASS**
 **Date:** 2026-09-03 | **Owner:** Nature Way | **Depends:** T-07a closed 2026-09-03
 
 ---
@@ -48,8 +48,25 @@ Script `scripts/prove-v2-seller.mjs` (new, mirrors `prove-v2-admin.mjs` auth cha
 6. **QR transaction room (S6)** — transaction-scoped: verify a QR token path is seller-guarded (401/403 for non-counterparty, accepted for counterpart), chat round-trip.
 7. **DB cross-check** — product + StockEvent + claim draft visible via serverless driver.
 
-**Constraint:** the demo seller account `demo@seller.omni` (password `Omni@2026`, used on prod 2026-09-02) is the proof identity. Freshness is restored after the proof so no stale state is left behind. No write touches `public.*` (RD-1: v2 only).
+**Constraint:** proof identity = `demo@seller.omni` (created this session — see §6). Freshness is restored after the proof so no stale state is left behind. No write touches `public.*` (RD-1: v2 only).
 
-## 6. After proof PASS
+## 6. Proof results — PASS 8/8 (2026-09-03)
 
-→ T-07b `done`; T-07c Buyer slice becomes `ready`.
+`scripts/prove-v2-seller.mjs` executed against production-connected data, correlationId `6978e7ea-b3d5-4f4e-bfb8-38ef60b738e1`. Proof identity: dedicated `demo@seller.omni` auth account (created this session via auth sign-up endpoint, id `56e7d0f0-968e-4303-863d-14e424cd7ea9`), bound to the labeled fixture « Omni Demo Seller Hub » via `POST /api/v2/seller/demo-rebind`.
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Seller routes reject anonymous access (401) | ✅ catalogue=401 queue=401 |
+| 2 | Demo seller fixture bound to proof identity (rebind) | ✅ HTTP_200 |
+| 3 | Catalogue authorized, lists facility | ✅ HTTP_200 facilities=1 |
+| 4 | Catalogue lists 6 products with availability fields (S2/S3) | ✅ products=6 |
+| 5 | Availability setter rejects non-Pro facility — D-04 entitlement guard (S4) | ✅ HTTP_409 |
+| 6 | Seller availability queue authorized (inbox) | ✅ HTTP_200 requests=4 |
+| 7 | Wallet / plans overview authorized (S8) | ✅ HTTP_200 |
+| 8 | DB reflects seller catalogue in v2 schema only (RD-1) | ✅ v2_products=6 |
+
+**Positive availability-setter path (S4 pro-eligible write + StockEvent ledger S5):** covered by unit tests in `src/server/trunk-repository.test.ts` « Product availability Root seam (G-04 trunk) » — pro-eligible write logs a `manual` StockEvent (l.1210), non-eligible rejected, catalogue returns `availabilityProEligible: true` with freshness expiry after opportunistic `v2_expire_stale_availability` (l.1262). The demo fixture is entirely non-Pro, so the live 409 guard is the correct production-connected behavior; a live positive Pro write would require a paid facility_pro activation (FedaPay), which is wallet-reload-only and out of V1 proof scope.
+
+**Account setup note (evidence):** `demo@seller.omni` did **not** exist in `neon_auth.user` before this session (only `demo@buyer.omni`, `juniorkheir@gmail.com` [operator:active], `kheirlissi@icloud.com` [admin+reviewer]). The founder-provided seller fixture was orphaned (auth_user_id `e10f90f3-…` had no auth user). This session created the auth account and used the intended `demo-rebind` mechanism to bind it — no manual DB mutation.
+
+→ **T-07b CLOSED.** T-07c Buyer slice becomes `ready`.

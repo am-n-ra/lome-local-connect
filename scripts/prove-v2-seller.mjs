@@ -77,9 +77,11 @@ step('demo seller fixture bound to proof identity', rebind.status === 200 || reb
 
 // 3. Catalogue (S2/S3) — authorized seller sees their facilities and products.
 const catalogue = await call('GET', '/api/v2/seller/catalogue', seller.token);
-const facilities = catalogue.body?.data?.facilities ?? catalogue.body?.facilities ?? [];
+const catalogueData = catalogue.body?.data ?? catalogue.body ?? {};
+const facilities = catalogueData.facilities ?? [];
 step('catalogue authorized for seller account', catalogue.status === 200 && Array.isArray(facilities), `HTTP_${catalogue.status} facilities=${facilities.length}`);
-const products = facilities.flatMap((facility) => (facility.products ?? []).map((product) => ({ ...product, facilityName: facility.name, facilityId: facility.id })));
+// Catalogue response is flat: data.products (each carries facilityId/facilityName).
+const products = catalogueData.products ?? [];
 step('catalogue lists products with availability fields', products.length > 0 && products.every((p) => typeof p.availabilityState === 'string'), `products=${products.length}`);
 
 // 4. Availability (S4) — facility_pro-gated: pick a Pro-eligible product if one exists,
