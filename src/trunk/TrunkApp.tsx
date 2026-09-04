@@ -1,18 +1,19 @@
 import { FormEvent, Suspense, forwardRef, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ChevronRight, ChevronUp, Clock3, Download, LogIn, LogOut, MapPin, Menu, PackageSearch, QrCode, Search, ShieldCheck, User, X } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { setProductAvailability, getProductStockEvents } from './api';
+import { setProductAvailability, getProductStockEvents, listSavedSearches, deleteSavedSearch } from './api';
 import { cancelFacilityClaim, confirmExternalPayment, createFacilityClaimDraft, createPurchaseIntent, declareExternalPayment, getAccountCapabilities, getAvailabilityResponses, getTransaction, getTransactionMessages, sendTransactionMessage, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail, getNotificationInbox, getOperatorRuns, getReviewQueue, getSellerActivationQueue, getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, createWalletRecharge, activateFacilityPro, createSellerProductDraft, createSellerFacility, updateSellerProductDraft, transitionSellerProduct, importPublicFacility, importPublicFacilityBatch, issueBuyerQrToken, listPublicFacilities, markNotificationSeen, getWebPushStatus, rebindDemoSeller, requestAvailability, requestSellerAvailabilityResponse, reviewFacilityClaim, subscribeWebPush, activateSellerAccount, setSellerAccountSuspension, submitFacilityClaim, submitTransactionRating, transitionTransaction, uploadFacilityEvidence, verifyQrToken, getRoleManagementAccounts, setManagedStaffRole, getAdminConsole, listAdminAuditEvents, setFacilityOperationalState, correctFacilitySalesCounter } from './api';
 const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) => ({ default: Component })));
 import { TransactionQrCard } from './TransactionQrCard';
 import { TransactionChat } from './TransactionChat';
+import { SavedSearchesSheet } from './SavedSearchesSheet';
 import { SellerTransactionPanel } from './SellerTransactionPanel';
 import { canNativeShare, copyTextToClipboard, facilityPublicUrl } from './qr-share';
 import { RatingStars, TransactionStepper, TransactionTimeline } from './transaction-visuals';
 const FieldPilotLocationMap = lazy(() => import('./FieldPilotLocationMap').then(({ FieldPilotLocationMap: Component }) => ({ default: Component })));
 import { dockBandOffset } from './layout-contract';
 import { discoverFromOverpass, type DiscoveryFacility } from '../lib/public-discovery';
-import type { AccountCapabilitiesResult, AdminAuditEvent, AdminAuditListResult, AdminConsoleResult, FacilityOperationalState, RoleManagementAccount, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicTrust, PurchaseIntentResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest, SellerCatalogueFacility, SellerCatalogueProduct, SellerCatalogueResult, QrVerificationResult, RouteTarget, TransactionMessage, TransactionState, TransactionMessagesResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdminAuditEvent, AdminAuditListResult, AdminConsoleResult, FacilityOperationalState, RoleManagementAccount, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PublicTrust, PurchaseIntentResult, ReviewClaimResult, ReviewOutcome, ReviewQueueItem, ReviewQueueResult, SavedSearch, SearchOptions, SellerAvailabilityQueue, SellerAvailabilityRequest, SellerCatalogueFacility, SellerCatalogueProduct, SellerCatalogueResult, QrVerificationResult, RouteTarget, TransactionMessage, TransactionState, TransactionMessagesResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useScrollLock, useViewportInsets } from '../hooks/use-viewport-insets';
 import { MenuIcon, RoleSwitch, SearchDock, StatusBadge, PriceBadge, FilterChip, FacilityCard, ContextPanel, facilityStatus, discountPercent, FacilitySelectorChips, SellerCertificationProgress, NeutralLockedCreditBadge, PaymentMethodSelector, ReviewStars } from './v3';
@@ -32,7 +33,7 @@ import { Sparkles, Wallet, Compass, Building2, Eye, Home } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console' | 'admin-audit' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search';
+type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console' | 'admin-audit' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search' | 'saved-searches';
 type AuthMode = 'sign-in' | 'sign-up';
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console';
@@ -123,6 +124,10 @@ export function TrunkApp() {
   const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestList | null>(null);
   const [buyerRequestsState, setBuyerRequestsState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [buyerRequestsError, setBuyerRequestsError] = useState('');
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
+  const [savedSearchesState, setSavedSearchesState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [savedSearchesError, setSavedSearchesError] = useState('');
+  const [savedSearchDeletingId, setSavedSearchDeletingId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
   const [liquidShowcaseOpen, setLiquidShowcaseOpen] = useState(false);
@@ -474,6 +479,71 @@ export function TrunkApp() {
     }
     setPanel('buyer-requests');
     void loadBuyerRequests();
+  };
+
+  const loadSavedSearches = async () => {
+    setSavedSearchesState('loading');
+    setSavedSearchesError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSavedSearchesState('error');
+        setSavedSearchesError('Votre session doit être réouverte pour retrouver vos recherches.');
+        return;
+      }
+      const result = await listSavedSearches({ token });
+      if (!result.ok || !result.data) {
+        setSavedSearchesState('error');
+        setSavedSearchesError(result.error?.message ?? 'Vos recherches ne peuvent pas être chargées pour le moment.');
+        return;
+      }
+      setSavedSearches(result.data.searches ?? []);
+      setSavedSearchesState('idle');
+    } catch (caught) {
+      setSavedSearchesState('error');
+      setSavedSearchesError(caught instanceof Error ? caught.message : 'Vos recherches ne peuvent pas être chargées pour le moment.');
+    }
+  };
+
+  const openSavedSearches = () => {
+    setMenuOpen(false);
+    setOptionsOpen(false);
+    if (!sessionUser) {
+      openAuth('sign-in', 'none');
+      return;
+    }
+    setPanel('saved-searches');
+    void loadSavedSearches();
+  };
+
+  const rerunSavedSearch = (search: SavedSearch) => {
+    setQuery(search.query);
+    setCommittedQuery(search.query);
+    setPanel('search');
+  };
+
+  const removeSavedSearch = async (search: SavedSearch) => {
+    setSavedSearchDeletingId(search.id);
+    setSavedSearchesError('');
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        setSavedSearchesError('Votre session doit être réouverte pour modifier vos recherches.');
+        setSavedSearchDeletingId(null);
+        return;
+      }
+      const result = await deleteSavedSearch({ token, searchId: search.id });
+      if (!result.ok) {
+        setSavedSearchesError(result.error?.message ?? 'Cette recherche n’a pas pu être supprimée.');
+        setSavedSearchDeletingId(null);
+        return;
+      }
+      setSavedSearches((current) => current.filter((item) => item.id !== search.id));
+      setSavedSearchDeletingId(null);
+    } catch (caught) {
+      setSavedSearchesError(caught instanceof Error ? caught.message : 'Cette recherche n’a pas pu être supprimée.');
+      setSavedSearchDeletingId(null);
+    }
   };
 
   const resumeBuyerRequest = async (request: BuyerAvailabilityRequestSummary) => {
@@ -2275,6 +2345,7 @@ export function TrunkApp() {
       {panel === 'admin-audit' && <AdminAuditSheet state={auditState} error={auditError} data={auditData} filter={auditFilter} setFilter={setAuditFilter} onApplyFilter={() => void loadAdminAudit(auditFilter)} onHop={hopToAuditObject} onBack={() => { openAdminConsole(); }} onClose={() => setPanel('none')} />}
       {panel === 'reviewer' && <ReviewerSheet state={reviewerState} error={reviewerError} queue={reviewerQueue} selected={selectedReview} onSelect={selectReview} outcome={reviewOutcome} setOutcome={setReviewOutcome} reason={reviewReason} setReason={setReviewReason} actionState={reviewActionState} actionError={reviewActionError} actionResult={reviewActionResult} onSubmit={submitReview} onRefresh={() => { void loadReviewerQueue(); void loadSellerActivationQueue(); }} onBack={() => { setSelectedReview(null); setReviewActionState('idle'); }} onClose={() => setPanel('none')} opState={opState} setOpState={setOpState} opStateReason={opStateReason} setOpStateReason={setOpStateReason} opStateActionState={opStateActionState} opStateActionError={opStateActionError} onSubmitOperationalState={() => void submitOperationalState()} counterValue={counterValue} setCounterValue={setCounterValue} counterReason={counterReason} setCounterReason={setCounterReason} counterActionState={counterActionState} counterActionError={counterActionError} counterResult={counterResult} onSubmitCounterCorrection={() => void submitCounterCorrection()} activationQueue={activationQueue} activationQueueState={activationQueueState} activationQueueError={activationQueueError} activationActionState={activationActionState} activationActionError={activationActionError} activationResult={activationResult} onActivateSeller={(accountId) => void activateSeller(accountId)} onActivationRefresh={() => void loadSellerActivationQueue()} statusActionState={statusActionState} statusActionError={statusActionError} onStatusChange={(accountId, suspended, reason) => void changeSellerStatus(accountId, suspended, reason)} />}
 
+      {panel === 'saved-searches' && <SavedSearchesSheet searches={savedSearches} state={savedSearchesState} error={savedSearchesError} deletingId={savedSearchDeletingId} onRefresh={() => void loadSavedSearches()} onRerun={rerunSavedSearch} onDelete={(search) => void removeSavedSearch(search)} onClose={() => setPanel('none')} />}
       {panel === 'buyer-requests' && (
         <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Espace Buyer" style={{ height: '52%' }}>
           <div className="sheet-handle" />
@@ -2313,6 +2384,7 @@ export function TrunkApp() {
             </p>
           )}
           <div className="btnrow" style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setPanel('none'); openSavedSearches(); }}>Alertes</button>
             <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setPanel('none'); setPanel('wallet'); }}>Wallet</button>
             <button className="btn ghost" style={{ flex: 1 }} onClick={() => { setPanel('none'); setPanel('buyer-pro-plans'); }}>Plans</button>
           </div>
