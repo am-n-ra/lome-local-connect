@@ -31,6 +31,7 @@
     "@vercel/blob": "^2.8.0",
     "@vitejs/plugin-react": "latest",
     "fedapay": "^1.2.5",
+    "html5-qrcode": "^2.3.8",
     "jose": "^6.2.10",
     "jsqr": "^1.4.0",
     "lucide-react": "latest",

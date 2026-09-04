@@ -7,6 +7,7 @@ const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) 
 import { TransactionQrCard } from './TransactionQrCard';
 import { TransactionChat } from './TransactionChat';
 import { SavedSearchesSheet } from './SavedSearchesSheet';
+const PublicQrScannerSheet = lazy(() => import('../components/ui/PublicQrScannerSheet').then(({ PublicQrScannerSheet: Component }) => ({ default: Component })));
 import { SellerTransactionPanel } from './SellerTransactionPanel';
 import { canNativeShare, copyTextToClipboard, facilityPublicUrl } from './qr-share';
 import { RatingStars, TransactionStepper, TransactionTimeline } from './transaction-visuals';
@@ -1622,6 +1623,7 @@ export function TrunkApp() {
     setNearbyCollapsed(false);
     setOptionsOpen(false);
     setMenuOpen(false);
+    setPanel('none');
     setError('');
   };
 
@@ -1714,7 +1716,10 @@ export function TrunkApp() {
     setPinContext(facility);
     setSelectedFacility({ ...facility, products: [] });
     setSelectedProductId(null);
-    setPanel('none');
+    setPanel('facility');
+    if (facility.source !== 'osm') {
+      void selectFacility(facility);
+    }
   };
 
   const retryPublicFacilities = () => {
@@ -2244,21 +2249,16 @@ export function TrunkApp() {
 
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={retryPublicFacilities}>Réessayer</button></div>}
 
-      {/* Surface d'accueil Acheteur Liquid Glass (B01 - B04) */}
-      {panel === 'none' && (
-        <div className="fixed inset-x-0 bottom-0 z-30 pointer-events-none flex flex-col justify-end pb-3">
-          {/* Carrousel des résultats B04 (affiché UNIQUEMENT lors d'une recherche active avec mot-clé ou catégorie explicite) */}
-          {(Boolean(committedQuery.trim()) || (Boolean(appliedOptions.category) && appliedOptions.category !== 'all' && appliedOptions.category !== 'Tous')) && (
-            <div className="pointer-events-auto !bottom-20 fixed inset-x-0 z-40">
-              <LiquidResultCarousel
-                facilities={visibleFacilities}
-                selectedFacilityId={selectedFacility?.id ?? null}
-                onSelectFacility={(fac) => {
-                  void selectFacility(fac as PublicFacility);
-                }}
-              />
-            </div>
-          )}
+      {/* Maquette RESULTS sheet: .sheet h-auto + .hgrid of .hcard — shown on active search OR reveal */}
+      {panel === 'none' && (nearbyOpen || committedQuery.trim() || (appliedOptions.category && appliedOptions.category !== 'all' && appliedOptions.category !== 'Tous')) && (
+        <div className="pointer-events-auto !bottom-20 fixed inset-x-0 z-40">
+          <LiquidResultCarousel
+            facilities={visibleFacilities}
+            selectedFacilityId={selectedFacility?.id ?? null}
+            onSelectFacility={(fac) => {
+              void selectFacility(fac as PublicFacility);
+            }}
+          />
         </div>
       )}
 
@@ -2359,23 +2359,15 @@ export function TrunkApp() {
 
 
       {panel === 'qr-scan' && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Scanner un QR" style={{ height: '52%' }}>
-          <div className="sheet-handle" />
-          <div className="sheet-head">
-            <div>
-              <span className="section-kicker">Scanner un QR</span>
-              <h2>Facilité publique</h2>
-            </div>
-            <button type="button" onClick={() => setPanel('none')} aria-label="Fermer"><X size={16} /></button>
-          </div>
-          <div className="maquette-cardbox" style={{ display: 'grid', placeItems: 'center', padding: 14 }}>
-            <div className="code" style={{ width: 150, height: 150, border: '12px solid #fff', outline: '1px solid #e6e6e6', background: 'repeating-conic-gradient(#111 0 8%, #fff 0 16%)', borderRadius: 16 }} />
-          </div>
-          <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#6b6b6b' }}>
-            QR public — découvrir les offres. ≠ QR transaction.
-          </p>
-          <button className="btn ghost" style={{ marginTop: 10 }} onClick={() => setPanel('none')}>Ouvrir la fiche</button>
-        </section>
+        <Suspense fallback={<section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-label="Scanner un QR" style={{ height: '52%' }}><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Scanner un QR</span><h2>Facilité publique</h2></div></div><p className="tiny muted" style={{ textAlign: 'center', marginTop: 16 }}>Ouverture du scanner…</p></section>}>
+          <PublicQrScannerSheet
+            onDetected={(facilityId) => {
+              setPanel('none');
+              void selectFacilityById(facilityId);
+            }}
+            onClose={() => setPanel('none')}
+          />
+        </Suspense>
       )}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <MaquetteSellerSheet
