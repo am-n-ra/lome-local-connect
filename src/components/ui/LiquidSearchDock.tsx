@@ -67,20 +67,23 @@ export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Pr
         </button>
       </form>
 
-      {/* Maquette constraintZone: chips qui se révèlent à la frappe */}
+      {/* Maquette V1.1 constraintZone: chips pleines avec pastille (dot) qui se révèlent à la frappe */}
       {typing && (
         <div className="constraintZone omni-sheet-enter">
           <div className="constraintLabel">Contraintes (requête, pas engagement vendeur)</div>
           <div className="chips">
             <label className={`chip${quantity > 1 ? ' active' : ''}`}>
+              <span className="dot" />
               <span>Qté</span>
               <input type="number" min={1} value={quantity} onChange={(e) => setQuantity(Math.max(1, Number(e.target.value) || 1))} aria-label="Quantité" />
             </label>
             <label className={`chip${maxBudget ? ' active' : ''}`}>
+              <span className="dot" />
               <span>Budget</span>
               <input type="number" min={0} value={maxBudget} onChange={(e) => setMaxBudget(e.target.value)} placeholder="∞" aria-label="Budget maximum" />
             </label>
             <label className="chip select">
+              <span className="dot" />
               <span>Rayon</span>
               <select value={maxDistance} onChange={(e) => setMaxDistance(Number(e.target.value))} aria-label="Rayon">
                 {DISTANCES.map((d) => <option key={d} value={d}>{d} km</option>)}
@@ -88,11 +91,13 @@ export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Pr
             </label>
             {(['any', 'pickup', 'delivery'] as const).map((m) => (
               <button key={m} type="button" className={`chip${deliveryMode === m ? ' active' : ''}`} onClick={() => setDeliveryMode(m)}>
+                <span className="dot" />
                 {m === 'any' ? 'Tous' : m === 'pickup' ? 'Retrait' : 'Livraison'}
               </button>
             ))}
             {onScanQr && (
               <button type="button" className="chip" onClick={onScanQr} aria-label="Scanner un QR">
+                <span className="dot" />
                 <QrCode width={12} height={12} /> QR
               </button>
             )}

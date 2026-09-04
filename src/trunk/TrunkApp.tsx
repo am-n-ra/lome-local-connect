@@ -2191,7 +2191,7 @@ export function TrunkApp() {
       <Suspense fallback={<div className="omni-map-loading" role="status" aria-live="polite"><span className="spinner" /> Chargement de la carte…</div>}><TrunkMap facilities={facilities} selectedId={selectedFacility?.id ?? null} onSelect={handleMapPinSelect} onBoundsChange={setBounds} onRevealStateChange={handleRevealStateChange} revealKey={searchRevealKey} contextSurfaceOpen={nearbyOpen || optionsOpen || menuOpen || panel !== 'none'} routeTarget={routeTarget} onRouteClose={() => setRouteTarget(null)} focusTarget={focusTarget} ownedFacilityIds={accountCapabilities?.ownedFacilityIds} /></Suspense>
 
       {/* Maquette: rolepill centered, dynamic roles (Buyer + capability roles) */}
-      <header className="fixed top-3 left-3 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
+      <header className="fixed top-3.5 left-1/2 -translate-x-1/2 z-30 flex bg-white/85 backdrop-blur-md border border-[#e6e6e6] shadow-[0_4px_14px_rgba(0,0,0,0.06)] rounded-full p-0.5 pointer-events-auto">
         {availableRoles.map((role) => (
           <button
             key={role}
@@ -2313,49 +2313,63 @@ export function TrunkApp() {
         </section>
       )}
 
-      {/* Maquette: .navpill — dark floating dock, 3 buttons (search / role center / menu) */}
-      <nav className="omni-navpill" aria-label="Navigation Omni">
-        {panel !== 'none' && panel !== 'search' ? (
-          <button
-            type="button"
-            title="Retour"
-            className="navpill-btn"
-            onClick={() => { if (panel === 'facility' || panel === 'claim' || panel === 'qr-scan') closeFacilityContext(); else setPanel('none'); }}
-          >
-            <ArrowLeft size={18} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            title="Recherche"
-            className={`navpill-btn${panel === 'search' ? ' active' : ''}`}
-            onClick={() => setPanel('search')}
-          >
-            <Search size={18} />
-          </button>
-        )}
-        <button
-          type="button"
-          title={activeRole === 'buyer' ? 'QR' : activeRole === 'seller' ? 'Stock' : 'À valider'}
-          className="navpill-btn center"
-          onClick={() => {
-            if (activeRole === 'buyer') setPanel('qr-scan');
-            else if (activeRole === 'seller') openSellerEntry();
-            else if (activeRole === 'admin') openReviewer();
-            else openFieldPilot();
-          }}
-        >
-          {activeRole === 'buyer' ? <QrCode size={20} /> : activeRole === 'seller' ? <PackageSearch size={20} /> : <ShieldCheck size={20} />}
-        </button>
-        <button
-          type="button"
-          title="Menu"
-          className="navpill-btn"
-          onClick={() => { setMenuOpen(true); }}
-        >
-          <Menu size={18} />
-        </button>
-      </nav>
+      {/* Maquette V1.1 .navpill — contextual dock (dockFor): 3 buttons re-derived
+          from active sheet + role. Center is wider (46px) and gets accent dot when active.
+          Sits ABOVE the sheet (z-index 60 > sheet 50) — "en bas mais au-dessus de sheet". */}
+      {(() => {
+        const isTeam = activeRole === 'admin' || activeRole === 'operator';
+        const isTxn = panel === 'availability' && availabilityStep >= 1;
+        const contentOpen = panel !== 'none' && panel !== 'search' && panel !== 'qr-scan';
+        type DockBtn = { icon: typeof Search; label: string; active: boolean; action: () => void; center?: boolean };
+        let dock: DockBtn[];
+        if (isTxn) {
+          dock = [
+            { icon: X, label: 'Annuler', active: false, action: () => { setAvailabilityStep(0); setPanel('none'); } },
+            { icon: QrCode, label: 'QR', active: true, action: () => setPanel('qr-scan'), center: true },
+            { icon: Menu, label: 'Menu', active: false, action: () => setMenuOpen(true) },
+          ];
+        } else if (contentOpen) {
+          const centerIcon = isTeam ? ShieldCheck : activeRole === 'seller' ? PackageSearch : Search;
+          const centerAction = isTeam ? openReviewer : activeRole === 'seller' ? openSellerEntry : () => setPanel('search');
+          dock = [
+            { icon: ArrowLeft, label: 'Retour', active: false, action: () => { if (panel === 'facility' || panel === 'claim') closeFacilityContext(); else setPanel('none'); } },
+            { icon: centerIcon, label: isTeam ? 'À valider' : activeRole === 'seller' ? 'Stock' : 'Recherche', active: true, action: centerAction, center: true },
+            { icon: Menu, label: 'Menu', active: false, action: () => setMenuOpen(true) },
+          ];
+        } else if (panel === 'search') {
+          const centerIcon = isTeam ? ShieldCheck : activeRole === 'seller' ? PackageSearch : QrCode;
+          const centerAction = isTeam ? openReviewer : activeRole === 'seller' ? openSellerEntry : () => setPanel('qr-scan');
+          dock = [
+            { icon: Search, label: 'Recherche', active: true, action: () => setPanel('search') },
+            { icon: centerIcon, label: isTeam ? 'À valider' : activeRole === 'seller' ? 'Stock' : 'QR', active: true, action: centerAction, center: true },
+            { icon: Menu, label: 'Menu', active: false, action: () => setMenuOpen(true) },
+          ];
+        } else {
+          // default (map / no sheet): buyer=QR center, seller=Stock center, team=À valider center
+          const centerIcon = isTeam ? ShieldCheck : activeRole === 'seller' ? PackageSearch : QrCode;
+          const centerAction = isTeam ? openReviewer : activeRole === 'seller' ? openSellerEntry : () => setPanel('qr-scan');
+          dock = [
+            { icon: Search, label: 'Recherche', active: false, action: () => setPanel('search') },
+            { icon: centerIcon, label: isTeam ? 'À valider' : activeRole === 'seller' ? 'Stock' : 'QR', active: true, action: centerAction, center: true },
+            { icon: Menu, label: 'Menu', active: false, action: () => setMenuOpen(true) },
+          ];
+        }
+        return (
+          <nav className="omni-navpill" aria-label="Navigation Omni">
+            {dock.map((b, i) => (
+              <button
+                key={i}
+                type="button"
+                title={b.label}
+                className={`navpill-btn${b.center ? ' center' : ''}${b.active ? ' active' : ''}`}
+                onClick={b.action}
+              >
+                <b.icon size={b.center ? 20 : 18} />
+              </button>
+            ))}
+          </nav>
+        );
+      })()}
 
 
       {panel === 'qr-scan' && (
