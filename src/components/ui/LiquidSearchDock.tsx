@@ -15,7 +15,14 @@ interface Props {
   isSearching?: boolean;
 }
 
-const DISTANCES = [2, 5, 10, 25] as const;
+const DISTANCES = [
+  { km: 1, label: '1 km — quartier' },
+  { km: 5, label: '5 km' },
+  { km: 10, label: '10 km' },
+  { km: 25, label: '25 km — ville' },
+  { km: 100, label: '100 km — région' },
+  { km: 0, label: 'Monde entier' },
+] as const;
 
 // Maquette SEARCH sheet: .searchdock .fld — pill 34px, loupe + input + bouton « → »;
 // contraintes (chips) se révèlent à la frappe, pas un panneau séparé.
@@ -86,7 +93,7 @@ export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Pr
               <span className="dot" />
               <span>Rayon</span>
               <select value={maxDistance} onChange={(e) => setMaxDistance(Number(e.target.value))} aria-label="Rayon">
-                {DISTANCES.map((d) => <option key={d} value={d}>{d} km</option>)}
+                {DISTANCES.map((d) => <option key={d.km} value={d.km}>{d.label}</option>)}
               </select>
             </label>
             {(['any', 'pickup', 'delivery'] as const).map((m) => (

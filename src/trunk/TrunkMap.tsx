@@ -210,7 +210,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   onRevealStateChangeRef.current = onRevealStateChange;
   const facilitiesRef = useRef(facilities);
   const rotating = useRef(true);
-  const cameraMode = useRef<CameraMode>('resting_globe');
+  const cameraMode = useRef<CameraMode>('manual_navigation');
   const rotationFrame = useRef<number | null>(null);
   const rotationResumeTimer = useRef<number | null>(null);
   const revealToken = useRef(0);
@@ -223,11 +223,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const [basemap, setBasemap] = useState<'vector' | 'local' | 'raster'>('vector');
   const [mapRetryKey, setMapRetryKey] = useState(0);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
-  const [cameraModeState, setCameraModeState] = useState<CameraMode>('resting_globe');
+  const [cameraModeState, setCameraModeState] = useState<CameraMode>('manual_navigation');
   const [revealRunning, setRevealRunning] = useState(false);
   const [revealLabel, setRevealLabel] = useState<string | null>(null);
-  const [zoom, setZoom] = useState(1.35);
-  const [projection, setProjection] = useState<'globe' | 'mercator'>('globe');
+  const [zoom, setZoom] = useState(11.5);
+  const [projection, setProjection] = useState<'globe' | 'mercator'>('mercator');
   const [bearing, setBearing] = useState(0);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
   const [locationState, setLocationState] = useState<LocationState>('idle');
@@ -431,7 +431,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         url: resourceType === 'Glyphs' ? rewriteGlyphUrl(url) : url,
       }),
       center: [1.22, 6.13],
-      zoom: 1.35,
+      zoom: 11.5,
       minZoom: 1,
       maxZoom: 18,
       attributionControl: false,
@@ -921,8 +921,26 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       chain = chain.then(() => new Promise<void>((resolve) => {
         if (isStale()) { resolve(); return; }
         setRevealLabel(step.label);
-        map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
-        window.setTimeout(resolve, step.pause + 820);
+        // V1.1 founder: globe spins slowly during the world phase (like searching)
+        if (step.kind === 'world') {
+          rotating.current = true;
+          const spin = () => {
+            if (isStale() || !rotating.current || !map) return;
+            const c = map.getCenter();
+            map.setCenter([c.lng + 0.35, c.lat]);
+            rotationFrame.current = window.requestAnimationFrame(spin);
+          };
+          rotationFrame.current = window.requestAnimationFrame(spin);
+          map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
+          window.setTimeout(() => {
+            rotating.current = false;
+            if (rotationFrame.current !== null) { window.cancelAnimationFrame(rotationFrame.current); rotationFrame.current = null; }
+            resolve();
+          }, step.pause + 820);
+        } else {
+          map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
+          window.setTimeout(resolve, step.pause + 820);
+        }
       }));
     });
     chain.then(() => { if (!isStale()) finish(); }).catch(() => undefined);

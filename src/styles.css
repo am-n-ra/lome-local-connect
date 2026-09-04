@@ -342,6 +342,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 @keyframes lift-in { from { opacity: 0; transform: translate(-50%, 10px) scale(.98); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes options-lift-in { from { opacity: 0; transform: translate(0, 10px); } to { opacity: 1; transform: translate(0, 0); } }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width: 900px) { @keyframes sheet-in { from { opacity: 0; transform: translate(-50%, 100%); } to { opacity: 1; transform: translate(-50%, 0); } } }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 50% { opacity: .4; transform: scale(.82); } }
 @keyframes nearby-state-in { from { opacity: .35; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
@@ -355,7 +356,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .nearby-card { flex-basis: min(320px, 47%); }
   .search-anchor { width: min(54vw, 560px); bottom: var(--nearby-sheet-offset, 28px); }
   .map-controls { top: 22%; right: 32px; }
-  .omni-sheet { width: min(100%, 560px); bottom: 22px; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
+  .omni-sheet { width: min(100%, 560px); left: 50%; transform: translateX(-50%); bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
   .sheet-backdrop { background: rgba(15, 15, 15, .14); }
 }
 
