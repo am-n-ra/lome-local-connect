@@ -1770,15 +1770,6 @@ textarea:focus-visible {
   color: #fff;
   background: rgba(255, 255, 255, 0.16);
 }
-.omni-navpill .navpill-btn.active::after {
-  content: "";
-  position: absolute;
-  bottom: 4px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #2e8b6f;
-}
 .omni-navpill .navpill-btn.center {
   width: 46px;
   height: 46px;
@@ -1847,12 +1838,12 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   gap: 7px;
-  height: 40px;
+  height: 36px;
   border-radius: 999px;
   background: #fff;
   border: 1px solid #e6e6e6;
-  padding: 0 11px;
-  transition: 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+  padding: 0 12px;
+  box-shadow: 0 1px 2px rgba(15, 15, 15, 0.04), 0 1px 1px rgba(15, 15, 15, 0.03);
 }
 .searchdock .fld:focus-within {
   border-color: #0f0f0f;
@@ -1864,11 +1855,10 @@ textarea:focus-visible {
   border: 0;
   outline: 0;
   background: none;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
   color: #0f0f0f;
 }
-.searchdock .fld input::placeholder { color: #6b6b6b; font-weight: 400; }
+.searchdock .fld input::placeholder { color: #6b6b6b; }
 .searchdock .fld-go {
   flex: none;
   width: 30px;
