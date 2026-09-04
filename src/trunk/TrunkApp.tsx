@@ -2285,7 +2285,7 @@ export function TrunkApp() {
       )}
 
       {panel === 'search' && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Recherche Omni">
+        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet" role="dialog" aria-modal="true" aria-label="Recherche Omni">
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>

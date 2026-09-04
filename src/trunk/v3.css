@@ -1753,6 +1753,14 @@ textarea:focus-visible {
   background: #111111;
   box-shadow: 0 20px 48px rgba(15, 15, 15, 0.16);
   z-index: 60;
+  transition: bottom 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* T-10q2: navpill rises with the keyboard so it stays reachable while typing;
+   the app shell itself (map, role switch at top) never shifts. */
+@media (max-width: 620px) {
+  .species-app[data-keyboard-open] .omni-navpill {
+    bottom: calc(14px + var(--omni-keyboard, 0px));
+  }
 }
 .omni-navpill .navpill-btn {
   width: 40px;
