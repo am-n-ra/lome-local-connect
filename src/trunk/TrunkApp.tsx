@@ -26,9 +26,7 @@ import { SellerWorkspaceSheet as MaquetteSellerSheet } from '../components/ui/Se
 import { AvailSheet as MaquetteAvailSheet } from '../components/ui/BuyerSheet';
 import { LiquidResultCarousel } from '../components/ui/LiquidResultCarousel';
 import { LiquidFacilitySheet } from '../components/ui/LiquidFacilitySheet';
-import { LiquidTransactionRoom, type LiquidTransactionDetails } from '../components/ui/LiquidTransactionRoom';
-import { GlassSurface, GlassButton, GlassBadge } from '../components/ui/LiquidGlass';
-import { Sparkles, Wallet, Compass, Building2, Eye, Home } from 'lucide-react';
+import { Sparkles, Wallet, Compass, Home } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
@@ -131,7 +129,6 @@ export function TrunkApp() {
   const [saveCurrentError, setSaveCurrentError] = useState('');
   const [query, setQuery] = useState('');
   const [committedQuery, setCommittedQuery] = useState('');
-  const [liquidShowcaseOpen, setLiquidShowcaseOpen] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | undefined>(undefined);
   const [mapState, setMapState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading');
   const [detailState, setDetailState] = useState<'idle' | 'loading' | 'error'>('idle');
