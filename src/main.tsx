@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { TrunkApp } from './trunk/TrunkApp';
+import { TrunkAppV13 } from './trunk/TrunkAppV13';
 import './styles.css';
 import './trunk/v3.css';
 
@@ -14,6 +14,6 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <TrunkApp />
+    <TrunkAppV13 />
   </StrictMode>,
 );
