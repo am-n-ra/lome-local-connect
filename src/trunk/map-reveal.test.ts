@@ -26,7 +26,11 @@ describe('map search reveal contract', () => {
   it('returns truthful fallbacks for absent or invalid points', () => {
     expect(centerOfPoints([], [9, 8])).toEqual([9, 8]);
     expect(boundsOfPoints([])).toBeNull();
-    expect(buildSearchRevealSteps([])).toEqual([]);
+    // La séquence se déclenche toujours (spec V1.3) : sans résultats, elle vole
+    // vers le centre par défaut (Lomé) avec l'étape finale "Aucun résultat".
+    const steps = buildSearchRevealSteps([]);
+    expect(steps.map((step) => step.kind)).toEqual(['world', 'continent', 'country', 'region', 'city', 'results']);
+    expect(steps.at(-1)?.label).toBe('Aucun résultat');
     expect(boundsOfPoints([{ longitude: Number.NaN, latitude: 1 }])).toBeNull();
   });
 });

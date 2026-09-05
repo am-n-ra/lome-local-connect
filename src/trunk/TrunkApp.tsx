@@ -2472,6 +2472,8 @@ export function TrunkApp() {
 
       {/* T-10q1: Bottom gradient blur — app lives above the dock */}
       <div className="omni-bottom-gradient" aria-hidden="true" />
+      {/* T-10t: voile de fondu DEVANT la sheet au-dessus du dock (illusion "ça disparaît"). */}
+      <div className={`omni-dock-veil${panel !== 'none' || menuOpen || optionsOpen ? ' visible' : ''}`} aria-hidden="true" />
 
       {/* Maquette V1.1 .navpill — contextual dock (dockFor): 3 buttons re-derived
           from active sheet + role. Center is wider (46px) and gets accent dot when active.

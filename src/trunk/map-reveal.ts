@@ -45,15 +45,25 @@ export function buildSearchRevealSteps(
   facilities: readonly RevealPoint[],
   userPosition?: RevealPoint | null,
 ): SearchRevealStep[] {
+  // La séquence se déclenche TOUJOURS, même sans résultat : sur une recherche vide
+  // on vole vers la position utilisateur (ou le centre par défaut) et la grille vide
+  // apparaît à la fin. C'est le comportement demandé (spec V1.3 : jamais de saut
+  // direct à la grille, toujours le vol contextuel).
   const validFacilities = facilities.filter(validPoint);
-  if (!validFacilities.length) return [];
-  const contextCenter = userPosition && validPoint(userPosition)
-    ? [userPosition.longitude, userPosition.latitude] as [number, number]
-    : centerOfPoints(validFacilities);
-  const resultCenter = centerOfPoints(userPosition ? [...validFacilities, userPosition] : validFacilities);
+  const hasUser = Boolean(userPosition && validPoint(userPosition));
+  const userPoint = hasUser && userPosition ? [userPosition.longitude, userPosition.latitude] as [number, number] : null;
+  // Centre de contexte (chaque étape du vol) : la position utilisateur si fournie,
+  // sinon le centre des facilities, sinon Lomé par défaut.
+  const contextCenter: [number, number] = userPoint
+    ?? (validFacilities.length ? centerOfPoints(validFacilities) : [1.22, 6.13]);
+  // Centre final de cadrage : facilities + utilisateur quand il y a des résultats,
+  // sinon la position utilisateur, sinon le contexte.
+  const resultCenter: [number, number] = validFacilities.length
+    ? centerOfPoints(userPoint ? [...validFacilities, { latitude: userPosition!.latitude, longitude: userPosition!.longitude }] : validFacilities)
+    : (userPoint ?? contextCenter);
   return [
     ...REVEAL_STAGES.map((stage) => ({ ...stage, center: contextCenter })),
-    { kind: 'results', label: 'Facilités trouvées', center: resultCenter, zoom: 14.2, pause: 0 },
+    { kind: 'results', label: validFacilities.length ? 'Facilités trouvées' : 'Aucun résultat', center: resultCenter, zoom: 14.2, pause: 0 },
   ];
 }
 

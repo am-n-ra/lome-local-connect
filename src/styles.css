@@ -391,6 +391,38 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
     -webkit-backdrop-filter: blur(3px);
   }
 }
+
+/* Maquette V1.3 motion — voile de fondu DEVANT la sheet, juste au-dessus du dock.
+   Le fondateur : « le contenu doit sembler disparaître devant le dock », pas passer
+   derrière. z-index 55 = au-dessus des sheets (50), sous le navpill (60).
+   La sheet glisse dessous et son bord bas s'estompe dans le blanc du dock. */
+.omni-dock-veil {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 96px;
+  z-index: 55;
+  pointer-events: none;
+  background: linear-gradient(to top, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.55) 42%, transparent 100%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .28s var(--ease), transform .28s var(--ease);
+}
+.omni-dock-veil.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (min-width: 900px) {
+  .omni-dock-veil {
+    height: 84px;
+    background: linear-gradient(to top, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.45) 45%, transparent 100%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
 @media (min-width: 900px) {
   :root { --sheet-height: min(46dvh, 430px); }
   .species-topbar { top: 24px; left: 32px; right: 32px; }
@@ -404,8 +436,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   /* `translate` (not `transform`) so the sheet-in keyframes — which animate
      `transform: translateY(...)` with fill-mode both — cannot clobber centering.
      `top:auto` neutralizes the Radix bottom-variant `sm:top-1/2` so desktop sheets
-     stay bottom-anchored and horizontally centered (maquette V1.3: mobile === desktop). */
-  .omni-sheet { top: auto; width: min(100%, 560px); left: 50%; right: auto; translate: -50% 0; transform: none; bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
+     stay bottom-anchored and horizontally centered (maquette V1.3: mobile === desktop).
+     `inset-inline:0 + margin-inline:auto` est le centrage le plus robuste (indépendant
+     de translate/transform, fonctionne même si une animation les écrase). */
+  .omni-sheet { top: auto; left: 0; right: 0; width: min(100%, 560px); margin-inline: auto; translate: none; transform: none; bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
   .sheet-backdrop { background: rgba(15, 15, 15, .14); }
 }
 

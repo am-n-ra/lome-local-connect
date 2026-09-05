@@ -866,7 +866,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !revealKey || revealKey === lastRevealKey.current || !facilities.length) return;
+    if (!map || !revealKey || revealKey === lastRevealKey.current) return;
+    // La carte MapLibre peut ne pas encore avoir fini de charger (mapStatus !== 'ready')
+    // alors que les facilities sont déjà là. Dans ce cas on ne marque PAS le reveal
+    // comme vu : quand mapStatus passe à 'ready', l'effet se rejoue et démarre enfin.
+    if (mapStatus !== 'ready') return;
     lastRevealKey.current = revealKey;
     const token = revealToken.current + 1;
     revealToken.current = token;
@@ -964,7 +968,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         setRevealLabel(null);
       }
     };
-  }, [facilities, onRevealStateChange, revealKey]);
+  }, [facilities, mapStatus, onRevealStateChange, revealKey]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
