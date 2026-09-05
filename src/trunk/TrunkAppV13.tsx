@@ -4,10 +4,10 @@ import { authClient, getAuthToken } from '../auth';
 import { getAccountCapabilities, listPublicFacilities, getFacilityDetail } from './api';
 import type { FacilityDetail, PublicFacility, SearchOptions } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
-import { TrunkMap } from './TrunkMap';import { AdminV13 } from './AdminV13';import { BuyerFlowV13 } from './BuyerFlowV13';
+import { TrunkMap } from './TrunkMap';import { AdminV13 } from './AdminV13';import { BuyerFlowV13 } from './BuyerFlowV13';import { SellerV13 } from './SellerV13';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin' | 'flow';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -147,7 +147,7 @@ export function TrunkAppV13() {
       <div className="countmark" aria-hidden="true">{facilities.length}</div>
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         {(eligibleRoles.length ? eligibleRoles : ['buyer'] as Role[]).map((r: Role) => (
-          <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); if (r === 'admin') setSheet('admin'); if (r === 'buyer') setSheet('none'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+          <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); if (r === 'admin') setSheet('admin'); if (r === 'seller') setSheet('seller'); if (r === 'buyer') setSheet('none'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
         ))}
       </div>
       <div className="navpill" role="navigation" aria-label="Actions principales">
@@ -218,6 +218,9 @@ export function TrunkAppV13() {
             </div>
           )}
         </section>
+      )}
+      {sheet === 'seller' && (
+        <SellerV13 onClose={() => setSheet('menu')} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} />
