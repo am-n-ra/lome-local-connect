@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
+import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 
 type FlowProduct = { id: string; name: string };
@@ -42,6 +42,8 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   const [messages, setMessages] = useState<Array<{ body: string; senderRole: string; createdAt: string }>>([]);
   const [score, setScore] = useState(5);
   const [note, setNote] = useState('');
+  const [chatDraft, setChatDraft] = useState('');
+  const [chatSending, setChatSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<number | null>(null);
 
@@ -70,6 +72,23 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
     if (result.ok && result.data) { setTxn(result.data); setTxnId(id); setStage('txn'); }
     if (messagesResult?.ok && messagesResult.data) setMessages(messagesResult.data.messages.slice(-4));
   }, []);
+
+  const sendChat = useCallback(async () => {
+    const body = chatDraft.trim();
+    if (!body || !txnId || chatSending) return;
+    const token = await getAuthToken();
+    if (!token) { setError('Session requise.'); return; }
+    setChatSending(true);
+    try {
+      const result = await sendTransactionMessage({ transactionId: txnId, body, token });
+      if (result.ok && result.data) {
+        setMessages((current) => [...current, { body: result.data!.body, senderRole: result.data!.senderRole, createdAt: result.data!.createdAt }].slice(-4));
+        setChatDraft('');
+      } else { setError(result.error?.message ?? 'Message non envoyé.'); }
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Message non envoyé.');
+    } finally { setChatSending(false); }
+  }, [chatDraft, txnId, chatSending]);
 
   const request = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -242,9 +261,20 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
         <div className="cardbox">
           <p className="tiny muted">Transaction {txnId ? txnId.slice(0, 8) : '—'} · {txn?.state ?? 'intent_created'}</p>
           {qrToken && <p className="sub">QR émis — présentable en caisse (ou « Scanner un QR » du dock).</p>}
-          {messages.length > 0 && messages.map((message) => (
-            <p className="tiny muted" key={message.createdAt + message.body}><b>{message.senderRole === 'buyer' ? 'Vous' : 'Commerce'}</b> {message.body}</p>
-          ))}
+          {messages.length > 0 && (
+            <div className="chatlog" aria-label="Conversation transaction" style={{ marginTop: 8 }}>
+              {messages.map((message) => (
+                <div className={`msg ${message.senderRole === 'buyer' ? 'me' : 'them'}`} key={message.createdAt + message.body}>
+                  {message.body}
+                  <small>{new Date(message.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</small>
+                </div>
+              ))}
+            </div>
+          )}
+          <form className="chatbar" onSubmit={(event) => { event.preventDefault(); void sendChat(); }}>
+            <input value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Écrivez au commerce…" aria-label="Message au commerce" maxLength={1000} />
+            <button type="submit" aria-label="Envoyer" disabled={chatSending || !chatDraft.trim()}><ArrowRight size={15} /></button>
+          </form>
           <div className="btnrow">
             <button className="btn" type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> Mon QR</button>
             <button className="btn ghost" type="button" disabled={busy || !qrToken} onClick={() => void verifyQr()}>Vérifier</button>
