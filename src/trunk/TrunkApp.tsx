@@ -32,10 +32,35 @@ import { Sparkles, Wallet, Compass, Home } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
+// Recherche mémorisée pour le gating auth (V1.3 §4) : stockée en sessionStorage,
+// relue après l'identité minimale pour reprendre la recherche exacte.
+const PENDING_SEARCH_KEY = 'omni.pendingAvailabilitySearch';
+type PendingSearch = {
+  term: string;
+  category: string | null;
+  filters: unknown;
+  quantity?: number;
+};
+function savePendingSearch(payload: PendingSearch) {
+  if (typeof window === 'undefined') return;
+  window.sessionStorage.setItem(PENDING_SEARCH_KEY, JSON.stringify(payload));
+}
+function restorePendingSearch(): PendingSearch | null {
+  if (typeof window === 'undefined') return null;
+  const raw = window.sessionStorage.getItem(PENDING_SEARCH_KEY);
+  if (!raw) return null;
+  window.sessionStorage.removeItem(PENDING_SEARCH_KEY);
+  try {
+    return JSON.parse(raw) as PendingSearch;
+  } catch {
+    return null;
+  }
+}
+
 type Panel = 'none' | 'account' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console' | 'admin-audit' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search' | 'saved-searches';
 type AuthMode = 'sign-in' | 'sign-up';
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
-type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console';
+type AuthReturn = 'none' | 'search' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console';
 type SellerResponseStatus = Extract<AvailabilityResponseStatus, 'available' | 'partial' | 'unavailable'>;
 export type EscapeTarget = 'facility' | 'seller-queue' | 'nearby-results' | 'close' | 'none';
 
@@ -155,6 +180,10 @@ export function TrunkApp() {
   const [authState, setAuthState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [authError, setAuthError] = useState('');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
+  // Miroir de sessionUser pour les callbacks différés (ex. reprise de recherche
+  // après auth dans un setTimeout) — évite de capturer une valeur stale.
+  const sessionUserRef = useRef<SessionUser | null>(null);
+  sessionUserRef.current = sessionUser;
   const [accountCapabilities, setAccountCapabilities] = useState<AccountCapabilitiesResult | null>(null);
   const [accountCapabilitiesState, setAccountCapabilitiesState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [roleAccounts, setRoleAccounts] = useState<RoleManagementAccount[]>([]);
@@ -1629,6 +1658,19 @@ export function TrunkApp() {
   const beginSearch = (event?: FormEvent, explicitQuery?: string) => {
     event?.preventDefault();
     const nextQuery = (explicitQuery ?? query).trim();
+    // Gating recherche (V1.3 §4) : sans session, on mémorise la requête et les
+    // contraintes puis on passe par l'identité minimale — la recherche reprend
+    // automatiquement après connexion (jamais rien n'est perdu).
+    if (!sessionUserRef.current) {
+      savePendingSearch({
+        term: nextQuery,
+        category: draftOptions.category ?? null,
+        filters: draftOptions,
+        quantity,
+      });
+      openAuth('sign-in', 'search');
+      return;
+    }
     facilityQueryKeyRef.current = null;
     setMapState('loading');
     setSearchRevealRevision((revision) => revision + 1);
@@ -2067,8 +2109,25 @@ export function TrunkApp() {
       setAppliedOptions(draftOptions);
       setAuthState('idle');
       const resumePanel = authReturn === 'availability' ? 'availability' : authReturn === 'buyer-requests' ? 'buyer-requests' : authReturn === 'seller-entry' ? 'seller-entry' : authReturn === 'field-pilot' ? 'field-pilot' : authReturn === 'claim' ? 'claim' : authReturn === 'inbox' ? 'inbox' : authReturn === 'reviewer' ? 'reviewer' : authReturn === 'admin-roles' ? 'admin-roles' : authReturn === 'admin-console' ? 'admin-console' : 'none';
+      const returnTo_ = authReturn;
       setAuthReturn('none');
       setPanel(resumePanel);
+      if (returnTo_ === 'search') {
+        // V1.3 §4 : reprise automatique de la recherche mémorisée après identité minimale.
+        const pending = restorePendingSearch();
+        if (pending) {
+          setQuery(pending.term);
+          if (pending.filters && typeof pending.filters === 'object') {
+            const restoredFilters = pending.filters as Partial<typeof draftOptions>;
+            setDraftOptions({ ...draftOptions, ...restoredFilters });
+            setAppliedOptions({ ...draftOptions, ...restoredFilters });
+          }
+          setPanel('none');
+          window.setTimeout(() => {
+            beginSearch(undefined, pending.term);
+          }, 120);
+        }
+      }
       if (resumePanel === 'admin-console') {
         void loadAdminConsole();
       }
