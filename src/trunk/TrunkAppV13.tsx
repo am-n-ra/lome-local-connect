@@ -4,10 +4,10 @@ import { authClient, getAuthToken } from '../auth';
 import { getAccountCapabilities, listPublicFacilities, getFacilityDetail } from './api';
 import type { FacilityDetail, PublicFacility, SearchOptions } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
-import { TrunkMap } from './TrunkMap';import { AdminV13 } from './AdminV13';
+import { TrunkMap } from './TrunkMap';import { AdminV13 } from './AdminV13';import { BuyerFlowV13 } from './BuyerFlowV13';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin' | 'flow';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -26,7 +26,7 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
@@ -212,11 +212,15 @@ export function TrunkAppV13() {
                   <span className="pthumb" />
                   <span><b>{product.name}</b><small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
                   <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
+                  <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} type="button" onClick={() => { setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name }); setFlowProduct({ id: product.id, name: product.name }); setSheet('flow'); }}>Demander</button>
                 </div>
               ))}
             </div>
           )}
         </section>
+      )}
+      {sheet === 'flow' && flowFacility && flowProduct && (
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
