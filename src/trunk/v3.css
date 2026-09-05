@@ -2256,3 +2256,184 @@ textarea, input[type=text], input[type=number] { border-radius:10px !important; 
 .txstep:not(.ok):not(.now) .txstep-body b { color: var(--maquette-ink-soft); }
 .txstep .go { color: var(--maquette-accent); display: grid; place-items: center; }
 .txstep.now .go { color: var(--maquette-ink); font-weight: 700; }
+/* ==========================================================================
+   Gate 5 / Branches — COQUILLE DESKTOP V1.3 (maquette `body.desktop`, ≥1040px)
+   Re-foundation founder 2026-09-05: la maquette V1.3 fournie après la desktop
+   = coquille bureau: recherche en barre permanente haute, résultats en rail gauche
+   permanent, autres sheets en tiroirs dockés à droite, dock en rail latéral gauche.
+
+   Mobile/tablette inchangés (sheets bottom centrées). Le seuil 1040px = le même
+   que `desktopMQ` de la maquette (matchMedia min-width:1040px`.
+   ========================================================================== */
+@media (min-width: 1040px) {
+  /* 1. Recherche = barre permanente en haut (ex SEARCH, `omni-sheet-search`). */
+  .omni-sheet-search {
+    position: fixed !important;
+    top: 36px;
+    bottom: auto;
+    left: 64px;
+    right: 0;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap:  18px;
+    border:  0;
+    border-bottom: 1px solid #e8e8e6;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 10px 24px;
+    overflow: visible;
+    transform: none;
+    translate: none;
+    z-index:  16;
+    animation: none;
+    background: #fff;
+  }
+  .omni-sheet-search .sheet-handle,
+  .omni-sheet-search .sheet-head {
+    display: none;
+  }
+  .omni-sheet-search .searchdock {
+    margin:  0;
+    flex: 0 0 300px;
+    width: auto;
+  }
+  .omni-sheet-search .searchdock .fld { width: 100%; }
+  .omni-sheet-search .constraintZone {
+    margin:  0;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap:	 10px;
+  }
+  .omni-sheet-search .constraintZone .constraintLabel { display: none; }
+  .omni-sheet-search .constraintZone .chips {
+    margin-top:  0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .omni-sheet-search .constraintZone .chips::-webkit-scrollbar { display: none; }
+  .omni-sheet-search > div:last-child { margin-top:  0; flex: none; }
+
+  /* 2. Résultats = rail gauche permanent（ex RESULTS, `omni-results-surface`）. */
+  .omni-results-surface {
+    position: fixed;
+    top:	 36px;
+    bottom:	  0;
+    left:	 64px;
+    right: auto;
+    width:	 346px;
+    max-width:	 346px;
+    z-index:	 15;
+    pointer-events: auto;
+    transition: none;
+  }
+  .omni-results-surface .omni-sheet-results {
+    position: absolute;
+    inset:	  0;
+    width:	 100%;
+    max-width:	 100%;
+    max-height: none;
+    margin:	  0;
+    border:	  0;
+    border-right:	 1px solid #e8e8e6;
+    border-radius:	 0;
+    box-shadow: none;
+    padding:	 14px 14px 18px;
+    overflow: hidden;
+    transform: none;
+    translate: none;
+    animation: none;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+  }
+  .omni-results-surface .omni-sheet-results .sheet-handle { display: none; }
+  .omni-results-surface .omni-sheet-results .sheet-head { flex: none; padding: 0 2px 10px; }
+  .omni-results-surface .omni-sheet-results .omni-hgrid {
+    flex:	 1;
+    flex-direction: column;
+    overflow-x: visible;
+    overflow-y: auto;
+    max-width: none;
+    margin:	  0;
+    padding:	 2px 2px 6px;
+    gap:	 10px;
+    scroll-snap-type: none;
+  }
+  .omni-results-surface .omni-sheet-results .omni-hcard {
+    flex: none;
+    width:	 100%;
+    display: flex;
+    align-items: center;
+    gap:	 10px;
+    border-radius:	 14px;
+  }
+  .omni-results-surface .omni-sheet-results .omni-hcard-thumb { width:	 72px; height:	 52px; flex: none; }
+  .omni-results-surface .omni-sheet-results .omni-hcard-body { flex:	 1; padding:	 0; }
+
+  /* 3. Toutes les autres sheets = tiroir droit docké. */
+  .omni-sheet:not(.omni-sheet-search):not(.omni-sheet-results) {
+    position: fixed;
+    top:	 36px;
+    bottom:	  0;
+    left: auto;
+    right:	  0;
+    width:	 min(400px, 90vw);
+    max-width: none;
+    max-height: none;
+    height: auto;
+    margin:	 0;
+    border:	 0;
+    border-left:	 1px solid #e8e8e6;
+    border-radius:	 0;
+    box-shadow:	 -18px 0 40px rgba(0,0,0,0.14);
+    padding:	 16px 16px 24px;
+    overflow-y: auto;
+    transform: none;
+    translate: none;
+    background:	 #fff;
+    z-index:	 18;
+    animation: omni-drawer-in .26s var(--ease) both;
+  }
+  @keyframes omni-drawer-in {
+    from { opacity: 0; transform: translateX(28px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  /* 4. Dock = rail latéral gauche. */
+  .omni-navpill {
+    top:	 64px;
+    bottom: auto;
+    left:	 14px;
+    right: auto;
+    transform: none;
+    flex-direction: column;
+    padding:	 8px;
+    gap:	 4px;
+    justify-content: flex-start;
+  }
+  .omni-navpill .navpill-btn.center { margin: 2px 0; }
+  .omni-navpill.morph,
+  .omni-navpill.dock-sheet-open { animation: none; }
+
+  /* 5. Fondus bas + charnières mobile désactivés（pas de pill bas）. */
+  .omni-bottom-gradient,
+  .omni-dock-veil { display: none; }
+
+  /* 6. Rolepill: garde le haut-centre（maquette top:8px； prod 14px（ — ajustement léger. */
+  .omni-roleswitch { top:	 10px; }
+
+  /* 7. Neutralise `.omni-sheet-enter` pour les rails recherché/résultats
+      (les tiroirs drawers gardent leur propre `omni-drawer-in`.). */
+  .omni-sheet-enter.omni-sheet-search,
+  .omni-sheet-enter.omni-sheet-results { animation: none; }
+}

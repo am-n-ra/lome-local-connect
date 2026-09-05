@@ -110,6 +110,16 @@ function publicBadge(facility: PublicFacility) {
 }
 
 export function TrunkApp() {
+  // V1.3 desktop coquille : la top bar recherche + rail résultats gauche
+  // s'activent à partir de 1040px (même seuil que `body.desktop` de la maquette).
+  const [desktopShell, setDesktopShell] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1040px)');
+    const apply = () => setDesktopShell(mq.matches);
+    apply();
+    mq.addEventListener?.('change', apply) ?? mq.addListener?.(apply);
+    return () => { mq.removeEventListener?.('change', apply) ?? mq.removeListener?.(apply); };
+  }, []);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   const [selectedFacility, setSelectedFacility] = useState<FacilityDetail | null>(null);
   // Itinéraire in-app (écran 10): cible du tracé Evergreen affiché sur la carte.
@@ -2405,9 +2415,10 @@ export function TrunkApp() {
 
       {mapState === 'error' && <div className="map-error" role="alert"><span>{error}</span><button type="button" onClick={retryPublicFacilities}>Réessayer</button></div>}
 
-      {/* Maquette RESULTS sheet: .sheet h-auto + .hgrid of .hcard — shown on active search OR reveal */}
+      {/* Maquette RESULTS sheet: .sheet h-auto + .hgrid of .hcard — shown on active search OR reveal.
+          V1.3 desktop: devient un rail gauche permanent (`omni-results-surface`). */}
       {panel === 'none' && (nearbyOpen || committedQuery.trim() || (appliedOptions.category && appliedOptions.category !== 'all' && appliedOptions.category !== 'Tous')) && (
-        <div className="pointer-events-auto !bottom-20 fixed inset-x-0 z-40">
+        <div className="omni-results-surface">
           <LiquidResultCarousel
             facilities={visibleFacilities}
             selectedFacilityId={selectedFacility?.id ?? null}
@@ -2419,7 +2430,7 @@ export function TrunkApp() {
       )}
 
       {panel === 'search' && (
-        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Recherche Omni">
+        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet scroll-fade omni-sheet-search" role="dialog" aria-modal="true" aria-label="Recherche Omni">
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>
@@ -2429,6 +2440,7 @@ export function TrunkApp() {
             <button type="button" onClick={() => setPanel('none')} aria-label="Fermer la recherche"><X size={18} /></button>
           </div>
           <LiquidSearchDock
+            constraintsPersistent={desktopShell}
             onSearch={(demand) => {
               setQuery(demand.rawQuery);
               setQuantity(demand.quantity || 1);

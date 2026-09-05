@@ -12,7 +12,7 @@ type Props = {
 export function LiquidResultCarousel({ facilities, selectedFacilityId, onSelectFacility, className = '' }: Props) {
   if (facilities.length === 0) return null;
   return (
-    <section className={`omni-sheet omni-sheet-enter context-sheet ${className}`} role="dialog" aria-modal="true" aria-label={`Résultats (${facilities.length})`}>
+    <section className={`omni-sheet omni-sheet-enter context-sheet omni-sheet-results ${className}`} role="dialog" aria-modal="true" aria-label={`Résultats (${facilities.length})`}>
       <div className="sheet-handle" />
       <div className="sheet-head">
         <div>

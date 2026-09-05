@@ -13,6 +13,9 @@ interface Props {
   onSearch: (demand: StructuredDemand) => void;
   onScanQr?: () => void;
   isSearching?: boolean;
+  /** V1.3 desktop coquille : force la rangée de contraintes visible
+   * même sans frappe (top bar permanente). */
+  constraintsPersistent?: boolean;
 }
 
 const DISTANCES = [
@@ -26,7 +29,7 @@ const DISTANCES = [
 
 // Maquette SEARCH sheet: .searchdock .fld — pill 34px, loupe + input + bouton « → »;
 // contraintes (chips) se révèlent à la frappe, pas un panneau séparé.
-export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Props) {
+export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false, constraintsPersistent = false }: Props) {
   const [query, setQuery] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [maxBudget, setMaxBudget] = useState('');
@@ -74,8 +77,8 @@ export function LiquidSearchDock({ onSearch, onScanQr, isSearching = false }: Pr
         </button>
       </form>
 
-      {/* Maquette V1.1 constraintZone: chips pleines avec pastille (dot) qui se révèlent à la frappe */}
-      {typing && (
+      {/* Maquette V1.1 constraintZone: chips pleines avec pastille (dot) qui se révèlent à la frappe (toujours visibles sur la top bar desktop V1.3) */}
+      {(typing || constraintsPersistent) && (
         <div className="constraintZone omni-sheet-enter">
           <div className="constraintLabel">Contraintes (requête, pas engagement vendeur)</div>
           <div className="chips">
