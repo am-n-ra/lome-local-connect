@@ -73,6 +73,8 @@ Only Gate 4 (Trunk) and its ready work may be active, executed in the locked ord
 
 | 2026-09-05 | Foundateur: « non recherche doit être gater par auth; push » → T-10s2 gating recherche (V1.3 §4( : `beginSearch` mémorise la requête + passe par l'identité minimale, reprise auto après auth. **Push exécuté** : origin `omni-v2-rebuild` à `ec381c0` ; **prod sert `index-DyYT2veM.js` === build local (guardrail T-07d ✅)**. tsc ✅, 296/296 tests ✅. | T-10s → `done` (2 passe(; Gate  ​5 reste `active` jusqu'à la passe navigateur 4 largeurs prod. | advance | Nature Way | Sur passe navigateur 4 largeurs prod + clôture Gate  ​5 |
 
+| 2026-09-05 | Foundateur: « je veux des animations, des motions, un design complet » → T-10t système de motion : spec motion documentée, dock « breath » à l'ouverture de sheet, mask scroll en direct, soft paywall onboarding (Free vs Pro, Continuer gratuitement) + enchaînement onboarding → identité minimale → reprise auto. **Push exécuté** : `1c2ab45` ; **prod sert `index-wRdr-i1j.js` === build local (guardrail T-07d ✅)**. tsc ✅, 296/296 tests ✅, preuve navigateur du flux onboarding→paywall→auth ✅. | T-10t → `done`; Gate  ​5 reste `active` jusqu'à la passe navigateur 4 largeurs prod + clôture. | advance | Nature Way | Sur passe navigateur 4 largeurs prod + clôture Gate  ​5 |
+
 ## Founder checkpoint
 
 > **Where we are:** Milestone M-01; Species (G-02a–d) **closed**; Root (G-03) **applied**; Gate 4 (Trunk) **closed 2026-09-03** (console admin suffit pour le volet opérateur — décision fondateur; T-08 prouvé 16/16); **Gate  ​5 (Branches/UI) — `active`** depuis 2026-09-04/09-05 (T-10…T-10r exécutés, retours PC fondateur intégrés, dernier commit `986fc8d`); `/nature-way` reste le spécialiste en contrôle.
