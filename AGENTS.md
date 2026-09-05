@@ -53,8 +53,9 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - Species blueprint: `docs/omni-species-blueprint-2026-08-27.md` (§4D Admin/Reviewer/Operator; §2 design system).
 - Existing prototype (buyer/seller/admin stubs): `docs/omni-species-html/index.html` + `app.js`. Design tokens in `:root` of index.html.
 
-## Branch rule (founder locked 2026-09-02)
-**Only `omni-v2-rebuild` is touched.** Never merge to `main`. "Merge" means "push prod branch"; feature branches merge into `omni-v2-rebuild` only if founder explicitly names one.
+## Branch rule( founder locked 2026-09-02; amended 2026-09-05(
+**Only `omni-v2-rebuild` is touched.** Never merge to `main`. "Merge" means "push prod branch"; feature branches merge into `omni-v2-rebuild` only if founder explicitly names one. **Push rule (amended 2026-09-05, founder order(: push vers prod APRÈS CHAQUE ÉTAPE SIGNIFICATIVE, sans attendre confirmation; vérifier hash prod === local (guardrail T-07d( avant continuer; le fondateur valide sur prod au fil de l'eau.**
+**T-13 (2026-09-05, commit  ​81869c9(: refonte UI 1:1 — slice V-1 coquille livrée( shell `TrunkAppV13`( remplace `TrunkApp`( (mount main.tsx(; atoms 1:1 `ui-v13.css` extrait du HTML maquette; rolepill/navpill/countmark/sheets SEARCH-RESULTS-FACILITY-MENU-ACCOUNT-AUTH réels, backend réel via `api.ts` + auth Neon email/password; tests 297/297, tsc clean, build+prod hash `index-CbuxGUOp.js` === local.
 
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
