@@ -7,6 +7,7 @@ const TrunkMap = lazy(() => import('./TrunkMap').then(({ TrunkMap: Component }) 
 import { TransactionQrCard } from './TransactionQrCard';
 import { TransactionChat } from './TransactionChat';
 import { SavedSearchesSheet } from './SavedSearchesSheet';
+import { AccountProfileSheet } from './AccountProfileSheet';
 const PublicQrScannerSheet = lazy(() => import('../components/ui/PublicQrScannerSheet').then(({ PublicQrScannerSheet: Component }) => ({ default: Component })));
 import { SellerTransactionPanel } from './SellerTransactionPanel';
 import { canNativeShare, copyTextToClipboard, facilityPublicUrl } from './qr-share';
@@ -31,7 +32,7 @@ import { Sparkles, Wallet, Compass, Home } from 'lucide-react';
 
 const emptySearchOptions: SearchOptions = { category: '' };
 
-type Panel = 'none' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console' | 'admin-audit' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search' | 'saved-searches';
+type Panel = 'none' | 'account' | 'auth' | 'facility' | 'claim' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console' | 'admin-audit' | 'qr-scan' | 'buyer-pro-plans' | 'onboarding' | 'wallet' | 'company-onboarding' | 'seller-scanner' | 'instore-scan' | 'search' | 'saved-searches';
 type AuthMode = 'sign-in' | 'sign-up';
 type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 type AuthReturn = 'none' | 'availability' | 'buyer-requests' | 'seller-entry' | 'field-pilot' | 'claim' | 'inbox' | 'reviewer' | 'admin-roles' | 'admin-console';
@@ -2206,10 +2207,16 @@ export function TrunkApp() {
     }
   }, [mapState, nearbyOpen, nearbyCollapsed, revealActive, showAllResults, visibleFacilities.length]);
 
-  const availableRoles: Array<'buyer' | 'seller' | 'admin' | 'operator'> = ['buyer'];
-  if (accountCapabilities?.roles?.some((role) => role.toLowerCase().includes('seller'))) availableRoles.push('seller');
-  if (accountCapabilities?.roles?.some((role) => role.toLowerCase() === 'reviewer' || role.toLowerCase() === 'admin')) availableRoles.push('admin');
-  if (accountCapabilities?.roles?.some((role) => role.toLowerCase() === 'operator')) availableRoles.push('operator');
+  // Maquette V1.3 (et D-06 « one identity + capability ») : Buyer et Seller sont
+  // toujours proposés — le compte peut acheter et/ou vendre selon ses capabilités ;
+  // Admin/Operator ne s'ajoutent que si le compte détient ces rôles internes.
+  const hasReviewerRole = accountCapabilities?.roles?.some(
+    (role) => role.toLowerCase() === 'reviewer' || role.toLowerCase() === 'admin' || role.toLowerCase() === 'moderator',
+  );
+  const hasOperatorRole = accountCapabilities?.roles?.some((role) => role.toLowerCase() === 'operator');
+  const availableRoles: Array<'buyer' | 'seller' | 'admin' | 'operator'> = ['buyer', 'seller'];
+  if (hasReviewerRole) availableRoles.push('admin');
+  if (hasOperatorRole) availableRoles.push('operator');
   const rolePillLabel: Record<'buyer' | 'seller' | 'admin' | 'operator', string> = { buyer: 'Buyer', seller: 'Seller', admin: 'Admin', operator: 'Operator' };
   const switchActiveRole = (role: 'buyer' | 'seller' | 'admin' | 'operator') => {
     setActiveRole(role);
@@ -2244,7 +2251,7 @@ export function TrunkApp() {
       </header>
 
       {menuOpen && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Menu Omni" style={{ height: '64%' }}>
+        <section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Menu Omni" style={{ height: '64%' }}>
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>
@@ -2269,9 +2276,9 @@ export function TrunkApp() {
               <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><Compass size={15} /></span>
               <span><b style={{ fontSize: 10, display: 'block' }}>Plans</b></span>
             </button>
-            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); openAuth('sign-in'); }}>
+            <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); setPanel(sessionUser ? 'account' : 'auth'); }}>
               <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><User size={15} /></span>
-              <span><b style={{ fontSize: 10, display: 'block' }}>Compte</b></span>
+              <span><b style={{ fontSize: 10, display: 'block' }}>{sessionUser ? 'Compte' : 'Créer un compte / se connecter'}</b></span>
             </button>
             {sessionUser && <button className="menuitem" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 11, borderRadius: 13, background: '#f7f7f7', border: '1px solid #e6e6e6', textAlign: 'left', cursor: 'pointer' }} onClick={() => { setMenuOpen(false); signOut(); }}>
               <span className="mi" style={{ display: 'grid', width: 26, height: 26, placeItems: 'center', borderRadius: 8, color: '#0f0f0f', background: '#fff', border: '1px solid #e6e6e6' }}><X size={15} /></span>
@@ -2297,7 +2304,7 @@ export function TrunkApp() {
       )}
 
       {panel === 'search' && (
-        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet" role="dialog" aria-modal="true" aria-label="Recherche Omni">
+        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Recherche Omni">
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>
@@ -2392,8 +2399,9 @@ export function TrunkApp() {
             { icon: Menu, label: 'Menu', active: false, action: () => setMenuOpen(true) },
           ];
         }
+        const dockFingerprint = dock.map((b) => b.label).join('|');
         return (
-          <nav className="omni-navpill" aria-label="Navigation Omni">
+          <nav key={dockFingerprint} className="omni-navpill morph" aria-label="Navigation Omni">
             {dock.map((b, i) => (
               <button
                 key={i}
@@ -2411,7 +2419,7 @@ export function TrunkApp() {
 
 
       {panel === 'qr-scan' && (
-        <Suspense fallback={<section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-label="Scanner un QR" style={{ height: '52%' }}><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Scanner un QR</span><h2>Facilité publique</h2></div></div><p className="tiny muted" style={{ textAlign: 'center', marginTop: 16 }}>Ouverture du scanner…</p></section>}>
+        <Suspense fallback={<section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-label="Scanner un QR" style={{ height: '52%' }}><div className="sheet-handle" /><div className="sheet-head"><div><span className="section-kicker">Scanner un QR</span><h2>Facilité publique</h2></div></div><p className="tiny muted" style={{ textAlign: 'center', marginTop: 16 }}>Ouverture du scanner…</p></section>}>
           <PublicQrScannerSheet
             onDetected={(facilityId) => {
               setPanel('none');
@@ -2420,6 +2428,25 @@ export function TrunkApp() {
             onClose={() => setPanel('none')}
           />
         </Suspense>
+      )}
+      {panel === 'account' && (
+        <AccountProfileSheet
+          open
+          user={sessionUser}
+          capabilities={accountCapabilities}
+          walletBalance={sellerWallet ? currency(sellerWallet.balanceMinor, sellerWallet.currency) : null}
+          roleLabel={rolePillLabel[activeRole]}
+          onOpenWallet={() => setPanel('wallet')}
+          onOpenPlans={() => setPanel('buyer-pro-plans')}
+          onToggleRole={() => {
+            const next = activeRole === 'seller' ? 'buyer' : 'seller';
+            setActiveRole(next);
+            setPanel('none');
+            if (next === 'seller') openSellerEntry();
+          }}
+          onSignOut={() => void signOut()}
+          onClose={() => setPanel('none')}
+        />
       )}
       {panel === 'auth' && <AuthSheet mode={authMode} setMode={setAuthMode} email={authEmail} setEmail={setAuthEmail} password={authPassword} setPassword={setAuthPassword} name={authName} setName={setAuthName} state={authState} error={authError} onSubmit={submitAuth} onClose={() => { setAuthReturn('none'); setPanel('none'); }} />}
       {panel === 'seller-entry' && <MaquetteSellerSheet
@@ -2444,7 +2471,7 @@ export function TrunkApp() {
 
       {panel === 'saved-searches' && <SavedSearchesSheet searches={savedSearches} state={savedSearchesState} error={savedSearchesError} deletingId={savedSearchDeletingId} onRefresh={() => void loadSavedSearches()} onRerun={rerunSavedSearch} onDelete={(search) => void removeSavedSearch(search)} onClose={() => setPanel('none')} />}
       {panel === 'buyer-requests' && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Espace Buyer" style={{ height: '52%' }}>
+        <section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Espace Buyer" style={{ height: '52%' }}>
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>
@@ -2488,7 +2515,7 @@ export function TrunkApp() {
         </section>
       )}
       {panel === 'buyer-pro-plans' && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Plans" style={{ height: '52%' }}>
+        <section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Plans" style={{ height: '52%' }}>
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>
@@ -2520,7 +2547,7 @@ export function TrunkApp() {
       )}
       {panel === 'onboarding' && <OnboardingModal onClose={() => setPanel('none')} onComplete={() => setPanel('none')} />}
       {panel === 'wallet' && (
-        <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Wallet" style={{ height: '52%' }}>
+        <section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Wallet" style={{ height: '52%' }}>
           <div className="sheet-handle" />
           <div className="sheet-head">
             <div>

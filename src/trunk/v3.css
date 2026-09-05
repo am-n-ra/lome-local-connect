@@ -1791,6 +1791,23 @@ textarea:focus-visible {
 .omni-navpill .navpill-btn:active {
   transform: scale(0.9);
 }
+/* Maquette V1.3 motion — dock morphing: when the contextual center action
+   changes (search ↔ QR/stock/team), the pill does a soft background pulse so
+   the change reads as a living transition, not an abrupt icon swap. */
+.omni-navpill.morph {
+  animation: navpill-morph 260ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.omni-navpill .navpill-btn {
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), color 0.2s var(--ease), background 0.2s var(--ease);
+}
+.omni-navpill .navpill-btn.center {
+  transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), background 0.22s var(--ease), border-color 0.22s var(--ease);
+}
+@keyframes navpill-morph {
+  0% { transform: translateX(-50%) scale(1); }
+  45% { transform: translateX(-50%) scale(1.06); }
+  100% { transform: translateX(-50%) scale(1); }
+}
 
 /* Maquette .hgrid / .hcard — RESULTS sheet facility cards */
 .omni-hgrid {

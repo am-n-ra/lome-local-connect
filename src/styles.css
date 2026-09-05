@@ -203,6 +203,13 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 
 .sheet-backdrop { position: absolute; z-index: 10; inset: 0; background: rgba(0,0,0,0.15); backdrop-filter: none; animation: fade-in .18s var(--ease); }
 .omni-sheet { position: absolute; z-index: 50; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; width: auto; max-height: min(88dvh, 720px); overflow: auto; transform: none; padding: 10px 15px 92px; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; color: var(--ink); background: #FFFFFF; box-shadow: 0 -14px 44px rgba(0,0,0,0.16); backdrop-filter: none; animation: sheet-in .32s var(--ease); }
+/* Maquette V1.3 motion — living sheets: content fades into a soft mask before
+   reaching the dock instead of passing behind it ("disparaît devant le dock").
+   Re-masks only on scroll (mask-position translated) via a tiny JS toggle. */
+.omni-sheet.scroll-fade {
+  mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 118px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 118px), transparent 100%);
+}
 .sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .sheet-head > button:last-child { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; color: var(--ink-soft); background: #eef4f0; }
 .sheet-head h2 { margin: 0; color: var(--ink); font-size: 16px; font-weight: 700; letter-spacing: -.4px; line-height: 1.1; }
@@ -383,8 +390,10 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
   .search-anchor { width: min(54vw, 560px); bottom: var(--nearby-sheet-offset, 28px); }
   .map-controls { top: 22%; right: 32px; }
   /* `translate` (not `transform`) so the sheet-in keyframes — which animate
-     `transform: translateY(...)` with fill-mode both — cannot clobber centering. */
-  .omni-sheet { width: min(100%, 560px); left: 50%; right: auto; translate: -50% 0; transform: none; bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
+     `transform: translateY(...)` with fill-mode both — cannot clobber centering.
+     `top:auto` neutralizes the Radix bottom-variant `sm:top-1/2` so desktop sheets
+     stay bottom-anchored and horizontally centered (maquette V1.3: mobile === desktop). */
+  .omni-sheet { top: auto; width: min(100%, 560px); left: 50%; right: auto; translate: -50% 0; transform: none; bottom: 0; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; }
   .sheet-backdrop { background: rgba(15, 15, 15, .14); }
 }
 
