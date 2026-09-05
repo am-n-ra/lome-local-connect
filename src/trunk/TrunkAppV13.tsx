@@ -1,13 +1,13 @@
 import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin, Search, QrCode, Menu, LogOut, User, X, ArrowRight, PackageSearch } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
-import { listPublicFacilities, getFacilityDetail } from './api';
+import { getAccountCapabilities, listPublicFacilities, getFacilityDetail } from './api';
 import type { FacilityDetail, PublicFacility, SearchOptions } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
-import { TrunkMap } from './TrunkMap';
+import { TrunkMap } from './TrunkMap';import { AdminV13 } from './AdminV13';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -26,7 +26,7 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [capabilities, setCapabilities] = useState<{ ownedFacilityIds: string[] | null } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
@@ -51,10 +51,23 @@ export function TrunkAppV13() {
 
   useEffect(() => {
     let active = true;
-    authClient?.getSession?.().then((result: unknown) => {
+    void (async () => {
+      try {
+        const result = await authClient?.getSession?.();
       const user = sessionUserFromAuthResult(result);
-      if (active && user) setSessionUser(user);
-    }).catch(() => undefined);
+      if (active && user) {
+        setSessionUser(user);
+        const token = await getAuthToken();
+        if (token) {
+          const caps = await getAccountCapabilities({ token });
+          if (caps.ok && caps.data) {
+            setAccountRoles(caps.data.roles ?? []);
+            setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+          }
+        }
+      }
+      } catch { /* session restore */ }
+    })();
     return () => { active = false; };
   }, []);
 
@@ -105,9 +118,9 @@ export function TrunkAppV13() {
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
     if (sessionUser) base.push('seller');
-    if (capabilities?.ownedFacilityIds?.length) base.push('admin');
+    if (adminTools) base.push('admin');
     return base;
-  }, [sessionUser, capabilities]);
+  }, [sessionUser, adminTools]);
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
@@ -125,7 +138,7 @@ export function TrunkAppV13() {
             onBoundsChange={setBounds}
             onRevealStateChange={handleRevealStateChange}
             revealKey={revealKey}
-            ownedFacilityIds={capabilities?.ownedFacilityIds ?? null}
+            focusTarget={focusTarget}
           />
         </Suspense>
       </section>
@@ -134,7 +147,7 @@ export function TrunkAppV13() {
       <div className="countmark" aria-hidden="true">{facilities.length}</div>
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         {(eligibleRoles.length ? eligibleRoles : ['buyer'] as Role[]).map((r: Role) => (
-          <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => setRole(r)}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+          <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); if (r === 'admin') setSheet('admin'); if (r === 'buyer') setSheet('none'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
         ))}
       </div>
       <div className="navpill" role="navigation" aria-label="Actions principales">
@@ -205,6 +218,9 @@ export function TrunkAppV13() {
           )}
         </section>
       )}
+      {sheet === 'admin' && adminTools && (
+        <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
+      )}
       {sheet === 'menu' && (
         <section className="sheet h-mid" role="region" aria-label="Espace">
           <div className="handle" />
@@ -215,7 +231,7 @@ export function TrunkAppV13() {
           <div className="menugrid" style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             {!sessionUser && <button className="btn" type="button" onClick={() => setSheet('auth')}>Se connecter</button>}
             {sessionUser && <button className="btn ghost" type="button" onClick={() => setSheet('account')}>Mon compte <User size={16} /></button>}
-            {sessionUser && <button className="btn ghost" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setCapabilities(null); }}><LogOut size={16} /> Se déconnecter</button>}
+            {sessionUser && <button className="btn ghost" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setAdminTools(false);setAccountRoles([]); }}><LogOut size={16} /> Se déconnecter</button>}
           </div>
         </section>
       )}
