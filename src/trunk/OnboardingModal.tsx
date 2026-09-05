@@ -43,19 +43,79 @@ const ONBOARDING_SLIDES: Slide[] = [
 
 export function OnboardingModal({ onClose, onComplete }: OnboardingModalProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  // Le paywall est présenté à la fin du parcours de valeur (conversion : tôt,
+  // pas au fond de l'app). Il n'est jamais bloquant.
+  const [showPaywall, setShowPaywall] = useState(false);
 
-  const isLast = currentSlide === ONBOARDING_SLIDES.length - 1;
+  const isLastSlide = currentSlide === ONBOARDING_SLIDES.length - 1;
 
   const handleNext = () => {
-    if (isLast) {
-      onComplete?.();
-      onClose();
+    if (isLastSlide) {
+      setShowPaywall(true);
     } else {
       setCurrentSlide((prev) => prev + 1);
     }
   };
 
+  const handlePaywallChoice = (upgrade: boolean) => {
+    if (upgrade) {
+      onClose();
+      return;
+    }
+    // « Continuer gratuitement » : la décision appartient au parent (ici, enchaîner
+    // vers l'identité minimale quand une recherche est en attente). On n'appelle
+    // pas onClose ici pour ne pas écraser le panel choisi par onComplete.
+    onComplete?.();
+  };
+
   const slide = ONBOARDING_SLIDES[currentSlide];
+
+  if (showPaywall) {
+    return (
+      <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-labelledby="paywall-title">
+        <section className="omni-sheet omni-sheet-enter omni-keyboard-aware context-sheet onboarding-sheet">
+          <div className="sheet-handle" />
+          <div className="sheet-head onboarding-head">
+            <span className="section-kicker">Vos plans Omni</span>
+            <button type="button" className="text-button skip-button" onClick={onClose} aria-label="Passer (Restez gratuit)">
+              Passer <Check size={13} />
+            </button>
+          </div>
+          <div className="onboarding-slide-content">
+            <div className="onboarding-badge">Sans engagement</div>
+            <h2 id="paywall-title" className="onboarding-title">Commencez gratuitement, passez Pro quand vous voulez.</h2>
+            <p className="onboarding-text">
+              La recherche avec contraintes et la découverte restent gratuites. Buyer Pro débloque les recherches illimitées et les alertes — sans vous bloquer aujourd’hui.
+            </p>
+          </div>
+          <div className="softplan" style={{ marginTop: 10 }}>
+            <div>
+              <b style={{ fontSize: 12 }}>Buyer Free</b>
+              <br />
+              <span style={{ fontSize: 10 }}>Carte, recherche avec contraintes, découverte</span>
+            </div>
+            <span className="status gray">Actuel</span>
+          </div>
+          <div className="softplan" style={{ marginTop: 8 }}>
+            <div>
+              <b style={{ fontSize: 12 }}>Buyer Pro</b>
+              <br />
+              <span style={{ fontSize: 10 }}>Recherches illimitées + alertes · 5&nbsp;$ / mois</span>
+            </div>
+            <span className="status ink">5 $</span>
+          </div>
+          <div className="onboarding-actions">
+            <button className="primary-button wide omni-pressable" type="button" onClick={() => handlePaywallChoice(false)}>
+              Continuer gratuitement <Check size={16} />
+            </button>
+            <button className="secondary-button wide omni-pressable" type="button" onClick={() => handlePaywallChoice(true)}>
+              Voir les plans Pro <ArrowRight size={15} />
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="sheet-backdrop" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
@@ -96,7 +156,7 @@ export function OnboardingModal({ onClose, onComplete }: OnboardingModalProps) {
 
         <div className="onboarding-actions">
           <button className="primary-button wide omni-pressable" type="button" onClick={handleNext}>
-            {isLast ? (
+            {isLastSlide ? (
               <>
                 Commencer à explorer <Check size={16} />
               </>

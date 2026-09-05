@@ -205,10 +205,22 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .omni-sheet { position: absolute; z-index: 50; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; width: auto; max-height: min(88dvh, 720px); overflow: auto; transform: none; padding: 10px 15px 92px; border: 0; border-top: 1px solid #e8e8e6; border-radius: 24px 24px 0 0; color: var(--ink); background: #FFFFFF; box-shadow: 0 -14px 44px rgba(0,0,0,0.16); backdrop-filter: none; animation: sheet-in .32s var(--ease); }
 /* Maquette V1.3 motion — living sheets: content fades into a soft mask before
    reaching the dock instead of passing behind it ("disparaît devant le dock").
-   Re-masks only on scroll (mask-position translated) via a tiny JS toggle. */
+   Le mask suit le scroll : .scroll-fade ajuste mask-position avec une transition
+   douce (le JS ajoute .scrolled quand l'utilisateur descend). */
 .omni-sheet.scroll-fade {
-  mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 118px), transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 118px), transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 116px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black calc(100% - 116px), transparent 100%);
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+  transition: mask-position 0.18s ease-out, -webkit-mask-position 0.18s ease-out;
+}
+.omni-sheet.scroll-fade.scrolled {
+  mask-position: 0 -10px;
+  -webkit-mask-position: 0 -10px;
+  mask-size: 100% calc(100% + 10px);
+  -webkit-mask-size: 100% calc(100% + 10px);
 }
 .sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .sheet-head > button:last-child { display: grid; width: 32px; height: 32px; flex: 0 0 auto; place-items: center; border: 0; border-radius: 50%; color: var(--ink-soft); background: #eef4f0; }

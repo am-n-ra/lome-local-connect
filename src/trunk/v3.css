@@ -1808,6 +1808,17 @@ textarea:focus-visible {
   45% { transform: translateX(-50%) scale(1.06); }
   100% { transform: translateX(-50%) scale(1); }
 }
+/* Maquette V1.3 motion — dock "breath" : quand une sheet s'ouvre/ferme, le dock
+   recule d'un souffle (comme poussé par la sheet qui monte depuis lui) puis revient.
+   Appliqué via la classe .dock-sheet-open sur le .omni-navpill. */
+.omni-navpill.dock-sheet-open {
+  animation: navpill-breath 320ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@keyframes navpill-breath {
+  0% { transform: translateX(-50%) translateY(0) scale(1); }
+  40% { transform: translateX(-50%) translateY(-3px) scale(0.97); }
+  100% { transform: translateX(-50%) translateY(0) scale(1); }
+}
 
 /* Maquette .hgrid / .hcard — RESULTS sheet facility cards */
 .omni-hgrid {

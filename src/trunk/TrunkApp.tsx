@@ -331,6 +331,59 @@ export function TrunkApp() {
     return () => document.removeEventListener('pointerdown', blurOutsideDock, true);
   }, []);
 
+  // Motion — Masks de scroll en direct + « dock breath » à l'ouverture des sheets.
+  // Le fondu de fin de sheet (.scroll-fade) suit le défilement ; le navpill réagit
+  // à l'ouverture d'une surface flottante (breath) comme s'il était poussé d'un souffle.
+  useEffect(() => {
+    const sheets = new Set<HTMLElement>();
+    let frames: number[] = [];
+    const updateSheetMask = (sheet: HTMLElement) => {
+      const atTop = sheet.scrollTop <= 4;
+      sheet.classList.toggle('scrolled', !atTop);
+    };
+    const onScroll = (event: Event) => {
+      const sheet = event.currentTarget as HTMLElement;
+      if (frames.length > 20) frames.shift();
+      frames.push(window.requestAnimationFrame(() => updateSheetMask(sheet)));
+    };
+    const activateSheets = () => {
+      sheets.forEach((sheet) => {
+        sheet.removeEventListener('scroll', onScroll);
+        sheet.removeEventListener('pointerdown', onScroll);
+      });
+      sheets.clear();
+      document.querySelectorAll<HTMLElement>('.omni-sheet.scroll-fade').forEach((sheet) => {
+        sheets.add(sheet);
+        sheet.addEventListener('scroll', onScroll, { passive: true });
+        updateSheetMask(sheet);
+      });
+    };
+    const timer = window.setInterval(activateSheets, 600);
+    activateSheets();
+    return () => {
+      window.clearInterval(timer);
+      frames.forEach((frame) => window.cancelAnimationFrame(frame));
+      sheets.forEach((sheet) => {
+        sheet.removeEventListener('scroll', onScroll);
+        sheet.removeEventListener('pointerdown', onScroll);
+      });
+    };
+  }, []);
+
+  // Dock breath : relance l'animation à chaque ouverture/fermeture de surface
+  // (pas au premier rendu — le dock "respire" seulement quand un contexte change).
+  const dockBreathFirstRef = useRef(true);
+  useEffect(() => {
+    const navpill = document.querySelector<HTMLElement>('.omni-navpill');
+    if (!navpill || dockBreathFirstRef.current) {
+      dockBreathFirstRef.current = false;
+      return;
+    }
+    navpill.classList.remove('dock-sheet-open');
+    const frame = window.requestAnimationFrame(() => navpill.classList.add('dock-sheet-open'));
+    return () => window.cancelAnimationFrame(frame);
+  }, [panel, optionsOpen, menuOpen]);
+
   const selectedProduct = useMemo(() => selectedFacility?.products.find((product) => product.id === selectedProductId) ?? null, [selectedFacility, selectedProductId]);
   const categoryOptions = useMemo(() => {
     const categories = new Set(facilities.map((facility) => facility.category).filter(Boolean));
@@ -1668,7 +1721,10 @@ export function TrunkApp() {
         filters: draftOptions,
         quantity,
       });
-      openAuth('sign-in', 'search');
+      // Conversion V1.3 §3-4 : pas d'auth au premier écran. Le non-connecté passe
+      // d'abord par le parcours de valeur + soft paywall (onboarding), puis par
+      // l'identité minimale ; la recherche reprend automatiquement ensuite.
+      setPanel('onboarding');
       return;
     }
     facilityQueryKeyRef.current = null;
@@ -2604,7 +2660,18 @@ export function TrunkApp() {
           <button className="btn" style={{ marginTop: 10 }} onClick={() => setPanel('none')}>Passer au niveau supérieur</button>
         </section>
       )}
-      {panel === 'onboarding' && <OnboardingModal onClose={() => setPanel('none')} onComplete={() => setPanel('none')} />}
+      {panel === 'onboarding' && (
+        <OnboardingModal
+          onClose={() => setPanel('none')}
+          onComplete={() => {
+            if (!sessionUserRef.current) {
+              openAuth('sign-in', 'search');
+              return;
+            }
+            setPanel('none');
+          }}
+        />
+      )}
       {panel === 'wallet' && (
         <section className="omni-sheet omni-sheet-enter context-sheet scroll-fade" role="dialog" aria-modal="true" aria-label="Wallet" style={{ height: '52%' }}>
           <div className="sheet-handle" />
