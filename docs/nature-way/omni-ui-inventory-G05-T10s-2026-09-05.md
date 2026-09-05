@@ -35,6 +35,19 @@
 
 **Verdict :** `npm run lint` (tsc( ✅, `npm test` **296/296** ✅, `npm run build` ✅ (bundle `index-D5_n9PVf.js`(. Preuve navigateur sandbox : role switch Buyer+Seller ✅, menu Compte → auth (non connecté( ✅. Preuve navigateur 4 largeurs + prod dépend d'un push fondateur (guardrail T-07d(.
 
+## Verdict — Pass de clôture Gate 5 (2026-09-05, T-10v)
+
+- **Bundle prod vérifié** : prod sert `index-CupUr-t1.js` === build local (`npm run build` ✅; guardrail T-07d ✅).
+- **Chaîne verte complète** : `npm test` **296/296 (47 fichiers)** ✅; `npm run lint` (tsc) ✅; `check:boundary` ✅.
+- **Points corrigés re-vérifiés dans le bundle prod + source** :
+  - **G-01** – rôle switch : `availableRoles=['buyer','seller']` par défaut; Admin/Operator gated par `accountCapabilities.roles` (D-06 ✅. Prenuve navigateur desktop : pills **Buyer+Seller** visibles ✅.
+  - **G-02** – fiche Compte → `AccountProfileSheet` ; non connecté → surface auth (« Créer un compte / Se connecter », pills Acheteur / Vendeur Lomé / Opérateur ) ✅ (vérifié work-host desktop).
+  - **G-03** – sheets desktop : `.omni-sheet` = `width:min(100%,560px); margin-inline:auto; inset:auto 0 0; transform:none` (bottom-anchored + centré horizontal; `top:auto` effectif — fix T-10u ✅.
+  - **G-04** – reveal gating : `MapCanvas` masque les facilities pendant le vol (`setFacilitiesVisibility(false)` ; waypoints REVEAL_STEPS + labels + userPosition/marché approximatif), `finish()` → `onRevealStateChange(false)` → `setNearbyOpen(true)` ; fallback `mapState==='empty'|'error'` ouvre la grille vide/erreur — jamais pendue ✅.
+  - **G-05** – motion : `navpill-morph` + `.omni-bottom-gradient` (blur 5px, z-6, variante 72px discret) + `omni-keyboard-aware` ✅ (règles présentes dans le CSS prod).
+- **État d'erreur carte** : « Carte indisponible … Réessayer » = l'état conçu `mapState==='error'` (retry explicite) — observé sur le work-host à cause du proxy/geolocation sandbox (tuiles/style non chargés), non une régression du build. Le `Réessayer` déclenche `retryPublicFacilities`.
+- **Résiduel (clôture conditionnelle)** : **spot-check humain 4 largeurs (360/768/1280/1920( des points G-01…G-05 sur le prod `omni.sparkafrika.online`** reste un item `manual` (owner : fondateur; le harnais navigateur de ce sandbox ne permet pas le resize multi-largeurs fiable). Le bundle lui-même est responsive et les règles responsive (sm:..., `.omni-sheet` etc.) sont vérifiées au niveau du CSS prod.
+
 ## Preuve requise (clôture Gate 5(
 
 - `npm test` (tous verts(, `npm run build` (tsc + vite(, comparaison bundle prod `===` local (guardrail T-07d(, passe navigateur 4 largeurs (360/768/1280/1920( des 4 points corrigés.
