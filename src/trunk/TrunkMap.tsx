@@ -10,7 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { PublicFacility, RouteTarget } from './types';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
-import { boundsOfPoints, buildSearchRevealSteps, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { pinFeatureCollection, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
@@ -885,16 +885,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
     // Cinematic reveal: world → continent → country → region → city → results framing.
     // Mirrors the accepted maquette search experience (globe zooms in progressively).
-    const steps = buildSearchRevealSteps(facilities, userPositionRef.current);
-    if (!steps.length) {
-      revealRunningRef.current = false;
-      onRevealStateChange?.(false);
-      setRevealRunning(false);
-      setRevealLabel(null);
-      return () => undefined;
-    }
-    cameraMode.current = 'search_reveal';
-    setCameraModeState('search_reveal');
+    const flight = computeSearchFlight(facilities, userPositionRef.current);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const setLabel = (label: string | null) => setRevealLabel(label);
 
     const finish = () => {
       if (isStale()) return;
@@ -904,11 +897,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       setCameraModeState('result_framing');
 
       if (finalBounds) {
-        const [[west, south], [east, north]] = finalBounds;
+        const west = finalBounds[0][0];
+        const south = finalBounds[0][1];
+        const east = finalBounds[1][0];
+        const north = finalBounds[1][1];
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
           map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
         } else {
-          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left: 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
+          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left:  60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
         }
       }
 
@@ -920,54 +916,66 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       setCameraModeState('manual_navigation');
     };
 
-    let chain: Promise<void> = Promise.resolve();
-    steps.forEach((step) => {
-      chain = chain.then(() => new Promise<void>((resolve) => {
-        if (isStale()) { resolve(); return; }
-        setRevealLabel(step.label);
-        // V1.1 founder: the globe phase spins. easeTo + setCenter per frame fight
-        // each other, so the world step runs its own rAF loop that lerps the
-        // zoom down to globe level while rotating the longitude.
-        if (step.kind === 'world') {
-          rotating.current = true;
-          const duration = step.pause + 820;
-          const startZoom = map.getZoom();
-          const startCenter = map.getCenter();
-          const startTime = performance.now();
-          const spin = (now: number) => {
-            if (isStale() || !rotating.current) return;
-            const t = Math.min(1, (now - startTime) / duration);
-            const eased = 1 - Math.pow(1 - t, 3);
-            map.jumpTo({
-              center: [startCenter.lng + t * 55, startCenter.lat],
-              zoom: startZoom + (step.zoom - startZoom) * eased,
-            });
-            if (t < 1) {
-              rotationFrame.current = window.requestAnimationFrame(spin);
-            } else {
-              rotating.current = false;
-              rotationFrame.current = null;
-              resolve();
-            }
-          };
-          rotationFrame.current = window.requestAnimationFrame(spin);
-        } else {
-          map.easeTo({ center: step.center, zoom: step.zoom, duration: 820, essential: true });
-          window.setTimeout(resolve, step.pause + 820);
-        }
-      }));
-    });
-    chain.then(() => { if (!isStale()) finish(); }).catch(() => undefined);
-
-    return () => {
-      if (token === revealToken.current) {
-        revealToken.current += 1;
-        revealRunningRef.current = false;
-        onRevealStateChange?.(false);
-        setRevealRunning(false);
-        setRevealLabel(null);
+    const revealPinsStaggered = () => {
+      const pins = map.getLayer('omni-pins');
+      const rings = map.getLayer('omni-cluster-rings');
+      const clusters = map.getLayer('omni-clusters');
+      if (reduced) {
+        if (pins) map.setPaintProperty('omni-pins', 'circle-opacity', 1);
+        if (rings) map.setPaintProperty('omni-cluster-rings', 'circle-opacity', 0.2);
+        if (clusters) map.setPaintProperty('omni-clusters', 'circle-opacity', 0.96);
+        finish();
+        return;
       }
+      // V1.3 pave C — montée échelonnée (stagger-like(canvas approximation( : 3 vagues
+      // de 60ms, puis cadrage final. (Spec: stagger 50ms pop-in(.
+      let wave = 0;
+      const tick = () => {
+        wave +=  1;
+        if (pins) map.setPaintProperty('omni-pins', 'circle-opacity', Math.min(wave / 3, 1));
+        if (rings) map.setPaintProperty('omni-cluster-rings', 'circle-opacity', Math.min(wave /  3, 0.2));
+        if (clusters) map.setPaintProperty('omni-clusters', 'circle-opacity', Math.min(wave /  3, 0.96));
+        if (wave < 3) window.setTimeout(tick, 60); else finish();
+      };
+      tick();
     };
+
+    const beginFlight = () => {
+      // V1.3 §1.2 — pave A: bascule de caméra — « on prend de la hauteur ».
+      if (reduced) {
+        map.jumpTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0 });
+        map.once('moveend', () => { if (!isStale()) revealPinsStaggered(); });
+        return;
+      }
+      const prevZoom = map.getZoom();
+      setLabel(labelForZoom(prevZoom -  1) ?? 'Recherche dans le monde…');
+      map.easeTo({ pitch: 35, bearing:  8, zoom: prevZoom -  1, duration:   250, easing: (t) => t * (2 - t), essential: true });
+      map.once('moveend', () => {
+        if (isStale()) return;
+        // pave B: THE vol cinématique — UN flyTo curve 1.7 (dézoom/rezoom natifs.
+        const duration = Math.min(1400, Math.max(900, 900 + Math.abs(flight.targetZoom - map.getZoom()) * 140));
+        const pendingLabel = setInterval(() => {
+          if (isStale()) { window.clearInterval(pendingLabel); return; }
+          const label = labelForZoom(map.getZoom());
+          setLabel(label);
+        }, 120);
+        map.once('moveend', () => {
+          window.clearInterval(pendingLabel);
+          setLabel(null);
+          if (isStale()) return;
+          revealPinsStaggered();
+        });
+        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, curve: 1.7, duration, essential: true });
+      });
+    };
+
+    // Masque les pins pendant le vol — leveil arrive à la toute fin. (Spec 1.2:C(.
+    if (!reduced) {
+      if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-opacity', 0);
+      if (map.getLayer('omni-cluster-rings')) map.setPaintProperty('omni-cluster-rings', 'circle-opacity', 0);
+      if (map.getLayer('omni-clusters')) map.setPaintProperty('omni-clusters', 'circle-opacity', 0);
+    }
+    beginFlight();
   }, [facilities, mapStatus, onRevealStateChange, revealKey]);
 
   useEffect(() => {

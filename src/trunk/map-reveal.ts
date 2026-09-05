@@ -1,23 +1,30 @@
 import type { PublicFacility } from './types';
 
 export type RevealPoint = Pick<PublicFacility, 'latitude' | 'longitude'>;
-export type RevealStepKind = 'world' | 'continent' | 'country' | 'region' | 'city' | 'results';
 
-export type SearchRevealStep = {
-  kind: RevealStepKind;
-  label: string;
-  center: [number, number];
-  zoom: number;
-  pause: number;
+export type SearchFlight = {
+  targetCenter: [number, number];
+  targetZoom: number;
+  hasResults: boolean;
 };
 
-const REVEAL_STAGES: ReadonlyArray<Pick<SearchRevealStep, 'kind' | 'label' | 'zoom' | 'pause'>> = [
-  { kind: 'world', label: 'Le monde', zoom: 1.05, pause: 320 },
-  { kind: 'continent', label: 'Le continent', zoom: 2.15, pause: 560 },
-  { kind: 'country', label: 'Le pays', zoom: 5.35, pause: 620 },
-  { kind: 'region', label: 'La région', zoom: 8.25, pause: 680 },
-  { kind: 'city', label: 'La ville / zone', zoom: 11.25, pause: 720 },
-];
+// V1.3 §1.2: le vol cinématique est UN appel flyTo (curve 1.7) plus un
+// cadrage cameraForBounds en fin de vol — plus d'étapes manuelles fragiles.
+
+// Paliers  de zoom → libellé contextuel (spec §1.2.2(, crossfade côté UI.
+
+
+
+const WORLD_LABEL = 'Recherche dans le monde…';
+
+export function labelForZoom(zoom: number): string | null {
+  if (zoom < 4) return WORLD_LABEL;
+  if (zoom < 6) return "Afrique de l'Ouest";
+  if (zoom < 9) return 'Togo';
+  if (zoom < 12) return 'Région Maritime';
+  if (zoom < 14) return 'Lomé';
+  return null; // niveau rue — masquer le label
+}
 
 function validPoint(point: RevealPoint) {
   return Number.isFinite(point.longitude) && Number.isFinite(point.latitude);
@@ -35,36 +42,34 @@ export function centerOfPoints(points: readonly RevealPoint[], fallback: [number
 export function boundsOfPoints(points: readonly RevealPoint[]): [[number, number], [number, number]] | null {
   const valid = points.filter(validPoint);
   if (!valid.length) return null;
-  return [
-    [Math.min(...valid.map((point) => point.longitude)), Math.min(...valid.map((point) => point.latitude))],
-    [Math.max(...valid.map((point) => point.longitude)), Math.max(...valid.map((point) => point.latitude))],
-  ];
+  return [[Math.min(...valid.map((point) => point.longitude)), Math.min(...valid.map((point) => point.latitude))], [Math.max(...valid.map((point) => point.longitude)), Math.max(...valid.map((point) => point.latitude))]];
 }
 
-export function buildSearchRevealSteps(
+// Cible du vol(spec §1.2.1(: le centre = utilisateur + résultats, et le
+// zoom cible = niveau rue 14.2 avec résultats, sinon palier ville 12.5
+//(spec §1.3: aucun résultat → la caméra s'arrête au palier ville, jamais rue(。
+export function computeSearchFlight(
   facilities: readonly RevealPoint[],
   userPosition?: RevealPoint | null,
-): SearchRevealStep[] {
-  // La séquence se déclenche TOUJOURS, même sans résultat : sur une recherche vide
-  // on vole vers la position utilisateur (ou le centre par défaut) et la grille vide
-  // apparaît à la fin. C'est le comportement demandé (spec V1.3 : jamais de saut
-  // direct à la grille, toujours le vol contextuel).
+  fallback: [number, number] = [1.22, 6.13],
+): SearchFlight {
+
   const validFacilities = facilities.filter(validPoint);
   const hasUser = Boolean(userPosition && validPoint(userPosition));
-  const userPoint = hasUser && userPosition ? [userPosition.longitude, userPosition.latitude] as [number, number] : null;
-  // Centre de contexte (chaque étape du vol) : la position utilisateur si fournie,
-  // sinon le centre des facilities, sinon Lomé par défaut.
+  const userPoint: [number, number] | null = hasUser && userPosition ? [userPosition.longitude, userPosition.latitude] : null;
   const contextCenter: [number, number] = userPoint
-    ?? (validFacilities.length ? centerOfPoints(validFacilities) : [1.22, 6.13]);
-  // Centre final de cadrage : facilities + utilisateur quand il y a des résultats,
-  // sinon la position utilisateur, sinon le contexte.
+    ?? (validFacilities.length ? centerOfPoints(validFacilities) : fallback);
+
   const resultCenter: [number, number] = validFacilities.length
     ? centerOfPoints(userPoint ? [...validFacilities, { latitude: userPosition!.latitude, longitude: userPosition!.longitude }] : validFacilities)
+
     : (userPoint ?? contextCenter);
-  return [
-    ...REVEAL_STAGES.map((stage) => ({ ...stage, center: contextCenter })),
-    { kind: 'results', label: validFacilities.length ? 'Facilités trouvées' : 'Aucun résultat', center: resultCenter, zoom: 14.2, pause: 0 },
-  ];
+
+  return {
+    targetCenter: resultCenter,
+    targetZoom: validFacilities.length ? 14.2 : 12.5,
+    hasResults: validFacilities.length > 0,
+  };
 }
 
 export function pointsForResultFraming(
