@@ -173,9 +173,8 @@ body.desktop .dockmask{display:none}
 /* ---------- desktop shell: left rail dock, top search bar, left journey panel, right-docked drawers, top role switch ---------- */
 body.desktop{background:#dadad7;padding:0}
 body.desktop .omni-v13-stage{width:100%;height:100%;max-width:none;max-height:none;min-width:0;min-height:0;margin:0;border-radius:0;border:0;box-shadow:none}
-/* left icon rail: contextual per journey — appears only while a journey sheet owns the left slot; hidden during pre-search home / plain map browsing */
-body.desktop .navpill[data-journey]{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20;opacity:1}
-body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;display:none}
+/* left dock (permanent sur desktop): la navpill verticale reste toujours visible; les sheets de parcours/destination occupent l'emplacement gauche à côté — le dock ne disparaît pas */
+body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20}
 body.desktop .navpill.morph{animation:none}
 body.desktop .navpill .center{margin:2px 0}
 body.desktop .dockmask{display:none}
@@ -197,3 +196,4 @@ body.desktop .sheet[data-sheet="results"] .btnrow{margin-top:14px}
 /* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
 body.desktop .sheet[data-sheet="menu"],body.desktop .sheet[data-sheet="account"],body.desktop .sheet[data-sheet="home"],body.desktop .sheet[data-sheet="wallet"],body.desktop .sheet[data-sheet="plans"],body.desktop .sheet[data-sheet="saved"],body.desktop .sheet[data-sheet="auth"]{left:auto;right:0;top:36px;bottom:0;width:min(400px,90vw);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
 body.desktop .sheet>*{animation:none!important}
+
