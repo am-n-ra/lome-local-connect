@@ -2,7 +2,7 @@
 
 :root{--bg:#fff;--ink:#0f0f0f;--ink-soft:#6b6b6b;--line:#e6e6e6;--panel:#f7f7f7;--accent:#2e8b6f;--accent-soft:#eef4f1;--pill:#111;--warn:#8a6d1f;--warn-soft:#f6f0df;--ease:cubic-bezier(.23,1,.32,1);--ease-spring:cubic-bezier(.34,1.56,.64,1);--sh-sm:0 1px 2px rgba(15,15,15,.04),0 1px 1px rgba(15,15,15,.03);--sh-md:0 6px 18px rgba(15,15,15,.08);--sh-lg:0 20px 48px rgba(15,15,15,.16)}
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#f2f2f0;display:grid;place-items:center;padding:18px;gap:14px}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f2f0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .board{max-width:780px;text-align:center;color:var(--ink-soft);font-size:11.5px;line-height:1.5}
 .board b{color:var(--ink)}
@@ -11,7 +11,8 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .board .pal{display:flex;justify-content:center;gap:7px;margin-top:8px;flex-wrap:wrap}
 .board .pal span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:9.5px;font-weight:700;color:var(--ink)}
 .board .pal i{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.08)}
-.omni-v13-stage{position:relative;width:360px;height:720px;overflow:hidden;border-radius:46px;background:var(--bg);box-shadow:0 24px 60px rgba(0,0,0,.18),inset 0 0 0 1px rgba(0,0,0,.06)}
+.omni-v13-stage{position:relative;width:100%;height:100%;overflow:hidden;background:var(--bg)}
+.omni-v13-stage .map-stage{width:100%!important;height:100%!important}
 .mapbase{position:absolute;inset:0;background:var(--bg)}
 .mapbase svg.mapsvg{position:absolute;inset:0;width:100%;height:100%}
 .countmark{position:absolute;z-index:4;top:118px;left:34%;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--pill);color:#fff;font-weight:800;font-size:15px;box-shadow:0 8px 22px rgba(0,0,0,.25)}
