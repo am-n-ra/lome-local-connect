@@ -48,6 +48,14 @@ SEARCH, RESULTS, FACILITY(buyer/unclaimed/admin(, AVAIL, BULK, PENDING, ARESULT,
 | V-4 | Branches/Acheteur | Surfaces buyer+transaction branchées loop réelle | V-1, api.ts buyer/txn | `todo` | Browser + loop 10 événements |
 | V-5 | Branches/Suppression | Supprimer l'UI actuelle ( trunk sheets legacy(, coquille seule nouvelle | V-1..V-4 | `todo` | Suite + build + prod hash |
 
+## ⏫ RECONCILIATION V-6 (2026-09-05, ordre fondateur direct)
+
+**Fondateur (direct)** :
+1. **Développer BULK + COMPARE** (les 2 surfaces ABSENTEs du re-audit G06(→ V-6a + V-6b.
+2. **Pas de clôture Gate  ​6** — l'UI doit **matcher la maquette 1:1**: le **flou** (dockmask/backdrop-blur(, **animation du dock & de la navigation** (morph, icon-in, sheet-enter(, **toutes les nouveautés** (freshbar/fraîcheur, facilité mobile, sortchips, desktop shell(.
+3. **Prod = la vraie app, pas une maquette** — responsive (mobile+tablette+desktop(, données réelles (D-R3 zéro mock(, états réels (loading/empty/error/retry/cancel/locked(.
+
+**Impact plan** : G-06 reste `in_progress` (pas de clôture(; V-6 ajouté (workstream「1:1 motion+surfaces」(: V-6a BULK (multi-facilités, `requestAvailability`×N, idempotency par facilité(— **démarré**; V-6b COMPARE (sortchips + candidates réels, tri distance/prix/remise(; V-6c flou+dock/nav animations (dockmask, morph, icon-in, sheet-enter(; V-6d facilité mobile + freshbar fraîcheur + micro-copies M; V-6e desktop shell responsive 1:1 + aria-modal; V-6f checklist finale 4 largeurs + verdict Go (décision fondateur(.
 ## Handoff to Founder HQ — ce pass
 
 > **Local status:** `in_progress` ( V-1 actif（

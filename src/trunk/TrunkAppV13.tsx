@@ -7,21 +7,22 @@ import {
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
-  getAccountCapabilities, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
-  getWalletOverview, listPublicFacilities, listSavedSearches, submitFacilityClaim, uploadFacilityEvidence,
+  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
+  getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
 import type {
-  BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
-  FacilityDetail, PublicFacility, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
+  AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
+  FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
 import { SellerV13 } from './SellerV13';
+import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -33,6 +34,20 @@ const CLAIM_KINDS: Array<[EvidenceKind, string]> = [
   ['location', 'Repère de localisation'],
   ['service', 'Preuve de service'],
 ];
+
+
+function moneyOrQty(stockLoueOmni: number): string {
+  return `${stockLoueOmni} dispo`;
+}
+
+function bulkLabel(status: string): string {
+  if (status === 'available') return 'Disponible';
+  if (status === 'partial') return 'Partielle';
+  if (status === 'unavailable') return 'Indisponible';
+  if (status === 'expired') return 'Expirée';
+  if (status === 'error') return 'Erreur';
+  return 'En attente';
+}
 
 function statusLabel(requestStatus: string): string {
 
@@ -64,6 +79,15 @@ export function TrunkAppV13() {
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+const [bulkFacilities, setBulkFacilities] = useState<PublicFacility[] | null>(null);
+const [bulkDetails, setBulkDetails] = useState<Record<string, FacilityDetail | null>>({});
+const [bulkSelection, setBulkSelection] = useState<Record<string, string>>({});
+const [bulkLoading, setBulkLoading] = useState(false);
+const [bulkSending, setBulkSending] = useState(false);
+const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
+const [bulkErrors, setBulkErrors] = useState<string | null>(null);
+const [compareResults, setCompareResults] = useState<PublicFacility[]>([]);
+const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 'remise'>('match');
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
@@ -190,6 +214,76 @@ export function TrunkAppV13() {
       return token;
     } catch { setSheet('auth'); return null; }
   }, []);
+
+  const openBulk = useCallback(async () => {
+    setSheet('bulk');
+    setBulkSending(false);
+    setBulkResults(null);
+    setBulkErrors(null);
+    setBulkFacilities(results.length > 0 ? results : null);
+    if (results.length === 0) { setBulkErrors('Aucune facilité en résultat. Lancez d\'abord une recherche.'); return; }
+    setBulkLoading(true);
+    const token = await requireAuth();
+    if (!token) { setBulkLoading(false); return; }
+    try {
+      await Promise.all(results.map(async (facility) => {
+        const detail = bulkDetails[facility.id] ?? (await getFacilityDetail(facility.id)).data ?? null;
+        setBulkDetails((current) => ({ ...current, [facility.id]: detail }));
+        const productId = detail?.products?.find((p) => p.stockLoueOmni > 0)?.id ?? detail?.products?.[0]?.id;
+        if (productId) setBulkSelection((current) => ({ ...current, [facility.id]: productId }));
+      }));
+    } catch { /* per-facility detail errors handled per row */ }
+    setBulkLoading(false);
+  }, [results, bulkDetails]);
+
+  const sendBulk = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token || bulkSending) return;
+    const entries = Object.entries(bulkSelection).filter(([, productId]) => Boolean(productId));
+    if (entries.length === 0) { setBulkErrors('Sélectionnez au moins une facilité.'); return; }
+    setBulkSending(true); setBulkErrors(null);
+    const submitted = await Promise.all(entries.map(async ([facilityId, productId]) => {
+      const facilityName = (bulkFacilities ?? []).find((f) => f.id === facilityId)?.name ?? facilityId;
+      const productName = bulkDetails[facilityId]?.products?.find((p) => p.id === productId)?.name ?? 'Produit';
+      try {
+        const result = await requestAvailability({
+          productId, facilityId, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, token,
+          idempotencyKey: 'bulk-' + facilityId + '-' + crypto.randomUUID(),
+        });
+        if (!result.ok || !result.data) return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
+        const requestId = result.data.requestId;
+        const poll = async (): Promise<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired'; quantityAvailable: number | null; observedAt: string | null }> => {
+          for (let attempt = 0; attempt < 4; attempt++) {
+            await new Promise((resolve) => window.setTimeout(resolve, 3000));
+            const res = await getAvailabilityResponses({ requestId, token });
+            if (res.ok && res.data && res.data.responses.length > 0) {
+              const r = res.data.responses[0];
+              return { facilityId, facilityName, productName, status: r.status === 'available' ? 'available' : r.status === 'partial' ? 'partial' : r.status === 'unavailable' ? 'unavailable' : 'expired', quantityAvailable: r.quantityAvailable ?? null, observedAt: r.observedAt ?? null };
+            }
+          }
+          return { facilityId, facilityName, productName, status: 'submitted' as const, quantityAvailable: null, observedAt: null };
+        };
+        return await poll();
+      } catch {
+        return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
+      }
+    }));
+    setBulkResults(submitted);
+    setBulkSending(false);
+  }, [bulkSelection, bulkFacilities, bulkDetails, bulkSending]);
+
+  const openCompare = useCallback(async () => {
+    setSheet('compare');
+    const facilities = compareResults.length > 0 ? compareResults : results;
+    setCompareResults(facilities);
+    if (facilities.length === 0) return;
+    const token = await requireAuth();
+    if (!token) return;
+    await Promise.all(facilities.map(async (facility) => {
+      const detail = bulkDetails[facility.id] ?? (await getFacilityDetail(facility.id)).data ?? null;
+      setBulkDetails((current) => ({ ...current, [facility.id]: detail }));
+    }));
+  }, [compareResults, results, bulkDetails]);
 
   const openHome = useCallback(async () => {
     const token = await requireAuth();
@@ -421,6 +515,7 @@ export function TrunkAppV13() {
         <button type="button" aria-label="Scanner un QR" onClick={() => setSheet('menu')}><QrCode size={20} /></button>
         <button type="button" aria-label="Menu" onClick={() => setSheet('menu')}><Menu size={20} /></button>
       </div>
+      <div className="dockmask" aria-hidden="true" />
       {sheet === 'search' && (
 
         <form className="sheet h-low" onSubmit={handleSubmitSearch}>
@@ -458,6 +553,101 @@ export function TrunkAppV13() {
               </button>
             ))}
           </div>
+          <div className="btnrow" style={{ marginTop: 10 }}>
+            <button className="btn ghost sm" type="button" disabled={results.length < 2} onClick={() => void openCompare()}>Comparer</button>
+            <button className="btn sm" type="button" disabled={results.length === 0} onClick={() => void openBulk()}>Dispo groupée</button>
+          </div>
+        </section>
+      )}
+      {sheet === 'bulk' && (
+        <section className="sheet h-mid" role="region" aria-label="Disponibilité groupée">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Disponibilité groupée</div><h1>Interroger plusieurs facilités</h1></div>
+            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('results')}><X size={15} /> Fermer</button>
+          </div>
+          <p className="tiny muted">Interroger plusieurs facilités en une fois — chaque facilité reçoit sa propre demande reel.faible 1 requête groupée restante ce mois (plan gratuit).</p>
+          {bulkLoading && <p className="sub" role="status">Chargement des facilités…</p>}
+          {bulkErrors && !bulkLoading && !bulkSending && !bulkResults && <p className="sub" role="alert">{bulkErrors}</p>}
+          {!bulkLoading && !bulkResults && (
+            <div className="plist" id="bulkList">
+              {(bulkFacilities ?? []).map((facility) => {
+                const detail = bulkDetails[facility.id];
+                const products = detail?.products ?? [];
+                const selected = bulkSelection[facility.id];
+                return (
+                  <div key={facility.id} className="pitem" style={{ alignItems: 'center', cursor: 'default' }}>
+                    <span className="chk" aria-hidden="true">{selected ? '✓' : ''}</span>
+                    <span style={{ flex: 1 }}>
+                      <b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan} · {facility.productCount} produits</span>
+                      {products.length > 0 ? (
+                        <select className="field" style={{ marginTop: 4, height: 26, fontSize: 9 }} value={selected ?? ''} onChange={(event) => setBulkSelection((current) => ({ ...current, [facility.id]: event.target.value }))}>
+                          {products.filter((p) => p.stockLoueOmni > 0).map((product) => (<option key={product.id} value={product.id}>{product.name} · {moneyOrQty(product.stockLoueOmni)} dispo</option>))}
+                          {products.length === 0 && <option value="">Aucun produit</option>}
+                        </select>
+                      ) : (
+                        <span className="status gray" style={{ marginTop: 4 }}>Aucun produit référencé</span>
+                      )}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {!bulkLoading && !bulkResults && (
+            <button className="btn ok" type="button" disabled={bulkSending || Object.keys(bulkSelection).length === 0} onClick={() => void sendBulk()} style={{ marginTop: 10 }}>
+              {bulkSending ? 'Envoi en cours…' : 'Envoyer aux facilités sélectionnées'}
+            </button>
+          )}
+          {!bulkLoading && bulkResults && (
+            <>
+              {bulkResults.map((row) => (
+                <div key={row.facilityId} className="cardbox" style={{ marginTop: 8 }}>
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <div><b>{row.facilityName}</b><br /><span className="tiny muted">{row.productName}</span></div>
+                    <span className={`status ${row.status === 'available' ? 'ok' : row.status === 'partial' ? 'ink' : row.status === 'unavailable' || row.status === 'expired' ? 'dash' : 'gray'}`}>{bulkLabel(row.status)}</span>
+                  </div>
+                  {row.quantityAvailable !== null && <p className="tiny muted" style={{ marginTop: 4 }}>{row.quantityAvailable} dispo</p>}
+                  {row.observedAt && <p className="tiny muted" style={{ marginTop: 2 }}>Réponse : {new Date(row.observedAt).toLocaleTimeString('fr-FR')}</p>}
+                </div>
+              ))}
+              <div className="freshbar" style={{ marginTop: 8 }}><span className="fdot" />Fraîcheur : reflète l'allocation Omni, pas l'inventaire total du vendeur</div>
+              <div className="btnrow">
+                <button className="btn ghost sm" type="button" onClick={() => { setBulkResults(null);}}>Voir d'autres facilités</button>
+                <button className="btn ok sm" type="button" disabled={bulkSending || bulkResults.every((r) => r.status !== 'available' && r.status !== 'partial')} onClick={() => { const pick = bulkResults.find((r) => r.status === 'available' || r.status === 'partial'); if (pick) { setFlowFacility({ id: pick.facilityId, name: pick.facilityName }); setFlowProduct({ id: '', name: pick.productName }); setSheet('flow'); } }}>Je veux acheter</button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+      {sheet === 'compare' && (
+        <section className="sheet h-mid" role="region" aria-label="Comparer">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Comparer</div><h1>Facilités candidates</h1></div>
+            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('results')}><X size={15} /> Fermer</button>
+          </div>
+          <div className="sortbar">
+            {([['match', 'Meilleur match'], ['distance', 'Plus proche'], ['price', 'Prix le plus bas'], ['remise', 'Remise Omni']] as const).map(([key, label]) => (
+              <button key={key} type="button" className={`sortchip${compareSort === key ? ' active' : ''}`} onClick={() => setCompareSort(key)}>{label}</button>
+            ))}
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            {[...compareResults].sort((a2,b2) => compareFacilities(a2,b2,compareSort, bulkDetails)).map((facility) => {
+              const detail = bulkDetails[facility.id];
+              const product = detail?.products?.find((p) => p.stockLoueOmni > 0) ?? detail?.products?.[0];
+              return (
+                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { setFlowFacility({ id: facility.id,name: facility.name }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
+                    {detail?.products?.length ? <span className="status ok">dès {Math.min(...detail.products.map((p) => p.prixReduit)) / 100} F</span> : <span className="status gray">Non transactable</span>}
+                  </div>
+                  {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
+                </button>
+              );
+            })}
+          </div>
+          <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { setFlowFacility({ id: pick.id,name: pick.name }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } } }}>Choisir & acheter</button>
         </section>
       )}
       {sheet === 'facility' && (
