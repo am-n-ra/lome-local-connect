@@ -66,3 +66,11 @@ SEARCH, RESULTS, FACILITY(buyer/unclaimed/admin(, AVAIL, BULK, PENDING, ARESULT,
 > **Residual gap:** backend non touché; la coquille n'existe pas encore; suppression non exécutée
 > **Next smallest action:** construire V-1 shell minimal réel ( stage+rolepill+navpill+countmark+carte+search dock（ appelant `listPublicFacilities`（, puis preuve browser
 > **Re-plan trigger:** retour fondateur visuel, décision renversée, slice proof échouée
+
+## ☑️ V-6a/V-6b + V-6c+ — livrés (2026-09-05, commit  ​26eeb3d)
+
+- **V-6a BULK multi-facilités (REAL)** : `bulk` sheet intégré in TrunkAppV13 — per-facility lazy detail + `.chk` checkbox selection par produit simplifié (, parallel `requestAvailability` (un POST par facilité) + polling `getAvailabilityResponses`, statut par ligne (`submitted/available/partial/unavailable/expired/error`), auth-guard + facilité non-revendiquée bloquée, `.pitem`/`.freshbar`/`.btnrow` vocab.
+- **V-6b COMPARE (REAL)** : `compare` sheet intégré — `.sortbar`/`.sortchip` réels(match/distance/price/remise), tri réel délégué au module propre `src/trunk/v13-compare.ts` (comparateur clean-room ASCII-only), cards `.cardbox` click → `flow` (achat) si transactable sinon facilité sheet; bouton « Choisir & acheter » choisit meilleur candidat transactable.
+- **V-6c+ 1:1 (maquette byte-exact)** : CSS ajouté depuis la maquette(lignes source−(: `.sortbar`/`.sortchip`(+svg/+active), `.plist`, `.freshbar`(+`.fdot`), `.chk`, `.sheet.h-mid`(max-height:62dvh), `.sheet.hidden`, `.selbar`, `.cardbox.tap`(+active), `.pitem:active`/`.menuitem:active`/`.chip:active`/`.btn:disabled`, `.navpill.morph`(+desktop none), `.icon-in`, `.dockmask`(élément monté entre carte et sheets, z10) +desktop none}, — 1169 octets appended, pure ASCII.
+- **Qualité**: tsc 0 errores, tests 295/295 (47 files), build ✅ (bundle `index-…`), preview statique navegued ✅ (dockmask+atoms servis); `poll()` return-type corrigé (cascade TS).
+- **Push ⚠️ BLOQUÉ**: `GITHUB_TOKEN` not authorized for l'account remote (3 tentatives: `x-access-token:`/`am-n-ra:`/token-as-user — toutes « Invalid username or token »); remote URL restauré propre(https://github.com/...); **3 commits ahead** à pousser (`4f5660e`, `8dca9ad`, `26eeb3d`) — **à fondateur: fournir un jeton GH avec accès `repo`** (puis `git push origin omni-v2-rebuild`).
