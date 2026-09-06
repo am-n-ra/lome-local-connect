@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveEscape, resolveSellerEntry } from './TrunkApp';
+import { resolveEscape, resolveSellerEntry } from './ui-helpers';
 
 describe('seller entry boundary', () => {
   it('opens the seller boundary directly for an authenticated account', () => {

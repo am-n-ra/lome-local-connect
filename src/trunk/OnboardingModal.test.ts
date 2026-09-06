@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { OnboardingModal } from './OnboardingModal';
+import { TrunkAppV13 } from './TrunkAppV13';
 
-describe('OnboardingModal', () => {
-  it('is exported as a valid React component', () => {
-    expect(OnboardingModal).toBeDefined();
-    expect(typeof OnboardingModal).toBe('function');
+describe('TrunkAppV13 ex-Onboarding legacy decommissionne', () => {
+  it('exports la coquille V13 1:1 comme composant React valide', () => {
+    expect(TrunkAppV13).toBeDefined();
+    expect(typeof TrunkAppV13).toBe('function');
   });
 });

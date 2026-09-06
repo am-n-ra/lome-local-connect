@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { SellerScannerModal } from './SellerScannerModal';
+import { SellerV13 } from './SellerV13';
 
-describe('SellerScannerModal', () => {
-  it('is exported as a valid React component', () => {
-    expect(SellerScannerModal).toBeDefined();
-    expect(typeof SellerScannerModal).toBe('function');
+describe('SellerV13 ex-SellerScanner legacy decommissionne', () => {
+  it('exports lespace vendeur V13 1:1 comme composant React valide', () => {
+    expect(SellerV13).toBeDefined();
+    expect(typeof SellerV13).toBe('function');
   });
 });

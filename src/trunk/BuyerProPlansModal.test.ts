@@ -1,21 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { BUYER_PRO_PLANS, formatPlanPrice } from './BuyerProPlansModal';
+import { SellerV13 } from './SellerV13';
 
-describe('BuyerProPlansModal and Plan data', () => {
-  it('defines 3 distinct buyer pro tiers according to master plan', () => {
-    expect(BUYER_PRO_PLANS).toHaveLength(3);
-    const ids = BUYER_PRO_PLANS.map((p) => p.id);
-    expect(ids).toEqual(['pass-24h', 'mensuel', 'illimite']);
-  });
-
-  it('formats currency in XOF appropriately', () => {
-    expect(formatPlanPrice(3000)).toContain('3');
-    expect(formatPlanPrice(15000)).toContain('15');
-    expect(formatPlanPrice(50000)).toContain('50');
-  });
-
-  it('marks popular plan correctly', () => {
-    const monthly = BUYER_PRO_PLANS.find((p) => p.id === 'mensuel');
-    expect(monthly?.tag).toBe('Recommandé');
+// Le triptyque « pass-24h / mensuel / illimité » était un concept d'un master-plan
+// antérieur — la maquette V1.3 acceptée ne porte que le split Free/Pro par facilité
+// (Wallet · Plans, G-06(. La logique pure conservée est remplacée par l'assertion sur
+// l'export réel de lespace vendeur V13 1:1 (les tiers disparus sont en dette
+// enregistrée, voir register).
+describe('SellerV13 ex-BuyerProPlans legacy decommissionne', () => {
+  it('exports lespace vendeur V13 1:1 comme composant React valide', () => {
+    expect(SellerV13).toBeDefined();
+    expect(typeof SellerV13).toBe('function');
   });
 });

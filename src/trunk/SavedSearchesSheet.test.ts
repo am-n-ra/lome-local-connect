@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { savedSearchConstraintSummary } from './SavedSearchesSheet';
+import { savedSearchConstraintSummary } from './ui-helpers';
 import type { SavedSearch } from './types';
 
 function search(constraints: Record<string, unknown>): SavedSearch {

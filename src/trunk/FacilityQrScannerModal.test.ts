@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFacilityIdFromQr } from './FacilityQrScannerModal';
+import { parseFacilityIdFromQr } from './ui-helpers';
 
 describe('parseFacilityIdFromQr', () => {
   it('parses full URL with facility parameter', () => {

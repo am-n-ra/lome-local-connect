@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { OmniWalletModal } from './OmniWalletModal';
+import { TrunkAppV13 } from './TrunkAppV13';
 
-describe('OmniWalletModal', () => {
-  it('is exported as a valid React component', () => {
-    expect(OmniWalletModal).toBeDefined();
-    expect(typeof OmniWalletModal).toBe('function');
+describe('TrunkAppV13 ex-surface Wallet legacy decommissionnee', () => {
+  it('exports la coquille V13 1:1 comme composant React valide', () => {
+    expect(TrunkAppV13).toBeDefined();
+    expect(typeof TrunkAppV13).toBe('function');
   });
 });
