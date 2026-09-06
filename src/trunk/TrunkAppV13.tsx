@@ -1,4 +1,4 @@
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
   Compass, Home, LogOut, MapPin, Menu, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
@@ -15,6 +15,7 @@ import type {
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
+import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
@@ -66,6 +67,8 @@ function money(minor: number, currency: string): string {
 const LOME = [1.22, 6.13] as const;
 
 export function TrunkAppV13() {
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  useViewportInsets(stageRef);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
   const [mapState, setMapState] = useState<MapState>('loading');
   const [error, setError] = useState('');
@@ -123,6 +126,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
   const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
+  // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
+  // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
+
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller']), []);
+  const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
     if (!mq) return;
@@ -498,7 +506,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   };
 
   return (
-    <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet}>
+    <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
       <section className="mapbase" aria-label="Carte Omni">
         <Suspense fallback={<div role="status">Chargement de la carte…</div>}>
           <TrunkMap
@@ -520,7 +528,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); if (r === 'admin') setSheet('admin'); else if (r === 'seller') setSheet('seller'); else setSheet('none'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
         ))}
       </div>
-      <div className="navpill" role="navigation" aria-label="Actions principales">
+      <div className="navpill" role="navigation" aria-label="Actions principales" data-journey={desktop && isJourney ? 'open' : undefined}>
         <button type="button" aria-label="Rechercher" onClick={() => setSheet(sheet === 'search' ? 'none' : 'search')}><Search size={20} /></button>
         <button type="button" aria-label="Scanner un QR" onClick={() => setSheet('menu')}><QrCode size={20} /></button>
         <button type="button" aria-label="Menu" onClick={() => setSheet('menu')}><Menu size={20} /></button>

@@ -23,6 +23,11 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .usermarker::after{content:"";position:absolute;inset:-13px;border-radius:50%;background:rgba(26,115,232,.18);animation:locpulse 2.6s infinite}
 .meloc{position:absolute;z-index:3;width:14px;height:14px;border-radius:50%;background:#1a73e8;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.1),var(--sh-sm)}
 .meloc::after{content:"";position:absolute;inset:-12px;border-radius:50%;background:rgba(26,115,232,.18);animation:locpulse 2.6s infinite}
+.omni-v13-stage{--omni-vvh:100vh}
+@media (max-width:719px){.omni-v13-stage{--omni-vvh:100svh}}
+.omni-v13-stage .sheet[data-sheet="facility"],.omni-v13-stage .sheet[data-sheet="bulk"],.omni-v13-stage .sheet[data-sheet="compare"]{max-height:min(72dvh,var(--omni-vvh))}
+.omni-v13-stage .sheet[data-sheet="search"]{bottom:calc(14px + var(--omni-keyboard,0px))}
+.omni-v13-stage .navpill{bottom:max(14px,env(safe-area-inset-bottom),calc(14px + var(--omni-keyboard,0px)))}
 @keyframes locpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
 .pop-hidden{transform:scale(0)!important}
 .vdot-reveal{animation:popIn .5s var(--ease)}
@@ -168,8 +173,9 @@ body.desktop .dockmask{display:none}
 /* ---------- desktop shell: left rail dock, top search bar, left journey panel, right-docked drawers, top role switch ---------- */
 body.desktop{background:#dadad7;padding:0}
 body.desktop .omni-v13-stage{width:100%;height:100%;max-width:none;max-height:none;min-width:0;min-height:0;margin:0;border-radius:0;border:0;box-shadow:none}
-/* left icon rail replaces the bottom pill */
-body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20}
+/* left icon rail: contextual per journey — appears only while a journey sheet owns the left slot; hidden during pre-search home / plain map browsing */
+body.desktop .navpill[data-journey]{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20;opacity:1}
+body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;display:none}
 body.desktop .navpill.morph{animation:none}
 body.desktop .navpill .center{margin:2px 0}
 body.desktop .dockmask{display:none}
