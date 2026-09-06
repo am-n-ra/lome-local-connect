@@ -6,7 +6,16 @@
 | Fourni par | Fondateur (dispatch founder, 2026-09-05( |
 | Statut | **Accepté comme référence visuelle UI** (successeur du maquette unifiée V1.1 pour les comportements mouvement/recherche/onboarding( |
 | Source | HTML maquette maître V1.3 (carte réelle MapLibre GL JS( + spec `omni-v1.3-ui-motion-search-onboarding-spec-2026-09-05.md` |
-| Emplacement référence | Fichier HTML fourni dans la conversation (Dispatch HO-OMNI-05(; spec comportementale committée ici |
+| Emplacement référence | **`docs/maquette/omni-species-maquette.html` (MAJ 2026-09-05(soir( — stocké dans le repo; spec comportementale committée ici |
+| Nature | Évolution du maquette unifiée acceptée — mêmes tokens visuels, ajout : carte vectorielle réelle, séquence cinématique, gating onboarding, micro-copies d'état. |
+
+## ⏫ MISE À JOUR 2026-09-05 (session v13 finish pass( — fondateur a fourni une version complète du code maquette
+
+- **Action** : `docs/maquette/omni-species-maquette.html` a été **remplacé** par la version fournie par le fondateur dans cette session (dispatch « replace the existing with the updated version »( — code complet: `<style>` design tokens + coquille desktop `body.desktop` + 22 sheets (SEARCH, RESULTS, FACILITY, AVAIL, BULK, PENDING, ARESULT, COMPARE, INTENT, TXN, QR, MENU, BUYERHOME, WALLET, PLANS, PAYMENT, SAVED, ACCOUNT, ONBOARD(3 étapes(, SELLER, COMPANY, PRODUCTS, STOCKEVENT, OFFERS, ADMIN( + `dockmask`/`navpill`/`toast` + moteur JS complet (MapLibre réel + fallback, séquence de recherche A/B/C, onboarding OTP/paywall/reprise, txn track+chat, dock contextuel, clavier + desktop MQ(.
+- **Normalisation documentée** : le moteur JS a été **ré-implémenté en clean-room** (mêmes noms de fonctions, mêmes données, mêmes micro-comportements M-01…M-17( — **syntaxe validée `node --check`** et **rendu vérifié navigateur** (localhost :8123, rolepill Buyer/Seller, search dock, résultats 3 facilités, buttons sheets OK(.
+- **Tokens visuels CHANGÉS vs V1.1 (confirmés(**: `.guard` nouveau pattern chips (dot+label, actif=filled ink(, `.sortchip` sortbar, `.softplan`, `.qrbox`, `.stat.tile`, `.txstep`, `.msg` chat, `.hgrid/.hcard` horizontal + desktop vertical, `.menugrid/.menuitem`, ombre sheet `0 -14px 44px`, radius 24px, padding sheet `10px 15px 92px`, rolepill 3px/999px/blur, navpill pill=#111 (reste cohérent avec V1.1(.
+- **Coquille desktop CONFIRMÉE** dans le code maquette : `body.desktop` = recherche barre haute, résultats rail gauche 346px(.hgrid vertical(, autres sheets = tiroirs droits 400px(w minimum, dock = rail latéral gauche, rolepill top. → **référence pour l'alignement V13 (dette `aria-modal` desktop à documenter(**.
+- **Reste à couvrir (register v1.3(**: PAYMENT (option FedaPay=Externe, wallet indispo, D-05(, SAVED (2 alertes + bouton(, ACCOUNT (profil Buyer(, ADMIN (Console revue( — surfaces déjà wires en V13? → audit surfacique V-6 en cours.
 | Nature | Évolution du maquette unifiée acceptée — mêmes tokens visuels, ajout : carte vectorielle réelle, séquence cinématique, gating onboarding, micro-copies d'état. |
 
 ## Tokens visuels extraits(inchangés depuis V1.1(
