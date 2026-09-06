@@ -142,3 +142,29 @@ h1,h2,h3,p{margin:0}h1{font-size:16px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .selbar{position:sticky;bottom:0;margin-top:10px;padding-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 22%)}
 body.desktop .navpill.morph{animation:none}
 body.desktop .dockmask{display:none}
+/* ---------- desktop shell: left rail dock, top search bar, left journey panel, right-docked drawers, top role switch ---------- */
+body.desktop{background:#dadad7;padding:0}
+body.desktop .omni-v13-stage{width:100%;height:100%;max-width:none;max-height:none;min-width:0;min-height:0;margin:0;border-radius:0;border:0;box-shadow:none}
+/* left icon rail replaces the bottom pill */
+body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20}
+body.desktop .navpill.morph{animation:none}
+body.desktop .navpill .center{margin:2px 0}
+body.desktop .dockmask{display:none}
+/* map fills everything right of the rail + results panel */
+body.desktop .mapbase{top:112px;left:410px;right:0;bottom:0}
+body.desktop .countmark{top:150px;left:calc(410px + 90px)}
+body.desktop .map-legend{top:120px;left:426px}
+body.desktop .rolepill{top:8px;left:50%}
+/* SEARCH becomes a permanent top bar spanning the content area (never hidden at desktop) */
+body.desktop .sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top:36px;bottom:auto;height:76px;width:auto;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 24px;overflow:visible;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:18px;z-index:16}
+body.desktop .sheet[data-sheet="search"] .handle{display:none}
+body.desktop .sheet[data-sheet="search"] .sheet-head{display:none}
+body.desktop .sheet[data-sheet="search"] .searchdock{margin-top:0;flex:0 0 300px}
+/* The whole "browsing a result" journey — results, facility detail, bulk, compare, claim — shares ONE fixed slot on the left, next to the rail.It behaves exactly like the mobile single-sheet navigation, just positioned as a panel instead of a full-screen sheet. Only screens reached from the dock/menu that are NOT part of this journey (menu, account, home, wallet, plans, saved, auth) get a right-hand drawer — that distinction is the whole point: a drawer is for "a separate destination", not for "the next step of what you were already looking at". */
+body.desktop .sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:112px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
+body.desktop .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}
+body.desktop .sheet[data-sheet="results"] .hgrid{flex-direction:column;overflow-x:visible;overflow-y:visible;height:auto}
+body.desktop .sheet[data-sheet="results"] .btnrow{margin-top:14px}
+/* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
+body.desktop .sheet[data-sheet="menu"],body.desktop .sheet[data-sheet="account"],body.desktop .sheet[data-sheet="home"],body.desktop .sheet[data-sheet="wallet"],body.desktop .sheet[data-sheet="plans"],body.desktop .sheet[data-sheet="saved"],body.desktop .sheet[data-sheet="auth"]{left:auto;right:0;top:36px;bottom:0;width:min(400px,90vw);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
+body.desktop .sheet>*{animation:none!important}

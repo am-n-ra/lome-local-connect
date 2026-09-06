@@ -122,6 +122,16 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [claimSubmitError, setClaimSubmitError] = useState('');
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
+  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
+  useEffect(() => {
+    const mq = window.matchMedia?.('(min-width:1040px)');
+    if (!mq) return;
+    const apply = () => { setDesktop(mq.matches); document.body.classList.toggle('desktop', mq.matches); };
+    apply();
+    if (mq.addEventListener) mq.addEventListener('change', apply); else mq.addListener(apply);
+    return () => { if (mq.removeEventListener) mq.removeEventListener('change', apply); else mq.removeListener(apply); };
+  }, []);
+  useEffect(() => { document.body.classList.toggle('desktop', desktop); }, [desktop]);
 
   const loadPublic = useCallback(async (bbox?: [number, number, number, number]) => {
     const result = await listPublicFacilities(bbox ?? undefined);
@@ -516,9 +526,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <button type="button" aria-label="Menu" onClick={() => setSheet('menu')}><Menu size={20} /></button>
       </div>
       <div className="dockmask" aria-hidden="true" />
-      {sheet === 'search' && (
+      {(sheet === 'search' || desktop) && (
 
-        <form className="sheet h-low" onSubmit={handleSubmitSearch}>
+        <form className="sheet h-low" data-sheet="search" onSubmit={handleSubmitSearch}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div>
@@ -533,7 +543,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </form>
       )}
       {sheet === 'results' && (
-        <section className="sheet h-auto" role="region" aria-label="Résultats">
+        <section className="sheet h-auto" data-sheet="results" role="region" aria-label="Résultats">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Résultats</div><h1>Facilités proches</h1></div>
@@ -560,7 +570,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'bulk' && (
-        <section className="sheet h-mid" role="region" aria-label="Disponibilité groupée">
+        <section className="sheet h-mid" data-sheet="bulk" role="region" aria-label="Disponibilité groupée">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Disponibilité groupée</div><h1>Interroger plusieurs facilités</h1></div>
@@ -621,7 +631,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'compare' && (
-        <section className="sheet h-mid" role="region" aria-label="Comparer">
+        <section className="sheet h-mid" data-sheet="compare" role="region" aria-label="Comparer">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Comparer</div><h1>Facilités candidates</h1></div>
@@ -651,7 +661,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'facility' && (
-        <section className="sheet h-full" role="region" aria-label="Facilité">
+        <section className="sheet h-full" data-sheet="facility" role="region" aria-label="Facilité">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? '—'}</h1></div>
@@ -698,7 +708,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
       )}
       {sheet === 'menu' && (
-        <section className="sheet h-mid" role="region" aria-label="Espace">
+        <section className="sheet h-mid" data-sheet="menu" role="region" aria-label="Espace">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : 'Espace ' + role}</h1></div>
@@ -741,7 +751,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'account' && sessionUser && (
-        <section className="sheet h-mid" role="region" aria-label="Compte">
+        <section className="sheet h-mid" data-sheet="account" role="region" aria-label="Compte">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Compte</div><h1>Votre profil Omni</h1></div>
@@ -756,7 +766,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'home' && (
-        <section className="sheet h-mid" role="region" aria-label="Mon espace">
+        <section className="sheet h-mid" data-sheet="home" role="region" aria-label="Mon espace">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace Buyer</div><h1>Vos demandes & transactions.</h1></div>
@@ -794,7 +804,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'wallet' && (
-        <section className="sheet h-mid" role="region" aria-label="Omni Wallet">
+        <section className="sheet h-mid" data-sheet="wallet" role="region" aria-label="Omni Wallet">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Omni Wallet</div><h1>Votre pouvoir de recherche.</h1></div>
@@ -867,7 +877,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'plans' && (
-        <section className="sheet h-mid" role="region" aria-label="Plans">
+        <section className="sheet h-mid" data-sheet="plans" role="region" aria-label="Plans">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Seller' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Buyer'}</h1></div>
@@ -900,7 +910,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'saved' && (
-        <section className="sheet h-mid" role="region" aria-label="Recherches enregistrées">
+        <section className="sheet h-mid" data-sheet="saved" role="region" aria-label="Recherches enregistrées">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Recherches enregistrées</div><h1>Vos alertes</h1></div>
@@ -937,7 +947,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'claim' && claimResult && (
-        <section className="sheet h-mid" role="region" aria-label="Revendiquer">
+        <section className="sheet h-mid" data-sheet="claim" role="region" aria-label="Revendiquer">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Revendiquer</div><h1>Vérifier une facilité</h1></div>
@@ -982,7 +992,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'auth' && (
-        <section className="sheet h-mid" role="dialog" aria-modal="true" aria-label="Connexion">
+        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>
