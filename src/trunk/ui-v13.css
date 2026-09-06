@@ -179,9 +179,12 @@ body.desktop .navpill.morph{animation:none}
 body.desktop .navpill .center{margin:2px 0}
 body.desktop .dockmask{display:none}
 /* map fills everything right of the rail + results panel */
-body.desktop .mapbase{top:112px;left:410px;right:0;bottom:0}
-body.desktop .countmark{top:150px;left:calc(410px + 90px)}
-body.desktop .map-legend{top:120px;left:426px}
+body.desktop .mapbase{top:112px;left:64px;right:0;bottom:0}
+.omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;right:0}
+body.desktop .countmark{top:150px;left:calc(64px + 90px)}
+.omni-v13-stage[data-sheet="results"] .countmark,.omni-v13-stage[data-sheet="facility"] .countmark,.omni-v13-stage[data-sheet="bulk"] .countmark,.omni-v13-stage[data-sheet="compare"] .countmark,.omni-v13-stage[data-sheet="flow"] .countmark,.omni-v13-stage[data-sheet="seller"] .countmark,.omni-v13-stage[data-sheet="claim"] .countmark{left:calc(410px + 90px)}
+body.desktop .map-legend{top:120px;left:80px}
+.omni-v13-stage[data-sheet="results"] .map-legend,.omni-v13-stage[data-sheet="facility"] .map-legend,.omni-v13-stage[data-sheet="bulk"] .map-legend,.omni-v13-stage[data-sheet="compare"] .map-legend,.omni-v13-stage[data-sheet="flow"] .map-legend,.omni-v13-stage[data-sheet="seller"] .map-legend,.omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
 body.desktop .rolepill{top:8px;left:50%}
 /* SEARCH becomes a permanent top bar spanning the content area (never hidden at desktop) */
 body.desktop .sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top:36px;bottom:auto;height:76px;width:auto;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 24px;overflow:visible;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:18px;z-index:16}
