@@ -25,3 +25,11 @@ Menugrid maquette 1:1 contextual par rôle (buyer/seller/admin/operator( via .me
 - Push 5d12259..b903c0a; prod hash === local (index-C7NVQt6k.js( ( guardrail T-07d ✓( — pollé live depuis omni.sparkafrika.online.
 - Page prod live: 206 facilités réelles (OSM+Omni(, countmark 206, rolepill Buyer, navpill réels. Erreur carte vectorielle « Carte indisponible » dans CE sandbox uniquement (bloc connu d assets MapLibre, cf audit G-5( — pas une régression code. Idem « Localisation désactivée » = prompt géo normal.
 - Legacy TrunkApp.tsx (261KB( + sheets legacy-only existent encore; seller-entry.test.ts importe resolveEscape/resolveSellerEntry de lui — V-5 devra déplacer ces helpers( ou garder un mini module helpers( avant suppression.
+
+## V-5 - DECOMMISSION livre 2026-09-05
+
+- Supprimes 16 fichiers legacy: TrunkApp.tsx monolithe 261KB, v3.tsx composants, 7 modales onboarding/scan/wallet legacy, SavedSearchesSheet, TransactionChat, SellerTransactionPanel, TransactionQrCard, FieldPilotLocationMap, transaction-visuals, AccountProfileSheet — aucune ref en code ni en tests.
+- Helpers purs preserves → src/trunk/ui-helpers.ts: resolveEscape, resolveSellerEntry, savedSearchConstraintSummary, parseFacilityIdFromQr — 6 tests logiques repoints sans perte; 3 tests composants-existence re-affirmes sur TrunkAppV13/SellerV13.
+- v3.css CONSERVE — charge-bearing: .omni-stage-viewport, .map-canvas, .map-stage, .map-provider-error, .route-status-chip utilises par le shell carte V13 (independant de v3.tsx decomissionne(.
+- Dette enregistree — triptyque buyer Pro pass-24h/mensuel/illimite — concept master-plan anterieur absent de la maquette V1.3 acceptee split Free/Pro par facilite; test remplace par assertion sur lespace vendeur V13 reel; re-ouvrir seulement si le fondateur valide un modele prospectif dabonnement buyer.
+- 295/295 tests 47 files, lint OK, build index-C0ICwsS8.js OK, boundary OK; push 87ff345..bcc6143; prod hash === local index-C0ICwsS8.js ✓ guardrail T-07d; page prod reelle intacte rolepill, navpill, countmark 206 apres suppression legacy.
