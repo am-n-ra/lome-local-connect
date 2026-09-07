@@ -226,7 +226,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         setResultsLoading(false);
         setRevealKey(`v13-${Date.now()}`);
         setRevealPending(true);
-        if (mapState === 'error') setSheet('results');
       } else {
         setResultsLoading(false);
         setError(result.error?.message ?? 'Recherche indisponible.');
@@ -237,7 +236,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setError(caught instanceof Error ? caught.message : 'Recherche indisponible.');
       setSheet('results');
     }
-  }, [bounds, mapState]);
+  }, [bounds]);
 
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);

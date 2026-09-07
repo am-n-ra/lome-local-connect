@@ -588,7 +588,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         if (arrivalReduced) {
           return [
             { center: [lng, lat], zoom: 6, label: 'Pays', pause: PAUSE_DURATION },
-            { center: [lng, lat], zoom: 12, label: 'Zone', pause: 0 },
+            { center: [lng, lat], zoom: 12, label: 'Votre position', pause: 0 },
           ];
         }
         return [
@@ -596,7 +596,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           { center: [lng, lat], zoom: 6, label: 'Pays', pause: PAUSE_DURATION },
           { center: [lng, lat], zoom: 9, label: 'Région', pause: PAUSE_DURATION },
           { center: [lng, lat], zoom: 12, label: 'Ville', pause: PAUSE_DURATION },
-          { center: [lng, lat], zoom: 14.5, label: 'Zone', pause: 0 },
+          { center: [lng, lat], zoom: 14.2, label: 'Votre position', pause: 0 },
         ];
       };
 
@@ -610,12 +610,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         setRevealRunning(false);
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
-      };
-      const detachCancel = () => {
-        map.off('dragstart', cancel);
-        map.off('zoomstart', cancel);
-        window.removeEventListener('pointerdown', cancel);
-        window.removeEventListener('wheel', cancel);
       };
 
       const runStep = async (index: number, stops: ArrivalStop[], target: { lat: number; lng: number }) => {
@@ -640,26 +634,42 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         highlightBoundaryAtTarget(map, step.zoom, target);
         if (step.pause) await waitForDuration(step.pause);
         if (cancelIfStale()) return;
-        if (index === stops.length - 1) { finishArrival(); return; }
+        if (index === stops.length - 1) {
+          setRevealLabel(null);
+          await waitForRenderFrames(2);
+          finishArrival();
+          return;
+        }
         await runStep(index + 1, stops, target);
       };
 
       const finishArrival = () => {
-        detachCancel();
         arrivalInProgressRef.current = false;
-        setRevealLabel(null);
         setRevealRunning(false);
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
+        if (firstArrival) {
+          map.dragPan.enable();
+          map.keyboard.enable();
+          map.scrollZoom.enable();
+          map.boxZoom.enable();
+          map.doubleClickZoom.enable();
+          map.touchZoomRotate.enable();
+        }
+        scheduleUserPosition();
       };
 
       token = ++arrivalTokenRef.current;
       arrivalInProgressRef.current = true;
       setRevealRunning(true);
-      map.once('dragstart', cancel);
-      map.once('zoomstart', cancel);
-      window.addEventListener('pointerdown', cancel, { once: true });
-      window.addEventListener('wheel', cancel, { once: true, passive: true });
+      if (firstArrival) {
+        map.dragPan.disable();
+        map.keyboard.disable();
+        map.scrollZoom.disable();
+        map.boxZoom.disable();
+        map.doubleClickZoom.disable();
+        map.touchZoomRotate.disable();
+      }
 
       const lng = userPositionRef.current?.longitude ?? 1.22;
       const lat = userPositionRef.current?.latitude ?? 6.13;
