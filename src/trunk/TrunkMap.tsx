@@ -533,14 +533,29 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const beginArrival = () => {
       if (arrivalPlayedRef.current) return;
       arrivalPlayedRef.current = true;
-      if (basemapKind === 'raster' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe') return;
+      const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (cameraMode.current !== 'resting_globe') return;
+
       type ArrivalStop = { center: [number, number]; zoom: number; label: string };
-      const stops: ArrivalStop[] = [
-        { center: [2.8, 10.5], zoom: 3.8, label: "Afrique de l'Ouest" },
+      const stops: ArrivalStop[] = arrivalReduced ? [
+
         { center: [0.9,  8.6], zoom:  6.4, label: 'Togo' },
-        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime' },
+
         { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé' },
+
+      ] : [
+
+        { center: [2.8, 10.5], zoom:  3.8, label: "Afrique de l'Ouest" },
+
+        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo' },
+
+        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime' },
+
+        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé' },
+
       ];
+
       let cancelled = false;
       let step =  0;
       const cancel = () => {
@@ -562,7 +577,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         if (cancelled) return;
         const next = stops[step++];
         setRevealLabel(next.label);
-        map.easeTo({ center: next.center, zoom: next.zoom, duration: 760, easing: (t) => t * (2 - t), essential: true });
+        map.easeTo({ center: next.center, zoom: next.zoom, duration: arrivalReduced ? 340 :  760, easing: (t) => t * (2 - t), essential: true });
+
         map.once('moveend', () => {
           if (cancelled) return;
           if (step < stops.length) advance(); else finishArrival();
@@ -1019,10 +1035,25 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const beginFlight = () => {
       // V1.3 §1.2 — pave A: bascule de caméra — « on prend de la hauteur ».
       if (reduced) {
-        map.jumpTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0 });
-        map.once('moveend', () => { if (!isStale()) revealPinsStaggered(); });
+
+        const reducedLabels = setInterval(() => {
+
+          if (isStale()) { window.clearInterval(reducedLabels); return; }
+
+          const label = labelForZoom(map.getZoom()); setLabel(label);
+
+        }, 140);
+
+        setLabel('Recherche dans le monde…');
+
+        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0, curve:  1.25, duration:  ​620, essential: true });
+
+        map.once('moveend', () => { window.clearInterval(reducedLabels); setLabel(null); if (!isStale()) revealPinsStaggered(); });
+
         return;
+
       }
+
       const prevZoom = map.getZoom();
       setLabel(labelForZoom(prevZoom -  1) ?? 'Recherche dans le monde…');
       map.easeTo({ pitch: 35, bearing:  8, zoom: prevZoom -  1, duration:   250, easing: (t) => t * (2 - t), essential: true });
