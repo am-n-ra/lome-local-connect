@@ -133,3 +133,58 @@
 ## Reconcile log additionnel — HO-OMNI-06 (2026-09-05(
 | Date | Evidence | Task changes | Decision | Owner | Next review |
 | 2026-09-05 | V-4.menu done (b903c0a(: menugrid 1:1 par role, Espace Buyer, Wallet reel (+ recharges FedaPay(, Recherches enregistrees (CRUD(, Claim 1:1 (6 kinds preuves prives + storage-status guard + soumission + annulation(, chat transaction reel (dans BuyerFlowV13(, Compte reel → 297/297, mobile+desktop, poussé + prod hash === index-C7NVQt6k.js. V-5 decommission done (bcc6143(: supprimés 16 fichiers legacy ( TrunkApp.tsx 261KB(, v3.tsx, 7 modales legacy, SavedSearchesSheet, TransactionChat/Panel/QrCard, FieldPilotLocationMap, transaction-visuals, AccountProfileSheet(; helpers purs resolveEscape/resolveSellerEntry/savedSearchConstraintSummary/parseFacilityIdFromQr → ui-helpers.ts (6 tests logiques repoints sans perte(; tests composants-existence re-affirmés sur TrunkAppV13/SellerV13; v3.css conserve (shell carte .omni-stage-viewport/.map-*/.route-status-chip( → 295/295 tests, lint, build index-C0ICwsS8.js, boundary clean, poussé, prod hash === local ✓. | V-2/V-3/V-4/V-4.menu/V-5 → done (bcc6143(; V-6 = checklist finale V1 complete (surfaces maquette restantes a verifier: COMPARE, BULK, PENDING existent en code → audit surfacique puis cloture Gate  ​6 (founder review prod 4 largeurs(. | Decommission accepted; legacy unrendered in prod. Prochain slice: V-6 inventaire surfacique final des etats maquette vs code V13 + cloture coquille (support aria-modal desktop = dette semantique documentee(. Re-plan si prod hash diverge ou le founder signale une regression visuelle. |
+
+---
+
+## Slice borné — HO-OMNI-06 — Contextualisation nature-way (highlight limites) sur `omni-v2-rebuild`
+
+> **Date:** 2026-09-07 (UTC)
+> **Handoff:** `docs/founder-hq/handoff-receipt-HO-OMNI-06.md` — fondateur : « la contextualisation nature-way n’apparaît pas ; exemple sur `main` ; la faire venir ici »
+> **Gate:** Gate 5 — Branches/UI (motion carte) — `watch` pendant ce travail borné
+> **Maturité cible:** tranche UI bornée, preuve locale(tsc + tests → build), pas de push (branch rule: seul `omni-v2-rebuild`; push sur ordre fondateur explicite.
+
+### Resource Receipt (slice HO-OMNI-06)
+
+| Status | Exact path |
+|---|---|
+| Loaded | `.agents/skills/nature-way/SKILL.md` |
+| Loaded | `.agents/skills/nature-way/references/intra-skill-execution-controller.md`, `references/autonomous-delivery-gates.md`, `references/proof-and-decision-ledger.md`, `references/visual-and-logic-coherence-review.md`|
+| Loaded | `.agents/skills/nature-way-founder-hq/references/ecosystem-orchestration-protocol.md` + `intra-skill-planning-protocol.md` (copies HQ) |
+| Template instantiated | `templates/skill-handoff-receipt.md` → `docs/founder-hq/handoff-receipt-HO-OMNI-06.md`; `templates/intra-skill-plan.md` → this slice section |
+| Loaded (référence code) | `git show origin/main:src/components/omni/MapCanvas.tsx` (`runStep`+`REVEAL_STEPS`+ helpers); `src/lib/boundaries/loader.ts` (identique 2 branches); docs `omni-motion-spec-2026-09-05.md` §4.1; `AGENTS.md` (T-10p/T-10r/T-12); maquette V1.3 |
+| Not loaded / reason | `templates/portable-starter` — pas de transfert; `launch-envelope.md` — pas de release/push en scope ici; `technical-lead-production-review.md` — pas de décision architecture/API/money en scope. |
+
+### Gate plan du slice
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Diagnostic (did) | Cause exacte nommée, source qui la possède | Rapport `HO-OMNI-06` + diagnostic ci-dessus | `done` |
+| 2 | Mini-species | La contextualisation hérite de la maquette V1.3 + spec motion §4.1 (étapes + labels + zoom) — pas de nouveau pattern visuel | Spec déjà acceptée; aucun nouveau maquette requis | `done` |
+| 3 | Mini-root (contrat) | Zoom/stops → levels limites (`BOUNDARY_LEVELS.minzoom/maxzoom`) ; highlight = état `active` par `setFeatureState` (sources GeoJSON ajoutées par `addBoundaryLayers`) | Convention `map-reveal.ts` + `boundaries/loader.ts` existants | `done` |
+| 4 | Mini-trunk (code) | Porter les étapes-highlight nature-way dans le reveal de recherche(et garder le tour d'arrivée hors T-10p) sans casser la suite 303/303 | Code + `npx tsc` + `npm test` | `done` |
+| 5 | Preuve locale | tsc clean, tests (≥303 avant), navigateur si possible, inspection code | tsc + tests sortis | `done` |
+
+### Arbre tâches
+
+| ID | Parent | Phase | Objective | Depends | Owner | Status | Acceptance / proof | Risk/debt | Re-plan trigger |
+|---|---|---|---|---|---|---|---|---|---|
+| NW-M1 | — | Branches/UI (motion carte) | Contextualisation nature-way portée dans le reveal de recherche du rebuild | mini-species/root | Nature Way | `done` | tsc + tests + inspect | WIP cassé à réparer/écarter d'abord | — |
+| NW-M2 | NW-M1 | Réparer WIP | Nettoyer le working-tree cassé (doublon `const finish`→TS1005( avant/avec le portage | — | Nature Way | `done` | `npx tsc --noEmit` clean | Les 3 fichiers modifiés non commités sont du travail précédent; préserver le bon, écarter le cassé | — |
+| NW-M3 | NW-M1 | Mini-trunk | Étapes highlight(continent→pays→région→ville→quartier) dans `beginFlight`/`finish` du reveal, pattern `main` (flyTo → settle → load → highlight → pause) | NW-M2 | Nature Way | `done` | highlight visible + clearHighlight + tsc | Ne pas casser `computeSearchFlight`/`labelForZoom`/stagger pins / T-10p initial | — |
+| NW-M4 | NW-M1 | Preuve | tsc + tests + rapport preuve locale| NW-M3 | Nature Way | `done` | commandes sorties + résidu honnête | Aucun push sans ordre fondateur | — |
+
+### Reconcile log (slice
+
+| Date | Evidence | Task changes | Decision | Owner | Next review |
+|---|---|---|---|---|---|
+| 2026-09-07 | Doit faire le diagnostic(HQ receipt): `main` a les étapes-highlight (`MapCanvas.tsx`), le rebuild non (`beginFlight` = vol unique); `beginArrival` verrouillé par T-10p (`cameraMode` initial `manual_navigation`); WIP 3 fichiers non commités dont doublon `const finish` (cassé. | NW-M1..NW-M4 définis; WIP = `NW-M2` (réparer/écarter( | Portage ciblé reveal de recherche; tour d'arrivée = `deferred` (T-10p verrouille; voir Founder décision) | Nature Way | Sur retour preuve + décision fondateur |
+| 2026-09-07 | Preuve locale passee: `npx tsc --noEmit` clean; `npm test` 306/306 (48 fichiers); `npm run build` dist OK. Portage `runSteps` (stops 3.2/5.5/8.3/11.5/14.2 → labels Afrique/Togo/Region/Lome)) aligne sur `labelForZoom`; regressions corrigees (`isStale` garde dans `finish`, `advance`/`finishArrival` reintroduits dans `beginArrival` moveend); `clearHighlight` ajoute hors reveal. | NW-M1..NW-M4 -> `done` | Preuve locale suffisante (pas de push par rule); nav reelle = residu (work-host proxy insuffisant); T-10p stay deferred | Nature Way | Reconcile Founder HQ board/master-plan puis decision fondateur sur push |
+
+### Handoff à Founder HQ
+
+> **Local status:** `verified` — tsc clean, 306/306 tests, build OK
+> **Gate decision:** `advance` (si preuve locale propre) — pas de push
+> **Closed:** NW-M1…NW-M4 (vérouillé par la preuve locale 2026-09-07)
+> **Residual gap:** navigateur réel(proxy/tuiles work-host insuffisant(, prod hash — non testé ici (pas de push) ; décision fondateur: tour d'arrivée initial garder mort (T-10p) ou réactiver ?
+> **Next smallest action:** réconcilier HO-OMNI-06 avec `founder-hq-board.md` + `master-plan` (mettre statut `verified`+next-action(
+> **Re-plan trigger:** tsc/test échoue; une décision fondateur change l'orientation (ex: réactiver l'arrivée, pas que la recherche)

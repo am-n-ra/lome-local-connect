@@ -14,6 +14,7 @@ import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionFor
 import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
+import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
 
@@ -536,6 +537,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       if (cameraMode.current !== 'resting_globe') return;
+      const targetLngLat: [number, number] = [userPositionRef.current?.longitude ?? 1.22, userPositionRef.current?.latitude ??  6.13];
 
       type ArrivalStop = { center: [number, number]; zoom: number; label: string };
       const stops: ArrivalStop[] = arrivalReduced ? [
@@ -573,13 +575,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         window.removeEventListener('pointerdown', cancel);
         window.removeEventListener('wheel', cancel);
       };
-      const advance = () => {
+      const advance = async () => {
         if (cancelled) return;
         const next = stops[step++];
         setRevealLabel(next.label);
         map.easeTo({ center: next.center, zoom: next.zoom, duration: arrivalReduced ? 340 :  760, easing: (t) => t * (2 - t), essential: true });
 
-        map.once('moveend', () => {
+        map.once('moveend', async () => {
+          if (cancelled) return;
+          if (next.zoom) {
+            await loadBoundariesForZoom(map, next.zoom);
+            if (cancelled) return;
+            highlightBoundaryAtTarget(map, next.zoom, { lat: targetLngLat[1], lng: targetLngLat[0] });
+          }
           if (cancelled) return;
           if (step < stops.length) advance(); else finishArrival();
         });
@@ -972,6 +980,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     rotating.current = false;
     if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
     if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
+    clearHighlight(map);
 
     const isStale = () => token !== revealToken.current;
 
@@ -1059,20 +1068,31 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       map.easeTo({ pitch: 35, bearing:  8, zoom: prevZoom -  1, duration:   250, easing: (t) => t * (2 - t), essential: true });
       map.once('moveend', () => {
         if (isStale()) return;
-        // pave B: THE vol cinématique — UN flyTo curve 1.7 (dézoom/rezoom natifs.
-        const duration = Math.min(1400, Math.max(900, 900 + Math.abs(flight.targetZoom - map.getZoom()) * 140));
-        const pendingLabel = setInterval(() => {
-          if (isStale()) { window.clearInterval(pendingLabel); return; }
-          const label = labelForZoom(map.getZoom());
-          setLabel(label);
-        }, 120);
-        map.once('moveend', () => {
-          window.clearInterval(pendingLabel);
-          setLabel(null);
+        // pave B — contextualisation nature-way: vol progressif continent → pays →
+        // région → ville/quartier, highlight limite avancé à chaque palier (port
+        // de `main` MapCanvas `runStep` dans la chorégraphie V1.3(.
+
+        const REVEAL_STOP_ZOOMS: number[] = [3.2,  ​5.5,​  ​8.3,​  ​11.5,​  ​14.2];
+        const steps: number[] = REVEAL_STOP_ZOOMS.filter( (z) => z < flight.targetZoom -  0.05 );
+        steps.push( flight.targetZoom );
+        const runSteps = async () => {
+          const landing = { lat: userPositionRef.current?.latitude ??  6.13, lng: userPositionRef.current?.longitude ??  1.22 };
+          for (const stop of steps) {
+            if (isStale()) return;
+            setLabel(labelForZoom(stop));
+            map.flyTo({ center: flight.targetCenter, zoom: stop, curve:  ​1.7, speed:​  ​0.75, duration​: Math.min(1400​, Math.max(700,​ 700 + Math.abs(stop - map.getZoom()) * 140)), essential​: true });
+            await waitForMapMove(map, 2200);
+            if (isStale()) return;
+            await loadBoundariesForZoom(map, stop);
+            if (isStale()) return;
+            highlightBoundaryAtTarget(map, stop, landing);
+            await new Promise<void>((resolve) => window.setTimeout(resolve,​ 440));
+          }
           if (isStale()) return;
+          setLabel(null);
           revealPinsStaggered();
-        });
-        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, curve: 1.7, duration, essential: true });
+        };
+        void runSteps();
       });
     };
 

@@ -13,10 +13,11 @@
 | Opportunity pipeline | None active. | — | `inactive` | — | — | — |
 | Release / operations | `omni-v2-rebuild` auto-deploys to Vercel prod; skills bundle merged (#75). No release decision is open. | Git, `vercel.json` | `frozen for product changes` | Founder HQ | Keep prod stable; docs-only PRs until Species and Root close. | Any UI/migration PR before Seed acceptance repeats the rushed pattern. |
 | Decisions | **Resolved 2026-09-02:** D-01 keep 9 internal trust states, derive public label, add operational state; D-02 Offer naming + `StockEvent` ledger; D-03 deterministic auto-availability in V1, `facility_pro`-gated; freshness 4 h fresh / 24 h expired (accepted recommendation); D-04 supply≠facility location deferred post-V1; D-05 seller entitlements per facility, buyer credits per account (accepted recommendation); D-06 one identity, buyer+seller capabilities, mode switch. **Open:** D-07 which existing maquettes survive — answered by the Species audit. | Intent Brief § Founder confirmation | `resolved except D-07` | Founder | Accept/reject maquette sets in build order. | Reopening any decision reopens Seed. |
+| Motion carte — contextualisation nature-way | La contextualisation limites（continent→pays→région→ville/quartier）est maintenant portée sur `omni-v2-rebuild`（port de `main` `MapCanvas.runStep` → `TrunkMap.beginFlight`——stops 3.2/5.5/8.3/11.5/14.2 → `loadBoundariesForZoom`+`highlightBoundaryAtTarget` à chaque palier; régressions corrigées + `clearHighlight`）。**Preuve locale:** `npx tsc --noEmit` clean ✅; `npm test` 306/306（48 fichiers）✅; `npm run build` ✅。 | `docs/founder-hq/handoff-receipt-HO-OMNI-06.md` | Gate 5 — Branches/UI（motion carte） — `done/verified`（preuve locale）; pas de push（branch rule）; nav réelle + prod hash = résidu | Founder (+`/nature-way`) | Décision fondateur sur：（a）push?（b）arrivée initiale（`beginArrival`）réactiver（débloquer T-10p initial?（c）vol recherche définitif？ | WIP cassé réparé（doublon `const finish` supprimé）; branche conservée propre（aucun commit ni push par rule）。 |
 
-## Branch rule (founder locked 2026-09-02)
+## Branch rule( founder locked 2026-09-02; push-wait rule added 2026-09-07(
 
-Only `omni-v2-rebuild` is touched. Never merge to `main`. "Merge" = "push prod branch". Feature branches merge into `omni-v2-rebuild` only if founder explicitly names one.
+Only `omni-v2-rebuild` is touched. Never merge to `main`. "Merge" = "push prod branch". Feature branches merge into `omni-v2-rebuild` only if founder explicitly names one. **Push rule (amended 2026-09-07(: AUCUN push sans signal explicite du fondateur—attendre son signal avant de pousser.**
 
 ## Current gate
 

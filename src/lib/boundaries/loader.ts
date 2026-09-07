@@ -211,7 +211,7 @@ const BOUNDARY_PATHS: Record<string, string> = {
 
 let loadedLevels = new Set<string>();
 
-export async function loadBoundariesForZoom(map: MapInstance, zoom: number) {
+export async function loadBoundariesForZoom(map: any, zoom: number) {
   for (const level of BOUNDARY_LEVELS) {
     if (loadedLevels.has(level.source)) continue;
     if (zoom >= level.minzoom - 1 && zoom <= level.maxzoom + 1) {
@@ -253,7 +253,7 @@ function featureMatchesLevel(feature: GeoJSONFeature, level: BoundaryLevel) {
   });
 }
 
-export function highlightBoundaryAtTarget(map: MapInstance, zoom: number, target: TargetPoint) {
+export function highlightBoundaryAtTarget(map: any, zoom: number, target: TargetPoint) {
   const queryableMap = map as QueryableMap;
   const level = boundaryLevelForZoom(zoom);
   if (!level || !loadedLevels.has(level.source)) {
@@ -290,7 +290,7 @@ export function highlightBoundaryAtCenter(map: MapInstance, zoom: number) {
   return highlightBoundaryAtTarget(map, zoom, { lat: center.lat, lng: center.lng });
 }
 
-export function clearHighlight(map: MapInstance) {
+export function clearHighlight(map: any) {
   if (activeFeature) {
     map.setFeatureState({ source: activeFeature.source, id: activeFeature.id }, { active: false });
     activeFeature = null;
