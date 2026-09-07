@@ -35,6 +35,11 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
   .omni-v13-stage .sheet{padding-bottom:calc(92px + var(--safe-bottom, 0px))}
   .omni-v13-stage .sheet .hgrid{display:grid!important;grid-template-columns:1fr;gap:9px;overflow:visible;margin-top:10px;scroll-snap-type:none;padding-bottom:0}
 }
+/* Coquille v13: les sous-composants legacy (PublicQrScannerSheet…) embarquent leur propre cadre `.omni-sheet`
+   — ce qui empilait deux sheets au clic QR. Dans le stage v13, seul le cadre `.sheet` parent reste; l'inner
+   legacy devient contenu nu (un header au lieu de deux, une seule poignée, un seul fond`. */
+.omni-v13-stage .omni-sheet{height:auto!important;background:transparent!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;overflow:visible!important}
+.omni-v13-stage .omni-sheet .sheet-handle,.omni-v13-stage .omni-sheet .sheet-head{display:none!important}
 
 @keyframes locpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
 .pop-hidden{transform:scale(0)!important}

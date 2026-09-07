@@ -4486,9 +4486,16 @@ Search → Authentication required → Sign up / Login → Onboarding → Restor
 
 L'utilisateur ne doit jamais perdre sa recherche.
 
-## 9. Camera after search
+## 8.5. Cinématique d'ouverture (règle — entrée Omni)
 
-Après chaque recherche, la caméra se repositionne automatiquement pour afficher la position utilisateur + facilities pertinentes, sans demander à l'utilisateur de dézoomer.
+À la première ouverture, Omni démarre en **état globe** (vue monde avec rotation lente, sans recherche lancée) puis joue une **boucle d'animation complète** : continent → pays → région → ville → **zone** (paliers successifs, libellés contextuels affichés pendant le vol). La caméra **s'arrête au palier zone** autour de l'utilisateur et **n'ouvre aucune feuille/sheet** : les pins de la zone sont visibles et l'utilisateur peut **découvrir par lui-même** avant de songer à une recherche. Tout geste de l'utilisateur (drag, pinch, scroll, touche) **annule proprement** la cinématique et laisse la caméra à sa position manuelle.
+
+## 9. Camera after search — cinématique de recherche (règle)
+
+Après chaque recherche, la carte **se dézoome d'abord vers l'état globe** (petit mouvement de hauteur, pitch/bearing léger) puis déroule la **boucle d'animation complète** de paliers — continent → pays → région → ville → zone — avec libellés contextuels (« Recherche dans le monde… », « Afrique de l'Ouest », « Togo », « Région Maritime », « Lomé »…) et indicateur de progression visibles pendant le vol. Ce vol **est l'état de chargement** de la recherche — **aucun résultat n'est affiché avant la fin du vol**"/**Aucune liste, card, ni feuille results ne s'ouvre tant que l'animation n'est pas terminée.
+
+ En fin de vol, si des facilités correspondent : la caméra se recentre pour encadrer **la position utilisateur + les facilités les plus proches**, puis les résultats sont montrés (feuille résultats/cards). Si **rien ne correspond** : le vol **s'arrête au palier ville** (jamais au niveau rue), la feuille résultats s'ouvre avec le message approprié (« Aucune facilité ne correspond à votre recherche dans cette zone… ») et la carte reste à cette échelle. L'utilisateur ne doit jamais perdre sa recherche.
+ Si l'utilisateur interagit pendant le vol (drag/touche/scroll/, la caméra reste manuelle et la feuille résultats s'ouvre normalement à l'atterrissage (résultats déjà reçus).
 
 ## 10. Search results et facility cards
 

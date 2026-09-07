@@ -224,7 +224,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         setResults(result.data);
         setResultsLoading(false);
         setRevealKey(`v13-${Date.now()}`);
-        setSheet('results');
+        if (mapState === 'error') setSheet('results');
       } else {
         setResultsLoading(false);
         setError(result.error?.message ?? 'Recherche indisponible.');
@@ -235,11 +235,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setError(caught instanceof Error ? caught.message : 'Recherche indisponible.');
       setSheet('results');
     }
-  }, [bounds]);
+  }, [bounds, mapState]);
 
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);
-    if (!active && sheet === 'results') setSheet('results');
+    if (!active && (sheet === 'none' || sheet === 'results')) setSheet('results');
   }, [sheet]);
 
   const handleResultsScroll = useCallback(() => {
@@ -613,7 +613,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const dockGo = useCallback((target: Sheet, homeLike: boolean) => {
     if (target === 'none') { setSheet('none'); return; }
     if (target === 'search') { setSheet(sheet === 'search' ? 'none' : 'search'); return; }
-    if (target === 'results') { setRevealKey(`v13-${Date.now()}`); setSheet('results'); return; }
+    if (target === 'results') { setRevealKey(`v13-${Date.now()}`); return; }
     if (target === 'qr' && sheet === 'menu' && !desktop) { setSheet('qr'); return; }
     if (!homeLike) setSelectedId(null);
     setSheet(target);
@@ -803,6 +803,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           </div>
           {resultsLoading && <p className="sub">Recherche…</p>}
           {error && !resultsLoading && <p className="sub" role="alert">{error}</p>}
+          {!resultsLoading && !error && results.length === 0 && (
+            <p className="sub" role="status">Aucune facilité ne correspond à votre recherche dans cette zone. Essayez d'élargir la recherche ou de vous déplacer sur la carte.</p>
+          )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
             {results.map((facility) => (
               <button key={facility.id} data-fid={facility.id} type="button" className={`cardbox${resultsFollowId === facility.id ? ' focused' : ''}`} style={{ textAlign: 'left' }} onClick={() => void handlePinSelect(facility)}>
