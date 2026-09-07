@@ -757,7 +757,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       </section>
       {mapState === 'error' && <div className="map-legend" role="alert"><span>{error}</span></div>}
       {mapState === 'empty' && <div className="map-legend" role="status"><span>Aucun lieu dans cette vue.</span></div>}
-      <div className="countmark" aria-hidden="true">{sheet === 'results' && results.length ? results.length : facilities.length}</div>
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
