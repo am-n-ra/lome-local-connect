@@ -933,16 +933,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         map.jumpTo({ center: [1.22, 6.13], zoom: 2, bearing: 0, pitch: 0 });
         map.setProjection({ type: 'mercator' });
         map.resize();
-      }, 6_500);
+      }, 4_000);
     };
     fallbackTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) switchToLocalGlobe();
-    }, 3_200);
+    }, 1_400);
     readinessTimer = window.setTimeout(() => {
       // T-4: Ne pas set error si le fallback local a déjà résolu (initialStyleReady)
       // ou si on est déjà en train de charger un style alternatif (mapStatus='loading').
       if (!initialStyleReady.current && mapRef.current === map && mapStatus === 'loading') setMapStatus('error');
-    }, 12_000);
+    }, 8_000);
     // Escalate immediately on a fatal (non-tile) style error, e.g. the provider is
     // down or blocked by TLS/CORS, so users never sit on a blank map waiting for
     // the readiness timer.
