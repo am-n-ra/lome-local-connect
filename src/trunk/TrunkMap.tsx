@@ -580,9 +580,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       const FLIGHT_DURATION = arrivalReduced ? 340 : 700;
+      const FIRST_FLIGHT_DURATION = arrivalReduced ? 280 : 380;
       const PAUSE_DURATION = arrivalReduced ? 200 : 550;
 
-      type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number };
+      type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number; flightDuration?: number };
 
       const buildStops = (lng: number, lat: number): ArrivalStop[] => {
         if (arrivalReduced) {
@@ -592,7 +593,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           ];
         }
         return [
-          { center: [lng, lat], zoom: 3, label: 'Continent', pause: PAUSE_DURATION },
+          { center: [lng, lat], zoom: 3, label: 'Continent', pause: PAUSE_DURATION, flightDuration: FIRST_FLIGHT_DURATION },
           { center: [lng, lat], zoom: 6, label: 'Pays', pause: PAUSE_DURATION },
           { center: [lng, lat], zoom: 9, label: 'Région', pause: PAUSE_DURATION },
           { center: [lng, lat], zoom: 12, label: 'Ville', pause: PAUSE_DURATION },
@@ -618,15 +619,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         if (!step) { finishArrival(); return; }
 
         setRevealLabel(step.label);
+        const dur = step.flightDuration ?? FLIGHT_DURATION;
         map.flyTo({
           center: step.center,
           zoom: step.zoom,
-          duration: FLIGHT_DURATION,
+          duration: dur,
           speed: 0.55,
           curve: 1.15,
           essential: true,
         });
-        await waitForMapSettle(map, FLIGHT_DURATION + 800);
+        await waitForMapSettle(map, dur + 800);
         if (cancelIfStale()) return;
         await loadBoundariesForZoom(map, step.zoom);
         await waitForRenderFrames(3);
@@ -935,12 +937,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     };
     fallbackTimer = window.setTimeout(() => {
       if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) switchToLocalGlobe();
-    }, 6_500);
+    }, 3_200);
     readinessTimer = window.setTimeout(() => {
       // T-4: Ne pas set error si le fallback local a déjà résolu (initialStyleReady)
       // ou si on est déjà en train de charger un style alternatif (mapStatus='loading').
       if (!initialStyleReady.current && mapRef.current === map && mapStatus === 'loading') setMapStatus('error');
-    }, 18_000);
+    }, 12_000);
     // Escalate immediately on a fatal (non-tile) style error, e.g. the provider is
     // down or blocked by TLS/CORS, so users never sit on a blank map waiting for
     // the readiness timer.
