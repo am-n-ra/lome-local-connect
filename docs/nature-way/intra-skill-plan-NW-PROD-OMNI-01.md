@@ -172,6 +172,7 @@
 | NW-M2 | NW-M1 | Réparer WIP | Nettoyer le working-tree cassé (doublon `const finish`→TS1005( avant/avec le portage | — | Nature Way | `done` | `npx tsc --noEmit` clean | Les 3 fichiers modifiés non commités sont du travail précédent; préserver le bon, écarter le cassé | — |
 | NW-M3 | NW-M1 | Mini-trunk | Étapes highlight(continent→pays→région→ville→quartier) dans `beginFlight`/`finish` du reveal, pattern `main` (flyTo → settle → load → highlight → pause) | NW-M2 | Nature Way | `done` | highlight visible + clearHighlight + tsc | Ne pas casser `computeSearchFlight`/`labelForZoom`/stagger pins / T-10p initial | — |
 | NW-M4 | NW-M1 | Preuve | tsc + tests + rapport preuve locale| NW-M3 | Nature Way | `done` | commandes sorties + résidu honnête | Aucun push sans ordre fondateur | — |
+| NW-M5 | NW-M1 | Branches/UI (motion carte) | Arrivée initiale (`beginArrival`) réparée — le premier voyage joue au chargement (stops Afrique→Togo→Région→Lomé avec highlight(; T-10p préservé pour les ré-invocations suivantes | NW-M3 | Nature Way | `done` | tsc + tests + build（306/306）✅; première vue: le tour joue au load | — | — |
 
 ### Reconcile log (slice
 

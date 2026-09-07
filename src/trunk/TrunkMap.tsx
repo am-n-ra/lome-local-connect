@@ -532,11 +532,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       }
     };
     const beginArrival = () => {
+      const firstArrival = !arrivalPlayedRef.current;
       if (arrivalPlayedRef.current) return;
       arrivalPlayedRef.current = true;
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      if (cameraMode.current !== 'resting_globe') return;
+      if (!firstArrival && cameraMode.current !== 'resting_globe') return;
       const targetLngLat: [number, number] = [userPositionRef.current?.longitude ?? 1.22, userPositionRef.current?.latitude ??  6.13];
 
       type ArrivalStop = { center: [number, number]; zoom: number; label: string };
