@@ -746,7 +746,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           </div>
         </form>
       )}
-      {sheet === 'results' && (
+      {(sheet === 'results' && desktop) && (
         <section className="sheet h-auto" data-sheet="results" role="region" aria-label="Résultats">
           <div className="handle" />
           <div className="sheet-head">

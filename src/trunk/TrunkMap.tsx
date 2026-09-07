@@ -220,6 +220,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const revealToken = useRef(0);
   const revealRunningRef = useRef(false);
   const lastRevealKey = useRef<string | null>(null);
+  const arrivalPlayedRef = useRef(false);
   const pointerInside = useRef(false);
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
@@ -447,8 +448,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       transformRequest: (url, resourceType) => ({
         url: resourceType === 'Glyphs' ? rewriteGlyphUrl(url) : url,
       }),
-      center: [1.22, 6.13],
-      zoom: 11.5,
+      center: [10, 8],
+      zoom: 1.25,
       minZoom: 1,
       maxZoom: 18,
       attributionControl: false,
@@ -523,6 +524,58 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         stopRotation();
         setRotationState('paused');
       }
+    };
+    const beginArrival = () => {
+      if (arrivalPlayedRef.current) return;
+      arrivalPlayedRef.current = true;
+      if (basemapKind === 'raster' || window.matchMedia('(prefers-reduced-motion: reduce)').matches || cameraMode.current !== 'resting_globe') return;
+      type ArrivalStop = { center: [number, number]; zoom: number; label: string };
+      const stops: ArrivalStop[] = [
+        { center: [2.8, 10.5], zoom: 3.8, label: "Afrique de l'Ouest" },
+        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo' },
+        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime' },
+        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé' },
+      ];
+      let cancelled = false;
+      let step =  0;
+      const cancel = () => {
+        if (cancelled) return;
+        cancelled = true;
+        map.stop();
+        setRevealLabel(null);
+        setRevealRunning(false);
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
+      };
+      const detachCancel = () => {
+        map.off('dragstart', cancel);
+        map.off('zoomstart', cancel);
+        window.removeEventListener('pointerdown', cancel);
+        window.removeEventListener('wheel', cancel);
+      };
+      const advance = () => {
+        if (cancelled) return;
+        const next = stops[step++];
+        setRevealLabel(next.label);
+        map.easeTo({ center: next.center, zoom: next.zoom, duration: 760, easing: (t) => t * (2 - t), essential: true });
+        map.once('moveend', () => {
+          if (cancelled) return;
+          if (step < stops.length) advance(); else finishArrival();
+        });
+      };
+      const finishArrival = () => {
+        detachCancel();
+        setRevealLabel(null);
+        setRevealRunning(false);
+        cameraMode.current = 'manual_navigation';
+        setCameraModeState('manual_navigation');
+      };
+      setRevealRunning(true);
+      map.once('dragstart', cancel);
+      map.once('zoomstart', cancel);
+      window.addEventListener('pointerdown', cancel, { once: true });
+      window.addEventListener('wheel', cancel, { once: true, passive: true });
+      advance();
     };
     const scheduleSettledResume = () => {
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
@@ -789,6 +842,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       configureStyle();
       globeProjection = basemapKind !== 'raster' && map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
+      beginArrival();
     });
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
