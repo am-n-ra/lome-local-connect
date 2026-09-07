@@ -228,6 +228,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const lastRevealKey = useRef<string | null>(null);
   const arrivalPlayedRef = useRef(false);
   const arrivalInProgressRef = useRef(false);
+  const arrivalTokenRef = useRef(0);
   const pointerInside = useRef(false);
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
@@ -532,6 +533,29 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         setRotationState('paused');
       }
     };
+    const waitForRenderFrames = (frameCount = 2): Promise<void> =>
+      new Promise((resolve) => {
+        let remaining = frameCount;
+        const tick = () => {
+          if (--remaining <= 0) { resolve(); return; }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+    const waitForMapSettle = (mapInstance: any, timeout = 2600): Promise<void> =>
+      new Promise((resolve) => {
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timeoutId);
+          void waitForRenderFrames(2).then(resolve);
+        };
+        const timeoutId = window.setTimeout(done, timeout);
+        mapInstance.once('moveend', done);
+      });
+    const waitForDuration = (ms: number): Promise<void> =>
+      new Promise((resolve) => window.setTimeout(resolve, ms));
     const beginArrival = () => {
       const firstArrival = !arrivalPlayedRef.current;
       if (arrivalPlayedRef.current) return;
@@ -541,30 +565,32 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (!firstArrival && cameraMode.current !== 'resting_globe') return;
       const targetLngLat: [number, number] = [userPositionRef.current?.longitude ?? 1.22, userPositionRef.current?.latitude ??  6.13];
 
-      type ArrivalStop = { center: [number, number]; zoom: number; label: string };
+      const FLIGHT_DURATION = arrivalReduced ? 340 : 1250;
+      const PAUSE_DURATION = arrivalReduced ? 200 : 1400;
+
+      type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number };
       const stops: ArrivalStop[] = arrivalReduced ? [
 
-        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo' },
+        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo', pause: PAUSE_DURATION },
 
-        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé' },
+        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé', pause: 0 },
 
       ] : [
 
-        { center: [2.8, 10.5], zoom:  3.8, label: "Afrique de l'Ouest" },
+        { center: [2.8, 10.5], zoom:  3.8, label: "Afrique de l'Ouest", pause: PAUSE_DURATION },
 
-        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo' },
+        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo', pause: PAUSE_DURATION },
 
-        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime' },
+        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime', pause: PAUSE_DURATION },
 
-        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé' },
+        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé', pause: 0 },
 
       ];
 
-      let cancelled = false;
-      let step =  0;
+      let token = 0;
+      const cancelIfStale = () => token !== arrivalTokenRef.current;
       const cancel = () => {
-        if (cancelled) return;
-        cancelled = true;
+        arrivalTokenRef.current += 1;
         arrivalInProgressRef.current = false;
         map.stop();
         setRevealLabel(null);
@@ -578,24 +604,33 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         window.removeEventListener('pointerdown', cancel);
         window.removeEventListener('wheel', cancel);
       };
-      const advance = async () => {
-        if (cancelled) return;
-        arrivalInProgressRef.current = true;
-        const next = stops[step++];
-        setRevealLabel(next.label);
-        map.easeTo({ center: next.center, zoom: next.zoom, duration: arrivalReduced ? 340 :  760, easing: (t) => t * (2 - t), essential: true });
 
-        map.once('moveend', async () => {
-          if (cancelled) return;
-          if (next.zoom) {
-            await loadBoundariesForZoom(map, next.zoom);
-            if (cancelled) return;
-            highlightBoundaryAtTarget(map, next.zoom, { lat: targetLngLat[1], lng: targetLngLat[0] });
-          }
-          if (cancelled) return;
-          if (step < stops.length) advance(); else finishArrival();
+      const runStep = async (index: number) => {
+        if (cancelIfStale()) return;
+        const step = stops[index];
+        if (!step) { finishArrival(); return; }
+
+        setRevealLabel(step.label);
+        map.flyTo({
+          center: step.center,
+          zoom: step.zoom,
+          duration: FLIGHT_DURATION,
+          speed: 0.55,
+          curve: 1.15,
+          essential: true,
         });
+        await waitForMapSettle(map, FLIGHT_DURATION + 2200);
+        if (cancelIfStale()) return;
+        await loadBoundariesForZoom(map, step.zoom);
+        await waitForRenderFrames(3);
+        if (cancelIfStale()) return;
+        highlightBoundaryAtTarget(map, step.zoom, { lat: targetLngLat[1], lng: targetLngLat[0] });
+        if (step.pause) await waitForDuration(step.pause);
+        if (cancelIfStale()) return;
+        if (index === stops.length - 1) { finishArrival(); return; }
+        await runStep(index + 1);
       };
+
       const finishArrival = () => {
         detachCancel();
         arrivalInProgressRef.current = false;
@@ -604,12 +639,15 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
       };
+
+      token = ++arrivalTokenRef.current;
+      arrivalInProgressRef.current = true;
       setRevealRunning(true);
       map.once('dragstart', cancel);
       map.once('zoomstart', cancel);
       window.addEventListener('pointerdown', cancel, { once: true });
       window.addEventListener('wheel', cancel, { once: true, passive: true });
-      advance();
+      void runStep(0);
     };
     const scheduleSettledResume = () => {
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
