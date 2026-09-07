@@ -84,6 +84,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .searchdock{margin-top:8px}
 .searchdock .fld{display:flex;align-items:center;gap:7px;height:36px;border-radius:999px;background:#fff;border:1px solid var(--line);padding:0 12px;box-shadow:var(--sh-sm)}
 .searchdock .fld input{flex:1;border:0;outline:0;background:none;font-size:11px;color:var(--ink)}
+@supports(-webkit-touch-callout:none){.searchdock .fld input{font-size:16px}}
 .searchdock .fld svg{flex:none}
 .searchdock .fld.busy{opacity:.7}
 .searchdock .fld.busy input{pointer-events:none}

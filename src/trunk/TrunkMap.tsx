@@ -1167,7 +1167,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
       const prevZoom = map.getZoom();
       setLabel(labelForZoom(prevZoom -  1) ?? 'Recherche dans le monde…');
-      map.easeTo({ pitch: 35, bearing:  8, zoom: prevZoom -  1, duration:   250, easing: (t) => t * (2 - t), essential: true });
+      map.easeTo({ pitch: 35, bearing:  8, zoom: Math.min(prevZoom -  1, 2.5), duration:   250, easing: (t) => t * (2 - t), essential: true });
       map.once('moveend', () => {
         if (isStale()) return;
         // pave B — contextualisation nature-way: vol progressif continent → pays →
