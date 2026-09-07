@@ -161,7 +161,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .txstep .sdot.ok{background:var(--accent)}.txstep .sdot.now{background:var(--ink)}
 .txstep b{font-size:8.5px}.txstep small{display:block;color:var(--ink-soft);font-size:7px}
 .txstep .go{color:var(--ink-soft)}
-.navpill{position:absolute;z-index:11;bottom:var(--safe-bottom, 14px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg);transition:width .32s var(--ease)}
+.navpill{position:absolute;z-index:11;bottom:var(--safe-bottom, 14px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px));border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg);transition:width .32s var(--ease)}
 .navpill button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78);position:relative;overflow:hidden;transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
 .navpill button svg{width:18px;height:18px}
 .navpill button.active{color:#fff;background:rgba(255,255,255,.14)}
@@ -210,20 +210,13 @@ body{background:#dadad7;padding:0}
 .navpill{animation:none}
 .navpill .center{margin:2px 0}
 .dockmask{display:none}
-/* map fills everything right of the rail + results panel */
-.mapbase{top:112px;left:64px;right:0;bottom:0}
+/* map fills everything right of the rail */
+.mapbase{top:0;left:64px;right:0;bottom:0}
 .omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;right:0}
-.map-legend{top:120px;left:80px}
+.map-legend{top:52px;left:80px}
 .omni-v13-stage[data-sheet="results"] .map-legend,.omni-v13-stage[data-sheet="facility"] .map-legend,.omni-v13-stage[data-sheet="bulk"] .map-legend,.omni-v13-stage[data-sheet="compare"] .map-legend,.omni-v13-stage[data-sheet="flow"] .map-legend,.omni-v13-stage[data-sheet="seller"] .map-legend,.omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
 .rolepill{top:8px;left:50%}
-/* SEARCH becomes a permanent top bar spanning the content area (never hidden at desktop) */
-.sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top:36px;bottom:auto;height:76px;width:auto;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 24px;overflow:visible;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:18px;z-index:16}
-.sheet[data-sheet="search"] .handle{display:none}
-.sheet[data-sheet="search"] .sheet-head{display:none}
-.sheet[data-sheet="search"] .searchdock{margin-top:0;flex:0 0 300px}
-.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:10px;min-width:0}
-.sheet[data-sheet="search"] .constraint-zone .label{flex:none;font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
-.sheet[data-sheet="search"] .constraint-zone .chips{flex:1 1 auto;margin-top:0;gap:6px;flex-wrap:wrap;overflow:hidden;max-height:38px}
+/* SEARCH stays bottom-anchored on desktop (no top bar) */
 /* The whole "browsing a result" journey — results, facility detail, bulk, compare, claim — shares ONE fixed slot on the left, next to the rail.It behaves exactly like the mobile single-sheet navigation, just positioned as a panel instead of a full-screen sheet. Only screens reached from the dock/menu that are NOT part of this journey (menu, account, home, wallet, plans, saved, auth) get a right-hand drawer — that distinction is the whole point: a drawer is for "a separate destination", not for "the next step of what you were already looking at". */
 .sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:112px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
 .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}

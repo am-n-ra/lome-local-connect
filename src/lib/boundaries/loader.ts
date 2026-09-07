@@ -122,13 +122,15 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
     promoteId: "id",
   });
 
+  const isContinent = level.id === "africa-continent";
+
   map.addLayer({
     id: `${level.id}-fills`,
     type: "fill",
     source: level.source,
     minzoom: level.minzoom,
     maxzoom: level.maxzoom,
-    layout: { visibility: "visible" },
+    layout: { visibility: isContinent ? "none" : "visible" },
     paint: {
       "fill-color": [
         "case",
@@ -136,7 +138,7 @@ function addBoundaryLayers(map: MapInstance, level: BoundaryLevel, data: GeoJSON
         ACTIVE_FILL_COLOR,
         "#ffffff",
       ],
-      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], 0.12, 0],
+      "fill-opacity": ["case", ["boolean", ["feature-state", "active"], false], isContinent ? 0 : 0.12, 0],
     },
   });
 
