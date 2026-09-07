@@ -227,6 +227,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const revealRunningRef = useRef(false);
   const lastRevealKey = useRef<string | null>(null);
   const arrivalPlayedRef = useRef(false);
+  const arrivalInProgressRef = useRef(false);
   const pointerInside = useRef(false);
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
@@ -564,6 +565,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       const cancel = () => {
         if (cancelled) return;
         cancelled = true;
+        arrivalInProgressRef.current = false;
         map.stop();
         setRevealLabel(null);
         setRevealRunning(false);
@@ -578,6 +580,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       };
       const advance = async () => {
         if (cancelled) return;
+        arrivalInProgressRef.current = true;
         const next = stops[step++];
         setRevealLabel(next.label);
         map.easeTo({ center: next.center, zoom: next.zoom, duration: arrivalReduced ? 340 :  760, easing: (t) => t * (2 - t), essential: true });
@@ -595,6 +598,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       };
       const finishArrival = () => {
         detachCancel();
+        arrivalInProgressRef.current = false;
         setRevealLabel(null);
         setRevealRunning(false);
         cameraMode.current = 'manual_navigation';
@@ -629,6 +633,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       // si le style distant échoue et que le fallback local prend le relais.
       if (!arrivalPlayedRef.current) {
         beginArrival();
+      }
+      // T-5: Pendant l'arrival, ne pas perturber la caméra easeTo.
+      // syncProjection et configureStyle sont appelés sur chaque styledata/zoom,
+      // ce qui déclenche setProjection/setResize/setPadding mid-animation.
+      if (arrivalInProgressRef.current) {
+        addLayers(map);
+        const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
+        source?.setData(pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current));
+        lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
+        return;
       }
       const initialGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
@@ -871,6 +885,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     });
     let globeProjection = true;
     const syncProjection = () => {
+      if (arrivalInProgressRef.current) return;
       const wantsGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
