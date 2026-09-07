@@ -53,8 +53,8 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - Species blueprint: `docs/omni-species-blueprint-2026-08-27.md` (§4D Admin/Reviewer/Operator; §2 design system).
 - Existing prototype (buyer/seller/admin stubs): `docs/omni-species-html/index.html` + `app.js`. Design tokens in `:root` of index.html.
 
-## Branch rule( founder locked 2026-09-02; amended 2026-09-05; push-wait rule added 2026-09-07(
-**Only `omni-v2-rebuild` is touched.** Never merge to `main`. "Merge" means "push prod branch"; feature branches merge into `omni-v2-rebuild` only if founder explicitly names one. **Push rule (amended 2026-09-07, founder order(: AUCUN push sans signal explicite du fondateur — attendre son signal avant de pousser(; vérifier hash prod === local (guardrail T-07d( avant continuer.**
+## Branch rule( founder locked 2026-09-02; amended 2026-09-05; push-wait superseded 2026-09-07(
+**Only `omni-v2-rebuild` is touched.** Never merge to `main`. "Merge" means "push prod branch"; feature branches merge into `omni-v2-rebuild` only if founder explicitly names one. **Push rule (amended 2026-09-07, founder order(: push vers prod SANS attendre de signal—APRÈS CHAQUE ÉTAPE SIGNIFICATIVE(; vérifier hash prod === local (guardrail T-07d( avant continuer.**
 **T-13 (2026-09-05, commit  ​81869c9(: refonte UI 1:1 — slice V-1 coquille livrée( shell `TrunkAppV13`( remplace `TrunkApp`( (mount main.tsx(; atoms 1:1 `ui-v13.css` extrait du HTML maquette; rolepill/navpill/countmark/sheets SEARCH-RESULTS-FACILITY-MENU-ACCOUNT-AUTH réels, backend réel via `api.ts` + auth Neon email/password; tests 297/297, tsc clean, build+prod hash `index-CbuxGUOp.js` === local.
 
 ## Commands
