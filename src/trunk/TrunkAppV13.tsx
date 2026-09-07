@@ -125,6 +125,7 @@ const [compareResults, setCompareResults] = useState<PublicFacility[]>([]);
 const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 'remise'>('match');
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
+  const [revealPending, setRevealPending] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
 
   // Espace Buyer — demandes
@@ -224,6 +225,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         setResults(result.data);
         setResultsLoading(false);
         setRevealKey(`v13-${Date.now()}`);
+        setRevealPending(true);
         if (mapState === 'error') setSheet('results');
       } else {
         setResultsLoading(false);
@@ -239,6 +241,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
 
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);
+    if (!active) setRevealPending(false);
     if (!active && (sheet === 'none' || sheet === 'results')) setSheet('results');
   }, [sheet]);
 
@@ -276,6 +279,18 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   useEffect(() => () => {
     if (resultsScrollFrame.current !== null) window.cancelAnimationFrame(resultsScrollFrame.current);
   }, []);
+
+  // Garantie d'affichage : les résultats s'ouvrent au plus tard 5,5 s après la recherche,
+  // même si le style de carte n'est jamais prêt (la cinématique est un bonus, jamais un blocage).
+  useEffect(() => {
+    if (!revealPending) return;
+    const t = window.setTimeout(() => {
+      setRevealPending(false);
+      setRevealActive(false);
+      setSheet(sheet === 'none' ? 'results' : sheet);
+    }, 5500);
+    return () => window.clearTimeout(t);
+  }, [revealPending, sheet]);
 
   const handlePinSelect = useCallback(async (facility: PublicFacility) => {
     setSelectedId(facility.id);
