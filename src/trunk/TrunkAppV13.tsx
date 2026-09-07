@@ -678,6 +678,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     }
     if (target === 'back') {
       if (sheet === 'bulk' || sheet === 'compare') { setSheet('results'); return; }
+      if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth') { setSheet('menu'); return; }
       setSheet('none');
@@ -685,7 +686,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     }
     if (target === 'none') { setSelectedId(null); setSheet('none'); return; }
     dockGo(target, sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results'));
-  }, [sheet, dockGo]);
+  }, [sheet, dockGo, results]);
 
   const handleDockMorph = useCallback((btn: HTMLButtonElement | null) => {
     if (!btn) return;
@@ -793,7 +794,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           </div>
         </form>
       )}
-      {(sheet === 'results' && desktop) && (
+      {(sheet === 'results') && (
         <section className="sheet h-auto" data-sheet="results" role="region" aria-label="Résultats">
           <div className="handle" />
           <div className="sheet-head">
