@@ -205,20 +205,27 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 body{background:#dadad7;padding:0}
 .omni-v13-stage{width:100%;height:100%;max-width:none;max-height:none;min-width:0;min-height:0;margin:0;border-radius:0;border:0;box-shadow:none}
 /* left dock (permanent sur desktop): la navpill verticale reste toujours visible; les sheets de parcours/destination occupent l'emplacement gauche à côté — le dock ne disparaît pas */
-.navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20}
+.navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20;-webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%);background:rgba(17,17,17,.82)}
 .navpill.morph{animation:none}
 .navpill{animation:none}
 .navpill .center{margin:2px 0}
 .dockmask{display:none}
-/* map fills everything right of the rail */
+/* map fills everything right of the rail + search bar */
 .mapbase{top:0;left:64px;right:0;bottom:0}
-.omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;right:0}
+.omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;top:76px;right:0}
 .map-legend{top:52px;left:80px}
 .omni-v13-stage[data-sheet="results"] .map-legend,.omni-v13-stage[data-sheet="facility"] .map-legend,.omni-v13-stage[data-sheet="bulk"] .map-legend,.omni-v13-stage[data-sheet="compare"] .map-legend,.omni-v13-stage[data-sheet="flow"] .map-legend,.omni-v13-stage[data-sheet="seller"] .map-legend,.omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
 .rolepill{top:8px;left:50%}
-/* SEARCH stays bottom-anchored on desktop (no top bar) */
+/* SEARCH lives in the left panel on desktop — permanent top bar above journey sheets */
+.sheet[data-sheet="search"]{position:absolute;left:64px;right:auto;top:0;bottom:auto;width:346px;height:76px;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 24px;overflow:visible;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:18px;z-index:16}
+.sheet[data-sheet="search"] .handle{display:none}
+.sheet[data-sheet="search"] .sheet-head{display:none}
+.sheet[data-sheet="search"] .searchdock{margin-top:0;flex:1 1 auto}
+.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:10px;min-width:0}
+.sheet[data-sheet="search"] .constraint-zone .label{flex:none;font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
+.sheet[data-sheet="search"] .constraint-zone .chips{flex:1 1 auto;margin-top:0;gap:6px;flex-wrap:wrap;overflow:hidden;max-height:38px}
 /* The whole "browsing a result" journey — results, facility detail, bulk, compare, claim — shares ONE fixed slot on the left, next to the rail.It behaves exactly like the mobile single-sheet navigation, just positioned as a panel instead of a full-screen sheet. Only screens reached from the dock/menu that are NOT part of this journey (menu, account, home, wallet, plans, saved, auth) get a right-hand drawer — that distinction is the whole point: a drawer is for "a separate destination", not for "the next step of what you were already looking at". */
-.sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:112px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
+.sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:76px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
 .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}
 .sheet[data-sheet="results"] .hgrid{display:grid!important;grid-template-columns:1fr;gap:9px;overflow:visible;margin-top:10px;scroll-snap-type:none;padding-bottom:0}
 .sheet[data-sheet="results"] .btnrow{margin-top:14px}

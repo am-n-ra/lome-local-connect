@@ -579,8 +579,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       arrivalPlayedRef.current = true;
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      const FLIGHT_DURATION = arrivalReduced ? 340 : 1250;
-      const PAUSE_DURATION = arrivalReduced ? 200 : 1400;
+      const FLIGHT_DURATION = arrivalReduced ? 340 : 700;
+      const PAUSE_DURATION = arrivalReduced ? 200 : 550;
 
       type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number };
 
@@ -626,7 +626,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           curve: 1.15,
           essential: true,
         });
-        await waitForMapSettle(map, FLIGHT_DURATION + 2200);
+        await waitForMapSettle(map, FLIGHT_DURATION + 800);
         if (cancelIfStale()) return;
         await loadBoundariesForZoom(map, step.zoom);
         await waitForRenderFrames(3);
