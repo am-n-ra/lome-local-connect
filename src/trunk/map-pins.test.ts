@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupProjectedFacilities, pinFeatureCollection, pinRadiusPx, pinRingColor, pinRingWidthPx, PIN_RADIUS_PX, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR, PIN_RING_WIDTH_PX, PIN_SELECTED_SCALE, type ProjectedFacility } from './map-pins';
+import { groupProjectedFacilities, pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingColor, pinRingWidthPx, PIN_DIM_OPACITY, PIN_RADIUS_PX, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR, PIN_RING_WIDTH_PX, PIN_SELECTED_SCALE, type PinDimMode, type ProjectedFacility } from './map-pins';
 import type { PublicFacility } from './types';
 
 function facility(id: string, longitude: number, latitude: number): PublicFacility {
@@ -85,5 +85,28 @@ describe('rule 7 pin anatomy (owned ring + selected emphasis)', () => {
     const facilities = [facility('a', 1.2, 6.1)];
     expect(pinFeatureCollection(facilities, null).features[0].properties.owned).toBe(false);
     expect(pinFeatureCollection(facilities, []).features[0].properties.owned).toBe(false);
+
+  });
+
+  describe('rule 7 pin dim modes (résultats, sélection, itinéraire)', () => {
+    it('treats the selected facility as the only vivid pin when a facility is focused', () => {
+      const mode: PinDimMode = { kind: 'selection', selectedId: 'b' };
+      const vivid = [...pinIdSetForMode(mode, ['a', 'b', 'c'])];
+      expect(vivid).toEqual(['b']);
+      expect(PIN_DIM_OPACITY).toBeCloseTo(0.15);
+    });
+
+    it('keeps query-result pins vivid,and dims non-results', () => {
+      const mode: PinDimMode = { kind: 'results', ids: ['a', 'c'] };
+      const vivid = [...pinIdSetForMode(mode, ['a', 'b', 'c'])];
+      expect(vivid.sort()).toEqual(['a', 'c']);
+      const partial = [...pinIdSetForMode(mode, ['a'])];
+      expect(partial.sort()).toEqual(['a']);
+    });
+
+    it('keeps itinerary endpoint facility vivid', () => {
+      const vivid = [...pinIdSetForMode(null, ['a', 'b'])];
+      expect(vivid).toEqual(['a', 'b']);
+    });
   });
 });

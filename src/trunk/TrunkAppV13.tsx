@@ -1,6 +1,6 @@
-import { FormEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
+  ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
   Compass, Home, LogOut, MapPin, Menu, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
   Trash2, User, Wallet, X,
 } from 'lucide-react';
@@ -10,6 +10,7 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
   getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
+import { parseFacilityIdFromQr } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
@@ -19,11 +20,12 @@ import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
+import { PublicQrScannerSheet } from '../components/ui/PublicQrScannerSheet';
 import { SellerV13 } from './SellerV13';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -66,6 +68,27 @@ function money(minor: number, currency: string): string {
 
 const LOME = [1.22, 6.13] as const;
 
+const SEARCH_CONSTRAINTS: Record<Role, string[]> = {
+  buyer: ['Quantité 10', '≤ 15 000 FCFA', '≤ 10 km', 'Ouvert', 'Livraison', 'Transactable'],
+  seller: ['Ma compagnie', 'Vérifiée', 'À valider', 'Stock bas'],
+  admin: ['Claims', 'Créations', 'À valider', 'Preuves prêtes'],
+  operator: ['Tournée du jour', 'À visiter', 'Vérifiés'],
+};
+
+const SEARCH_LABEL: Record<Role, [string, string]> = {
+  buyer: ['Recherche', 'Que cherchez-vous ?'],
+  seller: ['Recherche Seller', 'Trouvez vos compagnies & facilités'],
+  admin: ['Recherche équipe', 'Trouvez un objet de revue'],
+  operator: ['Recherche équipe', 'Trouvez un point de tournée'],
+};
+
+const SEARCH_PLACEHOLDER: Record<Role, string> = {
+  buyer: 'Produit, service, propriété…',
+  seller: 'Compagnie, facilité…',
+  admin: 'Claim, création, facilité…',
+  operator: 'Claim, création, facilité…',
+};
+
 export function TrunkAppV13() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   useViewportInsets(stageRef);
@@ -73,11 +96,15 @@ export function TrunkAppV13() {
   const [mapState, setMapState] = useState<MapState>('loading');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [constraintsOpen, setConstraintsOpen] = useState(false);
+  const [activeConstraints, setActiveConstraints] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<PublicFacility[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedFacility, setSelectedFacility] = useState<FacilityDetail | null>(null);
   const [facilityLoading, setFacilityLoading] = useState(false);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const [qrScanKey, setQrScanKey] = useState(0);
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
@@ -224,6 +251,16 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setFacilityLoading(false);
     }
   }, []);
+
+  const handleQrDetected = useCallback(async (facilityId: string) => {
+    if (!parseFacilityIdFromQr(facilityId)) { setQrError('QR non reconnu — visez le QR public d’une facilité.'); return; }
+    const found = facilities.find((item) => item.id === facilityId) ?? null;
+    if (found) { setSheet('qr'); await handlePinSelect(found); return; }
+    const result = await listPublicFacilities(undefined, undefined, { category: '' });
+    const detail = (result.ok ? (result.data ?? []) : []).find((item) => item.id === facilityId) ?? null;
+    if (!detail) { setQrError('Facilité introuvable dans cette zone — QR inconnu.'); setSheet('qr'); return; }
+    setSheet('qr'); await handlePinSelect(detail);
+  }, [facilities, handlePinSelect]);
 
   const requireAuth = useCallback(async (): Promise<string | null> => {
     try {
@@ -493,17 +530,151 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     }
   }, [claimResult, requireAuth]);
 
+  const rolesRef = useRef<HTMLDivElement | null>(null);
+  const rolesIndRef = useRef<HTMLSpanElement | null>(null);
+
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
     if (sessionUser) base.push('seller');
     if (adminTools) base.push('admin');
+    if (adminTools) base.push('operator');
     return base;
   }, [sessionUser, adminTools]);
+
+  // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
+  // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
+  const switchRoles = useMemo<Role[]>(() => {
+    if (role === 'admin') return ['buyer', 'admin', 'operator'];
+    if (role === 'operator') return ['buyer', 'operator', 'admin'];
+    return ['buyer', 'seller'];
+  }, [role]);
+
+  // L'indicateur glissant (.ind) suit le rôle actif — la maquette le mesure
+  // après render (`positionIndicator(0)`), à chaque bascule.
+  useEffect(() => {
+    const wrap = rolesRef.current;
+    const ind = rolesIndRef.current;
+    if (!wrap || !ind) return;
+    const on = wrap.querySelector('button.on');
+    if (!on) { ind.style.opacity = '0'; return; }
+    const wrapRect = wrap.getBoundingClientRect();
+    const onRect = on.getBoundingClientRect();
+    ind.style.opacity = '1';
+    ind.style.width = `${onRect.width}px`;
+    ind.style.transform = `translateX(${onRect.left - wrapRect.left}px)`;
+  }, [role, switchRoles]);
+
+  const dockGo = useCallback((target: Sheet, homeLike: boolean) => {
+    if (target === 'none') { setSheet('none'); return; }
+    if (target === 'search') { setSheet(sheet === 'search' ? 'none' : 'search'); return; }
+    if (target === 'results') { setRevealKey(`v13-${Date.now()}`); setSheet('results'); return; }
+    if (!homeLike) setSelectedId(null);
+    setSheet(target);
+  }, [sheet]);
+
+  type DockItem = { icon: string; label: string; target: Sheet | 'back' | 'cancel'; center: boolean; active: boolean };
+
+  // Dock contextuel — miroir réact de la fonction `dockFor()` de la maquette V1.3:
+  // jamais d'icônes fixes; 5 cas (transaction, destination, menu, équipe, seller, défaut.
+  const dockItems = useMemo<DockItem[]>(() => {
+    const team = role === 'admin' || role === 'operator';
+    const currentSheet: Sheet = sheet;
+    const homeLike = sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results');
+    if (sheet === 'flow' || sheet === 'claim') return [
+      { icon: 'cancel', label: 'Annuler', target: 'none', center: false, active: false },
+      { icon: 'qr', label: 'QR', target: 'qr', center: true, active: false },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
+    ];
+    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'account' && sheet !== 'wallet' && sheet !== 'plans' && sheet !== 'saved' && sheet !== 'home' && sheet !== 'auth' && !homeLike;
+    if (destination) return [
+      { icon: 'back', label: 'Retour', target: 'back', center: false, active: false },
+      { icon: team ? 'check' : (role === 'seller' ? 'box' : 'search'), label: team ? 'À valider' : (role === 'seller' ? 'Stock' : 'Recherche'), target: team ? 'admin' : (role === 'seller' ? 'seller' : 'search'), center: true, active: role !== 'buyer' },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
+    ];
+    if (sheet === 'menu') return [
+      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
+      { icon: 'qr', label: 'QR', target: 'qr', center: false, active: false },
+      { icon: 'home', label: 'Carte', target: 'none', center: true, active: false },
+    ];
+    if (team) return [
+      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
+      { icon: 'check', label: 'À valider', target: 'admin', center: true, active: currentSheet === 'admin' },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
+    ];
+    if (role === 'seller') return [
+      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: sheet === 'search' },
+      { icon: 'box', label: 'Stock', target: 'seller', center: true, active: currentSheet === 'seller' },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
+    ];
+    return [
+      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: sheet === 'search' },
+      { icon: 'qr', label: 'QR', target: 'qr', center: true, active: sheet === 'qr' },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
+    ];
+  }, [role, sheet, desktop]);
+
+  const dockIcon = (icon: string, size = 18): ReactNode => {
+    switch (icon) {
+      case 'back': return <ArrowLeft size={size} />;
+      case 'qr': return <QrCode size={size} />;
+      case 'menu': return <Menu size={size} />;
+      case 'home': return <Home size={size} />;
+      case 'check': return <CheckCircle2 size={size} />;
+      case 'box': return <PackageSearch size={size} />;
+      default: return <Search size={size} />;
+    }
+  };
+
+  const handleDock = useCallback((target: Sheet | 'back' | 'cancel') => {
+    if (target === 'cancel') {
+      if (sheet === 'flow' || sheet === 'claim') setSheet(sheet === 'flow' ? 'facility' : 'facility');
+      return;
+    }
+    if (target === 'back') {
+      if (sheet === 'bulk' || sheet === 'compare') { setSheet('results'); return; }
+      if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
+      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth') { setSheet('menu'); return; }
+      setSheet('none');
+      return;
+    }
+    if (target === 'none') { setSelectedId(null); setSheet('none'); return; }
+    dockGo(target, sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results'));
+  }, [sheet, dockGo]);
+
+  const handleDockMorph = useCallback((btn: HTMLButtonElement | null) => {
+    if (!btn) return;
+    btn.style.transition = 'none';
+    btn.style.transform = 'scale(.8)';
+    requestAnimationFrame(() => { btn.style.transition = ''; btn.style.transform = ''; });
+  }, []);
+
+  const handleSearchInput = (value: string) => {
+    setQuery(value);
+    setConstraintsOpen(value.trim().length > 0);
+    if (!value.trim()) setActiveConstraints(new Set());
+  };
+
+  const toggleConstraint = useCallback((label: string) => {
+    setActiveConstraints((current) => {
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }, []);
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
     void runSearch(query);
   };
+
+  // Pins contextuels: les pins hors-contexte s'estompent quand un sheet
+  // parcours (résultats, sélection, itinéraire) est ouvert — la maquette dim mode.
+  const dimMode = useMemo(() => {
+    if (sheet === 'results') return { mode: { kind: 'results' as const, ids: results.map((f) => f.id) }, active: true };
+    if (sheet === 'facility' && selectedId) return { mode: { kind: 'selection' as const, selectedId }, active: true };
+    return null;
+  }, [sheet, results, selectedId]);
 
   return (
     <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
@@ -517,6 +688,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             onRevealStateChange={handleRevealStateChange}
             revealKey={revealKey}
             focusTarget={focusTarget}
+            dimMode={dimMode}
           />
         </Suspense>
       </section>
@@ -524,14 +696,28 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       {mapState === 'empty' && <div className="map-legend" role="status"><span>Aucun lieu dans cette vue.</span></div>}
       <div className="countmark" aria-hidden="true">{facilities.length}</div>
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
-        {(eligibleRoles.length ? eligibleRoles : ['buyer'] as Role[]).map((r: Role) => (
-          <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); if (r === 'admin') setSheet('admin'); else if (r === 'seller') setSheet('seller'); else setSheet('none'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
-        ))}
+        <div className="roleswitch" ref={rolesRef}>
+          <span className="ind" ref={rolesIndRef} />
+          {(switchRoles.length ? switchRoles : ['buyer'] as Role[]).map((r: Role) => (
+            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : 'menu'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+          ))}
+        </div>
       </div>
-      <div className="navpill" role="navigation" aria-label="Actions principales" data-journey={desktop && isJourney ? 'open' : undefined}>
-        <button type="button" aria-label="Rechercher" onClick={() => setSheet(sheet === 'search' ? 'none' : 'search')}><Search size={20} /></button>
-        <button type="button" aria-label="Scanner un QR" onClick={() => setSheet('menu')}><QrCode size={20} /></button>
-        <button type="button" aria-label="Menu" onClick={() => setSheet('menu')}><Menu size={20} /></button>
+      <div className="navpill" role="navigation" aria-label="Actions principales">
+        {dockItems.map((item) => (
+          <button
+            key={item.icon}
+            type="button"
+            ref={(btn: HTMLButtonElement | null) => { handleDockMorph(btn); }}
+            className={`
+              ${item.center ? 'center' : ''}${item.active ? ' active' : ''}
+            `}
+            onClick={() => handleDock(item.target as Sheet | 'back' | 'cancel')}
+          >
+            <span className="icon-in">{dockIcon(item.icon)}</span>
+            <span className="sr-only">{item.label}</span>
+          </button>
+        ))}
       </div>
       <div className="dockmask" aria-hidden="true" />
       {(sheet === 'search' || desktop) && (
@@ -539,14 +725,24 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <form className="sheet h-low" data-sheet="search" onSubmit={handleSubmitSearch}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div>
+            <div><div className="eyebrow">{SEARCH_LABEL[role][0]}</div><h1>{SEARCH_LABEL[role][1]}</h1></div>
           </div>
           <div className="searchdock">
-            <div className="fld">
+            <div className={`fld${resultsLoading ? ' busy' : ''}`}>
               <svg width="16" height="16" aria-hidden="true"><use href="#iSearch" /></svg>
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Produit, service, commerce…" aria-label="Recherche" />
+              <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
               <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, padding: '0 10px' }} type="submit"><ArrowRight size={15} /></button>
             </div>
+          {constraintsOpen && (
+            <div className="constraint-zone">
+              <div className="label">{role === 'buyer' ? 'Contraintes (requête, pas engagement vendeur)' : 'Filtres actifs'}</div>
+              <div className="chips">
+                {(SEARCH_CONSTRAINTS[role] ?? SEARCH_CONSTRAINTS.buyer).map((c: string) => (
+                  <span key={c} className={`chip${activeConstraints.has(c) ? ' active' : ''}`} onClick={() => toggleConstraint(c)} role="button" tabIndex={0}><span className="dot" />{c}</span>
+                ))}
+              </div>
+            </div>
+          )}
           </div>
         </form>
       )}
@@ -668,6 +864,17 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { setFlowFacility({ id: pick.id,name: pick.name }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } } }}>Choisir & acheter</button>
         </section>
       )}
+      {sheet === 'qr' && (
+        <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="true" aria-label="Scanner un QR">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Scanner un QR</div><h1>Facilité publique</h1></div>
+            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /> Fermer</button>
+          </div>
+          {qrError && <p className="sub" role="alert" style={{ marginTop: 8 }}>{qrError}</p>}
+          <PublicQrScannerSheet key={qrScanKey} onDetected={(facilityId: string) => void handleQrDetected(facilityId)} onClose={() => setSheet('menu')} />
+        </section>
+      )}
       {sheet === 'facility' && (
         <section className="sheet h-full" data-sheet="facility" role="region" aria-label="Facilité">
           <div className="handle" />
@@ -747,7 +954,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 {(role === 'admin' || role === 'operator') && (
                   <>
                     <button className="menuitem" type="button" onClick={() => setSheet('admin')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Console</b><small>revue & audit</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
                   </>
                 )}
@@ -841,7 +1047,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               <div className="cardbox">
                 <div className="eyebrow">Recharger le Wallet</div>
                 <p className="tiny muted">Rechargez des crédits Omni pour les services de plateforme. La confirmation finale vient du webhook FedaPay vérifié.</p>
-                <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop:  ​8 }}>
+                <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop:   8 }}>
                   {[5000, 10000, 25000].map((amount) => (
                     <button key={amount} type="button" className={rechargeAmount === String(amount) ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 28 }} onClick={() => setRechargeAmount(String(amount))}>{(amount / 100).toFixed(0)} F</button>
                   ))}

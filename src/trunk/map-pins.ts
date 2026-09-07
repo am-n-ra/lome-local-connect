@@ -31,6 +31,18 @@ export const PIN_RING_THIRD_PARTY_COLOR = '#F9F7F2';
 export const PIN_RADIUS_PX = 7;
 export const PIN_RING_WIDTH_PX = 3;
 export const PIN_SELECTED_SCALE = 1.3;
+export const PIN_DIM_OPACITY = 0.15;
+
+export type PinDimMode =
+  | { kind: 'selection'; selectedId: string }
+  | { kind: 'results'; ids: string[] };
+
+/** ids that must stay vivid (full opacity). Everything else renders dim (0.15). */
+export function pinIdSetForMode(mode: PinDimMode | null, candidateIds: readonly string[]): Set<string> {
+  if (!mode) return new Set(candidateIds);
+  const vivid = new Set(mode.kind === 'selection' ? [mode.selectedId] : mode.ids);
+  return new Set(candidateIds.filter((id) => vivid.has(id)));
+}
 
 export function pinRingColor(owned: boolean): string {
   return owned ? PIN_RING_OWNED_COLOR : PIN_RING_THIRD_PARTY_COLOR;

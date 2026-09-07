@@ -26,8 +26,13 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .omni-v13-stage{--omni-vvh:100vh}
 @media (max-width:719px){.omni-v13-stage{--omni-vvh:100svh}}
 .omni-v13-stage .sheet[data-sheet="facility"],.omni-v13-stage .sheet[data-sheet="bulk"],.omni-v13-stage .sheet[data-sheet="compare"]{max-height:min(72dvh,var(--omni-vvh))}
-.omni-v13-stage .sheet[data-sheet="search"]{bottom:calc(14px + var(--omni-keyboard,0px))}
-.omni-v13-stage .navpill{bottom:max(14px,env(safe-area-inset-bottom),calc(14px + var(--omni-keyboard,0px)))}
+.omni-v13-stage .sheet[data-sheet="search"]{bottom:14px;transform-origin:bottom center;translate:0 calc(var(--omni-keyboard,0px)*0.96);transition:translate .22s var(--ease)}
+.omni-v13-stage .navpill{transition:translate .22s var(--ease),width .32s var(--ease)}
+@media (max-width:719px){
+  .omni-v13-stage .navpill{translate:0 var(--omni-keyboard,0px)}
+  .omni-v13-stage .dockmask{translate:0 var(--omni-keyboard,0px);transition:translate .22s var(--ease)}
+  .omni-v13-stage .sheet:not([data-sheet="search"]){translate:0 var(--omni-keyboard,0px);transition:translate .22s var(--ease)}
+}
 @keyframes locpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
 .pop-hidden{transform:scale(0)!important}
 .vdot-reveal{animation:popIn .5s var(--ease)}
@@ -47,6 +52,10 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .pin-label span{display:block;color:rgba(255,255,255,.72)}
 .pin-label::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:3px solid transparent;border-top-color:rgba(15,15,15,.92)}
 .rolepill{position:absolute;z-index:7;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid var(--line);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.06);white-space:nowrap}
+.roleswitch{position:relative;display:flex}
+.roleswitch .ind{position:absolute;top:0;bottom:0;border-radius:999px;background:var(--ink);transition:transform .28s var(--ease),width .28s var(--ease);z-index:0}
+.roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease)}
+.roleswitch button.on{color:#fff}
 .rolepill button{border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:.2s var(--ease)}
 .rolepill button.on{color:#fff;background:var(--ink)}
 .map-legend{position:absolute;z-index:6;top:48px;left:16px;font-size:8px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase}
@@ -67,9 +76,15 @@ h1,h2,h3,p{margin:0}h1{font-size:16px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .searchdock .fld{display:flex;align-items:center;gap:7px;height:34px;border-radius:999px;background:#fff;border:1px solid var(--line);padding:0 11px}
 .searchdock .fld input{flex:1;border:0;outline:0;background:none;font-size:11px;color:var(--ink)}
 .searchdock .fld svg{flex:none}
-.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-.chip{padding:6px 10px;border-radius:999px;background:var(--panel);color:var(--ink-soft);font-size:8.5px;font-weight:700;cursor:pointer}
-.chip.active{background:var(--ink);color:#fff}
+.searchdock .fld.busy{opacity:.7}
+.searchdock .fld.busy input{pointer-events:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 11px 6px 8px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--ink-soft);font-size:8.5px;font-weight:700;cursor:pointer;transition:.18s var(--ease)}
+.chip .dot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:.18s var(--ease)}
+.chip.active{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:var(--sh-sm)}
+.chip.active .dot{background:var(--accent)}
+.constraint-zone{margin-top:9px;animation:riseIn .3s var(--ease) backwards}
+@keyframes riseIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
 .kv{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:8.5px}
 .kv:first-of-type{border-top:none}.kv span{color:var(--ink-soft)}.kv b{font-weight:800}
 .btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:40px;border-radius:13px;color:#fff;background:var(--ink);font-size:10.5px;font-weight:800;padding:0 14px;transition:.15s var(--ease);line-height:1.2;text-align:center}
@@ -137,7 +152,7 @@ h1,h2,h3,p{margin:0}h1{font-size:16px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .txstep .sdot.ok{background:var(--accent)}.txstep .sdot.now{background:var(--ink)}
 .txstep b{font-size:8.5px}.txstep small{display:block;color:var(--ink-soft);font-size:7px}
 .txstep .go{color:var(--ink-soft)}
-.navpill{position:absolute;z-index:11;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:0 10px 28px rgba(0,0,0,.35)}
+.navpill{position:absolute;z-index:11;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:0 10px 28px rgba(0,0,0,.35);transition:width .32s var(--ease)}
 .navpill button{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.85);transition:.2s var(--ease)}
 .navpill button svg{width:18px;height:18px}
 .navpill button.active{color:#fff;background:rgba(255,255,255,.14)}
@@ -166,6 +181,10 @@ h1,h2,h3,p{margin:0}h1{font-size:16px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .menuitem:active{transform:scale(.97)}
 .navpill.morph{animation:dockPop .38s cubic-bezier(.34,1.56,.64,1)}
 .icon-in{animation:iconIn .32s cubic-bezier(.34,1.56,.64,1) backwards}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,os)important;border:0;white-space:nowrap}
+@keyframes dockPop{0%{transform:translate(-50%,var(--ty,0px)) scale(.92)}60%{transform:translate(-50%,var(--ty,0px)) scale(1.035)}100%{transform:translate(-50%,var(--ty,0px)) scale(1)}}
+@keyframes iconIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
+.navpill button:active svg{transform:scale(.78)}
 .dockmask{position:absolute;left:0;right:0;bottom:0;height:118px;z-index:10;pointer-events:none;-webkit-backdrop-filter:blur(9px) saturate(160%);backdrop-filter:blur(9px) saturate(160%);-webkit-mask-image:linear-gradient(to top,#000 30%,transparent 100%);mask-image:linear-gradient(to top,#000 30%,transparent 100%);background:linear-gradient(to top,rgba(255,255,255,.82),rgba(255,255,255,0));transform:translateY(var(--ty,0px));transition:transform .38s var(--ease)}
 .selbar{position:sticky;bottom:0;margin-top:10px;padding-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 22%)}
 body.desktop .navpill.morph{animation:none}
@@ -191,6 +210,9 @@ body.desktop .sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top
 body.desktop .sheet[data-sheet="search"] .handle{display:none}
 body.desktop .sheet[data-sheet="search"] .sheet-head{display:none}
 body.desktop .sheet[data-sheet="search"] .searchdock{margin-top:0;flex:0 0 300px}
+body.desktop .sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:10px;min-width:0}
+body.desktop .sheet[data-sheet="search"] .constraint-zone .label{flex:none;font-size:8px;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft)}
+body.desktop .sheet[data-sheet="search"] .constraint-zone .chips{flex:1 1 auto;margin-top:0;gap:6px;flex-wrap:wrap;overflow:hidden;max-height:38px}
 /* The whole "browsing a result" journey — results, facility detail, bulk, compare, claim — shares ONE fixed slot on the left, next to the rail.It behaves exactly like the mobile single-sheet navigation, just positioned as a panel instead of a full-screen sheet. Only screens reached from the dock/menu that are NOT part of this journey (menu, account, home, wallet, plans, saved, auth) get a right-hand drawer — that distinction is the whole point: a drawer is for "a separate destination", not for "the next step of what you were already looking at". */
 body.desktop .sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:112px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
 body.desktop .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}

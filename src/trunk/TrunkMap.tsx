@@ -9,9 +9,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // (previously: blank map, "can't deserialize StructArrayLayout ..." in the console).
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { PublicFacility, RouteTarget } from './types';
+import type { PinDimMode } from './map-pins';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
-import { pinFeatureCollection, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
+import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
@@ -33,6 +34,9 @@ type Props = {
   focusTarget?: { latitude: number; longitude: number; key: string } | null;
   // Facilities owned by the signed-in account (rule 7 Evergreen pin ring).
   ownedFacilityIds?: string[] | null;
+  // Pins contextuels — dim mode: dès qu'une surface (résultats, sélection,
+  // itinéraire) est ouverte, les pins hors-contexte s'estompent (opacité basse.
+  dimMode?: { mode: PinDimMode | null; active: boolean } | null;
 };
 
 // Primary vector basemap: CARTO Positron GL. It is a muted-gray/mono style that
@@ -192,7 +196,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, ownedFacilityIds = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -280,6 +284,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   useEffect(() => {
     scheduleUserPosition();
   }, [userPosition, scheduleUserPosition]);
+
+  // Pins contextuels: dès qu'une surface est ouverte, les pins hors-contexte
+  // s'estompent (dim mode; jamais pendant le vol de révélation qui pilote l'opacité.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || revealRunningRef.current || !map.getLayer('omni-pins')) return;
+    if (dimMode && dimMode.active) {
+      const vivid = pinIdSetForMode(dimMode.mode, facilities.map((f) => f.id));
+      map.setPaintProperty('omni-pins', 'circle-opacity', ['case', ['in', ['get', 'id'], ['literal', Array.from(vivid)]], 1, PIN_DIM_OPACITY]);
+    } else {
+      map.setPaintProperty('omni-pins', 'circle-opacity', 1);
+    }
+  }, [dimMode, facilities, revealRunning]);
 
   const cancelActiveReveal = () => {
     if (!revealRunningRef.current) return;
