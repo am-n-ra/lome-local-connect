@@ -431,9 +431,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       map = new Map({
       container: container.current,
       style: LOCAL_STYLE,
-      transformRequest: (url, resourceType) => ({
-        url: resourceType === 'Glyphs' ? rewriteGlyphUrl(url) : url,
-      }),
       center: [10, 8],
       zoom: 1.25,
       minZoom: 1,
