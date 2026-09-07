@@ -198,6 +198,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   onBoundsChangeRef.current = onBoundsChange;
   onRevealStateChangeRef.current = onRevealStateChange;
   const facilitiesRef = useRef(facilities);
+  const facilitiesKeyRef = useRef('');
   const rotating = useRef(true);
   const cameraMode = useRef<CameraMode>('manual_navigation');
   const rotationFrame = useRef<number | null>(null);
@@ -628,6 +629,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           map.doubleClickZoom.enable();
           map.touchZoomRotate.enable();
         }
+        // Charger les pins APRÈS l'arrival pour ne pas ralentir l'animation
+        addLayers(map);
+        const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
+        source?.setData(pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current));
+        lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
         scheduleUserPosition();
       };
 
@@ -664,20 +670,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (!map.isStyleLoaded()) return;
       initialStyleReady.current = true;
       setMapStatus('ready');
-      // T-2: Déclencher l'arrival animation dès que le style est prêt,
-      // pas seulement depuis map.on('load') qui peut ne jamais se déclencher
-      // si le style distant échoue et que le fallback local prend le relais.
+      // T-2: Déclencher l'arrival animation quand la carte est IDLE (pas seulement style-loaded),
+      // pour garantir que le rendu est complet avant de bouger la caméra.
       if (!arrivalPlayedRef.current) {
-        beginArrival();
+        map.once('idle', () => {
+          if (!arrivalPlayedRef.current) beginArrival();
+        });
       }
       // T-5: Pendant l'arrival, ne pas perturber la caméra easeTo.
-      // syncProjection et configureStyle sont appelés sur chaque styledata/zoom,
-      // ce qui déclenche setProjection/setResize/setPadding mid-animation.
+      // Ne PAS ajouter de layers ni de pins tant que l'animation n'est pas terminée.
       if (arrivalInProgressRef.current) {
-        addLayers(map);
-        const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
-        source?.setData(pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current));
-        lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
         return;
       }
       const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
@@ -1104,7 +1106,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
   useEffect(() => {
     const source = mapRef.current?.getSource(SOURCE) as GeoJSONSource | undefined;
-    source?.setData(pinFeatureCollection(facilities, ownedFacilityIds));
+    if (!source) return;
+    // Skip setData if facilities haven't actually changed (avoid redundant re-renders)
+    const key = `${facilities.length}-${facilities[0]?.id ?? ''}-${ownedFacilityIds?.length ?? 0}`;
+    if (key === facilitiesKeyRef.current) return;
+    facilitiesKeyRef.current = key;
+    source.setData(pinFeatureCollection(facilities, ownedFacilityIds));
     scheduleUserPosition();
   }, [facilities, ownedFacilityIds, scheduleUserPosition]);
 
