@@ -249,6 +249,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const [screenUserPosition, setScreenUserPosition] = useState<{ left: number; top: number } | null>(null);
   const userPositionFrame = useRef<number | null>(null);
   const locationRequest = useRef<number | null>(null);
+  const geolocationResolvedRef = useRef(false);
   facilitiesRef.current = facilities;
   userPositionRef.current = userPosition;
   // Rule 7 (owned-pin Evergreen ring): mirror the owned ids and the selected
@@ -369,6 +370,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       (position) => {
         if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
         locationRequest.current = null;
+        geolocationResolvedRef.current = true;
         const approximate = position.coords.accuracy > 500;
         const nextPosition = { longitude: position.coords.longitude, latitude: position.coords.latitude };
         setUserPosition(nextPosition);
@@ -384,6 +386,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       (error) => {
         if (locationRequest.current !== null) window.clearTimeout(locationRequest.current);
         locationRequest.current = null;
+        geolocationResolvedRef.current = true;
         setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : error.code === error.TIMEOUT ? 'timeout' : 'unavailable');
       },
       { enableHighAccuracy: recenter, maximumAge: recenter ? 60_000 : 300_000, timeout: recenter ? 8_000 : 10_000 },
@@ -409,6 +412,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const arrivalAttemptKey = 'omni.canopy.v4.1.location-attempted';
     const attemptArrivalLocation = async () => {
       if (!navigator.geolocation) {
+        geolocationResolvedRef.current = true;
         setLocationState('unavailable');
         return;
       }
@@ -420,6 +424,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       }
       if (!active) return;
       if (permissionState === 'denied') {
+        geolocationResolvedRef.current = true;
         setLocationState('denied');
         return;
       }
@@ -559,33 +564,41 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const beginArrival = () => {
       const firstArrival = !arrivalPlayedRef.current;
       if (arrivalPlayedRef.current) return;
+      if (!firstArrival && cameraMode.current !== 'resting_globe') return;
+
+      if (!geolocationResolvedRef.current) {
+        const waitInterval = window.setInterval(() => {
+          if (geolocationResolvedRef.current) {
+            window.clearInterval(waitInterval);
+            if (!arrivalPlayedRef.current) beginArrival();
+          }
+        }, 100);
+        return;
+      }
+
       arrivalPlayedRef.current = true;
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (!firstArrival && cameraMode.current !== 'resting_globe') return;
-      const targetLngLat: [number, number] = [userPositionRef.current?.longitude ?? 1.22, userPositionRef.current?.latitude ??  6.13];
 
       const FLIGHT_DURATION = arrivalReduced ? 340 : 1250;
       const PAUSE_DURATION = arrivalReduced ? 200 : 1400;
 
       type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number };
-      const stops: ArrivalStop[] = arrivalReduced ? [
 
-        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo', pause: PAUSE_DURATION },
-
-        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé', pause: 0 },
-
-      ] : [
-
-        { center: [2.8, 10.5], zoom:  3.8, label: "Afrique de l'Ouest", pause: PAUSE_DURATION },
-
-        { center: [0.9,  8.6], zoom:  6.4, label: 'Togo', pause: PAUSE_DURATION },
-
-        { center: [1.12,  6.1], zoom:  9.5, label: 'Région Maritime', pause: PAUSE_DURATION },
-
-        { center: [1.22,  6.13], zoom:  11.6, label: 'Lomé', pause: 0 },
-
-      ];
+      const buildStops = (lng: number, lat: number): ArrivalStop[] => {
+        if (arrivalReduced) {
+          return [
+            { center: [lng, lat], zoom: 6, label: 'Pays', pause: PAUSE_DURATION },
+            { center: [lng, lat], zoom: 12, label: 'Zone', pause: 0 },
+          ];
+        }
+        return [
+          { center: [lng, lat], zoom: 3, label: 'Continent', pause: PAUSE_DURATION },
+          { center: [lng, lat], zoom: 6, label: 'Pays', pause: PAUSE_DURATION },
+          { center: [lng, lat], zoom: 9, label: 'Région', pause: PAUSE_DURATION },
+          { center: [lng, lat], zoom: 12, label: 'Ville', pause: PAUSE_DURATION },
+          { center: [lng, lat], zoom: 14.5, label: 'Zone', pause: 0 },
+        ];
+      };
 
       let token = 0;
       const cancelIfStale = () => token !== arrivalTokenRef.current;
@@ -605,7 +618,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         window.removeEventListener('wheel', cancel);
       };
 
-      const runStep = async (index: number) => {
+      const runStep = async (index: number, stops: ArrivalStop[], target: { lat: number; lng: number }) => {
         if (cancelIfStale()) return;
         const step = stops[index];
         if (!step) { finishArrival(); return; }
@@ -624,11 +637,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         await loadBoundariesForZoom(map, step.zoom);
         await waitForRenderFrames(3);
         if (cancelIfStale()) return;
-        highlightBoundaryAtTarget(map, step.zoom, { lat: targetLngLat[1], lng: targetLngLat[0] });
+        highlightBoundaryAtTarget(map, step.zoom, target);
         if (step.pause) await waitForDuration(step.pause);
         if (cancelIfStale()) return;
         if (index === stops.length - 1) { finishArrival(); return; }
-        await runStep(index + 1);
+        await runStep(index + 1, stops, target);
       };
 
       const finishArrival = () => {
@@ -647,7 +660,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       map.once('zoomstart', cancel);
       window.addEventListener('pointerdown', cancel, { once: true });
       window.addEventListener('wheel', cancel, { once: true, passive: true });
-      void runStep(0);
+
+      const lng = userPositionRef.current?.longitude ?? 1.22;
+      const lat = userPositionRef.current?.latitude ?? 6.13;
+      const stops = buildStops(lng, lat);
+      void runStep(0, stops, { lat, lng });
     };
     const scheduleSettledResume = () => {
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
