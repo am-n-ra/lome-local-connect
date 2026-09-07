@@ -32,7 +32,12 @@ type Props = {
   // R-03 map-contextual focus: an external surface (admin review, audit hop)
   // asks the map to pan/zoom onto arbitrary coordinates without a pin click.
   focusTarget?: { latitude: number; longitude: number; key: string } | null;
-  // Facilities owned by the signed-in account (rule 7 Evergreen pin ring).
+  // Défilement contextuel bidirectionnel (v1.3 §4.4: léger cadrage du marker
+  // correspondant à la carte mise en avant dans la grille résultats(sans zoom fixe.
+
+  followTarget?: { latitude: number; longitude: number; key: string } | null;
+  // Facilities owned by the signed-in account (rule 7 Evergreen pin ring.
+
   ownedFacilityIds?: string[] | null;
   // Pins contextuels — dim mode: dès qu'une surface (résultats, sélection,
   // itinéraire) est ouverte, les pins hors-contexte s'estompent (opacité basse.
@@ -196,7 +201,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -1085,6 +1090,24 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     setCameraModeState('selected_facility');
     map.easeTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: Math.max(map.getZoom(), 14), duration: 900, essential: true });
   }, [focusTarget]);
+
+  // Défilement contextuel bidirectionnel (v1.3 §4.4: le scroll de la grille
+  // résultats cadré légèrement le marker correspondant — jamais pendant un vol de
+  // révélation (qui pilote lui-même la caméra)et jamais à font fixe du cas du focus.
+
+  const lastFollowKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !followTarget) return;
+    if (lastFollowKeyRef.current === followTarget.key) return;
+    lastFollowKeyRef.current = followTarget.key;
+
+
+    if (revealRunningRef.current || cameraMode.current === 'search_reveal') return;
+    rotating.current = false;
+    const followZoom = Math.max(map.getZoom(),11.5);
+    map.easeTo({ center: [followTarget.longitude, followTarget.latitude], zoom: followZoom, duration:500, essential: true });
+  }, [followTarget]);
 
   // Evergreen route trace (écran 10): update the GeoJSON source data when the
   // route target or the user position changes; clear it when closed. Camera

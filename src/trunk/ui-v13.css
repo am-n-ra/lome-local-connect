@@ -100,6 +100,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .btn svg{flex:none}
 .btnrow{display:flex;gap:8px;margin-top:10px}.btnrow .btn{flex:1}
 .cardbox{padding:10px;border:1px solid var(--line);border-radius:14px;background:#fff;margin-top:9px;text-align:left}
+.cardbox.focused{border-color:var(--acc2,#2f6df6);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--acc2,#2f6df6) 28%,transparent)}
 .field{width:100%;height:32px;margin-top:7px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;background:#fff;color:var(--ink);font-size:9px;min-width:0}
 .field.lg{min-height:44px}
 .label{font-size:8.5px;color:var(--ink-soft);margin-top:10px;font-weight:700}
@@ -176,6 +177,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .freshbar{display:flex;align-items:center;gap:5px;margin-top:6px;font-size:7.5px;color:var(--ink-soft)}
 .freshbar .fdot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
 .chk{width:17px;height:17px;border-radius:5px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;flex:none;font-size:9px;color:var(--accent)}
+.chk.on{border-color:var(--accent);background:var(--accent);color:#fff}
 .sheet.h-mid{max-height:62dvh}
 .sheet.hidden{display:block!important;transform:translateY(26px);opacity:0;pointer-events:none}
 .chip:active{transform:scale(.96)}
@@ -206,11 +208,11 @@ body.desktop .navpill .center{margin:2px 0}
 body.desktop .dockmask{display:none}
 /* map fills everything right of the rail + results panel */
 body.desktop .mapbase{top:112px;left:64px;right:0;bottom:0}
-.omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;right:0}
+body.desktop .omni-v13-stage[data-sheet="results"] .mapbase,body.desktop .omni-v13-stage[data-sheet="facility"] .mapbase,body.desktop .omni-v13-stage[data-sheet="bulk"] .mapbase,body.desktop .omni-v13-stage[data-sheet="compare"] .mapbase,body.desktop .omni-v13-stage[data-sheet="flow"] .mapbase,body.desktop .omni-v13-stage[data-sheet="seller"] .mapbase,body.desktop .omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;right:0}
 body.desktop .countmark{top:150px;left:calc(64px + 90px)}
-.omni-v13-stage[data-sheet="results"] .countmark,.omni-v13-stage[data-sheet="facility"] .countmark,.omni-v13-stage[data-sheet="bulk"] .countmark,.omni-v13-stage[data-sheet="compare"] .countmark,.omni-v13-stage[data-sheet="flow"] .countmark,.omni-v13-stage[data-sheet="seller"] .countmark,.omni-v13-stage[data-sheet="claim"] .countmark{left:calc(410px + 90px)}
+body.desktop .omni-v13-stage[data-sheet="results"] .countmark,body.desktop .omni-v13-stage[data-sheet="facility"] .countmark,body.desktop .omni-v13-stage[data-sheet="bulk"] .countmark,body.desktop .omni-v13-stage[data-sheet="compare"] .countmark,body.desktop .omni-v13-stage[data-sheet="flow"] .countmark,body.desktop .omni-v13-stage[data-sheet="seller"] .countmark,body.desktop .omni-v13-stage[data-sheet="claim"] .countmark{left:calc(410px + 90px)}
 body.desktop .map-legend{top:120px;left:80px}
-.omni-v13-stage[data-sheet="results"] .map-legend,.omni-v13-stage[data-sheet="facility"] .map-legend,.omni-v13-stage[data-sheet="bulk"] .map-legend,.omni-v13-stage[data-sheet="compare"] .map-legend,.omni-v13-stage[data-sheet="flow"] .map-legend,.omni-v13-stage[data-sheet="seller"] .map-legend,.omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
+body.desktop .omni-v13-stage[data-sheet="results"] .map-legend,body.desktop .omni-v13-stage[data-sheet="facility"] .map-legend,body.desktop .omni-v13-stage[data-sheet="bulk"] .map-legend,body.desktop .omni-v13-stage[data-sheet="compare"] .map-legend,body.desktop .omni-v13-stage[data-sheet="flow"] .map-legend,body.desktop .omni-v13-stage[data-sheet="seller"] .map-legend,body.desktop .omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
 body.desktop .rolepill{top:8px;left:50%}
 /* SEARCH becomes a permanent top bar spanning the content area (never hidden at desktop) */
 body.desktop .sheet[data-sheet="search"]{position:absolute;left:64px;right:0;top:36px;bottom:auto;height:76px;width:auto;max-height:none;border:0;border-bottom:1px solid var(--line);border-radius:0;box-shadow:none;padding:14px 24px;overflow:visible;transform:none!important;opacity:1!important;pointer-events:auto!important;display:flex!important;align-items:center;gap:18px;z-index:16}

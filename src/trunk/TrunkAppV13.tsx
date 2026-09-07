@@ -102,6 +102,7 @@ export function TrunkAppV13() {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedFacility, setSelectedFacility] = useState<FacilityDetail | null>(null);
+  const [facProductSel, setFacProductSel] = useState<string[]>([]);
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrScanKey, setQrScanKey] = useState(0);
@@ -109,6 +110,10 @@ export function TrunkAppV13() {
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
   const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
+  const resultsScrollFrame = useRef<number | null>(null);
+  const resultsFollowKeyCounter = useRef(0);
 const [bulkFacilities, setBulkFacilities] = useState<PublicFacility[] | null>(null);
 const [bulkDetails, setBulkDetails] = useState<Record<string, FacilityDetail | null>>({});
 const [bulkSelection, setBulkSelection] = useState<Record<string, string>>({});
@@ -237,9 +242,50 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     if (!active && sheet === 'results') setSheet('results');
   }, [sheet]);
 
+  const handleResultsScroll = useCallback(() => {
+    if (resultsScrollFrame.current !== null) return;
+    resultsScrollFrame.current = window.requestAnimationFrame(() => {
+      resultsScrollFrame.current = null;
+      const grid = document.getElementById('hgrid');
+      if (!grid || revealActive) return;
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-fid]'));
+      if (!cards.length) return;
+      const sheet = grid.closest('.sheet') ?? grid;
+      const rect = sheet.getBoundingClientRect();
+      const center = rect.top + rect.height * 0.42;
+      let best: HTMLElement | null = null;
+      let bestGap = Infinity;
+      for (const card of cards) {
+        const cardRect = card.getBoundingClientRect();
+        const gap = Math.abs(cardRect.top + cardRect.height * 0.5 - center);
+        if (gap < bestGap) { bestGap = gap; best = card; }
+      }
+      if (!best) return;
+      const fid = best.dataset.fid ?? null;
+      if (fid && resultsFollowId !== fid) {
+        setResultsFollowId(fid);
+        const facility = results.find((f) => f.id === fid);
+        if (facility) {
+          resultsFollowKeyCounter.current = resultsFollowKeyCounter.current + 1;
+          setFollowTarget({ latitude: facility.latitude, longitude: facility.longitude, key: `follow-${fid}-${resultsFollowKeyCounter.current}` });
+        }
+      }
+    });
+  }, [revealActive, results, resultsFollowId]);
+
+  useEffect(() => () => {
+    if (resultsScrollFrame.current !== null) window.cancelAnimationFrame(resultsScrollFrame.current);
+  }, []);
+
   const handlePinSelect = useCallback(async (facility: PublicFacility) => {
     setSelectedId(facility.id);
     setSelectedFacility(null);
+    setFacProductSel([]);
+    // Défilement contextuel bidirectionnel (v1.3 §4.4): un tap marker pendant
+    // une session résultats fait aussi défiler la grille vers la carte correspondante.
+
+    const grid = document.getElementById('hgrid');
+    grid?.querySelector<HTMLElement>(`[data-fid="${facility.id}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth', inline: 'nearest' });
     setFacilityLoading(true);
     setSheet('facility');
     try {
@@ -688,13 +734,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             onRevealStateChange={handleRevealStateChange}
             revealKey={revealKey}
             focusTarget={focusTarget}
+            followTarget={followTarget}
             dimMode={dimMode}
           />
         </Suspense>
       </section>
       {mapState === 'error' && <div className="map-legend" role="alert"><span>{error}</span></div>}
       {mapState === 'empty' && <div className="map-legend" role="status"><span>Aucun lieu dans cette vue.</span></div>}
-      <div className="countmark" aria-hidden="true">{facilities.length}</div>
+      <div className="countmark" aria-hidden="true">{sheet === 'results' && results.length ? results.length : facilities.length}</div>
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
@@ -755,9 +802,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           </div>
           {resultsLoading && <p className="sub">Recherche…</p>}
           {error && !resultsLoading && <p className="sub" role="alert">{error}</p>}
-          <div className="hgrid" id="hgrid">
+          <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
             {results.map((facility) => (
-              <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left' }} onClick={() => void handlePinSelect(facility)}>
+              <button key={facility.id} data-fid={facility.id} type="button" className={`cardbox${resultsFollowId === facility.id ? ' focused' : ''}`} style={{ textAlign: 'left' }} onClick={() => void handlePinSelect(facility)}>
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <b>{facility.name}</b>
                   <span className="status ok">{facility.category}</span>
@@ -885,8 +932,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           {facilityLoading && <p className="sub">Chargement…</p>}
           {!facilityLoading && selectedFacility && (
             <div>
-              <div className={`fhero${selectedFacility.trust === 'unclaimed' ? ' unclaimed' : ''}`} style={{ padding: 12, border: '1px solid var(--line)', borderRadius: 14 }}><span className="tag">{selectedFacility.category}</span></div>
-              <div className="row tiny muted" style={{ marginTop: 6 }}><span>{selectedFacility.trust === 'unclaimed' ? 'Non revendiquée' : selectedFacility.trust === 'unconfirmed' ? 'À confirmer' : 'Confirmée'} · {selectedFacility.plan === 'pro_active' ? 'Pro' : 'Free'}</span></div>
+              <div className={`fhero${selectedFacility.trust === 'unclaimed' ? ' unclaimed' : ''}`}><span className="tag">{selectedFacility.category}</span></div>
+              <div className="row tiny muted" style={{ marginTop: 7 }}><span>{selectedFacility.trust === 'unclaimed' ? 'Non revendiquée' : selectedFacility.trust === 'unconfirmed' ? 'À confirmer' : 'Confirmée'} · {selectedFacility.plan === 'pro_active' ? 'Pro' : 'Free'}</span></div>
               {claimState === 'success' && claimResult && (
                 <div className="cardbox" role="status" style={{ marginTop: 8 }}>
                   <p className="sub"><CheckCircle2 size={15} /> Brouillon ouvert. La preuve et la revue Omni restent nécessaires.</p>
@@ -901,14 +948,32 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
-              {selectedFacility.products.map((product) => (
-                <div className="pitem" key={product.id}>
-                  <span className="pthumb" />
-                  <span><b>{product.name}</b><small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
-                  <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
-                  <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} type="button" onClick={() => { setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name }); setFlowProduct({ id: product.id, name: product.name }); setSheet('flow'); }}>Demander</button>
+              {selectedFacility.products.map((product) => {
+                const on = facProductSel.includes(product.id);
+                return (
+                  <div className="pitem" key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setFacProductSel((current) => on ? current.filter((id) => id !== product.id) : [...current, product.id])}>
+                    <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
+                    <span className="pthumb" />
+                    <span><b>{product.name}</b><small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
+                    <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
+                  </div>
+                );
+              })}
+              {selectedFacility.products.length > 0 && selectedFacility.trust !== 'unclaimed' && (
+                <div className="selbar" style={{ marginTop: 10 }}>
+                  <button className="btn ok" type="button" disabled={facProductSel.length === 0} onClick={() => {
+                    const picked = selectedFacility.products.filter((p) => facProductSel.includes(p.id));
+                    if (picked.length === 0) return;
+                    if (picked.length === 1) {
+                      setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name }); setFlowProduct({ id: picked[0].id, name: picked[0].name }); setSheet('flow');
+                    } else {
+                      setBulkFacilities([{ ...selectedFacility, productCount: picked.length }]);
+                      setBulkSelection({ [selectedFacility.id]: picked[0].id });
+                      setSheet('bulk');
+                    }
+                  }}>Demander la disponibilité (<span id="selCount">{facProductSel.length}</span>)</button>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </section>
