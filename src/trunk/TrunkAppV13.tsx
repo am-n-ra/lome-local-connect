@@ -157,14 +157,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [claimSubmitError, setClaimSubmitError] = useState('');
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
-  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
+  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1280px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
   const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
-    const mq = window.matchMedia?.('(min-width:1040px)');
+    const mq = window.matchMedia?.('(min-width:1280px)');
     if (!mq) return;
     const apply = () => { setDesktop(mq.matches); document.body.classList.toggle('desktop', mq.matches); };
     apply();
@@ -614,6 +614,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     if (target === 'none') { setSheet('none'); return; }
     if (target === 'search') { setSheet(sheet === 'search' ? 'none' : 'search'); return; }
     if (target === 'results') { setRevealKey(`v13-${Date.now()}`); setSheet('results'); return; }
+    if (target === 'qr' && sheet === 'menu' && !desktop) { setSheet('qr'); return; }
     if (!homeLike) setSelectedId(null);
     setSheet(target);
   }, [sheet]);
@@ -639,7 +640,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     ];
     if (sheet === 'menu') return [
       { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
-      { icon: 'qr', label: 'QR', target: 'qr', center: false, active: false },
       { icon: 'home', label: 'Carte', target: 'none', center: true, active: false },
     ];
     if (team) return [
@@ -767,7 +767,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         ))}
       </div>
       <div className="dockmask" aria-hidden="true" />
-      {(sheet === 'search' || desktop) && (
+      {(sheet === 'search' || (desktop && (isJourney || sheet === 'qr'))) && (
 
         <form className="sheet h-low" data-sheet="search" onSubmit={handleSubmitSearch}>
           <div className="handle" />

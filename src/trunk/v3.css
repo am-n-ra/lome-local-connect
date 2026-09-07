@@ -2265,7 +2265,7 @@ textarea, input[type=text], input[type=number] { border-radius:10px !important; 
    Mobile/tablette inchangés (sheets bottom centrées). Le seuil 1040px = le même
    que `desktopMQ` de la maquette (matchMedia min-width:1040px`.
    ========================================================================== */
-@media (min-width: 1040px) {
+@media (min-width: 1280px) {
   /* 1. Recherche = barre permanente en haut (ex SEARCH, `omni-sheet-search`). */
   .omni-sheet-search {
     position: fixed !important;
