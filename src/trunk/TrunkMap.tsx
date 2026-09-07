@@ -624,6 +624,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       initialStyleReady.current = true;
       if (readinessTimer !== null) window.clearTimeout(readinessTimer);
       setMapStatus('ready');
+      // T-2: Déclencher l'arrival animation dès que le style est prêt,
+      // pas seulement depuis map.on('load') qui peut ne jamais se déclencher
+      // si le style distant échoue et que le fallback local prend le relais.
+      if (!arrivalPlayedRef.current) {
+        beginArrival();
+      }
       const initialGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
@@ -813,8 +819,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         map.setProjection({ type: 'globe' });
         map.resize();
         map.triggerRepaint();
+        // T-1: Forcer configureStyle après le chargement du style local.
+        // Le handler style.load global (ligne 647) peut rater si isStyleLoaded()
+        // retourne false pendant le teardown du style distant (race condition).
+        // Ici on s'assure que mapStatus atteint 'ready' quand le fallback local charge.
+        configureStyle();
       });
       map.setStyle(LOCAL_STYLE);
+      // T-3: Ré-enregistrer le load handler sur le nouveau style.
+      // L'ancien handler map.on('load') de la ligne 868 ne se reclenche pas
+      // après setStyle() — on en ajoute un pour garantir l'arrival.
+      map.once('load', () => {
+        if (!arrivalPlayedRef.current) beginArrival();
+      });
       map.jumpTo({ center: [1.22, 6.13], zoom: 1.35, bearing: 0, pitch: 0 });
       map.resize();
       // Last resort: if even the local style fails to become ready, fall back to
@@ -841,7 +858,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (!initialStyleReady.current && mapRef.current === map && !fallbackApplied) switchToLocalGlobe();
     }, 6_500);
     readinessTimer = window.setTimeout(() => {
-      if (!initialStyleReady.current && mapRef.current === map) setMapStatus('error');
+      // T-4: Ne pas set error si le fallback local a déjà résolu (initialStyleReady)
+      // ou si on est déjà en train de charger un style alternatif (mapStatus='loading').
+      if (!initialStyleReady.current && mapRef.current === map && mapStatus === 'loading') setMapStatus('error');
     }, 18_000);
     // Escalate immediately on a fatal (non-tile) style error, e.g. the provider is
     // down or blocked by TLS/CORS, so users never sit on a blank map waiting for
