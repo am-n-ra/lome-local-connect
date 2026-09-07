@@ -26,12 +26,12 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .omni-v13-stage{--omni-vvh:100vh}
 @media (max-width:719px){.omni-v13-stage{--omni-vvh:100svh}}
 .omni-v13-stage .sheet[data-sheet="facility"],.omni-v13-stage .sheet[data-sheet="bulk"],.omni-v13-stage .sheet[data-sheet="compare"]{max-height:min(72dvh,var(--omni-vvh))}
-.omni-v13-stage .sheet[data-sheet="search"]{bottom:14px;transform-origin:bottom center;translate:0 calc(var(--omni-keyboard,0px)*0.96);transition:translate .22s var(--ease)}
-.omni-v13-stage .navpill{transition:translate .22s var(--ease),width .32s var(--ease)}
+.omni-v13-stage .sheet[data-sheet="search"]{bottom:14px;transform-origin:bottom center;translate:0 calc(var(--omni-keyboard,0px)*0.96);transition:transform .38s var(--ease),opacity .28s var(--ease),translate .22s var(--ease)}
+.omni-v13-stage .navpill{transition:transform .38s var(--ease),width .32s var(--ease-spring,var(--ease)),translate .22s var(--ease)}
 @media (max-width:719px){
   .omni-v13-stage .navpill{translate:0 var(--omni-keyboard,0px)}
-  .omni-v13-stage .dockmask{translate:0 var(--omni-keyboard,0px);transition:translate .22s var(--ease)}
-  .omni-v13-stage .sheet:not([data-sheet="search"]){translate:0 var(--omni-keyboard,0px);transition:translate .22s var(--ease)}
+  .omni-v13-stage .dockmask{translate:0 var(--omni-keyboard,0px);transition:transform .38s var(--ease),translate .22s var(--ease)}
+  .omni-v13-stage .sheet:not([data-sheet="search"]){translate:0 var(--omni-keyboard,0px);transition:transform .38s var(--ease),opacity .28s var(--ease),translate .22s var(--ease)}
 }
 @keyframes locpulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
 .pop-hidden{transform:scale(0)!important}
@@ -54,12 +54,14 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .rolepill{position:absolute;z-index:7;top:14px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid var(--line);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.06);white-space:nowrap}
 .roleswitch{position:relative;display:flex}
 .roleswitch .ind{position:absolute;top:0;bottom:0;border-radius:999px;background:var(--ink);transition:transform .28s var(--ease),width .28s var(--ease);z-index:0}
-.roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease)}
+.roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease),transform .18s var(--ease)}
+.roleswitch button:active{transform:scale(.96)}
+@keyframes sheetIn{0%{transform:translateY(28px);opacity:.25}100%{transform:translateY(0);opacity:1}}
 .roleswitch button.on{color:#fff}
 .rolepill button{border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:.2s var(--ease)}
 .rolepill button.on{color:#fff;background:var(--ink)}
 .map-legend{position:absolute;z-index:6;top:48px;left:16px;font-size:8px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase}
-.sheet{position:absolute;z-index:8;left:0;right:0;bottom:0;top:auto;background:var(--bg);border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.14);padding:10px 15px 92px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;border-top:1px solid var(--line)}
+.sheet{position:absolute;z-index:8;left:0;right:0;bottom:0;top:auto;background:var(--bg);border-radius:24px 24px 0 0;box-shadow:0 -12px 40px rgba(0,0,0,.14);padding:10px 15px 92px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;border-top:1px solid var(--line);transition:transform .38s var(--ease),opacity .28s var(--ease);transform:translateY(var(--ty,0px));opacity:1;animation:sheetIn .38s var(--ease) backwards}
 .sheet::-webkit-scrollbar{width:0;display:none}
 .sheet.h-full{height:64%}.sheet.h-mid{height:52%}.sheet.h-auto{height:auto;max-height:60%}.sheet.h-low{height:auto;max-height:44%}
 .sheet.peek{overflow:hidden}
@@ -188,6 +190,7 @@ h1,h2,h3,p{margin:0}h1{font-size:16px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .dockmask{position:absolute;left:0;right:0;bottom:0;height:118px;z-index:10;pointer-events:none;-webkit-backdrop-filter:blur(9px) saturate(160%);backdrop-filter:blur(9px) saturate(160%);-webkit-mask-image:linear-gradient(to top,#000 30%,transparent 100%);mask-image:linear-gradient(to top,#000 30%,transparent 100%);background:linear-gradient(to top,rgba(255,255,255,.82),rgba(255,255,255,0));transform:translateY(var(--ty,0px));transition:transform .38s var(--ease)}
 .selbar{position:sticky;bottom:0;margin-top:10px;padding-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 22%)}
 body.desktop .navpill.morph{animation:none}
+body.desktop .navpill{animation:none}
 body.desktop .dockmask{display:none}
 /* ---------- desktop shell: left rail dock, top search bar, left journey panel, right-docked drawers, top role switch ---------- */
 body.desktop{background:#dadad7;padding:0}
@@ -195,6 +198,7 @@ body.desktop .omni-v13-stage{width:100%;height:100%;max-width:none;max-height:no
 /* left dock (permanent sur desktop): la navpill verticale reste toujours visible; les sheets de parcours/destination occupent l'emplacement gauche à côté — le dock ne disparaît pas */
 body.desktop .navpill{left:14px;right:auto;bottom:14px;top:64px;transform:translateY(var(--ty,0px));flex-direction:column;padding:8px;gap:4px;justify-content:flex-start;z-index:20}
 body.desktop .navpill.morph{animation:none}
+body.desktop .navpill{animation:none}
 body.desktop .navpill .center{margin:2px 0}
 body.desktop .dockmask{display:none}
 /* map fills everything right of the rail + results panel */

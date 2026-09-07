@@ -703,7 +703,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           ))}
         </div>
       </div>
-      <div className="navpill" role="navigation" aria-label="Actions principales">
+      <div className="navpill" key={role} role="navigation" aria-label="Actions principales">
         {dockItems.map((item) => (
           <button
             key={item.icon}
@@ -923,7 +923,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
       )}
       {sheet === 'menu' && (
-        <section className="sheet h-mid" data-sheet="menu" role="region" aria-label="Espace">
+        <section className="sheet h-mid" data-sheet="menu" key={role} role="region" aria-label="Espace">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : 'Espace ' + role}</h1></div>
