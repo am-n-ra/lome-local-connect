@@ -4497,8 +4497,7 @@ Après chaque recherche, la carte **se dézoome d'abord vers l'état globe** (pe
  En fin de vol, si des facilités correspondent : la caméra se recentre pour encadrer **la position utilisateur + les facilités les plus proches**, puis les résultats sont montrés (feuille résultats/cards). Si **rien ne correspond** : le vol **s'arrête au palier ville** (jamais au niveau rue), la feuille résultats s'ouvre avec le message approprié (« Aucune facilité ne correspond à votre recherche dans cette zone… ») et la carte reste à cette échelle. L'utilisateur ne doit jamais perdre sa recherche.
  Si l'utilisateur interagit pendant le vol (drag/touche/scroll/, la caméra reste manuelle et la feuille résultats s'ouvre normalement à l'atterrissage (résultats déjà reçus).
 
-**Le panneau latéral des résultats n'existe que sur desktop (≥1280 px, rail gauche/panneau de parcours). En dessous de cette largeur(mobile/tabletteé, les résultats s'affichent exclusivement dans la feuille de bas de écran — jamais de panneau latéral.**
-
+**Le panneau latéral des résultats n'existe que sur desktop (≥1024 px, rail gauche/panneau de parcours. En dessousde cette largeur(mobile, téléphones et tablettes portrait, les résultats s'affichent exclusivement dans la feuille de bas de écran — jamais de panneau latéral.**
 ## 10. Search results et facility cards
 
 Après recherche : `42 facilities found`. Les résultats apparaissent sur la carte, sans clusters dans le modèle souhaité. Une card/panel peut accompagner les résultats.

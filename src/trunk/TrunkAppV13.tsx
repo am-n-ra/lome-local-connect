@@ -157,14 +157,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [claimSubmitError, setClaimSubmitError] = useState('');
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
-  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1280px)').matches ?? false)));
+  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1024px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
   const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
-    const mq = window.matchMedia?.('(min-width:1280px)');
+    const mq = window.matchMedia?.('(min-width:1024px)');
     if (!mq) return;
     const apply = () => { setDesktop(mq.matches); document.body.classList.toggle('desktop', mq.matches); };
     apply();
