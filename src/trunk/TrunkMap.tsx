@@ -212,7 +212,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const initialStyleReady = useRef(false);
   const lastBoundsKey = useRef<string | null>(null);
   const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [basemap, setBasemap] = useState<'vector' | 'local' | 'raster'>('vector');
+  const [basemap, setBasemap] = useState<'vector' | 'local' | 'raster'>('local');
   const [mapRetryKey, setMapRetryKey] = useState(0);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [cameraModeState, setCameraModeState] = useState<CameraMode>('manual_navigation');
@@ -425,7 +425,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     if (!container.current || mapRef.current) return;
     initialStyleReady.current = false;
     setMapStatus('loading');
-    setBasemap('vector');
+    setBasemap('local');
     let map: Map;
     try {
       map = new Map({
@@ -680,7 +680,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
         return;
       }
-      const initialGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
+      const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
       setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
@@ -853,7 +853,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     let globeProjection = true;
     const syncProjection = () => {
       if (arrivalInProgressRef.current) return;
-      const wantsGlobe = basemapKind !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
+      const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
@@ -869,7 +869,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     map.on('load', () => {
       setMapStatus('ready');
       configureStyle();
-      globeProjection = basemapKind !== 'raster' && map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
+      globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
       beginArrival();
     });
@@ -881,8 +881,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
-      if (readinessTimer !== null) window.clearTimeout(readinessTimer);
-      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
