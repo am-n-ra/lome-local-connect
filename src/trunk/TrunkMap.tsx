@@ -47,7 +47,7 @@ type Props = {
 
 // Primary vector basemap: self-hosted monochrome globe style.
 // No remote tile provider — the map loads instantly from the local GeoJSON.
-const LOCAL_STYLE = '/omni-local-style.json';
+const LOCAL_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 const SOURCE = 'omni-v2-facilities';
