@@ -839,7 +839,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         providerTransactionId: String(transaction.id ?? transaction.reference ?? '').trim(),
         providerEventId: eventId || `${String(transaction.id ?? transaction.reference ?? '')}:${eventName}`,
         status,
-        amountMinor: Number(transaction.amount),
+        amountMinor: Math.round(Number(transaction.amount) * 100),
         currency: typeof transaction.currency === 'string' ? transaction.currency : transaction.currency && typeof transaction.currency === 'object' && !Array.isArray(transaction.currency) ? String((transaction.currency as Record<string, unknown>).iso ?? '') : '',
         omniRechargeId: metadata.omni_recharge_id ? String(metadata.omni_recharge_id) : metadata.deposit_id ? String(metadata.deposit_id) : null,
         now: new Date().toISOString(),

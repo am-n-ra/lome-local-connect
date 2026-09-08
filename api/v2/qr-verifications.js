@@ -178,7 +178,7 @@ async function createFedaPayCheckout(input) {
     method: "POST",
     body: JSON.stringify({
       description: input.description.slice(0, 180),
-      amount: input.amountMinor,
+      amount: Math.round(input.amountMinor / 100),
       currency: { iso: input.currency.toUpperCase() },
       callback_url: input.callbackUrl,
       custom_metadata: { omni_recharge_id: input.rechargeId },
@@ -3980,7 +3980,7 @@ async function handleApi(req, res, pathname, url) {
         providerTransactionId: String(transaction.id ?? transaction.reference ?? "").trim(),
         providerEventId: eventId || `${String(transaction.id ?? transaction.reference ?? "")}:${eventName}`,
         status,
-        amountMinor: Number(transaction.amount),
+        amountMinor: Math.round(Number(transaction.amount) * 100),
         currency: typeof transaction.currency === "string" ? transaction.currency : transaction.currency && typeof transaction.currency === "object" && !Array.isArray(transaction.currency) ? String(transaction.currency.iso ?? "") : "",
         omniRechargeId: metadata.omni_recharge_id ? String(metadata.omni_recharge_id) : metadata.deposit_id ? String(metadata.deposit_id) : null,
         now: (/* @__PURE__ */ new Date()).toISOString()

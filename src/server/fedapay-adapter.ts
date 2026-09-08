@@ -131,7 +131,7 @@ export async function createFedaPayCheckout(input: {
     method: 'POST',
     body: JSON.stringify({
       description: input.description.slice(0, 180),
-      amount: input.amountMinor,
+      amount: Math.round(input.amountMinor / 100),
       currency: { iso: input.currency.toUpperCase() },
       callback_url: input.callbackUrl,
       custom_metadata: { omni_recharge_id: input.rechargeId },
@@ -165,7 +165,7 @@ export async function fetchFedaPayTransaction(transactionId: string): Promise<Fe
   return {
     transactionId,
     status: normalizeStatus(transaction.status),
-    amountMinor: Number(transaction.amount ?? 0),
+    amountMinor: Math.round(Number(transaction.amount ?? 0) * 100),
     currency: currencyIso ? currencyIso.toUpperCase() : null,
     omniRechargeId: metadataObject.omni_recharge_id ? String(metadataObject.omni_recharge_id) : metadataObject.deposit_id ? String(metadataObject.deposit_id) : null,
   };
