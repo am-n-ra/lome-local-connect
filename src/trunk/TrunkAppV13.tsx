@@ -22,10 +22,15 @@ import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
 import { PublicQrScannerSheet } from '../components/ui/PublicQrScannerSheet';
 import { SellerV13 } from './SellerV13';
+import { ProductCatalogueV13 } from './ProductCatalogueV13';
+import { StockEventLedgerV13 } from './StockEventLedgerV13';
+import { OffersV13 } from './OffersV13';
+import { CompanyV13 } from './CompanyV13';
+import { OnboardV13 } from './OnboardV13';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -117,6 +122,8 @@ export function TrunkAppV13() {
 const [bulkFacilities, setBulkFacilities] = useState<PublicFacility[] | null>(null);
 const [bulkDetails, setBulkDetails] = useState<Record<string, FacilityDetail | null>>({});
 const [bulkSelection, setBulkSelection] = useState<Record<string, string>>({});
+const [stockEventProductId, setStockEventProductId] = useState<string | null>(null);
+const [pendingSearch, setPendingSearch] = useState('');
 const [bulkLoading, setBulkLoading] = useState(false);
 const [bulkSending, setBulkSending] = useState(false);
 const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
@@ -646,7 +653,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       { icon: 'qr', label: 'QR', target: 'qr', center: true, active: false },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
-    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'account' && sheet !== 'wallet' && sheet !== 'plans' && sheet !== 'saved' && sheet !== 'home' && sheet !== 'auth' && !homeLike;
+    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'account' && sheet !== 'wallet' && sheet !== 'plans' && sheet !== 'saved' && sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;
     if (destination) return [
       { icon: 'back', label: 'Retour', target: 'back', center: false, active: false },
       { icon: team ? 'check' : (role === 'seller' ? 'box' : 'search'), label: team ? 'À valider' : (role === 'seller' ? 'Stock' : 'Recherche'), target: team ? 'admin' : (role === 'seller' ? 'seller' : 'search'), center: true, active: role !== 'buyer' },
@@ -694,7 +701,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       if (sheet === 'bulk' || sheet === 'compare') { setSheet('results'); return; }
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
-      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth') { setSheet('menu'); return; }
+      if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
+      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company') { setSheet('seller'); return; }
       setSheet('none');
       return;
     }
@@ -1026,7 +1034,22 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} />
+      )}
+      {sheet === 'products' && (
+        <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} />
+      )}
+      {sheet === 'stockevent' && stockEventProductId && (
+        <StockEventLedgerV13 productId={stockEventProductId} onClose={() => setSheet('products')} />
+      )}
+      {sheet === 'offers' && (
+        <OffersV13 onClose={() => setSheet('seller')} />
+      )}
+      {sheet === 'company' && (
+        <CompanyV13 onClose={() => setSheet('seller')} />
+      )}
+      {sheet === 'onboard' && (
+        <OnboardV13 pendingSearch={pendingSearch} onClose={() => setSheet('menu')} onComplete={() => { setSheet('none'); }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
         <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} />
@@ -1058,7 +1081,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 {role === 'seller' && (
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => { setSheet('seller'); }}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde, Pro & recharges</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Free vs Pro</small></span></button>
                   </>
