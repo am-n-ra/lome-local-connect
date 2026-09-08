@@ -149,11 +149,11 @@ export function SellerV13({ onClose }: SellerV13Props) {
           </div>
           <div className="cardbox" style={{ textAlign: 'center', padding: 8 }}>
             <div style={{ fontSize: 18, fontWeight: 800 }}>{queue.length}</div>
-            <div className="tiny-muted">Demandes</div>
+            <div className="tiny muted">Demandes</div>
           </div>
           <div className="cardbox" style={{ textAlign: 'center', padding: 8 }}>
             <div style={{ fontSize: 18, fontWeight: 800 }}>{catalogue.facilities.length}</div>
-            <div className="tiny-muted">Commerces</div>
+            <div className="tiny muted">Commerces</div>
           </div>
         </div>
       )}

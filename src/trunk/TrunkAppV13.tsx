@@ -11,7 +11,6 @@ import {
   getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
 import { parseFacilityIdFromQr } from './ui-helpers';
-import { haversineKm } from '../lib/omni';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
@@ -835,8 +834,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
             {results.map((facility) => (
               <button key={facility.id} data-fid={facility.id} type="button" className={`hcard${resultsFollowId === facility.id ? ' focused' : ''}`} onClick={() => void handlePinSelect(facility)}>
-                <div className={`thumb${facility.trust === 'non_revue' ? ' unclaimed' : ''}`}>
-                  {facility.trust === 'verifiee' && <span className="vmark">✓</span>}
+                <div className={`thumb${facility.trust === 'unconfirmed' ? ' unclaimed' : ''}`}>
+                  {facility.trust === 'confirmed' && <span className="vmark">✓</span>}
                 </div>
                 <div className="body">
                   <b>{facility.name}</b>
@@ -965,14 +964,13 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div>
               <div className={`fhero${selectedFacility.trust === 'unclaimed' ? ' unclaimed' : ''}`}><span className="tag">{selectedFacility.category}</span></div>
               <div className="stategroup" style={{ marginTop: 7 }}>
-                {(['decouvrable', 'interrogeable', 'disponible', 'transactable', 'verifiee'] as const).map((state) => {
-                  const labels: Record<string, string> = { decouvrable: 'Découvrable', interrogeable: 'Interrogeable', disponible: 'Disponible', transactable: 'Transactable', verifiee: 'Vérifiée' };
-                  const isActive = selectedFacility.trust === state || (state === 'decouvrable');
+                {(['unclaimed', 'unconfirmed', 'confirmed'] as const).map((state) => {
+                  const labels: Record<string, string> = { unclaimed: 'Non revendiquée', unconfirmed: 'À confirmer', confirmed: 'Confirmée' };
+                  const isActive = selectedFacility.trust === state || (state === 'unclaimed');
                   return <span key={state} className={`status ${isActive ? 'ok' : 'gray'}`}>{labels[state]}</span>;
                 })}
               </div>
               <div className="row tiny muted" style={{ marginTop: 7 }}>
-                {userPosition && <span>Lomé · {Math.round(haversineKm(userPosition.latitude, userPosition.longitude, selectedFacility.latitude, selectedFacility.longitude) * 10) / 10} km</span>}
                 <span className="status ok">Ouvert</span>
               </div>
               {selectedFacility.trust === 'unclaimed' && (
