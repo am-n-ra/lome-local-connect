@@ -144,7 +144,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [wallet, setWallet] = useState<WalletOverviewResult | null>(null);
   const [walletState, setWalletState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [walletError, setWalletError] = useState('');
-  const [rechargeAmount, setRechargeAmount] = useState('10000');
+  const [rechargeAmount, setRechargeAmount] = useState('100');
   const [rechargeState, setRechargeState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [rechargeError, setRechargeError] = useState('');
   const [rechargeResult, setRechargeResult] = useState<WalletRechargeResult | null>(null);
@@ -544,12 +544,13 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   }, [requireAuth]);
 
   const startRecharge = useCallback(async () => {
-    const amountMinor = Number.parseInt(rechargeAmount.trim(), 10);
-    if (!Number.isInteger(amountMinor) || amountMinor < 100) {
+    const amountFrancs = Number.parseInt(rechargeAmount.trim(), 10);
+    if (!Number.isInteger(amountFrancs) || amountFrancs < 1) {
       setRechargeState('error');
-      setRechargeError('Saisissez un montant XOF entier d’au moins 100.');
+      setRechargeError('Saisissez un montant entier d’au moins 1 FCFA.');
       return;
     }
+    const amountMinor = amountFrancs * 100;
     const token = await requireAuth();
     if (!token) return;
     setRechargeState('loading'); setRechargeError(''); setRechargeResult(null);
@@ -1240,17 +1241,18 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 <div className="eyebrow">Recharger le Wallet</div>
                 <p className="tiny muted">Rechargez des crédits Omni pour les services de plateforme. La confirmation finale vient du webhook FedaPay vérifié.</p>
                 <div className="row" style={{ gap: 6, flexWrap: 'wrap', marginTop:   8 }}>
-                  {[5000, 10000, 25000].map((amount) => (
-                    <button key={amount} type="button" className={rechargeAmount === String(amount) ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 28 }} onClick={() => setRechargeAmount(String(amount))}>{(amount / 100).toFixed(0)} F</button>
+                  {[50,100,250].map((amount) => (
+                    <button key={amount} type="button" disabled={rechargeState === 'success'} className={rechargeAmount === String(amount) ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 28 }} onClick={() => setRechargeAmount(String(amount))}>{amount} F</button>
                   ))}
                 </div>
-                <label className="label" htmlFor="v13-recharge">Montant en XOF</label>
-                <input id="v13-recharge" className="field" type="number" min="100" step="1" inputMode="numeric" value={rechargeAmount} onChange={(event) => setRechargeAmount(event.target.value)} />
+                <label className="label" htmlFor="v13-recharge">Montant en FCFA</label>
+                <input id="v13-recharge" className="field" type="number" min="1" step="1" inputMode="numeric" disabled={rechargeState === 'success'} value={rechargeAmount} onChange={(event) => setRechargeAmount(event.target.value)} />
                 {rechargeError && <p className="sub" role="alert">{rechargeError}</p>}
                 {rechargeState === 'success' && rechargeResult ? (
                   <div className="cardbox" style={{ marginTop: 8 }}>
                     <p className="sub" role="status">Recharge créée · {money(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
                     <a className="btn" href={rechargeResult.checkoutUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8, textDecoration: 'none' }}>Continuer le paiement FedaPay <ArrowRight size={15} /></a>
+                    <button className="btn ghost sm" type="button" style={{ marginTop: 8 }} onClick={() => { setRechargeState('idle'); setRechargeResult(null); setRechargeAmount('100'); }}>Nouvelle recharge</button>
                   </div>
                 ) : (
                   <button className="btn" type="button" disabled={rechargeState === 'loading'} style={{ marginTop: 10 }} onClick={() => void startRecharge()}>{rechargeState === 'loading' ? 'Préparation…' : 'Préparer la recharge'}</button>
