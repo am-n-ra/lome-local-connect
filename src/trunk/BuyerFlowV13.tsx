@@ -258,7 +258,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
             <button type="button" className={deliveryMode === 'retrait' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('retrait')}>Retrait</button>
             <button type="button" className={deliveryMode === 'livraison' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('livraison')}>Livraison</button>
           </div>
-          <div className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
+          <textarea className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
           <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>Envoyer la demande</button>
         </form>
       )}
