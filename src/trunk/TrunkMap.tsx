@@ -408,14 +408,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         setLocationState('denied');
         return;
       }
-      let alreadyAttempted = false;
-      try {
-        alreadyAttempted = window.sessionStorage.getItem(arrivalAttemptKey) === '1';
-        if (permissionState !== 'granted') window.sessionStorage.setItem(arrivalAttemptKey, '1');
-      } catch {
-        // A restricted storage context must not prevent the browser permission flow.
-      }
-      if (permissionState !== 'granted' && alreadyAttempted) return;
       requestLocation(false);
     };
     void attemptArrivalLocation();
