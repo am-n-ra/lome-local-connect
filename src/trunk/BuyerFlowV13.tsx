@@ -6,7 +6,7 @@ import type { ExternalPaymentMethod, TransactionSnapshotResult, TransactionState
 
 type FlowProduct = { id: string; name: string };
 type FlowFacility = { id: string; name: string };
-type Stage = 'avail' | 'intent' | 'txn' | 'qr' | 'pay' | 'rate';
+type Stage = 'avail' | 'pending' | 'result' | 'intent' | 'txn' | 'qr' | 'pay' | 'rate';
 
 type BuyerFlowV13Props = {
   facility: FlowFacility;
@@ -19,6 +19,15 @@ const STEPS: Array<{ id: Stage; label: string }> = [
   { id: 'intent', label: 'Intention' },
   { id: 'txn', label: 'Transaction' },
   { id: 'rate', label: 'Avis' },
+];
+const TXN_STAGES = [
+  { label: 'Intention d\'achat', sub: 'enregistrée côté Omni' },
+  { label: 'Transaction créée', sub: 'en attente de vérification' },
+  { label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
+  { label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
+  { label: 'Paiement', sub: 'méthode choisie & déclarée' },
+  { label: 'Exécution', sub: 'retrait / remise / livraison' },
+  { label: 'Complétée', sub: 'notez le vendeur' },
 ];
 
 function qrStyle(token: string): string {
@@ -33,6 +42,8 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   const [quantity, setQuantity] = useState(1);
   const [budgetMode, setBudgetMode] = useState<'unlimited' | 'maximum'>('unlimited');
   const [budget, setBudget] = useState('');
+  const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
+  const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string } | null>(null);
   const [txn, setTxn] = useState<TransactionSnapshotResult | null>(null);
@@ -108,8 +119,9 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
       });
       if (result.ok && result.data) {
         setRequestId(result.data.requestId);
-        setToast('Demande envoyée — le commerce confirme la dispo.');
+        setToast('');
         setError('');
+        setStage('pending');
         // poll the responses once so the buyer can see alivestatus
         const poll = async (): Promise<void> => {
           const t2 = await getAuthToken();
@@ -118,7 +130,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
           if (responses.ok && responses.data && responses.data.responses.length > 0) {
             const r = responses.data.responses[0];
             setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status });
-            setStage('intent');
+            setStage('result');
           } else {
             pollRef.current = window.setTimeout(poll, 4000);
           }
@@ -234,33 +246,92 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
         <form className="cardbox" onSubmit={request}>
           <label className="label" htmlFor="flow-qty">Quantité</label>
           <input id="flow-qty" className="field" type="number" min="1" value={quantity} onChange={(event) => setQuantity(Math.max(1, Number(event.target.value || 1)))} />
-          <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop:  ​8, marginBottom:  ​8 }}>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8, marginTop: 8, marginBottom: 8 }}>
             <button type="button" className={budgetMode === 'unlimited' ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 30 }} onClick={() => setBudgetMode('unlimited')}>Sans limite</button>
             <button type="button" className={budgetMode === 'maximum' ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', minHeight: 30 }} onClick={() => setBudgetMode('maximum')}>Budget max</button>
           </div>
           {budgetMode === 'maximum' && (
             <input className="field" type="number" min="0" step="0.01" placeholder="Budget max (FCFA)" value={budget} onChange={(event) => setBudget(event.target.value)} />
           )}
-          <button className="btn" type="submit" disabled={busy} style={{ marginTop: 10 }}>Demander la dispo <ArrowRight size={15} /></button>
+          <div className="label" style={{ marginTop: 8 }}>Contraintes</div>
+          <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 4 }}>
+            <button type="button" className={deliveryMode === 'retrait' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('retrait')}>Retrait</button>
+            <button type="button" className={deliveryMode === 'livraison' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('livraison')}>Livraison</button>
+          </div>
+          <div className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
+          <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>Envoyer la demande</button>
         </form>
       )}
-      {stage === 'intent' && liveResponse && (
+
+      {stage === 'pending' && (
         <div className="cardbox">
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <div><b>{facility.name}</b><br /><span className="tiny muted">{liveResponse.quantityAvailable} unités disponibles</span></div>
-            <span className="status ok">En stock</span>
+          <p className="sub">Demande envoyée — le commerce confirme la dispo.</p>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>{product.name} ×{quantity}</span><b className="status gray">En attente</b></div>
           </div>
-          <p className="sub">{(liveResponse.priceMinor /  ​100).toFixed(2)} FCFA / unité</p>
-          <div className="btnrow">
-            <button className="btn" type="button" disabled={busy} onClick={() => void createIntent()}><BadgeCheck size={15} /> Confirmer mon intention</button>
+          <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ».</p>
+          <button className="btn sm" style={{ marginTop: 10 }} type="button" onClick={() => { if (requestId) { void (async () => { const t = await getAuthToken(); if (t) { const r = await getAvailabilityResponses({ requestId, token: t }); if (r.ok && r.data && r.data.responses.length > 0) { const resp = r.data.responses[0]; setLiveResponse({ priceMinor: resp.priceMinor ?? 0, quantityAvailable: resp.quantityAvailable ?? 0, status: resp.status }); setStage('result'); } } })(); } }}>Simuler la réponse</button>
+        </div>
+      )}
+      {stage === 'result' && liveResponse && (
+        <div>
+          <div className="cardbox">
+            <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+          </div>
+          <div className="freshbar" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9, color: 'var(--ink-soft)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+            Fraîcheur : il y a 2 min · reflète l’allocation Omni, pas l’inventaire total du vendeur
+          </div>
+          <div className="btnrow" style={{ marginTop: 10 }}>
+            <button className="btn ghost" type="button" onClick={() => setStage('intent')}>Comparer</button>
+            <button className="btn ok" type="button" onClick={() => setStage('intent')}>Je veux acheter</button>
+          </div>
+          <button className="btn ghost" style={{ marginTop: 10 }} type="button" onClick={() => setStage('pending')}>Voir d’autres facilités</button>
+        </div>
+      )}
+            {stage === 'intent' && liveResponse && (
+        <div>
+          <div className="cardbox">
+            <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
+            <div className="kv"><span>Prix unitaire</span><b>{(liveResponse.priceMinor / 100).toFixed(2)} FCFA</b></div>
+            <div className="kv"><span>Total</span><b>{((liveResponse.priceMinor * quantity) / 100).toFixed(2)} FCFA</b></div>
+          </div>
+          <div className="freshbar" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9, color: 'var(--ink-soft)' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
+            Fraîcheur : il y a 2 min · reflète l'allocation Omni, pas l'inventaire total du vendeur
+          </div>
+          <p className="sub" style={{ marginTop: 8 }}>Crée la transaction. Une fois dedans, vous suivez jusqu'à la note — pas de retour.</p>
+          <div className="btnrow" style={{ marginTop: 10 }}>
+            <button className="btn ok" type="button" disabled={busy} onClick={() => void createIntent()}>Confirmer l'intention</button>
             <button className="btn ghost" type="button" onClick={() => setStage('avail')}>Retour</button>
           </div>
         </div>
       )}
       {stage === 'txn' && (
-        <div className="cardbox">
-          <p className="tiny muted">Transaction {txnId ? txnId.slice(0, 8) : '—'} · {txn?.state ?? 'intent_created'}</p>
-          {qrToken && <p className="sub">QR émis — présentable en caisse (ou « Scanner un QR » du dock).</p>}
+        <div>
+          <div className="txntrack" style={{ marginTop: 8 }}>
+            {[
+              { id: 'intent', label: 'Intention d\'achat', sub: 'enregistrée côté Omni' },
+              { id: 'created', label: 'Transaction créée', sub: 'en attente de vérification' },
+              { id: 'qr', label: 'QR de transaction généré', sub: 'à faire scanner par le vendeur' },
+              { id: 'verified', label: 'Vérifiée', sub: 'le vendeur a scanné le QR' },
+              { id: 'payment', label: 'Paiement', sub: 'méthode choisie & déclarée' },
+              { id: 'fulfilled', label: 'Exécution', sub: 'retrait / remise / livraison' },
+              { id: 'completed', label: 'Complétée', sub: 'notez le vendeur' },
+            ].map((step, i) => {
+              const txnState = txn?.state ?? 'intent_created';
+              const stateMap: Record<string, number> = { intent_created: 0, qr_issued: 2, verified: 3, payment_declared: 4, fulfilled: 5, received: 5, rated: 6, closed: 6 };
+              const currentIdx = stateMap[txnState] ?? 0;
+              const cls = i < currentIdx ? 'ok' : (i === currentIdx ? 'now' : '');
+              return (
+                <div className="txstep" key={step.id}>
+                  <span className={`sdot ${cls}`} />
+                  <div><b>{step.label}</b><small>{step.sub}</small></div>
+                  <span className="go" style={{ fontSize: 10, color: cls === 'ok' ? 'var(--accent)' : cls === 'now' ? 'var(--ink)' : 'var(--ink-soft)' }}>{i < currentIdx ? '✓' : (i === currentIdx ? '→' : '')}</span>
+                </div>
+              );
+            })}
+          </div>
           {messages.length > 0 && (
             <div className="chatlog" aria-label="Conversation transaction" style={{ marginTop: 8 }}>
               {messages.map((message) => (
@@ -275,7 +346,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
             <input value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} placeholder="Écrivez au commerce…" aria-label="Message au commerce" maxLength={1000} />
             <button type="submit" aria-label="Envoyer" disabled={chatSending || !chatDraft.trim()}><ArrowRight size={15} /></button>
           </form>
-          <div className="btnrow">
+          <div className="btnrow" style={{ marginTop: 8 }}>
             <button className="btn" type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> Mon QR</button>
             <button className="btn ghost" type="button" disabled={busy || !qrToken} onClick={() => void verifyQr()}>Vérifier</button>
           </div>
@@ -299,13 +370,28 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
         </div>
       )}
       {stage === 'pay' && (
-        <div className="cardbox">
-          <p className="sub">Net à payer : {(txn?.netAmountMinor ?? 0) / 100} FCFA</p>
-          <div className="btnrow">
-            <button className="btn" type="button" disabled={busy} onClick={() => void declarePay('cash')}><Banknote size={15} /> Espèces</button>
-            <button className="btn ghost" type="button" disabled={busy} onClick={() => void declarePay('mobile_money')}><Smartphone size={15} /> Mobile money</button>
+        <div>
+          <div className="cardbox">
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div><b>Omni Wallet</b><br /><span className="tiny muted">0,00 $ disponible</span></div>
+              <span className="status gray">Indisponible</span>
+            </div>
           </div>
-          <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30, marginTop:  ​8 }} type="button" onClick={() => setStage('txn')}>Retour</button>
+          <div className="cardbox" style={{ marginTop: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div><b>Mobile Money / cash à la remise</b><br /><span className="tiny muted">Déclaré par l'acheteur, confirmé par le vendeur</span></div>
+              <span className="status ok">Recommandé</span>
+            </div>
+          </div>
+          <div className="cardbox" style={{ marginTop: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div><b>Recharge FedaPay</b><br /><span className="tiny muted">Recharge externe — pas de paiement transaction</span></div>
+              <span className="status ink">Externe</span>
+            </div>
+          </div>
+          <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy} onClick={() => void declarePay('cash')}>Déclarer le paiement</button>
+          <p className="tiny muted" style={{ textAlign: 'center', marginTop: 9 }}>L'argent ne transite pas par Omni en V1 (D-05).</p>
+          <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30, marginTop: 8 }} type="button" onClick={() => setStage('txn')}>Retour</button>
         </div>
       )}
       {stage === 'rate' && (
