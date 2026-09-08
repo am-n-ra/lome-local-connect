@@ -45,12 +45,12 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany }: SellerV1
       {catalogue && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 9 }}>
           <div style={{ padding: 11, borderRadius: 15, background: 'var(--panel)', border: '1px solid var(--line)' }}>
-            <small style={{ display: 'block', color: 'var(--ink-soft)', fontSize: 7 }}>Demandes en attente</small>
-            <strong style={{ display: 'block', marginTop: 3, fontSize: 17 }}>{queue.length}</strong>
+            <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Demandes en attente</small>
+            <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{queue.length}</strong>
           </div>
           <div style={{ padding: 11, borderRadius: 15, background: 'var(--accent-soft)', border: '1px solid var(--line)' }}>
-            <small style={{ display: 'block', color: 'var(--ink-soft)', fontSize: 7 }}>Commandes à préparer</small>
-            <strong style={{ display: 'block', marginTop: 3, fontSize: 17 }}>{catalogue.products.filter((p) => p.publicationState === 'published').length}</strong>
+            <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Commandes à préparer</small>
+            <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{catalogue.products.filter((p) => p.publicationState === 'published').length}</strong>
           </div>
         </div>
       )}
@@ -65,8 +65,8 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany }: SellerV1
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 9 }}>
         <span className="tiny muted">Je suis actif en ce moment</span>
         <div style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', width: 110 }}>
-          <button type="button" className="btn sm" style={{ flex: 1, borderRadius: 999, minHeight: 30, fontSize: 9.5 }}>ON</button>
-          <button type="button" className="btn ghost sm" style={{ flex: 1, borderRadius: 999, minHeight: 30, fontSize: 9.5 }}>OFF</button>
+          <button type="button" className="btn sm" style={{ flex: 1, borderRadius: 999, minHeight: 30 }}>ON</button>
+          <button type="button" className="btn ghost sm" style={{ flex: 1, borderRadius: 999, minHeight: 30 }}>OFF</button>
         </div>
       </div>
       <div className="btnrow">

@@ -134,6 +134,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [revealActive, setRevealActive] = useState(false);
   const [revealPending, setRevealPending] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
+  const [simMode, setSimMode] = useState<'normal' | 'vide' | 'lent' | 'erreur'>('normal');
 
   // Espace Buyer — demandes
   const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestSummary[]>([]);
@@ -182,6 +183,22 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   useEffect(() => { document.body.classList.toggle('desktop', desktop); }, [desktop]);
 
   const loadPublic = useCallback(async (bbox?: [number, number, number, number]) => {
+    if (simMode === 'vide') {
+      await new Promise((r) => setTimeout(r, 300));
+      setFacilities([]);
+      setMapState('empty');
+      setError('');
+      return;
+    }
+    if (simMode === 'lent') {
+      await new Promise((r) => setTimeout(r, 8000));
+    }
+    if (simMode === 'erreur') {
+      await new Promise((r) => setTimeout(r, 500));
+      setMapState('error');
+      setError('Simulated network error');
+      return;
+    }
     const result = await listPublicFacilities(bbox ?? undefined);
     if (result.ok && result.data) {
       setFacilities(result.data);
@@ -191,7 +208,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setMapState('error');
       setError(result.error?.message ?? 'La découverte publique est temporairement indisponible.');
     }
-  }, []);
+  }, [simMode]);
 
   useEffect(() => {
     let active = true;
@@ -227,6 +244,21 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     setResultsLoading(true);
     setSheet('none');
     try {
+      if (simMode === 'vide') {
+        await new Promise((r) => setTimeout(r, 300));
+        setResults([]);
+        setResultsLoading(false);
+        setRevealKey(`v13-${Date.now()}`);
+        setRevealPending(true);
+        return;
+      }
+      if (simMode === 'lent') {
+        await new Promise((r) => setTimeout(r, 8000));
+      }
+      if (simMode === 'erreur') {
+        await new Promise((r) => setTimeout(r, 500));
+        throw new Error('Simulated network error');
+      }
       const result = await listPublicFacilities(bounds ?? undefined, trimmed, opts);
       if (result.ok && result.data) {
         setResults(result.data);
@@ -243,7 +275,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setError(caught instanceof Error ? caught.message : 'Recherche indisponible.');
       setSheet('results');
     }
-  }, [bounds]);
+  }, [bounds, simMode]);
 
   const handleRevealStateChange = useCallback((active: boolean) => {
     setRevealActive(active);
@@ -368,6 +400,17 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       const facilityName = (bulkFacilities ?? []).find((f) => f.id === facilityId)?.name ?? facilityId;
       const productName = bulkDetails[facilityId]?.products?.find((p) => p.id === productId)?.name ?? 'Produit';
       try {
+        if (simMode === 'erreur') {
+          await new Promise((r) => setTimeout(r, 500));
+          return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
+        }
+        if (simMode === 'lent') {
+          await new Promise((r) => setTimeout(r, 8000));
+        }
+        if (simMode === 'vide') {
+          await new Promise((r) => setTimeout(r, 300));
+          return { facilityId, facilityName, productName, status: 'unavailable' as const, quantityAvailable: 0, observedAt: new Date().toISOString() };
+        }
         const result = await requestAvailability({
           productId, facilityId, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, token,
           idempotencyKey: 'bulk-' + facilityId + '-' + crypto.randomUUID(),
@@ -816,10 +859,10 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             </div>
           )}
           <div className="sim-chips" style={{ display: 'none', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
-            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />normal</span>
-            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />vide</span>
-            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />lent</span>
-            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />erreur</span>
+            <span className={`chip${simMode === 'normal' ? ' active' : ''}`} onClick={() => setSimMode('normal')} role="button" tabIndex={0}><span className="dot" />normal</span>
+            <span className={`chip${simMode === 'vide' ? ' active' : ''}`} onClick={() => setSimMode('vide')} role="button" tabIndex={0}><span className="dot" />vide</span>
+            <span className={`chip${simMode === 'lent' ? ' active' : ''}`} onClick={() => setSimMode('lent')} role="button" tabIndex={0}><span className="dot" />lent</span>
+            <span className={`chip${simMode === 'erreur' ? ' active' : ''}`} onClick={() => setSimMode('erreur')} role="button" tabIndex={0}><span className="dot" />erreur</span>
           </div>
           </div>
         </form>
@@ -880,7 +923,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                     <span style={{ flex: 1 }}>
                       <b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan} · {facility.productCount} produits</span>
                       {products.length > 0 ? (
-                        <select className="field" style={{ marginTop: 4, height: 26, fontSize: 9 }} value={selected ?? ''} onChange={(event) => setBulkSelection((current) => ({ ...current, [facility.id]: event.target.value }))}>
+                        <select className="field fs-9" style={{ marginTop: 4, height: 26 }} value={selected ?? ''} onChange={(event) => setBulkSelection((current) => ({ ...current, [facility.id]: event.target.value }))}>
                           {products.filter((p) => p.stockLoueOmni > 0).map((product) => (<option key={product.id} value={product.id}>{product.name} · {moneyOrQty(product.stockLoueOmni)} dispo</option>))}
                           {products.length === 0 && <option value="">Aucun produit</option>}
                         </select>
@@ -1182,7 +1225,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               <div className="cardbox" style={{ background: 'var(--ink)', color: '#fff' }}>
                 <p className="tiny" style={{ color: '#bbb' }}>Solde disponible</p>
                 <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}>
-                  <strong style={{ fontSize: 26 }}>{money(wallet.balanceMinor, wallet.currency)}</strong>
+                  <strong className="fs-26">{money(wallet.balanceMinor, wallet.currency)}</strong>
                   <span className="status gray">{wallet.currency}</span>
                 </div>
               </div>
@@ -1292,7 +1335,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div className="cardbox" key={search.id}>
               <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <b style={{ display: 'block', fontSize: 13 }}>{search.query}</b>
+                  <b className="fs-13" style={{ display: 'block' }}>{search.query}</b>
                   <span className="tiny muted">{search.active ? 'Active' : 'Inactive'}</span>
                 </div>
                 <span className={`status ${search.active ? 'ok' : 'gray'}`}>{search.active ? <Bell size={11} /> : <BellOff size={11} />} {search.active ? ' Active' : ' Inactive'}</span>

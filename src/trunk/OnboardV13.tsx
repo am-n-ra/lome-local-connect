@@ -87,11 +87,11 @@ export function OnboardV13({ pendingSearch, onClose, onComplete }: OnboardV13Pro
             <div><div className="eyebrow">Avant de reprendre votre recherche</div><h1>Ce que Pro débloque.</h1></div>
           </div>
           <div className="softplan">
-            <div><b style={{ fontSize: 10.5 }}>Buyer Pro</b><br /><span className="tiny muted">Recherches illimitées + alertes</span></div>
+            <div><b className="fs-10">Buyer Pro</b><br /><span className="tiny muted">Recherches illimitées + alertes</span></div>
             <span className="status ink">5 $/mois</span>
           </div>
           <div className="softplan">
-            <div><b style={{ fontSize: 10.5 }}>Buyer Free</b><br /><span className="tiny muted">Ce que vous avez déjà</span></div>
+            <div><b className="fs-10">Buyer Free</b><br /><span className="tiny muted">Ce que vous avez déjà</span></div>
             <span className="status gray">Actuel</span>
           </div>
           <button className="btn ghost" style={{ marginTop: 10 }} type="button" onClick={onComplete}>Continuer gratuitement</button>

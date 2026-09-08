@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphon
 import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
+import { useFreshnessTimer } from './useFreshnessTimer';
 
 type FlowProduct = { id: string; name: string };
 type FlowFacility = { id: string; name: string };
@@ -45,7 +46,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
-  const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string } | null>(null);
+  const [liveResponse, setLiveResponse] = useState<{ priceMinor: number; quantityAvailable: number; status: string; observedAt: string | null } | null>(null);
   const [txn, setTxn] = useState<TransactionSnapshotResult | null>(null);
   const [txnId, setTxnId] = useState<string | null>(null);
   const [qrToken, setQrToken] = useState<string | null>(null);
@@ -57,6 +58,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   const [chatSending, setChatSending] = useState(false);
   const [copied, setCopied] = useState(false);
   const pollRef = useRef<number | null>(null);
+  const freshness = useFreshnessTimer(liveResponse?.observedAt ?? null);
 
   const clearPoll = useCallback(() => {
     if (pollRef.current !== null) { window.clearTimeout(pollRef.current); pollRef.current = null; }
@@ -129,7 +131,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
           const responses = await getAvailabilityResponses({ requestId: result.data.requestId, token: t2 });
           if (responses.ok && responses.data && responses.data.responses.length > 0) {
             const r = responses.data.responses[0];
-            setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status });
+            setLiveResponse({ priceMinor: r.priceMinor ?? 0, quantityAvailable: r.quantityAvailable ?? 0, status: r.status, observedAt: r.observedAt ?? null });
             setStage('result');
           } else {
             pollRef.current = window.setTimeout(poll, 4000);
@@ -270,7 +272,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
             <div className="kv"><span>{product.name} ×{quantity}</span><b className="status gray">En attente</b></div>
           </div>
           <p className="tiny muted" style={{ marginTop: 7 }}>Sans réponse, Omni ne transforme jamais le silence en « disponible ».</p>
-          <button className="btn sm" style={{ marginTop: 10 }} type="button" onClick={() => { if (requestId) { void (async () => { const t = await getAuthToken(); if (t) { const r = await getAvailabilityResponses({ requestId, token: t }); if (r.ok && r.data && r.data.responses.length > 0) { const resp = r.data.responses[0]; setLiveResponse({ priceMinor: resp.priceMinor ?? 0, quantityAvailable: resp.quantityAvailable ?? 0, status: resp.status }); setStage('result'); } } })(); } }}>Simuler la réponse</button>
+          <button className="btn sm" style={{ marginTop: 10 }} type="button" onClick={() => { if (requestId) { void (async () => { const t = await getAuthToken(); if (t) { const r = await getAvailabilityResponses({ requestId, token: t }); if (r.ok && r.data && r.data.responses.length > 0) { const resp = r.data.responses[0]; setLiveResponse({ priceMinor: resp.priceMinor ?? 0, quantityAvailable: resp.quantityAvailable ?? 0, status: resp.status, observedAt: resp.observedAt ?? null }); setStage('result'); } } })(); } }}>Simuler la réponse</button>
         </div>
       )}
       {stage === 'result' && liveResponse && (
@@ -278,9 +280,9 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
           <div className="cardbox">
             <div className="kv"><span>{product.name} ×{quantity} (source : auto)</span><b className="status ok">{liveResponse.quantityAvailable} dispo</b></div>
           </div>
-          <div className="freshbar" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9, color: 'var(--ink-soft)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-            Fraîcheur : il y a 2 min · reflète l’allocation Omni, pas l’inventaire total du vendeur
+          <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
+            <span className="fdot" />
+            Fraîcheur : {freshness.text || 'à l\'instant'} · reflète l'allocation Omni, pas l'inventaire total du vendeur
           </div>
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ghost" type="button" onClick={() => setStage('intent')}>Comparer</button>
@@ -296,9 +298,9 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
             <div className="kv"><span>Prix unitaire</span><b>{(liveResponse.priceMinor / 100).toFixed(2)} FCFA</b></div>
             <div className="kv"><span>Total</span><b>{((liveResponse.priceMinor * quantity) / 100).toFixed(2)} FCFA</b></div>
           </div>
-          <div className="freshbar" style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9, color: 'var(--ink-soft)' }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)' }} />
-            Fraîcheur : il y a 2 min · reflète l'allocation Omni, pas l'inventaire total du vendeur
+          <div className={`freshbar${freshness.level === 'stale' ? ' stale' : freshness.level === 'expired' ? ' expired' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, padding: '6px 10px', borderRadius: 999, background: 'var(--accent-soft)', fontSize: 9 }}>
+            <span className="fdot" />
+            Fraîcheur : {freshness.text || 'à l\'instant'} · reflète l'allocation Omni, pas l'inventaire total du vendeur
           </div>
           <p className="sub" style={{ marginTop: 8 }}>Crée la transaction. Une fois dedans, vous suivez jusqu'à la note — pas de retour.</p>
           <div className="btnrow" style={{ marginTop: 10 }}>
