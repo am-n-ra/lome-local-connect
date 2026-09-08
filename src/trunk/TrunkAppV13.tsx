@@ -11,6 +11,7 @@ import {
   getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
 import { parseFacilityIdFromQr } from './ui-helpers';
+import { haversineKm } from '../lib/omni';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
@@ -807,6 +808,12 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               </div>
             </div>
           )}
+          <div className="sim-chips" style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />normal</span>
+            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />vide</span>
+            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />lent</span>
+            <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />erreur</span>
+          </div>
           </div>
         </form>
       )}
@@ -814,26 +821,27 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <section className="sheet h-auto" data-sheet="results" role="region" aria-label="Résultats">
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Résultats</div><h1>Facilités proches</h1></div>
+            <div><div className="eyebrow">Résultats · correspondant à vos contraintes</div><h1>Facilités proches</h1></div>
             <span className="status gray">{results.length}</span>
           </div>
           {resultsLoading && <p className="sub" role="status">Recherche en cours dans votre zone…</p>}
           {error && !resultsLoading && <p className="sub" role="alert">{error}</p>}
           {!resultsLoading && !error && results.length === 0 && (
-            <>
-              <p className="sub" role="status">Aucune fourniture ne correspond à ces contraintes ici. Essayez d'élargir la distance ou le budget.</p>
-              <button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => setSheet('search')}>Élargir les contraintes</button>
-            </>
+            <div className="cardbox">
+              <p className="sub">Aucune fourniture ne correspond à ces contraintes ici. Essayez d'élargir la distance ou le budget.</p>
+              <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('search')}>Élargir les contraintes</button>
+            </div>
           )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
             {results.map((facility) => (
-              <button key={facility.id} data-fid={facility.id} type="button" className={`cardbox${resultsFollowId === facility.id ? ' focused' : ''}`} style={{ textAlign: 'left' }} onClick={() => void handlePinSelect(facility)}>
-                <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <b>{facility.name}</b>
-                  <span className="status ok">{facility.category}</span>
+              <button key={facility.id} data-fid={facility.id} type="button" className={`hcard${resultsFollowId === facility.id ? ' focused' : ''}`} onClick={() => void handlePinSelect(facility)}>
+                <div className={`thumb${facility.trust === 'non_revue' ? ' unclaimed' : ''}`}>
+                  {facility.trust === 'verifiee' && <span className="vmark">✓</span>}
                 </div>
-                <p className="tiny muted">{facility.latitude.toFixed(4)}, {facility.longitude.toFixed(4)}</p>
-                <p className="tiny muted">{facility.plan} · {facility.productCount} produits</p>
+                <div className="body">
+                  <b>{facility.name}</b>
+                  <small>{facility.category} · {facility.productCount} produits</small>
+                </div>
               </button>
             ))}
           </div>
@@ -956,21 +964,38 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           {!facilityLoading && selectedFacility && (
             <div>
               <div className={`fhero${selectedFacility.trust === 'unclaimed' ? ' unclaimed' : ''}`}><span className="tag">{selectedFacility.category}</span></div>
-              <div className="row tiny muted" style={{ marginTop: 7 }}><span>{selectedFacility.trust === 'unclaimed' ? 'Non revendiquée' : selectedFacility.trust === 'unconfirmed' ? 'À confirmer' : 'Confirmée'} · {selectedFacility.plan === 'pro_active' ? 'Pro' : 'Free'}</span></div>
+              <div className="stategroup" style={{ marginTop: 7 }}>
+                {(['decouvrable', 'interrogeable', 'disponible', 'transactable', 'verifiee'] as const).map((state) => {
+                  const labels: Record<string, string> = { decouvrable: 'Découvrable', interrogeable: 'Interrogeable', disponible: 'Disponible', transactable: 'Transactable', verifiee: 'Vérifiée' };
+                  const isActive = selectedFacility.trust === state || (state === 'decouvrable');
+                  return <span key={state} className={`status ${isActive ? 'ok' : 'gray'}`}>{labels[state]}</span>;
+                })}
+              </div>
+              <div className="row tiny muted" style={{ marginTop: 7 }}>
+                {userPosition && <span>Lomé · {Math.round(haversineKm(userPosition.latitude, userPosition.longitude, selectedFacility.latitude, selectedFacility.longitude) * 10) / 10} km</span>}
+                <span className="status ok">Ouvert</span>
+              </div>
+              {selectedFacility.trust === 'unclaimed' && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <p className="sub">Cette facilité est découvrable, elle contribue à la représentation de la fourniture, mais n'a pas de gestionnaire — elle ne peut pas encore recevoir de transaction Omni.</p>
+                  <button className="btn" type="button" disabled={claimState === 'loading'} style={{ marginTop: 10 }} onClick={() => void startClaim(selectedFacility!)}>{claimState === 'loading' ? 'Ouverture du brouillon…' : 'Revendiquer cette facilité'}</button>
+                  <button className="btn ghost" style={{ marginTop: 7 }} onClick={() => alert('Créer une nouvelle facilité (si absente)')}>La facilité n'est pas sur la carte? Créer</button>
+                </div>
+              )}
               {claimState === 'success' && claimResult && (
                 <div className="cardbox" role="status" style={{ marginTop: 8 }}>
                   <p className="sub"><CheckCircle2 size={15} /> Brouillon ouvert. La preuve et la revue Omni restent nécessaires.</p>
                   <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => setSheet('claim')}>Ouvrir le parcours de preuve</button>
                 </div>
               )}
-              {selectedFacility.trust === 'unclaimed' && !(claimState === 'success' && claimResult) && (
+              {selectedFacility.trust !== 'unclaimed' && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
-                  <p className="sub">Cette facilité est découvrable mais n’a pas de gestionnaire. Vous pouvez la revendiquer.</p>
-                  <button className="btn" type="button" disabled={claimState === 'loading'} style={{ marginTop: 8 }} onClick={() => void startClaim(selectedFacility!)}>{claimState === 'loading' ? 'Ouverture du brouillon…' : 'Commencer la revendication'} <ArrowRight size={15} /></button>
+                  <div className="kv"><span>Adresse</span><b>{selectedFacility.address ?? 'Non renseignée'}</b></div>
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
+              {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
               {selectedFacility.products.map((product) => {
                 const on = facProductSel.includes(product.id);
                 return (
@@ -995,6 +1020,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                       setSheet('bulk');
                     }
                   }}>Demander la disponibilité (<span id="selCount">{facProductSel.length}</span>)</button>
+                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Contact vendeur & chat débloqués après intention d’achat.</p>
                 </div>
               )}
             </div>
@@ -1065,6 +1091,15 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div className="kv"><span>Facilité affiliée</span><b>{(accountRoles.some((r) => r.includes('seller')) ? 'Accès vendeur' : 'Aucune')}</b></div>
             <div className="kv"><span>Compte</span><b>{sessionUser.email}</b></div>
           </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? `${((wallet.balanceMinor ?? 0) / 100).toFixed(2)} ${wallet.currency ?? 'XOF'}` : '—'}</b></div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>Plan</span><b>{eligibleRoles.includes('seller') ? 'Vendeur Free' : 'Acheteur Free'}</b></div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('plans')}>Voir les plans</button>
+          </div>
+          <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
         </section>
       )}
       {sheet === 'home' && (

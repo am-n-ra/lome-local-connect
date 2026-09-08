@@ -141,6 +141,34 @@ export function SellerV13({ onClose }: SellerV13Props) {
       {error && <p className="sub" role="alert">{error}</p>}
       {toast && <p className="sub" role="status">{toast}</p>}
       {busy && <p className="sub">…</p>}
+      {catalogue && (
+        <div className="statstile" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 10 }}>
+          <div className="cardbox" style={{ textAlign: 'center', padding: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{catalogue.products.length}</div>
+            <div className="tiny muted">Produits</div>
+          </div>
+          <div className="cardbox" style={{ textAlign: 'center', padding: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{queue.length}</div>
+            <div className="tiny-muted">Demandes</div>
+          </div>
+          <div className="cardbox" style={{ textAlign: 'center', padding: 8 }}>
+            <div style={{ fontSize: 18, fontWeight: 800 }}>{catalogue.facilities.length}</div>
+            <div className="tiny-muted">Commerces</div>
+          </div>
+        </div>
+      )}
+      {catalogue && catalogue.facilities.length > 0 && (
+        <div className="cardbox" style={{ marginBottom: 10 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <div><b>{catalogue.facilities[0].name}</b><br /><span className="tiny muted">Commerce principal</span></div>
+            <span className="status ok">Actif</span>
+          </div>
+          <div className="row" style={{ marginTop: 6, justifyContent: 'space-between' }}>
+            <span className="tiny muted">État opérationnel</span>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26, fontSize: 10 }} type="button">ON / OFF</button>
+          </div>
+        </div>
+      )}
       {tab === 'produits' && (
         <div className="hgrid" id="hgrid">
           {catalogue?.products.length === 0 && <p className="sub">Aucun produit — créez votre premier brouillon dans « Nouveau ».</p>}

@@ -81,6 +81,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .row{display:flex;align-items:center;gap:8px}
 .status{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 9px;font-size:8px;font-weight:800;white-space:nowrap}
 .status.ok{color:#1f5c48;background:var(--accent-soft)}.status.ink{color:var(--ink);background:#fff;border:1px solid var(--ink)}.status.gray{color:var(--ink-soft);background:var(--panel)}.status.dash{color:var(--ink);background:#fff;border:1px dashed var(--ink)}
+.stategroup{display:flex;flex-wrap:wrap;gap:4px}.stategroup .status{font-size:10px;padding:2px 6px}
 .searchdock{margin-top:8px}
 .searchdock .fld{display:flex;align-items:center;gap:7px;height:36px;border-radius:999px;background:#fff;border:1px solid var(--line);padding:0 12px;box-shadow:var(--sh-sm)}
 .searchdock .fld input{flex:1;border:0;outline:0;background:none;font-size:11px;color:var(--ink)}
@@ -230,6 +231,7 @@ body{background:#dadad7;padding:0}
 .sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:76px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
 .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}
 .sheet[data-sheet="results"] .hgrid{display:grid!important;grid-template-columns:1fr;gap:9px;overflow:visible;margin-top:10px;scroll-snap-type:none;padding-bottom:0}
+.sheet[data-sheet="results"] .hgrid .hcard{flex:none;width:100%;scroll-snap-align:none}
 .sheet[data-sheet="results"] .btnrow{margin-top:14px}
 /* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
 .sheet[data-sheet="menu"],.sheet[data-sheet="account"],.sheet[data-sheet="home"],.sheet[data-sheet="wallet"],.sheet[data-sheet="plans"],.sheet[data-sheet="saved"],.sheet[data-sheet="auth"]{left:auto;right:0;top:112px;bottom:0;width:min(400px,90vw);border:0;border-left:1px solid var(--line);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
