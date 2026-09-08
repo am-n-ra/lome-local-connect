@@ -653,11 +653,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
+  // Source de vérité = eligibleRoles (rôles serveur réels, ex. adminTools); l'ordre
+  // suit la maquette: buyer → seller → admin → operator. Le rôle courant est toujours inclus.
   const switchRoles = useMemo<Role[]>(() => {
-    if (role === 'admin') return ['buyer', 'admin', 'operator'];
-    if (role === 'operator') return ['buyer', 'operator', 'admin'];
-    return ['buyer', 'seller'];
-  }, [role]);
+    const ordered: Role[] = ['buyer', 'seller', 'admin', 'operator'];
+    const roles = ordered.filter((r) => eligibleRoles.includes(r));
+    if (!roles.includes(role)) return [role, ...roles.filter((r) => r !== role)];
+    return roles;
+  }, [role, eligibleRoles]);
 
   // L'indicateur glissant (.ind) suit le rôle actif — la maquette le mesure
   // après render (`positionIndicator(0)`), à chaque bascule.

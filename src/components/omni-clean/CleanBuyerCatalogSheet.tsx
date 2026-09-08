@@ -2,6 +2,7 @@ import { ArrowLeft, Check, RefreshCw, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getFacility, type ProductRow } from "@/lib/omni.functions";
 import { useServerFn } from "@/lib/useServerFn";
+import { formatMarketAmount } from "@/lib/currency-context";
 import { cn } from "@/lib/utils";
 
 type SelectedProduct = {
@@ -23,7 +24,7 @@ type Props = {
 
 function productPrice(product: ProductRow) {
   if (!Number.isFinite(product.price)) return "Prix à confirmer";
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(product.price)} FCFA`;
+  return formatMarketAmount(product.price, navigator.language);
 }
 
 export function CleanBuyerCatalogSheet({

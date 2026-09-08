@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { CATEGORIES } from "@/lib/omni";
+import { formatMarketAmount } from "@/lib/currency-context";
 import { cn } from "@/lib/utils";
 import { DEFAULT_FILTERS, type MapFilters } from "@/lib/search-dock-contract";
 import { deriveSearchDockActionMode, isSubmitWithinGuard } from "@/lib/search-dock-state";
@@ -43,7 +44,7 @@ const CATEGORY_CHIPS = [{ value: null, label: "Tout" }, ...CATEGORIES];
 
 function formatMoney(value: number | null) {
   if (value == null || !Number.isFinite(value)) return "sans limite";
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)} FCFA`;
+  return formatMarketAmount(value, navigator.language);
 }
 
 function categoryText(category: string | null) {

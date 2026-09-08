@@ -4,6 +4,7 @@ import { MapCanvas, type MapFacility } from "@/components/omni/MapCanvas";
 import { OmniResumeBar } from "@/components/omni/ui/OmniPrimitives";
 import { CleanBuyerSearchDock } from "@/components/omni-clean/CleanBuyerSearchDock";
 import type { MapFilters } from "@/lib/search-dock-contract";
+import { formatMarketAmount } from "@/lib/currency-context";
 
 type LocationStatus = "pending" | "granted" | "fallback" | "unavailable";
 type BrowserPermissionStatus = "unknown" | "prompt" | "granted" | "denied" | "unsupported";
@@ -86,7 +87,7 @@ function formatDistance(distanceKm?: number) {
 
 function formatMoney(value?: number | null) {
   if (value == null || !Number.isFinite(value)) return null;
-  return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 }).format(value)} FCFA`;
+  return formatMarketAmount(value, navigator.language);
 }
 
 export function CleanBuyerMapStage({
