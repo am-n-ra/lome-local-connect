@@ -139,7 +139,7 @@
     {"id":"country-benin","type":"fill","source":"countries","filter":["==","name","Bénin"],"paint":{"fill-color":"#f0f0ee","fill-opacity":0.5}},
     {"id":"country-borders","type":"line","source":"countries","layout":{"line-cap":"round","line-join":"round"},"paint":{"line-color":"#c8c8c6","line-width":1.0,"line-opacity":0.7}},
     {"id":"coastline","type":"line","source":"coastline","layout":{"line-cap":"round","line-join":"round"},"paint":{"line-color":"#b0b0ae","line-width":1.2,"line-opacity":0.8}},
-    {"id":"cities-primary","type":"circle","source":"cities","filter":["==","primary",true],"paint":{"circle-radius":5,"circle-color":"#0f0f0f","circle-stroke-color":"#ffffff","circle-stroke-width":1.5}},
-    {"id":"cities-secondary","type":"circle","source":"cities","filter":["!","primary"],"minzoom":6,"paint":{"circle-radius":3,"circle-color":"#3a3a38","circle-stroke-color":"#ffffff","circle-stroke-width":1}}
+    {"id":"cities-primary","type":"circle","source":"cities","filter":["==",["get","primary"],true],"paint":{"circle-radius":5,"circle-color":"#0f0f0f","circle-stroke-color":"#ffffff","circle-stroke-width":1.5}},
+    {"id":"cities-secondary","type":"circle","source":"cities","filter":["!",["get","primary"]],"minzoom":6,"paint":{"circle-radius":3,"circle-color":"#3a3a38","circle-stroke-color":"#ffffff","circle-stroke-width":1}}
   ]
 }
