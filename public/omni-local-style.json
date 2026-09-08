@@ -1,145 +1,16 @@
 {
   "version": 8,
-  "name": "Omni — Monochrome Mercator",
+  "name": "Omni — Positron Mercator",
   "projection": {"type": "mercator"},
   "sources": {
-    "ocean": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [{
-          "type": "Feature",
-          "properties": {},
-          "geometry": {
-            "type": "Polygon",
-            "coordinates": [[[-180,-85],[-180,85],[180,85],[180,-85],[-180,-85]]]
-          }
-        }]
-      }
-    },
-    "land": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [{
-          "type": "Feature",
-          "properties": {"name": "Africa"},
-          "geometry": {
-            "type": "Polygon",
-            "coordinates": [[[-17.6,14.8],[-15.4,11.0],[-16.7,6.4],[-12.4,4.4],[-8.6,4.4],[-5.5,5.0],[-1.5,5.2],[3.2,6.1],[7.4,4.4],[9.8,4.4],[10.2,2.0],[9.6,0.2],[9.2,-1.1],[12.4,-5.7],[14.1,-5.7],[16.2,-6.0],[18.9,-7.9],[21.8,-8.2],[25.3,-9.0],[28.8,-9.8],[32.6,-9.4],[35.2,-11.6],[37.5,-11.3],[40.5,-10.3],[42.0,-2.0],[44.0,0.5],[46.7,-1.2],[49.5,-2.2],[51.2,-5.0],[50.5,-11.4],[43.7,-12.2],[39.5,-14.8],[36.3,-17.8],[32.8,-20.5],[28.6,-22.9],[26.0,-24.5],[21.0,-28.4],[18.5,-28.8],[16.5,-28.6],[17.0,-32.8],[18.5,-34.8],[19.0,-34.2],[22.0,-33.8],[26.0,-33.2],[28.5,-32.2],[31.0,-30.2],[32.0,-28.2],[33.0,-26.2],[35.0,-24.2],[36.5,-22.5],[38.0,-20.0],[39.5,-17.5],[40.5,-15.0],[41.5,-12.5],[42.5,-10.0],[43.5,-7.5],[44.5,-5.0],[45.5,-2.5],[46.5,0.0],[47.5,2.5],[48.5,5.0],[49.5,7.5],[50.5,10.0],[51.0,11.5],[49.0,12.0],[44.0,12.5],[43.0,11.5],[42.0,13.0],[40.0,14.5],[38.0,16.0],[36.5,17.5],[34.0,20.0],[33.0,22.0],[31.5,24.0],[30.0,26.5],[25.0,31.0],[20.0,33.0],[15.0,32.5],[12.0,34.0],[10.0,36.5],[5.0,36.0],[0.0,35.5],[-3.0,35.8],[-5.5,36.0],[-6.0,35.2],[-2.5,32.5],[-1.3,29.0],[-2.0,27.5],[-5.0,27.5],[-8.7,27.8],[-13.0,27.6],[-17.0,21.5],[-17.0,16.5],[-17.6,14.8]]]
-          }
-        }]
-      }
-    },
-    "graticule": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-180,-30],[-150,-30],[-120,-30],[-90,-30],[-60,-30],[-30,-30],[0,-30],[30,-30],[60,-30],[90,-30],[120,-30],[150,-30],[180,-30]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-180,-15],[-150,-15],[-120,-15],[-90,-15],[-60,-15],[-30,-15],[0,-15],[30,-15],[60,-15],[90,-15],[120,-15],[150,-15],[180,-15]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-180,0],[-150,0],[-120,0],[-90,0],[-60,0],[-30,0],[0,0],[30,0],[60,0],[90,0],[120,0],[150,0],[180,0]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-180,15],[-150,15],[-120,15],[-90,15],[-60,15],[-30,15],[0,15],[30,15],[60,15],[90,15],[120,15],[150,15],[180,15]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-180,30],[-150,30],[-120,30],[-90,30],[-60,30],[-30,30],[0,30],[30,30],[60,30],[90,30],[120,30],[150,30],[180,30]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[-30,-60],[-30,-30],[-30,0],[-30,30],[-30,60]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[0,-60],[0,-30],[0,0],[0,30],[0,60]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[30,-60],[30,-30],[30,0],[30,30],[30,60]]}},
-          {"type":"Feature","properties":{},"geometry":{"type":"LineString","coordinates":[[60,-60],[60,-30],[60,0],[60,30],[60,60]]}}
-        ]
-      }
-    },
-    "countries": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [
-          {
-            "type": "Feature",
-            "properties": {"name": "Togo"},
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [[
-                [0.14,6.10],[0.23,6.28],[0.35,6.55],[0.45,6.78],[0.53,6.95],[0.59,7.03],[0.64,7.37],[0.70,7.47],[0.80,7.68],[0.87,7.87],[0.94,8.07],[1.01,8.25],[1.07,8.43],[1.14,8.60],[1.17,8.78],[1.20,9.00],[1.23,9.18],[1.26,9.37],[1.30,9.58],[1.35,9.80],[1.40,10.02],[1.45,10.18],[1.50,10.30],[1.55,10.43],[1.60,10.55],[1.63,10.65],[1.65,10.75],[1.68,10.87],[1.70,10.97],[1.72,11.05],[1.53,11.05],[1.35,11.05],[1.15,11.05],[0.95,11.05],[0.75,11.05],[0.55,11.05],[0.35,11.05],[0.15,11.05],[0.14,10.87],[0.14,10.70],[0.14,10.52],[0.14,10.35],[0.14,10.18],[0.14,10.00],[0.14,9.82],[0.14,9.65],[0.14,9.47],[0.14,9.30],[0.14,9.12],[0.14,8.95],[0.14,8.77],[0.14,8.60],[0.14,8.42],[0.14,8.25],[0.14,8.07],[0.14,7.90],[0.14,7.72],[0.14,7.55],[0.14,7.37],[0.14,7.20],[0.14,7.02],[0.14,6.85],[0.14,6.67],[0.14,6.50],[0.14,6.32],[0.14,6.10]
-              ]]
-            }
-          },
-          {
-            "type": "Feature",
-            "properties": {"name": "Ghana"},
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [[
-                [-3.25,5.95],[-3.10,5.80],[-2.85,5.65],[-2.60,5.50],[-2.35,5.40],[-2.10,5.25],[-1.85,5.15],[-1.60,5.10],[-1.35,5.05],[-1.10,5.02],[-0.85,5.00],[-0.60,5.00],[-0.35,5.02],[-0.10,5.10],[0.14,5.20],[0.14,6.10],[0.14,6.32],[0.14,6.50],[0.14,6.67],[0.14,6.85],[0.14,7.02],[0.14,7.20],[0.14,7.37],[0.14,7.55],[0.14,7.72],[0.14,7.90],[0.14,8.07],[0.14,8.25],[0.14,8.42],[0.14,8.60],[0.14,8.77],[0.14,8.95],[0.14,9.12],[0.14,9.30],[0.14,9.47],[0.14,9.65],[0.14,9.82],[0.14,10.00],[0.14,10.18],[0.14,10.35],[0.14,10.52],[0.14,10.70],[0.14,10.87],[0.14,11.05],[-0.05,11.05],[-0.25,11.05],[-0.45,11.05],[-0.65,11.05],[-0.85,11.05],[-1.05,11.05],[-1.25,11.05],[-1.50,11.05],[-1.75,11.05],[-2.00,11.05],[-2.25,11.05],[-2.50,11.05],[-2.75,11.05],[-3.00,11.05],[-3.00,10.75],[-3.00,10.50],[-3.00,10.25],[-3.00,10.00],[-3.00,9.75],[-3.00,9.50],[-3.00,9.25],[-3.00,9.00],[-3.00,8.75],[-3.00,8.50],[-3.00,8.25],[-3.00,8.00],[-3.00,7.75],[-3.00,7.50],[-3.00,7.25],[-3.00,7.00],[-3.00,6.75],[-3.00,6.50],[-3.00,6.25],[-3.00,6.00],[-3.25,5.95]
-              ]]
-            }
-          },
-          {
-            "type": "Feature",
-            "properties": {"name": "Bénin"},
-            "geometry": {
-              "type": "Polygon",
-              "coordinates": [[
-                [1.60,6.18],[1.80,6.22],[2.00,6.30],[2.20,6.40],[2.40,6.50],[2.55,6.62],[2.65,6.75],[2.70,6.88],[2.75,7.05],[2.80,7.20],[2.85,7.40],[2.88,7.58],[2.90,7.75],[2.93,7.95],[2.95,8.15],[2.97,8.35],[2.98,8.55],[3.00,8.75],[3.00,8.95],[3.00,9.15],[3.00,9.35],[3.00,9.55],[3.00,9.75],[3.00,9.95],[3.00,10.15],[3.00,10.35],[3.00,10.55],[3.00,10.75],[3.00,11.05],[2.80,11.05],[2.60,11.05],[2.40,11.05],[2.20,11.05],[2.00,11.05],[1.80,11.05],[1.72,11.05],[1.70,10.97],[1.68,10.87],[1.65,10.75],[1.63,10.65],[1.60,10.55],[1.55,10.43],[1.50,10.30],[1.45,10.18],[1.40,10.02],[1.35,9.80],[1.30,9.58],[1.26,9.37],[1.23,9.18],[1.20,9.00],[1.17,8.78],[1.14,8.60],[1.07,8.43],[1.01,8.25],[0.94,8.07],[0.87,7.87],[0.80,7.68],[0.70,7.47],[0.64,7.37],[0.59,7.03],[0.53,6.95],[0.45,6.78],[0.35,6.55],[0.23,6.28],[0.14,6.10],[0.30,6.08],[0.50,6.08],[0.70,6.10],[0.90,6.12],[1.10,6.14],[1.30,6.15],[1.50,6.17],[1.60,6.18]
-              ]]
-            }
-          }
-        ]
-      }
-    },
-    "cities": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [
-          {"type":"Feature","properties":{"name":"Lomé","primary":true},"geometry":{"type":"Point","coordinates":[1.2123,6.1375]}},
-          {"type":"Feature","properties":{"name":"Kara"},"geometry":{"type":"Point","coordinates":[1.5281,9.5514]}},
-          {"type":"Feature","properties":{"name":"Kpalimé"},"geometry":{"type":"Point","coordinates":[0.6328,6.9000]}},
-          {"type":"Feature","properties":{"name":"Sokodé"},"geometry":{"type":"Point","coordinates":[1.1333,8.9833]}},
-          {"type":"Feature","properties":{"name":"Atakpamé"},"geometry":{"type":"Point","coordinates":[1.6167,7.8500]}},
-          {"type":"Feature","properties":{"name":"Accra"},"geometry":{"type":"Point","coordinates":[-0.1870,5.6037]}},
-          {"type":"Feature","properties":{"name":"Tema"},"geometry":{"type":"Point","coordinates":[-0.0166,5.6698]}},
-          {"type":"Feature","properties":{"name":"Kumasi"},"geometry":{"type":"Point","coordinates":[-1.6244,6.6885]}},
-          {"type":"Feature","properties":{"name":"Cotonou"},"geometry":{"type":"Point","coordinates":[2.3912,6.3654]}},
-          {"type":"Feature","properties":{"name":"Porto-Novo"},"geometry":{"type":"Point","coordinates":[2.6283,6.4969]}},
-          {"type":"Feature","properties":{"name":"Abomey-Calavi"},"geometry":{"type":"Point","coordinates":[2.3556,6.4472]}},
-          {"type":"Feature","properties":{"name":"Ho"},"geometry":{"type":"Point","coordinates":[0.4700,6.6000]}},
-          {"type":"Feature","properties":{"name":"Hohoe"},"geometry":{"type":"Point","coordinates":[0.4733,7.1494]}},
-          {"type":"Feature","properties":{"name":"Dapaong"},"geometry":{"type":"Point","coordinates":[1.0600,10.8731]}},
-          {"type":"Feature","properties":{"name":"Mango"},"geometry":{"type":"Point","coordinates":[0.9667,10.3500]}},
-          {"type":"Feature","properties":{"name":"Niamtougou"},"geometry":{"type":"Point","coordinates":[1.3667,9.7667]}}
-        ]
-      }
-    },
-    "coastline": {
-      "type": "geojson",
-      "data": {
-        "type": "FeatureCollection",
-        "features": [
-          {
-            "type": "Feature",
-            "properties": {},
-            "geometry": {
-              "type": "LineString",
-              "coordinates": [
-                [-3.25,5.95],[-3.10,5.80],[-2.85,5.65],[-2.60,5.50],[-2.35,5.40],[-2.10,5.25],[-1.85,5.15],[-1.60,5.10],[-1.35,5.05],[-1.10,5.02],[-0.85,5.00],[-0.60,5.00],[-0.35,5.02],[-0.10,5.10],[0.14,5.20],[0.30,6.08],[0.50,6.08],[0.70,6.10],[0.90,6.12],[1.10,6.14],[1.30,6.15],[1.50,6.17],[1.60,6.18],[1.80,6.22],[2.00,6.30],[2.20,6.40],[2.40,6.50],[2.55,6.62],[2.65,6.75],[2.70,6.88],[2.75,7.05],[2.80,7.20],[2.85,7.40],[2.88,7.58],[2.90,7.75],[2.93,7.95],[2.95,8.15],[2.97,8.35],[2.98,8.55],[3.00,8.75]
-              ]
-            }
-          }
-        ]
-      }
+    "basemap": {
+      "type": "raster",
+      "tiles": ["https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png"],
+      "tileSize": 256,
+      "attribution": "© OpenStreetMap contributors © CARTO"
     }
   },
   "layers": [
-    {"id":"background","type":"background","paint":{"background-color":"#f2f2f0"}},
-    {"id":"ocean","type":"fill","source":"ocean","paint":{"fill-color":"#e8e8e6","fill-opacity":1}},
-    {"id":"land","type":"fill","source":"land","paint":{"fill-color":"#ffffff","fill-outline-color":"#d0d0ce","fill-opacity":0.98}},
-    {"id":"graticule","type":"line","source":"graticule","layout":{"line-cap":"round","line-join":"round"},"paint":{"line-color":"#d8d8d6","line-width":0.4,"line-opacity":0.5,"line-dasharray":[4,4]}},
-    {"id":"country-togo","type":"fill","source":"countries","filter":["==","name","Togo"],"paint":{"fill-color":"#f5f5f3","fill-opacity":0.6}},
-    {"id":"country-ghana","type":"fill","source":"countries","filter":["==","name","Ghana"],"paint":{"fill-color":"#f0f0ee","fill-opacity":0.5}},
-    {"id":"country-benin","type":"fill","source":"countries","filter":["==","name","Bénin"],"paint":{"fill-color":"#f0f0ee","fill-opacity":0.5}},
-    {"id":"country-borders","type":"line","source":"countries","layout":{"line-cap":"round","line-join":"round"},"paint":{"line-color":"#c8c8c6","line-width":1.0,"line-opacity":0.7}},
-    {"id":"coastline","type":"line","source":"coastline","layout":{"line-cap":"round","line-join":"round"},"paint":{"line-color":"#b0b0ae","line-width":1.2,"line-opacity":0.8}},
-    {"id":"cities-primary","type":"circle","source":"cities","filter":["==",["get","primary"],true],"paint":{"circle-radius":5,"circle-color":"#0f0f0f","circle-stroke-color":"#ffffff","circle-stroke-width":1.5}},
-    {"id":"cities-secondary","type":"circle","source":"cities","filter":["!",["get","primary"]],"minzoom":6,"paint":{"circle-radius":3,"circle-color":"#3a3a38","circle-stroke-color":"#ffffff","circle-stroke-width":1}}
+    {"id": "basemap", "type": "raster", "source": "basemap", "paint": {"raster-opacity": 0.5}}
   ]
 }
