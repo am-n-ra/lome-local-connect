@@ -702,6 +702,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       scheduleUserPosition();
       emitBounds();
     };
+    let styleTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedConfigureStyle = () => {
+      if (!map.isStyleLoaded()) return;
+      if (styleTimer !== null) return;
+      styleTimer = setTimeout(() => { styleTimer = null; configureStyle(); }, 120);
+    };
     map.on('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
@@ -867,7 +873,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     };
     map.on('zoom', syncProjection);
     map.on('moveend', syncProjection);
-    map.on('styledata', configureStyle);
+    map.on('styledata', debouncedConfigureStyle);
     map.on('load', () => {
       setMapStatus('ready');
       configureStyle();
@@ -879,13 +885,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
     const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleUserPosition(); });
-    surfaceObserver.observe(document.body, { childList: true, subtree: true });
+    surfaceObserver.observe(container.current, { childList: true, subtree: false });
     const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
+      if (styleTimer !== null) clearTimeout(styleTimer);
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);

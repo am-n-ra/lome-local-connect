@@ -157,8 +157,8 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .chatbar input{flex:1;height:34px;border:1px solid var(--line);border-radius:999px;padding:0 12px;font-size:10px;outline:0}
 .chatbar button{width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;flex:none;display:grid;place-items:center}
 .chatbar button svg{width:15px;height:15px}
-.txntrack{display:flex;flex-direction:column;gap:0;margin-top:8px}
-.txstep{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.txntrack{display:flex;flex-direction:column;gap:0;margin-top:8px;overflow:hidden}
+.txstep{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);overflow:hidden}
 .txstep:last-child{border-bottom:none}
 .txstep .sdot{width:10px;height:10px;border-radius:50%;background:var(--panel);border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
 .txstep .sdot.ok{background:var(--accent)}.txstep .sdot.now{background:var(--ink)}
@@ -194,13 +194,14 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .menuitem:active{transform:scale(.97)}
 .navpill.morph{animation:dockPop .38s cubic-bezier(.34,1.56,.64,1)}
 .icon-in{animation:iconIn .32s cubic-bezier(.34,1.56,.64,1) backwards}
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,os)important;border:0;white-space:nowrap}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0)!important;border:0;white-space:nowrap}
+.mapboxgl-ctrl-bottom-left{display:none!important}
 @keyframes dockPop{0%{transform:translate(-50%,var(--ty,0px)) scale(.92)}60%{transform:translate(-50%,var(--ty,0px)) scale(1.035)}100%{transform:translate(-50%,var(--ty,0px)) scale(1)}}
 @keyframes iconIn{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
 .navpill button:active svg{transform:scale(.78)}
 .dockmask{position:absolute;left:0;right:0;bottom:0;height:118px;z-index:10;pointer-events:none;-webkit-backdrop-filter:blur(9px) saturate(160%);backdrop-filter:blur(9px) saturate(160%);-webkit-mask-image:linear-gradient(to top,#000 30%,transparent 100%);mask-image:linear-gradient(to top,#000 30%,transparent 100%);background:linear-gradient(to top,rgba(255,255,255,.82),rgba(255,255,255,0));transform:translateY(var(--ty,0px));transition:transform .38s var(--ease)}
 .selbar{position:sticky;bottom:0;margin-top:10px;padding-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 22%)}
-@media (min-width:1024px){
+@media (min-width:1040px){
 .navpill.morph{animation:none}
 .navpill{animation:none}
 .dockmask{display:none}
@@ -234,7 +235,7 @@ body{background:#dadad7;padding:0}
 .sheet[data-sheet="results"] .hgrid .hcard{flex:none;width:100%;scroll-snap-align:none}
 .sheet[data-sheet="results"] .btnrow{margin-top:14px}
 /* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
-.sheet[data-sheet="menu"],.sheet[data-sheet="account"],.sheet[data-sheet="home"],.sheet[data-sheet="wallet"],.sheet[data-sheet="plans"],.sheet[data-sheet="saved"],.sheet[data-sheet="auth"]{left:auto;right:0;top:112px;bottom:0;width:min(400px,90vw);border:0;border-left:1px solid var(--line);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
+.sheet[data-sheet="menu"],.sheet[data-sheet="account"],.sheet[data-sheet="home"],.sheet[data-sheet="wallet"],.sheet[data-sheet="plans"],.sheet[data-sheet="saved"],.sheet[data-sheet="auth"],.sheet[data-sheet="seller"],.sheet[data-sheet="products"],.sheet[data-sheet="stockevent"],.sheet[data-sheet="offers"],.sheet[data-sheet="company"],.sheet[data-sheet="onboard"],.sheet[data-sheet="claim"],.sheet[data-sheet="admin"]{left:auto;right:0;top:112px;bottom:0;width:min(400px,90vw);border:0;border-left:1px solid var(--line);border-radius:0 0 16px 0;box-shadow:-18px 0 40px rgba(0,0,0,.14);transform:translateX(0);z-index:18;padding:14px 20px 22px}
 .sheet>*{animation:none!important}
 }
 

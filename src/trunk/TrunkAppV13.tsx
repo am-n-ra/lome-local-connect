@@ -165,14 +165,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [claimSubmitError, setClaimSubmitError] = useState('');
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
-  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1024px)').matches ?? false)));
+  const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
   const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
-    const mq = window.matchMedia?.('(min-width:1024px)');
+    const mq = window.matchMedia?.('(min-width:1040px)');
     if (!mq) return;
     const apply = () => { setDesktop(mq.matches); document.body.classList.toggle('desktop', mq.matches); };
     apply();
@@ -815,7 +815,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               </div>
             </div>
           )}
-          <div className="sim-chips" style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+          <div className="sim-chips" style={{ display: 'none', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
             <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />normal</span>
             <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />vide</span>
             <span className="chip" onClick={() => {}} role="button" tabIndex={0}><span className="dot" />lent</span>
@@ -853,8 +853,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             ))}
           </div>
           <div className="btnrow" style={{ marginTop: 10 }}>
-            <button className="btn ghost sm" type="button" disabled={results.length < 2} onClick={() => void openCompare()}>Comparer</button>
-            <button className="btn sm" type="button" disabled={results.length === 0} onClick={() => void openBulk()}>Dispo groupée</button>
+            <button className="btn ghost sm" type="button" disabled={results.length < 2} title={results.length < 2 ? 'Sélectionnez au moins 2 résultats' : undefined} onClick={() => void openCompare()}>Comparer</button>
+            <button className="btn sm" type="button" disabled={results.length === 0} title={results.length === 0 ? 'Aucun résultat à comparer' : undefined} onClick={() => void openBulk()}>Dispo groupée</button>
           </div>
         </section>
       )}
@@ -950,11 +950,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'qr' && (
-        <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="false" aria-label="Scanner un QR">
+        <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="true" aria-label="Scanner un QR">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Scanner un QR</div><h1>Facilité publique</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /> Fermer</button>
+            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {qrError && <p className="sub" role="alert" style={{ marginTop: 8 }}>{qrError}</p>}
           <PublicQrScannerSheet key={qrScanKey} onDetected={(facilityId: string) => void handleQrDetected(facilityId)} onClose={() => setSheet('menu')} />
@@ -1352,7 +1352,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'auth' && (
-        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="false" aria-label="Connexion">
+        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>

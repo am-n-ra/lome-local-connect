@@ -69,7 +69,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   }, [load]);
 
   return (
-    <section className="sheet h-mid" role="region" aria-label="Espace équipe">
+    <section className="sheet h-mid" data-sheet="admin" role="region" aria-label="Espace équipe">
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Espace équipe</div><h1>Revue Omni</h1></div>

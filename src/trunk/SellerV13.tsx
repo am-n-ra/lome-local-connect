@@ -33,7 +33,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany }: SellerV1
   useEffect(() => { void load(); }, [load]);
 
   return (
-    <section className="sheet h-mid" role="region" aria-label="Espace vendeur">
+    <section className="sheet h-mid" data-sheet="seller" role="region" aria-label="Espace vendeur">
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Espace Seller</div><h1>Ce qui demande votre attention.</h1></div>

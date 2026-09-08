@@ -229,7 +229,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   }, [qrToken]);
 
   return (
-    <section className="sheet h-mid" role="dialog" aria-modal="false" aria-label="Demande de dispo">
+    <section className="sheet h-mid" data-sheet="flow" role="dialog" aria-modal="true" aria-label="Demande de dispo">
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Disponibilité</div><h1>{product.name}</h1></div>
