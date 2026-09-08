@@ -15,18 +15,19 @@
 | T5 | **V-7a — seller map-first** | Nécessite une mini-species de découpage（ | `planned — prochaine tranche` | — |
 | T6 | **V-7b — QR auto + scanner caméra** | Scanner natif（ | `planned` | — |
 | T7 | **V-7c — onboarding gating** | ( | `planned` | — |
-| T8 | **V-6 restant — sim scénarios + fraîcheur visuelle** | Simulations normal/empty/slow/error;rafraîchir visuels（ | `planned` | — |
+| T8 | **V-6 restant — sim scénarios + fraîcheur visuelle** | Simulations normal/empty/slow/error;rafraîchir visuels（ | `done` | tsc clean; push `b681954` |
 
 
 
-## Preuves（ 898e88f（
-- `npx tsc --noEmit` ✅
-- `npm test` — Test Files **48 passed**（306 tests（ ✅
-- `npm run build` — `dist/assets/index-C7W9opd2.js` ✅
-- Push `898e88f` sur `origin/omni-v2-rebuild` ✅
+## Preuves（ b681954（
+- `npx tsc --noEmit` ✅（only pre-existing @types/node issue）
+- `npm test` — blocked by rolldown WASM on Windows（known issue）
+- `npm run build` — blocked by rolldown WASM on Windows（known issue）
+- Push `b681954` sur `origin/omni-v2-rebuild` ✅
 
 
 ## Dette explicitement triggerée（ restante（
 - V-7e formulaire retrait/livraison + note（ contrat API `requestAvailability` a étendre（ servéur `POST /api/v2/availability`（ + migration（ + UI（ — triggeré périmètre M-01?— à valider fondateur（
 - V-7a seller map-first（ mini-species requise（
-- V-7b/7c scanners/onboarding;V-6 restant sim/fraîcheur（
+- V-7b/7c scanners/onboarding（
+- Spot-check 4 largeurs（360/768/1280/1920（ sur 3 rôles = action manuelle fondateur
