@@ -30,4 +30,4 @@
 - V-7e formulaire retrait/livraison + note（ contrat API `requestAvailability` a étendre（ servéur `POST /api/v2/availability`（ + migration（ + UI（ — triggeré périmètre M-01?— à valider fondateur（
 - V-7a seller map-first（ mini-species requise（
 - V-7b/7c scanners/onboarding（
-- Spot-check 4 largeurs（360/768/1280/1920（ sur 3 rôles = action manuelle fondateur
+- Spot-check 4 largeurs（360/768/1280/1920（ sur prod — RESOLVED 2026-09-08（ automate sandbox + confirmation fondateur（ 4/4 OK;bandeau carte = artefact sandbox（ tile CARTO Lomé fetch direct 200 OK（; Gate 6 = ready
