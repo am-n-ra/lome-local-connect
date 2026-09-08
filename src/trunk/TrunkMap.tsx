@@ -369,7 +369,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         geolocationResolvedRef.current = true;
         setLocationState(error.code === error.PERMISSION_DENIED ? 'denied' : error.code === error.TIMEOUT ? 'timeout' : 'unavailable');
       },
-      { enableHighAccuracy: recenter, maximumAge: recenter ? 60_000 : 300_000, timeout: recenter ? 8_000 : 10_000 },
+      { enableHighAccuracy: recenter, maximumAge: recenter ? 60_000 : 300_000, timeout: recenter ? 5_000 : 8_000 },
     );
   };
 
@@ -550,9 +550,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       arrivalPlayedRef.current = true;
       const arrivalReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      const FLIGHT_DURATION = arrivalReduced ? 340 : 700;
-      const FIRST_FLIGHT_DURATION = arrivalReduced ? 280 : 380;
-      const PAUSE_DURATION = arrivalReduced ? 200 : 550;
+      const FLIGHT_DURATION = arrivalReduced ? 280 : 520;
+      const FIRST_FLIGHT_DURATION = arrivalReduced ? 200 : 300;
+      const PAUSE_DURATION = arrivalReduced ? 150 : 350;
 
       type ArrivalStop = { center: [number, number]; zoom: number; label: string; pause: number; flightDuration?: number };
 
@@ -595,14 +595,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           center: step.center,
           zoom: step.zoom,
           duration: dur,
-          speed: 0.55,
-          curve: 1.15,
+          speed: 0.7,
+          curve: 1.1,
           essential: true,
         });
-        await waitForMapSettle(map, dur + 800);
+        await waitForMapSettle(map, dur + 400);
         if (cancelIfStale()) return;
         await loadBoundariesForZoom(map, step.zoom);
-        await waitForRenderFrames(3);
+        await waitForRenderFrames(2);
         if (cancelIfStale()) return;
         highlightBoundaryAtTarget(map, step.zoom, target);
         if (step.pause) await waitForDuration(step.pause);
