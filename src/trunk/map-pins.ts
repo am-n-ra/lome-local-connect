@@ -21,12 +21,12 @@ type ScreenPinGroup = {
 };
 
 // ── Rule 7 (design system v3): pin anatomy ────────────────────────────────
-// The pin core stays orange in both cases; the outer ring discriminates
-// ownership — Evergreen #234D40 for a facility owned by the signed-in
-// account, Cream/white for a third-party facility. Never invert
-// (spec: « Jamais inverser »).
-export const PIN_CORE_COLOR = '#F08F5A';
-export const PIN_RING_OWNED_COLOR = '#234D40';
+// Pin core = encre (near-black(, conforme la maquette V1.3 (dots encre(
+// la palette monochrome verrouillée 2026-09-02. Seul l'anneau de sélection/vérifié
+// utilise l'accent unique #2e8b6f (owned(; un anneau third-party reste paper/neutre. Never
+// invert (spec: « Jamais inverser »(.
+export const PIN_CORE_COLOR = '#1F1F1F';
+export const PIN_RING_OWNED_COLOR = '#2e8b6f';
 export const PIN_RING_THIRD_PARTY_COLOR = '#F9F7F2';
 export const PIN_RADIUS_PX = 7;
 export const PIN_RING_WIDTH_PX = 3;

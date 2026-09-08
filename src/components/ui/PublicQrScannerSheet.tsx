@@ -68,7 +68,7 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
   }, []);
 
   return (
-    <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="true" aria-label="Scanner un QR" style={{ height: '52%' }}>
+    <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="false" aria-label="Scanner un QR" style={{ height: '52%' }}>
       <div className="sheet-handle" />
       <div className="sheet-head">
         <div>

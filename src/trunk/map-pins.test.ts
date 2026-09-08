@@ -60,7 +60,7 @@ describe('rule 7 pin anatomy (owned ring + selected emphasis)', () => {
   it('gives owned pins the Evergreen ring and third-party pins the Cream ring', () => {
     expect(pinRingColor(true)).toBe(PIN_RING_OWNED_COLOR);
     expect(pinRingColor(false)).toBe(PIN_RING_THIRD_PARTY_COLOR);
-    expect(pinRingColor(true)).toBe('#234D40');
+    expect(pinRingColor(true)).toBe('#2e8b6f');
     expect(pinRingColor(false)).toBe('#F9F7F2');
   });
 

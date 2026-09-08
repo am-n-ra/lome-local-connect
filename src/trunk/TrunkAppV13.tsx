@@ -789,6 +789,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div><div className="eyebrow">{SEARCH_LABEL[role][0]}</div><h1>{SEARCH_LABEL[role][1]}</h1></div>
           </div>
           <div className="searchdock">
+            {activeConstraints.size > 0 && (
+              <p className="tiny muted" role="status" style={{ marginBottom: 4 }}>{activeConstraints.size} contrainte{activeConstraints.size > 1 ? 's' : ''} active{activeConstraints.size > 1 ? 's' : ''}</p>
+            )}
             <div className={`fld${resultsLoading ? ' busy' : ''}`}>
               <svg width="16" height="16" aria-hidden="true"><use href="#iSearch" /></svg>
               <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
@@ -814,10 +817,13 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div><div className="eyebrow">Résultats</div><h1>Facilités proches</h1></div>
             <span className="status gray">{results.length}</span>
           </div>
-          {resultsLoading && <p className="sub">Recherche…</p>}
+          {resultsLoading && <p className="sub" role="status">Recherche en cours dans votre zone…</p>}
           {error && !resultsLoading && <p className="sub" role="alert">{error}</p>}
           {!resultsLoading && !error && results.length === 0 && (
-            <p className="sub" role="status">Aucune facilité ne correspond à votre recherche dans cette zone. Essayez d'élargir la recherche ou de vous déplacer sur la carte.</p>
+            <>
+              <p className="sub" role="status">Aucune fourniture ne correspond à ces contraintes ici. Essayez d'élargir la distance ou le budget.</p>
+              <button type="button" className="btn ghost sm" style={{ marginTop: 8 }} onClick={() => setSheet('search')}>Élargir les contraintes</button>
+            </>
           )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
             {results.map((facility) => (
@@ -929,7 +935,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'qr' && (
-        <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="true" aria-label="Scanner un QR">
+        <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="false" aria-label="Scanner un QR">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Scanner un QR</div><h1>Facilité publique</h1></div>
@@ -1288,7 +1294,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'auth' && (
-        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion">
+        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="false" aria-label="Connexion">
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>
