@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Omni — Positron Mercator",
+  "name": "Omni — Positron",
   "projection": {"type": "mercator"},
   "sources": {
     "basemap": {
@@ -11,6 +11,6 @@
     }
   },
   "layers": [
-    {"id": "basemap", "type": "raster", "source": "basemap", "paint": {"raster-opacity": 0.5}}
+    {"id": "basemap", "type": "raster", "source": "basemap"}
   ]
 }
