@@ -1003,7 +1003,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
           map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
         } else {
-          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left:  60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
+          const isDesktop = window.innerWidth >= 1040;
+          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left: isDesktop ? 420 : 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
         }
       }
 
@@ -1186,12 +1187,13 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         source.setData(routeFeatureCollection(routeTarget, origin));
         setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct)`);
         pauseMotion('interaction', false);
+        const isDesktop = window.innerWidth >= 1040;
         map.fitBounds(
           [
             [Math.min(origin.longitude, routeTarget.longitude), Math.min(origin.latitude, routeTarget.latitude)],
             [Math.max(origin.longitude, routeTarget.longitude), Math.max(origin.latitude, routeTarget.latitude)],
           ],
-          { padding: { top: 96, right: 76, bottom: 220, left: 76 }, maxZoom: 14, duration: 900, essential: true },
+          { padding: { top: 96, right: 76, bottom: 220, left: isDesktop ? 430 : 76 }, maxZoom: 14, duration: 900, essential: true },
         );
       }
       return;
