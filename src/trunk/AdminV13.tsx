@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { correctFacilitySalesCounter, getAdminConsole, getReviewQueue, listAdminAuditEvents, reviewFacilityClaim, setFacilityOperationalState } from './api';
+import { correctFacilitySalesCounter, getAdminConsole, getReviewQueue, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState } from './api';
 import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem } from './types';
 
 type AdminV13Props = {
@@ -19,6 +19,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [error, setError] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [reconciling, setReconciling] = useState(false);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -68,6 +69,27 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [load]);
 
+  const reconcile = useCallback(async () => {
+    setReconciling(true);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await reconcileRecharges({ token });
+      if (result.ok && result.data) {
+        const { rechecked, credited, unchanged, errors } = result.data;
+        setToast({ kind: 'ok', text: `${credited} recharge(s) confirmée(s) · ${unchanged} inchangée(s) sur ${rechecked} revérifiée(s)${errors.length ? ` · ${errors.length} erreurs` : ''}.` });
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Revérification impossible.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Revérification impossible.' });
+    } finally {
+      setReconciling(false);
+      void load();
+    }
+  }, [load]);
+
   return (
     <section className="sheet h-mid" data-sheet="admin" role="region" aria-label="Espace équipe">
       <div className="handle" />
@@ -89,6 +111,12 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
             <div className="tile"><small>Créations</small><strong>{consoleData.pendingActivations}</strong></div>
             <div className="tile"><small>Claims</small><strong>{consoleData.pendingClaims}</strong></div>
             <div className="tile"><small>Audit aujourd’hui</small><strong>{consoleData.auditEventsToday}</strong></div>
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <div><b>Recharges Wallet</b><br /><span className="tiny muted">Re-vérifier les paiements FedaPay en attente</span></div>
+              <button className="btn sm" type="button" disabled={reconciling} onClick={() => void reconcile()}><RefreshCw size={14} /> {reconciling ? 'Vérification…' : 'Re-vérifier'}</button>
+            </div>
           </div>
           {toast && <p className="sub" role="status">{toast.text}</p>}
           {queue.length === 0 && <p className="sub" style={{ marginTop: 8 }}>Aucune demande en attente.</p>}
