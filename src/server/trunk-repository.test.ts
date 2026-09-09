@@ -873,11 +873,13 @@ describe('purchase-intent persistence Root seam', () => {
       authUserId: 'auth-user-1',
       responseId: 'response-1',
       idempotencyKey: 'intent-key-1',
+      correlationId: 'corr-intent-1',
     });
     const replay = await repository.createPurchaseIntent({
       authUserId: 'auth-user-1',
       responseId: 'response-1',
       idempotencyKey: 'intent-key-1',
+      correlationId: 'corr-intent-1',
     });
 
     expect(replay).toEqual(first);
@@ -890,6 +892,9 @@ describe('purchase-intent persistence Root seam', () => {
     expect(call.queries[0]).toContain('insert into v2_transaction_members');
     expect(call.queries[0]).toContain('insert into v2_transaction_events');
     expect(call.queries[0]).toContain('on conflict (transaction_id, state) do nothing');
+    expect(call.queries[0]).toContain('insert into v2_qr_tokens');
+    expect(call.queries[0]).toContain("'qr_ready'");
+    expect(call.queries[0]).toContain("'auto_at_intent'");
   });
 
   it('rejects an unavailable or out-of-scope response without returning an intent', async () => {
@@ -900,6 +905,7 @@ describe('purchase-intent persistence Root seam', () => {
       authUserId: 'auth-user-1',
       responseId: 'response-1',
       idempotencyKey: 'intent-key-2',
+      correlationId: 'corr-intent-2',
     })).rejects.toBeInstanceOf(PurchaseIntentPolicyError);
   });
 
@@ -917,6 +923,7 @@ describe('purchase-intent persistence Root seam', () => {
       authUserId: 'auth-user-1',
       responseId: 'response-1',
       idempotencyKey: 'intent-key-3',
+      correlationId: 'corr-intent-3',
     })).rejects.toThrow('The idempotency key is already used for a different purchase intent.');
   });
 });

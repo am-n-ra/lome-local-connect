@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Camera, CameraOff } from 'lucide-react';
+import { X, Camera, CameraOff, ScanLine } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 interface Props {
@@ -32,6 +32,7 @@ export function extractFacilityId(raw: string): string | null {
 export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
   const [state, setState] = useState<'starting' | 'scanning' | 'error'>('starting');
   const [error, setError] = useState('');
+  const [manual, setManual] = useState('');
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const detectedRef = useRef(false);
   const onDetectedRef = useRef(onDetected);
@@ -92,8 +93,18 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
           </div>
         )}
       </div>
+      <div className="maquette-cardbox" style={{ marginTop: 8 }}>
+        <label className="tiny muted" htmlFor="omni-public-qr-manual" style={{ display: 'block', marginBottom: 4 }}>Saisir le code</label>
+        <div className="row" style={{ gap: 6 }}>
+          <input id="omni-public-qr-manual" value={manual} onChange={(event) => setManual(event.target.value)} placeholder="ID de la facilité" aria-label="Code QR facilité" style={{ flex: 1, minWidth: 0 }} />
+          <button className="btn sm" type="button" disabled={!extractFacilityId(manual)} onClick={() => { const id = extractFacilityId(manual); if (id) onDetected(id); }}>
+            <ScanLine size={14} /> Ouvrir
+          </button>
+        </div>
+      </div>
       <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#6b6b6b' }}>
         QR public — découvrir les offres. ≠ QR transaction.
+
       </p>
     </section>
   );

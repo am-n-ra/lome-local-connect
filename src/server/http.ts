@@ -1236,7 +1236,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A stable idempotency key is required.'));
         return true;
       }
-      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey });
+      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey, correlationId });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

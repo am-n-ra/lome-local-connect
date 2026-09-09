@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue, getSellerAvailabilityQueue } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
@@ -12,13 +12,14 @@ type SellerV13Props = {
   onCompany?: () => void;
   onReply?: () => void;
   onRefresh?: () => void;
+  onScan?: () => void;
   catalogue?: SellerCatalogueResult | null;
   queue?: SellerAvailabilityRequest[];
   publicFacilities?: PublicFacility[];
   ownedIds?: string[];
 };
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [catalogue, setCatalogue] = useState<SellerCatalogueResult | null>(null);
@@ -100,7 +101,10 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         <button className="btn" type="button" onClick={onProducts}>{lang.catalogue}</button>
         <button className="btn ghost" type="button" onClick={onOffers}>Offres</button>
       </div>
-      <p className="tiny muted" style={{ marginTop: 7 }}>{lang.wallet} · {lang.scanner} — disponibles depuis votre menu.</p>
+      <div className="btnrow" style={{ marginTop: 7 }}>
+        <button className="btn ghost" type="button" onClick={onScan}><ScanLine size={14} /> {lang.scanner}</button>
+      </div>
+      <p className="tiny muted" style={{ marginTop: 6 }}>{lang.wallet} — depuis votre menu.</p>
     </section>
   );
 }

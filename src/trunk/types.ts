@@ -122,6 +122,8 @@ export interface PurchaseIntentResult {
   transactionId: string;
   buyerAccountId: string;
   state: string;
+  qrToken?: string;
+  qrExpiresAt?: string;
 }
 
 export interface QrTokenIssueResult {

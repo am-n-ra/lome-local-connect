@@ -21,6 +21,7 @@ import { TrunkMap } from './TrunkMap';
 import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
 import { PublicQrScannerSheet } from '../components/ui/PublicQrScannerSheet';
+import { SellerQrScannerSheet } from './SellerQrScannerSheet';
 import { SellerV13 } from './SellerV13';
 import { SellerReplyV13 } from './SellerReplyV13';
 import { ProductCatalogueV13 } from './ProductCatalogueV13';
@@ -31,7 +32,7 @@ import { OnboardV13 } from './OnboardV13';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -1128,10 +1129,13 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
+      )}
+      {sheet === 'seller-qr' && (
+        <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={() => undefined} />
       )}
       {sheet === 'products' && (
         <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} />

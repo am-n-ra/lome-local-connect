@@ -2829,6 +2829,9 @@ function createTrunkRepository(sql = database()) {
       };
     },
     async createPurchaseIntent(input) {
+      const token = randomBytes(32).toString("base64url");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1e3).toISOString();
       const rows = await retryDatabase(() => sql`
         with buyer as (
           select a.id as buyer_account_id
@@ -2911,9 +2914,44 @@ function createTrunkRepository(sql = database()) {
           join eligible e on e.response_id = i.response_id
           on conflict (transaction_id, state) do nothing
           returning transaction_id
+        ),
+        qr_eligible as (
+          select i.transaction_id, m.account_id as buyer_account_id
+          from intent_result i
+          join v2_transaction_snapshots s on s.transaction_id = i.transaction_id
+          join v2_transaction_members m on m.transaction_id = s.transaction_idand m.role = 'buyer'
+        ),
+        qr_token_insert as (
+          insert into v2_qr_tokens (transaction_id, token_hash, expires_at, verified_at, replay_count)
+          select e.transaction_id, ${tokenHash}, ${expiresAt}::timestamptz, null, 0
+          from qr_eligible e
+          on conflict (transaction_id) do update
+            set token_hash = excluded.token_hash,
+                expires_at = excluded.expires_at,
+                verified_at = null,
+                replay_count = 0
+          returning transaction_id, expires_at
+        ),
+        qr_event_insert as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select i.transaction_id, e.buyer_account_id, 'qr_ready', jsonb_build_object('issuer', 'buyer'), now()
+          from qr_token_insert i
+          join qr_eligible e on e.transaction_id = i.transaction_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
+        ),
+        qr_audit_insert as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.buyer_account_id, 'qr_issued', 'transaction', i.transaction_id::text, ${input.correlationId}, 'auto_at_intent', now()
+          from qr_token_insert i
+          join qr_eligible e on e.transaction_id = i.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
         )
-        select id, response_id, transaction_id, buyer_account_id, state
-        from intent_result
+        select i.id, i.response_id, i.transaction_id, i.buyer_account_id, i.state, q.expires_at
+        from intent_result i
+        left join qr_token_insert q on q.transaction_id = i.transaction_id
         limit 1
       `);
       const row = rows[0];
@@ -2926,7 +2964,9 @@ function createTrunkRepository(sql = database()) {
         responseId: String(row.response_id),
         transactionId: String(row.transaction_id),
         buyerAccountId: String(row.buyer_account_id),
-        state: String(row.state)
+        state: String(row.state),
+        qrToken: row.expires_at ? token : null,
+        qrExpiresAt: row.expires_at ? new Date(String(row.expires_at)).toISOString() : null
       };
     },
     async verifyQrToken(input) {
@@ -4451,7 +4491,7 @@ async function handleApi(req, res, pathname, url) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
         return true;
       }
-      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey });
+      const result = await repository.createPurchaseIntent({ authUserId, responseId, idempotencyKey, correlationId });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

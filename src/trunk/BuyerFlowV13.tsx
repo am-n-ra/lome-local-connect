@@ -35,6 +35,12 @@ function qrStyle(token: string): string {
   return token.split('').reduce((acc, ch) => acc + (ch.charCodeAt(0) % 2 ===  ​0 ? '█' : '▓'), '');
 }
 
+// Payload scannable par le vendeur: transactionId + jeton brut.
+
+export function qrPayload(transactionId: string, token: string): string {
+  return `${transactionId}:${token}`;
+}
+
 export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
@@ -161,6 +167,11 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
       if (intent.ok && intent.data) {
         setToast('');
         await loadTxn(intent.data.transactionId);
+        if (intent.data.qrToken) {
+          setQrToken(intent.data.qrToken);
+          setQrExpires(intent.data.qrExpiresAt ?? '');
+          setStage('qr');
+        }
       } else { setError(intent.error?.message ?? 'Intention non créée.'); }
     } finally { setBusy(false); }
   }, [needAuth, requestId, loadTxn]);
@@ -228,9 +239,9 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   }, [needAuth, txnId, score, note]);
 
   const copyQr = useCallback(async () => {
-    if (!qrToken) return;
-    try { await navigator.clipboard.writeText(qrToken); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* fallback */ }
-  }, [qrToken]);
+    if (!qrToken || !txnId) return;
+    try { await navigator.clipboard.writeText(qrPayload(txnId, qrToken)); setCopied(true); window.setTimeout(() => setCopied(false), 1500); } catch { /* fallback */ }
+  }, [qrToken, txnId]);
 
   return (
     <section className="sheet h-mid" data-sheet="flow" role="dialog" aria-modal="true" aria-label="Demande de dispo">
@@ -364,8 +375,8 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
       )}
       {stage === 'qr' && qrToken && (
         <div className="cardbox" style={{ textAlign: 'center' }}>
-          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight: 1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  ​8 }}>{qrStyle(qrToken.slice(0, 48))}</div>
-          <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrToken}</p>
+          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  ​1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  ​8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
+          <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
           <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')}</p>
           <div className="btnrow">
             <button className="btn" type="button" onClick={() => void copyQr()}><Copy size={15} /> {copied ? 'Copié' : 'Copier'}</button>
