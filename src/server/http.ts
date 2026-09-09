@@ -65,6 +65,29 @@ export async function parseRequestBody(req: IncomingMessage): Promise<Record<str
   return parsed as Record<string, unknown>;
 }
 
+export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
+  const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
+    ? payload.object as Record<string, unknown>
+    : null;
+  const nested = object && object.transaction && typeof object.transaction === 'object' && !Array.isArray(object.transaction)
+    ? object.transaction as Record<string, unknown>
+    : object ?? null;
+  const entity = payload.entity && typeof payload.entity === 'object' && !Array.isArray(payload.entity)
+    ? payload.entity as Record<string, unknown>
+    : null;
+  const data = payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data)
+    ? payload.data as Record<string, unknown>
+    : null;
+  const dataNested = data && data.transaction && typeof data.transaction === 'object' && !Array.isArray(data.transaction)
+    ? data.transaction as Record<string, unknown>
+    : data;
+  const transaction = entity ?? nested ?? dataNested ?? payload;
+  const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === 'object' && !Array.isArray(transaction.custom_metadata)
+    ? transaction.custom_metadata as Record<string, unknown>
+    : {};
+  return { transaction, metadata };
+}
+
 const TRANSACTION_STATES: readonly TransactionState[] = [
   'intent_created',
   'qr_ready',
@@ -831,9 +854,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const eventId = String(payload.id ?? payload.event_id ?? '').trim();
       const eventName = String(payload.name ?? payload.type ?? '').toLowerCase();
-      const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object) ? payload.object as Record<string, unknown> : payload.data && typeof payload.data === 'object' && !Array.isArray(payload.data) ? payload.data as Record<string, unknown> : payload;
-      const transaction = object.transaction && typeof object.transaction === 'object' && !Array.isArray(object.transaction) ? object.transaction as Record<string, unknown> : object;
-      const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === 'object' && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata as Record<string, unknown> : {};
+      const { transaction, metadata } = extractFedaPayTransaction(payload);
       const status = eventName.includes('approved') ? 'approved' : eventName.includes('declined') ? 'declined' : eventName.includes('canceled') || eventName.includes('cancelled') ? 'canceled' : 'pending';
       const result = await repository.reconcileWalletRecharge({
         providerTransactionId: String(transaction.id ?? transaction.reference ?? '').trim(),

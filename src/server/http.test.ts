@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, isTransactionState, parseRequestBody, toApiErrorResponse } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse } from './http';
 import { AvailabilityPolicyError, EvidenceStoragePolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -96,5 +96,38 @@ describe('Root HTTP error boundary', () => {
     expect(response.body.error.code).toBe('INTERNAL_RECOVERABLE');
     expect(response.body.error.retryable).toBe(true);
     expect(response.body.error.message).not.toContain('database password');
+  });
+
+  it('extracts the transaction from the live FedaPay entity payload shape', () => {
+    const payload = {
+      name: 'transaction.approved',
+      object: 'transaction',
+      entity: {
+        klass: 'v1/transaction',
+        id: 113034942,
+        reference: 'trx_9L0_1788932131726',
+        amount: 100,
+        description: 'Recharge Omni Wallet',
+        status: 'approved',
+        currency: { klass: 'v1/currency', id: 1, iso: 'XOF', div: 1 },
+        custom_metadata: { omni_recharge_id: 'f8406146-2938-4811-910b-c6229c77399a' },
+        customer_id: 7872480,
+      },
+    };
+    const { transaction, metadata } = extractFedaPayTransaction(payload);
+    expect(transaction.id).toBe(113034942);
+    expect((transaction.currency as Record<string, unknown>).iso).toBe('XOF');
+    expect(metadata.omni_recharge_id).toBe('f8406146-2938-4811-910b-c6229c77399a');
+  });
+
+  it('extracts the transaction from the documented nested object shape', () => {
+    const payload = {
+      id: 'evt_1',
+      type: 'transaction.approved',
+      object: { transaction: { id: 'trx_1', amount: 100, currency: { iso: 'XOF' }, custom_metadata: { omni_recharge_id: 'recharge-1' } } },
+    };
+    const { transaction, metadata } = extractFedaPayTransaction(payload);
+    expect(transaction.id).toBe('trx_1');
+    expect(metadata.omni_recharge_id).toBe('recharge-1');
   });
 });
