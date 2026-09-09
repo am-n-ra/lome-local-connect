@@ -1844,6 +1844,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.delivery_mode,
+          r.request_note,
           r.status as request_status,
           r.created_at,
           r.expires_at,
@@ -1880,6 +1882,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode as 'unlimited' | 'maximum',
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          deliveryMode: row.delivery_mode as 'retrait' | 'livraison',
+          requestNote: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status as AvailabilityResponsesResult['requestStatus'],
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
@@ -1900,6 +1904,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       requestedQuantity: number;
       budgetMode: 'unlimited' | 'maximum';
       budgetMinor: number | null;
+      deliveryMode: 'retrait' | 'livraison';
+      note: string | null;
       requestStatus: AvailabilityResponsesResult['requestStatus'];
       createdAt: string;
       expiresAt: string;
@@ -1916,6 +1922,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.delivery_mode,
+          r.request_note,
           r.created_at,
           r.expires_at,
           count(ar.id)::int as response_count,
@@ -1947,6 +1955,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode as 'unlimited' | 'maximum',
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          deliveryMode: row.delivery_mode as 'retrait' | 'livraison',
+          note: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status as AvailabilityResponsesResult['requestStatus'],
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
@@ -1958,7 +1968,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     async getAvailabilityResponses(input: { authUserId: string; requestId: string }): Promise<AvailabilityResponsesResult> {
       const rows = await retryDatabase(() => sql`
         with buyer_request as (
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status, r.delivery_mode, r.request_note
           from v2_availability_requests r
           join v2_accounts a on a.id = r.buyer_account_id
           where r.id = ${input.requestId}::uuid
@@ -1972,6 +1982,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           br.facility_id,
           br.expires_at,
           br.status as request_status,
+          br.delivery_mode,
+          br.request_note,
           ar.id as response_id,
           ar.facility_id as response_facility_id,
           f.name as facility_name,
@@ -2029,6 +2041,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         requestId: String(first.request_id),
         productId: String(first.product_id),
         facilityId: String(first.facility_id),
+        deliveryMode: String(first.delivery_mode) as 'retrait' | 'livraison',
+        note: first.request_note === null ? null : String(first.request_note),
         requestStatus,
         expiresAt,
         responses,
@@ -3422,6 +3436,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       quantity: number;
       budgetMode: 'unlimited' | 'maximum';
       budgetMinor: number | null;
+      deliveryMode: 'retrait' | 'livraison';
+      note: string | null;
       idempotencyKey: string;
     }): Promise<AvailabilityResult> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
@@ -3449,19 +3465,19 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ),
         request_insert as (
           insert into v2_availability_requests
-            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
-          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
           from account a
           cross join valid_selection s
           join wallet w on w.account_id = a.id
           on conflict (buyer_account_id, idempotency_key) do nothing
-          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
         ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.status, r.expires_at
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
@@ -3476,6 +3492,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         || Number(row.requested_quantity) !== input.quantity
         || String(row.budget_mode) !== input.budgetMode
         || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor
+        || String(row.delivery_mode) !== input.deliveryMode
+        || (row.request_note === null ? null : String(row.request_note)) !== input.note
       ) {
         throw new AvailabilityPolicyError('The idempotency key is already used for a different availability request.');
       }
@@ -3485,6 +3503,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         facilityId: String(row.facility_id),
         status: String(row.status) as AvailabilityResult['status'],
         expiresAt: new Date(String(row.expires_at)).toISOString(),
+        deliveryMode: String(row.delivery_mode) as 'retrait' | 'livraison',
+        note: row.request_note === null ? null : String(row.request_note),
         message: 'Request sent. The facility can now confirm the live availability.',
       };
     },

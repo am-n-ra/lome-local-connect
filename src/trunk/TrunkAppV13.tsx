@@ -22,6 +22,7 @@ import { AdminV13 } from './AdminV13';
 import { BuyerFlowV13 } from './BuyerFlowV13';
 import { PublicQrScannerSheet } from '../components/ui/PublicQrScannerSheet';
 import { SellerV13 } from './SellerV13';
+import { SellerReplyV13 } from './SellerReplyV13';
 import { ProductCatalogueV13 } from './ProductCatalogueV13';
 import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
@@ -30,7 +31,7 @@ import { OnboardV13 } from './OnboardV13';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -170,7 +171,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -434,6 +435,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         }
         const result = await requestAvailability({
           productId, facilityId, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, token,
+          deliveryMode: 'retrait',
+          note: null,
           idempotencyKey: 'bulk-' + facilityId + '-' + crypto.randomUUID(),
         });
         if (!result.ok || !result.data) return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
@@ -770,7 +773,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
-      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company') { setSheet('seller'); return; }
+      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
       return;
     }
@@ -1102,7 +1105,10 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} />
+      )}
+      {sheet === 'seller-reply' && (
+        <SellerReplyV13 onClose={() => setSheet('seller')} />
       )}
       {sheet === 'products' && (
         <ProductCatalogueV13 onClose={() => setSheet('seller')} onStockEvent={(id) => { setStockEventProductId(id); setSheet('stockevent'); }} />
@@ -1222,6 +1228,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 <div><b>{request.productName}</b><br /><span className="tiny muted">{request.facilityName} · {request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'}</span></div>
                 <span className="status gray">{statusLabel(request.requestStatus)}</span>
               </div>
+              <div className="row" style={{ gap: 4, marginTop: 4 }}>
+                <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
+                {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {money(request.budgetMinor, 'XOF')}</span>}
+              </div>
+              {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
               <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
             </button>
           ))}

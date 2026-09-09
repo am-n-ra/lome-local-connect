@@ -3,9 +3,9 @@ import { getAuthToken } from '../auth';
 import { getSellerCatalogue, getSellerAvailabilityQueue } from './api';
 import type { SellerAvailabilityRequest, SellerCatalogueProduct } from './types';
 
-type SellerV13Props = { onClose: () => void; onProducts?: () => void; onOffers?: () => void; onCompany?: () => void };
+type SellerV13Props = { onClose: () => void; onProducts?: () => void; onOffers?: () => void; onCompany?: () => void; onReply?: () => void };
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply }: SellerV13Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [catalogue, setCatalogue] = useState<{ facilities: Array<{ id: string; name: string }>; products: SellerCatalogueProduct[] } | null>(null);
@@ -44,10 +44,10 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany }: SellerV1
       {busy && <p className="sub">…</p>}
       {catalogue && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 9 }}>
-          <div style={{ padding: 11, borderRadius: 15, background: 'var(--panel)', border: '1px solid var(--line)' }}>
+          <button type="button" onClick={onReply} style={{ textAlign: 'left', padding: 11, borderRadius: 15, background: 'var(--panel)', border: '1px solid var(--line)' }}>
             <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Demandes en attente</small>
             <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{queue.length}</strong>
-          </div>
+          </button>
           <div style={{ padding: 11, borderRadius: 15, background: 'var(--accent-soft)', border: '1px solid var(--line)' }}>
             <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Commandes à préparer</small>
             <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{catalogue.products.filter((p) => p.publicationState === 'published').length}</strong>

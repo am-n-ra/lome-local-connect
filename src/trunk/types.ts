@@ -58,6 +58,8 @@ export interface AvailabilityResult {
   facilityId: string;
   status: AvailabilityRequestState;
   expiresAt: string;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
   message: string;
 }
 
@@ -82,6 +84,8 @@ export interface AvailabilityResponsesResult {
   requestId: string;
   productId: string;
   facilityId: string;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
   requestStatus: AvailabilityRequestState;
   expiresAt: string;
   responses: BuyerAvailabilityResponse[];
@@ -97,6 +101,8 @@ export interface BuyerAvailabilityRequestSummary {
   requestedQuantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
   requestStatus: AvailabilityRequestState;
   createdAt: string;
   expiresAt: string;
@@ -208,6 +214,8 @@ export interface SellerAvailabilityRequest {
   requestedQuantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  requestNote: string | null;
   requestStatus: AvailabilityRequestState;
   createdAt: string;
   expiresAt: string;

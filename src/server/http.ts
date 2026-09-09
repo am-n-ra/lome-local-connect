@@ -1252,7 +1252,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const quantity = Number(input.quantity);
       const budgetMode = input.budgetMode === 'maximum' ? 'maximum' : 'unlimited';
       const budgetMinor = input.budgetMinor === null || input.budgetMinor === undefined ? null : Number(input.budgetMinor);
+      const deliveryMode = input.deliveryMode === 'livraison' ? 'livraison' : 'retrait';
+      const note = typeof input.note === 'string' && input.note.trim().length > 0 ? input.note.trim() : null;
       const idempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
+
       if (!productId || !facilityId || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0))) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a product and a positive quantity.'));
         return true;
@@ -1261,7 +1264,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A stable idempotency key is required.'));
         return true;
       }
-      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, idempotencyKey });
+      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

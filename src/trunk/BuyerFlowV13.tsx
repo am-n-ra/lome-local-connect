@@ -116,6 +116,8 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
         quantity,
         budgetMode,
         budgetMinor: budgetMode === 'maximum' ? Math.round(Number(budget) * 100) : null,
+        deliveryMode,
+        note: availNote.trim().length > 0 ? availNote.trim() : null,
         token,
         idempotencyKey: 'flow-' + crypto.randomUUID(),
       });

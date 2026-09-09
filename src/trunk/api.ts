@@ -95,6 +95,8 @@ export async function requestAvailability(input: {
   quantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
   token: string;
   idempotencyKey: string;
 }): Promise<ApiResult<AvailabilityResult>> {
@@ -112,6 +114,8 @@ export async function requestAvailability(input: {
       quantity: input.quantity,
       budgetMode: input.budgetMode,
       budgetMinor: input.budgetMinor,
+      deliveryMode: input.deliveryMode,
+      note: input.note,
     }),
   });
   return parse<AvailabilityResult>(response);

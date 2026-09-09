@@ -11,6 +11,8 @@ const availabilityInput = {
   quantity: 2,
   budgetMode: 'maximum' as const,
   budgetMinor: 1000,
+  deliveryMode: 'livraison' as const,
+  note: 'Livrer avant 17h',
   idempotencyKey: 'availability-key-1',
 };
 
@@ -22,6 +24,8 @@ const resultRow = {
   budget_mode: 'maximum',
   budget_minor: 1000,
   status: 'submitted',
+  delivery_mode: 'livraison',
+  request_note: 'Livrer avant 17h',
   expires_at: '2026-08-22T01:00:00.000Z',
 };
 
@@ -236,6 +240,8 @@ describe('buyer request resume seam', () => {
       created_at: '2026-08-23T10:00:00.000Z',
       expires_at: '2026-08-23T11:00:00.000Z',
       response_count: 1,
+      delivery_mode: 'livraison',
+      request_note: 'Livrer avant 17h',
     }]);
     const repository = createTrunkRepository(call.sql);
 
@@ -253,6 +259,8 @@ describe('buyer request resume seam', () => {
       createdAt: '2026-08-23T10:00:00.000Z',
       expiresAt: '2026-08-23T11:00:00.000Z',
       responseCount: 1,
+      deliveryMode: 'livraison',
+      note: 'Livrer avant 17h',
     }] });
     expect(call.queries[0]).toContain('a.auth_user_id');
     expect(call.queries[0]).toContain('a.suspended_at is null');
@@ -309,6 +317,8 @@ describe('seller availability queue read seam', () => {
         expires_at: '2099-08-23T01:00:00.000Z',
         response_status: 'available',
         response_observed_at: '2026-08-23T00:05:00.000Z',
+        delivery_mode: 'livraison',
+        request_note: 'Livrer avant 17h',
         freshness: 'fresh',
       }]);
     }) as unknown as SqlStub;
