@@ -423,7 +423,7 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
     category: row.category ? String(row.category) : null,
     unit: String(row.unit ?? 'unit'),
     couponLabel: row.coupon_label ? String(row.coupon_label) : null,
-    currency: String(row.currency ?? 'USD'),
+    currency: String(row.currency ?? 'XOF'),
     stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === undefined ? 0 : Number(row.quantity_allocated_omni),
     prixOriginal: priceMinor,
     prixReduit,
@@ -1980,7 +1980,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           ar.status as response_status,
           ar.quantity_available,
           ar.price_minor,
-          coalesce(ar.offer_snapshot ->> 'currency', 'USD') as currency,
+          coalesce(ar.offer_snapshot ->> 'currency', 'XOF') as currency,
           ar.seller_message,
           ar.observed_at,
           case
@@ -2013,7 +2013,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           status: String(row.response_status) as BuyerAvailabilityResponseStatus,
           quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
           priceMinor: row.price_minor === null ? null : Number(row.price_minor),
-          currency: String(row.currency ?? 'USD'),
+          currency: String(row.currency ?? 'XOF'),
           sellerMessage: row.seller_message === null ? null : String(row.seller_message),
           observedAt: new Date(String(row.observed_at)).toISOString(),
           freshness: String(row.freshness) as AvailabilityResponsesResult['responses'][number]['freshness'],
@@ -2429,7 +2429,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         retryDatabase(() => sql`
           select f.id as facility_id, f.name as facility_name, f.commercial_plan,
                  coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
-                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
           from v2_facilities f
           join v2_accounts a on a.id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
@@ -2448,7 +2448,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const balance = (balanceRows as Record<string, unknown>[])[0];
       return {
         walletId,
-        currency: String(wallet.currency ?? 'USD'),
+        currency: String(wallet.currency ?? 'XOF'),
         balanceMinor: Number(balance?.balance_minor ?? 0),
         entries: (entryRows as Record<string, unknown>[]).map((row) => ({
           id: String(row.id),
@@ -2759,7 +2759,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ), facility as (
           select f.id as facility_id, f.account_id,
                  coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
-                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
           from v2_facilities f
           join seller s on s.account_id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
@@ -2887,7 +2887,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_availability_responses
             (request_id, facility_id, responder_account_id, status, quantity_available, price_minor, offer_snapshot, seller_message, idempotency_key)
           select e.request_id, e.facility_id, e.seller_account_id, ${input.status}, e.quantity_available, e.price_minor,
-                 jsonb_build_object('unit_price_minor', e.price_minor, 'currency', 'USD'), ${input.sellerMessage}, ${input.idempotencyKey}
+                 jsonb_build_object('unit_price_minor', e.price_minor, 'currency', 'XOF'), ${input.sellerMessage}, ${input.idempotencyKey}
           from eligible e
           where not exists (select 1 from existing)
           on conflict (responder_account_id, idempotency_key) where idempotency_key is not null do nothing
