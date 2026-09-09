@@ -109,3 +109,14 @@ export function sortProductsStockFirst<T extends { stockLoueOmni: number }>(prod
     Number(b2.stockLoueOmni >  ​0) - Number(a2.stockLoueOmni >  ​0)
   );
 }
+
+export interface WalletBucketTotals { creditMinor: number; spendMinor: number }
+
+export function walletBucketTotals(entries: Array<{ kind: string; amountMinor: number }>): WalletBucketTotals {
+  let creditMinor =  ​0;let spendMinor =  ​0;
+  for (const e of entries) {
+    if ((['recharge', 'bonus_grant', 'reversal', 'coupon_credit'] as string[]).includes(e.kind)) creditMinor += e.amountMinor; else spendMinor += e.amountMinor;
+
+  }
+  return { creditMinor, spendMinor };
+}

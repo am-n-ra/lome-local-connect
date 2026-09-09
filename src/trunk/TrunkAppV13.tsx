@@ -10,7 +10,7 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -1316,6 +1316,12 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 <div className="tile"><small>Recherches enregistrées</small><strong>{savedSearches.length}</strong></div>
                 <div className="tile ok"><small>Bonus vendeur</small><strong>20 $</strong></div>
               </div>
+{wallet.entries.length > 0 && (
+                <div className="stat" style={{ marginTop: 8 }}>
+                  <div className="tile"><small>Crédits récents</small><strong>{money(walletBucketTotals(wallet.entries).creditMinor, wallet.currency)}</strong></div>
+                  <div className="tile"><small>Services engagés récents</small><strong>{money(walletBucketTotals(wallet.entries).spendMinor, wallet.currency)}</strong></div>
+                </div>
+              )}
               <div className="cardbox">
                 <div className="eyebrow">Recharger le Wallet</div>
                 <p className="tiny muted">Rechargez des crédits Omni pour les services de plateforme. La confirmation finale vient du webhook FedaPay vérifié.</p>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingAction, pendingActionResume, sortProductsStockFirst } from './ui-helpers';
+import { describePendingAction, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -29,5 +29,15 @@ describe('PendingAction resume contract', () => {
     expect(sorted.map((p) => p.id)).toEqual(['b', 'c', 'a', 'd']);
     expect(items.map((p) => p.id)).toEqual(['a', 'b', 'c', 'd']);
     expect(sorted).not.toBe(items);
+  });
+
+  it('splits wallet buckets from ledger kinds', () => {
+    const totals = walletBucketTotals([
+      { kind: 'recharge', amountMinor:  ​1000 },
+      { kind: 'bonus_grant', amountMinor:​  ​500 },
+      { kind: 'slot_spend', amountMinor:​  ​300 },
+      { kind: 'facility_pro_spend', amountMinor:​  ​200 },
+    ]);
+    expect(totals).toEqual({ creditMinor:1500, spendMinor:500 });
   });
 });
