@@ -34,6 +34,8 @@
 
 | 2026-09-09 | Reconcile V-7c (T7(: onboarding gating + reprise auto livrés end-to-end. `PendingAction` contract + `gateRequest` + auth → onboard → reprise wiring + `BuyerFlowV13.onGate`. **52 files/326 tests** (+2 tests PendingAction/Resume(, lint + `check:boundary` clean, build `index-BffyAsnS.js`. **T-07d non vérifiable depuis ce sandbox** ( Vercel Security Checkpoint Code 29( même sur assets( — re-vérifier prod hash === build local depuis session humaine avant verdict. | **T7 `done`** ( onboarding gating livré(; D-3(a + (b( satisfaits. | advance: prochaine = **D-5 mini-slices ( T-7e/f** puis re-vérif T-07d humaine + clôture Gate | Founder HQ + Nature Way | D-5 ( mini-slices( avant verdict final Gate; re-check T-07d humain |
 
+| 2026-09-09 | Reconcile D-5 (T-7e/: CATALOG_READY livre — SellerCatalogueResult.catalogReady + badge SellerV13 ( commit af5bc82（; 52 files/327 tests;; lint + `check:boundary` clean;; build `index-DS0gVyMG.js`; **T-07d ✅ prod sert `index-DS0gVyMG.js` === build local（ 2026-09-09（**. Reste bundle D-5: wallet buckets UI, data company admin, Cards product-first — slices suivants. | T-7e/CATALOG_READY `done`（;D-5 reste: `partial`. | advance | Founder HQ + `/nature-way` | Dispatch prochain mini-slice D-5 restant / verdict fondateur「 Go with limits 」 avant clôture |
+
 ## Reconcile log（ 2026-09-09（
 
 | Date | Evidence | Task changes | Decision | Owner | Next review |
