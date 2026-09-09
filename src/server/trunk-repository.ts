@@ -2670,6 +2670,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       rechecked: number;
       credited: number;
       unchanged: number;
+      skipped: { providerTransactionId: string; providerStatus: string | null; reason: string }[];
       errors: { providerTransactionId: string; message: string }[];
     }> {
       const actorRows = await retryDatabase(() => sql`
@@ -2692,13 +2693,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         order by r.created_at
       `)) as unknown as Record<string, unknown>[];
       const errors: { providerTransactionId: string; message: string }[] = [];
+      const skipped: { providerTransactionId: string; providerStatus: string | null; reason: string }[] = [];
       let credited = 0;
       for (const pending of pendingRows as Record<string, unknown>[]) {
         const providerTransactionId = String(pending.provider_transaction_id).trim();
         try {
           const snapshot = await fetchFedaPayTransaction(providerTransactionId);
-          if (snapshot.status !== 'approved') continue;
-          if (!snapshot.omniRechargeId) continue;
+          if (snapshot.status !== 'approved') {
+            skipped.push({ providerTransactionId, providerStatus: snapshot.status, reason: 'not_approved' });
+            continue;
+          }
+          if (!snapshot.omniRechargeId) {
+            skipped.push({ providerTransactionId, providerStatus: snapshot.status, reason: 'missing_reference' });
+            continue;
+          }
           const outcome = await this.reconcileWalletRecharge({
             providerTransactionId,
             providerEventId: `fedapay:${providerTransactionId}:admin-reconcile`,
@@ -2717,7 +2725,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         authorized: true,
         rechecked: pendingRows.length,
         credited,
-        unchanged: Math.max(0, pendingRows.length - credited - errors.length),
+        unchanged: skipped.length,
+        skipped,
         errors,
       };
     },

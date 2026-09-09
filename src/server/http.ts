@@ -855,7 +855,7 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required to re-verify Wallet recharges.'));
         return true;
       }
-      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, errors: result.errors } });
+      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, skipped: result.skipped, errors: result.errors } });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/fedapay/webhook') {

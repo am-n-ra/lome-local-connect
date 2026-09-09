@@ -77,8 +77,17 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
       const result = await reconcileRecharges({ token });
       if (result.ok && result.data) {
-        const { rechecked, credited, unchanged, errors } = result.data;
-        setToast({ kind: 'ok', text: `${credited} recharge(s) confirmée(s) · ${unchanged} inchangée(s) sur ${rechecked} revérifiée(s)${errors.length ? ` · ${errors.length} erreurs` : ''}.` });
+        const { rechecked, credited, skipped, errors } = result.data;
+        const notApproved = skipped.filter((item) => item.reason === 'not_approved').length;
+        const noRef = skipped.filter((item) => item.reason === 'missing_reference').length;
+        const unchanged = skipped.length;
+        const detail = [
+          credited ? `${credited} confirmée(s)` : '',
+          notApproved ? `${notApproved} pas encore approuvée(s)` : '',
+          noRef ? `${noRef} sans référence` : '',
+          unchanged -notApproved - noRef ? `${unchanged - notApproved - noRef} autre(s)` : '',
+        ].filter(Boolean).join(' · ');
+        setToast({ kind: 'ok', text: `Revérifié (${rechecked}): ${detail || 'aucune en attente.'}${errors.length ? ` · ${errors.length} erreurs` : ''}.` });
       } else {
         setToast({ kind: 'err', text: result.error?.message ?? 'Revérification impossible.' });
       }

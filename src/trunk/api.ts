@@ -396,12 +396,12 @@ export async function getOperatorRuns(input: { token: string }): Promise<ApiResu
   return parse<OperatorRunsResult>(response);
 }
 
-export async function reconcileRecharges(input: { token: string }): Promise<ApiResult<{ rechecked: number; credited: number; unchanged: number; errors: Array<{ providerTransactionId: string; message: string }> }>> {
+export async function reconcileRecharges(input: { token: string }): Promise<ApiResult<{ rechecked: number; credited: number; unchanged: number; skipped: Array<{ providerTransactionId: string; providerStatus: string | null; reason: string }>; errors: Array<{ providerTransactionId: string; message: string }> }>> {
   const response = await fetchWithRecovery('/api/v2/admin/reconcile-recharges', {
     method: 'POST',
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
-  return parse<{ rechecked: number; credited: number; unchanged: number; errors: Array<{ providerTransactionId: string; message: string }> }>(response);
+  return parse<{ rechecked: number; credited: number; unchanged: number; skipped: Array<{ providerTransactionId: string; providerStatus: string | null; reason: string }>; errors: Array<{ providerTransactionId: string; message: string }> }>(response);
 }
 
 export async function createFacilityClaimDraft(input: { facilityId: string; token: string }): Promise<ApiResult<ClaimDraftResult>> {

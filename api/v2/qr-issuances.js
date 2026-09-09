@@ -2428,13 +2428,20 @@ function createTrunkRepository(sql = database()) {
         order by r.created_at
       `);
       const errors = [];
+      const skipped = [];
       let credited = 0;
       for (const pending of pendingRows) {
         const providerTransactionId = String(pending.provider_transaction_id).trim();
         try {
           const snapshot = await fetchFedaPayTransaction(providerTransactionId);
-          if (snapshot.status !== "approved") continue;
-          if (!snapshot.omniRechargeId) continue;
+          if (snapshot.status !== "approved") {
+            skipped.push({ providerTransactionId, providerStatus: snapshot.status, reason: "not_approved" });
+            continue;
+          }
+          if (!snapshot.omniRechargeId) {
+            skipped.push({ providerTransactionId, providerStatus: snapshot.status, reason: "missing_reference" });
+            continue;
+          }
           const outcome = await this.reconcileWalletRecharge({
             providerTransactionId,
             providerEventId: `fedapay:${providerTransactionId}:admin-reconcile`,
@@ -2453,7 +2460,8 @@ function createTrunkRepository(sql = database()) {
         authorized: true,
         rechecked: pendingRows.length,
         credited,
-        unchanged: Math.max(0, pendingRows.length - credited - errors.length),
+        unchanged: skipped.length,
+        skipped,
         errors
       };
     },
@@ -4048,7 +4056,7 @@ async function handleApi(req, res, pathname, url) {
         json(res, 403, errorBody(correlationId, "FORBIDDEN", "An active Omni Admin role is required to re-verify Wallet recharges."));
         return true;
       }
-      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, errors: result.errors } });
+      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, skipped: result.skipped, errors: result.errors } });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/fedapay/webhook") {
