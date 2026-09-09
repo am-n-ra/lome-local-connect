@@ -54,6 +54,15 @@ export async function listAdminAuditEvents(input: { token: string; eventType?: s
   return parse(response);
 }
 
+export async function setSellerFacilityOperationalState(input: { token: string; facilityId: string; state: FacilityOperationalState }): Promise<ApiResult<{ facilityId: string; operationalState: FacilityOperationalState }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/operational-state`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ state: input.state }),
+  });
+  return parse(response);
+}
+
 export async function setFacilityOperationalState(input: { token: string; facilityId: string; state: FacilityOperationalState; reason: string }): Promise<ApiResult<{ facilityId: string; operationalState: FacilityOperationalState }>> {
   const response = await fetchWithRecovery(`/api/v2/admin/facilities/${encodeURIComponent(input.facilityId)}/operational-state`, {
     method: 'POST',

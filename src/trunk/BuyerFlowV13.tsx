@@ -15,7 +15,13 @@ type BuyerFlowV13Props = {
   product: FlowProduct;
   onClose: () => void;
   onGate?: (action: PendingAction) => boolean;
+  walletBalanceMinor?: number | null;
 };
+
+function money(minor: number, currency = 'XOF'): string {
+  const whole = Number.isInteger(minor / 100);
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
+}
 
 const STEPS: Array<{ id: Stage; label: string }> = [
   { id: 'avail', label: 'Dispo' },
@@ -43,7 +49,7 @@ export function qrPayload(transactionId: string, token: string): string {
   return `${transactionId}:${token}`;
 }
 
-export function BuyerFlowV13({ facility, product, onClose, onGate }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalanceMinor }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -391,8 +397,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate }: BuyerFlowV1
         <div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Omni Wallet</b><br /><span className="tiny muted">0,00 $ disponible</span></div>
-              <span className="status gray">Indisponible</span>
+              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible — recharger via le Wallet' : `${money(walletBalanceMinor, 'XOF')} disponible`}</span></div>
+              <span className="status gray">{walletBalanceMinor !== null && walletBalanceMinor !== undefined && walletBalanceMinor > 0 ? 'Disponible' : 'Indisponible'}</span>
             </div>
           </div>
           <div className="cardbox" style={{ marginTop: 6 }}>

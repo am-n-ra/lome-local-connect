@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getSellerCatalogue, getSellerAvailabilityQueue } from './api';
+import { getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
+import type { FacilityOperationalState, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -25,6 +25,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [catalogue, setCatalogue] = useState<SellerCatalogueResult | null>(null);
   const [queue, setQueue] = useState<SellerAvailabilityRequest[]>([]);
   const [toast, setToast] = useState('');
+  const [toogleBusy, setToogleBusy] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
@@ -46,6 +47,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
 
   useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
 
+
   const lang = sellerRouteLabels();
   const ws = buildSellerWorkspace({
     facilities: propsCatalogue?.facilities ?? catalogue?.facilities ?? [],
@@ -54,6 +56,26 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     publicFacilities,
     selFacilityId: null,
   });
+
+  const activeFacility = (propsCatalogue ?? catalogue)?.facilities?.find((f) => f.id === ws.selFacilityId) ?? null;
+  const opState: FacilityOperationalState = activeFacility?.operationalState ?? 'ouvert';
+
+  const toggleOpState = useCallback(async (next: FacilityOperationalState) => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) return;
+    setToogleBusy(true); setError('');
+    try {
+      const result = await setSellerFacilityOperationalState({ token, facilityId: ws.selFacilityId, state: next });
+      if (result.ok && result.data) {
+        setToast(next === 'ouvert' ? 'Votre commerce est ouvert.' : 'Votre commerce est fermé — indisponible dans la recherche.');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setError(result.error?.message ?? 'Changement d’état non enregistré.');
+      }
+    } catch { setError('Changement d’état non enregistré.'); }
+    finally { setToogleBusy(false); }
+  }, [ws.selFacilityId, onRefresh, load]);
+
   const stockSignal = ws.stockCount > 0 ? `${ws.stockCount} produit${ws.stockCount > 1 ? 's' : ''} · ${ws.stockTotal} unité${ws.stockTotal > 1 ? 's' : ''} Omni` : 'Aucun produit publié';
   const onMapCount = ws.ownedPublic.length;
   const hasData = (propsCatalogue ?? catalogue) !== null;
@@ -93,8 +115,8 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 9 }}>
         <span className="tiny muted">Je suis actif en ce moment</span>
         <div style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', width: 110 }}>
-          <button type="button" className="btn sm" style={{ flex: 1, borderRadius: 999, minHeight: 30 }}>ON</button>
-          <button type="button" className="btn ghost sm" style={{ flex: 1, borderRadius: 999, minHeight: 30 }}>OFF</button>
+          <button type="button" className={opState === 'ouvert' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} disabled={toogleBusy || !ws.selFacilityId} onClick={() => void toggleOpState('ouvert')}>ON</button>
+          <button type="button" className={opState !== 'ouvert' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} disabled={toogleBusy || !ws.selFacilityId} onClick={() => void toggleOpState('ferme')}>OFF</button>
         </div>
       </div>
       <div className="btnrow" style={{ marginTop: 5 }}>

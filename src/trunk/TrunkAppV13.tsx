@@ -116,7 +116,7 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
@@ -254,6 +254,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             setAccountRoles(caps.data.roles ?? []);
             setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
             setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+            setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
             if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
           }
         }
@@ -701,11 +702,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
 
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
-    if (sessionUser) base.push('seller');
+    if (sessionUser && sellerAvailable) base.push('seller');
     if (adminTools) base.push('admin');
     if (adminTools) base.push('operator');
     return base;
-  }, [sessionUser, adminTools]);
+  }, [sessionUser, adminTools, sellerAvailable]);
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
@@ -1166,14 +1167,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             setFlowFacility({ id: resume.facilityId,name: resume.facilityName }); setFlowProduct({ id: resume.productId,name: resume.productName }); setSheet('flow');
           } else if (resume.sheet === 'facility') {
             setSelectedId(resume.facilityId)
-            setSheet('facility'); void handlePinSelect({ id: resume.facilityId,name: 'Ma facilité',category: 'commerce',address: null,latitude: 0,longitude: 0,trust: 'unclaimed',plan: 'free',productCount: 0 } as PublicFacility);
+            setSheet('facility'); void handlePinSelect({ id: resume.facilityId,name: 'Ma facilité',category: 'commerce',address: null,latitude: resume.latitude ?? 0,longitude: resume.longitude ?? 0,trust: 'unclaimed',plan: 'free',productCount: 0 } as PublicFacility);
           } else {
             setSheet(resume.sheet);
           }
         }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
@@ -1216,7 +1217,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                   </>
                 )}
                 <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>Compte</b><small>profil & rôles</small></span></button>
-                <button className="menuitem" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setAdminTools(false); setAccountRoles([]); setRole('buyer'); setSheet('none'); }}><span className="mi"><LogOut size={15} /></span><span><b>Se déconnecter</b></span></button>
+                <button className="menuitem" type="button" onClick={async () => { await authClient?.signOut?.().catch(() => undefined); setSessionUser(null); setAdminTools(false); setSellerAvailable(false); setAccountRoles([]); setRole('buyer'); setSheet('none'); }}><span className="mi"><LogOut size={15} /></span><span><b>Se déconnecter</b></span></button>
               </>
             )}
           </div>
@@ -1232,7 +1233,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="cardbox">
             <div className="kv"><span>Identité</span><b>{sessionUser.name ?? sessionUser.email}</b></div>
             <div className="kv"><span>Rôles</span><b>{eligibleRoles.join(' · ')}</b></div>
-            <div className="kv"><span>Facilité affiliée</span><b>{(accountRoles.some((r) => r.includes('seller')) ? 'Accès vendeur' : 'Aucune')}</b></div>
+            <div className="kv"><span>Facilité affiliée</span><b>{sellerAvailable ? 'Accès vendeur' : 'Aucune'}</b></div>
             <div className="kv"><span>Compte</span><b>{sessionUser.email}</b></div>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -1240,7 +1241,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Plan</span><b>{eligibleRoles.includes('seller') ? 'Vendeur Free' : 'Acheteur Free'}</b></div>
+            <div className="kv"><span>Plan</span><b>{sellerAvailable ? 'Vendeur Free' : 'Acheteur Free'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('plans')}>Voir les plans</button>
           </div>
           <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
@@ -1270,7 +1271,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <p className="sub" style={{ marginTop: 8 }}>Aucune demande enregistrée. Lancez une recherche, puis demandez la dispo d’un produit.</p>
           )}
           {buyerRequests.map((request) => (
-            <button key={request.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: 0, longitude: 0, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>
+            <button key={request.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: request.latitude, longitude: request.longitude, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
                 <div><b>{request.productName}</b><br /><span className="tiny muted">{request.facilityName} · {request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'}</span></div>
                 <span className="status gray">{statusLabel(request.requestStatus)}</span>

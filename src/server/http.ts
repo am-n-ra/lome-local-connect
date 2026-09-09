@@ -25,7 +25,7 @@ export class ApiInputError extends Error {
     super(message);
     this.name = 'ApiInputError';
   }
-}
+    }
 
 export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
@@ -44,13 +44,13 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
     status: 500,
     body: errorBody(correlationId, 'INTERNAL_RECOVERABLE', 'The service is temporarily unavailable. Please try again.', true),
   };
-}
+    }
 
 export async function readRawBody(req: IncomingMessage): Promise<string> {
   const chunks: Buffer[] = [];
   for await (const chunk of req) chunks.push(Buffer.from(chunk));
   return Buffer.concat(chunks).toString('utf8');
-}
+    }
 
 export async function parseRequestBody(req: IncomingMessage): Promise<Record<string, unknown>> {
   const raw = await readRawBody(req);
@@ -63,7 +63,7 @@ export async function parseRequestBody(req: IncomingMessage): Promise<Record<str
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ApiInputError('Request body must be an object.');
   return parsed as Record<string, unknown>;
-}
+    }
 
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
@@ -86,7 +86,7 @@ export function extractFedaPayTransaction(payload: Record<string, unknown>): { t
     ? transaction.custom_metadata as Record<string, unknown>
     : {};
   return { transaction, metadata };
-}
+    }
 
 const TRANSACTION_STATES: readonly TransactionState[] = [
   'intent_created',
@@ -107,7 +107,7 @@ export const isTransactionState = (value: unknown): value is TransactionState =>
 function numberParam(url: URL, key: string, fallback: number): number {
   const value = Number(url.searchParams.get(key));
   return Number.isFinite(value) ? value : fallback;
-}
+    }
 
 export async function handleApi(req: IncomingMessage, res: ServerResponse, pathname: string, url: URL) {
   const correlationId = crypto.randomUUID();
@@ -1114,7 +1114,25 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === 'GET' && pathname === '/api/v2/availability-responses') {
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/operational-state')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to set a facility operational state.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/operational-state'.length);
+      const input = await parseRequestBody(req);
+      const state = typeof input.state === 'string' ? input.state.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !['ouvert', 'ferme', 'temporairement_indisponible'].includes(state)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility and operational state.'));
+        return true;
+      }
+      const result = await repository.setSellerFacilityOperationalState({ authUserId, facilityId, state: state as 'ouvert' | 'ferme' | 'temporairement_indisponible', correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+        if (req.method === 'GET' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view availability responses.'));
@@ -1288,4 +1306,4 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     json(res, failure.status, failure.body);
     return true;
   }
-}
+    }

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { X, Camera, CameraOff, ScanLine } from 'lucide-react';
+import { X, Camera, CameraOff, RefreshCw, ScanLine } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { cameraStatusLabel } from '../../lib/camera-scanner';
 
 interface Props {
   onDetected: (facilityId: string) => void;
@@ -39,34 +40,56 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
   onDetectedRef.current = onDetected;
 
   useEffect(() => {
+    if (state !== 'scanning') return;
     let cancelled = false;
-    const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
-    scannerRef.current = scanner;
-    scanner
-      .start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 220, height: 220 } },
-        (decoded) => {
-          if (cancelled || detectedRef.current) return;
-          const facilityId = extractFacilityId(decoded);
-          if (!facilityId) return;
-          detectedRef.current = true;
-          onDetectedRef.current(facilityId);
-        },
-        () => undefined,
-      )
-      .then(() => { if (!cancelled) setState('scanning'); })
-      .catch((caught) => {
+    let stream: MediaStream | null = null;
+    const teardown = () => {
+      stream?.getTracks().forEach((track) => track.stop());
+      stream = null;
+      scannerRef.current?.stop().then(() => scannerRef.current?.clear()).catch(() => undefined);
+      scannerRef.current = null;
+    };
+    const stopOnHidden = () => {
+      if (document.visibilityState === 'hidden') {
+        cancelled = true;
+        teardown();
+        if (!detectedRef.current) setState('starting');
+      }
+    };
+    document.addEventListener('visibilitychange', stopOnHidden);
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices?.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        if (cancelled || !stream) { stream?.getTracks().forEach((track) => track.stop()); return; }
+        const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
+        scannerRef.current = scanner;
+        await scanner
+          .start(
+            { facingMode: { ideal: 'environment' } } ,
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            (decoded) => {
+              if (cancelled || detectedRef.current) return;
+              const facilityId = extractFacilityId(decoded);
+              if (!facilityId) return;
+              detectedRef.current = true;
+              onDetectedRef.current(facilityId);
+            },
+            () => undefined,
+          );
+        if (cancelled) { teardown(); return; }
+        setState('scanning');
+      } catch (caught) {
         if (cancelled) return;
         setState('error');
         setError(caught instanceof Error ? caught.message : 'La caméra est indisponible. Autorisez l’accès ou vérifiez l’appareil.');
-      });
+      }
+    })();
     return () => {
       cancelled = true;
-      scanner.stop().then(() => scanner.clear()).catch(() => undefined);
-      scannerRef.current = null;
+      document.removeEventListener('visibilitychange', stopOnHidden);
+      teardown();
     };
-  }, []);
+  }, [state]);
 
   return (
     <section className="omni-sheet omni-sheet-enter context-sheet" role="dialog" aria-modal="false" aria-label="Scanner un QR" style={{ height: '52%' }}>
@@ -79,16 +102,24 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
         <button type="button" onClick={onClose} aria-label="Fermer"><X size={16} /></button>
       </div>
       <div className="maquette-cardbox" style={{ display: 'grid', placeItems: 'center', padding: 12 }}>
-        {state === 'error' ? (
+        {state === 'starting' ? (
+          <div style={{ display: 'grid', placeItems: 'center', gap: 8, padding: 14, textAlign: 'center' }}>
+            <Camera size={26} aria-hidden="true" />
+            <p className="tiny muted" style={{ fontSize: 10 }}>Prêt à scanner ?</p>
+            <button className="btn sm" type="button" onClick={() => setState('scanning')}><Camera size={14} /> Autoriser et démarrer la caméra</button>
+            <span className="tiny muted" style={{ fontSize: 9 }}>La caméra ne démarre pas toute seule. Vous pouvez aussi saisir le code ci-dessous.</span>
+          </div>
+        ) : state === 'error' ? (
           <div style={{ display: 'grid', placeItems: 'center', gap: 8, padding: 14, textAlign: 'center' }}>
             <CameraOff size={26} aria-hidden="true" />
             <p className="tiny muted" style={{ fontSize: 10 }}>{error}</p>
+            <button className="btn ghost sm" type="button" onClick={() => { setState('starting'); setError(''); }}><RefreshCw size={13} /> Réessayer</button>
           </div>
         ) : (
           <div style={{ width: '100%', maxWidth: 260 }}>
             <div id={SCANNER_ID} style={{ width: '100%', borderRadius: 14, overflow: 'hidden' }} />
             <span className="tiny muted" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, marginTop: 6 }}>
-              <Camera size={12} aria-hidden="true" /> {state === 'scanning' ? 'Visez le QR de la facilité' : 'Ouverture de la caméra…'}
+              <Camera size={12} aria-hidden="true" /> {cameraStatusLabel(state === 'scanning' ? 'active' : 'permission_pending')}
             </span>
           </div>
         )}

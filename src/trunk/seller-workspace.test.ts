@@ -3,8 +3,8 @@ import type { PublicFacility, SellerCatalogueFacility, SellerCatalogueProduct } 
 import { buildSellerWorkspace, sellerRouteLabels, selectSellerFacility, isSellerWorkspaceRoute, sellerMenuHasFunctionalRoutes } from './seller-workspace';
 
 const catalogFacilities: SellerCatalogueFacility[] = [
-  { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', productCount: 2 },
-  { id: 'facility-2', name: 'Boutique B', category: 'Épicerie', address: 'Lomé', currency: 'XOF', slotState: 'active', productCount: 1 },
+  { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 2 },
+  { id: 'facility-2', name: 'Boutique B', category: 'Épicerie', address: 'Lomé', currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 1 },
 ];
 
 const publicFacilities: PublicFacility[] = [

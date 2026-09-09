@@ -107,6 +107,8 @@ export interface BuyerAvailabilityRequestSummary {
   createdAt: string;
   expiresAt: string;
   responseCount: number;
+  latitude: number;
+  longitude: number;
 }
 
 export interface BuyerAvailabilityRequestList {
@@ -240,6 +242,7 @@ export interface SellerCatalogueFacility {
   address: string | null;
   currency: string;
   slotState: 'active' | 'missing';
+  operationalState: FacilityOperationalState;
   productCount: number;
 }
 

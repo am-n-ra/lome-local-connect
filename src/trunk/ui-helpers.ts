@@ -90,7 +90,7 @@ export type PendingResume =
   | { sheet: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string }
   | { sheet: 'search' }
   | { sheet: 'seller' }
-  | { sheet: 'facility'; facilityId: string }
+  | { sheet: 'facility'; facilityId: string; latitude?: number; longitude?: number }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {

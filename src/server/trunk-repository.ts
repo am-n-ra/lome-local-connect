@@ -594,6 +594,44 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { facilityId: String(row.id), operationalState: String(row.operational_state) as FacilityOperationalState };
     },
 
+    async setSellerFacilityOperationalState(input: { authUserId: string; facilityId: string; state: FacilityOperationalState; correlationId: string }): Promise<FacilityOperationalStateResult> {
+      if (!FACILITY_OPERATIONAL_STATES.includes(input.state)) {
+        throw new FieldPilotPolicyError('A valid operational state is required.');
+      }
+      const reason = input.state === 'ouvert' ? 'Ouverture déclarée par le vendeur' : 'Fermeture déclarée par le vendeur';
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+          limit 1
+        ), target as (
+          select f.id, seller.id as seller_id
+          from v2_facilities f cross join seller
+          where f.id = ${input.facilityId}::uuid
+            and f.account_id = seller.id
+        ), updated as (
+          update v2_facilities f
+          set operational_state = ${input.state}, updated_at = now()
+          from target
+          where f.id = target.id
+          returning f.id, f.operational_state, target.seller_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select updated.seller_id,, 'facility_operational_state_changed', 'facility', updated.id::text,, ${input.correlationId}, ${reason}
+          from updated
+          returning entity_id
+        )
+        select updated.id,, updated.operational_state
+        from updated join audit on audit.entity_id = updated.id::text
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Seller session is not authorized for this facility or the facility is unavailable.');
+      return { facilityId: String(row.id), operationalState: String(row.operational_state) as FacilityOperationalState };
+    },
+
     async correctFacilitySalesCounter(input: { authUserId: string; facilityId: string; qualifyingSales: number; reason: string; correlationId: string }): Promise<SalesCounterCorrectionResult> {
       if (!Number.isInteger(input.qualifyingSales) || input.qualifyingSales < 0 || input.qualifyingSales > 3 || input.reason.trim().length < 3 || input.reason.trim().length > 1000) {
         throw new FieldPilotPolicyError('A counter value between 0 and 3 and a bounded reason are required.');
@@ -1507,6 +1545,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.name,
           coalesce(f.category, 'Autre') as category,
           f.address,
+          f.operational_state,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -1526,6 +1565,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         address: row.address === null ? null : String(row.address),
         currency: String(row.currency),
         slotState: 'active' as const,
+        operationalState: (['ouvert', 'ferme', 'temporairement_indisponible'].includes(String(row.operational_state)) ? String(row.operational_state) : 'ouvert') as SellerCatalogueFacility['operationalState'],
         productCount: Number(row.product_count ?? 0),
       }));
       const rows = await retryDatabase(() => sql`
@@ -1913,6 +1953,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       createdAt: string;
       expiresAt: string;
       responseCount: number;
+      latitude: number;
+      longitude: number;
     }> }> {
       const rows = await retryDatabase(() => sql`
         select
@@ -1920,6 +1962,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.id as facility_id,
           f.name as facility_name,
           f.category as facility_category,
+          f.latitude as facility_latitude,
+          f.longitude as facility_longitude,
           p.id as product_id,
           p.name as product_name,
           r.requested_quantity,
@@ -1964,6 +2008,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
           responseCount: Number(row.response_count),
+          latitude: Number(row.facility_latitude),
+          longitude: Number(row.facility_longitude),
         })),
       };
     },

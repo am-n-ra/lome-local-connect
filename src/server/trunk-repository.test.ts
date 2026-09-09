@@ -231,6 +231,8 @@ describe('buyer request resume seam', () => {
       facility_id: 'facility-1',
       facility_name: 'Demo Facility',
       facility_category: 'Local supply',
+      facility_latitude: 6.1319,
+      facility_longitude: 1.2223,
       product_id: 'product-1',
       product_name: 'Demo product',
       requested_quantity: 2,
@@ -261,6 +263,8 @@ describe('buyer request resume seam', () => {
       responseCount: 1,
       deliveryMode: 'livraison',
       note: 'Livrer avant 17h',
+      latitude: 6.1319,
+      longitude: 1.2223,
     }] });
     expect(call.queries[0]).toContain('a.auth_user_id');
     expect(call.queries[0]).toContain('a.suspended_at is null');
@@ -1265,7 +1269,7 @@ describe('Product availability Root seam (G-04 trunk)', () => {
   });
 
   it('returns seller catalogue with availability fields after opportunistic expiry', async () => {
-    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, currency: 'XOF', product_count: 1 }];
+    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, operational_state: 'ouvert', currency: 'XOF', product_count: 1 }];
     const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 3, net_price_minor: 4500, publication_state: 'published', availability_state: 'en_stock', availability_expires_at: '2026-09-02T16:00:00.000Z', availability_pro_eligible: true }];
     const queries: string[] = [];
     const seq = [[], [{ id: 'account-1' }], facilityRows, productRows];
@@ -1287,8 +1291,24 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     expect(queries[3]).toContain('availability_state');
   });
 
+  it('lets an owning seller flip its facility operational state (V-7d)', async () => {
+    const call = stubSql([{ id: 'facility-1', operational_state: 'ferme' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setSellerFacilityOperationalState({ authUserId: 'auth-seller-1', facilityId: 'facility-1', state: 'ferme', correlationId: 'corr-seller-1' });
+    expect(result.operationalState).toBe('ferme');
+    expect(call.queries[0]).toContain('onboarding_state = \'seller_ready\'');
+    expect(call.queries[0]).toContain('f.account_id = seller.id');
+    expect(call.queries[0]).toContain('facility_operational_state_changed');
+  });
+
+  it('rejects seller op-state for a facility it does not own (no row returned', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setSellerFacilityOperationalState({ authUserId: 'auth-seller-1', facilityId: 'facility-1', state: 'ferme', correlationId: 'corr-seller-1' })).rejects.toThrow('Seller session is not authorized');
+  });
+
   it('flags the seller catalogue as not ready when no sellable stock exists', async () => {
-    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, currency: 'XOF', product_count: 1 }];
+    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, operational_state: 'ouvert', currency: 'XOF', product_count: 1 }];
     const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0, net_price_minor: null, publication_state: 'published', availability_state: 'a_valider', availability_expires_at: null, availability_pro_eligible: false }];
     const { sql, queries } = stubSqlSequence([[], [{ id: 'account-1' }], facilityRows, productRows]);
     const repository = createTrunkRepository(sql);

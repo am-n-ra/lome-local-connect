@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { correctFacilitySalesCounter, getAdminConsole, getReviewQueue, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState } from './api';
+import { getAdminConsole, getReviewQueue, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState } from './api';
 import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem } from './types';
 
 type AdminV13Props = {
@@ -161,7 +161,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
           )}
           <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Le compteur de ventes ne se modifie pas ici. Chaque décision est motivée & auditée.</p>
           <div className="btnrow">
-            <button className="btn ghost sm" onClick={() => void correctFacilitySalesCounter({ token: '', facilityId: '', qualifyingSales: 0, reason: '' })}>Compteur (voir fiche)</button>
+            <button className="btn ghost sm" type="button" disabled>Compteur — volet opérateur</button>
           </div>
         </>
       )}
