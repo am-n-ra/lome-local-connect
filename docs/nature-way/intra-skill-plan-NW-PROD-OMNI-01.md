@@ -232,11 +232,13 @@
 | 2026-09-08 | Spot-check  ​4 largeurs RESOLVED( fondateur 4/4 OK;bandeau = artefact sandbox( | Gate  ​6 → `ready` | advance | Founder + Nature Way | Dispatch Gate  ​6 to `/nature-way` |
 | 2026-09-09 | Wallet FedaPay hotfixes poussés( suite 313/313, prod `index-Bw-YG3lI.js` === build local(; D-4 ( palette( = T-1 `done`( push `898e88f`( | Gate  ​6 reste `ready` — **décisions fondateur D-1…D-5 requises** pour clôture « Go with limits » | pause at decision boundary | Founder + Nature Way | Réponse D-1…D-5( §4 re-audit( |
 
+| 2026-09-09 | V-7a (T5( seller map-first + V-7b (T6( QR auto/scanner + V-7c (T7( onboarding gating+reprise auto livrés（ pushes `ea71025`+`a7f8e5a`+`3f1a43a`+`6fdfb8a`; suite **52 files/326 tests**( lint+boundary+build ✅; **T-07d ✅ prod `index-BffyAsnS.js` === build local 2026-09-09（**. | T5/T6/T7 `done`（ registre V-7（; **prochaine = D-5 mini-slices（ T-7e/f**（; Gate  ​6 clôture「 Go with limits 」 attend verdict fondateur | advance | Founder HQ + `/nature-way` | Sur D-5（ T-7e/f（ avant verdict final Gate  ​6 |
+
 ### Handoff à Founder HQ( 
 
 > **Local status:** `ready` — evidence Gate  ​6 assemblée et verify ( 313/313, prod hash === local, spot-check 4/4(.
 > **Gate decision:** `pause` — **stop au portail décision**: D-1…D-5 sont des décisions fondateur（ impossible de contourner honnêtement「 Go with limits 」sans elles（.
-> **Closed:** T-1/T-2a/T-2b/T-3/T-8( V-7 register( — T4–T7 planifiées, mappées D-1/D-2/D-3/D-5（; D-4 = résolue via T-1（.
+> **Closed:** T-1/T-2a/T-2b/T-3/T-8( V-7 register( — T4/T5/T6/T7 `done`（ V-7 complet（; D-5 mini-slices（ T-7e/f= prochaine（; D-4 = résolue via T-1（.
 > **Open or blocked:** Aucun blocage technique. Décision fondateur D-1…D-5 en attente —— **owner: fondateur**, plus petite action: répondre §4 re-audit ( options (a( Build now → mini-slices V-7( / (b( dette explicitement triggerée → clôture immédiate「 Go with limits 」(
 > **Resource Receipt:** chargés: SKILL + execution-controller + intra-skill + autonomous-delivery-gates + preuve/dette + HQ copies; artefacts V-7 + re-audit §4 + plan/board.HQ. Template plan + handoff instanciés.
 
