@@ -40,6 +40,8 @@
 
 | 2026-09-09 | Reconcile D-5 (( data company admin( live — CompanyV13 rewired to real seller-catalogue data: per-facility admin cards ( produits/Stock Omni/En-stock-à-valider/catalogReady( + wired Offres & Dispo auto actions(, no mock, no new route ( commit `d802a32`;; 52 files/328 tests;; lint + `check:boundary` clean;; build `index-ttpRQbut.js`; **T-07d ✅ prod sert `index-ttpRQbut.js` === build local（** 2026-09-09（**. D-5 reste: `wallet buckets UI` —— spec owner fondateur; le reste bundle `partial`. | data company admin `done`（; D-5 reste: `partial`（ + wallet-buckets spec pending`. | advance | Founder HQ + `/nature-way` | Verdict fondateur「 Go with limits 」 et/ou spec「 wallet buckets UI 」 = prochaine décision |
 
+| 2026-09-09 | Reconcile D-5 verification —「 unclaimed wording 」 &「 4 étapes AVAILABILITY 」 code-audited SATISFIED ( `TrunkAppV13:1079/1089` unclaimed + `ProductCatalogueV13:10` STATE_LABEL 4 states（; no code needed. D-5 reste = **un seul item: `wallet buckets UI`** — spec owner fondateur,deferred explicitly. | verification `done`; wallet-buckets: `deferred`（ spec required. | advance | Founder HQ + `/nature-way` | Verdict fondateur「 Go with limits 」 et/ou spec「 wallet buckets UI 」 = prochaine décision |
+
 ## Reconcile log（ 2026-09-09（
 
 | Date | Evidence | Task changes | Decision | Owner | Next review |
