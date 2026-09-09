@@ -10,7 +10,7 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
-import { parseFacilityIdFromQr } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -126,6 +126,7 @@ const [bulkDetails, setBulkDetails] = useState<Record<string, FacilityDetail | n
 const [bulkSelection, setBulkSelection] = useState<Record<string, string>>({});
 const [stockEventProductId, setStockEventProductId] = useState<string | null>(null);
 const [pendingSearch, setPendingSearch] = useState('');
+const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 const [bulkLoading, setBulkLoading] = useState(false);
 const [bulkSending, setBulkSending] = useState(false);
 const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
@@ -413,6 +414,13 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       return token;
     } catch { setSheet('auth'); return null; }
   }, []);
+
+  const gateRequest = useCallback((action: PendingAction): boolean => {
+    if (sessionUser) return true;
+    setPendingAction(action);
+    setSheet('auth');
+    return false;
+  }, [sessionUser]);
 
   const openBulk = useCallback(async () => {
     setSheet('bulk');
@@ -1150,10 +1158,22 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <CompanyV13 onClose={() => setSheet('seller')} />
       )}
       {sheet === 'onboard' && (
-        <OnboardV13 pendingSearch={pendingSearch} onClose={() => setSheet('menu')} onComplete={() => { setSheet('none'); }} />
+        <OnboardV13 pendingSearch={pendingSearch} onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => {
+          const act = pendingAction;
+          const resume = pendingActionResume(act);
+          setPendingAction(null);
+          if (resume.sheet === 'flow') {
+            setFlowFacility({ id: resume.facilityId,name: resume.facilityName }); setFlowProduct({ id: resume.productId,name: resume.productName }); setSheet('flow');
+          } else if (resume.sheet === 'facility') {
+            setSelectedId(resume.facilityId)
+            setSheet('facility'); void handlePinSelect({ id: resume.facilityId,name: 'Ma facilité',category: 'commerce',address: null,latitude: 0,longitude: 0,trust: 'unclaimed',plan: 'free',productCount: 0 } as PublicFacility);
+          } else {
+            setSheet(resume.sheet);
+          }
+        }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
@@ -1479,7 +1499,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               const session = await authClient.getSession();
               const user = sessionUserFromAuthResult(session);
               if (user) setSessionUser(user);
-              setSheet("menu");
+              if (pendingAction) { setSheet('onboard'); } else { setSheet("menu"); }
             } catch {
               setError("Connexion impossible - vérifiez vos identifiants.");
             }

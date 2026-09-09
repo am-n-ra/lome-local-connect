@@ -4,6 +4,7 @@ import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { useFreshnessTimer } from './useFreshnessTimer';
+import type { PendingAction } from './ui-helpers';
 
 type FlowProduct = { id: string; name: string };
 type FlowFacility = { id: string; name: string };
@@ -13,6 +14,7 @@ type BuyerFlowV13Props = {
   facility: FlowFacility;
   product: FlowProduct;
   onClose: () => void;
+  onGate?: (action: PendingAction) => boolean;
 };
 
 const STEPS: Array<{ id: Stage; label: string }> = [
@@ -41,7 +43,7 @@ export function qrPayload(transactionId: string, token: string): string {
   return `${transactionId}:${token}`;
 }
 
-export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -112,6 +114,7 @@ export function BuyerFlowV13({ facility, product, onClose }: BuyerFlowV13Props) 
   const request = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
+    if (onGate && !onGate({ kind: 'intent', returnTo: 'flow', facilityId: facility.id, facilityName: facility.name, productId: product.id, productName: product.name, quantity })) return;
     const token = await needAuth();
     if (!token) return;
     setBusy(true); setToast('');
