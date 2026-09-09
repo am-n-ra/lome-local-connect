@@ -844,7 +844,13 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to re-verify Wallet recharges.'));
         return true;
       }
-      const result = await repository.reconcilePendingRecharges({ authUserId, now: new Date().toISOString() });
+      let result;
+      try {
+        result = await repository.reconcilePendingRecharges({ authUserId, now: new Date().toISOString() });
+      } catch (reconcileError) {
+        json(res, 500, errorBody(correlationId, 'INTERNAL_RECOVERABLE', `Reconcile failed: ${reconcileError instanceof Error ? reconcileError.message : String(reconcileError)}`, true));
+        return true;
+      }
       if (!result.authorized) {
         json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required to re-verify Wallet recharges.'));
         return true;
