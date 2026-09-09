@@ -10,7 +10,7 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -1105,7 +1105,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
               {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
-              {selectedFacility.products.map((product) => {
+              {sortProductsStockFirst(selectedFacility.products).map((product) => {
                 const on = facProductSel.includes(product.id);
                 return (
                   <div className="pitem" key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setFacProductSel((current) => on ? current.filter((id) => id !== product.id) : [...current, product.id])}>

@@ -103,3 +103,9 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   if (action?.kind === 'claim') return { sheet: 'facility', facilityId: action.facilityId };
   return { sheet: 'none' };
 }
+
+export function sortProductsStockFirst<T extends { stockLoueOmni: number }>(products: T[]): T[] {
+  return [...products].sort((a2, b2) =>
+    Number(b2.stockLoueOmni >  ​0) - Number(a2.stockLoueOmni >  ​0)
+  );
+}
