@@ -1155,7 +1155,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <OffersV13 onClose={() => setSheet('seller')} />
       )}
       {sheet === 'company' && (
-        <CompanyV13 onClose={() => setSheet('seller')} />
+        <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'onboard' && (
         <OnboardV13 pendingSearch={pendingSearch} onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => {
