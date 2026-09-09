@@ -42,6 +42,8 @@
 
 | 2026-09-09 | Reconcile D-5 verification —「 unclaimed wording 」 &「 4 étapes AVAILABILITY 」 code-audited SATISFIED ( `TrunkAppV13:1079/1089` unclaimed + `ProductCatalogueV13:10` STATE_LABEL 4 states（; no code needed. D-5 reste = **un seul item: `wallet buckets UI`** — spec owner fondateur,deferred explicitly. | verification `done`; wallet-buckets: `deferred`（ spec required. | advance | Founder HQ + `/nature-way` | Verdict fondateur「 Go with limits 」 et/ou spec「 wallet buckets UI 」 = prochaine décision |
 
+| 2026-09-09 | Reconcile D-5 ( wallet buckets UI( live — `walletBucketTotals` pure helper( credit/spend split by ledger kind(,tested( + wallet sheet stat row「 Crédits récents / Services engagés 」 honest recent-entries label( ( commit `638ad33`;; 52 files/329 tests;; lint + `check:boundary` clean;; build `index-BJwt4Bc9.js`;; **T-07d ✅ prod sert `index-BJwt4Bc9.js` === build local（** 2026-09-09（**. **D-5 bundle COMPLET — tous 5 items livrés/provés**（;Gate  ​6 ready「 Go with limits 」 pour verdict fondateur. | wallet buckets UI `done`（;D-5 bundle `done`（ — Gate  ​6 `ready`. | advance | Founder HQ + `/nature-way` | Verdict fondateur「 Go with limits 」 = clôture Gate  ​6,seule décision restante |
+
 ## Reconcile log（ 2026-09-09（
 
 | Date | Evidence | Task changes | Decision | Owner | Next review |
