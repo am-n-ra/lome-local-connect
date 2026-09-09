@@ -189,3 +189,58 @@
 > **Residual gap:** navigateur réel(proxy/tuiles work-host insuffisant(, prod hash — non testé ici (pas de push) ; décision fondateur: tour d'arrivée initial garder mort (T-10p) ou réactiver ?
 > **Next smallest action:** réconcilier HO-OMNI-06 avec `founder-hq-board.md` + `master-plan` (mettre statut `verified`+next-action(
 > **Re-plan trigger:** tsc/test échoue; une décision fondateur change l'orientation (ex: réactiver l'arrivée, pas que la recherche)
+---
+
+## Slice borné — Gate 6 Canopy/launch-readiness — dispersion `/nature-way` ( HO-OMNI-09( 2026-09-09
+
+> **Handoff:** `docs/founder-hq/handoff-receipt-HO-OMNI-09.md` — fondateur : « next go » → Gate 6 prêt, arbitrage D-1…D-5 + ordonnancement V-7.
+> **Gate:** Gate 6 — Canopy/launch-readiness — `ready` ( spot-check 4 largeurs RESOLVED 2026-09-08; wallet FedaPay hotfixes poussés 2026-09-09, suite  ​313/313, prod hash `index-Bw-YG3lI.js` === build local, guardrail T-07d ✅(.
+> **Maturité cible:** clôture honnête « Go with limits » — dettes V-7 listées et **triggerées explicitement** ( etou mini-slices V-7a–e si fondateur choisit Build now per §4 re-audit(.
+
+### Resource Receipt ( Gate  ​6 pass( 
+
+| Status | Exact path |
+|---|---|
+| Loaded | `.agents/skills/nature-way/SKILL.md`; `references/intra-skill-execution-controller.md`; `references/execution-controller.md`; `references/autonomous-delivery-gates.md`; `references/proof-and-decision-ledger.md`; `references/risk-and-escalation-matrix.md`; `references/visual-and-logic-coherence-review.md`; `references/anti-slop-and-debt-review.md`; HQ `references/intra-skill-execution-controller.md` |
+| Template instantiated | `templates/intra-skill-plan.md` → cette section; `templates/skill-handoff-receipt.md` → `docs/founder-hq/handoff-receipt-HO-OMNI-09.md` |
+| Loaded (artefacts( | `docs/nature-way/omni-v7-perfection-tracking-2026-09-07.md`; `docs/nature-way/omni-species-reopen-audit-master-v1.3-g02a-revisited-2026-09-07.md` §4 (D-1…D-5(; `founder-hq-board.md` + `master-plan` (réconciliés 2026-09-09(. |
+| Not loaded / reason | `launch-envelope.md` — pas de release/envelope en scope ici( pas de nouveau déploiement produit(`technical-lead-production-review.md` — pas de décision architecture/money en scope; `founder-mission-contract.md` — contrat déjà verrouillé. |
+
+### Gate plan du slice( Gate  ​6(
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Reconcile evidence Gate 6 ( spot-check + wallet hotfixes + palette pins( | Toutes les preuves matérielles de canon ( 4/4 largeurs, 313/313, prod hash === local( | V-7 register + master-plan + board | `done` ( 2026-09-08/09( |
+| 2 | Clôture honnête « Go with limits »( | Dettes V-7 listées et **triggerées explicitement** ( + arbitrage fondateur D-1…D-5( | Décisions fondateur §4 + V-7 register MAJ | `ready` — attend **D-1…D-5** fondateur |
+| 3 | Tranches V-7 ( si fondateur opte Build now( | D-1…D-5 répondu( → V-7a–e ordonnancées et exécutées en tranches courtes | tsc + tests + build + push par tranche | `planned` |
+
+### Arbre tâches( V-7 tranches( — mappées aux décisions fondateur §4 re-audit(
+
+| ID | Parent | Décision §4 | Objective | Depends | Owner | Status | Acceptance / proof | Risk/debt | Re-plan trigger |
+|---|---|---|---|---|---|---|---|---|---|
+| V-7d ( T-1( | D-4 | Palette pins verrouillée | Pins MapLibre → encre `#1F1F1F`, anneau owned → `#2e8b6f`, third-party paper; test aligné | — | Nature Way | `done` | push `898e88f`; build prod ✅ | — | — |
+| V-7e ( T4( | D-5 | Formulaire retrait/livraison + note | Contrat API `requestAvailability` à étendre` serveur `POST /api/v2/availability` + migration + UI | D-5 fondateur | Nature Way | `planned` | tsc + tests + build + push | Si fondateur opte dette( → `deferred` explicitement triggerée | Réponse D-5 |
+| V-7a ( T5( | D-1 | Seller map-first | Shell map-first seller ( mini-species requise( | D-1 fondateur | Nature Way | `planned( prochaine tranche` | mini-species + tsc + tests + build + push | Si (b( dette( → `deferred` | Réponse D-1 |
+| V-7b ( T6( | D-2 | QR transactionnel seller + auto-génération à l'intention | `createPurchaseIntent` émet QR même création( + scanner caméra prêt‑à‑scanner + fallback `Saisir le code` | D-2 fondateur | Nature Way | `planned` | tsc + tests + build + push | Si (b( dette( → `deferred` | Réponse D-2 |
+| V-7c ( T7( | D-3 | Onboarding d'accès + reprise auto | Gating minimal: intention réelle → identité minimale + soft paywall + reprise automatique | D-3 fondateur | Nature Way | `planned` | tsc + tests + build + push | Si (b( dette( → `deferred` | Réponse D-3 |
+| Items secondaires ( D-5( | D-5 | Cards product‑first + CATALOG_READY, wallet buckets UI, data company admin, unclaimed wording, 4 étapes AVAILABILITY | Mini-slices successifs en V-7e/f ou dette explicitement triggerée | D-5 fondateur | Nature Way | `planned` | Par tranche: tsc + tests + build + push | Option (b( dette( → `deferred` avec owner + trigger | Réponse D-5 |
+
+### Reconcile log( Gate  ​6(
+
+| Date | Evidence | Task changes | Decision | Owner | Next review |
+|---|---|---|---|---|---|
+| 2026-09-08 | Spot-check  ​4 largeurs RESOLVED( fondateur 4/4 OK;bandeau = artefact sandbox( | Gate  ​6 → `ready` | advance | Founder + Nature Way | Dispatch Gate  ​6 to `/nature-way` |
+| 2026-09-09 | Wallet FedaPay hotfixes poussés( suite 313/313, prod `index-Bw-YG3lI.js` === build local(; D-4 ( palette( = T-1 `done`( push `898e88f`( | Gate  ​6 reste `ready` — **décisions fondateur D-1…D-5 requises** pour clôture « Go with limits » | pause at decision boundary | Founder + Nature Way | Réponse D-1…D-5( §4 re-audit( |
+
+### Handoff à Founder HQ( 
+
+> **Local status:** `ready` — evidence Gate  ​6 assemblée et verify ( 313/313, prod hash === local, spot-check 4/4(.
+> **Gate decision:** `pause` — **stop au portail décision**: D-1…D-5 sont des décisions fondateur（ impossible de contourner honnêtement「 Go with limits 」sans elles（.
+> **Closed:** T-1/T-2a/T-2b/T-3/T-8( V-7 register( — T4–T7 planifiées, mappées D-1/D-2/D-3/D-5（; D-4 = résolue via T-1（.
+> **Open or blocked:** Aucun blocage technique. Décision fondateur D-1…D-5 en attente —— **owner: fondateur**, plus petite action: répondre §4 re-audit ( options (a( Build now → mini-slices V-7( / (b( dette explicitement triggerée → clôture immédiate「 Go with limits 」(
+> **Resource Receipt:** chargés: SKILL + execution-controller + intra-skill + autonomous-delivery-gates + preuve/dette + HQ copies; artefacts V-7 + re-audit §4 + plan/board.HQ. Template plan + handoff instanciés.
+
+> **Residual gap:** verdict « Go with limits » non émis —— dépend de D-1…D-5； caméra/GPS réelle ( « partial » per §0.8.4(; prod hash `index-Bw-YG3lI.js` === build local ✅; pas de nouveau push produit en scope.
+.
+> **Next smallest action:** **Fondateur répond D-1…D-5** ( §4 de `docs/nature-way/omni-species-reopen-audit-master-v1.3-g02a-revisited-2026-09-07.md`( — Nature Way exécute la combinaison choisie( V-7a–e en tranches courtes ou dette explicitement triggerée( → Founder HQ réconcilie plan/board → clôture Gate  ​6「 Go with limits 」(
+> **Re-plan trigger:** réponse fondateur D-1…D-5; un test échoue; prod hash diverge; décision fondateur change l'orientation（

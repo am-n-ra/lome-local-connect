@@ -31,3 +31,15 @@
 - V-7a seller map-first（ mini-species requise（
 - V-7b/7c scanners/onboarding（
 - Spot-check 4 largeurs（360/768/1280/1920（ sur prod — RESOLVED 2026-09-08（ automate sandbox + confirmation fondateur（ 4/4 OK;bandeau carte = artefact sandbox（ tile CARTO Lomé fetch direct 200 OK（; Gate 6 = ready
+
+## Reconcile log（ 2026-09-09（
+
+| Date | Evidence | Task changes | Decision | Owner | Next review |
+|---|---|---|---|---|---|
+| 2026-09-08 | Spot-check 4 largeurs RESOLVED（ automate sandbox + confirmation fondateur（ 4/4 OK;bandeau carte = artefact sandbox（ tile CARTO Lomé fetch direct  ​200 OK（ | Gate ​​6 → `ready` | advance | Founder + Nature Way | Dispatch Gate ​​6 to `/nature-way` |
+| 2026-09-09 | Wallet FedaPay hotfixes prod poussés（ webhook live + parse `entity` + XOF math x100 minor + reconcile admin-guarded（ **313/313**, prod hash `index-Bw-YG3lI.js` === build local（ guardrail T-07d ✅（ | **D-4 palette pins（ = T-1（ V-7d（ `done`（ (push `898e88f`（ — correctif « ne bloque pas （ »（ | Gate ​​6 reste `ready` — clôture « Go with limits » attend arbitrage fondateur **D-1…D-5**（ §4 re-audit（ | Founder HQ + Nature Way | Sur réponse fondateur D-1…D-5（ → V-7a–e（ ordonnancées（ ou dette explicitement triggerée（ |
+
+Mapping dette ↔ décisions fondateur (§4 re-audit master-v1.3（:
+- V-7e formulaire retrait/livraison + note（ = **D-5**（ a（ mini-slice（ /（ b（ dette（;
+- V-7a seller map-first（ = **D-1**（ a/b/c（; V-7b QR auto + scanner caméra（ = **D-2**（ a/b（; V-7c onboarding gating（ = **D-3**（ a/b（;
+- **D-4 palette pins（** ✅ **RESOLVED via T-1（ V-7d（**（ — ne bloque plus la clôture honnête.
