@@ -36,6 +36,8 @@
 
 | 2026-09-09 | Reconcile D-5 (T-7e/: CATALOG_READY livre — SellerCatalogueResult.catalogReady + badge SellerV13 ( commit af5bc82（; 52 files/327 tests;; lint + `check:boundary` clean;; build `index-DS0gVyMG.js`; **T-07d ✅ prod sert `index-DS0gVyMG.js` === build local（ 2026-09-09（**. Reste bundle D-5: wallet buckets UI, data company admin, Cards product-first — slices suivants. | T-7e/CATALOG_READY `done`（;D-5 reste: `partial`. | advance | Founder HQ + `/nature-way` | Dispatch prochain mini-slice D-5 restant / verdict fondateur「 Go with limits 」 avant clôture |
 
+| 2026-09-09 | Reconcile D-5 ( Cards product-first( live — `sortProductsStockFirst` pure helper + test; wire facility-sheet product list trie En-stock d'abord( commit `75393bd`;; 52 files/328 tests;; lint + `check:boundary` clean;; build `index-CLkxqTVd.js`; **T-07d ✅ prod sert `index-CLkxqTVd.js` === build local（ 2026-09-09（**. Reste bundle D-5: wallet buckets UI, data company admin — slices suivants. | Cards product-first `done`（; D-5 reste: `partial`. | advance | Founder HQ + `/nature-way` | Dispatch prochain mini-slice D-5 restant / verdict fondateur「 Go with limits 」 avant clôture |
+
 ## Reconcile log（ 2026-09-09（
 
 | Date | Evidence | Task changes | Decision | Owner | Next review |
