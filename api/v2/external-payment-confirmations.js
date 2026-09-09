@@ -304,7 +304,7 @@ var toProduct = (row) => {
     category: row.category ? String(row.category) : null,
     unit: String(row.unit ?? "unit"),
     couponLabel: row.coupon_label ? String(row.coupon_label) : null,
-    currency: String(row.currency ?? "USD"),
+    currency: String(row.currency ?? "XOF"),
     stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Number(row.quantity_allocated_omni),
     prixOriginal: priceMinor,
     prixReduit,
@@ -1769,7 +1769,7 @@ function createTrunkRepository(sql = database()) {
           ar.status as response_status,
           ar.quantity_available,
           ar.price_minor,
-          coalesce(ar.offer_snapshot ->> 'currency', 'USD') as currency,
+          coalesce(ar.offer_snapshot ->> 'currency', 'XOF') as currency,
           ar.seller_message,
           ar.observed_at,
           case
@@ -1800,7 +1800,7 @@ function createTrunkRepository(sql = database()) {
         status: String(row.response_status),
         quantityAvailable: row.quantity_available === null ? null : Number(row.quantity_available),
         priceMinor: row.price_minor === null ? null : Number(row.price_minor),
-        currency: String(row.currency ?? "USD"),
+        currency: String(row.currency ?? "XOF"),
         sellerMessage: row.seller_message === null ? null : String(row.seller_message),
         observedAt: new Date(String(row.observed_at)).toISOString(),
         freshness: String(row.freshness)
@@ -2179,7 +2179,7 @@ function createTrunkRepository(sql = database()) {
         retryDatabase(() => sql`
           select f.id as facility_id, f.name as facility_name, f.commercial_plan,
                  coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
-                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
           from v2_facilities f
           join v2_accounts a on a.id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
@@ -2198,7 +2198,7 @@ function createTrunkRepository(sql = database()) {
       const balance = balanceRows[0];
       return {
         walletId,
-        currency: String(wallet.currency ?? "USD"),
+        currency: String(wallet.currency ?? "XOF"),
         balanceMinor: Number(balance?.balance_minor ?? 0),
         entries: entryRows.map((row) => ({
           id: String(row.id),
@@ -2469,7 +2469,7 @@ function createTrunkRepository(sql = database()) {
         ), facility as (
           select f.id as facility_id, f.account_id,
                  coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
-                 coalesce(last_entitlement.billing_currency, 'USD') as billing_currency
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
           from v2_facilities f
           join seller s on s.account_id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
@@ -2585,7 +2585,7 @@ function createTrunkRepository(sql = database()) {
           insert into v2_availability_responses
             (request_id, facility_id, responder_account_id, status, quantity_available, price_minor, offer_snapshot, seller_message, idempotency_key)
           select e.request_id, e.facility_id, e.seller_account_id, ${input.status}, e.quantity_available, e.price_minor,
-                 jsonb_build_object('unit_price_minor', e.price_minor, 'currency', 'USD'), ${input.sellerMessage}, ${input.idempotencyKey}
+                 jsonb_build_object('unit_price_minor', e.price_minor, 'currency', 'XOF'), ${input.sellerMessage}, ${input.idempotencyKey}
           from eligible e
           where not exists (select 1 from existing)
           on conflict (responder_account_id, idempotency_key) where idempotency_key is not null do nothing
@@ -3213,6 +3213,16 @@ async function parseRequestBody(req) {
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiInputError("Request body must be an object.");
   return parsed;
+}
+function extractFedaPayTransaction(payload) {
+  const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : null;
+  const nested = object && object.transaction && typeof object.transaction === "object" && !Array.isArray(object.transaction) ? object.transaction : object ?? null;
+  const entity = payload.entity && typeof payload.entity === "object" && !Array.isArray(payload.entity) ? payload.entity : null;
+  const data = payload.data && typeof payload.data === "object" && !Array.isArray(payload.data) ? payload.data : null;
+  const dataNested = data && data.transaction && typeof data.transaction === "object" && !Array.isArray(data.transaction) ? data.transaction : data;
+  const transaction = entity ?? nested ?? dataNested ?? payload;
+  const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === "object" && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata : {};
+  return { transaction, metadata };
 }
 var TRANSACTION_STATES = [
   "intent_created",
@@ -3972,9 +3982,7 @@ async function handleApi(req, res, pathname, url) {
       }
       const eventId = String(payload.id ?? payload.event_id ?? "").trim();
       const eventName = String(payload.name ?? payload.type ?? "").toLowerCase();
-      const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : payload.data && typeof payload.data === "object" && !Array.isArray(payload.data) ? payload.data : payload;
-      const transaction = object.transaction && typeof object.transaction === "object" && !Array.isArray(object.transaction) ? object.transaction : object;
-      const metadata = transaction.custom_metadata && typeof transaction.custom_metadata === "object" && !Array.isArray(transaction.custom_metadata) ? transaction.custom_metadata : {};
+      const { transaction, metadata } = extractFedaPayTransaction(payload);
       const status = eventName.includes("approved") ? "approved" : eventName.includes("declined") ? "declined" : eventName.includes("canceled") || eventName.includes("cancelled") ? "canceled" : "pending";
       const result = await repository.reconcileWalletRecharge({
         providerTransactionId: String(transaction.id ?? transaction.reference ?? "").trim(),
