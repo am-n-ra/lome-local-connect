@@ -470,7 +470,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
           limit 1
         )
@@ -504,7 +504,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
           limit 1
         ), target as (
@@ -538,7 +538,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
           limit 1
         )
@@ -565,7 +565,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
           limit 1
         ), target as (
@@ -602,7 +602,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
           limit 1
         ), target as (
@@ -634,7 +634,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const authorizationRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
-        join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+        join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
         where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
         limit 1
       `);
@@ -2676,7 +2676,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with admin as (
           select a.id
           from v2_accounts a
-          join v2_account_roles ar on ar.account_id = a.idand ar.role = 'admin'and ar.status = 'active'
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' AND ar.status = 'active'
           where a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
           limit 1
