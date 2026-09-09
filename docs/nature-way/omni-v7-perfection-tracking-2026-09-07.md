@@ -38,6 +38,8 @@
 
 | 2026-09-09 | Reconcile D-5 ( Cards product-first( live — `sortProductsStockFirst` pure helper + test; wire facility-sheet product list trie En-stock d'abord( commit `75393bd`;; 52 files/328 tests;; lint + `check:boundary` clean;; build `index-CLkxqTVd.js`; **T-07d ✅ prod sert `index-CLkxqTVd.js` === build local（ 2026-09-09（**. Reste bundle D-5: wallet buckets UI, data company admin — slices suivants. | Cards product-first `done`（; D-5 reste: `partial`. | advance | Founder HQ + `/nature-way` | Dispatch prochain mini-slice D-5 restant / verdict fondateur「 Go with limits 」 avant clôture |
 
+| 2026-09-09 | Reconcile D-5 (( data company admin( live — CompanyV13 rewired to real seller-catalogue data: per-facility admin cards ( produits/Stock Omni/En-stock-à-valider/catalogReady( + wired Offres & Dispo auto actions(, no mock, no new route ( commit `d802a32`;; 52 files/328 tests;; lint + `check:boundary` clean;; build `index-ttpRQbut.js`; **T-07d ✅ prod sert `index-ttpRQbut.js` === build local（** 2026-09-09（**. D-5 reste: `wallet buckets UI` —— spec owner fondateur; le reste bundle `partial`. | data company admin `done`（; D-5 reste: `partial`（ + wallet-buckets spec pending`. | advance | Founder HQ + `/nature-way` | Verdict fondateur「 Go with limits 」 et/ou spec「 wallet buckets UI 」 = prochaine décision |
+
 ## Reconcile log（ 2026-09-09（
 
 | Date | Evidence | Task changes | Decision | Owner | Next review |
