@@ -11,7 +11,7 @@
 | T2a | **V-6g — compteur contraintes actives** | spec V1.3 §5.1: compteur discret `role="status"` au-dessus du champ quand ≥1 chip active（ `${n} contrainte(s) active(s)`（ | `done` | idem |
 | T2b | **V-6h — aria-modal honnête** | Sheets V13 non modales（ sans focus trap（: `TrunkAppV13` qr/auth, `BuyerFlowV13` flow, `PublicQrScannerSheet` — `aria-modal="true"` → `"false"`（ | `done` | idem |
 | T3 | **V-6i — micro-copies M-01/M-02** | M-02 exact dans RESULTS vide + bouton「 Élargir les contraintes 」（ spec §5 RESULTS vide（;bandeau chargement「 Recherche en cours dans votre zone… 」（ M-01 erreur réseau reste via bandeau existant（ | `done` | idem |
-| T4 | **V-7e — formulaire retrait/livraison + note**（ spec §4.3（ | `requestAvailability` n'a pas les champs mode/note → tranche **contrat API+serveur+UI**, non incluse ici | `planned` | — |
+| T4 | **V-7e — formulaire retrait/livraison + note**（ spec §4.3（ | `requestAvailability` mode/note champs → tranche **contrat API+serveur+UI+DB+prod** — livrée (commit `773bc4f`, migration `043`, seller reply sheet `SellerReplyV13`) | `done` | tsc clean; **49 files/313 tests**; build `index-BXtDUEoU.js`; **043 appliquée sur canonical** (cols+constraints vérifiés; **prod hash === build local (T-07d ✅**; registry 043 backfill en attente |
 | T5 | **V-7a — seller map-first** | Nécessite une mini-species de découpage（ | `planned — prochaine tranche` | — |
 | T6 | **V-7b — QR auto + scanner caméra** | Scanner natif（ | `planned` | — |
 | T7 | **V-7c — onboarding gating** | ( | `planned` | — |
@@ -39,6 +39,7 @@
 | 2026-09-08 | Spot-check 4 largeurs RESOLVED（ automate sandbox + confirmation fondateur（ 4/4 OK;bandeau carte = artefact sandbox（ tile CARTO Lomé fetch direct  ​200 OK（ | Gate ​​6 → `ready` | advance | Founder + Nature Way | Dispatch Gate ​​6 to `/nature-way` |
 | 2026-09-09 | Wallet FedaPay hotfixes prod poussés（ webhook live + parse `entity` + XOF math x100 minor + reconcile admin-guarded（ **313/313**, prod hash `index-Bw-YG3lI.js` === build local（ guardrail T-07d ✅（ | **D-4 palette pins（ = T-1（ V-7d（ `done`（ (push `898e88f`（ — correctif « ne bloque pas （ »（ | Gate ​​6 reste `ready` — clôture « Go with limits » attend arbitrage fondateur **D-1…D-5**（ §4 re-audit（ | Founder HQ + Nature Way | Sur réponse fondateur D-1…D-5（ → V-7a–e（ ordonnancées（ ou dette explicitement triggerée（ |
 
+| 2026-09-09 | Reconcile HQ: migration `043` appliquée sur canonical (cols `delivery_mode`+`request_note` + constraints vérifiés(; prod sert `index-BXtDUEoU.js` === build local (V-7d déployé, guardrail T-07d ✅(; tsc clean, 49 files/313 tests, build ✅. | T4 `done` (V-7e formulaire retrait/livraison+note livré end-to-end(; registre: T5/T6/T7 restent `planned`. | advance | Founder HQ + Nature Way | Sur backfill registre 043 + invocation `/nature-way`: arbitrage D-1…D-5 + ordre T5/T6/T7 |
 Mapping dette ↔ décisions fondateur (§4 re-audit master-v1.3（:
 - V-7e formulaire retrait/livraison + note（ = **D-5**（ a（ mini-slice（ /（ b（ dette（;
 - V-7a seller map-first（ = **D-1**（ a/b/c（; V-7b QR auto + scanner caméra（ = **D-2**（ a/b（; V-7c onboarding gating（ = **D-3**（ a/b（;

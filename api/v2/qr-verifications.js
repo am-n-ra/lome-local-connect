@@ -1664,6 +1664,8 @@ function createTrunkRepository(sql = database()) {
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.delivery_mode,
+          r.request_note,
           r.status as request_status,
           r.created_at,
           r.expires_at,
@@ -1700,6 +1702,8 @@ function createTrunkRepository(sql = database()) {
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode,
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          deliveryMode: row.delivery_mode,
+          requestNote: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status,
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
@@ -1721,6 +1725,8 @@ function createTrunkRepository(sql = database()) {
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.delivery_mode,
+          r.request_note,
           r.created_at,
           r.expires_at,
           count(ar.id)::int as response_count,
@@ -1752,6 +1758,8 @@ function createTrunkRepository(sql = database()) {
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode,
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          deliveryMode: row.delivery_mode,
+          note: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status,
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
@@ -1762,7 +1770,7 @@ function createTrunkRepository(sql = database()) {
     async getAvailabilityResponses(input) {
       const rows = await retryDatabase(() => sql`
         with buyer_request as (
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.expires_at, r.status, r.delivery_mode, r.request_note
           from v2_availability_requests r
           join v2_accounts a on a.id = r.buyer_account_id
           where r.id = ${input.requestId}::uuid
@@ -1776,6 +1784,8 @@ function createTrunkRepository(sql = database()) {
           br.facility_id,
           br.expires_at,
           br.status as request_status,
+          br.delivery_mode,
+          br.request_note,
           ar.id as response_id,
           ar.facility_id as response_facility_id,
           f.name as facility_name,
@@ -1825,6 +1835,8 @@ function createTrunkRepository(sql = database()) {
         requestId: String(first.request_id),
         productId: String(first.product_id),
         facilityId: String(first.facility_id),
+        deliveryMode: String(first.delivery_mode),
+        note: first.request_note === null ? null : String(first.request_note),
         requestStatus,
         expiresAt,
         responses
@@ -3118,19 +3130,19 @@ function createTrunkRepository(sql = database()) {
         ),
         request_insert as (
           insert into v2_availability_requests
-            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, status, idempotency_key, expires_at)
-          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
           from account a
           cross join valid_selection s
           join wallet w on w.account_id = a.id
           on conflict (buyer_account_id, idempotency_key) do nothing
-          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
         ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, status, expires_at
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.status, r.expires_at
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
@@ -3139,7 +3151,7 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
-      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor) {
+      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor || String(row.delivery_mode) !== input.deliveryMode || (row.request_note === null ? null : String(row.request_note)) !== input.note) {
         throw new AvailabilityPolicyError("The idempotency key is already used for a different availability request.");
       }
       return {
@@ -3148,6 +3160,8 @@ function createTrunkRepository(sql = database()) {
         facilityId: String(row.facility_id),
         status: String(row.status),
         expiresAt: new Date(String(row.expires_at)).toISOString(),
+        deliveryMode: String(row.delivery_mode),
+        note: row.request_note === null ? null : String(row.request_note),
         message: "Request sent. The facility can now confirm the live availability."
       };
     }
@@ -4453,6 +4467,8 @@ async function handleApi(req, res, pathname, url) {
       const quantity = Number(input.quantity);
       const budgetMode = input.budgetMode === "maximum" ? "maximum" : "unlimited";
       const budgetMinor = input.budgetMinor === null || input.budgetMinor === void 0 ? null : Number(input.budgetMinor);
+      const deliveryMode = input.deliveryMode === "livraison" ? "livraison" : "retrait";
+      const note = typeof input.note === "string" && input.note.trim().length > 0 ? input.note.trim() : null;
       const idempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
       if (!productId || !facilityId || !Number.isInteger(quantity) || quantity < 1 || budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a product and a positive quantity."));
@@ -4462,7 +4478,7 @@ async function handleApi(req, res, pathname, url) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A stable idempotency key is required."));
         return true;
       }
-      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, idempotencyKey });
+      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
