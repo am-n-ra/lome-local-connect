@@ -484,6 +484,43 @@ function createTrunkRepository(sql = database()) {
       if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the facility is unavailable.");
       return { facilityId: String(row.id), operationalState: String(row.operational_state) };
     },
+    async setSellerFacilityOperationalState(input) {
+      if (!FACILITY_OPERATIONAL_STATES.includes(input.state)) {
+        throw new FieldPilotPolicyError("A valid operational state is required.");
+      }
+      const reason = input.state === "ouvert" ? "Ouverture d\xE9clar\xE9e par le vendeur" : "Fermeture d\xE9clar\xE9e par le vendeur";
+      const rows = await retryDatabase(() => sql`
+        with seller as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state = 'seller_ready'
+          limit 1
+        ), target as (
+          select f.id, seller.id as seller_id
+          from v2_facilities f cross join seller
+          where f.id = ${input.facilityId}::uuid
+            and f.account_id = seller.id
+        ), updated as (
+          update v2_facilities f
+          set operational_state = ${input.state}, updated_at = now()
+          from target
+          where f.id = target.id
+          returning f.id, f.operational_state, target.seller_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select updated.seller_id,, 'facility_operational_state_changed', 'facility', updated.id::text,, ${input.correlationId}, ${reason}
+          from updated
+          returning entity_id
+        )
+        select updated.id,, updated.operational_state
+        from updated join audit on audit.entity_id = updated.id::text
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Seller session is not authorized for this facility or the facility is unavailable.");
+      return { facilityId: String(row.id), operationalState: String(row.operational_state) };
+    },
     async correctFacilitySalesCounter(input) {
       if (!Number.isInteger(input.qualifyingSales) || input.qualifyingSales < 0 || input.qualifyingSales > 3 || input.reason.trim().length < 3 || input.reason.trim().length > 1e3) {
         throw new FieldPilotPolicyError("A counter value between 0 and 3 and a bounded reason are required.");
@@ -1370,6 +1407,7 @@ function createTrunkRepository(sql = database()) {
           f.name,
           coalesce(f.category, 'Autre') as category,
           f.address,
+          f.operational_state,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -1389,6 +1427,7 @@ function createTrunkRepository(sql = database()) {
         address: row.address === null ? null : String(row.address),
         currency: String(row.currency),
         slotState: "active",
+        operationalState: ["ouvert", "ferme", "temporairement_indisponible"].includes(String(row.operational_state)) ? String(row.operational_state) : "ouvert",
         productCount: Number(row.product_count ?? 0)
       }));
       const rows = await retryDatabase(() => sql`
@@ -1721,6 +1760,8 @@ function createTrunkRepository(sql = database()) {
           f.id as facility_id,
           f.name as facility_name,
           f.category as facility_category,
+          f.latitude as facility_latitude,
+          f.longitude as facility_longitude,
           p.id as product_id,
           p.name as product_name,
           r.requested_quantity,
@@ -1764,7 +1805,9 @@ function createTrunkRepository(sql = database()) {
           requestStatus: row.request_status,
           createdAt: new Date(String(row.created_at)).toISOString(),
           expiresAt: new Date(String(row.expires_at)).toISOString(),
-          responseCount: Number(row.response_count)
+          responseCount: Number(row.response_count),
+          latitude: Number(row.facility_latitude),
+          longitude: Number(row.facility_longitude)
         }))
       };
     },
@@ -4367,6 +4410,24 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.listSellerCatalogue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/operational-state")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the owning seller to set a facility operational state."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/operational-state".length);
+      const input = await parseRequestBody(req);
+      const state = typeof input.state === "string" ? input.state.trim() : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !["ouvert", "ferme", "temporairement_indisponible"].includes(state)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid facility and operational state."));
+        return true;
+      }
+      const result = await repository.setSellerFacilityOperationalState({ authUserId, facilityId, state, correlationId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
