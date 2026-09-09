@@ -101,6 +101,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         <button className="btn" type="button" onClick={onProducts}>{lang.catalogue}</button>
         <button className="btn ghost" type="button" onClick={onOffers}>Offres</button>
       </div>
+      {((propsCatalogue ?? catalogue)?.products?.length ?? 0) > 0 && (
+        <p className="tiny" style={{ marginTop: 3, color: (propsCatalogue ?? catalogue)?.catalogReady ? 'var(--accent)' : 'var(--warn)' }}>
+          {(propsCatalogue ?? catalogue)?.catalogReady ? 'Catalogue prêt — produits visibles' : 'Catalogue incomplet pour la vente'}
+        </p>
+      )}
       <div className="btnrow" style={{ marginTop: 7 }}>
         <button className="btn ghost" type="button" onClick={onScan}><ScanLine size={14} /> {lang.scanner}</button>
       </div>

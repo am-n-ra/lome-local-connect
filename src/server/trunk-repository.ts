@@ -1489,7 +1489,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { authorized: true };
     },
 
-    async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; facilities: SellerCatalogueFacility[]; products: SellerCatalogueProduct[] }> {
+    async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; catalogReady: boolean; facilities: SellerCatalogueFacility[]; products: SellerCatalogueProduct[] }> {
       // D-03: opportunistic freshness expiry (deterministic auto-transition, facility_pro only)
       await retryDatabase(() => sql`select v2_expire_stale_availability()`).catch(() => [] as unknown[]);
       const authorizationRows = await retryDatabase(() => sql`
@@ -1500,7 +1500,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           and a.onboarding_state = 'seller_ready'
         limit 1
       `);
-      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, facilities: [], products: [] };
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, catalogReady: false, facilities: [], products: [] };
       const facilityRows = await retryDatabase(() => sql`
         select
           f.id,
@@ -1580,7 +1580,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === undefined ? null : new Date(String(row.availability_expires_at)).toISOString(),
         availabilityProEligible: row.availability_pro_eligible === true,
       }));
-            return { authorized: true, facilities, products };
+            const catalogReady = products.length > 0 && products.some((p) => (p.stockLoueOmni ?? 0) > 0);
+            return { authorized: true, facilities, products, catalogReady };
     },
     async createSellerProductDraft(input: {
       authUserId: string;

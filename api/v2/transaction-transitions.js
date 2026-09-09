@@ -1363,7 +1363,7 @@ function createTrunkRepository(sql = database()) {
           and a.onboarding_state = 'seller_ready'
         limit 1
       `);
-      if (!authorizationRows[0]) return { authorized: false, facilities: [], products: [] };
+      if (!authorizationRows[0]) return { authorized: false, catalogReady: false, facilities: [], products: [] };
       const facilityRows = await retryDatabase(() => sql`
         select
           f.id,
@@ -1443,7 +1443,8 @@ function createTrunkRepository(sql = database()) {
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === void 0 ? null : new Date(String(row.availability_expires_at)).toISOString(),
         availabilityProEligible: row.availability_pro_eligible === true
       }));
-      return { authorized: true, facilities, products };
+      const catalogReady = products.length > 0 && products.some((p) => (p.stockLoueOmni ?? 0) > 0);
+      return { authorized: true, facilities, products, catalogReady };
     },
     async createSellerProductDraft(input) {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) {

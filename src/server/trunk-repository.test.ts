@@ -1282,8 +1282,19 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     expect(result.authorized).toBe(true);
     expect(result.products[0]).toMatchObject({ availabilityState: 'en_stock', availabilityProEligible: true });
     expect(result.products[0].availabilityExpiresAt).toBe('2026-09-02T16:00:00.000Z');
+    expect(result.catalogReady).toBe(true);
     expect(queries[0]).toContain('v2_expire_stale_availability');
     expect(queries[3]).toContain('availability_state');
+  });
+
+  it('flags the seller catalogue as not ready when no sellable stock exists', async () => {
+    const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, currency: 'XOF', product_count: 1 }];
+    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0, net_price_minor: null, publication_state: 'published', availability_state: 'a_valider', availability_expires_at: null, availability_pro_eligible: false }];
+    const { sql, queries } = stubSqlSequence([[], [{ id: 'account-1' }], facilityRows, productRows]);
+    const repository = createTrunkRepository(sql);
+    const result = await repository.listSellerCatalogue({ authUserId: 'auth-seller-1' });
+    expect(result.catalogReady).toBe(false);
+    expect(result.products).toHaveLength(1);
   });
 });
 

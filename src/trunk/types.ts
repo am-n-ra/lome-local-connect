@@ -286,6 +286,7 @@ export interface ProductStockEvent {
 
 export interface SellerCatalogueResult {
   authorized: boolean;
+  catalogReady: boolean;
   facilities: SellerCatalogueFacility[];
   products: SellerCatalogueProduct[];
 }
