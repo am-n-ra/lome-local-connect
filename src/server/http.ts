@@ -838,6 +838,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'POST' && pathname === '/api/v2/admin/reconcile-recharges') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to re-verify Wallet recharges.'));
+        return true;
+      }
+      const result = await repository.reconcilePendingRecharges({ authUserId, now: new Date().toISOString() });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required to re-verify Wallet recharges.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, errors: result.errors } });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/fedapay/webhook') {
       const rawBody = await readRawBody(req);
       const signature = typeof req.headers['x-fedapay-signature'] === 'string' ? req.headers['x-fedapay-signature'] : null;

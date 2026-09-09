@@ -238,6 +238,27 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     return () => { active = false; };
   }, []);
 
+  // Retour d’une recharge FedaPay (callback): on rouvre le Wallet et on ré-affiche le solde à jour.
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('wallet') !== 'recharge') return;
+    const approved = params.get('status') === 'approved';
+    const txnId = params.get('id');
+    if (approved && txnId) {
+      setRechargeState('success');
+      setRechargeResult({ checkoutUrl: '', amountMinor: Number(params.get('amount') ?? '0'), currency: 'XOF' } as WalletRechargeResult);
+    }
+    setSheet('wallet');
+    void (async () => {
+      const token = await getAuthToken();
+      if (!token) return;
+      const result = await getWalletOverview({ token });
+      if (result.ok && result.data) { setWallet(result.data); setWalletState('idle'); }
+    })();
+    window.history.replaceState(null, '', window.location.pathname);
+  }, []);
+
   const runSearch = useCallback(async (raw: string, opts?: SearchOptions) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
@@ -1251,7 +1272,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 {rechargeState === 'success' && rechargeResult ? (
                   <div className="cardbox" style={{ marginTop: 8 }}>
                     <p className="sub" role="status">Recharge créée · {money(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
-                    <a className="btn" href={rechargeResult.checkoutUrl} target="_blank" rel="noreferrer" style={{ marginTop: 8, textDecoration: 'none' }}>Continuer le paiement FedaPay <ArrowRight size={15} /></a>
+                    <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { window.location.assign(rechargeResult.checkoutUrl); }}>Continuer le paiement FedaPay <ArrowRight size={15} /></button>
                     <button className="btn ghost sm" type="button" style={{ marginTop: 8 }} onClick={() => { setRechargeState('idle'); setRechargeResult(null); setRechargeAmount('100'); }}>Nouvelle recharge</button>
                   </div>
                 ) : (

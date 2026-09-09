@@ -5,7 +5,7 @@ import type { QrVerificationResult, TransactionState, WalletEntryKind } from '..
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
 import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
-import { createFedaPayCheckout, isFedaPayConfigured } from './fedapay-adapter';
+import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -2663,6 +2663,63 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) return { status: 'ignored' };
       return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : undefined };
+    },
+
+    async reconcilePendingRecharges(input: { authUserId: string; now: string }): Promise<{
+      authorized: boolean;
+      rechecked: number;
+      credited: number;
+      unchanged: number;
+      errors: { providerTransactionId: string; message: string }[];
+    }> {
+      const actorRows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.idand ar.role = 'admin'and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        )
+        select 1
+        from admin
+      `);
+      const pendingRows = (await retryDatabase(() => sql`
+        select r.id, r.provider_transaction_id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+        from v2_wallet_recharge_intents r
+        where r.status = 'pending'
+          and r.provider_transaction_id is not null
+        order by r.created_at
+      `)) as unknown as Record<string, unknown>[];
+      const errors: { providerTransactionId: string; message: string }[] = [];
+      let credited = 0;
+      for (const pending of pendingRows as Record<string, unknown>[]) {
+        const providerTransactionId = String(pending.provider_transaction_id).trim();
+        try {
+          const snapshot = await fetchFedaPayTransaction(providerTransactionId);
+          if (snapshot.status !== 'approved') continue;
+          if (!snapshot.omniRechargeId) continue;
+          const outcome = await this.reconcileWalletRecharge({
+            providerTransactionId,
+            providerEventId: `fedapay:${providerTransactionId}:admin-reconcile`,
+            status: 'approved',
+            amountMinor: snapshot.amountMinor,
+            currency: snapshot.currency ?? 'XOF',
+            omniRechargeId: snapshot.omniRechargeId,
+            now: input.now,
+          });
+          if (outcome.status === 'confirmed') credited += 1;
+        } catch (caught) {
+          errors.push({ providerTransactionId, message: caught instanceof Error ? caught.message : String(caught) });
+        }
+      }
+      return {
+        authorized: true,
+        rechecked: pendingRows.length,
+        credited,
+        unchanged: Math.max(0, pendingRows.length - credited - errors.length),
+        errors,
+      };
     },
 
     async spendWallet(input: {

@@ -201,6 +201,21 @@ async function createFedaPayCheckout(input) {
   if (!checkoutUrl) throw new FedaPayProviderError("FedaPay did not return a checkout URL.");
   return { transactionId, checkoutUrl, status: normalizeStatus(transaction.status) };
 }
+async function fetchFedaPayTransaction(transactionId) {
+  const payload = await requestProvider(`/transactions/${encodeURIComponent(transactionId)}`, { method: "GET" });
+  const transaction = transactionPayload(payload);
+  const currency = transaction.currency;
+  const currencyIso = typeof currency === "string" ? currency : currency && typeof currency === "object" && !Array.isArray(currency) ? String(currency.iso ?? "") : null;
+  const metadata = transaction.custom_metadata;
+  const metadataObject = metadata && typeof metadata === "object" && !Array.isArray(metadata) ? metadata : {};
+  return {
+    transactionId,
+    status: normalizeStatus(transaction.status),
+    amountMinor: Math.round(Number(transaction.amount ?? 0) * 100),
+    currency: currencyIso ? currencyIso.toUpperCase() : null,
+    omniRechargeId: metadataObject.omni_recharge_id ? String(metadataObject.omni_recharge_id) : metadataObject.deposit_id ? String(metadataObject.deposit_id) : null
+  };
+}
 function verifyFedaPayWebhookSignature(rawBody, signature) {
   if (!signature) return false;
   try {
@@ -2392,6 +2407,56 @@ function createTrunkRepository(sql = database()) {
       if (!row) return { status: "ignored" };
       return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : void 0 };
     },
+    async reconcilePendingRecharges(input) {
+      const actorRows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.idand ar.role = 'admin'and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        )
+        select 1
+        from admin
+      `);
+      const pendingRows = await retryDatabase(() => sql`
+        select r.id, r.provider_transaction_id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+        from v2_wallet_recharge_intents r
+        where r.status = 'pending'
+          and r.provider_transaction_id is not null
+        order by r.created_at
+      `);
+      const errors = [];
+      let credited = 0;
+      for (const pending of pendingRows) {
+        const providerTransactionId = String(pending.provider_transaction_id).trim();
+        try {
+          const snapshot = await fetchFedaPayTransaction(providerTransactionId);
+          if (snapshot.status !== "approved") continue;
+          if (!snapshot.omniRechargeId) continue;
+          const outcome = await this.reconcileWalletRecharge({
+            providerTransactionId,
+            providerEventId: `fedapay:${providerTransactionId}:admin-reconcile`,
+            status: "approved",
+            amountMinor: snapshot.amountMinor,
+            currency: snapshot.currency ?? "XOF",
+            omniRechargeId: snapshot.omniRechargeId,
+            now: input.now
+          });
+          if (outcome.status === "confirmed") credited += 1;
+        } catch (caught) {
+          errors.push({ providerTransactionId, message: caught instanceof Error ? caught.message : String(caught) });
+        }
+      }
+      return {
+        authorized: true,
+        rechecked: pendingRows.length,
+        credited,
+        unchanged: Math.max(0, pendingRows.length - credited - errors.length),
+        errors
+      };
+    },
     async spendWallet(input) {
       if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0 || !input.reference.trim()) {
         throw new WalletPolicyError("Wallet spend amount and reference are invalid.");
@@ -3964,6 +4029,20 @@ async function handleApi(req, res, pathname, url) {
         now: (/* @__PURE__ */ new Date()).toISOString()
       });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/admin/reconcile-recharges") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to re-verify Wallet recharges."));
+        return true;
+      }
+      const result = await repository.reconcilePendingRecharges({ authUserId, now: (/* @__PURE__ */ new Date()).toISOString() });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, "FORBIDDEN", "An active Omni Admin role is required to re-verify Wallet recharges."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { rechecked: result.rechecked, credited: result.credited, unchanged: result.unchanged, errors: result.errors } });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/fedapay/webhook") {
