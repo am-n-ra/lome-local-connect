@@ -8,12 +8,12 @@ import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
-  getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
+  getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
 import { parseFacilityIdFromQr } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
-  FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
@@ -115,7 +115,7 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
@@ -217,6 +217,26 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     return () => { active = false; };
   }, [loadPublic]);
 
+  // Espace Seller map-first (V-7a(: la donnée vendeur est levée une fois au niveau
+  // de l'app — les pins détenus (owner) portent l'anneau Evergreen sur la carte
+  // toujours visible,et les strips du workspace reflètent le découpage dédié.
+
+  const loadSellerWorkspace = useCallback(async () => {
+    if (sellerWorkspaceState === 'loading') return;
+    setSellerWorkspaceState('loading');
+    try {
+      const token = await getAuthToken();
+      if (!token) return;
+      const [catalogueResult, queueResult] = await Promise.all([
+        getSellerCatalogue({ token }),
+        getSellerAvailabilityQueue({ token }).catch(() => null),
+      ]);
+      if (catalogueResult.ok && catalogueResult.data) setSellerCatalogue(catalogueResult.data);
+      if (queueResult?.ok && queueResult.data) setSellerQueue(queueResult.data.requests);
+      setSellerWorkspaceState('ready');
+    } catch { setSellerWorkspaceState('error'); }
+  }, [sellerWorkspaceState]);
+
   useEffect(() => {
     let active = true;
     void (async () => {
@@ -230,7 +250,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           const caps = await getAccountCapabilities({ token });
           if (caps.ok && caps.data) {
             setAccountRoles(caps.data.roles ?? []);
+            setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
             setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+            if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
           }
         }
       }
@@ -829,6 +851,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             revealKey={revealKey}
             focusTarget={focusTarget}
             followTarget={followTarget}
+            ownedFacilityIds={ownedFacilityIds.length ? ownedFacilityIds : null}
             dimMode={dimMode}
           />
         </Suspense>
@@ -839,7 +862,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
           {(switchRoles.length ? switchRoles : ['buyer'] as Role[]).map((r: Role) => (
-            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : 'menu'); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
           ))}
         </div>
       </div>
@@ -1105,7 +1128,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />

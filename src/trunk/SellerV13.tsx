@@ -1,14 +1,27 @@
 import { useCallback, useEffect, useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue, getSellerAvailabilityQueue } from './api';
-import type { SellerAvailabilityRequest, SellerCatalogueProduct } from './types';
+import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
+import type { PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
-type SellerV13Props = { onClose: () => void; onProducts?: () => void; onOffers?: () => void; onCompany?: () => void; onReply?: () => void };
+type SellerV13Props = {
+  onClose: () => void;
+  onProducts?: () => void;
+  onOffers?: () => void;
+  onCompany?: () => void;
+  onReply?: () => void;
+  onRefresh?: () => void;
+  catalogue?: SellerCatalogueResult | null;
+  queue?: SellerAvailabilityRequest[];
+  publicFacilities?: PublicFacility[];
+  ownedIds?: string[];
+};
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [catalogue, setCatalogue] = useState<{ facilities: Array<{ id: string; name: string }>; products: SellerCatalogueProduct[] } | null>(null);
+  const [catalogue, setCatalogue] = useState<SellerCatalogueResult | null>(null);
   const [queue, setQueue] = useState<SellerAvailabilityRequest[]>([]);
   const [toast, setToast] = useState('');
 
@@ -23,41 +36,55 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply }:
         getSellerAvailabilityQueue({ token }).catch(() => null),
       ]);
       if (!catalogueResult.ok || !catalogueResult.data) { setError(catalogueResult.error?.message ?? 'Espace vendeur non ouvert.'); return; }
-      setCatalogue({ facilities: catalogueResult.data.facilities, products: catalogueResult.data.products });
+      setCatalogue(catalogueResult.data);
       if (queueResult?.ok && queueResult.data) setQueue(queueResult.data.requests);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Espace vendeur indisponible.');
     } finally { setBusy(false); }
   }, []);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
+
+  const lang = sellerRouteLabels();
+  const ws = buildSellerWorkspace({
+    facilities: propsCatalogue?.facilities ?? catalogue?.facilities ?? [],
+    products: propsCatalogue?.products ?? catalogue?.products ?? [],
+    ownedIds,
+    publicFacilities,
+    selFacilityId: null,
+  });
+  const stockSignal = ws.stockCount > 0 ? `${ws.stockCount} produit${ws.stockCount > 1 ? 's' : ''} · ${ws.stockTotal} unité${ws.stockTotal > 1 ? 's' : ''} Omni` : 'Aucun produit publié';
+  const onMapCount = ws.ownedPublic.length;
+  const hasData = (propsCatalogue ?? catalogue) !== null;
+
+  const renderStrip = () => (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 9 }}>
+      <button type="button" onClick={onReply} style={{ textAlign: 'left', padding: 11, borderRadius: 15, background: 'var(--panel)', border: '1px solid var(--line)' }}>
+        <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>{lang.requests}</small>
+        <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{ws.pendingCount || queue.length}</strong>
+      </button>
+      <div style={{ padding: 11, borderRadius: 15, background: 'var(--accent-soft)', border: '1px solid var(--line)' }}>
+        <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>{lang.facility}</small>
+        <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{onMapCount ? `${onMapCount} sur la carte` : ws.selFacilityCatalogue?.name ?? '—'}</strong>
+      </div>
+    </div>
+  );
 
   return (
     <section className="sheet h-mid" data-sheet="seller" role="region" aria-label="Espace vendeur">
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Espace Seller</div><h1>Ce qui demande votre attention.</h1></div>
-        <span className="status ink">Seller</span>
+        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => { if (onRefresh) onRefresh(); else void load(); }}><RefreshCw size={14} /> Actualiser</button>
       </div>
       {error && <p className="sub" role="alert">{error}</p>}
       {toast && <p className="sub" role="status">{toast}</p>}
-      {busy && <p className="sub">…</p>}
-      {catalogue && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 9 }}>
-          <button type="button" onClick={onReply} style={{ textAlign: 'left', padding: 11, borderRadius: 15, background: 'var(--panel)', border: '1px solid var(--line)' }}>
-            <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Demandes en attente</small>
-            <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{queue.length}</strong>
-          </button>
-          <div style={{ padding: 11, borderRadius: 15, background: 'var(--accent-soft)', border: '1px solid var(--line)' }}>
-            <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Commandes à préparer</small>
-            <strong className="fs-17" style={{ display: 'block', marginTop: 3 }}>{catalogue.products.filter((p) => p.publicationState === 'published').length}</strong>
-          </div>
-        </div>
-      )}
-      {catalogue && catalogue.facilities.length > 0 && (
+      {busy && !hasData && <p className="sub">…</p>}
+      {hasData && renderStrip()}
+      {hasData && ws.selFacilityCatalogue?.name && (
         <div className="cardbox" style={{ marginTop: 9 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
-            <div><b>{catalogue.facilities[0].name}</b><br /><span className="tiny muted">{catalogue.facilities.length} facilité{catalogue.facilities.length > 1 ? 's' : ''}</span></div>
+            <div><b>{ws.selFacilityCatalogue?.name}</b><br /><span className="tiny muted">{stockSignal}</span></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30 }} type="button" onClick={onCompany}>Ouvrir</button>
           </div>
         </div>
@@ -69,10 +96,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply }:
           <button type="button" className="btn ghost sm" style={{ flex: 1, borderRadius: 999, minHeight: 30 }}>OFF</button>
         </div>
       </div>
-      <div className="btnrow">
-        <button className="btn ghost" type="button" onClick={onProducts}>Produits</button>
+      <div className="btnrow" style={{ marginTop: 5 }}>
+        <button className="btn" type="button" onClick={onProducts}>{lang.catalogue}</button>
         <button className="btn ghost" type="button" onClick={onOffers}>Offres</button>
       </div>
+      <p className="tiny muted" style={{ marginTop: 7 }}>{lang.wallet} · {lang.scanner} — disponibles depuis votre menu.</p>
     </section>
   );
 }
