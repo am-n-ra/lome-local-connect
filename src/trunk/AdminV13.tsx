@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole } from './api';
+import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount } from './api';
 import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount } from './types';
 
 type AdminV13Props = {
@@ -24,6 +24,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [roleBusy, setRoleBusy] = useState<string | null>(null);
   const [roleDraft, setRoleDraft] = useState<{ accountId: string; role: 'operator' | 'reviewer'; desired: 'active' | 'revoked'; label: string } | null>(null);
   const [roleDraftText, setRoleDraftText] = useState('');
+  const [sellerCandidates, setSellerCandidates] = useState<Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string; suspended: boolean }>>([]);
+  const [sellerActivationBusy, setSellerActivationBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -31,11 +33,12 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     try {
       const token = await getAuthToken();
       if (!token) { setState('unauthorized'); return; }
-      const [consoleResult, queueResult, auditResult, roleResult] = await Promise.all([
+      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult] = await Promise.all([
         getAdminConsole({ token }),
         getReviewQueue({ token }),
         listAdminAuditEvents({ token, limit: 12 }),
         getRoleManagementAccounts({ token }),
+        getAdminSellerActivationQueue({ token }),
       ]);
       if (!consoleResult.ok || !consoleResult.data) {
         setState('unauthorized');
@@ -46,6 +49,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setQueue(queueResult.ok && queueResult.data ? queueResult.data.requests : []);
       setAudits(auditResult.ok && auditResult.data ? auditResult.data.events : []);
       setRoleAccounts(roleResult.ok && roleResult.data ? roleResult.data.accounts : []);
+      setSellerCandidates(sellerActivationResult.ok && sellerActivationResult.data ? sellerActivationResult.data.candidates : []);
       setState('ready');
     } catch (caught) {
       setState('error');
@@ -141,6 +145,26 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     setRoleDraftText('');
   }, []);
 
+  const activateSeller = useCallback(async (candidate: { accountId: string }) => {
+    setSellerActivationBusy(candidate.accountId);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await adminActivateSellerAccount({ token, accountId: candidate.accountId });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: 'Compte vendeur activé — le switch montrera Seller.' });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Activation non enregistrée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Activation non enregistrée.' });
+    } finally {
+      setSellerActivationBusy(null);
+    }
+  }, [load]);
+
   const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
   const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
     const active = account.roles.includes(role);
@@ -217,6 +241,29 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
                       {roleBusy !== null && <span className="tiny muted">Enregistrement…</span>}
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+          {sellerCandidates.length > 0 && (
+            <div className="cardbox" style={{ marginTop: 8 }}>
+              <div className="eyebrow">Activation vendeurs</div>
+              <p className="tiny muted" style={{ marginBottom: 6 }}>Comptes avec une facilité prête a être activés comme vendeur. L'activation suit la certification.r</p>
+              {sellerCandidates.map((candidate) => (
+                <div className="kv" key={candidate.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line, #e8e8e6)' }}>
+                  <span>
+                    <b>{candidate.suspended ? 'Suspendu' : 'Vendeur candidat'}</b>
+                    <br />
+                    <span className="tiny muted">{candidate.facilityCount} facilité{candidate.facilityCount === 1 ? '' : 's'} · {new Date(candidate.createdAt).toLocaleDateString('fr-FR')}</span>
+                  </span>
+                  <button
+                    className="btn sm"
+                    type="button"
+                    disabled={sellerActivationBusy !== null || candidate.suspended}
+                    onClick={() => void activateSeller(candidate)}
+                  >
+                    {sellerActivationBusy === candidate.accountId ? 'Activation…' : 'Rendre vendeur'}
+                  </button>
                 </div>
               ))}
             </div>
