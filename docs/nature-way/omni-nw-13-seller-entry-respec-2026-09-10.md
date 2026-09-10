@@ -67,16 +67,24 @@ La règle clé: **la garde Facility before Offer** s'applique à la **publicatio
 
 
 
-##  ​5. Décisions à verrouiller ( questions fondateur(
+##  ​5. Décisions verrouillées ( fondateur 2026-09-10(
 
 
 
-| ID | Décision | Propositions | Impact |
+| ID | Décision | Choix fondateur | Impact |
 |---|---|---|---|
-| D-A | Le droit seller( (ce qui expose Seller au switch( | (a( état seller_ready( existant( (b( débuter l'onboarding vendeur crée l'accès( (c( rôle seller explicite en v2_account_roles( | Détermine P1 |
-| D-B | La création de facilité( (trust initial( | Propos: formulaire minimal company/facility( trust unconfirmed( puis parcours preuve( | Détermine P2 créer |
-| D-C | La revendication depuis l'espace seller | Propos: même ClaimSheet( draft lié au compte courant( | Détermine P2 revendiquer |
-| D-D | Quand l'espace opérationnel s'ouvre( (P3( | Propos: dès que le compte a facilité éligible( + approbation admin optionnelle pour la disponibilité( | Détermine la transition P2→P3 |
+| D-A | Le droit seller( (ce qui expose Seller au switch( | **(d( Universel**: tout user peut acheter ET vendre s'il a une offre/service/entreprise/produit; le switch expose Seller à tous — pas de gate d'état ni de rôle; l'espace seller gère absence/présence de facilité et limites de plan( (docs master V1 + master plan( | P1 = néant gate; P2/P3 par facilité + plan |
+| D-B | La création de facilité( (trust initial( | **recommend = (a(**: formulaire minimal company/facility, trust unconfirmed, puis parcours preuve( | P2 créer |
+| D-C | La revendication depuis l'espace seller | **recommend = (a(**: même ClaimSheet, draft lié au compte courant( | P2 revendiquer |
+| D-D | Quand l'espace opérationnel s'ouvre( (P3( | **recommend = (a(**: dès que le compte a facilité éligible; l'approbation admin reste requise pour la disponibilité des offres( (D-07 rien pre-accepted( | P2→P3 |
+
+
+
+##  ​5bis. Chantier ouvert — Plans Free/Pro à revoir( fondateur 2026-09-10(
+
+
+
+Le fondateur demande de revoir correctement ce que les plans **Free** et **Pro** offrent ou limitent, pour que les users tirent le meilleur parti de l'offre et que Omni profite monétairement. La couverture universelle vendeur( (D-A(, le vendeur **mobile** et le mode **discovery** sont cités comme des cas à couvrir. Une spec séparée `omni-nw-13b-plans-free-pro-…` sera produite depuis les docs master V1 + master plan( et l'implémentation actuelle( avant tout changement de code de plan.
 
 
 
@@ -92,4 +100,16 @@ L'espace seller s'ouvre selon D-A; P2 affiche Créer/Revendiquer( et les deux ac
 
 
 
-État: brouillon — en attente des décisions D-A…D-D du fondateur avant tout code.
+État: **décisions verrouillées 2026-09-10**; NW-13a en cours; NW-13b/13c planned.
+
+##  ​8. Annexe — Découvertes code( 2026-09-10(
+
+- **Plans actuels**: commercial_plan est une colonne par facilité( free ou pro_active(; limite actuelle observée: publication max 5 produits si non pro_active( (trunk-repository l.1722(; disponibilité peer-à-peer semble gated par pro_active( (l.1596/1746 à confirmer(.
+- **Aucune route de création company/facility** en serveur actuel: le formulaire Créer sera une nouvelle root à bâtir en NW-13c( trust initial unconfirmed + parcours preuve(; la revendication( ClaimSheet existant(, reste la voie parallèle immédiate(.
+
+- **Seller workspace serveur gated** par onboarding_state = seller_ready( c'est P3 l'opérationnel(; l'UI universelle P1 ouvre l'éventail sans changer ces gardes serveur; P2 revendication utilisable immédiatement; P3 s'ouvre quand facilité+activation( conform les contrats existants. 
+- **Vendeur mobile + mode discovery**: pas de représentation actuelle(; couverture à définir dans NW-13b Plans Free/Pro( (type de facilité mobile/zone et capacité discovery(..
+
+- **Séquence validée par le fondateur**: (1( NW-13a maintenant( réversible(: switch universel + espace seller état vide avec Revendiquer live + Créer affiché honnête(; (2( NW-13b spec Plans Free/Pro à valider(; (3( NW-13c création serveur+UI selon la spec(.
+
+- **State de ce doc**: décisions D-A…D-D verrouillées; NW-13a in_progress; NW-13b/13c planned.

@@ -13,14 +13,16 @@ type SellerV13Props = {
   onReply?: () => void;
   onRefresh?: () => void;
   onScan?: () => void;
+  onMap?: () => void;
   catalogue?: SellerCatalogueResult | null;
   queue?: SellerAvailabilityRequest[];
   publicFacilities?: PublicFacility[];
   ownedIds?: string[];
 };
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
+  const [showCreateHint, setShowCreateHint] = useState(false);
   const [busy, setBusy] = useState(false);
   const [catalogue, setCatalogue] = useState<SellerCatalogueResult | null>(null);
   const [queue, setQueue] = useState<SellerAvailabilityRequest[]>([]);
@@ -103,6 +105,20 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       {error && <p className="sub" role="alert">{error}</p>}
       {toast && <p className="sub" role="status">{toast}</p>}
       {busy && !hasData && <p className="sub">…</p>}
+      {!hasData && !busy && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="eyebrow">Bienvenue — espace vendeur</div>
+          <p className="sub">Tout compte Omni peut vendre: une facilité d'abord, puis un catalogue et des offres.</p>
+          <p className="tiny muted">Commencez par revendiquer une facilité déjà sur la carte, ou créez la vôtre( la création arrive avec la spec Free/Pro(.</p>
+          <div className="btnrow" style={{ marginTop: 7 }}>
+            <button className="btn" type="button" onClick={onMap}>Ouvrir la carte pour revendiquer</button>
+            <button className="btn ghost" type="button" onClick={() => setShowCreateHint((v) => !v)}>Créer une facilité</button>
+          </div>
+          {showCreateHint && (
+            <p className="tiny muted" style={{ marginTop: 6 }} role="status">La création de facilité arrive avec la spécification Free/Pro( bientôt(. En attendant, l'option la plus proche est la revendication d'une facilité existante.</p>
+          )}
+        </div>
+      )}
       {hasData && renderStrip()}
       {hasData && ws.selFacilityCatalogue?.name && (
         <div className="cardbox" style={{ marginTop: 9 }}>

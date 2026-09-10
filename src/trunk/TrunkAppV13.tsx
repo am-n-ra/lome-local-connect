@@ -704,11 +704,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
 
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
-    if (sessionUser && sellerAvailable) base.push('seller');
+    if (sessionUser) base.push('seller');
     if (adminTools) base.push('admin');
     if (adminTools) base.push('operator');
     return base;
-  }, [sessionUser, adminTools, sellerAvailable]);
+  }, [sessionUser, adminTools]);
 
   // Espace de rôle — la maquette garde un tableau par rôle pour le rolepill
   // glissant (.roleswitch avec .ind indicateur inset), pas la liste « on/off » seule.
@@ -875,7 +875,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
           {(switchRoles.length ? switchRoles : ['buyer'] as Role[]).map((r: Role) => (
-            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : r === 'seller' && sessionUser && !sellerAvailable ? 'seller' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
           ))}
         </div>
       </div>
@@ -1146,7 +1146,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
