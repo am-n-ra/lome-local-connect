@@ -22,6 +22,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [reconciling, setReconciling] = useState(false);
   const [roleAccounts, setRoleAccounts] = useState<RoleManagementAccount[]>([]);
   const [roleBusy, setRoleBusy] = useState<string | null>(null);
+  const [roleDraft, setRoleDraft] = useState<{ accountId: string; role: 'operator' | 'reviewer'; desired: 'active' | 'revoked'; label: string } | null>(null);
+  const [roleDraftText, setRoleDraftText] = useState('');
 
   const load = useCallback(async () => {
     setState('loading');
@@ -103,29 +105,41 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [load]);
 
-  const setManagedRole = useCallback(async (accountId: string, role: 'operator' | 'reviewer', status: 'active' | 'revoked', label: string) => {
-    const reason = window.prompt(`Motif de ${status === 'active' ? 'l’octroi' : 'la révocation'} du rôle ${label} (audité):`);
-    if (reason === null) return;;
-    const trimmed = reason.trim();
-    if (!trimmed) { setToast({ kind: 'err', text: 'Un motif est requis pour cette action.' }); return; }
-    setRoleBusy(`${accountId}:${role}:${status}`);
+  const confirmRoleComposer = useCallback(async () => {
+    if (!roleDraft) return;;
+    const trimmed = roleDraftText.trim();
+    if (!trimmed) { setToast({ kind: "err", text: "Un motif est requis pour cette action." }); return; }
+    const { accountId, role, desired, label } = roleDraft;
+    setRoleBusy(`${accountId}:${role}:${desired}`);
     setToast(null);
     try {
       const token = await getAuthToken();
-      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
-      const result = await setManagedStaffRole({ token, accountId, role, status, reason: trimmed });
+      if (!token) { setToast({ kind: "err", text: "Session requise." }); return; }
+      const result = await setManagedStaffRole({ token, accountId, role, status: desired, reason: trimmed });
       if (result.ok) {
-        setToast({ kind: 'ok', text: `${label} ${status === 'active' ? 'ajouté' : 'révoqué'} — ${role}.`});
+        setToast({ kind: "ok", text: `${label} ${desired === "active" ? "ajouté" : "révoqué"} — ${role}.` });
+        setRoleDraft(null);
+        setRoleDraftText("");
         void load();
       } else {
-        setToast({ kind: 'err', text: result.error?.message ?? 'Changement de rôle non enregistré.' });
+        setToast({ kind: "err", text: result.error?.message ?? "Changement de rôle non enregistré." });
       }
     } catch (caught) {
-      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Changement de rôle non enregistré.' });
+      setToast({ kind: "err", text: caught instanceof Error ? caught.message : "Changement de rôle non enregistré." });
     } finally {
       setRoleBusy(null);
     }
-  }, [load]);
+  }, [load, roleDraft, roleDraftText]);
+
+  const cancelRoleComposer = useCallback(() => {
+    setRoleDraft(null);
+    setRoleDraftText("");
+  }, []);
+
+  const openRoleComposer = useCallback((accountId: string, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
+    setRoleDraft({ accountId, role, desired, label: roleLabel(role) });
+    setRoleDraftText('');
+  }, []);
 
   const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
   const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
@@ -135,7 +149,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
         className="chip"
         type="button"
         disabled={roleBusy !== null || active !== (desired === 'active')}
-        onClick={() => void setManagedRole(account.accountId, role, desired, roleLabel(role))}
+        onClick={() => openRoleComposer(account.accountId, role, desired)}
       >
         {desired === 'active' ? '+' : '−'} {roleLabel(role)}
       </button>
@@ -187,6 +201,22 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
                     {!account.roles.includes('reviewer') && roleChip(account, 'reviewer', 'active')}
                     {account.roles.includes('reviewer') && roleChip(account, 'reviewer', 'revoked')}
                   </span>
+                  {roleDraft?.accountId === account.accountId && (
+                    <div style={{ flexBasis: '100%', display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <input
+                        className="fld"
+                        type="text"
+                        value={roleDraftText}
+                        onChange={(e) => setRoleDraftText(e.target.value)}
+                        placeholder={`${roleDraft?.desired === 'active' ? 'Octroi' : 'Révocation'} — motif audité`}
+                        disabled={roleBusy !== null}
+                        onKeyDown={(e) => { if (e.key === 'Enter') void confirmRoleComposer(); }}
+                      />
+                      <button className="btn sm" type="button" disabled={roleBusy !== null} onClick={() => void confirmRoleComposer()}>Confirmer</button>
+                      <button className="btn ghost sm" type="button" disabled={roleBusy !== null} onClick={cancelRoleComposer}>Annuler</button>
+                      {roleBusy !== null && <span className="tiny muted">Enregistrement…</span>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
