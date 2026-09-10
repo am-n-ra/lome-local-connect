@@ -50,6 +50,9 @@ type Props = {
 const LOCAL_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
+// R-03b (founder 2026-09-10):amener une facilite en avant = fin de
+// l'animation d'arrivee (14.2 "Votre position") - pas Math.max(zoom, 5.2).
+const FACILITY_FOCUS_ZOOM =  14.2;
 const SOURCE = 'omni-v2-facilities';
 // Evergreen route trace (écran 10 — itinéraire in-app, décision propriétaire #2).
 // Straight two-point polyline from the user position to the facility: no external
@@ -949,7 +952,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         if (facility) {
           pauseMotion('interaction', false);
           onSelectRef.current(facility);
-          target.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(target.getZoom(), 5.2), duration: 700 });
+          target.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 700 });
         }
       });
       for (const layer of ['omni-clusters', 'omni-pins']) {
@@ -1058,54 +1061,78 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     };
 
     const beginFlight = () => {
-      // V1.3 §1.2 — la séquence cinématique est TROIS appels chaînés.
-      // 1. A : bascule de caméra (250ms( — « on prend de la hauteur », tilt + rotation légère,
-      //     léger dézoom. 2. B : un SEUL flyTo (curve 1.7( vers le centre/zoom cible
-      //     calculé par cameraForBounds(utilisateur + résultats(. 3. C : à l’arrivée,
-      //     révélation échelonnée des pins, puis la grille glisse — jamais avant la fin du vol.,
-      //     omettant les paliers manuels à étapes (le code précédent `runSteps`( qui divergait
-      //     de la maquette acceptée. Le label contextuel suit l’événement `zoom` du flyTo
-      //     (crossfade 120ms, spec §1.2.2( — pas de paliers fixes discrets.
-      const zoomLabelFallback = setInterval(() => {
-        const label = labelForZoom(map.getZoom()); if (!isStale()) setLabel(label);
-      }, 140);
-      const clearZoomLabel = () => { window.clearInterval(zoomLabelFallback); setLabel(null); };
-      const land = () => {
+      // R-03c (founder 2026-09-10): the search reveal now mirrors the arrival
+      // flight step-for-step: same zooms (3/6/9/12/final), same durations(co,
+      // same boundary+highlight work, and the per-palier zoom labels - with ONE
+      // extra opening step: from whatever state the map is in, first fly back
+      // out to the globe,then run the same palier chain as arrival,but aimed at
+      // the search context (flight.targetCenter) and labeled via labelForZoom.
+      // Reduced-motion keeps a single direct flyTo (accessibility).
+
+      const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const PAUSE_DURATION = isReduced ? 150 : 350;
+      const FLIGHT_DURATION =isReduced ? 280 : 520;
+      const FIRST_FLIGHT_DURATION =isReduced ? 200 : 300;
+
+      const waitFrames = (n =   2): Promise<void> => new Promise((resolve) => {
+        let remaining = n;
+        const tick = () => { if (--remaining <= 0) { resolve(); return; } requestAnimationFrame(tick); };
+        requestAnimationFrame(tick);
+      });
+      const waitSettle = (mapInstance: any, timeout = 2600): Promise<void> =>
+        new Promise((resolve) => {
+          let settled = false;
+          const done = () => { if (settled) return; settled = true; window.clearTimeout(timeoutId); void waitFrames(2).then(resolve); };
+          const timeoutId = window.setTimeout(done, timeout);
+          mapInstance.once('moveend', done);
+        });
+      const waitFor = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
+      const toGlobe = async (): Promise<void> => {
         if (isStale()) return;
-        clearZoomLabel();
-        revealPinsStaggered();
+        const cur = map.getCenter();
+        map.flyTo({ center: [cur.lng, cur.lat], zoom:  1.8, bearing:  0, pitch:  0, curve:  1.1, duration: FLIGHT_DURATION, essential: true });
+        await waitSettle(map, FLIGHT_DURATION +  400);
       };
-      if (reduced) {
-        setLabel('Recherche dans le monde…');
-        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0, curve:  1.25, duration:  620, essential: true });
-        map.once('moveend', land);
+      type SearchStop = { center: [number, number]; zoom: number; pause: number; flightDuration?: number };
+      const runPalier = async (index: number, stops: SearchStop[], target: { lat: number; lng: number }): Promise<void> => {
+        if (isStale()) return;
+        const step = stops[index];
+        if (!step) return;
+        setLabel(labelForZoom(step.zoom) ?? labelForZoom(2));
+        const dur = step.flightDuration ?? FLIGHT_DURATION;
+        map.flyTo({ center: step.center, zoom: step.zoom, duration: dur, speed:  0.7, curve:  1.1, essential: true });
+        await waitSettle(map, dur +  400);
+        if (isStale()) return;
+        await loadBoundariesForZoom(map, step.zoom);
+        await waitFrames(2);
+        if (isStale()) return;
+        highlightBoundaryAtTarget(map, step.zoom, target);
+        if (step.pause) await waitFor(step.pause);
+        if (isStale()) return;
+        if (index === stops.length -  1) { setLabel(null); revealPinsStaggered(); return; }
+        await runPalier(index +  1, stops, target);
+      };
+      const stops: SearchStop[] = [
+        { center: flight.targetCenter, zoom:  3, pause: PAUSE_DURATION, flightDuration: FIRST_FLIGHT_DURATION },
+        { center: flight.targetCenter, zoom:  6, pause: PAUSE_DURATION },
+        { center: flight.targetCenter, zoom:  9, pause: PAUSE_DURATION },
+        { center: flight.targetCenter, zoom:  12, pause: PAUSE_DURATION },
+        { center: flight.targetCenter, zoom: flight.targetZoom, pause:  0 },
+      ];
+      if (isReduced) {
+        setLabel(labelForZoom(2));
+        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing:  0, pitch:  0, curve:  1.25, duration:  620, essential: true });
+        map.once('moveend', () => { if (!isStale()) revealPinsStaggered(); });
         return;
       }
-      // Étape A — on prend de la hauteur.
-      const prevZoom = map.getZoom();
-      setLabel(labelForZoom(prevZoom -  1) ?? 'Recherche dans le monde…');
-      map.easeTo({ pitch: 35, bearing:  8, zoom: Math.min(prevZoom -  1, 2.5), duration:   250, easing: (t) => t * (2 - t), essential: true });
-      map.once('moveend', () => {
+      void (async () => {
+        await toGlobe();
         if (isStale()) return;
-        // Étape B — vol cinématique unique MapLibre (dézoom/rezoom via curve(;
-        // le label contextuel vit sur l’événement `zoom` du flyTo — sans paliers ni
-        // boundaries intermédiaires.
-        const flyDuration  = Math.min(1400, Math.max(900, 700 + Math.abs(flight.targetZoom - map.getZoom()) * 140));
-        map.flyTo({
-          center: flight.targetCenter,
-          zoom: flight.targetZoom,
-          curve:  1.7,
-          speed:  1.15,
-          bearing:  0,
-          pitch:  0,
-          duration:  flyDuration,
-          essential: true,
-        });
-        // Étape C — la grille n’apparaît jamais avant la fin du vol:la sheet results
-        // est ouverte par le parent via onRevealStateChange(false( après la révélation des pins.
-        map.once('moveend', land);
-      });
+        const landing = { lat: flight.targetCenter[1], lng: flight.targetCenter[0] };
+        await runPalier(0, stops, landing);
+      })();
     };
+
     // Masque les pins pendant le vol — leveil arrive à la toute fin. (Spec 1.2:C(.
     if (!reduced) {
       if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-opacity', 0);
@@ -1148,9 +1175,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     if (bottomPad > 0) {
       const pt = map.project([selected.longitude, selected.latitude]);
       const target = map.unproject([pt.x, pt.y - (bottomPad +  64) / 2]);
-      map.easeTo({ center: [target.lng, target.lat], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+      map.easeTo({ center: [target.lng, target.lat], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
     } else {
-      map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+      map.easeTo({ center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
     }
   }, [facilities, selectedId]);
 
@@ -1257,7 +1284,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
       {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
-        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true }); }}>{facility.name}</button>)}
+        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
