@@ -94,3 +94,42 @@
 > **What proves the next move:** `npm test` **329/329** ✅, tsc ✅, boundary ✅, build ✅. Un mini-slice pris un à la fois, chacun avec tsc+tests+build+preuve prod hash===build ( guardrail T-07d(. Le verdict fondateur = clôture Gate  ​6 « Go with limits » ou No-go sur dettes choisies.
 
 _Fin de l’audit._
+
+---
+
+## Clôture des slices V-8 (2026-09-09, HEAD `a3c8fd6`(
+
+Passe de correction post-audit menée via V-8a…h (commits `7aa4319`, `a845d53`, `b17d6bf`, `a3c8fd6`(. Recalibration code-vérité: une partie des dettes listées étaient **déjà résolues** en code courant ( details §V-8 du plan `intra-skill-plan-NW-PROD-OMNI-01.md`（;celles restantes ont été clôturées:
+
+| ID | Disposition initiale | État final ( 2026-09-09（ |
+|---|---|---|---|
+| COH-01 | À corriger V-8a | ✅ **CLOSED** — serveur fournit lat/lng réels (`getBuyerAvailabilityRequests`（ ; client les utilise（; **dernier bord océan supprimé** ( dead `PendingAction.claim` → resume `(0,0)`（ retiré ( commit `b17d6bf`（ |
+| COH-03 | groupé V-8a | ✅ **CLOSED** — idem COH-01（ |
+| COH-02 | À corriger V-8b | ✅ **CLOSED** — gating par capabilities serveur déjà en code（ (`TrunkAppV13.tsx` l.705–707： `sellerAvailable`/`adminTools`（ |
+| COH-04 | À corriger V-8c | ✅ **CLOSED** — boutique「 Autoriser et démarrer 」 + `permission_pending` + `visibilitychange` stop（ ( `7aa4319`；preuve caméra réelle reste `COH-18` humain（ |
+| COH-05 | À corriger V-8d | ✅ **CLOSED** — solde wallet réel via prop `walletBalanceMinor` + label honnête（ (`BuyerFlowV13.tsx` l.400–401（ |
+| COH-06 | À corriger V-8e | ✅ **CLOSED** — toggle ON/OFF wire `setSellerFacilityOperationalState`（ ( `7aa4319` + `a845d53`（ |
+| COH-07 | À corriger V-8f | ✅ **CLOSED** — label plan dynamique seller/buyer（ (`TrunkAppV13.tsx` l.1244（ |
+| COH-08 | À corriger V-8g | ✅ **CLOSED** — bouton Compteur désactivé—— naviguer fiche facility（ (`AdminV13.tsx` l.164（ |
+| COH-12 | groupé V-8d | ✅ **CLOSED** — freshbar + variantes expired en single-flow（ (`BuyerFlowV13.tsx` l.75,305–325（ |
+| COH-10 | V-8h | ✅ **CLOSED** — tiroirs desktop `role="dialog" aria-modal="false"` + `trapDrawerFocus`（ ( commit `a3c8fd6`（ |
+| COH-16 | groupé V-8h | ✅ **CLOSED** — idem COH-10（ |
+| COH-09 | V-8c ( docs（ | `deferred` — outillage maquette seulement（ |
+| COH-11 | — | `deferred` — pas de données mobiles（ |
+| COH-13 | — | `deferred` — déclencheur fondateur création facilité（ |
+| COH-14 | rien | checklist — conforme annexe K（ |
+| COH-15 | watch | **`watch`** — décision fondateur ré-verbaliser zoom arrivée（ |
+| COH-17 | rien | décision fondateur enregistrée（ |
+| COH-18 | manual | **`manual` / humain** — preuve caméra/GPS + spot-check 4 largeurs prod（ avant verdict final（ |
+
+### Preuve slices（
+
+| Item | Résultat |
+|---|---|
+| `npm test` | ✅ **331/331** （ 52 files（ |
+| `npx tsc --noEmit` | ✅ clean |
+| `npm run check:boundary` | ✅ clean |
+| `npm run build` | ✅ `index-CS6Peqms.js`（ |
+| Prod hash ( T-07d（ | ✅ **JS `index-CS6Peqms.js` + CSS `index-DLlo-Ci5.css` === build local**（ pollé 2026-09-09（ |
+
+**Reste au fondateur:** verdict `Go with limits` sur Gate  ​6 — les dettes restantes sont `deferred`/`watch`/`manual` ( COH-09,11,13,15,17,18（ listées+triggerées（. Slices codées **V-8a/b** poussées + déployées。（
