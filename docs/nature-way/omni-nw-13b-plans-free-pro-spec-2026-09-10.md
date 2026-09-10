@@ -14,7 +14,9 @@ Un user qui choisit **une seule facilité et y met tous ses produits** exerce ex
 
 
 
-**Ce qui justifie le plan actuel, et comment Omni profite monétairement:** le plan ne vend pas le droit d'exister;il vend la **profondeur** de l'établissement ( Pro = produits illimités + dispo auto + analytics + visibilité(, la **largeur** du compte ( slots additionnels à l'unité pour multi-boutiques(, la **fréquence** d'intention acheteur ( packs bulk + Acheteur Pro(, la **visibilité** ( publicité sponsorisée(, et l'**intelligence** ( analytics Pro(.( Un user à une seule facilité n'est pas un contournement: c'est la couverture universelle assumée — le Free prouve la confiance via 3 QR, le Pro rend l'établissement opérationnel(, et Omni monétise la puissance vendue, pas l'entrée.
+**Ce qui justifie le plan actuel, et comment Omni profite monétairement:** le plan ne vend pas le droit d'exister;il vend la **profondeur** de l'établissement ( Pro = 10 produits + packs surplus + dispo auto + analytics + visibilité(, la **largeur** du compte ( slots additionnels à l'unité pour multi-boutiques(, la **fréquence** d'intention acheteur ( packs bulk + Acheteur Pro(, la **visibilité** ( publicité sponsorisée(, et l'**intelligence** ( analytics Pro(.( Un user à une seule facilité n'est pas un contournement: c'est la couverture universelle assumée — le Free prouve la confiance via  ​3 QR, le Pro rend l'établissement opérationnel(, et Omni monétise la puissance vendue, pas l'entrée.
+
+**Plusieurs facilités non liées sont le cas naturel** visé par les **facility slots**: on veut être découvert **dans la zone où l'on fournit le service**; si tout est au même endroit, on peut tout mettre sous une seule facilité(, mais si les marchés/zones sont distincts, on ouvre des facilités supplémentaires ≠ des entités liées artificiellement, chacune avec son slot, son plan(, et ses produits(, mesurés par la recherche géospatiale(.
 
 
 
@@ -32,7 +34,7 @@ Un user qui choisit **une seule facilité et y met tous ses produits** exerce ex
 |---|---|---|---|---|
 | Exploration cartographique | Illimitée temps réel | + filtres géospatiaux avancés + favoris persistants | Recherche + filtres rayon existants; favoris persistants? saved-searches partiel |
 | Vérification unitaire | Gratuite illimitée | Gratuite illimitée | Routée availability, en place |
-| Bulk availability | 3 opérations groupées / mois | Illimité | **Quota absent** — aucune route de comptage bulk |
+| Bulk availability |  ​3 opérations groupées / mois | **Compté: 10 bulk Pro / mois, surplus achetable en packs** | **Quota absent** — aucune route de comptage bulk |
 | Comparateur |1 comparaison active | Jusqu'à 5 comparaisons multi-critères | Compare existant ( surface `compare`(; quotas absents |
 | Espace transaction + QR | Accès complet | + support prioritaire + offres exclusives | En place ( flow + chat( |
 | Recommandations | Manuel | Automatisées meilleur compromis | **Absent** — suggestions non implémentées |
@@ -44,8 +46,8 @@ Un user qui choisit **une seule facilité et y met tous ses produits** exerce ex
 | Capacité | Vendeur Free | Vendeur Pro ( 5 000 XOF/établissement/mois( | État code actuel |
 |---|---|---|---|---|
 | Établissements inclus |**1 établissement actif** ( fixe/mobile/ambulant/digital( | Pro indépendant par établissement |**1 free slot par compte** implémenté ( `v2_facility_slots` + `roots-operations`(; 3 types dernièrement libres |
-| Slots additionnels | Facturés à l'unité | Facturés à l'unité ou inclus réseaux multi-boutiques | Règle achat slot en place ( 250 unités test(; UI d'achat à confirmer |
-| Taille catalogue | Jusqu'à 5 produits/services publiés | Produits illimités pour l'établissement | **5 max / pro_active débloque** en place ( l.1722( |
+| Slots additionnels | Facturés à l'unité ( propos prod: 1 000 XOF( | Facturés à l'unité ou inclus réseaux multi-boutiques | Règle achat slot en place ( 250 unités test(; prix prod 1 000 XOF à confirmer |
+| Taille catalogue | Jusqu'à 5 produits/services publiés | **10 produits Pro compris**; surplus au-delà achetable en packs produits( ( ex.  ​5 000 XOF pour +10( | **5 max en place** ( l.1722(; l'extension Pro 10 + surplus packs est la nouvelle cible |
 | Traitement dispo | Manuel 3 clics | Auto instantanée stock alloué | **Partiel**: réponse seller manuelle en place; auto `availability_pro_eligible` couplée à la garde pro en racine ( D-04( |
 | Vitrine + QR | Fiche publique + QR | Enrichie + mise en avant + édition rapide | Fiche + QR en place; mise en avant Pro à confirmer |
 | Scanner caisse | Scanner web/PWA | Haute cadence + journal + audit | Scanner QR seller en place; journal/audit Pro absent |
@@ -61,15 +63,15 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 
 ### 5. Mode discovery et visibilité
 
-- **Discovery** = être découvert dans la recherche géospatiale et dans les listes. En Free, la facilité est trouvable, avec un catalogue publié limité à 5. En Pro, la vitrine est mise en avant sur la carte et les produits illimités apparaissent en priorité ( visibilité supérieure, campagnes sponsorisées en route séparée(.
+- **Discovery** = être découvert dans la recherche géospatiale et dans les listes. En Free, la facilité est trouvable, avec un catalogue publié limité à 5. En Pro, la vitrine est mise en avant sur la carte et les produits Pro ( 10 + surplus( apparaissent en priorité ( visibilité supérieure, campagnes sponsorisées en route séparée(.
 - Le mode discovery ( « mettre les choses en discovery » que le fondateur cite( n'est pas un plan séparé: c'est la capacité de **tout catalogue publié** à être trouvé par la recherche(, bornée par les quotas Free/Pro de publication(,( et amplifiée par la visibilité Pro(/.
 
 ##  ​6. Monétisation multi-couches ( le modèle de revenus(
 
 | Couche | Vend | Client | État code |
 |---|---|---|---|---|
-| Abonnement Pro vendeur | Profondeur de l'établissement: produits illimités, dispo auto, analytics, visibilité | Vendeur par facilité | Backend en place ( 30 j, wallet spend, entitlement(; UI à compléter |
-| Slots additionnels | Largeur: capacité multi-boutiques | Vendeur | En place ( règles(; UI/prix prod à confirmer |
+| Abonnement Pro vendeur | Profondeur de l'établissement: 10 produits, dispo auto, analytics, visibilité + packs produits surplus | Vendeur par facilité | Backend en place( 30 j, wallet spend, entitlement(; UI + packs à compléter |
+| Slots additionnels | Facturés à l'unité ( propos prod: 1 000 XOF( | Facturés à l'unité ou inclus réseaux multi-boutiques | Règle achat slot en place ( 250 unités test(; prix prod 1 000 XOF à confirmer |
 | Packs bulk + Acheteur Pro | Fréquence d'intention: requêtes groupées, comparateur, recommandations | Acheteur | **Quotas absents**; recommandations absentes |
 | Publicité sponsorisée | Visibilité: campagnes, mise en avant | Vendeur | Campagnes existantes mentionnées( doc(; IA draft uniquement |
 | Bonus confiance 20 USD verrouillé | Traction: 3 ventes QR débloquent le crédit | Vendeur nouveau | **Info en doc**; seller_unlocks/pro_test_credit **absents** en prod |
@@ -81,7 +83,7 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 
 | Priorité | Gap | Bloque | Tranche proposée |
 |---|---|---|---|---|
-| P1 | Quotas bulk acheteur ( 3/mois Free, illimité Pro( | Honnêteté des promesses acheteur | NW-13d comptage serveur |
+| P1 | Quotas bulk acheteur( 3/mois Free,, 10/mois Pro compté + packs surplus rachetables( | Honnêteté des promesses acheteur| NW-13d comptage serveur + packs |
 | P1 | seller_unlocks + pro_test_credit ( 20 USD verrouillé( | Le bonus 20$ promis n'existe pas en prod | NW-13e bonus confiance |
 | P2 | Types de facilité contraints ( fixe/mobile/digital( | La création ( NW-13c( ne peut pas exprimer le mobile/discovery | NW-13c création |
 | P2 | Analytique vendeur Pro | La promesse Pro analytics n'existe pas | NW-13f analytics |
@@ -92,22 +94,35 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 
 
 
-##  ​8. Décisions à verrouiller ( questions fondateur(
+##  ​8b. Décisions verrouillées ( fondateur 2026-09-10(
 
-
-
-| ID | Décision | Propositions | Impact |
-|---|---|---|---|---|
-| D-E | Valider la réponse à la question: 1 seule facilité tous produits = 1 établissement actif légitime; monétisation = profondeur/largeur/fréquence/visibilité/intelligence | Oui / Ajuster | Fige le modèle de revenus |
-| D-F | Types de facilité contraints: fixe/mobile/digital + zone/rayon pour mobile | ( a( 3 types strictes( (b( libre avec label( | NW-13c formulaire |
-| D-G | Quotas bulk acheteur comptés côté serveur |( a( 3/mois Free, illimité Pro( (b( 5/Free, 20/Pro( | NW-13d |
-| D-H | Bonus confiance 20 USD verrouillé après 3 QR |( a( livrer seller_unlocks+pro_test_credit( (b( différer au CA | NW-13e |
-| D-I | Abonnement Pro: auto-renouvellement par défaut? |( a( oui avec rappel 3j avant( (b( manual opt-in( | NW-13g |
-| D-J | Prix prod: Pro 5 000 XOF/établissement/mois, slot à l'unité 2 500 XOF? | À confirmer avec le modèle de coûts | NW-13c/g pricing |
-| D-K | L'acheteur Pro 2 500 XOF/mois est-il lançable maintenant ou après NW-13h? |( a( lancer après recommandations+quotas( (b( lancer maintenant avec favoris+comparateur( | Planning |
-
+| ID | Décision verrouillée | Choix fondateur |
+|---|---|---|---|
+| D-E |  ​1 seule facilité tous produits = 1 établissement actif légitime; multi-facilités = slots payés, découverte par zone de service | **Validé** |
+| D-F |Types de facilité: fixe/mobile/digital + zone/rayon pour mobile |**(a(: 3 types strictes** |
+| D-G |Quotas bulk: 3/mois Free, **10/mois Pro compté** + surplus rachetable en packs |**(a(: 3 Free** + **10 Pro compté** + **packs surplus rachetables à volonté** |
+| D-H |Bonus confiance:  ​20 USD verrouillé,, débloqué après **3 ventes transactions Omni avec users distincts** |**(a(: seller_unlocks + pro_test_credit,, users distincts exigé** |
+| D-I |Abonnement Pro: **auto-renouvellement recommandé** via wallet,, opt-out possible pour l'user |**(a(: auto + wallet + opt-out** |
+| D-J |Prix prod: **facility slot 1 000 XOF à confirmer**; Pro vendeur 5 000 XOF/mois; packs produits/bulk à fixer |**Slot  ​1 000 XOF à confirmer** |
+| D-K |**Acheteur Pro lancé maintenant**( favoris+comparateur(; recommandations ensuite |**(b(: maintenant** |
 
 
 #####  ​9. Définition de fait de NW-13b
 
-La spec est validée par le fondateur; les 8 décisions D-E…D-K sont prises; les tranches NW-13c…j sont planifiées en ordre; la réponse à la question est officielle et fige le modèle de revenus. Aucun code de plan avant validation de ce doc.
+Spec validée fondateur 2026-09-10; décisions D-E…D-K **verrouillées**; le modèle de revenus est **figé**: profondeur/largeur/fréquence/visibilité/intelligence; Free  ​5 produits,, Pro ​10 compris + packs surplus; 3 types de facilité; bulk 3/10 compté + surplus; bonus  ​20 USD verrouillé après 3 ventes QR à users distincts; abonnement auto+opt-out;; slot  ​1 000 XOF à confirmer; acheteur Pro lancé maintenant.
+
+
+##  ​8c. Ordre des tranches planifiées( après validation NW-13b(
+
+| Ordre | Tranche | Contenu | Bloque |
+|---|---|---|---|---|
+| 1 | NW-13c | Création de facilité serveur+UI: formulaire minimal,, trust unconfirmed,, puis parcours preuve; 3 types( fixe/mobile/digital(,, zone/rayon mobile(,, digital sans point | D-B,, D-F,, D-J partiel |
+| 2 | NW-13d | Quotas bulk acheteur côté serveur: 3 Free,,  ​10 Pro compté + packs surplus | D-G |
+| 3 | NW-13e | Bonus confiance: seller_unlocks + pro_test_credit,,  ​3 ventes à users distincts | D-H |
+| 4 | NW-13g | Renouvellement Pro auto via wallet + opt-out + rappel | D-I |
+|  ​5 | NW-13h | Acheteur Pro: favoris persistants + comparateur multi-critères + quotas | D-K |
+|  ​6 | NW-13f | Analytics vendeur Pro: conversion,, provenance scans | Promesse analytics |
+|  ​7 | NW-13i | Mobile Money MTN/Moov/Orange | Monétisation mobile |
+|  ​8 | NW-13j | Publicité sponsorisée + IA | Promesse publicité |
+
+**Note:** la prochaine action après validation = **NW-13c** création de facilité(,, car elle débloque P2Créer du switch universel( et permet les types mobile/digital( (D-F(,( et amorce la monétisation par slot/plan.
