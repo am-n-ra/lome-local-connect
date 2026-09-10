@@ -29,6 +29,7 @@ import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
+import { chipHintFor, chipStatusFor, chipsToSearchOptions, summarizeActiveChips } from './search-constraints';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
@@ -309,6 +310,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       const result = await listPublicFacilities(bounds ?? undefined, trimmed, opts);
       if (result.ok && result.data) {
         setResults(result.data);
+        setFacilities(result.data);
         setResultsLoading(false);
         setRevealKey(`v13-${Date.now()}`);
         setRevealPending(true);
@@ -827,6 +829,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   };
 
   const toggleConstraint = useCallback((label: string) => {
+    if (chipStatusFor(label) === 'soon') return;
     setActiveConstraints((current) => {
       const next = new Set(current);
       if (next.has(label)) next.delete(label);
@@ -837,7 +840,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
-    void runSearch(query);
+    void runSearch(query, chipsToSearchOptions(activeConstraints));
   };
 
   // Pins contextuels: les pins hors-contexte s'estompent quand un sheet
@@ -913,10 +916,18 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div className="constraint-zone">
               <div className="label">{role === 'buyer' ? 'Contraintes (requête, pas engagement vendeur)' : 'Filtres actifs'}</div>
               <div className="chips">
-                {(SEARCH_CONSTRAINTS[role] ?? SEARCH_CONSTRAINTS.buyer).map((c: string) => (
-                  <span key={c} className={`chip${activeConstraints.has(c) ? ' active' : ''}`} onClick={() => toggleConstraint(c)} role="button" tabIndex={0}><span className="dot" />{c}</span>
-                ))}
+                {(SEARCH_CONSTRAINTS[role] ?? SEARCH_CONSTRAINTS.buyer).map((c: string) => {
+                  const soon = chipStatusFor(c) === 'soon';
+                  return (
+                    <span key={c} className={`chip${activeConstraints.has(c) ? ' active' : ''}${soon ? ' soon' : ''}`} onClick={() => { if (!soon) toggleConstraint(c); }} role="button" tabIndex={soon ? -1 : 0} aria-disabled={soon} title={soon ? (chipHintFor(c) ?? 'Bientôt') : undefined}><span className="dot" />{c}{soon ? <small style={{ marginLeft: 3 }}>bientôt</small> : null}</span>
+                  );
+                })}
               </div>
+              {(() => {
+                const applied = summarizeActiveChips(activeConstraints);
+                if (applied.length === 0) return null;
+                return <p className="tiny muted" role="status" style={{ marginTop: 4 }}>Appliqué: {applied.join(' · ')}</p>;
+              })()}
             </div>
           )}
           <div className="sim-chips" style={{ display: 'none', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>

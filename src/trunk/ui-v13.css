@@ -98,6 +98,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .chip .dot{width:6px;height:6px;border-radius:50%;background:var(--line);transition:.18s var(--ease)}
 .chip.active{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:var(--sh-sm)}
 .chip.active .dot{background:var(--accent)}
+.chip.soon{opacity:.55;cursor:not-allowed;border-style:dashed;;text-decoration:none}
 .constraint-zone{margin-top:9px;animation:riseIn .3s var(--ease) backwards}
 @keyframes riseIn{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:translateY(0)}}
 .kv{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--line);font-size:8.5px}

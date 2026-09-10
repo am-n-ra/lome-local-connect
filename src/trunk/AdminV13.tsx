@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState } from './api';
-import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem } from './types';
+import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole } from './api';
+import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount } from './types';
 
 type AdminV13Props = {
   onClose: () => void;
@@ -20,6 +20,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [toast, setToast] = useState<Toast | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
+  const [roleAccounts, setRoleAccounts] = useState<RoleManagementAccount[]>([]);
+  const [roleBusy, setRoleBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -27,10 +29,11 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     try {
       const token = await getAuthToken();
       if (!token) { setState('unauthorized'); return; }
-      const [consoleResult, queueResult, auditResult] = await Promise.all([
+      const [consoleResult, queueResult, auditResult, roleResult] = await Promise.all([
         getAdminConsole({ token }),
         getReviewQueue({ token }),
         listAdminAuditEvents({ token, limit: 12 }),
+        getRoleManagementAccounts({ token }),
       ]);
       if (!consoleResult.ok || !consoleResult.data) {
         setState('unauthorized');
@@ -40,6 +43,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setConsoleData(consoleResult.data);
       setQueue(queueResult.ok && queueResult.data ? queueResult.data.requests : []);
       setAudits(auditResult.ok && auditResult.data ? auditResult.data.events : []);
+      setRoleAccounts(roleResult.ok && roleResult.data ? roleResult.data.accounts : []);
       setState('ready');
     } catch (caught) {
       setState('error');
@@ -99,6 +103,45 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [load]);
 
+  const setManagedRole = useCallback(async (accountId: string, role: 'operator' | 'reviewer', status: 'active' | 'revoked', label: string) => {
+    const reason = window.prompt(`Motif de ${status === 'active' ? 'l’octroi' : 'la révocation'} du rôle ${label} (audité):`);
+    if (reason === null) return;;
+    const trimmed = reason.trim();
+    if (!trimmed) { setToast({ kind: 'err', text: 'Un motif est requis pour cette action.' }); return; }
+    setRoleBusy(`${accountId}:${role}:${status}`);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await setManagedStaffRole({ token, accountId, role, status, reason: trimmed });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: `${label} ${status === 'active' ? 'ajouté' : 'révoqué'} — ${role}.`});
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Changement de rôle non enregistré.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Changement de rôle non enregistré.' });
+    } finally {
+      setRoleBusy(null);
+    }
+  }, [load]);
+
+  const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
+  const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
+    const active = account.roles.includes(role);
+    return (
+      <button
+        className="chip"
+        type="button"
+        disabled={roleBusy !== null || active !== (desired === 'active')}
+        onClick={() => void setManagedRole(account.accountId, role, desired, roleLabel(role))}
+      >
+        {desired === 'active' ? '+' : '−'} {roleLabel(role)}
+      </button>
+    );
+  };
+
   return (
     <section className="sheet h-mid" data-sheet="admin" role="region" aria-label="Espace équipe">
       <div className="handle" />
@@ -127,6 +170,27 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               <button className="btn sm" type="button" disabled={reconciling} onClick={() => void reconcile()}><RefreshCw size={14} /> {reconciling ? 'Vérification…' : 'Re-vérifier'}</button>
             </div>
           </div>
+          {roleAccounts.length > 0 && (
+            <div className="cardbox" style={{ marginTop: 8 }}>
+              <div className="eyebrow">Équipe · Rôles</div>
+              <p className="tiny muted" style={{ marginBottom: 6 }}>Octroyer ou révoquer les rôles Opérateur / Réviseur ( motif obligatoire, audité(.</p>
+              {roleAccounts.map((account) => (
+                <div className="kv" key={account.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line, #e8e8e6)' }}>
+                  <span>
+                    <b>{account.onboardingState === 'seller_ready' ? 'Vendeur prêt' : 'Compte'}</b>
+                    <br />
+                    <span className="tiny muted">{account.suspended ? 'Suspendu' : 'Actif'} · {account.facilityCount} facilité{account.facilityCount === 1 ? '' : 's'}</span>
+                  </span>
+                  <span className="btnrow" style={{ gap: 4 }}>
+                    {!account.roles.includes('operator') && roleChip(account, 'operator', 'active')}
+                    {account.roles.includes('operator') && roleChip(account, 'operator', 'revoked')}
+                    {!account.roles.includes('reviewer') && roleChip(account, 'reviewer', 'active')}
+                    {account.roles.includes('reviewer') && roleChip(account, 'reviewer', 'revoked')}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           {toast && <p className="sub" role="status">{toast.text}</p>}
           {queue.length === 0 && <p className="sub" style={{ marginTop: 8 }}>Aucune demande en attente.</p>}
           {queue.map((item) => (

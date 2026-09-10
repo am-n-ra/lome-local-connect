@@ -8,6 +8,8 @@ export interface SearchOptions {
   quantiteMin?: number | null;
   /** Search constraint: search radius in kilometres (rayon_km) from the viewport centre. */
   rayonKm?: number | null;
+  /** Search constraint: keep only facilities operationally open (Ouvert; operational_state). */
+  operationalState?: 'ouvert' | null;
 }
 
 export interface PublicFacility {

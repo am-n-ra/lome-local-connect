@@ -89,6 +89,7 @@ export async function listPublicFacilities(bounds?: [number, number, number, num
   if (typeof options?.budgetMaxMinor === 'number') params.set('budget_max', String(options.budgetMaxMinor));
   if (typeof options?.quantiteMin === 'number') params.set('quantite_min', String(options.quantiteMin));
   if (typeof options?.rayonKm === 'number') params.set('rayon_km', String(options.rayonKm));
+  if (options?.operationalState) params.set('operational_state', options.operationalState);
   const response = await fetchWithRecovery(`/api/v2/public/facilities?${params.toString()}`, { headers: { Accept: 'application/json' } });
   return parse<PublicFacility[]>(response);
 }

@@ -35,6 +35,16 @@ describe('listPublicFacilities search contract', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/v2/public/facilities?', { headers: { Accept: 'application/json' } });
   });
 
+ it('serializes wired search constraints including operational state', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listPublicFacilities(undefined, 'riz', { category: '', quantiteMin: 10, budgetMaxMinor: 100000, rayonKm:   10, operationalState: 'ouvert' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?q=riz&budget_max=100000&quantite_min=10&rayon_km=10&operational_state=ouvert',
+      { headers: { Accept: 'application/json' } },
+    );
+  });
   it('serializes a text query without viewport bounds for global search', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
 

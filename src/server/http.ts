@@ -624,10 +624,13 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const hasBudget = url.searchParams.has('budget_max');
       const hasQuantity = url.searchParams.has('quantite_min');
       const hasRayon = url.searchParams.has('rayon_km');
+      const hasOperational = url.searchParams.has('operational_state');
+      const operationalState = hasOperational && url.searchParams.get('operational_state') === 'ouvert' ? 'ouvert' as const : undefined;
       const constraints = {
         budgetMaxMinor: hasBudget ? numberParam(url, 'budget_max', 0) : undefined,
         quantiteMin: hasQuantity ? numberParam(url, 'quantite_min', 0) : undefined,
         rayonKm: hasRayon ? numberParam(url, 'rayon_km', 0) : undefined,
+        operationalState,
       };
       const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get('q') ?? undefined, category, constraints);
       json(res, 200, { ok: true, correlationId, data: facilities });

@@ -1248,6 +1248,7 @@ function createTrunkRepository(sql = database()) {
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
         const quantiteMin = constraints?.quantiteMin ?? null;
         const rayonKm = constraints?.rayonKm ?? null;
+        const operationalState = constraints?.operationalState ?? null;
         const centerLat = bounds ? (south + north) / 2 : null;
         const centerLng = bounds ? (west + east) / 2 : null;
         const rows = await sql`
@@ -1287,6 +1288,7 @@ function createTrunkRepository(sql = database()) {
                 least(1, cos(radians(${centerLat})) * cos(radians(f.latitude)) * cos(radians(f.longitude) - radians(${centerLng})) + sin(radians(${centerLat})) * sin(radians(f.latitude)))
               )
             ) <= ${rayonKm}`}
+            ${operationalState === null ? sql`` : sql`and (f.operational_state = ${operationalState} or f.operational_state is null)`}
           group by f.id
           order by f.trust_state = 'unclaimed', f.name
           limit 250
@@ -3923,10 +3925,13 @@ async function handleApi(req, res, pathname, url) {
       const hasBudget = url.searchParams.has("budget_max");
       const hasQuantity = url.searchParams.has("quantite_min");
       const hasRayon = url.searchParams.has("rayon_km");
+      const hasOperational = url.searchParams.has("operational_state");
+      const operationalState = hasOperational && url.searchParams.get("operational_state") === "ouvert" ? "ouvert" : void 0;
       const constraints = {
         budgetMaxMinor: hasBudget ? numberParam(url, "budget_max", 0) : void 0,
         quantiteMin: hasQuantity ? numberParam(url, "quantite_min", 0) : void 0,
-        rayonKm: hasRayon ? numberParam(url, "rayon_km", 0) : void 0
+        rayonKm: hasRayon ? numberParam(url, "rayon_km", 0) : void 0,
+        operationalState
       };
       const facilities = await repository.listPublicFacilities(bounds, url.searchParams.get("q") ?? void 0, category, constraints);
       json(res, 200, { ok: true, correlationId, data: facilities });

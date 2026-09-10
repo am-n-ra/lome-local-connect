@@ -15,6 +15,7 @@ import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFrami
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
+import { type MapBasemap, RASTER_STYLE_URL, shouldFallbackToRaster, styleChoiceFor, STYLE_WATCHDOG_MS, VECTOR_STYLE_URL } from './map-style-fallback';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
 
@@ -47,7 +48,8 @@ type Props = {
 
 // Primary vector basemap: self-hosted monochrome globe style.
 // No remote tile provider — the map loads instantly from the local GeoJSON.
-const LOCAL_STYLE = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+const LOCAL_STYLE = VECTOR_STYLE_URL;
+const RASTER_STYLE = RASTER_STYLE_URL;
 const RESULT_LOCAL_ZOOM = 12.8;
 const RESULT_MAX_ZOOM = 14.5;
 // R-03b (founder 2026-09-10):amener une facilite en avant = fin de
@@ -214,10 +216,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const arrivalTokenRef = useRef(0);
   const pointerInside = useRef(false);
   const initialStyleReady = useRef(false);
-  const lastBoundsKey = useRef<string | null>(null);
-  const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [basemap, setBasemap] = useState<'vector' | 'local' | 'raster'>('local');
-  const [mapRetryKey, setMapRetryKey] = useState(0);
+    const vectorLoadedRef = useRef(false);
+    const [mapStatus, setMapStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+    const [basemap, setBasemap] = useState<MapBasemap>('local');
+    const [mapRetryKey, setMapRetryKey] = useState(0);
+    const lastBoundsKey = useRef<string | null>(null);
   const [rotationState, setRotationState] = useState<'idle' | 'rotating' | 'paused' | 'reduced'>('idle');
   const [cameraModeState, setCameraModeState] = useState<CameraMode>('manual_navigation');
   const [revealRunning, setRevealRunning] = useState(false);
@@ -420,13 +423,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   useEffect(() => {
     if (!container.current || mapRef.current) return;
     initialStyleReady.current = false;
+    vectorLoadedRef.current = false;
     setMapStatus('loading');
-    setBasemap('local');
+    const initialBasemap: MapBasemap = basemap === 'raster' ? 'raster' : 'local';
     let map: Map;
     try {
       map = new Map({
       container: container.current,
-      style: LOCAL_STYLE,
+      style: styleChoiceFor(initialBasemap, mapRetryKey > 0).url,
       center: [10, 8],
       zoom: 1.25,
       minZoom: 1,
@@ -443,7 +447,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       return;
     }
     mapRef.current = map;
-    const syncCameraPadding = () => {
+
+    const fallbackTimer: number | null = initialBasemap === 'raster' ? null : window.setTimeout(() => {
+      if (shouldFallbackToRaster(basemap, vectorLoadedRef.current, false, true)) {
+        setBasemap('raster');
+      }
+    }, STYLE_WATCHDOG_MS);
+    map.on('error', () => {
+      if (shouldFallbackToRaster(basemap, vectorLoadedRef.current, true, false)) {
+        setBasemap('raster');
+      }
+    });
+
+const syncCameraPadding = () => {
       // Coquille V13: les sheets sont rendus conditionnellement — le `.sheet` monté
       // EST le sheet actif (ex. search permanent en desktop et le formulaire search
       // en mobile). En mobile le sheet est ancré en bas:le padding de la carte doit
@@ -675,6 +691,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     const configureStyle = () => {
       if (!map.isStyleLoaded()) return;
       initialStyleReady.current = true;
+      vectorLoadedRef.current = true;
       setMapStatus('ready');
       // T-2: Déclencher l'arrival animation quand la carte est IDLE (pas seulement style-loaded),
       // pour garantir que le rendu est complet avant de bouger la caméra.
@@ -688,7 +705,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (arrivalInProgressRef.current) {
         return;
       }
-      const initialGlobe = projectionForZoom(map.getZoom()) === 'globe';
+      const initialGlobe = initialBasemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       globeProjection = initialGlobe;
       map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
       setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
@@ -867,7 +884,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     let globeProjection = true;
     const syncProjection = () => {
       if (arrivalInProgressRef.current) return;
-      const wantsGlobe = projectionForZoom(map.getZoom()) === 'globe';
+      const wantsGlobe = basemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
@@ -900,6 +917,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
       if (styleTimer !== null) clearTimeout(styleTimer);
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);
@@ -975,7 +993,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     }
     // Recreate ONLY on the explicit retry signal. Parent re-renders (bounds updates,
     // facility load, etc.) must never tear the map down — callbacks are read from refs.
-  }, [mapRetryKey]);
+  }, [mapRetryKey, basemap]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -1288,8 +1306,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
-      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'error' ? 'Carte indisponible' : 'Carte active'}</div>
-      {mapStatus === 'error' && <div className="map-provider-error" role="alert"><span>La carte vectorielle est temporairement indisponible.</span><button type="button" onClick={() => { setMapStatus('loading'); setMapRetryKey((key) => key + 1); }}>Réessayer</button></div>}
+      <div className="map-status" aria-live="polite">{mapStatus === 'loading' ? 'Chargement de la carte' : mapStatus === 'error' ? 'Carte indisponible' : basemap === 'raster' ? 'Cartographie de secours' : 'Carte active'}</div>
+      {mapStatus === 'error' && <div className="map-provider-error" role="alert"><span>La carte vectorielle est temporairement indisponible.</span><button type="button" onClick={() => { setBasemap('local'); setMapStatus('loading'); setMapRetryKey((key) => key + 1); }}>Réessayer</button></div>}
+      {mapStatus === 'ready' && basemap === 'raster' && <div className="map-provider-error" role="status"><span>Cartographie de secours:la carte vectorielle n'a pas pu se charger.</span><button type="button" onClick={() => { setBasemap('local'); setMapStatus('loading'); setMapRetryKey((key) => key + 1); }}>Revenir à la carte vectorielle</button></div>}
       {locationState !== 'idle' && <div className="location-status-sr" role="status" aria-live="polite">{locationCopy.title}. {locationCopy.detail}</div>}
       <div className="map-controls" aria-label="Contrôles de carte">
         <button className="zoom-out-control" type="button" aria-label="Zoom arrière" onClick={zoomOut}><Minus size={16} /></button>

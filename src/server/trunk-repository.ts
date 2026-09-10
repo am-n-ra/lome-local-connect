@@ -1374,7 +1374,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       return { active: Number((rows as Record<string, unknown>[])[0]?.active ?? 0) };
     },
-    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null }): Promise<PublicFacility[]> {
+    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null; operationalState?: 'ouvert' | null }): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? '';
@@ -1382,6 +1382,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
         const quantiteMin = constraints?.quantiteMin ?? null;
         const rayonKm = constraints?.rayonKm ?? null;
+        const operationalState = constraints?.operationalState ?? null;
         const centerLat = bounds ? (south + north) / 2 : null;
         const centerLng = bounds ? (west + east) / 2 : null;
         const rows = await sql`
@@ -1421,6 +1422,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                 least(1, cos(radians(${centerLat})) * cos(radians(f.latitude)) * cos(radians(f.longitude) - radians(${centerLng})) + sin(radians(${centerLat})) * sin(radians(f.latitude)))
               )
             ) <= ${rayonKm}`}
+            ${operationalState === null ? sql`` : sql`and (f.operational_state = ${operationalState} or f.operational_state is null)`}
           group by f.id
           order by f.trust_state = 'unclaimed', f.name
           limit 250
