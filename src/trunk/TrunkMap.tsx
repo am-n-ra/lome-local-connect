@@ -441,7 +441,18 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     }
     mapRef.current = map;
     const syncCameraPadding = () => {
-      const sheet = document.querySelector<HTMLElement>('.nearby-sheet');
+      // Coquille V13: les sheets sont rendus conditionnellement — le `.sheet` monté
+      // EST le sheet actif (ex. search permanent en desktop et le formulaire search
+      // en mobile). En mobile le sheet est ancré en bas:le padding de la carte doit
+      // refléter sa hauteur pour que les pins restent visibles au-dessus. En desktop,
+      // le journey sheet est un panneau latéral — la carte ne masque rien en bas,
+      // dont pas de padding vertical.
+      if (window.innerWidth >= 1040) {
+        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
+        return;
+      }
+      const stage = container.current?.closest('.omni-v13-stage');
+      const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])') ?? stage?.querySelector<HTMLElement>('.sheet');
       const sheetHeight = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
       const bottomPadding = sheetHeight > 0 ? Math.min(sheetHeight + 56, Math.max(180, window.innerHeight - 110)) : 0;
       map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
@@ -876,8 +887,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
+    const stageRoot = container.current?.closest('.omni-v13-stage');
     const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleUserPosition(); });
-    surfaceObserver.observe(container.current, { childList: true, subtree: false });
+    if (stageRoot) surfaceObserver.observe(stageRoot, { childList: true }); else surfaceObserver.observe(container.current, { childList: true, subtree: false });
     const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
@@ -1004,7 +1016,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
           map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
         } else {
           const isDesktop = window.innerWidth >= 1040;
-          map.fitBounds(finalBounds, { padding: { top: 90, right: 60, bottom: 180, left: isDesktop ? 420 : 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
+          const pad = map.getPadding() ?? { top: 0, right:  0, bottom:  0, left:  0 };
+          // Le padding dynamique syncCameraPadding(vient de protéger les pins de la
+          // sheet active (mobile: hauteur sheet réelle( — le cadrage final doit l'utiliser
+          // exactement,pour que les pins restent visibles au-dessus de la grille/sheet.
+          const finalBottom = isDesktop ? 90 : Math.max(0,(pad.bottom ?? 180));
+          map.fitBounds(finalBounds, { padding: { top: isDesktop ? 20 : (pad.top ?? 20), right: 60, bottom: finalBottom, left: isDesktop ? 420 : 60 }, maxZoom: RESULT_MAX_ZOOM, duration: 700, essential: true });
         }
       }
 
@@ -1041,60 +1058,54 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     };
 
     const beginFlight = () => {
-      // V1.3 §1.2 — pave A: bascule de caméra — « on prend de la hauteur ».
+      // V1.3 §1.2 — la séquence cinématique est TROIS appels chaînés.
+      // 1. A : bascule de caméra (250ms( — « on prend de la hauteur », tilt + rotation légère,
+      //     léger dézoom. 2. B : un SEUL flyTo (curve 1.7( vers le centre/zoom cible
+      //     calculé par cameraForBounds(utilisateur + résultats(. 3. C : à l’arrivée,
+      //     révélation échelonnée des pins, puis la grille glisse — jamais avant la fin du vol.,
+      //     omettant les paliers manuels à étapes (le code précédent `runSteps`( qui divergait
+      //     de la maquette acceptée. Le label contextuel suit l’événement `zoom` du flyTo
+      //     (crossfade 120ms, spec §1.2.2( — pas de paliers fixes discrets.
+      const zoomLabelFallback = setInterval(() => {
+        const label = labelForZoom(map.getZoom()); if (!isStale()) setLabel(label);
+      }, 140);
+      const clearZoomLabel = () => { window.clearInterval(zoomLabelFallback); setLabel(null); };
+      const land = () => {
+        if (isStale()) return;
+        clearZoomLabel();
+        revealPinsStaggered();
+      };
       if (reduced) {
-
-        const reducedLabels = setInterval(() => {
-
-          if (isStale()) { window.clearInterval(reducedLabels); return; }
-
-          const label = labelForZoom(map.getZoom()); setLabel(label);
-
-        }, 140);
-
         setLabel('Recherche dans le monde…');
-
-        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0, curve:  1.25, duration:  ​620, essential: true });
-
-        map.once('moveend', () => { window.clearInterval(reducedLabels); setLabel(null); if (!isStale()) revealPinsStaggered(); });
-
+        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing: 0, pitch:  0, curve:  1.25, duration:  620, essential: true });
+        map.once('moveend', land);
         return;
-
       }
-
+      // Étape A — on prend de la hauteur.
       const prevZoom = map.getZoom();
       setLabel(labelForZoom(prevZoom -  1) ?? 'Recherche dans le monde…');
       map.easeTo({ pitch: 35, bearing:  8, zoom: Math.min(prevZoom -  1, 2.5), duration:   250, easing: (t) => t * (2 - t), essential: true });
       map.once('moveend', () => {
         if (isStale()) return;
-        // pave B — contextualisation nature-way: vol progressif continent → pays →
-        // région → ville/quartier, highlight limite avancé à chaque palier (port
-        // de `main` MapCanvas `runStep` dans la chorégraphie V1.3(.
-
-        const REVEAL_STOP_ZOOMS: number[] = [3.2,  ​5.5,​  ​8.3,​  ​11.5,​  ​14.2];
-        const steps: number[] = REVEAL_STOP_ZOOMS.filter( (z) => z < flight.targetZoom -  0.05 );
-        steps.push( flight.targetZoom );
-        const runSteps = async () => {
-          const landing = { lat: userPositionRef.current?.latitude ??  6.13, lng: userPositionRef.current?.longitude ??  1.22 };
-          for (const stop of steps) {
-            if (isStale()) return;
-            setLabel(labelForZoom(stop));
-            map.flyTo({ center: flight.targetCenter, zoom: stop, curve:  ​1.7, speed:​  ​0.75, duration​: Math.min(1400​, Math.max(700,​ 700 + Math.abs(stop - map.getZoom()) * 140)), essential​: true });
-            await waitForMapMove(map, 2200);
-            if (isStale()) return;
-            await loadBoundariesForZoom(map, stop);
-            if (isStale()) return;
-            highlightBoundaryAtTarget(map, stop, landing);
-            await new Promise<void>((resolve) => window.setTimeout(resolve,​ 440));
-          }
-          if (isStale()) return;
-          setLabel(null);
-          revealPinsStaggered();
-        };
-        void runSteps();
+        // Étape B — vol cinématique unique MapLibre (dézoom/rezoom via curve(;
+        // le label contextuel vit sur l’événement `zoom` du flyTo — sans paliers ni
+        // boundaries intermédiaires.
+        const flyDuration  = Math.min(1400, Math.max(900, 700 + Math.abs(flight.targetZoom - map.getZoom()) * 140));
+        map.flyTo({
+          center: flight.targetCenter,
+          zoom: flight.targetZoom,
+          curve:  1.7,
+          speed:  1.15,
+          bearing:  0,
+          pitch:  0,
+          duration:  flyDuration,
+          essential: true,
+        });
+        // Étape C — la grille n’apparaît jamais avant la fin du vol:la sheet results
+        // est ouverte par le parent via onRevealStateChange(false( après la révélation des pins.
+        map.once('moveend', land);
       });
     };
-
     // Masque les pins pendant le vol — leveil arrive à la toute fin. (Spec 1.2:C(.
     if (!reduced) {
       if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-opacity', 0);
@@ -1128,7 +1139,19 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     if (!selected || map.isMoving()) return;
     cameraMode.current = 'selected_facility';
     setCameraModeState('selected_facility');
-    map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+    // R-03a (maquette V1.3): quand on ouvre un sheet, le pin sélectionné
+    // doit rester VISIBLE dans la zone de carte restante (au-dessus du sheet(,
+    // pas caché dessous. `setPadding` ne déplace pas la caméra en MapLibre:on
+    // recentre donc explicitement sur le pin, décalé vers le HAUT du padding basal reel du sheet.
+    const pad = map.getPadding();
+    const bottomPad = pad?.bottom ?? 0;
+    if (bottomPad > 0) {
+      const pt = map.project([selected.longitude, selected.latitude]);
+      const target = map.unproject([pt.x, pt.y - (bottomPad +  64) / 2]);
+      map.easeTo({ center: [target.lng, target.lat], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+    } else {
+      map.easeTo({ center: [selected.longitude, selected.latitude], zoom: Math.max(map.getZoom(), 5.2), duration: 650, essential: true });
+    }
   }, [facilities, selectedId]);
 
   // R-03 map-contextual focus (admin review selection, audit hop-to-object):

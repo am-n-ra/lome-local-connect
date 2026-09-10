@@ -967,7 +967,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Disponibilité groupée</div><h1>Interroger plusieurs facilités</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('results')}><X size={15} /> Fermer</button>
           </div>
           <p className="tiny muted">Interroger plusieurs facilités en une fois — chaque facilité reçoit sa propre demande reel.faible 1 requête groupée restante ce mois (plan gratuit).</p>
           {bulkLoading && <p className="sub" role="status">Chargement des facilités…</p>}
@@ -1028,7 +1027,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Comparer</div><h1>Facilités candidates</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('results')}><X size={15} /> Fermer</button>
           </div>
           <div className="sortbar">
             {([['match', 'Meilleur match'], ['distance', 'Plus proche'], ['price', 'Prix le plus bas'], ['remise', 'Remise Omni']] as const).map(([key, label]) => (
@@ -1058,7 +1056,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Scanner un QR</div><h1>Facilité publique</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {qrError && <p className="sub" role="alert" style={{ marginTop: 8 }}>{qrError}</p>}
           <PublicQrScannerSheet key={qrScanKey} onDetected={(facilityId: string) => void handleQrDetected(facilityId)} onClose={() => setSheet('menu')} />
@@ -1069,7 +1067,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? '—'}</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet(sheet === 'facility' ? (role === 'buyer' ? 'results' : 'menu') : 'none')}><X size={15} /> Fermer</button>
           </div>
           {facilityLoading && <p className="sub">Chargement…</p>}
           {!facilityLoading && selectedFacility && (
@@ -1225,7 +1222,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Compte</div><h1>Votre profil Omni</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           <div className="cardbox">
             <div className="kv"><span>Identité</span><b>{sessionUser.name ?? sessionUser.email}</b></div>
@@ -1249,7 +1246,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace Buyer</div><h1>Vos demandes & transactions.</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {buyerRequestsState === 'loading' && <p className="sub" role="status">Chargement de vos demandes…</p>}
           {buyerRequestsState === 'error' && (
@@ -1292,7 +1289,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Omni Wallet</div><h1>Votre pouvoir de recherche.</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {walletState === 'loading' && <p className="sub" role="status">Vérification du Wallet…</p>}
           {walletState === 'error' && (
@@ -1372,7 +1369,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Seller' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Buyer'}</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('menu')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {(role === 'buyer' || role === 'seller') ? (
             <>
@@ -1442,7 +1439,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Revendiquer</div><h1>Vérifier une facilité</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('facility')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('facility')} aria-label="Fermer"><X size={15} /></button>
           </div>
           <p className="tiny muted">{selectedFacility?.name ?? 'Facilité sélectionnée'} · draft v{claimResult.version}</p>
           <p className="sub">Ce parcours prépare une vérification représentant, société, lieu et activité. Il ne certifie jamais une personne au moment du clic.</p>
@@ -1487,7 +1484,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => setSheet('none')}><X size={15} /></button>
+            <button type="button" className="sheet-close" onClick={() => setSheet('none')} aria-label="Fermer"><X size={15} /></button>
           </div>
           <p className="sub">
             {authClient ? 'La connexion Omni (Neon Auth) est active.' : 'L’authentification n’est pas configurée dans cet environnement.'}

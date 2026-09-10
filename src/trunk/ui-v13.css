@@ -74,6 +74,9 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .sheet.peek{overflow:hidden}
 .handle{width:38px;height:4px;border-radius:4px;background:#dcdcda;margin:0 auto 10px;flex:none;cursor:pointer}
 .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.sheet-close{flex:none;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);background:#fff;color:var(--ink-soft);display:grid;place-items:center;cursor:pointer;transition:.18s var(--ease);box-shadow:var(--sh-sm)}
+.sheet-close:hover{color:var(--ink);border-color:var(--ink)}
+.sheet-close:active{transform:scale(.92)}
 .eyebrow{font-size:8px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
 h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{font-size:11px}
 .sub{color:var(--ink-soft);line-height:1.35;margin-top:4px;font-size:10px}
