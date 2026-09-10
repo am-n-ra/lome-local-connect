@@ -85,7 +85,11 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Équipe · Rôles ( surface admin:** contrat serveur `role-management` GET/POST **prouvé** par 4 nouveaux tests (`role-management.test.ts`(; `AdminV13` liste les comptes + grant/revoke `operator`/`reviewer` avec motif obligatoire audité — le fondateur pourra faire d'un user un operator/team depuis l'UI. Preuves: tsc clean, **344/344 tests**, build `index-2zqnh1PG.js`, `check:boundary` clean.
 - Dossier: `docs/nature-way/omni-nw-12-search-intent-and-team-2026-09-10.md`.
 
-## V-7d seller reply flow (2026-09-09, commit 773bc4f(
+## NW-13 (brouillon à valider, 2026-09-10): re-spécification entrée Seller
+- Le switch doit donner accès à l'espace seller normalement; sans facilité = état vide avec Créer / Revendiquer ( mêmes ClaimSheet que côté buyer(; la garde Facility-before-Offer ne s'applique qu'à la publication/disponibilité( pas à l'accès à l'espace
+- Doc: `docs/nature-way/omni-nw-13-seller-entry-respec-2026-09-10.md` + 4 décisions **D-A…D-D** en attente du fondateur avant tout code
+
+## V-7d seller reply flow ( 2026-09-09, commit  ​773bc4f(
 - **Buyer AVAIL captures `deliveryMode` (`retrait`/`livraison`) + optional `note`** — collected in `BuyerFlowV13`, passed through `requestAvailability` API/route/repository end-to-end; buyer pending stage displays both as context.
 - **New `SellerReplyV13` sheet ( seller-reply(**: loads seller availability queue `getSellerAvailabilityQueue`, shows buyer mode/note/product/qty/budget, inline reply composer (status/quantity/price/message( via `requestSellerAvailabilityResponse`; wired into `SellerV13` (「Demandes en attente」 button ( and `TrunkAppV13` (( `'seller-reply'` in `Sheet` union + mount + `journeySheets`(. TypeScript clean, **313/313 tests pass**.
 - **Migration `db/migrations/043_v2_availability_request_mode_note.sql`** — adds `delivery_mode` (text not null default 'retrait', check retrait/livraison( + `request_note` (text nullable, ≤500 chars check( to `v2_availability_requests`, additive+idempotent. **Prepared+verified on Neon temp branch `br-delicate-cake-am8g44hd`** ( columns/constraints/defaults + idempotent re-run prove(; **APPLIED on canonical `br-dawn-hill-am5amy22`** (vérifié 2026-09-09: colonnes + contraintes présentes via pg_constraint; **mais entrée `omni_schema_migrations` ABSENTE pour 043** → backfill registre requis (pattern 041(; code `773bc4f` **déjà déployé prod**: prod sert `index-BXtDUEoU.js` === build local (guardrail T-07d ✅, 49 files/313 tests, tsc clean, build OK(.
