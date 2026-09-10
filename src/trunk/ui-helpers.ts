@@ -73,14 +73,12 @@ export function savedSearchConstraintSummary(search: SavedSearch): string {
 export type PendingAction =
   | { kind: 'intent'; returnTo: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string; quantity: number }
   | { kind: 'seller-entry'; returnTo: 'seller-entry' }
-  | { kind: 'claim'; returnTo: 'facility'; facilityId: string }
   | { kind: 'search'; returnTo: 'search' };
 
 export function describePendingAction(action: PendingAction | null): string {
   switch (action?.kind) {
     case 'intent': return 'Secure checkout';
     case 'seller-entry': return 'Seller space';
-    case 'claim': return 'Facility claim';
     case 'search': return 'Search';
     default: return '';
   }
@@ -90,7 +88,6 @@ export type PendingResume =
   | { sheet: 'flow'; facilityId: string; facilityName: string; productId: string; productName: string }
   | { sheet: 'search' }
   | { sheet: 'seller' }
-  | { sheet: 'facility'; facilityId: string; latitude?: number; longitude?: number }
   | { sheet: 'none' };
 
 export function pendingActionResume(action: PendingAction | null): PendingResume {
@@ -100,8 +97,7 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
   }
   if (action?.kind === 'search') return { sheet: 'search' };
   if (action?.kind === 'seller-entry') return { sheet: 'seller' };
-  if (action?.kind === 'claim') return { sheet: 'facility', facilityId: action.facilityId };
-  return { sheet: 'none' };
+ return { sheet: 'none' };
 }
 
 export function sortProductsStockFirst<T extends { stockLoueOmni: number }>(products: T[]): T[] {

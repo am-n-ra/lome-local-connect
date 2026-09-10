@@ -1165,9 +1165,6 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           setPendingAction(null);
           if (resume.sheet === 'flow') {
             setFlowFacility({ id: resume.facilityId,name: resume.facilityName }); setFlowProduct({ id: resume.productId,name: resume.productName }); setSheet('flow');
-          } else if (resume.sheet === 'facility') {
-            setSelectedId(resume.facilityId)
-            setSheet('facility'); void handlePinSelect({ id: resume.facilityId,name: 'Ma facilité',category: 'commerce',address: null,latitude: resume.latitude ?? 0,longitude: resume.longitude ?? 0,trust: 'unclaimed',plan: 'free',productCount: 0 } as PublicFacility);
           } else {
             setSheet(resume.sheet);
           }
