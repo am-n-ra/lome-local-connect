@@ -279,3 +279,20 @@ Le registre `omni-v8-coherence-audit-V1-2026-09-09.md` listait 18 dettes; une pa
 | V-8d | COH-18 | preuve manuelle humaine | Caméra/GPS réel + spot-check humain 4 largeurs prod | `watch` — humain |
 
 Chaque slice codée porte: tsc + tests + build + prod hash===build ( T-07d（ + push après étape significative.
+
+## Slice borné — NW-12 « la recherche est le cœur : l'intention derrière » de 2026-09-10
+
+> Handoff HO-OMNI-11 ( fondateur de 2026-09-10(; Gate  6 Canopy/launch-readiness.
+ Dossier: `docs/nature-way/omni-nw-12-search-intent-and-team-2026-09-10.md`.
+
+### Clôture — 5/5 slices codées + docs
+
+| ID | Périmètre | Preuve | Statut |
+|---|---|---|---|
+| NW-12.1 | chips contraintes → SearchOptions réels + bientôt honnête | `search-constraints.ts` + tests | done |
+| NW-12.2 | operationalState serveur | api/http/repo + tests | done |
+| NW-12.3 | submit → opts + pins = résultats + chips soon | TrunkAppV13 l.289-313,832-922 | done |
+| NW-12.4 | fallback raster + watchdog + retry | map-style-fallback.ts + TrunkMap + 3 tests | done |
+| NW-12.5 | surface admin Équipe · Rôles | role-management.test.ts 4 tests + AdminV13 | done |
+
+Preuves globales: tsc clean, 344/344 tests,  ​55 fichiers, build `index-2zqnh1PG.js`, boundary clean, push `7b20da0`.
