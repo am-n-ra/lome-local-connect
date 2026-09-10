@@ -246,3 +246,36 @@
 .
 > **Next smallest action:** **Fondateur répond D-1…D-5** ( §4 de `docs/nature-way/omni-species-reopen-audit-master-v1.3-g02a-revisited-2026-09-07.md`( — Nature Way exécute la combinaison choisie( V-7a–e en tranches courtes ou dette explicitement triggerée( → Founder HQ réconcilie plan/board → clôture Gate  ​6「 Go with limits 」(
 > **Re-plan trigger:** réponse fondateur D-1…D-5; un test échoue; prod hash diverge; décision fondateur change l'orientation（
+
+---
+
+## V-8 — Clôture des dettes résiduelles de cohérence V1 ( COH（ （ Gate  6「 Go with limits 」
+
+> **Handoff:** `HO-OMNI-11` ( Founder HQ 2026-09-09(; **structural path:** Gate  6 Canopy/launch-readiness.
+> **Resource Receipt ( this pass(:** Chargé `references/execution-controller.md`, `intra-skill-execution-controller.md`, `anti-slop-and-debt-review.md`, `visual-and-logic-coherence-review.md`, `proof-and-decision-ledger.md`, `autonomous-delivery-gates.md`; template `intra-skill-plan.md`. Non chargé: `risk-and-escalation-matrix.md` ( pas de slice argent ce pass(, `technical-lead-production-review.md`, `launch-envelope.md` ( pas de gate release/launch nouveau(.
+
+### Recalibration code-vérifiée ( 2026-09-09（: dettes déjà closes par le code actuel
+
+Le registre `omni-v8-coherence-audit-V1-2026-09-09.md` listait 18 dettes; une passe code-vérité ( HEAD `a845d53`+`1849d70`( montre que plusieurs sont **déjà résolues**:
+
+| Dette | État code réel ( fichier:ligne( | Preuve |
+|---|---|---|---|
+| COH-02 | ✅ gating rolepill par capabilities serveur (`sellerAvailable`/`adminTools`( | `TrunkAppV13.tsx` l.705–707 |
+| COH-04 | ✅ scanner bouton「 Autoriser et démarrer 」+ `permission_pending` + stop `visibilitychange` ( 2 fichiers( | `SellerQrScannerSheet.tsx` l.77–134; `PublicQrScannerSheet.tsx` l.53–109 |
+| COH-05 | ✅ solde wallet réel via prop `walletBalanceMinor` + label honnête ( pas de 0,00 dur( | `BuyerFlowV13.tsx` l.18,400–401 |
+| COH-06 | ✅ toggle ON/OFF wire `setSellerFacilityOperationalState` ( route serveur live, 12 bundles( | `SellerV13.tsx` l.63–119; `api/v2/*` |
+| COH-07 | ✅ label Plan dynamique seller/buyer | `TrunkAppV13.tsx` l.1244 |
+| COH-08 | ✅ bouton Compteur désactivé ( navigation volet opérateur( | `AdminV13.tsx` l.164 |
+| COH-12 | ✅ freshbar single-flow ( stale/expired( | `BuyerFlowV13.tsx` l.75,305–325 |
+| COH-01/03 | ✅ serveur fournit coords réelles (`facility_latitude/longitude`( + client les utilise (`request.latitude/longitude`( | `trunk-repository.ts` l.1940–2010; `TrunkAppV13.tsx` l.1274 |
+
+### Slices restantes ( codage（
+
+| ID | Dettes | Périmètre | Work | Statut |
+|---|---|---|---|---|
+| V-8a | COH-01/03 edge ( resume-claim sans coords（ | buyer/auth | Porter les coords de la facilité à travers `PendingAction.claim` + les utiliser au resume ( l.1170（; fallback vue courante si absentes | `ready` |
+| V-8b | COH-10/16 | desktop | `role="dialog" aria-modal="true"` + focus-trap/backdrop pour les tiroirs journey desktop ( menu/account/wallet/plans/saved（ | `ready` |
+| V-8c | COH-09,11,13,14,15,17 | non-coding | Dispositions enregistrées ( deferred/decision fondateur（ | `ready` — docs only |
+| V-8d | COH-18 | preuve manuelle humaine | Caméra/GPS réel + spot-check humain 4 largeurs prod | `watch` — humain |
+
+Chaque slice codée porte: tsc + tests + build + prod hash===build ( T-07d（ + push après étape significative.

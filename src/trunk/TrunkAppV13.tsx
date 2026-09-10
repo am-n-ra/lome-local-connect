@@ -10,7 +10,7 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -1177,7 +1177,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
       )}
       {sheet === 'menu' && (
-        <section className="sheet h-mid" data-sheet="menu" key={role} role="region" aria-label="Espace">
+        <section className="sheet h-mid" data-sheet="menu" key={role} role="dialog" aria-modal="false" aria-label="Espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : 'Espace ' + role}</h1></div>
@@ -1221,7 +1221,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'account' && sessionUser && (
-        <section className="sheet h-mid" data-sheet="account" role="region" aria-label="Compte">
+        <section className="sheet h-mid" data-sheet="account" role="dialog" aria-modal="false" aria-label="Compte" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Compte</div><h1>Votre profil Omni</h1></div>
@@ -1245,7 +1245,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'home' && (
-        <section className="sheet h-mid" data-sheet="home" role="region" aria-label="Mon espace">
+        <section className="sheet h-mid" data-sheet="home" role="dialog" aria-modal="false" aria-label="Mon espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Espace Buyer</div><h1>Vos demandes & transactions.</h1></div>
@@ -1288,7 +1288,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'wallet' && (
-        <section className="sheet h-mid" data-sheet="wallet" role="region" aria-label="Omni Wallet">
+        <section className="sheet h-mid" data-sheet="wallet" role="dialog" aria-modal="false" aria-label="Omni Wallet" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Omni Wallet</div><h1>Votre pouvoir de recherche.</h1></div>
@@ -1368,7 +1368,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'plans' && (
-        <section className="sheet h-mid" data-sheet="plans" role="region" aria-label="Plans">
+        <section className="sheet h-mid" data-sheet="plans" role="dialog" aria-modal="false" aria-label="Plans" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Seller' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Buyer'}</h1></div>
@@ -1401,7 +1401,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'saved' && (
-        <section className="sheet h-mid" data-sheet="saved" role="region" aria-label="Recherches enregistrées">
+        <section className="sheet h-mid" data-sheet="saved" role="dialog" aria-modal="false" aria-label="Recherches enregistrées" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Recherches enregistrées</div><h1>Vos alertes</h1></div>
@@ -1483,7 +1483,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         </section>
       )}
       {sheet === 'auth' && (
-        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion">
+        <section className="sheet h-mid" data-sheet="auth" role="dialog" aria-modal="true" aria-label="Connexion" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Bienvenue</div><h1>Connectez-vous pour continuer.</h1></div>

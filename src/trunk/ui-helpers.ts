@@ -116,3 +116,15 @@ export function walletBucketTotals(entries: Array<{ kind: string; amountMinor: n
   }
   return { creditMinor, spendMinor };
 }
+export function trapDrawerFocus(event: { key: string; shiftKey: boolean; preventDefault(): void; currentTarget: { querySelectorAll(selectors: string): NodeListOf<Element> } }): void {
+  const selectors = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  if (event.key !== 'Tab') return;
+  const focusables = Array.from(event.currentTarget.querySelectorAll(selectors)).filter((el) => !el.hasAttribute('hidden'));
+  if (focusables.length === 0) return;
+  const first = focusables[0] as HTMLElement;
+  const last = focusables[focusables.length - 1] as HTMLElement;
+
+  if (event.shiftKey && (document.activeElement === first || document.activeElement === event.currentTarget)) {
+ event.preventDefault(); last.focus(); }
+  else if (!event.shiftKey && (document.activeElement === last)) { event.preventDefault(); first.focus(); }
+}
