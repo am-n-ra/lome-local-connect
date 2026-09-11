@@ -40,7 +40,7 @@
 | ID | Tranche | Contenu | Bloque |
 |---|---|---|---|---|
 | P1-A | NW-13c — Création de facilité serveur+UI | Formulaire minimal: 3 types ( fixe/mobile/digital(,( zone/rayon mobile(, digital sans point; trust `unconfirmed`; puis parcours preuve. | D-B, D-F, D-J partiel |
-|P1-B | NW-13d — Crédits bulk ( acheteur(: 3 crédits/mois Free,, **pack mensuel Pro généreux**(à fixer, recommandé 25–30/mois(, comptage serveur: chaque demande à N facilités consomme une quantité; surplus rachetable en packs. | D-G |
+|P1-B | NW-13d — Crédits bulk ( acheteur(: 3 crédits/mois Free,, **Pro = base mensuelle ≈ 90 crédits/mois** ( 1 besoin =1 bulk(,, comptage serveur: chaque demande à N facilités consomme une quantité; surplus rachetable en packs. | D-G |
 | P1-C | NW-13e — Bonus confiance | `seller_unlocks` + `pro_test_credit`, après 3 ventes QR à users distincts. | D-H |
 | P1-D | NW-13g — Renouvellement Pro auto | Wallet auto-renouvellement + opt-out + rappel. | D-I |
 

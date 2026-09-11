@@ -34,7 +34,7 @@ Un user qui choisit **une seule facilité et y met tous ses produits** exerce ex
 |---|---|---|---|---|
 | Exploration cartographique | Illimitée temps réel | + filtres géospatiaux avancés + favoris persistants | Recherche + filtres rayon existants; favoris persistants? saved-searches partiel |
 | Vérification unitaire | Gratuite illimitée | Gratuite illimitée | Routée availability, en place |
-| Bulk availability |​ 3 opérations groupées / mois( crédits( | **Crédits bulk Pro: pack mensuel généreux**(à fixer, recommandé 25–30/mois consumer(, chaque demande à plusieurs facilités consomme une quantité | **Quota absent** — aucune route de comptage bulk |
+| Bulk availability |​ 3 opérations groupées / mois( crédits( | **Crédits bulk Pro = base mensuelle ≈ 90/mois** ( ≈ 3 besoins/jour(, principe **1 besoin = 1 bulk**,  ​30 rejeté comme insuffisant(; chaque demande à plusieurs facilités consomme une quantité; surplus rachetable au-delà | **Quota absent** — aucune route de comptage bulk |
 | Comparateur |1 comparaison active | Jusqu'à 5 comparaisons multi-critères | Compare existant ( surface `compare`(; quotas absents |
 | Espace transaction + QR | Accès complet | + support prioritaire + offres exclusives | En place ( flow + chat( |
 | Recommandations | Manuel | Automatisées meilleur compromis | **Absent** — suggestions non implémentées |
@@ -83,7 +83,7 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 
 | Priorité | Gap | Bloque | Tranche proposée |
 |---|---|---|---|---|
-| P1 | Quotas bulk acheteur( 3 crédits/mois Free,, crédits Pro via pack mensuel généreux( à fixer(, consommables par demande multi-facilités( | Honnéteté des promesses acheteur| NW-13d comptage serveur de crédits + packs |
+| P1 | Quotas bulk acheteur( 3 crédits/mois Free,, Pro = **base mensuelle ≈ 90 bulk/mois** ( à fixer(, 30 insuffisant(, consommables par demande multi-facilités( | Honnéteté des promesses acheteur| NW-13d comptage serveur de crédits + packs |
 | P1 | seller_unlocks + pro_test_credit ( 20 USD verrouillé( | Le bonus 20$ promis n'existe pas en prod | NW-13e bonus confiance |
 | P2 | Types de facilité contraints ( fixe/mobile/digital( | La création ( NW-13c( ne peut pas exprimer le mobile/discovery | NW-13c création |
 | P2 | Analytique vendeur Pro | La promesse Pro analytics n'existe pas | NW-13f analytics |
@@ -100,7 +100,7 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 |---|---|---|---|
 | D-E |  ​1 seule facilité tous produits = 1 établissement actif légitime; multi-facilités = slots payés, découverte par zone de service | **Validé** |
 | D-F |Types de facilité: fixe/mobile/digital + zone/rayon pour mobile |**(a(: 3 types strictes** |
-| D-G |Quotas bulk = crédits de volume: 3 crédits/mois Free; **Pro = pack mensuel de crédits généreux**(à fixer, ne pas négliger le besoin mensuel(; chaque demande à N facilités consomme une quantité |**(a(: 3 crédits Free/mois** + **Pro pack mensuel généreux, consommables** + surplus rachetable en packs |
+| D-G |Quotas bulk = crédits de volume: ​3 crédits/mois Free; **Pro = base mensuelle ≈ 90 crédits/mois**(à fixer, principe **1 besoin = 1 bulk**,  ​30 rejeté comme insuffisant(; chaque demande à N facilités consomme une quantité |**(a(: 3 crédits Free/mois** + **Pro base mensuelle ≈ 90/mois, consommables** + surplus rachetable en packs |
 | D-H |Bonus confiance:  ​20 USD verrouillé,, débloqué après **3 ventes transactions Omni avec users distincts** |**(a(: seller_unlocks + pro_test_credit,, users distincts exigé** |
 | D-I |Abonnement Pro: **auto-renouvellement recommandé** via wallet,, opt-out possible pour l'user |**(a(: auto + wallet + opt-out** |
 | D-J |Prix prod: **facility slot 1 000 XOF à confirmer**; Pro vendeur 5 000 XOF/mois; packs produits/bulk à fixer |**Slot  ​1 000 XOF à confirmer** |
@@ -109,7 +109,7 @@ Le modèle reconnaît **fixe, mobile/ambulant, digital** comme types d'établiss
 
 #####  ​9. Définition de fait de NW-13b
 
-Spec validée fondateur 2026-09-10, **amendée fondateur 2026-09-11**; décisions D-E…D-K **verrouillées**; le modèle de revenus est **figé**: profondeur/largeur/fréquence/visibilité/intelligence; Free​ 5 produits; **catalogue vendeur ILLIMITÉ en Pro actif** ( autres produits visibles Omni que quand Pro actif(; 3 types de facilité; **bulk = crédits de volume: 3 crédits/mois Free, pack mensuel Pro généreux à fixer, consommables par demande multi-facilités**; bonus​ 20 USD verrouillé après 3 ventes QR à users distincts; abonnement auto+opt-out;; slot​ 1 000 XOF à confirmer; acheteur Pro lancé maintenant.
+Spec validée fondateur 2026-09-10, **amendée fondateur 2026-09-11**; décisions D-E…D-K **verrouillées**; le modèle de revenus est **figé**: profondeur/largeur/fréquence/visibilité/intelligence; Free​ 5 produits; **catalogue vendeur ILLIMITÉ en Pro actif** ( autres produits visibles Omni que quand Pro actif(; 3 types de facilité; **bulk = crédits de volume: 3 crédits/mois Free, Pro = **base mensuelle ≈ 90 crédits/mois** ( 1 besoin =  ​1 bulk(,, 30 insuffisant(,, surplus rachetable au-delà(,, consommables par demande multi-facilités**; bonus​ 20 USD verrouillé après 3 ventes QR à users distincts; abonnement auto+opt-out;; slot​ 1 000 XOF à confirmer; acheteur Pro lancé maintenant.
 
 
 ##  ​8c. Ordre des tranches planifiées( après validation NW-13b(
@@ -117,7 +117,7 @@ Spec validée fondateur 2026-09-10, **amendée fondateur 2026-09-11**; décision
 | Ordre | Tranche | Contenu | Bloque |
 |---|---|---|---|---|
 | 1 | NW-13c | Création de facilité serveur+UI: formulaire minimal,, trust unconfirmed,, puis parcours preuve; 3 types( fixe/mobile/digital(,, zone/rayon mobile(,, digital sans point | D-B,, D-F,, D-J partiel |
-| 2 | NW-13d | Crédits bulk serveur: 3 crédits/mois Free,, **pack mensuel Pro généreux**(à fixer(,, comptage par demande multi-facilités + packs surplus | D-G |
+| 2 | NW-13d | Crédits bulk serveur: 3 crédits/mois Free,, **Pro base mensuelle ≈  ​90 crédits/mois** ( 1 besoin =1 bulk(,, comptage par demande multi-facilités + packs surplus | D-G |
 | 3 | NW-13e | Bonus confiance: seller_unlocks + pro_test_credit,,  ​3 ventes à users distincts | D-H |
 | 4 | NW-13g | Renouvellement Pro auto via wallet + opt-out + rappel | D-I |
 |  ​5 | NW-13h | Acheteur Pro: favoris persistants + comparateur multi-critères + quotas | D-K |
