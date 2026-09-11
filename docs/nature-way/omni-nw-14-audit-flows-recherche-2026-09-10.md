@@ -40,7 +40,7 @@
 | ID | Tranche | Contenu | Bloque |
 |---|---|---|---|---|
 | P1-A | NW-13c — Création de facilité serveur+UI | Formulaire minimal: 3 types ( fixe/mobile/digital(,( zone/rayon mobile(, digital sans point; trust `unconfirmed`; puis parcours preuve. | D-B, D-F, D-J partiel |
-|P1-B | NW-13d — Crédits bulk ( acheteur(: 3 crédits/mois Free,, **Pro = base mensuelle ≈ 90 crédits/mois** ( 1 besoin =1 bulk(,, comptage serveur: chaque demande à N facilités consomme une quantité; surplus rachetable en packs. | D-G |
+|P1-B | NW-13d — Crédits bulk ( acheteur(: 3 crédits/mois Free,, **Pro = base mensuelle ≈ 100 crédits/mois** ( 1 besoin =1 bulk(,, comptage serveur: chaque demande à N facilités consomme une quantité; surplus rachetable en packs. | D-G |
 | P1-C | NW-13e — Bonus confiance | `seller_unlocks` + `pro_test_credit`, après 3 ventes QR à users distincts. | D-H |
 | P1-D | NW-13g — Renouvellement Pro auto | Wallet auto-renouvellement + opt-out + rappel. | D-I |
 
@@ -52,14 +52,8 @@
 | P2-B | UI de gestion d'équipe | Écran admin « Équipe »: inviter un user en operator/admin, assigner une zone ( opérateur terrain(, liste des membres, révoquer. | A5 |
 | P2-C | Opérateur exposé en UI | L'operator voit sa zone ( file de revue, run d'import(, pas la console admin complète. | R-03, maquette |
 
-##  ​4. Ordre de validation demandé au fondateur
+##  ​4. Ordre de validation — **validé fondateur 2026-09-11**
 
-1. Valider **P0-A → P0-C** en priorité ( la recherche est le coeur(,( et c'est un bug réel de prod ( pas une amélioration((
-2. Valider l'ordre **P1** ( NW-13c→13d→13e→13g( ( vs la spec NW-13b déssignait NW-13c…j; ici on intercale rien, on confirme l'ordre produit((
-3. Cadrer **P2-A..C** ( gouvernance(,( — nouveau socle serveur tables+routes( + UI( — à planifier après P1? ou en parallèle si fondateur veut(,( — la promo A5 « gestion rôles » l'exige(.(
-
-##  ​5. État de la session
-
-- **NW-13b spec Plans Free/Pro**: VERROUILLÉE + committée en local `e4a5578` ( **push bloqué**: `GITHUB_TOKEN` invalide/expiré ( `401 Bad credentials` même pour `GET /user`(; aucune autre canal SSH/helper( — à débloquer par le système/fondateur puis `git push origin omni-v2-rebuild`(.((
-- Branche `omni-v2-rebuild`; local en avant: `87085ef`+`e4a5578`( (origin `68b9107`(.
-- Tests: 344/344 inchangés ( docs pur(; tsc inchangé.(
+1. ✅ **P0-A → P0-C** validé en priorité( la recherche est le coeur(,( et c’est un bug réel de prod ( pas une amélioration(( — lancer la tranche P0.
+2. ✅ **P1** validé( ordre **NW-13c→13d→13e→13g**( ( vs la spec NW-13b déssignait NW-13c…j; ici on intercale rien, on confirme l’ordre produit((
+3. ✅ **P2-A..C** cadré( gouvernance(,( — nouveau socle serveur tables+routes( + UI( — à planifier après P1? ou en parallèle si fondateur veut(,( — la promo A5 « gestion rôles » l’exige(.((
