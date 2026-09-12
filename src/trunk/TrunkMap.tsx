@@ -10,6 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { PublicFacility, RouteTarget } from './types';
 import type { PinDimMode } from './map-pins';
+import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
@@ -18,6 +19,26 @@ import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from
 import { type MapBasemap, RASTER_STYLE_URL, shouldFallbackToRaster, styleChoiceFor, STYLE_WATCHDOG_MS, VECTOR_STYLE_URL } from './map-style-fallback';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
+
+type MapEngine = Map | FallbackMapSurface;
+type StyleEventOnly = 'style.load' | 'styledata';
+interface MapEngineTypedOn { on2(event: StyleEventOnly, cb: () => void): void; }
+type MapEngineWithOn2 = MapEngine & MapEngineTypedOn;
+
+function centerOf(map: MapEngine): [number, number] {
+  const c = map.getCenter();
+  return Array.isArray(c) ? c as [number, number] : [c.lng, c.lat];
+}
+
+function toFallbackFacilities(facilities: readonly PublicFacility[]): FallbackSurfaceFacility[] {
+  return facilities.map((facility) => ({
+    id: facility.id,
+    name: facility.name,
+    latitude: facility.latitude,
+    longitude: facility.longitude,
+    kind: facility.trust === 'confirmed' ? 'standard' : 'claimed',
+  }));
+}
 
 type CameraMode = 'resting_globe' | 'manual_navigation' | 'search_reveal' | 'result_framing' | 'selected_facility';
 
@@ -84,7 +105,7 @@ if (typeof window !== 'undefined') setWorkerUrl(MAPLIBRE_WORKER_URL);
 // feature-state so the data-driven paint (scale 1.3 + soft shadow) updates in
 // place — no layer re-creation, no map remount. Returns the id whose state is
 // now set, so callers can track it across style reloads.
-function applyPinEmphasis(map: Map, selectedId: string | null, previousId: string | null): string | null {
+function applyPinEmphasis(map: MapEngine, selectedId: string | null, previousId: string | null): string | null {
   if (!map.getSource(SOURCE)) return previousId;
   try {
     if (previousId && previousId !== selectedId) map.setFeatureState({ source: SOURCE, id: previousId }, { selected: false });
@@ -118,7 +139,7 @@ function routeDistanceLabel(origin: RevealPoint, target: RouteTarget) {
   return kilometers < 1 ? `${Math.round(kilometers * 1000)} m` : `${kilometers.toFixed(1).replace('.', ',')} km`;
 }
 
-function applyCanopyPalette(map: Map) {
+function applyCanopyPalette(map: MapEngine) {
   // Positron is already vector-native: preserve its neutral land treatment and
   // explicitly tune only the geographic primitives needed by the Omni reference.
   const paints: Array<[string, string, unknown]> = [
@@ -150,7 +171,7 @@ function applyCanopyPalette(map: Map) {
   }
 }
 
-function setGlobeContextLabelVisibility(map: Map, visible: boolean) {
+function setGlobeContextLabelVisibility(map: MapEngine, visible: boolean) {
   for (const layerId of GLOBE_SUPPRESSED_LABEL_LAYERS) {
     try {
       if (map.getLayer(layerId)) map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
@@ -188,7 +209,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
 
 export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<Map | null>(null);
+  const mapRef = useRef<MapEngine | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
   // does NOT re-run when the parent re-renders. (TrunkApp passes handleMapPinSelect
   // and onRevealStateChange as fresh closures each render.) If the effect depended
@@ -426,15 +447,16 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
     vectorLoadedRef.current = false;
     setMapStatus('loading');
     const initialBasemap: MapBasemap = basemap === 'raster' ? 'raster' : 'local';
-    let map: Map;
+    let engine: MapEngine;
+    let isFallback = false;
     try {
-      map = new Map({
+      engine = new Map({
       container: container.current,
       style: styleChoiceFor(initialBasemap, mapRetryKey > 0).url,
       center: [10, 8],
-      zoom: 1.25,
-      minZoom: 1,
-      maxZoom: 18,
+      zoom:  ​1.25,
+      minZoom:  ​1,
+      maxZoom:  ​18,
       attributionControl: false,
       cooperativeGestures: false,
       dragPan: true,
@@ -442,11 +464,27 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       touchZoomRotate: true,
     });
     } catch (err) {
-      console.error('Failed to initialize map:', err);
-      setMapStatus('error');
-      return;
+      // P0-A: MapLibre init échoue ( worker/GL indispo., style morte( → basculer
+      // vers le fallback DOM animé avec les VRAIES facilités. La cinématique de
+      // recherche ( computeSearchFlight + stagger + paliers( continu de s'exécuter
+      // dessus grâce à la surface adaptatrice MapLibre-compatible.
+
+      console.error('MapLibre init failed — switching to fallback map:', err);
+      engine = createFallbackMapSurface({
+        container: container.current,
+        facilities: toFallbackFacilities(facilitiesRef.current),
+        userLL: userPositionRef.current ? [userPositionRef.current.longitude, userPositionRef.current.latitude] : null,
+        onSelect: (facility) => {
+          const full = facilitiesRef.current.find((item) => item.id === facility.id);
+          if (full) onSelectRef.current(full);
+        },
+      });
+      isFallback = true;
+      vectorLoadedRef.current = true;
+      setMapStatus('ready');
     }
-    mapRef.current = map;
+    mapRef.current = engine;
+    const map = engine;
 
     const fallbackTimer: number | null = initialBasemap === 'raster' ? null : window.setTimeout(() => {
       if (shouldFallbackToRaster(basemap, vectorLoadedRef.current, false, true)) {
@@ -500,8 +538,8 @@ const syncCameraPadding = () => {
           }
           const elapsedSeconds = Math.min(0.1, Math.max(0, time - previousTime) / 1000);
           previousTime = time;
-          const center = map.getCenter();
-          map.jumpTo({ center: [center.lng + (2.8 * elapsedSeconds), center.lat], bearing: 0, pitch: 0 });
+          const [lng0, lat0] = centerOf(map);
+          map.jumpTo({ center: [lng0 + (2.8 * elapsedSeconds), lat0], bearing: 0, pitch: 0 });
           rotationFrame.current = window.requestAnimationFrame(frame);
         };
         rotationFrame.current = window.requestAnimationFrame(frame);
@@ -649,7 +687,7 @@ const syncCameraPadding = () => {
           map.scrollZoom.enable();
           map.boxZoom.enable();
           map.doubleClickZoom.enable();
-          map.touchZoomRotate.enable();
+          if ('enable' in map.touchZoomRotate) map.touchZoomRotate.enable();
         }
         // Charger les pins APRÈS l'arrival pour ne pas ralentir l'animation
         addLayers(map);
@@ -668,7 +706,7 @@ const syncCameraPadding = () => {
         map.scrollZoom.disable();
         map.boxZoom.disable();
         map.doubleClickZoom.disable();
-        map.touchZoomRotate.disable();
+        if ('disable' in map.touchZoomRotate) map.touchZoomRotate.disable();
       }
 
       const lng = userPositionRef.current?.longitude ?? 1.22;
@@ -731,7 +769,10 @@ const syncCameraPadding = () => {
       if (styleTimer !== null) return;
       styleTimer = setTimeout(() => { styleTimer = null; configureStyle(); }, 120);
     };
-    map.on('style.load', configureStyle);
+    // `style.load` n'existe pas sur la surface fallback ( MapLibre-only); en fallback
+    // configureStyle est no-op de toute façon ( layers vides(, donc on en a pas besoin.
+
+    if (!isFallback) (map as MapEngineWithOn2).on2('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
       const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
@@ -773,8 +814,8 @@ const syncCameraPadding = () => {
     let globeGesture: GlobeGesture | null = null;
     const beginGlobeGesture = (x: number, y: number, touchId?: number) => {
       if (projectionForZoom(map.getZoom()) !== 'globe') return false;
-      const center = map.getCenter();
-      globeGesture = { x, y, center: [center.lng, center.lat], bearing: map.getBearing(), touchId };
+      const [glng, glat] = centerOf(map);
+      globeGesture = { x, y, center: [glng, glat], bearing: map.getBearing(), touchId };
       map.dragPan.disable();
       pauseMotion('interaction', false);
       return true;
@@ -854,7 +895,7 @@ const syncCameraPadding = () => {
     map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
     map.on('move', () => { setBearing(map.getBearing()); scheduleUserPosition(); });
     map.on('moveend', () => {
-      setCenterLongitude(map.getCenter().lng);
+      setCenterLongitude(centerOf(map)[0]);
       if (!rotating.current) emitBounds();
       scheduleUserPosition();
       if (cameraMode.current === 'resting_globe') scheduleSettledResume();
@@ -896,14 +937,22 @@ const syncCameraPadding = () => {
     };
     map.on('zoom', syncProjection);
     map.on('moveend', syncProjection);
-    map.on('styledata', debouncedConfigureStyle);
-    map.on('load', () => {
+    if (!isFallback) map.on('styledata', debouncedConfigureStyle);
+    map.on('load', () => { if (isFallback) return; // map status set by P0-A fallback path
       setMapStatus('ready');
       configureStyle();
       globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
       resume();
       beginArrival();
     });
+    // P0-A: en fallback Martin MapLibre n'émet jamais `load`/`style.load` — on
+    // déclenche donc la chorégraphie d'arrivée nous-mêmes une fois l'effet prêt.
+
+    if (isFallback) {
+      requestAnimationFrame(() => {
+        if (!arrivalPlayedRef.current) beginArrival();
+      });
+    }
 
     const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
     observer.observe(container.current);
@@ -940,7 +989,7 @@ const syncCameraPadding = () => {
       mapRef.current = null;
     };
 
-    function addLayers(target: Map) {
+    function addLayers(target: MapEngine) {
       if (target.getSource(SOURCE)) return;
       // promoteId lets feature-state target pins by facility id (rule 7
       // selected-pin emphasis) without numeric feature ids.
@@ -957,14 +1006,17 @@ const syncCameraPadding = () => {
       // through the `selected` feature-state — never a layer re-creation.
       target.addLayer({ id: 'omni-pin-shadow', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_SHADOW_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-blur': 0.8, 'circle-translate': [0, 2], 'circle-opacity': ['case', SELECTED_STATE, PIN_SHADOW_OPACITY, 0] } });
       target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_CORE_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-stroke-color': ['case', ['boolean', ['get', 'owned'], false], PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR], 'circle-stroke-width': ['case', SELECTED_STATE, pinRingWidthPx(true), pinRingWidthPx(false)], 'circle-opacity': 1 } });
-      target.on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
+      (target as Map).on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
+        // En fallback les couches sont vides: pas de clics synthétiques.
+        if (!(target instanceof Map)) return;
         const feature = event.features?.[0] as MapGeoJSONFeature | undefined;
         const clusterId = feature?.properties?.cluster_id;
         if (!feature || clusterId === undefined) return;
         const source = target.getSource(SOURCE) as GeoJSONSource;
         source.getClusterExpansionZoom(Number(clusterId)).then((nextZoom) => target.easeTo({ center: (feature.geometry as { type: 'Point'; coordinates: number[] }).coordinates as [number, number], zoom: nextZoom })).catch(() => undefined);
       });
-      target.on('click', 'omni-pins', (event: MapLayerMouseEvent) => {
+      (target as Map).on('click', 'omni-pins', (event: MapLayerMouseEvent) => {
+        if (!(target instanceof Map)) return;
         const id = String(event.features?.[0]?.properties?.id ?? '');
         const facility = facilitiesRef.current.find((item) => item.id === id);
         if (facility) {
@@ -974,8 +1026,8 @@ const syncCameraPadding = () => {
         }
       });
       for (const layer of ['omni-clusters', 'omni-pins']) {
-        target.on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });
-        target.on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
+        (target as Map).on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });
+        (target as Map).on('mouseleave', layer, () => { target.getCanvas().style.cursor = ''; });
       }
       // Evergreen route trace source + dashed line layers (itinéraire in-app).
       // Added through the same guarded pattern as the facility source: once per
@@ -1107,8 +1159,8 @@ const syncCameraPadding = () => {
       const waitFor = (ms: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, ms));
       const toGlobe = async (): Promise<void> => {
         if (isStale()) return;
-        const cur = map.getCenter();
-        map.flyTo({ center: [cur.lng, cur.lat], zoom:  1.8, bearing:  0, pitch:  0, curve:  1.1, duration: FLIGHT_DURATION, essential: true });
+        const [clng, clat] = centerOf(map);
+        map.flyTo({ center: [clng, clat], zoom:  1.8, bearing:  ​0, pitch:​  0, curve:​  1.1, duration: FLIGHT_DURATION, essential: true });
         await waitSettle(map, FLIGHT_DURATION +  400);
       };
       type SearchStop = { center: [number, number]; zoom: number; pause: number; flightDuration?: number };

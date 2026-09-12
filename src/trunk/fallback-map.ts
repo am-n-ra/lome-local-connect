@@ -4,7 +4,24 @@
 // Même surface méthode que MapLibre avec easeTo/flyTo/once/on/zoomIn/zoomOut/cameraForBounds
 // pour que TrunkMap l'utilise sans changements lourds.
 
-export type FallbackMapEvent = 'moveend' | 'move';
+export type FallbackMapEvent =
+  | 'moveend'
+  | 'move'
+  | 'idle'
+  | 'error'
+  | 'load'
+  | 'styledata'
+  | 'zoom'
+  | 'mousedown'
+  | 'touchstart'
+  | 'wheel'
+  | 'dragstart'
+  | 'rotatestart'
+  | 'zoomstart'
+  | 'dragend'
+  | 'zoomend';
+
+export type FallbackClockEvent = 'move' | 'moveend';
 
 export type FallbackFacility = {
   id: string;
@@ -31,6 +48,7 @@ export type FallbackMapHandle = {
   cameraForBounds(bounds: unknown, opts?: { maxZoom?: number }): { center: [number, number]; zoom: number };
   once(event: FallbackMapEvent, cb: () => void): void;
   on(event: FallbackMapEvent, cb: () => void): void;
+  on(event: FallbackMapEvent, selector: string, cb: () => void): void;
   off(event: FallbackMapEvent, cb?: () => void): void;
   resize(): void;
   remove(): void;
@@ -210,9 +228,20 @@ export function createFallbackMap(options: FallbackMapOptions): FallbackMapHandl
       list.push(cb);
       pendingOnce.set(ev, list);
     },
-    on: (ev: FallbackMapEvent, cb: () => void) => {
+    on: (ev: FallbackMapEvent, selector?: string | (() => void), cb?: () => void) => {
+      const handler = typeof selector === 'string' ? (cb ?? (() => undefined)) : selector;
+      const wrapped = () => {
+        const rect = container.getBoundingClientRect();
+        const evt = {
+          features: facilities.filter((facility) => {
+            const p = project(center);
+            return Math.abs(((p.x / 100) * rect.width) - rect.width / 2) < 12 && Math.abs(((p.y / 100) * rect.height) - rect.height / 2) < 12;
+          }).map((facility) => ({ properties: { id: facility.id, name: facility.name, trust: 'confirmed', productCount: 1, owned: false }, geometry: { type: 'Point', coordinates: [facility.longitude, facility.latitude] }, type: 'Feature' })),
+        };
+        (handler as (payload: unknown) => void)(evt);
+      };
       const list = onCallbacks.get(ev) ?? [];
-      list.push(cb);
+      list.push(wrapped);
       onCallbacks.set(ev, list);
     },
     off: (ev: FallbackMapEvent, cb?: () => void) => {
