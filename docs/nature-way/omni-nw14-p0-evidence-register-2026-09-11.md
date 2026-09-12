@@ -1,7 +1,7 @@
 # Production Evidence Register — NW-14 P0 « Redresser la recherche »
 
 > **Target maturity:** M-01 pilot-ready V1 (canopy/launch-readiness)
-> **Decision:** `Go with limits` (recommandé) — verdict fondateur formel en attente
+> **Decision:** `Go with limits` — **verdict fondateur FORMEL émis 2026-09-11** → Gate 6 Canopy/launch-readiness CLOSED
 > **As of:** 2026-09-11
 > **Release owner:** Nature Way (route `/nature-way`), arbitre fondateur
 

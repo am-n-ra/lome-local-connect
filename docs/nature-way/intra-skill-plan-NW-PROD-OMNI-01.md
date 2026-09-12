@@ -323,8 +323,8 @@ Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 te
 ### Handoff (slice P0) — retour fondateur
 
 > **Local status:** `verified` — tsc clean, 347/347 tests, build OK, boundary clean
-> **Gate decision:** `advance` — P0 clôturé; passe à P1 (∥ ou séquentiel) selon ordre validé fondateur
-> **Closed:** P0-A (`952df28`), P0-B (`5cd175c`), P0-C (`5cd175c`)
+> **Gate decision:** `advance` — P0 clôturé; **Gate 6 CLOSED sur verdict fondateur「 Go with limits 」 2026-09-11**; passe à P1 (∥ ou séquentiel) selon ordre validé fondateur
+> **Closed:** P0-A (`952df28`), P0-B (`5cd175c`), P0-C (`5cd175c`); **Gate 6 Canopy/launch-readiness CLOSED (verdict fondateur「 Go with limits 」 2026-09-11)**
 > **Open or blocked:** rien; **P1** ( NW-13c→13d→13e→13g( et **P2** ( gouvernance team/operator( = `planned`, post-verdict fondateur Gate 6
 > **Resource Receipt:** `intra-skill-plan` + `fallback-map-surface` + `search-constraints` + maquette V1.3
 > **Residual gap:** P0-C « Monde », 0 km (null rayon( reste **intention non câblée** ( `rayonScopeStatusFor('Monde')` = wired mais `rayonScopeOptionsFor('Monde')` = undefined (; le serveur api.ts:91 attend `rayon_km` numérique; null = « pas de filtre rayon » → UI le rend active sans option serveur. Verdict honnête: le chip Monde reste un no-op serveur jusqu'à tranche rayon-serveur additionnelle — documenté, pas masqué.

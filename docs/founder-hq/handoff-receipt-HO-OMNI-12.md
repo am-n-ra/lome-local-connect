@@ -4,7 +4,8 @@
 > **Founder HQ timestamp:** 2026-09-11 (UTC)
 > **Primary authority:** Nature Way
 > **Exact invocation:** `/nature-way`
-> **Activation status:** `ACTIVATED` (user ran `/nature-way` on 2026-09-11 → HQ plan dispatched; specialist performed Gate 6 P0 tranches on `omni-v2-rebuild`)
+> **Activation status:** `ACTIVATED` (user ran `/nature-way` on 2026-09-11 → HQ plan dispatched; specialist performed Gate 6 P0 tranches on `omni-v2-rebuild`) 
+> **Outcome:** `DONE — Gate 6 CLOSED` (verdict fondateur「 Go with limits 」 2026-09-11); P1 ( NW-13c→d→e→g( prêt; Gate 7 Venture Lifecycle en watch.
 
 ## Handoff input
 
@@ -38,5 +39,5 @@
 - Preuves: tsc clean; 55 files / **347 tests**; `tsc -b` + vite build verts; `check:boundary` clean; suite 17/17 fallback-map.
 - Registre: `docs/nature-way/omni-nw14-p0-evidence-register-2026-09-11.md`; plan § slice NW-14 P0.
 - **Residual gap:** P0-C « Monde » (null rayon( = intention non câblée serveur ( no-op(; countmark non capturé navigateur.
-- **Gate decision:** P0 `advance`; **Gate 6 reste `ready`** — verdict fondateur「 Go with limits 」 attendu; P1 ( NW-13c→d→e→g( prêt.
+- **Gate decision:** P0 `advance`; **Gate 6 CLOSED — verdict fondateur「 Go with limits 」 2026-09-11**; P1 ( NW-13c→d→e→g( prêt.
 - **Next smallest action:** clôture Gate 6 honnête sur verdict fondateur, puis dispatch P1.
