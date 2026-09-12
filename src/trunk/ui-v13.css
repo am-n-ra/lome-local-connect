@@ -249,3 +249,8 @@ body{background:#dadad7;padding:0}
 }
 
 
+/* V1.3 countmark — nombre de résultats de la recherche courant (maquette « 206 »).
+   Cercle pill aligné à la maquette: haut de la zone carte, léger décalé gauche. */
+.countmark{position:absolute;z-index:4;top:118px;left:34%;display:grid;place-items:center;width:54px;height:54px;border-radius:50%;background:var(--pill);color:#fff;font-weight:800;font-size:15px;box-shadow:var(--sh-md)}
+.countmark::after{content:"";position:absolute;inset:-10px;border-radius:50%;border:1.5px solid rgba(0,0,0,.12)}
+@media (min-width:1040px){.omni-v13-stage[data-sheet="none"] .countmark{top:64px}}

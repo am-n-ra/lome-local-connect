@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chipHintFor, chipOptionsFor, chipStatusFor, chipsToSearchOptions, summarizeActiveChips } from './search-constraints';
+import { chipHintFor, chipOptionsFor, chipStatusFor, chipsToSearchOptions, isRayonScope, rayonScopeOptionsFor, rayonScopeStatusFor, summarizeActiveChips } from './search-constraints';
 
 describe('search constraint helpers (NW-12.1', () => {
   it('wires buyer chips to real server options', () => {
@@ -28,5 +28,28 @@ describe('search constraint helpers (NW-12.1', () => {
   it('exposes honest soon hints', () => {
     expect(chipHintFor('Livraison')).toContain('Bientôt');
     expect(chipHintFor('Ouvert')).toBe('Exclut les facilités fermées');
+  });
+});
+
+describe('rayon scope chips (P0-C', () => {
+  it('exposes wired scope presets wired to the rayon_km filter', () => {
+    expect(rayonScopeStatusFor('1 km')).toBe('wired');
+    expect(rayonScopeStatusFor('25 km')).toBe('wired');
+    expect(rayonScopeStatusFor('Monde')).toBe('wired');
+    expect(rayonScopeOptionsFor('5 km')).toEqual({ rayonKm: 5 });
+    expect(rayonScopeOptionsFor('Monde')).toBeUndefined();
+    expect(isRayonScope('25 km')).toBe(true);
+    expect(isRayonScope('≤ 10 km')).toBe(false);
+  });
+
+  it('assembles SearchOptions from scope presets', () => {
+    const options = chipsToSearchOptions(new Set(['25 km', 'Ouvert']));
+    expect(options.rayonKm).toBe(25);
+    expect(options.operationalState).toBe('ouvert');
+  });
+
+  it('treats scope labels as non-soon chips', () => {
+    expect(chipStatusFor('10 km')).toBe('wired');
+    expect(chipStatusFor('100 km')).toBe('wired');
   });
 });

@@ -29,7 +29,7 @@ import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
-import { chipHintFor, chipStatusFor, chipsToSearchOptions, summarizeActiveChips } from './search-constraints';
+import { chipHintFor, chipStatusFor, chipsToSearchOptions, RAYON_SCOPE_LABELS, summarizeActiveChips } from './search-constraints';
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
@@ -866,6 +866,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             followTarget={followTarget}
             ownedFacilityIds={ownedFacilityIds.length ? ownedFacilityIds : null}
             dimMode={dimMode}
+            resultCount={results.length > 0 ? results.length : null}
           />
         </Suspense>
       </section>
@@ -923,6 +924,16 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                   );
                 })}
               </div>
+              {role === 'buyer' && (
+                <>
+                  <div className="label">Portée de recherche</div>
+                  <div className="chips">
+                    {RAYON_SCOPE_LABELS.map((scope: string) => (
+                      <span key={scope} className={`chip${activeConstraints.has(scope) ? ' active' : ''}`} onClick={() => toggleConstraint(scope)} role="button" tabIndex={0}><span className="dot" />{scope}</span>
+                    ))}
+                  </div>
+                </>
+              )}
               {(() => {
                 const applied = summarizeActiveChips(activeConstraints);
                 if (applied.length === 0) return null;
