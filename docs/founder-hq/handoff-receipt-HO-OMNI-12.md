@@ -4,7 +4,7 @@
 > **Founder HQ timestamp:** 2026-09-11 (UTC)
 > **Primary authority:** Nature Way
 > **Exact invocation:** `/nature-way`
-> **Activation status:** `user invocation required` (skill present at `.agents/skills/nature-way/SKILL.md`; Founder HQ cannot invoke it dynamically in this environment — user must run `/nature-way` to take the gate)
+> **Activation status:** `ACTIVATED` (user ran `/nature-way` on 2026-09-11 → HQ plan dispatched; specialist performed Gate 6 P0 tranches on `omni-v2-rebuild`)
 
 ## Handoff input
 
@@ -29,3 +29,14 @@
 ## Dispatch result
 
 `/nature-way` prend le contrôle des **tranches P0 recherche ( coeur Omni(** à valider d'abord par le fondateur ( ordre P0→P1→P2, NW-14 §4(, et devra rendre: gate, evidence, residual gap, owner, next action, Resource Receipt, et mises à jour registre/Master Plan pour clôture honnête Gate  ​6「 Go with limits 」 puis Venture Lifecycle（ Gate  ​7（ en watch.
+
+## Specialist return — P0 livrée (2026-09-11)
+
+- **P0-A** fallback map surface — commit `952df28` ( surface MapLibre-compatible sur fallback DOM(.
+- **P0-B** countmark V1.3 + cinématique recherche sur fallback — commit `5cd175c`.
+- **P0-C** chips portée rayon 1/5/10/25/100/Monde câblées `rayon_km` + rangée buyer — commit `5cd175c`.
+- Preuves: tsc clean; 55 files / **347 tests**; `tsc -b` + vite build verts; `check:boundary` clean; suite 17/17 fallback-map.
+- Registre: `docs/nature-way/omni-nw14-p0-evidence-register-2026-09-11.md`; plan § slice NW-14 P0.
+- **Residual gap:** P0-C « Monde » (null rayon( = intention non câblée serveur ( no-op(; countmark non capturé navigateur.
+- **Gate decision:** P0 `advance`; **Gate 6 reste `ready`** — verdict fondateur「 Go with limits 」 attendu; P1 ( NW-13c→d→e→g( prêt.
+- **Next smallest action:** clôture Gate 6 honnête sur verdict fondateur, puis dispatch P1.

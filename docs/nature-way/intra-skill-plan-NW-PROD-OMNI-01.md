@@ -296,3 +296,37 @@ Chaque slice codée porte: tsc + tests + build + prod hash===build ( T-07d（ + 
 | NW-12.5 | surface admin Équipe · Rôles | role-management.test.ts 4 tests + AdminV13 | done |
 
 Preuves globales: tsc clean, 344/344 tests,  ​55 fichiers, build `index-2zqnh1PG.js`, boundary clean, push `7b20da0`.
+
+## Slice borné — NW-14 P0 « Redresser la recherche » (2026-09-11)
+
+> Handoff HO-OMNI-12 ( fondateur activation `/nature-way` (; Gate 6 Canopy/launch-readiness — `ready`. Ordre P0→P1→P2 **validé fondateur 2026-09-11** ( NW-14 §4(; code débloqué.
+> Dossier audit: `docs/nature-way/omni-nw-14-audit-flows-recherche-2026-09-10.md`.
+
+### Clôture P0 — 3/3 tranches codées
+
+| ID | Tranche NW-14 | Preuve | Statut |
+|---|---|---|---|
+| P0-A | Câbler `createFallbackMap` (surface fallback MapLibre-compatible) | `src/trunk/fallback-map-surface.ts` + `TrunkMap.tsx` fallback switch; tsc/lint/build/boundary verts; commit `952df28` | done |
+| P0-B | Cinématique recherche complète sur fallback + countmark V1.3 | `resultCount` prop TrunkMap → `.countmark` ( repris maquette( ; CSS `ui-v13.css`; `TrunkAppV13` passe `results.length`; tsc/test/build verts; commit `5cd175c` | done |
+| P0-C | Chips de contraintes réels — portée rayon ( 1/5/10/25/100 km/Monde( câblée `rayon_km` | `search-constraints.ts` `RAYON_SCOPES`/`rayonScopeOptionsFor`/`rayonScopeStatusFor`/`isRayonScope` + rangée « Portée de recherche » buyer; 8 tests ( 7 existants + 3 nouveaux(; tsc vert; commit `5cd175c` | done |
+
+Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 tests**; `npx tsc -b` + `vite build` verts; `check:boundary` clean; commits `952df28`( P0-A( + `5cd175c`( P0-B/C(.
+
+### Resource Receipt (slice P0)
+
+| Status | Exact path |
+|---|---|
+| Loaded | `.agents/skills/nature-way/SKILL.md`; `references/execution-controller.md`, `references/intra-skill-execution-controller.md`, `references/proof-and-decision-ledger.md`, `references/visual-and-logic-coherence-review.md`, `references/anti-slop-and-debt-review.md`, `references/technical-lead-production-review.md` |
+| Template instantiated | `templates/intra-skill-plan.md` → cette section; `templates/production-evidence-register.md` → `docs/nature-way/omni-nw14-p0-evidence-register-2026-09-11.md` |
+| Not loaded / reason | `templates/portable-starter` ( pas de transfert (; `launch-envelope.md` ( pas de release/push en scope pour Gate 6 verdict ( ; `autonomous-delivery-gates.md` ( appelé au delivery réel de la tranche, pas ici ( |
+
+### Handoff (slice P0) — retour fondateur
+
+> **Local status:** `verified` — tsc clean, 347/347 tests, build OK, boundary clean
+> **Gate decision:** `advance` — P0 clôturé; passe à P1 (∥ ou séquentiel) selon ordre validé fondateur
+> **Closed:** P0-A (`952df28`), P0-B (`5cd175c`), P0-C (`5cd175c`)
+> **Open or blocked:** rien; **P1** ( NW-13c→13d→13e→13g( et **P2** ( gouvernance team/operator( = `planned`, post-verdict fondateur Gate 6
+> **Resource Receipt:** `intra-skill-plan` + `fallback-map-surface` + `search-constraints` + maquette V1.3
+> **Residual gap:** P0-C « Monde », 0 km (null rayon( reste **intention non câblée** ( `rayonScopeStatusFor('Monde')` = wired mais `rayonScopeOptionsFor('Monde')` = undefined (; le serveur api.ts:91 attend `rayon_km` numérique; null = « pas de filtre rayon » → UI le rend active sans option serveur. Verdict honnête: le chip Monde reste un no-op serveur jusqu'à tranche rayon-serveur additionnelle — documenté, pas masqué.
+> **Next smallest action:** fermer le chip « Monde » en tranche mini P0-C-2 ( serveur `rayon_km`: accepte absent = monde entier( ou le marquer `soon` honnêtement, selon décision fondateur.
+> **Re-plan trigger:** erreur runtime fallback ( eslint/build ⁠(; retour fondateur « countmark non visible »; divergence prod hash.
