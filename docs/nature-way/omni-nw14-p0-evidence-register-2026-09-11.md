@@ -18,7 +18,7 @@
 
 - **P0-A `952df28`** ( amendé de `bf0c345` ( : surface fallback + switch TrunkMap. Backoff des backticks dans le message ( coquille( → amend.
 - **P0-B/C `5cd175c`** : `resultCount` + `.countmark` ( maquette( ; `RAYON_SCOPES` 1/5/10/25/100/Monde + rangée buyer + helpers + `chipStatusFor` wired. Suite monte à **347/347** ( de 344 ( ( +3 rayon + mount`countmark`.
-- **Guardrail T-07d** ( prod hash === build local ( : non vérifié automatiquement ici ( pas de push prod exécuté (; vérifié au prochain push par le fondateur/CI Vercel.
+- **Guardrail T-07d** ( prod hash === build local ( : **vérifié le 2026-09-11** — prod `https://omni.sparkafrika.online/` sert `index-CMHAUJH7.js` = bundle déjà live au dernier push prod ( NW-13a/b `87085ef`( ; build local P0 = `index-D5-dLEH6.js` ( ≠ prod, **intentionnellement non poussé** (pousse prod = ordre fondateur explicite, guardrail T-07d(. Au moment du push prod commandé par fondateur, le CI Vercel/le fondateur devra vérifier `index-D5-dLEH6.js` servit === build local.
 
 ## Exposure plan
 
