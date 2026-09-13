@@ -21,9 +21,6 @@ import { type MapBasemap, RASTER_STYLE_URL, shouldFallbackToRaster, styleChoiceF
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
 
 type MapEngine = Map | FallbackMapSurface;
-type StyleEventOnly = 'style.load' | 'styledata';
-interface MapEngineTypedOn { on2(event: StyleEventOnly, cb: () => void): void; }
-type MapEngineWithOn2 = MapEngine & MapEngineTypedOn;
 
 function centerOf(map: MapEngine): [number, number] {
   const c = map.getCenter();
@@ -775,7 +772,7 @@ const syncCameraPadding = () => {
     // `style.load` n'existe pas sur la surface fallback ( MapLibre-only); en fallback
     // configureStyle est no-op de toute façon ( layers vides(, donc on en a pas besoin.
 
-    if (!isFallback) (map as MapEngineWithOn2).on2('style.load', configureStyle);
+    if (!isFallback) (map as Map).on('style.load', configureStyle);
     const emitBounds = () => {
       const bounds = map.getBounds();
       const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];

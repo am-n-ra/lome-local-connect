@@ -62,7 +62,6 @@ type EngineMembers = Partial<FallbackMapHandle> & {
   getSource(_sourceId: string): SourceLike | undefined;
   addSource(_sourceId: string, _source: Record<string, unknown>): void;
   on(event: FallbackMapEvent, selector: string, cb: (ev?: unknown) => void): void;
-  on2(event: FallbackMapEvent, cb: () => void): void;
   addLayer(_layer: Record<string, unknown>): void;
   getStyle(): { layers?: { id: string; type: string }[] } | undefined;
   dragPan: { disable(): void; enable(): void };
@@ -168,7 +167,6 @@ export function createFallbackMapSurface(options: FallbackSurfaceOptions): Fallb
     resize: () => { base.resize(); },
     remove: () => { base.remove(); },
     once: (ev: FallbackMapEvent, cb: () => void) => { base.once(ev, cb); },
-    on2: (ev: FallbackMapEvent, cb: () => void) => { base.on(ev, cb); },
     on: (ev: FallbackMapEvent, selector?: string | (() => void), cb?: () => void) => {
       base.on(ev, selector as never, cb as never);
     },
