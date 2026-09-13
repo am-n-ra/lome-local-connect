@@ -52,9 +52,12 @@ The founder wants two things addressed together, in order:
 
 Updated with founder's bridge-sizing inputs (2026-09-13):
 
-- **Need:** pre-YC operational runway (first months) + a credible acquisition team (field agents 10,000 F/day each; call/OSM 1,000 F/facility; in-person follow-up / unclaimed registration) — see Gate 7 handoff.
+- **Need:** pre-YC operational runway (first months) + a credible acquisition team (field agents ≈15,000 F/day/agent incl. food — now w/ one-agent-per-zone; call/OSM 1,000 F/facility; in-person follow-up / unclaimed registration) — see Gate 7 handoff.
 - **HERLOG entrance floor:** above ~50M (unit to confirm, assumed FCFA).
 - **Founder's sizing hypothesis:** the pre-YC operational need **exceeds 50M F** → the bridge may now be **intentionally sized at/above HERLOG's floor**, resolving the earlier "below-floor" tension **IF** the bottom-up budget supports the ≥50M hypothesis. This is the exact check the specialist must run: build the budget from the acquisition model and team plan, then confirm whether the ≥50M sizing holds honestly.
+- **Open allocation decisions (founder weighing, 2026-09-13):**
+  - **Vehicle vs daily transport:** buying a Hiace-type vehicle instead of recurring 10,000 F/day/agent transport → capex-vs-opex to model (purchase + fuel/maintenance/insurance/driver vs 15,000 F/day/agent); affects both budget and the CAC-per-registration basis.
+  - **Delaware incorporation from raise:** founder considers allocating part of the raise to forming the Delaware C-Corp ("maybe... I don't know") → potential use-of-funds line, to size with qualified counsel (formation + registered agent + legal).
 - **First-revenue note:** 13 paid Pro sellers (65,000 F) exists as founder-stated revenue — small but a real willingness-to-pay signal with internal consistency (13 × 5,000). Verify against wallet/ledger (see Gate 7 handoff) before using in the capital thesis.
 - **Entity sequencing:** target is a Delaware C-Corp, not yet incorporated. Raising before vs after incorporation is a legal/securities/cross-border decision → the specialist must flag it, not HQ.
 

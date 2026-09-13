@@ -21,11 +21,21 @@ Founder HQ has kept **Gate 7 (Venture Lifecycle — Lomé pilot demand/proof) in
 
 | Signal | Detail | Class |
 |---|---|---|
-| Field agent cost | **Max 10,000 F/day** transport to reach a Lomé location and return | `founder-stated` — to be measured |
-| Field agent yield | **≥ 30 user registrations/day** at that location | `founder-stated` — to be measured |
-| CAC per registration (logistic) | ≈ 10,000 / 30 ≈ **333 F per registered user** (transport only) | derived from founder inputs |
+| Field agent transport | **Max 10,000 F/day** to reach a Lomé location and return | `founder-stated` — to be measured |
+| Field agent food | **Max 5,000 F/day** for meals (alimentation) | `founder-stated` — to be measured |
+| Agent deployment | **One agent per zone per day** (each zone covered by a single agent on a given day) | `founder-stated` |
+| Field agent daily cost | **≈ 15,000 F/day per agent** (10,000 transport + 5,000 food) | derived from founder inputs |
+| Field agent yield | **≥ 30 user registrations/day** per agent | `founder-stated` — to be measured |
+| CAC per registration (logistic) | **≈ 15,000 / 30 = 500 F** per registered user (transport + food); **≈ 333 F** transport-only | derived from founder inputs |
 | CAC per paying user | Depends on conversion split: buyers vs sellers vs Pro — **to be measured in field** | unknown — next life-cycle experiment |
 | Split question | Of the 30/day: how many are buyers only, directly sellers, or Pro? | to be measured |
+
+### Open decisions for specialist (founder weighing, 2026-09-13)
+
+| Decision | Founder's framing | HQ note |
+|---|---|---|
+| Vehicle vs daily transport | **Considering buying a vehicle (e.g., a Hiace) instead of recurring transport spend** (10,000 F/day/agent) | Capex-vs-opex trade-off to model: vehicle purchase + running costs (fuel/maintenance/insurance/driver) vs 15,000 F/day/agent — no price assumed by HQ |
+| Delaware incorporation from raise | **"Maybe part of the raise will go to doing the Delaware C-Corp at the same time... I don't know"** | Potential use-of-funds line to size with qualified counsel — HQ proposes no figure |
 
 ### Acquisition team structure (3 workstreams, `founder-stated`)
 
