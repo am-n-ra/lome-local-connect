@@ -5,6 +5,15 @@ import { createSellerFacility, getFacilityBonusStatus, getFacilityRenewalStatus,
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import type { FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
+function money(minor: number, currency: string): string {
+  const whole = Number.isInteger(minor / 100);
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
+}
+
+function planUsdLabel(usdMinor: number): string {
+  return Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(usdMinor / 100);
+}
+
 type SellerV13Props = {
   onClose: () => void;
   onProducts?: () => void;
@@ -318,7 +327,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <div>
               <b className="tiny" style={{ display: 'block' }}>Pro · renouvellement</b>
               {renewalStatus.plan === 'pro_active' ? (
-                <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {renewalStatus.proPriceMinor} {renewalStatus.billingCurrency}/mois</span>
+                <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {planUsdLabel(renewalStatus.baseProPriceUsdMinor)}/mois ≈ {money(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}</span>
               ) : renewalStatus.plan === 'pro_expired' ? (
                 <span className="tiny muted">Expiré — renouvellement via portefeuille</span>
               ) : (
@@ -333,7 +342,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             )}
           </div>
           {renewalStatus.plan === 'pro_expired' && renewalStatus.renewalOptIn && !renewalStatus.sufficientFunds && (
-            <p className="tiny" style={{ marginTop: 6, color: 'var(--warn)' }}>Solde insuffisant pour le renouvellement auto ({renewalStatus.walletBalanceMinor} {renewalStatus.billingCurrency} sur {renewalStatus.proPriceMinor}). Rechargez votre portefeuille.</p>
+            <p className="tiny" style={{ marginTop: 6, color: 'var(--warn)' }}>Solde insuffisant pour le renouvellement auto ({money(renewalStatus.walletBalanceMinor, renewalStatus.billingCurrency)} sur {money(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}). Rechargez votre portefeuille.</p>
           )}
           {renewalStatus.plan === 'pro_expired' && (
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={renewalBusy} onClick={() => void runRenewNow()}>{renewalBusy ? '…' : 'Renouveler Pro maintenant'}</button>

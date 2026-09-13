@@ -551,6 +551,8 @@ export interface WalletFacilitySummary {
   slotState: 'active';
   proPriceMinor: number;
   billingCurrency: string;
+  baseProPriceUsdMinor: number;
+  baseBillingCurrency: string;
   proEndsAt: string | null;
   renewalOptIn: boolean;
   daysLeft: number;
@@ -588,6 +590,8 @@ export interface FacilityRenewalStatus {
   daysLeft: number;
   proPriceMinor: number;
   billingCurrency: string;
+  baseProPriceUsdMinor: number;
+  baseBillingCurrency: string;
   walletBalanceMinor: number;
   sufficientFunds: boolean;
 }
@@ -627,6 +631,8 @@ export interface BuyerProStatus {
   daysLeft: number;
   proPriceMinor: number;
   billingCurrency: string;
+  baseProPriceUsdMinor: number;
+  baseBillingCurrency: string;
   walletBalanceMinor: number;
   sufficientFunds: boolean;
   compareQuota: number;

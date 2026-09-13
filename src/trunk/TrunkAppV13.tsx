@@ -32,6 +32,7 @@ import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, RAYON_SCOPE_LABELS, summarizeActiveChips } from './search-constraints';
 import { compareFacilities } from './v13-compare';
+import { OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import './ui-v13.css';
 
 type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
@@ -73,6 +74,20 @@ function statusLabel(requestStatus: string): string {
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
+}
+
+/** Plan price label: canonical USD base + local equivalent ("5 $/mois ≈ 2 500 F"). */
+function planPriceLabel(kind: 'sellerPro' | 'buyerPro'): string {
+  const usdMinor = OMNI_PLAN_PRICES_USD_MINOR[kind];
+  const localMinor = convertUsdMinorToLocal(usdMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
+  const usd = Intl.NumberFormat('fr-FR', { style: 'currency', currency: OMNI_BASE_CURRENCY, maximumFractionDigits: 0 }).format(usdMinor / 100);
+  return `${usd}/mois${localMinor !== usdMinor ? ` ≈ ${money(localMinor, OMNI_DEFAULT_LOCAL_CURRENCY)}` : ''}`;
+}
+
+/** Compact local price for buttons/reminders ("≈ 2 500 F"). */
+function localPlanPriceLabel(kind: 'sellerPro' | 'buyerPro'): string {
+  const localMinor = convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR[kind], OMNI_DEFAULT_LOCAL_CURRENCY);
+  return money(localMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
 }
 
 const LOME = [1.22, 6.13] as const;
@@ -1642,7 +1657,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
                     <span><b>Buyer Pro expiré</b></span>
-                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler (2 500 F)</button>
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler ({localPlanPriceLabel('buyerPro')})</button>
                   </div>
                 )}
                 {!buyerProStatus || buyerProStatus.plan === 'free' ? (
@@ -1652,7 +1667,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   </div>
                 ) : null}
                 {buyerProStatus?.renewalOptIn && buyerProStatus.plan !== 'free' && !buyerProStatus.sufficientFunds && (
-                  <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto (2 500 F).</p>
+                  <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto ({localPlanPriceLabel('buyerPro')}).</p>
                 )}
               </div>
               {wallet.entries.length > 0 && (
@@ -1689,7 +1704,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>Buyer Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
-                  <span className="status ink">2 500 F/mois</span>
+                  <span className="status ink">{planPriceLabel('buyerPro')}</span>
                 </div>
                 {buyerProState === 'loading' && <p className="sub" role="status" style={{ marginTop: 8 }}>Vérification de votre plan…</p>}
                 {buyerProState === 'error' && <p className="sub" role="alert" style={{ marginTop: 8 }}>{buyerProError}</p>}
@@ -1701,18 +1716,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       <button type="button" className={`btn ${buyerProStatus.renewalOptIn ? 'ok' : 'ghost'} sm`} style={{ width: 'auto', minHeight: 26 }} onClick={() => void toggleBuyerProRenewal()}>{buyerProStatus.renewalOptIn ? 'Activé' : 'Désactivé'}</button>
                     </div>
                     {buyerProStatus.renewalOptIn && !buyerProStatus.sufficientFunds && (
-                      <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le prochain renouvellement (2 500 F).</p>
+                      <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le prochain renouvellement ({localPlanPriceLabel('buyerPro')}).</p>
                     )}
                   </div>
                 )}
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
                     <p className="sub">Pro expiré.{buyerProStatus.renewalOptIn && buyerProStatus.sufficientFunds ? ' Renouvellement disponible.' : ''}</p>
-                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro (2 500 F)</button>
+                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro ({localPlanPriceLabel('buyerPro')})</button>
                   </div>
                 )}
                 {(buyerProStatus?.plan === 'free' || !buyerProStatus) && (
-                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : 'Passer à Buyer Pro (2 500 F/mois)'}</button>
+                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : `Passer à Buyer Pro (${planPriceLabel('buyerPro')})`}</button>
                 )}
                 {buyerProError && <p className="sub" role="alert" style={{ marginTop: 6 }}>{buyerProError}</p>}
               </div>
@@ -1728,7 +1743,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>Pro</b><br /><span className="tiny muted">Stock Omni + dispo auto</span></div>
-                  <span className="status ink">10 $/mois</span>
+                  <span className="status ink">{planPriceLabel('sellerPro')}</span>
                 </div>
                 <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => void openWallet()}>Passer au niveau supérieur</button>
               </div>

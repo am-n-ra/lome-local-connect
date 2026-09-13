@@ -973,6 +973,8 @@ describe('facility pro renewal Root seam', () => {
       facility_name: 'Atelier Test',
       pro_price_minor: 1000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 1000,
+      base_billing_currency: 'USD',
       renewal_opt_in: true,
       entitlement_id: 'ent-1',
       starts_at: '2026-08-01T00:00:00.000Z',
@@ -986,9 +988,12 @@ describe('facility pro renewal Root seam', () => {
     expect(result.renewalOptIn).toBe(true);
     expect(result.sufficientFunds).toBe(true);
     expect(result.walletBalanceMinor).toBe(25000);
+    expect(result.baseProPriceUsdMinor).toBe(1000);
+    expect(result.baseBillingCurrency).toBe('USD');
     expect(result.daysLeft).toBeGreaterThan(100);
     expect(call.queries[0]).toContain('v2_facility_entitlements');
     expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('base_pro_price_usd_minor');
   });
 
   it('marks the plan pro_expired when the entitlement ended, even if renewal_opt_in stayed on', async () => {
@@ -997,6 +1002,8 @@ describe('facility pro renewal Root seam', () => {
       facility_name: 'Atelier Test',
       pro_price_minor: 1000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 1000,
+      base_billing_currency: 'USD',
       renewal_opt_in: true,
       entitlement_id: 'ent-1',
       starts_at: '2026-06-01T00:00:00.000Z',
@@ -1018,6 +1025,8 @@ describe('facility pro renewal Root seam', () => {
       facility_name: 'Atelier Test',
       pro_price_minor: 1000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 1000,
+      base_billing_currency: 'USD',
       renewal_opt_in: false,
       entitlement_id: null,
       starts_at: null,
@@ -1120,6 +1129,8 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
       renewal_opt_in: true,
       pro_price_minor: 250000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 500,
+      base_billing_currency: 'USD',
       balance_minor: 400000,
       credit_plan: 'pro',
     }]);
@@ -1127,12 +1138,16 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
     expect(result.plan).toBe('pro_active');
     expect(result.proPriceMinor).toBe(250000);
+    expect(result.billingCurrency).toBe('XOF');
+    expect(result.baseProPriceUsdMinor).toBe(500);
+    expect(result.baseBillingCurrency).toBe('USD');
     expect(result.walletBalanceMinor).toBe(400000);
     expect(result.sufficientFunds).toBe(true);
     expect(result.renewalOptIn).toBe(true);
     expect(result.compareQuota).toBe(5);
     expect(call.queries[0]).toContain('v2_buyer_pro_entitlements');
     expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('base_pro_price_usd_minor');
   });
 
   it('returns free, quota 1, when the buyer has never had Pro', async () => {
@@ -1145,6 +1160,8 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
       renewal_opt_in: false,
       pro_price_minor: 250000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 500,
+      base_billing_currency: 'USD',
       balance_minor: 0,
       credit_plan: 'free',
     }]);
@@ -1153,6 +1170,7 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     expect(result.plan).toBe('free');
     expect(result.compareQuota).toBe(1);
     expect(result.entitlementId).toBeNull();
+    expect(result.baseProPriceUsdMinor).toBe(500);
   });
 
   it('returns pro_expired when the entitlement ended even with opt-in still on', async () => {
@@ -1165,6 +1183,8 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
       renewal_opt_in: true,
       pro_price_minor: 250000,
       billing_currency: 'XOF',
+      base_pro_price_usd_minor: 500,
+      base_billing_currency: 'USD',
       balance_minor: 250000,
       credit_plan: 'free',
     }]);
@@ -1173,6 +1193,7 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     expect(result.plan).toBe('pro_expired');
     expect(result.sufficientFunds).toBe(true);
     expect(result.compareQuota).toBe(1);
+    expect(result.baseProPriceUsdMinor).toBe(500);
   });
 
   it('activates buyer pro from the wallet with spend, entitlement and pro credit plan', async () => {

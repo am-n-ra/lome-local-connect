@@ -1,5 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
+import { convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR } from '../domain/pricing';
 
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
@@ -2578,13 +2579,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         `),
         retryDatabase(() => sql`
           select f.id as facility_id, f.name as facility_name, f.commercial_plan,
-                 coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
-                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as pro_price_minor,
+                 coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
                  last_entitlement.id as entitlement_id,
                  last_entitlement.starts_at,
                  last_entitlement.ends_at,
                  last_entitlement.state as entitlement_state,
-                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in
+                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in,
+                 ${OMNI_PLAN_PRICES_USD_MINOR.sellerPro}::int as base_pro_price_usd_minor,
+                 ${OMNI_BASE_CURRENCY} as base_billing_currency
           from v2_facilities f
           join v2_accounts a on a.id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
@@ -2628,6 +2631,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             slotState: 'active' as const,
             proPriceMinor: Number(row.pro_price_minor),
             billingCurrency: String(row.billing_currency),
+            baseProPriceUsdMinor: Number(row.base_pro_price_usd_minor),
+            baseBillingCurrency: String(row.base_billing_currency),
             proEndsAt: row.ends_at ? new Date(String(row.ends_at)).toISOString() : null,
             renewalOptIn: Boolean(row.renewal_opt_in),
             daysLeft,
@@ -3046,8 +3051,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and a.onboarding_state in ('seller_ready', 'complete')
         ), facility as (
           select f.id as facility_id, f.account_id,
-                 coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
-                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
+                 coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as price_minor,
+                 coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency
           from v2_facilities f
           join seller s on s.account_id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
@@ -3119,8 +3124,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         with facility as (
           select f.id as facility_id, f.name as facility_name, f.account_id,
-                 coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
-                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as pro_price_minor,
+                 coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
                  coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in,
                  last_entitlement.id as entitlement_id,
                  last_entitlement.starts_at,
@@ -3151,6 +3156,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         select
           f.facility_id, f.facility_name, f.pro_price_minor, f.billing_currency,
           f.renewal_opt_in, f.entitlement_id, f.starts_at, f.ends_at, f.entitlement_state,
+          ${OMNI_PLAN_PRICES_USD_MINOR.sellerPro}::int as base_pro_price_usd_minor,
+          ${OMNI_BASE_CURRENCY} as base_billing_currency,
           b.balance_minor
         from facility f cross join balance b
       `);
@@ -3174,6 +3181,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         daysLeft,
         proPriceMinor: price,
         billingCurrency: String(row.billing_currency),
+        baseProPriceUsdMinor: Number(row.base_pro_price_usd_minor),
+        baseBillingCurrency: String(row.base_billing_currency),
         walletBalanceMinor: balanceMinor,
         sufficientFunds: balanceMinor >= price,
       };
@@ -3218,8 +3227,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         with facility as (
           select f.id as facility_id, f.name as facility_name, f.account_id,
-                 coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
-                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as price_minor,
+                 coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
                  last_entitlement.id as entitlement_id,
                  last_entitlement.ends_at as prior_ends_at,
                  coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in
@@ -3454,8 +3463,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           a.account_id,
           e.id as entitlement_id, e.state as entitlement_state, e.starts_at, e.ends_at,
           coalesce(e.renewal_opt_in, false) as renewal_opt_in,
-          coalesce(e.price_minor, 250000)::int as pro_price_minor,
-          coalesce(e.billing_currency, 'XOF') as billing_currency,
+          coalesce(e.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.buyerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as pro_price_minor,
+          coalesce(e.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
+          ${OMNI_PLAN_PRICES_USD_MINOR.buyerPro}::int as base_pro_price_usd_minor,
+          ${OMNI_BASE_CURRENCY} as base_billing_currency,
           b.balance_minor,
           coalesce(c.plan, 'free') as credit_plan
         from account a
@@ -3482,6 +3493,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         daysLeft,
         proPriceMinor: price,
         billingCurrency: String(row.billing_currency),
+        baseProPriceUsdMinor: Number(row.base_pro_price_usd_minor),
+        baseBillingCurrency: String(row.base_billing_currency),
         walletBalanceMinor: balanceMinor,
         sufficientFunds: balanceMinor >= price,
         compareQuota: plan === 'pro_active' ? 5 : 1,
@@ -3490,6 +3503,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
 
     async activateBuyerPro(input: { authUserId: string; now: string }): Promise<BuyerProActivationResult> {
       const reference = `buyer-pro:${input.authUserId}:${input.now.slice(0, 7)}`;
+      // Canonical USD base ($5) converted to the local billing currency.
+      const buyerProUsdMinor = OMNI_PLAN_PRICES_USD_MINOR.buyerPro;
+      const buyerProLocalMinor = convertUsdMinorToLocal(buyerProUsdMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
+      const billingCurrency = OMNI_DEFAULT_LOCAL_CURRENCY;
       const rows = await retryDatabase(() => sql`
         with account as (
           select a.id as account_id
@@ -3521,10 +3538,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), spend as (
           insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
-          select w.wallet_id, 'buyer_pro_spend', 250000, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select w.wallet_id, 'buyer_pro_spend', ${buyerProLocalMinor}, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
           from wallet w cross join balance b
           where not exists (select 1 from existing_active)
-            and b.balance_minor >= 250000
+            and b.balance_minor >= ${buyerProLocalMinor}
             and not exists (select 1 from existing_spend)
           on conflict (wallet_id, kind, reference) do nothing
           returning id, wallet_id, amount_minor
@@ -3535,7 +3552,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), entitlement as (
           insert into v2_buyer_pro_entitlements (account_id, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
-          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', 250000, 'XOF', false
+          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', ${buyerProLocalMinor}, ${billingCurrency}, false
           from account a cross join effective_spend s
           where not exists (select 1 from existing_active)
           returning id, account_id, ends_at
@@ -3591,6 +3608,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     async renewBuyerPro(input: { authUserId: string; now: string }): Promise<BuyerProRenewalResult> {
       const periodKey = new Date(input.now).toISOString().slice(0, 7);
       const reference = `buyer-pro-renew:${input.authUserId}:${periodKey}`;
+      // Canonical USD base ($5) converted to the local billing currency.
+      const buyerProUsdMinor = OMNI_PLAN_PRICES_USD_MINOR.buyerPro;
+      const buyerProLocalMinor = convertUsdMinorToLocal(buyerProUsdMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
+      const billingCurrency = OMNI_DEFAULT_LOCAL_CURRENCY;
       const rows = await retryDatabase(() => sql`
         with account as (
           select a.id as account_id
@@ -3622,10 +3643,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), spend as (
           insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
-          select w.wallet_id, 'buyer_pro_spend', 250000, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select w.wallet_id, 'buyer_pro_spend', ${buyerProLocalMinor}, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
           from wallet w cross join balance b
           where not exists (select 1 from existing_active)
-            and b.balance_minor >= 250000
+            and b.balance_minor >= ${buyerProLocalMinor}
             and not exists (select 1 from existing_spend)
           on conflict (wallet_id, kind, reference) do nothing
           returning id
@@ -3636,7 +3657,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), entitlement as (
           insert into v2_buyer_pro_entitlements (account_id, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
-          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', 250000, 'XOF', true
+          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', ${buyerProLocalMinor}, ${billingCurrency}, true
           from account a cross join effective_spend s
           where not exists (select 1 from existing_active)
           returning id, account_id, ends_at
