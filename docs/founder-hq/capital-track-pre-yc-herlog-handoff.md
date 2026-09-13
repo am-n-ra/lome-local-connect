@@ -39,13 +39,25 @@ The founder wants two things addressed together, in order:
 
 | # | Required input (owner: founder) | Why | Current status |
 |---|---|---|---|
-| C-01 | **Legal identity** of the entity that would raise (Omni SAS? new entity? personal?) | Determines the capital type and who signs | Unknown — **founder decision** |
-| C-02 | HERLOG contact/interaction status | Determines `research` vs `relationship` pipeline state | **RESOLVED (founder-stated): open contact** |
+| C-01 | **Legal identity** of the entity that would raise | Determines the capital type and who signs | **PARTIAL (founder-stated):** target = **Delaware C-Corp** (for the YC path), **not yet incorporated in any form**. Pre-incorporation raise vehicle = open; cross-border/securities decision → qualified counsel required |
+| C-02 | HERLOG contact/interaction status | Determines `research` vs `relationship` pipeline state | **RESOLVED (founder-stated): open contact** (info gathered in direct conversation with HERLOG) |
 | C-03 | Amount and duration: how many months of pre-YC runway, monthly burn, total ask | Phase 0 milestone-to-buy logic | Unknown |
 | C-04 | HERLOG role: direct investor, facilitator, or both? | Required for capital fit | **RESOLVED (founder-stated): both direct + facilitation (banks/angels/others)** — terms to verify |
 | C-05 | Any existing evidence (product proof, prod, tests) the founder wants to use | Evidence basis | Omni holds strong product proof (see below) |
 | C-06 | Default-alive position: what operating commitments continue if the bridge does not close | Contingency plan basis | Unknown |
 | C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone? | Capital tied to a milestone, not a wish list | Unknown |
+| C-08 | **HERLOG minimum ticket** | Capital fit: does the pre-YC bridge meet their floor? | **RESOLVED (founder-stated): HERLOG engages for amounts ABOVE ~50,000,000** (unit to confirm — assumed FCFA, ≈US$80–85k) → **capital-fit question for the specialist** (see below) |
+
+## Capital-fit tension (flagged by HQ; assessed by the specialist, not decided by HQ)
+
+The founder-stated facts raise a sizing question that only the fundraising specialist + qualified counsel can resolve:
+
+- **Need:** pre-YC operational runway (first months) + funding a credible team.
+- **HERLOG entrance floor:** above ~50M (unit to confirm, assumed FCFA).
+- **Tension:** if the honest pre-YC bridge is materially below ~50M, HERLOG may fit a **later round** (post Gate 7 demand proof / post-incorporation) rather than the initial bridge — **or** the bridge is intentionally sized at/above their floor, which changes dilution and use-of-funds materially.
+- **Entity sequencing:** target is a Delaware C-Corp, not yet incorporated. Raising before vs after incorporation is a legal/securities/cross-border decision → the specialist must flag it, not HQ.
+
+HQ does **not** propose an amount, instrument, or sequencing here.
 
 ## Product evidence Omni already holds (factual, from repository proof — invite the specialist to classify)
 

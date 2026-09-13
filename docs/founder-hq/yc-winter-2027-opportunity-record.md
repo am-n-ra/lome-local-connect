@@ -42,11 +42,12 @@ YC is a standard equity accelerator: cohort structure, weekly partner meetings, 
 - The YC application includes a batch-preference question; the founder can select Winter 2027 (or later) and apply when the Winter cycle opens.
 - The official application asks for product, traction, team, and company info — evidence Omni already holds (live prod, 393 tests, migrations 042→047 launched, wallet/plans/bonus/renewal shipped). **None of that is a fundability claim.**
 
-## Owner / next action (HQ-level)
+## Related historical signal — Djanta Tech Hub (founder-stated, 2026-09-13)
 
-| Role | Action |
+| Field | Value |
 |---|---|
-| Founder | Invoke `/nature-way-opportunity-intelligence` to run source re-verification, qualification, and fit before any submission. |
-| Founder HQ | Track status `watch` (trigger: Winter 2027 cycle opens on apply portal) → `pursue` only after specialist qualifies and founder confirms. |
-
-**No submission has been made. No account/contact created.**
+| Program | Djanta Tech Hub incubation |
+| Outcome | **11th of the 10 selected** out of **500+ applicants** — first alternate, not accepted |
+| Source / class | Founder 2026-09-13 / `founder-stated` — verify with Djanta if used externally |
+| Relevance | Strong external demand/application signal; useful corroborating color for the YC application (rigorous selection, near-miss) — **not** a fundability claim |
+| Status in context | Historical / `closed` (not selected); do not present as an active program |
