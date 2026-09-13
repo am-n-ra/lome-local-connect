@@ -19,7 +19,7 @@ Merci pour notre précédent échange. Je reviens vers vous avec une mise à jou
 **Où en est OMNI :**
 - Produit en production (omni.sparkafrika.online), avec un parcours testé (commerçants Pro, achats, portefeuille, renouvellement, packs de crédits Mobile Money).
 - **13 commerçants ont déjà payé** pour l'accès Pro (65 000 F, reçus en cash avant notre nouvelle grille USD). C'est une première preuve de demande, volontairement petite.
-- Nous préparons une **cohorte terrain mesurée à Lomé** (10–15 jours, données d'acquisition réelles par agent/zone) pour transformer cette première traction en unités économiques démontrées, puis Aflao.
+- Nous préparons une **cohorte terrain multi-zone à Lomé** (10–15 jours, données d'acquisition réelles par segment — buyer/seller/free/pro — et par zone) pour transformer cette première traction en unités économiques démontrées, puis Aflao.
 
 **Ce que je propose :** un échange pour discuter si un **premier soutien OMNI** peut s'inscrire dans vos critères actuels — que ce soit un appui direct ou une introduction vers des contacts pertinents (banques/angels). Je suis ouvert à discuter du cadre qui vous convient (montant, forme, jalons).
 
@@ -38,18 +38,19 @@ Cordialement,
 
 > Canal: formulaire sponsoring / site officiel (moov-africa.tg) ou direction Entreprise ; téléphone public à confirmer. Adapter le nom de la direction si connu.
 
-**Objet :** Proposition de pilote co-financé — expérimentation marchands Lomé (livrables mesurés)
+**Objet :** Proposition de pilote co-financé — expérimentation marchands Lomé (livrables mesurés par segment)
 
 Bonjour [Direction Entreprise / Partenariats / Moov Money],
 
-Nous construisons OMNI, une couche qui rend l'offre locale **recherchable, disponible et exploitable** : les acheteurs trouvent ce qui est proche et en stock, les micro-commerçants deviennent visibles et vendent mieux.
+Nous construisons **OMNI, le moteur de recherche de l'offre et de la demande** : chacun trouve ce qui correspond à ses contraintes (proximité, stock, disponibilité, prix) et choisit réellement la meilleure option disponible. Les acheteurs trouvent ce qui leur convient, les micro-commerçants deviennent visibles et vendent mieux.
 
-Nous avons une **première traction concrète** : 13 commerçants payants, un produit en production, et un plan pour une cohorte terrain mesurée à Lomé. Plutôt qu'un sponsoring générique, nous vous proposons une **expérimentation limitée et traçable** :
+Nous avons une **première traction concrète** : 13 commerçants payants, un produit en production, et un plan pour une cohorte terrain multi-zone mesurée à Lomé. Plutôt qu'un sponsoring générique, nous vous proposons une **expérimentation limitée et traçable** :
 
-**Le pilote (10–15 agent-jours, ~2 agents × 5–7 jours, une zone de Lomé)**
-- Coût approximatif : 350 000–525 000 F (transport + repas, plafonné 25 000 F/jour/membre), **co-financement à discuter**.
-- **Livrables précis :** cohorte instrumentée par agent/zone/jour (inscriptions vérifiées, vendeurs activés, premiers paiements réconciliés, CAC réel), rapport de synthèse 2–3 pages.
-- **Pour vous :** accès mesuré à un réseau de micro-commerçants, données anonymisées sur votre canal (SMS/Data/Moov Money), cas d'usage transactionnel marchand.
+**Le pilote (multi-zone, 10–15 agent-jours, mesuré par segment)**
+- **Design :** plusieurs zones échantillons représentatives de Lomé (dense/marché, résidentiel/commerce) pour couvrir la variance — pas une seule zone.
+- Coût approximatif : 350 000–525 000 F par tranche (transport + repas, plafonné 25 000 F/jour/membre), **co-financement à discuter**.
+- **Livrables précis :** cohorte instrumentée **par segment** (buyer/seller/free/pro) et par zone (inscriptions vérifiées, vendeurs activés, premiers paiements réconciliés, **CAC segmenté**, choix effectués), rapport de synthèse 2–3 pages.
+- **Pour vous :** accès mesuré aux micro-commerçants **et** aux demandeurs de Lomé, données anonymisées par segment sur votre canal (SMS/Data/Moov Money), cas d'usage transactionnel marchand.
 
 Ce qui nous intéresse le plus chez Moov : **le canal paiement** (Flooz/Moov Money) et **la distribution** (SMS/Data) pour équiper ces commerçants.
 
@@ -70,7 +71,7 @@ Cordialement,
 
 Bonjour [Programmes PME / Direction CCI],
 
-OMNI digitalise la visibilité des micro-commerçants de Lomé (offre locale recherchable, disponible, exploitable). Nous avons une première preuve de demande — 13 commerçants payants, produit en production — et nous lançons une **cohorte terrain mesurée** dans un quartier pilote.
+OMNI, le moteur de recherche de l'offre et de la demande, digitalise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit la meilleure option disponible. Nous avons une première preuve de demande — 13 commerçants payants, produit en production — et nous lançons une **cohorte terrain multi-zone mesurée** (par segment et par quartier).
 
 Nous serions intéressés par deux types de collaboration avec la CCI :
 1. **Accès encadré à vos réseaux de commerçants** pour conduire le pilote (validation des catégories, sessions d'information, retour d'expérience terrain).
@@ -95,7 +96,7 @@ Cordialement,
 
 Bonjour [Direction],
 
-OMNI rend l'offre locale recherchable et exploitable pour les micro-commerçants de Lomé. Nous démarrons une **cohorte terrain mesurée** (inscriptions vérifiées, vendeurs activés, premiers paiements, CAC réel) et cherchons un partenaire financier pour : **canal marchands / paiement / encadrement du segment**.
+OMNI, le moteur de recherche de l'offre et de la demande, organise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit réellement la meilleure option disponible. Nous démarrons une **cohorte terrain multi-zone mesurée** (inscriptions vérifiées, vendeurs activés, premiers paiements, **CAC par segment** — buyer/seller/free/pro — et par zone) et cherchons un partenaire financier pour : **canal marchands / paiement / encadrement du segment**.
 
 Le pilote a un coût limité (~350–525k F) et des livrables précis. Seriez-vous ouverts à un échange pour en discuter ?
 
