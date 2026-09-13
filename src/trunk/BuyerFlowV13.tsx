@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
-import type { ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
+import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
+import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { useFreshnessTimer } from './useFreshnessTimer';
 import type { PendingAction } from './ui-helpers';
 
@@ -71,8 +71,18 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalance
   const [chatDraft, setChatDraft] = useState('');
   const [chatSending, setChatSending] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [creditSummary, setCreditSummary] = useState<BuyerCreditSummary | null>(null);
   const pollRef = useRef<number | null>(null);
   const freshness = useFreshnessTimer(liveResponse?.observedAt ?? null);
+
+  const refreshCredits = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token) return;
+    const result = await getBuyerCreditSummary({ token });
+    if (result.ok && result.data) setCreditSummary(result.data);
+  }, []);
+
+  useEffect(() => { void refreshCredits(); }, [refreshCredits]);
 
   const clearPoll = useCallback(() => {
     if (pollRef.current !== null) { window.clearTimeout(pollRef.current); pollRef.current = null; }
@@ -140,6 +150,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalance
         setRequestId(result.data.requestId);
         setToast('');
         setError('');
+        setCreditSummary((current) => current ? { ...current, creditsUsed: current.creditsUsed + result.data!.creditCost, creditsRemaining: result.data!.creditsRemaining, monthlyQuota: result.data!.monthlyQuota, plan: result.data!.plan } : { accountId: '', plan: result.data!.plan, monthlyQuota: result.data!.monthlyQuota, creditsUsed: 0, extraCredits: 0, creditsRemaining: result.data!.creditsRemaining, periodMonth: '' });
+        void refreshCredits();
         setStage('pending');
         // poll the responses once so the buyer can see alivestatus
         const poll = async (): Promise<void> => {
@@ -283,7 +295,16 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalance
             <button type="button" className={deliveryMode === 'livraison' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('livraison')}>Livraison</button>
           </div>
           <textarea className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
-          <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>Envoyer la demande</button>
+          {creditSummary && (
+            <div className="row" style={{ marginTop: 8, alignItems: 'center', gap: 6 }}>
+              <span className="tiny muted">Crédits bulk — {creditSummary.creditsRemaining} restant{creditSummary.creditsRemaining > 1 ? 's' : ''} / {creditSummary.monthlyQuota}</span>
+              {creditSummary.creditsRemaining <= 0 && <span className="status gray">Épuisé</span>}
+            </div>
+          )}
+          <button className="btn ok" type="submit" disabled={busy || (creditSummary !== null && creditSummary.creditsRemaining <= 0)} style={{ marginTop: 10 }}>Envoyer la demande</button>
+          {creditSummary !== null && creditSummary.creditsRemaining <= 0 && (
+            <p className="tiny muted" style={{ marginTop: 6 }}>Vos crédits bulk de ce mois sont épuisés — rechargez en packs pour continuer.</p>
+          )}
         </form>
       )}
 

@@ -63,6 +63,20 @@ export interface AvailabilityResult {
   deliveryMode: 'retrait' | 'livraison';
   note: string | null;
   message: string;
+  creditCost: number;
+  creditsRemaining: number;
+  monthlyQuota: number;
+  plan: 'free' | 'pro';
+}
+
+export interface BuyerCreditSummary {
+  accountId: string;
+  plan: 'free' | 'pro';
+  monthlyQuota: number;
+  creditsUsed: number;
+  extraCredits: number;
+  creditsRemaining: number;
+  periodMonth: string;
 }
 
 export interface BuyerAvailabilityResponse {

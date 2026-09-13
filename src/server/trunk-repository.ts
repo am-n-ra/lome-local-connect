@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerCreditSummary, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -50,6 +50,13 @@ export class AvailabilityPolicyError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'AvailabilityPolicyError';
+  }
+}
+
+export class InsufficientCreditsError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InsufficientCreditsError';
   }
 }
 
@@ -3554,6 +3561,65 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    async getOrCreateCreditStanding(input: { authUserId: string }): Promise<BuyerCreditSummary | null> {
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ),
+        standing as (
+          insert into v2_buyer_credit_accounts (buyer_account_id, plan, monthly_quota, period_month)
+          select a.id, 'free', 3, to_char(now(), 'YYYY-MM')
+          from account a
+          on conflict (buyer_account_id) do update set
+            period_month = case
+              when v2_buyer_credit_accounts.period_month <> to_char(now(), 'YYYY-MM') then to_char(now(), 'YYYY-MM')
+              else v2_buyer_credit_accounts.period_month
+            end,
+            credits_used = case
+              when v2_buyer_credit_accounts.period_month <> to_char(now(), 'YYYY-MM') then 0
+              else v2_buyer_credit_accounts.credits_used
+            end,
+            updated_at = now()
+          returning buyer_account_id, plan, monthly_quota, credits_used, extra_credits, period_month
+        )
+        select * from standing
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return {
+        accountId: String(row.buyer_account_id),
+        plan: String(row.plan) as 'free' | 'pro',
+        monthlyQuota: Number(row.monthly_quota),
+        creditsUsed: Number(row.credits_used),
+        extraCredits: Number(row.extra_credits),
+        creditsRemaining: Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used),
+        periodMonth: String(row.period_month),
+      };
+    },
+
+    async getBuyerCreditSummary(input: { authUserId: string }): Promise<BuyerCreditSummary | null> {
+      const rows = await retryDatabase(() => sql`
+        select c.buyer_account_id, c.plan, c.monthly_quota, c.credits_used, c.extra_credits, c.period_month
+        from v2_buyer_credit_accounts c
+        join v2_accounts a on a.id = c.buyer_account_id and a.auth_user_id = ${input.authUserId}
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return {
+        accountId: String(row.buyer_account_id),
+        plan: String(row.plan) as 'free' | 'pro',
+        monthlyQuota: Number(row.monthly_quota),
+        creditsUsed: Number(row.credits_used),
+        extraCredits: Number(row.extra_credits),
+        creditsRemaining: Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used),
+        periodMonth: String(row.period_month),
+      };
+    },
+
     async createAvailabilityRequest(input: {
       authUserId: string;
       productId: string;
@@ -3566,6 +3632,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       idempotencyKey: string;
     }): Promise<AvailabilityResult> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      const standing = await this.getOrCreateCreditStanding({ authUserId: input.authUserId });
+      const creditCost = 1;
+      if (standing && standing.creditsRemaining < creditCost) {
+        throw new InsufficientCreditsError('Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.');
+      }
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
           select p.id as product_id, f.id as facility_id
@@ -3598,19 +3669,53 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           on conflict (buyer_account_id, idempotency_key) do nothing
           returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
         ),
+        credit_spend as (
+          update v2_buyer_credit_accounts c
+          set credits_used = c.credits_used + ${
+            // One credit per targeted facility; facility_scope is an array so a future
+            // multi-facility request will debit cardinality(facility_scope) transparently.
+            `(select cardinality(facility_scope) from request_insert)::int`
+          }
+          where c.buyer_account_id = (select id from account)
+            and exists (select 1 from request_insert)
+            and c.monthly_quota + c.extra_credits - c.credits_used >= (select cardinality(facility_scope) from request_insert)
+          returning c.credits_used, c.monthly_quota, c.extra_credits
+        ),
+        credit_ledger_insert as (
+          insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, request_id)
+          select a.id, 'bulk_debit', - (select cardinality(facility_scope) from request_insert)::int, 'availability-request', r.id
+          from request_insert r
+          cross join account a
+          returning id
+        ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at, null::int as ignored_credit
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at, null::int
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
+        ),
+        final as (
+          select rr.id, rr.product_id, rr.facility_id, rr.requested_quantity, rr.budget_mode, rr.budget_minor, rr.delivery_mode, rr.request_note, rr.status, rr.expires_at,
+                 case when cs.credits_used is null then c.credits_used else cs.credits_used end as credits_used_result,
+                 c.monthly_quota, c.extra_credits, c.plan,
+                 case when exists (select 1 from request_insert) then 1 else 0 end as is_new,
+                 case when cs.credits_used is null then 0 else 1 end as debited
+          from request_result rr
+          join v2_buyer_credit_accounts c on c.buyer_account_id = (select id from account)
+          left join credit_spend cs on true
         )
-        select * from request_result limit 1
+        select * from final limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new AvailabilityPolicyError('The selected product is not published at the requested facility.');
+      if (!row) {
+        throw new AvailabilityPolicyError('The selected product is not published at the requested facility.');
+      }
+      if (Number(row.is_new) === 1 && Number(row.debited) === 0) {
+        throw new InsufficientCreditsError('Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.');
+      }
       if (
         String(row.product_id) !== input.productId
         || String(row.facility_id) !== input.facilityId
@@ -3631,6 +3736,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         deliveryMode: String(row.delivery_mode) as 'retrait' | 'livraison',
         note: row.request_note === null ? null : String(row.request_note),
         message: 'Request sent. The facility can now confirm the live availability.',
+        creditCost,
+        creditsRemaining: Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used_result),
+        monthlyQuota: Number(row.monthly_quota),
+        plan: String(row.plan) as 'free' | 'pro',
       };
     },
   };

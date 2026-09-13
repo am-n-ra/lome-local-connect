@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -76,6 +76,18 @@ describe('listPublicFacilities search contract', () => {
       '/api/v2/availability-responses',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
+  });
+
+  it('reads the buyer bulk-credit summary with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 1, extraCredits: 0, creditsRemaining: 2, periodMonth: '2026-09' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await getBuyerCreditSummary({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/credits',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 1, extraCredits: 0, creditsRemaining: 2, periodMonth: '2026-09' } });
   });
 
   it('reads the seller-owned availability queue with the bearer token', async () => {

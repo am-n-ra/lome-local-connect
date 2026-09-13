@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateSellerFacilityCreate } from './http';
-import { AvailabilityPolicyError, EvidenceStoragePolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
+import { AvailabilityPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
@@ -59,6 +59,36 @@ describe('Root HTTP error boundary', () => {
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('POLICY_REJECTED');
     expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('maps insufficient bulk credits to a non-retryable 403 INSUFFICIENT_CREDITS', () => {
+    const response = toApiErrorResponse('corr-credits', new InsufficientCreditsError('Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.'));
+    expect(response).toEqual({
+      status: 403,
+      body: {
+        ok: false,
+        correlationId: 'corr-credits',
+        error: {
+          code: 'INSUFFICIENT_CREDITS',
+          message: 'Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.',
+          retryable: false,
+        },
+      },
+    });
+  });
+
+  it('normalizes a valid availability-request create and leaves defaults for optional fields', () => {
+    const validated = validateAvailabilityRequestCreate(
+      { productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 2, idempotencyKey: 'https://x' },
+      'https://x',
+      'auth-user-1',
+    );
+    expect(validated).toEqual({ authUserId: 'auth-user-1', productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 2, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, idempotencyKey: 'https://x' });
+  });
+
+  it('rejects an availability-request create with an unknown product or a too-short idempotency key', () => {
+    expect(() => validateAvailabilityRequestCreate({ productId: 'not-a-uuid', quantity: 1, idempotencyKey: 'short' }, 'short', 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 0, idempotencyKey: 'https://x' }, 'https://x', 'auth-user-1')).toThrow('A valid product, facility, positive quantity and a stable idempotency key are required.');
   });
 
   it('maps external-payment policy rejection to a non-retryable 409', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -27,6 +27,12 @@ const resultRow = {
   delivery_mode: 'livraison',
   request_note: 'Livrer avant 17h',
   expires_at: '2026-08-22T01:00:00.000Z',
+  monthly_quota: 3,
+  extra_credits: 0,
+  credits_used_result: 1,
+  plan: 'free',
+  is_new: 1,
+  debited: 1,
 };
 
 function stubSql(rows: Record<string, unknown>[]): { sql: SqlStub; queries: string[] } {
@@ -38,6 +44,29 @@ function stubSql(rows: Record<string, unknown>[]): { sql: SqlStub; queries: stri
   }) as SqlStub;
   return { sql, queries };
 }
+
+/** Alternates between the given row-sets on every call (credit standing then main statement). */
+function stubSqlAlternating(sets: Record<string, unknown>[][]): { sql: SqlStub; queries: string[] } {
+  const queries: string[] = [];
+  let call = 0;
+  const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+    queries.push(strings.raw.join('¦'));
+    void values;
+    const rows = sets[call % sets.length] ?? [];
+    call += 1;
+    return Promise.resolve(rows);
+  }) as SqlStub;
+  return { sql, queries };
+}
+
+const creditStandingRow = {
+  buyer_account_id: 'account-1',
+  plan: 'free',
+  monthly_quota: 3,
+  credits_used: 0,
+  extra_credits: 0,
+  period_month: '2026-09',
+};
 
 describe('account context Root seam', () => {
   it('returns only active role capabilities and safe account state', async () => {
@@ -141,22 +170,29 @@ describe('public facility trust boundary', () => {
 });
 
 describe('availability repository Root seam', () => {
-  it('keeps account, wallet and request provisioning in one guarded statement and replays the canonical request', async () => {
-    const firstCall = stubSql([resultRow]);
+  it('keeps account, wallet, request and bulk-credit debit in guarded statements and replays the canonical request', async () => {
+    const firstCall = stubSqlAlternating([[creditStandingRow], [resultRow]]);
     const repository = createTrunkRepository(firstCall.sql);
 
     const first = await repository.createAvailabilityRequest(availabilityInput);
     const replay = await repository.createAvailabilityRequest(availabilityInput);
 
     expect(first.requestId).toBe('request-1');
+    expect(first).toMatchObject({ creditCost: 1, creditsRemaining: 2, monthlyQuota: 3, plan: 'free' });
     expect(replay).toEqual(first);
-    expect(firstCall.queries).toHaveLength(2);
-    expect(firstCall.queries[0]).toContain('with valid_selection as');
-    expect(firstCall.queries[0]).toContain('on conflict (auth_user_id)');
-    expect(firstCall.queries[0]).toContain('on conflict (account_id)');
-    expect(firstCall.queries[0]).toContain('on conflict (buyer_account_id, idempotency_key)');
-    expect(firstCall.queries[0]).toContain("p.publication_state = 'published'");
-    expect(firstCall.queries[0]).toContain("f.trust_state in ('certified', 'unconfirmed', 'confirmed')");
+    expect(firstCall.queries).toHaveLength(4);
+    expect(firstCall.queries[0]).toContain('v2_buyer_credit_accounts');
+    expect(firstCall.queries[0]).toContain("'free', 3");
+    expect(firstCall.queries[0]).toContain('to_char(now(),');
+    expect(firstCall.queries[1]).toContain('with valid_selection as');
+    expect(firstCall.queries[1]).toContain('on conflict (auth_user_id)');
+    expect(firstCall.queries[1]).toContain('on conflict (account_id)');
+    expect(firstCall.queries[1]).toContain('on conflict (buyer_account_id, idempotency_key)');
+    expect(firstCall.queries[1]).toContain("p.publication_state = 'published'");
+    expect(firstCall.queries[1]).toContain("f.trust_state in ('certified', 'unconfirmed', 'confirmed')");
+    expect(firstCall.queries[1]).toContain('credit_spend as');
+    expect(firstCall.queries[1]).toContain('cardinality(facility_scope)');
+    expect(firstCall.queries[1]).toContain('v2_availability_credit_ledger');
   });
 
   it('does not provision an account or wallet when the selected product is outside the requested facility or unpublished', async () => {
@@ -164,16 +200,46 @@ describe('availability repository Root seam', () => {
     const repository = createTrunkRepository(call.sql);
 
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toBeInstanceOf(AvailabilityPolicyError);
-    expect(call.queries[0]).toContain('where exists (select 1 from valid_selection)');
+    expect(call.queries).toHaveLength(2);
+    expect(call.queries[1]).toContain('where exists (select 1 from valid_selection)');
   });
 
   it('rejects an idempotency replay whose request shape differs from the stored response', async () => {
-    const call = stubSql([{ ...resultRow, requested_quantity: 1 }]);
+    const call = stubSqlAlternating([[creditStandingRow], [{ ...resultRow, requested_quantity: 1 }]]);
     const repository = createTrunkRepository(call.sql);
 
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toThrow(
       'The idempotency key is already used for a different availability request.',
     );
+  });
+
+  it('throws InsufficientCreditsError before touching the DB when the monthly bulk credits are exhausted', async () => {
+    const call = stubSql([{ ...creditStandingRow, credits_used: 3 }]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toBeInstanceOf(InsufficientCreditsError);
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('creates the monthly credit standing with a free quota of 3 and does not reset used credits mid-month', async () => {
+    const call = stubSql([{ ...creditStandingRow, credits_used: 1 }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const standing = await repository.getOrCreateCreditStanding({ authUserId: 'auth-user-1' });
+    expect(standing).toEqual({ accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 1, extraCredits: 0, creditsRemaining: 2, periodMonth: '2026-09' });
+    expect(call.queries[0]).toContain('v2_buyer_credit_accounts');
+    expect(call.queries[0]).toContain('period_month <> to_char(now()');
+    expect(call.queries[0]).toContain('then 0');
+  });
+
+  it('returns the buyer credit summary for an existing standing account', async () => {
+    const call = stubSql([{ ...creditStandingRow, extra_credits: 10 }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const summary = await repository.getBuyerCreditSummary({ authUserId: 'auth-user-1' });
+    expect(summary).toEqual({ accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 0, extraCredits: 10, creditsRemaining: 13, periodMonth: '2026-09' });
+    expect(call.queries[0]).toContain('v2_buyer_credit_accounts c');
+    expect(call.queries[0]).toContain("a.auth_user_id");
   });
 });
 

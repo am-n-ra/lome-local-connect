@@ -1,6 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
-import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
@@ -36,6 +36,9 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   }
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
+  }
+  if (error instanceof InsufficientCreditsError) {
+    return { status: 403, body: errorBody(correlationId, 'INSUFFICIENT_CREDITS', error.message) };
   }
   if (error instanceof AvailabilityPolicyError || error instanceof AvailabilityResponsePolicyError || error instanceof PurchaseIntentPolicyError || error instanceof SellerAuthorizationPolicyError || error instanceof SellerCataloguePolicyError || error instanceof TransactionPolicyError || error instanceof FieldPilotPolicyError || error instanceof WalletPolicyError || error instanceof BuyerSearchPolicyError) {
     return { status: 409, body: errorBody(correlationId, 'POLICY_REJECTED', error.message) };
@@ -97,6 +100,33 @@ export function validateSellerFacilityCreate(body: Record<string, unknown>, idem
     throw new ApiInputError('A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.');
   }
   return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, idempotencyKey };
+}
+
+export interface AvailabilityRequestCreateInput {
+  authUserId: string;
+  productId: string;
+  facilityId: string;
+  quantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
+  idempotencyKey: string;
+}
+
+export function validateAvailabilityRequestCreate(body: Record<string, unknown>, idempotencyKey: string, authUserId: string): AvailabilityRequestCreateInput {
+  const productId = typeof body.productId === 'string' ? body.productId : '';
+  const facilityId = typeof body.facilityId === 'string' ? body.facilityId : '';
+  const quantity = Number(body.quantity);
+  const budgetMode = body.budgetMode === 'maximum' ? 'maximum' : 'unlimited';
+  const budgetMinor = body.budgetMinor === null || body.budgetMinor === undefined ? null : Number(body.budgetMinor);
+  const deliveryMode = body.deliveryMode === 'livraison' ? 'livraison' : 'retrait';
+  const note = typeof body.note === 'string' && body.note.trim().length > 0 ? body.note.trim() : null;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(productId) || !uuidPattern.test(facilityId) || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+    throw new ApiInputError('A valid product, facility, positive quantity and a stable idempotency key are required.');
+  }
+  return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
 }
 
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
@@ -1183,6 +1213,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/credits') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your bulk credits.'));
+        return true;
+      }
+      const result = await repository.getBuyerCreditSummary({ authUserId });
+      if (!result) {
+        json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'No bulk credit account yet. Send a first availability request to create it.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -1295,24 +1339,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const input = await parseRequestBody(req);
-      const productId = typeof input.productId === 'string' ? input.productId : '';
-      const facilityId = typeof input.facilityId === 'string' ? input.facilityId : '';
-      const quantity = Number(input.quantity);
-      const budgetMode = input.budgetMode === 'maximum' ? 'maximum' : 'unlimited';
-      const budgetMinor = input.budgetMinor === null || input.budgetMinor === undefined ? null : Number(input.budgetMinor);
-      const deliveryMode = input.deliveryMode === 'livraison' ? 'livraison' : 'retrait';
-      const note = typeof input.note === 'string' && input.note.trim().length > 0 ? input.note.trim() : null;
-      const idempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
-
-      if (!productId || !facilityId || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0))) {
-        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a product and a positive quantity.'));
-        return true;
-      }
-      if (typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
-        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A stable idempotency key is required.'));
-        return true;
-      }
-      const result = await repository.createAvailabilityRequest({ authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey });
+      const rawIdempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
+      const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
+      const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
+      const result = await repository.createAvailabilityRequest(validated);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

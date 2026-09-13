@@ -366,3 +366,51 @@ Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 te
 > **Residual gap:** spot-check navigateur formulaire; route HTTP create end-to-end en prod une fois push.
 > **Next smallest action:** sur **ordre fondateur de push prod** → proof navigateur réel + prod-hash; ensuite **NW-13d ( crédits bulk ( 3 Free/mois, Pro ≈ 100/mois ( **.
 > **Re-plan trigger:** 044 rejeté par Postgres ( revoir CHECK/type (; divergence prod-hash au push; retour fondateur sur l'UI formulaire.
+
+
+## Slice borné — P1-A NW-13d « Crédits bulk serveur » ( HO-OMNI-13, 2026-09-13
+
+> **Handoff:** `docs/founder-hq/handoff-receipt-HO-OMNI-13.md` — fondateur : « allons y » 2026-09-13 → **NW-13d lancé** après NW-13c (454 code + DB).
+> **Gate:** Gate 6 `CLOSED` (maintient); P1 ( NW-13c→d→e→g (. Gate 7 = watch.
+> **Maturité cible:** comptage serveur de crédits bulk par buyer: **3 crédits/mois Free**, **Pro base mensuelle ≈ 100/mois** (1 besoin = 1 bulk; demande à N facilités consomme N); reset mensuel; surplus `extra_credits` (packs) stocké; erreur `INSUFFICIENT_CREDITS` quand épuisé; solde exposé (GET `/api/v2/buyer/credits`) + champ crédits dans la réponse de demande; UI acheteur affiche le solde et bloque si épuisé.
+
+### Decisions de périmètre (résolutions d'ambiguïté spec, réversibles)
+
+1. **Quota buyer** : le v2 n'a pas encore de plan buyer (buyer Pro = NW-13h). NW-13d consensus : quota **`free`=3** pour tout compte sans plan pro buyer; la colonne `monthly_quota` stocke la valeur appliquée, `plan` côté crédits démarre `free`. Pro ≈100 branché quand NW-13h livre le plan buyer réel.
+2. **Débit** : `credit_cost = cardinality(facility_scope)` (1 aujourd'hui par POST mono-facilité; correct pour le multi-facilités futur car `facility_scope` est un ARRAY dès maintenant).
+3. **Packs surplus** : la table stocke `extra_credits` (capacité prête), mais **l'achat/paiement Mobile Money = NW-13i** (hors périmètre). Message UI « rechargez en packs » = CTA vers l'état épuisé, sans tunnel d'achat réel dans NW-13d.
+
+### Mini-seed (ce que cette unité doit faire)
+
+Un acheteur envoie une demande de dispo; le serveur (v2) vérifie le solde mensuel de crédits bulk (3 Free / 100 Pro), débite 1 par facilité ciblée, journalise (ledger), et expose le solde restant; si épuisé → `INSUFFICIENT_CREDITS` (403) au lieu d'accepter une demande qui ne pourrait pas être honorée.
+
+### Mini-root (données, contrats, invariants)
+
+- Tables v2: `v2_buyer_credit_accounts` (compteur par buyer: plan, monthly_quota, period_month, credits_used, extra_credits; UNIQUE(buyer_account_id)) + `v2_availability_credit_ledger` (audit: kind bulk_debit/bulk_monthly_grant/pack_credit/reversal, amount, reason, request_id FK nullable).
+- Reset mensuel: au premier appel du mois, `period_month` ≠ courant → `credits_used=0`.
+- Débit atomique avec l'insertion de la demande (CTE data-modifying dans le même guarded statement); idempotence (replay) ne re-débite pas.
+- Check de solde préalable (requête standing) → `InsufficientCreditsError` si `remaining < cost`.
+- API: `GET /api/v2/buyer/credits` → summary; `POST /api/v2/availability` → 403 `INSUFFICIENT_CREDITS` si épuisé; réponse étendue `creditCost/creditsRemaining/monthlyQuota/plan`.
+- Invariants: `credits_used >= 0`, `monthly_quota > 0`, `extra_credits >= 0`, `remaining = monthly_quota + extra_credits - credits_used`.
+
+### Gate plan ( NW-13d(
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Migration 045 ( `v2_buyer_credit_accounts` + `v2_availability_credit_ledger` ( | Additive, idempotent | Fichier SQL; vérif colonnes/CHECK/FK; re-run idempotence | `done` ( **APPLIED canonical 2026-09-13 (MCP), 12 statements, registre `f8917577…`** ( |
+| 2 | Repo `getOrCreateCreditStanding` + `getBuyerCreditSummary` + `createAvailabilityRequest` debit atomique + `InsufficientCreditsError` | Débit 1/facilité; reset mensuel; idempotence sans double débit; erreur si épuisé | Tests repo (3 nouveaux + 3 adaptés) | `done` |
+| 3 | HTTP `GET /api/v2/buyer/credits` + catch `INSUFFICIENT_CREDITS` 403 sur POST avail + validator pur | Route 401 sans auth; 200 summary; 403 si épuisé | Tests http (3 nouveaux) | `done` |
+| 4 | Client/types `getBuyerCreditSummary` + `BuyerCreditSummary` + `AvailabilityResult` étendu | Serialize; types partagés | Tests api (1 nouveau) | `done` |
+| 5 | UI BuyerFlowV13 solde crédits + état épuisé (« rechargez en packs ») | Compteur visible; bouton bloqué si épuisé; message INSUFFICIENT_CREDITS | tsc + build; visuel navigateur = résidu | `done` (code(; navigateur réel = résidu |
+| 6 | Preuve locale complète | tsc clean; suite; build; boundary | commandes sorties | `done` (55f/367t(+7), build `index-1lygK87G.js`, boundary clean) |
+| 7 | Apply migration 045 canonical (Neon MCP) + registre + preuve live | Schéma vérifié; registry; preuve débit/reset/pack | ordres MCP + requêtes live | `done` ( APPLIED; preuve reset mensuel + pack extra_credits + débit + 0 trace ( |
+
+### Handoff ( NW-13d( — retour fondateur
+
+> **Local status:** `verified` — tsc clean, 55 files/367 tests (+7 ( repo 3, http 3, api 1 (), `tsc -b` + vite build verts ( bundle `index-1lygK87G.js` (, `check:boundary` clean; bundles serverless (12( régénérés ( availability.js porte 11 hits crédits (.
+> **Gate decision:** `advance` — NW-13d ( P1-B( livré branch-only; **Gate 6 reste CLOSED** ( rien n'a changé le verdict fondateur ( ; Gate 7 = watch.
+> **Closed:** migration 045 ( **appliquée canonical 2026-09-13 via Neon MCP, 12 statements, schéma vérifié, registre `f8917577…`, preuve live reset mensuel + pack extra_credits + débit + 0 trace** (; repo ( standing/débit atomique/idempotent (; HTTP ( route GET credits + 403 INSUFFICIENT + validator pur (; client/types ( getBuyerCreditSummary + AvailabilityResult étendu (; UI BuyerFlowV13 ( compteur + état épuisé (.
+> **Open or blocked:** rien côté DB ( 045 appliquée canonical MCP + registre ( ; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur (.
+> **Residual gap:** achat packs réel ( tunnel paiement Mobile Money = **NW-13i**; `extra_credits` capacité stockée, pas de vente ( ; plan buyer Pro ≈100/mois = **NW-13h** ( quota 3 free appliqué aujourd'hui (.
+> **Next smallest action:** sur **ordre fondateur** → push prod + proof navigateur réel; ensuite **NW-13e** ( slice suivante (.
+> **Re-plan trigger:** 045 rejeté Postgres ( revoir CHECK (; INSUFFICIENT_CREDITS non levé en demande; divergence solde UI vs serveur.
