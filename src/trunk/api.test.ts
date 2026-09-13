@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -377,6 +377,20 @@ describe('facility pro renewal contract (NW-13g)', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities/facility-1/pro/renew',
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
+    );
+  });
+});
+describe('facility analytics contract (NW-13f)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the performance analytics from the facility analytics endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', facilityName: 'Atelier', requests: 12, responsesAvailable: 9, transactionsStarted: 6, qrScansVerified: 4, transactionsClosed: 3, grossRevenueMinor: 24500, billingCurrency: 'XOF', scanToVerifyAvgMs: 3200 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getFacilityAnalytics({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/analytics',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });
 });

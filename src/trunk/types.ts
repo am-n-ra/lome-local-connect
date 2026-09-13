@@ -544,6 +544,18 @@ export interface FacilityBonusPersistenceResult {
   status: 'confirmed';
   facilityId: string;
 }
+export interface SellerFacilityAnalytics {
+  facilityId: string;
+  facilityName: string;
+  requests: number;
+  responsesAvailable: number;
+  transactionsStarted: number;
+  qrScansVerified: number;
+  transactionsClosed: number;
+  grossRevenueMinor: number;
+  billingCurrency: string;
+  scanToVerifyAvgMs: number | null;
+}
 export interface WalletFacilitySummary {
   facilityId: string;
   facilityName: string;

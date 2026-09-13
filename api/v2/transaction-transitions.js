@@ -2943,6 +2943,74 @@ function createTrunkRepository(sql = database()) {
         sufficientFunds: balanceMinor >= price
       };
     },
+    async getFacilityAnalytics(input) {
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.name as facility_name, f.account_id
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        requests as (
+          select r.id
+          from v2_availability_requests r
+          join facility f on f.facility_id = any(r.facility_scope)
+        ),
+        responses as (
+          select ar.id
+          from v2_availability_responses ar
+          join facility f on f.facility_id = ar.facility_id
+        ),
+        transactions as (
+          select s.transaction_id, s.buyer_account_id, s.net_amount_minor, s.unit_price_minor, s.created_at
+          from v2_transaction_snapshots s
+          join facility f on f.facility_id = s.facility_id
+        ),
+        qr_scans as (
+          select q.transaction_id, q.verified_at, s.created_at
+          from v2_qr_tokens q
+          join transactions s on s.transaction_id = q.transaction_id
+          where q.verified_at is not null
+        ),
+        closed_tx as (
+          select e.transaction_id
+          from v2_transaction_events e
+          join transactions s on s.transaction_id = e.transaction_id
+          where e.state = 'closed'
+        )
+        select
+          f.facility_id,
+          f.facility_name,
+          (select count(*)::int from requests) as requests,
+          (select count(*)::int from responses) as responses_available,
+          (select count(*)::int from transactions) as transactions_started,
+          (select count(*)::int from qr_scans) as qr_scans_verified,
+          (select count(*)::int from closed_tx) as transactions_closed,
+          (select coalesce(sum(s.net_amount_minor), 0)::int from transactions s join closed_tx c on c.transaction_id = s.transaction_id) as gross_revenue_minor,
+          (select
+             case when count(*) = 0 then null
+             else round(avg(extract(epoch from (qr.verified_at - qr.created_at)) * 1000))::bigint end
+           from qr_scans qr
+          ) as scan_to_verify_avg_ms
+        from facility f
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerAuthorizationPolicyError("Facility not found or not owned by the current user.");
+      return {
+        facilityId: String(row.facility_id),
+        facilityName: String(row.facility_name),
+        requests: Number(row.requests),
+        responsesAvailable: Number(row.responses_available),
+        transactionsStarted: Number(row.transactions_started),
+        qrScansVerified: Number(row.qr_scans_verified),
+        transactionsClosed: Number(row.transactions_closed),
+        grossRevenueMinor: Number(row.gross_revenue_minor),
+        billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY,
+        scanToVerifyAvgMs: row.scan_to_verify_avg_ms === null || row.scan_to_verify_avg_ms === void 0 ? null : Number(row.scan_to_verify_avg_ms)
+      };
+    },
     async setFacilityRenewalOptIn(input) {
       const rows = await retryDatabase(() => sql`
         with facility as (
@@ -5476,6 +5544,22 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.getFacilityBonusStatus({ authUserId, facilityId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/analytics")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the owning seller to view performance analytics."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/analytics".length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid facility."));
+        return true;
+      }
+      const result = await repository.getFacilityAnalytics({ authUserId, facilityId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

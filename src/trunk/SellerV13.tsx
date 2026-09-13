@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
+import { createSellerFacility, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
+import type { FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics } from './types';
 
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
@@ -152,6 +152,17 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       if (result.ok && result.data) setBonusStatus(result.data);
     } catch { /* bonus status is best-effort */ }
   }, [ws.selFacilityId]);
+
+  const [analytics, setAnalytics] = useState<SellerFacilityAnalytics | null>(null);
+  const loadAnalytics = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) { setAnalytics(null); return; }
+    try {
+      const result = await getFacilityAnalytics({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) setAnalytics(result.data);
+    } catch { /* analytics is best-effort */ }
+  }, [ws.selFacilityId]);
+  useEffect(() => { void loadAnalytics(); }, [loadAnalytics]);
 
   useEffect(() => { void loadBonus(); }, [loadBonus]);
 
@@ -346,6 +357,39 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           )}
           {renewalStatus.plan === 'pro_expired' && (
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={renewalBusy} onClick={() => void runRenewNow()}>{renewalBusy ? '…' : 'Renouveler Pro maintenant'}</button>
+          )}
+        </div>
+      )}
+      {hasData && ws.selFacilityCatalogue?.name && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Performance</b>
+              <span className="tiny muted">{ws.selFacilityCatalogue.name}</span>
+            </div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => void loadAnalytics()}>Actualiser</button>
+          </div>
+          {!analytics ? (
+            <p className="tiny muted" style={{ marginTop: 6 }}>Chargement des indicateurs…</p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 9 }}>
+              <div>
+                <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Demandes reçues</small>
+                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{analytics.requests}</strong>
+              </div>
+              <div>
+                <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Transactions</small>
+                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{analytics.transactionsStarted}<small className="fs-7 muted"> · {analytics.transactionsClosed} clôturées</small></strong>
+              </div>
+              <div>
+                <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Revenu</small>
+                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{money(analytics.grossRevenueMinor, analytics.billingCurrency)}</strong>
+              </div>
+              <div>
+                <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>QR vérifiés</small>
+                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{analytics.qrScansVerified}</strong>
+              </div>
+            </div>
           )}
         </div>
       )}

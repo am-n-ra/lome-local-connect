@@ -1118,6 +1118,66 @@ describe('facility pro renewal Root seam', () => {
   });
 });
 
+describe('facility analytics Root seam (NW-13f)', () => {
+  it('aggregates the conversion funnel, revenue and QR scan provenance for the owning seller', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      facility_name: 'Atelier Test',
+      requests: 12,
+      responses_available: 9,
+      transactions_started: 6,
+      qr_scans_verified: 4,
+      transactions_closed: 3,
+      gross_revenue_minor: 24500,
+      scan_to_verify_avg_ms: 3200,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getFacilityAnalytics({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result).toEqual({
+      facilityId: 'facility-1',
+      facilityName: 'Atelier Test',
+      requests: 12,
+      responsesAvailable: 9,
+      transactionsStarted: 6,
+      qrScansVerified: 4,
+      transactionsClosed: 3,
+      grossRevenueMinor: 24500,
+      billingCurrency: 'XOF',
+      scanToVerifyAvgMs: 3200,
+    });
+    expect(call.queries[0]).toContain('v2_availability_requests');
+    expect(call.queries[0]).toContain('v2_transaction_snapshots');
+    expect(call.queries[0]).toContain('v2_qr_tokens');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('returns zeros and a null scan latency when the facility has no activity yet', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      facility_name: 'Atelier Test',
+      requests: 0,
+      responses_available: 0,
+      transactions_started: 0,
+      qr_scans_verified: 0,
+      transactions_closed: 0,
+      gross_revenue_minor: 0,
+      scan_to_verify_avg_ms: null,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getFacilityAnalytics({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.grossRevenueMinor).toBe(0);
+    expect(result.scanToVerifyAvgMs).toBe(null);
+    expect(result.transactionsStarted).toBe(0);
+  });
+
+  it('rejects a facility that is not owned by the current user', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getFacilityAnalytics({ authUserId: 'auth-user-1', facilityId: 'facility-1' }))
+      .rejects.toThrow('Facility not found or not owned by the current user.');
+  });
+});
+
 describe('buyer pro Root seam (NW-13h D-K)', () => {
   it('returns the honest plan, price, balance and compare quota for an active entitlement', async () => {
     const call = stubSql([{
