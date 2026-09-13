@@ -350,7 +350,7 @@ Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 te
 
 | Order | Workstream | Gate condition | Evidence required | Status |
 |---|---|---|---|---|
-| 1 | Migration 044 ( facility_type/rayon/lat-lng nullable ( | Additive, idempotent, apply fondateur sur Neon | Fichier SQL; registry post-apply | `ready` (écrit; **apply = fondateur**) |
+| 1 | Migration 044 ( facility_type/rayon/lat-lng nullable ( | Additive, idempotent | Fichier SQL + registry | `done` ( **APPLIED 2026-09-13 sur canonical via Neon MCP**, enregistré + preuve INSERT digital/mobile ( |
 | 2 | Repo `createSellerFacility` | Type strict + coords/rayon validation; provision slot free (D-J(; trust `unconfirmed` (D-B(; vendeur universel (D-A( | Tests repo 5 | `done` |
 | 3 | HTTP route + validator | Validator pur `validateSellerFacilityCreate`; per-type; 401 sans auth; 201/200 | Tests http 6 | `done` |
 | 4 | Client `createSellerFacility` + types | Serialize facilityType/rayonKm/coords nullable; `CreateSellerFacilityResult` | Tests api 2 | `done` |
@@ -361,8 +361,8 @@ Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 te
 
 > **Local status:** `verified` — tsc clean, 55 files/360 tests ( (+13(, `tsc -b` + vite build verts ( bundle `index-CBKUqllX.js` (, `check:boundary` clean; bundles serverless (12( régénérés ( route `POST /api/v2/seller/facilities` → catch-all → `handleApi` (.
 > **Gate decision:** `advance` — NW-13c ( P1-A( livré branch-only; **Gate 6 reste CLOSED** ( rien n'a changé le verdict fondateur ( ; Gate 7 = watch.
-> **Closed:** migration 044 ( écrit, non appliqué (; repo; HTTP; client; types; UI SellerV13 ( formulaire minimal 3 types (.
-> **Open or blocked:** **apply 044 sur Neon = fondateur** ( classe manuelle, même classe que 038/039/043 ( ; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur ( ; digital facility non visible publiquement jusqu'à une tranche vitrine ( not in NW-13c scope (.
-> **Residual gap:** apply Neon; spot-check navigateur formulaire; prod-hash une fois poussé par ordre fondateur.
-> **Next smallest action:** fondateur applique `044` sur Neon puis, sur ordre explicite, push prod + proof navigateur; ensuite **NW-13d ( crédits bulk ( 3 Free/mois, Pro ≈ 100/mois ( **.
+> **Closed:** migration 044 ( **appliquée canonical 2026-09-13 MCP + registre** (; repo; HTTP; client; types; UI SellerV13 ( formulaire minimal 3 types (.
+> **Open or blocked:** rien côté DB ( 044 appliquée canonical 2026-09-13 MCP + registre ( ; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur ( ; digital facility non visible publiquement jusqu'à une tranche vitrine ( not in NW-13c scope (.
+> **Residual gap:** spot-check navigateur formulaire; route HTTP create end-to-end en prod une fois push.
+> **Next smallest action:** sur **ordre fondateur de push prod** → proof navigateur réel + prod-hash; ensuite **NW-13d ( crédits bulk ( 3 Free/mois, Pro ≈ 100/mois ( **.
 > **Re-plan trigger:** 044 rejeté par Postgres ( revoir CHECK/type (; divergence prod-hash au push; retour fondateur sur l'UI formulaire.
