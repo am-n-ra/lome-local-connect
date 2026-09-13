@@ -41,23 +41,24 @@ The founder wants two things addressed together, in order:
 |---|---|---|---|
 | C-01 | **Legal identity** of the entity that would raise | Determines the capital type and who signs | **PARTIAL (founder-stated):** target = **Delaware C-Corp** (for the YC path), **not yet incorporated in any form**. Pre-incorporation raise vehicle = open; cross-border/securities decision → qualified counsel required |
 | C-02 | HERLOG contact/interaction status | Determines `research` vs `relationship` pipeline state | **RESOLVED (founder-stated): open contact** (info gathered in direct conversation with HERLOG) |
-| C-03 | Amount and duration: how many months of pre-YC runway, monthly burn, total ask | Phase 0 milestone-to-buy logic | Unknown |
+| C-03 | Amount and duration: how many months of pre-YC runway, monthly burn, total ask | Phase 0 milestone-to-buy logic | **PARTIAL (founder-stated sizing hypothesis):** founder estimates the pre-YC operational need **will exceed 50,000,000 F** given the acquisition team (field agents + call team + follow-up) — **exact amount/duration/burn not yet built; specialist must build the budget bottom-up** |
 | C-04 | HERLOG role: direct investor, facilitator, or both? | Required for capital fit | **RESOLVED (founder-stated): both direct + facilitation (banks/angels/others)** — terms to verify |
 | C-05 | Any existing evidence (product proof, prod, tests) the founder wants to use | Evidence basis | Omni holds strong product proof (see below) |
 | C-06 | Default-alive position: what operating commitments continue if the bridge does not close | Contingency plan basis | Unknown |
-| C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone? | Capital tied to a milestone, not a wish list | Unknown |
-| C-08 | **HERLOG minimum ticket** | Capital fit: does the pre-YC bridge meet their floor? | **RESOLVED (founder-stated): HERLOG engages for amounts ABOVE ~50,000,000** (unit to confirm — assumed FCFA, ≈US$80–85k) → **capital-fit question for the specialist** (see below) |
+| C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone? | Capital tied to a milestone, not a wish list | **PARTIAL (founder-stated):** funding maps to field CAC experiment (Lomé/Aflao, first buyers+sellers+Pro, real CAC) + credible team → measurable milestones exist (see Gate 7 evidence), but the budget-to-milestone link is not formalized |
+| C-08 | **HERLOG minimum ticket** | Capital fit: does the pre-YC bridge meet their floor? | **RESOLVED (founder-stated): HERLOG engages for amounts ABOVE ~50,000,000** (unit to confirm — assumed FCFA, ≈US$80–85k) |
 
 ## Capital-fit tension (flagged by HQ; assessed by the specialist, not decided by HQ)
 
-The founder-stated facts raise a sizing question that only the fundraising specialist + qualified counsel can resolve:
+Updated with founder's bridge-sizing inputs (2026-09-13):
 
-- **Need:** pre-YC operational runway (first months) + funding a credible team.
+- **Need:** pre-YC operational runway (first months) + a credible acquisition team (field agents 10,000 F/day each; call/OSM 1,000 F/facility; in-person follow-up / unclaimed registration) — see Gate 7 handoff.
 - **HERLOG entrance floor:** above ~50M (unit to confirm, assumed FCFA).
-- **Tension:** if the honest pre-YC bridge is materially below ~50M, HERLOG may fit a **later round** (post Gate 7 demand proof / post-incorporation) rather than the initial bridge — **or** the bridge is intentionally sized at/above their floor, which changes dilution and use-of-funds materially.
+- **Founder's sizing hypothesis:** the pre-YC operational need **exceeds 50M F** → the bridge may now be **intentionally sized at/above HERLOG's floor**, resolving the earlier "below-floor" tension **IF** the bottom-up budget supports the ≥50M hypothesis. This is the exact check the specialist must run: build the budget from the acquisition model and team plan, then confirm whether the ≥50M sizing holds honestly.
+- **First-revenue note:** 13 paid Pro sellers (65,000 F) exists as founder-stated revenue — small but a real willingness-to-pay signal with internal consistency (13 × 5,000). Verify against wallet/ledger (see Gate 7 handoff) before using in the capital thesis.
 - **Entity sequencing:** target is a Delaware C-Corp, not yet incorporated. Raising before vs after incorporation is a legal/securities/cross-border decision → the specialist must flag it, not HQ.
 
-HQ does **not** propose an amount, instrument, or sequencing here.
+HQ does **not** propose an amount, instrument, or sequencing here; it records the founder's ≥50M sizing as a **hypothesis to build and verify**, not a decided figure.
 
 ## Product evidence Omni already holds (factual, from repository proof — invite the specialist to classify)
 
