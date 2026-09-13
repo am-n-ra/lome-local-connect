@@ -48,20 +48,31 @@ The founder wants two things addressed together, in order:
 | C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone? | Capital tied to a milestone, not a wish list | **PARTIAL (founder-stated):** funding maps to field CAC experiment (Lomé/Aflao, first buyers+sellers+Pro, real CAC) + credible team → measurable milestones exist (see Gate 7 evidence), but the budget-to-milestone link is not formalized |
 | C-08 | **HERLOG minimum ticket** | Capital fit: does the pre-YC bridge meet their floor? | **RESOLVED (founder-stated): HERLOG engages for amounts ABOVE ~50,000,000** (unit to confirm — assumed FCFA, ≈US$80–85k) |
 
+## Founder decisions recorded (2026-09-13)
+
+| # | Decision | Implication |
+|---|---|---|
+| D-01 | Raise to cover **3–6 months** runway | Horizon before YC W27 |
+| D-02 | Raise must have a **real objective** | Proof Round framing: instrumentation + controlled CAC, not "growth to saturate" |
+| D-03 | **>$100K** | Endorses the ~$150K order of magnitude of the external reference |
+| D-04 | **≤ 25,000 F/day max per field-team member** | New field cost cap (supersedes the 35k/day assumption in the external reference) |
+
+## External reference (stored 2026-09-13)
+
+`docs/founder-hq/reference-funding-recommendation-2026-08-21.md` — prepared 2026-08-21 (external AI analysis, not audited, no repo/URL access at that date). Recommends: syndicated **$150K Proof Round**, first closing **$75K**, anchor $75–100K (**HERLOG candidate**), milestone-gated disbursement, phased Lomé→Aflao (instrumentation → controlled pilot → Lomé wave → Aflao micro-pilot), investor rails (Baobab, Janngo, Digital Africa, Launch Africa, Catalyst + non-dilutive + partners), minimum data room, and "money buys proof, not registrations".
+
 ## Capital-fit tension (flagged by HQ; assessed by the specialist, not decided by HQ)
 
-Updated with founder's bridge-sizing inputs (2026-09-13):
+Updated with founder decisions + external reference (2026-09-13):
 
-- **Need:** pre-YC operational runway (first months) + a credible acquisition team (field agents ≈15,000 F/day/agent incl. food — now w/ one-agent-per-zone; call/OSM 1,000 F/facility; in-person follow-up / unclaimed registration) — see Gate 7 handoff.
-- **HERLOG entrance floor:** above ~50M (unit to confirm, assumed FCFA).
-- **Founder's sizing hypothesis:** the pre-YC operational need **exceeds 50M F** → the bridge may now be **intentionally sized at/above HERLOG's floor**, resolving the earlier "below-floor" tension **IF** the bottom-up budget supports the ≥50M hypothesis. This is the exact check the specialist must run: build the budget from the acquisition model and team plan, then confirm whether the ≥50M sizing holds honestly.
-- **Open allocation decisions (founder weighing, 2026-09-13):**
-  - **Vehicle vs daily transport:** buying a Hiace-type vehicle instead of recurring 10,000 F/day/agent transport → capex-vs-opex to model (purchase + fuel/maintenance/insurance/driver vs 15,000 F/day/agent); affects both budget and the CAC-per-registration basis.
-  - **Delaware incorporation from raise:** founder considers allocating part of the raise to forming the Delaware C-Corp ("maybe... I don't know") → potential use-of-funds line, to size with qualified counsel (formation + registered agent + legal).
-- **First-revenue note:** 13 paid Pro sellers (65,000 F) exists as founder-stated revenue — small but a real willingness-to-pay signal with internal consistency (13 × 5,000). Verify against wallet/ledger (see Gate 7 handoff) before using in the capital thesis.
-- **Entity sequencing:** target is a Delaware C-Corp, not yet incorporated. Raising before vs after incorporation is a legal/securities/cross-border decision → the specialist must flag it, not HQ.
+- **Structure direction (from reference, founder-endorsed):** syndicated Proof Round ~$150K, first closing ~$75K, HERLOG as candidate anchor/lead, milestone disbursement; **<>$100K honestly requires 6-month scenarios** (mid+veh ≈ $102K, full no-veh ≈ $106K, full+veh ≈ $143K at 25k/day cap).
+- **Field cost basis to reconcile:** our observed estimate ≈15,000 F/day (10k transport + 5k food); founder cap = 25,000 F/day; external reference used 35,000 F/day. The specialist must fix one working figure.
+- **Need (6-month, at 25k cap):** field team 5–10 + calls/OSM + mobile dev + legal + vehicles + support ⇒ ≈ $83–143K FCFA. Covers the founder's >$100K and the HERLOG ~50M floor (≈ $76–83K at 6-month mid) when dev/legal/vehicles are included.
+- **First-revenue note:** 13 paid Pro sellers (65,000 F) — founder-stated, verify in ledger; do not upgrade to ARPA/LTV.
+- **Entity sequencing:** Delaware C-Corp target, not yet incorporated — raise before/after = counsel.
+- **Instrument/terms/anchoring:** to be negotiated by the specialist with HERLOG (equity? SAFE? tranches?), no commitment made by HQ.
 
-HQ does **not** propose an amount, instrument, or sequencing here; it records the founder's ≥50M sizing as a **hypothesis to build and verify**, not a decided figure.
+HQ does **not** propose an amount, instrument, or sequencing here; it records founder decisions D-01…D-04 and the reference for the specialist.
 
 ## Product evidence Omni already holds (factual, from repository proof — invite the specialist to classify)
 

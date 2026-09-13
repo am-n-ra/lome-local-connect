@@ -139,6 +139,37 @@ Registrations at yield: team 5 → ~9,900 / team 8 → ~15,840 / team 10 → ~19
 - **The gap between ≤31M (3 months) and ≥50M (6 months) is real capital** (≈ 20–30M) buying 3 extra months of coverage — the founder must decide whether that extra runway before YC W27 is worth the corresponding dilution vs. a lean first bridge and a follow-on (HERLOG) after proof.
 - This remains a **direction for the specialist**, not an ask.
 
+## 9c. Rebuild at 25,000 F/day cap + founder decisions (2026-09-13)
+
+> Founder decisions: raise to cover **3–6 months**, real objective, **>$100K**, **≤ 25,000 F/day max per field-team member**. Reference document `reference-funding-recommendation-2026-08-21.md` proposes a syndicated **$150K Proof Round** (>$100K) — consistent with the 6-month scenarios below.
+
+Field+FCFA table at cap (excl. dev/legal/support; see §9b for full lines):
+
+| Horizon | Team | Callers | Field + calls sub | ≈ USD |
+|---|---|---|---|---|
+| 3 mo | 5 | 1 | 11,550,000 F | $17.6K |
+| 3 mo | 8 | 2 | 19,800,000 F | $30.2K |
+| 3 mo | 10 | 2 | 23,100,000 F | $35.2K |
+| 6 mo | 8 | 2 | 39,600,000 F | $60.4K |
+| 6 mo | 10 | 2 | 46,200,000 F | $70.4K |
+
+Full scenarios (dev + legal + support + vehicles, +10% contingency):
+
+| Scenario | Subtotal | **Total** | ≈ USD |
+|---|---|---|---|
+| 3mo lean (5a/1c, dev1.2M, legal1.5M) | 15,150,000 F | **16,665,000 F** | $25.4K |
+| 3mo mid (8a/2c, dev2M, legal2M) | 25,300,000 F | **27,830,000 F** | $42.4K |
+| 6mo mid (8a/2c, dev4M, legal3M) | 49,600,000 F | **54,560,000 F** | $83.2K |
+| 6mo mid + 1 vehicle | 60,800,000 F | **66,880,000 F** | $102.0K |
+| 6mo full (10a/2c, dev8M, legal4M, sup, no veh) | 63,000,000 F | **69,300,000 F** | $105.6K |
+| 6mo full + 2 vehicles | 85,400,000 F | **93,940,000 F** | $143.2K |
+
+### Honest read at the 25k cap
+
+- **The >$100K decision is only honestly supported by 6-month scenarios** (mid+veh ≈ $102K, full no-veh ≈ $106K, full+veh ≈ $143K). Pure 3-month scenarios land $25–42K regardless of team size.
+- The **gap between "measure 3 months then raise again" and "raise once for 6 months at >$100K" is the core founder decision**: runway security vs dilution and vs the instrumented-cohort proof the reference doc demands before scaling.
+- The reference's $150K Proof Round with $75K first closing fits the 6-month full family. The specialist must reconcile the **field cost basis** (15k observed / 25k cap / 35k in the reference) before finalizing the ask.
+
 ## 10. Open items to close before `/nature-way-fundraising`
 
 | # | Open item | Owner |
