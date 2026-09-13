@@ -170,6 +170,34 @@ Full scenarios (dev + legal + support + vehicles, +10% contingency):
 - The **gap between "measure 3 months then raise again" and "raise once for 6 months at >$100K" is the core founder decision**: runway security vs dilution and vs the instrumented-cohort proof the reference doc demands before scaling.
 - The reference's $150K Proof Round with $75K first closing fits the 6-month full family. The specialist must reconcile the **field cost basis** (15k observed / 25k cap / 35k in the reference) before finalizing the ask.
 
+## 9d. Add lines: marketing + ops + leadership (CEO/COO) — 2026-09-13
+
+> Founder reminder: budget must include **marketing**, **ops**, and **CEO/COO salaries** (local basis). Placeholders below (`HQ assumption` — founder to validate real local figures).
+
+| Line (monthly placeholder) | Value | Class |
+|---|---|---|
+| CEO salary | 500,000 F/mo | `HQ assumption` |
+| COO salary | 400,000 F/mo | `HQ assumption` |
+| Marketing | 300,000 F/mo | `HQ assumption` |
+| Ops | 300,000 F/mo | `HQ assumption` |
+| **Leadership + mkt + ops / mo** | **1,500,000 F** | derived |
+
+Rebuilt scenarios (8–10 agents, 2–3 callers, dev, legal, +leadership/mkt/ops/support, 10% contingency):
+
+| Scenario | Subtotal | **Total** | ≈ USD |
+|---|---|---|---|
+| 3mo mid (8a/2c/2+2) | 29,800,000 F | **32,780,000 F** | $50K |
+| 6mo mid (8a/2c/4+3) | 58,600,000 F | **64,460,000 F** | $98K |
+| 6mo mid + 1 veh | 69,800,000 F | **76,780,000 F** | $117K |
+| 6mo full no-veh (10a/2c/8+4) | 70,200,000 F | **77,220,000 F** | $118K |
+| 6mo full + 2 veh (10a/3c/8+4) | 99,200,000 F | **109,120,000 F** | $166K |
+
+### Honest read with the new lines
+
+- **The >$100K decision now rests on the vehicle/scale choice within a 6-month horizon:** 6mo mid (no veh) ≈ **$98K** (just under); 6mo + 1 veh ≈ **$117K**; full + 2 veh ≈ **$166K**. The reference's **$150K Proof Round sits comfortably in the full 6-month family** and covers marketing+ops+leadership.
+- **CEO/COO/mkt/ops add ≈ 1.5M F/month** to fixed costs — must be budgeted explicitly, otherwise the raise silently underfunds the team.
+- Placeholders to validate: CEO/COO real local salary, marketing/ops scope, vehicle price, dev in-house vs agency.
+
 ## 10. Open items to close before `/nature-way-fundraising`
 
 | # | Open item | Owner |
@@ -181,6 +209,7 @@ Full scenarios (dev + legal + support + vehicles, +10% contingency):
 | R-05 | Delaware legal line (with counsel) + mobile dev cost (in-house vs agency) | Founder + counsel + dev lead |
 | R-06 | Runway horizon: months before YC W27 + default-alive plan (C-06) | Founder |
 | R-07 | Validate working days/month, ops %, caller load, mobile dev timeline (1 mo iOS+Android realistic?) | Lifecycle + specialist |
+| R-08 | **Validate leadership (CEO/COO), marketing, ops salaries — local real figures** | Founder (local market) |
 
 ## Boundary
 
