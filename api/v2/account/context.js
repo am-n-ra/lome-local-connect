@@ -2129,16 +2129,29 @@ function createTrunkRepository(sql = database()) {
           on conflict (transaction_id, state) do nothing
           returning transaction_id
         ),
-        qualified_facility as (
-          update v2_facilities f
-          set qualifying_sales = least(3, f.qualifying_sales + 1),
-              trust_state = case when f.qualifying_sales + 1 >= 3 then 'confirmed' else f.trust_state end,
-              bonus_unlocked_at = case when f.qualifying_sales + 1 >= 3 then ${input.now}::timestamptz else f.bonus_unlocked_at end,
-              updated_at = ${input.now}::timestamptz
+        unlock_progress as (
+          insert into v2_seller_unlock_progress (facility_id, buyer_account_id, first_sale_at)
+          select s.facility_id, e.actor_account_id, ${input.now}::timestamptz
           from v2_transaction_snapshots s
           join closed_event c on c.transaction_id = s.transaction_id
-          where f.id = s.facility_id
-            and f.qualifying_sales < 3
+          join locked e on e.transaction_id = c.transaction_id
+          on conflict (facility_id, buyer_account_id) do nothing
+          returning facility_id
+        ),
+        unlock_counts as (
+          select p.facility_id, count(*)::int as distinct_buyers
+          from v2_seller_unlock_progress p
+          where p.facility_id in (select facility_id from unlock_progress)
+          group by p.facility_id
+        ),
+        qualified_facility as (
+          update v2_facilities f
+          set qualifying_sales = least(3, uc.distinct_buyers),
+              trust_state = case when uc.distinct_buyers >= 3 then 'confirmed' else f.trust_state end,
+              bonus_unlocked_at = case when uc.distinct_buyers >= 3 then ${input.now}::timestamptz else f.bonus_unlocked_at end,
+              updated_at = ${input.now}::timestamptz
+          from unlock_counts uc
+          where f.id = uc.facility_id
           returning f.id as facility_id, f.account_id, f.qualifying_sales
         ),
         bonus_wallet as (
@@ -2150,10 +2163,30 @@ function createTrunkRepository(sql = database()) {
         bonus_grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select bw.wallet_id, 'bonus_grant', 2000, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select bw.wallet_id, 'bonus_grant', 10000, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from bonus_wallet bw
           on conflict (wallet_id, kind, reference) do nothing
           returning id, facility_id
+        ),
+        unlock_object as (
+          insert into v2_seller_unlocks (facility_id, unlock_type, distinct_buyer_count, status, updated_at)
+          select uc.facility_id, 'pro_test_credit_20_usd', uc.distinct_buyers,
+                 case when exists (select 1 from bonus_grant bg where bg.facility_id = uc.facility_id) then 'granted'
+                      when uc.distinct_buyers >= 3 then 'eligible'
+                      else 'locked' end,
+                 ${input.now}::timestamptz
+          from unlock_counts uc
+          on conflict (facility_id, unlock_type) do update
+            set distinct_buyer_count = excluded.distinct_buyer_count,
+                status = case when v2_seller_unlocks.status = 'granted' then 'granted'
+                              when excluded.distinct_buyer_count >= 3 then 'eligible'
+                              else 'locked' end,
+                granted_at = case when v2_seller_unlocks.status <> 'granted'
+                                   and exists (select 1 from bonus_grant bg where bg.facility_id = excluded.facility_id)
+                                   then ${input.now}::timestamptz
+                                   else v2_seller_unlocks.granted_at end,
+                updated_at = excluded.updated_at
+          returning facility_id
         ),
         audited as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
@@ -2364,15 +2397,25 @@ function createTrunkRepository(sql = database()) {
         grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select w.wallet_id, 'bonus_grant', 2000, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select w.wallet_id, 'bonus_grant', 10000, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from wallet w
           join unlocked u on true
           on conflict (wallet_id, kind, reference) do nothing
           returning id, wallet_id, facility_id
+        ),
+        unlock_marking as (
+          update v2_seller_unlocks su
+          set status = 'granted',
+              granted_at = ${input.now}::timestamptz,
+              updated_at = ${input.now}::timestamptz
+          from grant g
+          where su.facility_id = g.facility_id
+            and su.unlock_type = 'pro_test_credit_20_usd'
+          returning su.facility_id
         )
-        select id, wallet_id, facility_id from grant
+        select g.id, g.wallet_id, g.facility_id from grant g
         union all
-        select id, wallet_id, facility_id from existing
+        select e.id, e.wallet_id, e.facility_id from existing e
         limit 1
       `);
       const row = rows[0];
@@ -2381,9 +2424,55 @@ function createTrunkRepository(sql = database()) {
         ledgerEntryId: String(row.id),
         walletId: String(row.wallet_id),
         kind: "bonus_grant",
-        amountMinor: 2e3,
+        amountMinor: 1e4,
         status: "confirmed",
         facilityId: String(row.facility_id)
+      };
+    },
+    async getFacilityBonusStatus(input) {
+      const rows = await retryDatabase(() => sql`
+        select
+          u.facility_id,
+          u.unlock_type,
+          u.distinct_buyer_count,
+          u.required_count,
+          u.status,
+          u.amount_minor,
+          f.trust_state,
+          f.qualifying_sales,
+          f.bonus_unlocked_at
+        from v2_seller_unlocks u
+        join v2_facilities f on f.id = u.facility_id
+        join v2_accounts a on a.id = f.account_id
+        where u.facility_id = ${input.facilityId}::uuid
+          and u.unlock_type = 'pro_test_credit_20_usd'
+          and a.auth_user_id = ${input.authUserId}
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) {
+        return {
+          facilityId: input.facilityId,
+          unlockType: "pro_test_credit_20_usd",
+          distinctBuyerCount: 0,
+          requiredCount: 3,
+          status: "locked",
+          amountMinor: 1e4,
+          trustState: "unconfirmed",
+          qualifyingSales: 0,
+          bonusUnlockedAt: null
+        };
+      }
+      return {
+        facilityId: String(row.facility_id),
+        unlockType: String(row.unlock_type),
+        distinctBuyerCount: Number(row.distinct_buyer_count),
+        requiredCount: Number(row.required_count),
+        status: String(row.status),
+        amountMinor: Number(row.amount_minor),
+        trustState: String(row.trust_state),
+        qualifyingSales: Number(row.qualifying_sales),
+        bonusUnlockedAt: row.bonus_unlocked_at === null || row.bonus_unlocked_at === void 0 ? null : new Date(String(row.bonus_unlocked_at)).toISOString()
       };
     },
     async createWalletRecharge(input) {
@@ -4684,6 +4773,38 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.setSellerFacilityOperationalState({ authUserId, facilityId, state, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/bonus")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the owning seller to view the trust bonus."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/bonus".length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid facility."));
+        return true;
+      }
+      const result = await repository.getFacilityBonusStatus({ authUserId, facilityId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/bonus/unlock")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the owning seller to unlock the trust bonus."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/bonus/unlock".length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid facility."));
+        return true;
+      }
+      const result = await repository.unlockFacilityBonus({ authUserId, facilityId, now: (/* @__PURE__ */ new Date()).toISOString() });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

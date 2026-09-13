@@ -440,3 +440,43 @@ Un acheteur envoie une demande de dispo; le serveur (v2) vérifie le solde mensu
 > **Residual gap:** achat packs réel ( tunnel paiement Mobile Money = **NW-13i**; `extra_credits` capacité stockée, pas de vente ( ; plan buyer Pro ≈100/mois = **NW-13h** ( quota 3 free appliqué aujourd'hui ( ; route bulk non exercée end-to-end en prod ( pas de push (.
 > **Next smallest action:** sur **ordre fondateur** → push prod + proof navigateur réel (encart coût bulk); ensuite **NW-13e** ( slice suivante (.
 > **Re-plan trigger:** le coût affiché en UI diverge du débit en base; bulk accepte des facilités hors scope produit; refus sans montant manquant.
+
+## Slice borné — P1-C NW-13e « Bonus confiance » (D-H, 2026-09-13)
+
+> **Handoff:** fondateur verrouille D-H ( bonus 20 USD débloqué après **3 ventes à users distincts** ( → **NW-13e lancé** sur `omni-v2-rebuild` (ord P1 verrouillé: NW-13c→d→e→g).
+> **Decision verrouillée:** `seller_unlocks` + `pro_test_credit` (20 USD, 10 000 XOF minor non withdrawable (taux repo ~500/USD)); users distincts exigé; statut visible vendeur.
+
+### Mini-seed
+
+Le vendeur voit un bandeau « Bonus confiance » : X/3 acheteurs distincts, 20 USD verrouillé. À la 3e vente à un acheteur distinct, le bonus se débloque (eligible) et le vendeur peut le créditer dans son wallet (grant), une seule fois.
+
+### Mini-root (données, contrats, invariants)
+
+- Tables v2: `v2_seller_unlock_progress` (PK (facility_id, buyer_account_id) = « users distincts », FK CASCADE, first_sale_at) + `v2_seller_unlocks` (UNIQUE (facility_id, unlock_type), unlock_type `pro_test_credit_20_usd`, distinct_buyer_count, required_count 3, status locked/eligible/granted, amount_minor 10000, granted_at).
+- `qualifying_sales` (v2_facilities) = cache visible `least(3, count distinct buyers depuis v2_seller_unlock_progress)`.
+- CTE dans `submitTransactionRating`: `closed_event` → `unlock_progress` (ON CONFLICT DO NOTHING) → `unlock_counts` (count distinct) → `qualified_facility` (set qualifying_sales + trust confirmed + bonus_unlocked_at à >=3) → `bonus_grant` (once, reference facility-bonus:{id}) → `unlock_object` (upsert statut, granted préservé).
+- `unlockFacilityBonus`: owner + trust confirmed + `qualifying_sales >= 3` + bonus null + wallet owned, `for update`, grant 10000 + marque `v2_seller_unlocks.status='granted'`.
+- API: `GET /api/v2/seller/facilities/:id/bonus` (statut) + `POST /api/v2/seller/facilities/:id/bonus/unlock` (grant), owner-only.
+- Invariants: distinct_buyer_count >= 0; status progression locked→eligible→granted (jamais de rétrogradation après granted); `qualifying_sales <= 3`.
+
+### Gate plan ( NW-13e(
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Migration 046 ( `v2_seller_unlock_progress` + `v2_seller_unlocks` ( | Additive, idempotent; PK/UNIQUE/CHECK | Fichier SQL; preuve branche temp Neon (tables, contraintes) | `done` (code + preuve branche temp; **apply canonique en attente ordre fondateur** ( |
+| 2 | Repo — `submitTransactionRating` comptage distincts + `getFacilityBonusStatus` + `unlockFacilityBonus` marque granted | CTE distincts (ON CONFLICT); status éligible; grant une fois; granted préservé | Tests repo (+2 getFacilityBonusStatus) | `done` (93 tests repo( |
+| 3 | HTTP — routes bonus (GET statut + POST unlock) | Owner-only; 401/400; `WalletPolicyError` → 409 POLICY_REJECTED | Tests http (+1 mapping) | `done` (26 tests http( |
+| 4 | Client/types — `getFacilityBonusStatus` + `unlockFacilityBonus` + types | Serialize GET/POST; types partagés | Tests api (+2) | `done` (22 tests api( |
+| 5 | UI — bandeau SellerV13 (X/3, éligible/Débloquer/accordé) | Vérifie chargement statut par facilité active; CTA unlock | tsc + build; visuel navigateur = résidu | `done` (code(; navigateur réel = résidu |
+| 6 | Preuve locale complète | tsc clean; suite; build; boundary | commandes sorties | `done` (55f/380t(+5), build `index-CpV0tuGd.js`, boundary clean) |
+| 7 | Preuve DB live (Neon MCP) | distinct=3 malgré rejeu; eligible; granted préservé; CHECK reject; cleanup 0 trace | requêtes live T1-T5 (branche temp) | `done` ( preuve branch temp, cleanup 0 trace ( |
+
+### Handoff ( NW-13e( — retour fondateur
+
+> **Local status:** `verified` — tsc clean, 55 files/**380 tests** (+5: repo 2, http 1, api 2; adaptés 2 (rating CTE)), `tsc -b` + vite build verts ( bundle `index-CpV0tuGd.js` (, `check:boundary` clean; bundles serverless (12( régénérés ( routes bonus présentes ).
+> **Gate decision:** `advance` — NW-13e ( P1-C( livré branch-only; **Gate 6 reste CLOSED** ( verdict fondateur « Go with limits » maintenu ( ; Gate 7 = watch.
+> **Closed:** migration 046 ( **preuve branche temp Neon T1-T5** ( tables + contraintes + distinct count + eligible + granted preserved + CHECK reject + cleanup 0 trace (; repo ( CTE distinct buyers + `getFacilityBonusStatus` + `unlockFacilityBonus` marque granted (; HTTP ( 2 routes owner bonus (; client/types ( bonus (; UI ( bandeau SellerV13 « Bonus confiance » X/3 + Débloquer/accordé (.
+> **Open or blocked:** **apply migration 046 canonical `br-dawn-hill-am5amy22` = ordre fondateur requis** ( même règle T-07d (; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur (.
+> **Residual gap:** `seller_unlocks` legacy supabase (020/021) non branché ( le trunk v2 a son objet propre ( ; le grant reste dans le wallet v2 ( non withdrawable par design D-H (.
+> **Next smallest action:** sur **ordre fondateur** → apply 046 canonical + push prod + proof navigateur réel (bandeau bonus); ensuite **NW-13g** ( prochaine slice P1 (.
+> **Re-plan trigger:** le comptage distinct diverge du nombre réel de transactions closed; statut eligible mais grant rejeté; le même buyer compte deux fois.

@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
-import { AvailabilityPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
@@ -159,6 +159,13 @@ describe('Root HTTP error boundary', () => {
     expect(response.status).toBe(404);
     expect(response.body.error.code).toBe('EVIDENCE_NOT_FOUND');
     expect(response.body.error.message).not.toContain('object key');
+  });
+
+  it('maps a not-yet-unlockable trust bonus to a non-retryable 409', () => {
+    const response = toApiErrorResponse('corr-bonus', new WalletPolicyError('Facility bonus requires confirmed trust, three qualifying sales and an owned wallet.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
   });
 
   it('redacts unexpected internal details behind a recoverable 500', () => {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, requestBulkAvailability, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getFacilityBonusStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, requestBulkAvailability, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -220,6 +220,32 @@ describe('createSellerFacility contract (NW-13c)', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities',
       expect.objectContaining({ body: JSON.stringify({ name: 'Boutique en ligne', facilityType: 'digital', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null }) }),
+    );
+  });
+});
+
+describe('facility trust bonus contract (NW-13e)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the owning seller bonus status from the facility bonus endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', unlockType: 'pro_test_credit_20_usd', distinctBuyerCount: 2, requiredCount: 3, status: 'locked', amountMinor: 10000, trustState: 'unconfirmed', qualifyingSales: 2, bonusUnlockedAt: null } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getFacilityBonusStatus({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/bonus',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('posts an unlock request to the facility bonus unlock endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { ledgerEntryId: 'ledger-1', walletId: 'wallet-1', kind: 'bonus_grant', amountMinor: 10000, status: 'confirmed', facilityId: 'facility-1' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await unlockFacilityBonus({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/bonus/unlock',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
     );
   });
 });

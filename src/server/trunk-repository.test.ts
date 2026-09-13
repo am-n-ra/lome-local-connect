@@ -869,7 +869,7 @@ describe('wallet persistence Root seam', () => {
       ledgerEntryId: 'bonus-ledger-1',
       walletId: 'wallet-1',
       kind: 'bonus_grant',
-      amountMinor: 2000,
+      amountMinor: 10000,
       status: 'confirmed',
       facilityId: 'facility-1',
     });
@@ -877,7 +877,7 @@ describe('wallet persistence Root seam', () => {
     expect(call.queries[0]).toContain('f.qualifying_sales >= 3');
     expect(call.queries[0]).toContain('f.bonus_unlocked_at is null');
     expect(call.queries[0]).toContain('for update of f');
-    expect(call.queries[0]).toContain("'bonus_grant', 2000, 'confirmed'");
+    expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
     expect(call.queries[0]).toContain('e.reference =');
   });
 
@@ -913,6 +913,57 @@ describe('wallet persistence Root seam', () => {
 
     expect(replay).toEqual(first);
     expect(call.queries[0]).toContain('on conflict (wallet_id, kind, reference) do nothing');
+  });
+
+  it('returns the bonus status row for the owning seller and facility', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      unlock_type: 'pro_test_credit_20_usd',
+      distinct_buyer_count: 2,
+      required_count: 3,
+      status: 'locked',
+      amount_minor: 10000,
+      trust_state: 'unconfirmed',
+      qualifying_sales: 2,
+      bonus_unlocked_at: null,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.getFacilityBonusStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+
+    expect(result).toEqual({
+      facilityId: 'facility-1',
+      unlockType: 'pro_test_credit_20_usd',
+      distinctBuyerCount: 2,
+      requiredCount: 3,
+      status: 'locked',
+      amountMinor: 10000,
+      trustState: 'unconfirmed',
+      qualifyingSales: 2,
+      bonusUnlockedAt: null,
+    });
+    expect(call.queries[0]).toContain('v2_seller_unlocks');
+    expect(call.queries[0]).toContain("unlock_type = 'pro_test_credit_20_usd'");
+    expect(call.queries[0]).toContain('a.auth_user_id =');
+  });
+
+  it('returns a locked zero-state when the seller unlock row does not exist yet', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.getFacilityBonusStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+
+    expect(result).toEqual({
+      facilityId: 'facility-1',
+      unlockType: 'pro_test_credit_20_usd',
+      distinctBuyerCount: 0,
+      requiredCount: 3,
+      status: 'locked',
+      amountMinor: 10000,
+      trustState: 'unconfirmed',
+      qualifyingSales: 0,
+      bonusUnlockedAt: null,
+    });
   });
 });
 
@@ -1293,9 +1344,11 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('v2_ratings');
     expect(call.queries[0]).toContain('v2_transaction_events');
     expect(call.queries[0]).toContain("'closed'");
+    expect(call.queries[0]).toContain('v2_seller_unlock_progress');
     expect(call.queries[0]).toContain('qualifying_sales = least(3');
-    expect(call.queries[0]).toContain("'bonus_grant', 2000, 'confirmed'");
+    expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
     expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
+    expect(call.queries[0]).toContain("'pro_test_credit_20_usd'");
   });
 
   it('rejects an invalid score before touching the database', async () => {

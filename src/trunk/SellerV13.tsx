@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState } from './api';
+import { createSellerFacility, getFacilityBonusStatus, getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { FacilityOperationalState, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
+import type { FacilityBonusStatus, FacilityOperationalState, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -132,6 +132,36 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     finally { setToogleBusy(false); }
   }, [ws.selFacilityId, onRefresh, load]);
 
+  const [bonusStatus, setBonusStatus] = useState<FacilityBonusStatus | null>(null);
+  const [bonusBusy, setBonusBusy] = useState(false);
+
+  const loadBonus = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) { setBonusStatus(null); return; }
+    try {
+      const result = await getFacilityBonusStatus({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) setBonusStatus(result.data);
+    } catch { /* bonus status is best-effort */ }
+  }, [ws.selFacilityId]);
+
+  useEffect(() => { void loadBonus(); }, [loadBonus]);
+
+  const claimBonus = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) return;
+    setBonusBusy(true); setError('');
+    try {
+      const result = await unlockFacilityBonus({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) {
+        setToast('Bonus confiance 20 USD crédité dans votre portefeuille.');
+        setBonusStatus((cur) => cur ? { ...cur, status: 'granted', bonusUnlockedAt: new Date().toISOString() } : cur);
+      } else {
+        setError(result.error?.message ?? 'Le bonus ne peut pas encore être débloqué.');
+      }
+    } catch { setError('Le bonus ne peut pas être débloqué.'); }
+    finally { setBonusBusy(false); }
+  }, [ws.selFacilityId]);
+
   const stockSignal = ws.stockCount > 0 ? `${ws.stockCount} produit${ws.stockCount > 1 ? 's' : ''} · ${ws.stockTotal} unité${ws.stockTotal > 1 ? 's' : ''} Omni` : 'Aucun produit publié';
   const onMapCount = ws.ownedPublic.length;
   const hasData = (propsCatalogue ?? catalogue) !== null;
@@ -217,6 +247,25 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <div><b>{ws.selFacilityCatalogue?.name}</b><br /><span className="tiny muted">{stockSignal}</span></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30 }} type="button" onClick={onCompany}>Ouvrir</button>
+          </div>
+        </div>
+      )}
+      {hasData && ws.selFacilityCatalogue?.name && (
+        <div className="cardbox" style={{ marginTop: 9, borderColor: bonusStatus?.status === 'eligible' ? 'var(--accent)' : undefined }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Bonus confiance</b>
+              {bonusStatus?.status === 'granted' ? (
+                <span className="tiny" style={{ color: 'var(--accent)' }}>✓ 20 USD crédités dans le portefeuille — merci pour votre confiance.</span>
+              ) : bonusStatus?.status === 'eligible' ? (
+                <span className="tiny" style={{ color: 'var(--accent)' }}>3/3 acheteurs distincts — le bonus 20 USD est débloqué.</span>
+              ) : (
+                <span className="tiny muted">{bonusStatus?.distinctBuyerCount ?? 0}/3 acheteurs distincts · 20 USD verrouillé (ventes QR)</span>
+              )}
+            </div>
+            {bonusStatus?.status === 'eligible' && (
+              <button className="btn sm" type="button" disabled={bonusBusy} onClick={() => void claimBonus()}>{bonusBusy ? '…' : 'Débloquer'}</button>
+            )}
           </div>
         </div>
       )}

@@ -524,6 +524,26 @@ export interface WalletLedgerSummary {
   createdAt: string;
   confirmedAt: string | null;
 }
+export type SellerBonusUnlockState = 'locked' | 'eligible' | 'granted';
+export interface FacilityBonusStatus {
+  facilityId: string;
+  unlockType: 'pro_test_credit_20_usd';
+  distinctBuyerCount: number;
+  requiredCount: number;
+  status: SellerBonusUnlockState;
+  amountMinor: number;
+  trustState: 'unclaimed' | 'verification_draft' | 'verification_submitted' | 'admin_review' | 'certified' | 'unconfirmed' | 'confirmed' | 'rejected' | 'suspended';
+  qualifyingSales: number;
+  bonusUnlockedAt: string | null;
+}
+export interface FacilityBonusPersistenceResult {
+  ledgerEntryId: string;
+  walletId: string;
+  kind: 'bonus_grant';
+  amountMinor: 10000;
+  status: 'confirmed';
+  facilityId: string;
+}
 export interface WalletFacilitySummary {
   facilityId: string;
   facilityName: string;
