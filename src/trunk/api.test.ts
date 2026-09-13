@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, requestBulkAvailability, setSellerAccountSuspension, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -88,6 +88,19 @@ describe('listPublicFacilities search contract', () => {
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
     expect(result).toEqual({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 1, extraCredits: 0, creditsRemaining: 2, periodMonth: '2026-09' } });
+  });
+
+  it('serializes a bulk-availability create with facilityIds and idempotency headers', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { requestId: 'request-1', productId: 'product-1', facilityIds: ['facility-1', 'facility-2'], facilityCount: 2, status: 'submitted', expiresAt: '2026-09-13T10:00:00.000Z', deliveryMode: 'retrait', note: null, message: 'sent', creditCost: 1, creditsRemaining: 2, monthlyQuota: 3, plan: 'free' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await requestBulkAvailability({ productId: 'product-1', facilityIds: ['facility-1', 'facility-2'], quantity: 1, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, token: 'session-token', idempotencyKey: 'bulk-key-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/bulk-availability',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'bulk-key-1' }, body: JSON.stringify({ productId: 'product-1', facilityIds: ['facility-1', 'facility-2'], quantity: 1, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null }) },
+    );
+    expect(result.data?.creditCost).toBe(1);
+    expect(result.data?.facilityCount).toBe(2);
   });
 
   it('reads the seller-owned availability queue with the bearer token', async () => {

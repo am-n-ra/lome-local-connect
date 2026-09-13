@@ -129,6 +129,33 @@ export function validateAvailabilityRequestCreate(body: Record<string, unknown>,
   return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
 }
 
+export interface BulkAvailabilityRequestCreateInput {
+  authUserId: string;
+  productId: string;
+  facilityIds: string[];
+  quantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
+  idempotencyKey: string;
+}
+
+export function validateBulkAvailabilityRequestCreate(body: Record<string, unknown>, idempotencyKey: string, authUserId: string): BulkAvailabilityRequestCreateInput {
+  const productId = typeof body.productId === 'string' ? body.productId : '';
+  const facilityIds = Array.isArray(body.facilityIds) ? body.facilityIds.filter((v): v is string => typeof v === 'string') : [];
+  const quantity = Number(body.quantity);
+  const budgetMode = body.budgetMode === 'maximum' ? 'maximum' : 'unlimited';
+  const budgetMinor = body.budgetMinor === null || body.budgetMinor === undefined ? null : Number(body.budgetMinor);
+  const deliveryMode = body.deliveryMode === 'livraison' ? 'livraison' : 'retrait';
+  const note = typeof body.note === 'string' && body.note.trim().length > 0 ? body.note.trim() : null;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(productId) || facilityIds.length < 2 || facilityIds.some((id) => !uuidPattern.test(id)) || new Set(facilityIds).size !== facilityIds.length || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+    throw new ApiInputError('A valid product, at least 2 distinct facility ids and a stable idempotency key are required for a bulk request.');
+  }
+  return { authUserId, productId, facilityIds, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
+}
+
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
     ? payload.object as Record<string, unknown>
@@ -1343,6 +1370,20 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest(validated);
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/bulk-availability') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create your account or sign in to verify bulk availability.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const rawIdempotencyKey = req.headers['idempotency-key'] ?? input.idempotencyKey;
+      const idempotencyKey = typeof rawIdempotencyKey === 'string' ? rawIdempotencyKey : '';
+      const validated = validateBulkAvailabilityRequestCreate(input, idempotencyKey, authUserId);
+      const result = await repository.createBulkAvailabilityRequest(validated);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

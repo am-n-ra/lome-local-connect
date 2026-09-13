@@ -3281,11 +3281,6 @@ function createTrunkRepository(sql = database()) {
     },
     async createAvailabilityRequest(input) {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
-      const standing = await this.getOrCreateCreditStanding({ authUserId: input.authUserId });
-      const creditCost = 1;
-      if (standing && standing.creditsRemaining < creditCost) {
-        throw new InsufficientCreditsError("Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.");
-      }
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
           select p.id as product_id, f.id as facility_id
@@ -3318,35 +3313,114 @@ function createTrunkRepository(sql = database()) {
           on conflict (buyer_account_id, idempotency_key) do nothing
           returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
         ),
+        request_result as (
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          from request_insert
+          union all
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
+          from v2_availability_requests r
+          where r.buyer_account_id = (select id from account)
+            and r.idempotency_key = ${input.idempotencyKey}
+        )
+        select * from request_result limit 1
+      `);
+      const row = rows[0];
+      if (!row) {
+        throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
+      }
+      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor || String(row.delivery_mode) !== input.deliveryMode || (row.request_note === null ? null : String(row.request_note)) !== input.note) {
+        throw new AvailabilityPolicyError("The idempotency key is already used for a different availability request.");
+      }
+      const standing = await this.getOrCreateCreditStanding({ authUserId: input.authUserId });
+      return {
+        requestId: String(row.id),
+        productId: String(row.product_id),
+        facilityId: String(row.facility_id),
+        status: String(row.status),
+        expiresAt: new Date(String(row.expires_at)).toISOString(),
+        deliveryMode: String(row.delivery_mode),
+        note: row.request_note === null ? null : String(row.request_note),
+        message: "Request sent. The facility can now confirm the live availability.",
+        creditCost: 0,
+        creditsRemaining: standing ? standing.creditsRemaining : 0,
+        monthlyQuota: standing ? standing.monthlyQuota : 0,
+        plan: standing ? standing.plan : "free"
+      };
+    },
+    async createBulkAvailabilityRequest(input) {
+      if (input.facilityIds.length < 2) {
+        throw new AvailabilityPolicyError("A bulk request must target at least 2 facilities. Use single availability request for one facility.");
+      }
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
+      const standing = await this.getOrCreateCreditStanding({ authUserId: input.authUserId });
+      const creditCost = Math.ceil(input.facilityIds.length / 100);
+      const uniqueIdList = Array.from(new Set(input.facilityIds.map((id) => id.trim())));
+      if (uniqueIdList.length !== input.facilityIds.length) {
+        throw new AvailabilityPolicyError("Duplicate facilityIds are not allowed in a bulk request.");
+      }
+      if (standing && standing.creditsRemaining < creditCost) {
+        throw new InsufficientCreditsError(`This bulk addresses ${input.facilityIds.length} facility(ies) = ${creditCost} bulk credit(s). You have ${standing.creditsRemaining}. Missing ${creditCost - standing.creditsRemaining}. Recharge with packs to send.`);
+      }
+      const rows = await retryDatabase(() => sql`
+        with valid_selection as (
+          select p.id as product_id, f.id as facility_id
+          from v2_products p
+          join v2_facilities f on f.id = any((${uniqueIdList})::text[]::uuid[])
+            and p.facility_id = f.id
+          where p.id = ${input.productId}::uuid
+            and p.publication_state = 'published'
+            and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+        ),
+        account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          select ${input.authUserId}, 'buyer_ready'
+          where exists (select 1 from valid_selection)
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ),
+        wallet as (
+          insert into v2_wallets (account_id)
+          select id from account
+          on conflict (account_id) do update set account_id = excluded.account_id
+          returning account_id
+        ),
+        request_insert as (
+          insert into v2_availability_requests
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
+          select a.id, s.product_id, (${uniqueIdList})::text[]::uuid[], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+          from account a
+          cross join (select distinct product_id from valid_selection) s
+          join wallet w on w.account_id = a.id
+          on conflict (buyer_account_id, idempotency_key) do nothing
+          returning id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+        ),
         credit_spend as (
           update v2_buyer_credit_accounts c
-          set credits_used = c.credits_used + ${// One credit per targeted facility; facility_scope is an array so a future
-      // multi-facility request will debit cardinality(facility_scope) transparently.
-      `(select cardinality(facility_scope) from request_insert)::int`}
+          set credits_used = c.credits_used + ${creditCost}
           where c.buyer_account_id = (select id from account)
             and exists (select 1 from request_insert)
-            and c.monthly_quota + c.extra_credits - c.credits_used >= (select cardinality(facility_scope) from request_insert)
+            and c.monthly_quota + c.extra_credits - c.credits_used >= ${creditCost}
           returning c.credits_used, c.monthly_quota, c.extra_credits
         ),
         credit_ledger_insert as (
           insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, request_id)
-          select a.id, 'bulk_debit', - (select cardinality(facility_scope) from request_insert)::int, 'availability-request', r.id
+          select a.id, 'bulk_debit', - ${creditCost}, 'bulk-availability over ' || (select cardinality(facility_scope) from request_insert) || ' facilities', r.id
           from request_insert r
           cross join account a
           returning id
         ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at, null::int as ignored_credit
+          select id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at, null::int
+          select r.id, r.product_id, r.facility_scope, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
         ),
         final as (
-          select rr.id, rr.product_id, rr.facility_id, rr.requested_quantity, rr.budget_mode, rr.budget_minor, rr.delivery_mode, rr.request_note, rr.status, rr.expires_at,
-                 case when cs.credits_used is null then c.credits_used else cs.credits_used end as credits_used_result,
+          select rr.id, rr.product_id, rr.facility_scope, rr.requested_quantity, rr.budget_mode, rr.budget_minor, rr.delivery_mode, rr.request_note, rr.status, rr.expires_at,
+                 coalesce(cs.credits_used, c.credits_used) as credits_used_result,
                  c.monthly_quota, c.extra_credits, c.plan,
                  case when exists (select 1 from request_insert) then 1 else 0 end as is_new,
                  case when cs.credits_used is null then 0 else 1 end as debited
@@ -3358,23 +3432,26 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) {
-        throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
+        throw new AvailabilityPolicyError("The selected product is not published at all requested facilities.");
       }
       if (Number(row.is_new) === 1 && Number(row.debited) === 0) {
-        throw new InsufficientCreditsError("Your monthly bulk credits are exhausted. Recharge with packs to keep sending availability requests.");
+        const availableAfterRace = Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used_result);
+        throw new InsufficientCreditsError(`This bulk addresses ${input.facilityIds.length} facility(ies) = ${creditCost} bulk credit(s). You have ${availableAfterRace}. Missing ${Math.max(0, creditCost - availableAfterRace)}. Recharge with packs to send.`);
       }
-      if (String(row.product_id) !== input.productId || String(row.facility_id) !== input.facilityId || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor || String(row.delivery_mode) !== input.deliveryMode || (row.request_note === null ? null : String(row.request_note)) !== input.note) {
+      const scopes = row.facility_scope.map((v) => String(v));
+      if (String(row.product_id) !== input.productId || scopes.length !== input.facilityIds.length || input.facilityIds.some((id) => !scopes.includes(id)) || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor || String(row.delivery_mode) !== input.deliveryMode || (row.request_note === null ? null : String(row.request_note)) !== input.note) {
         throw new AvailabilityPolicyError("The idempotency key is already used for a different availability request.");
       }
       return {
         requestId: String(row.id),
         productId: String(row.product_id),
-        facilityId: String(row.facility_id),
+        facilityIds: scopes,
+        facilityCount: scopes.length,
         status: String(row.status),
         expiresAt: new Date(String(row.expires_at)).toISOString(),
         deliveryMode: String(row.delivery_mode),
         note: row.request_note === null ? null : String(row.request_note),
-        message: "Request sent. The facility can now confirm the live availability.",
+        message: `Bulk request sent to ${scopes.length} facility(ies). Each facility can now confirm live availability.`,
         creditCost,
         creditsRemaining: Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used_result),
         monthlyQuota: Number(row.monthly_quota),
@@ -3553,6 +3630,20 @@ function validateAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
     throw new ApiInputError("A valid product, facility, positive quantity and a stable idempotency key are required.");
   }
   return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
+}
+function validateBulkAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
+  const productId = typeof body.productId === "string" ? body.productId : "";
+  const facilityIds = Array.isArray(body.facilityIds) ? body.facilityIds.filter((v) => typeof v === "string") : [];
+  const quantity = Number(body.quantity);
+  const budgetMode = body.budgetMode === "maximum" ? "maximum" : "unlimited";
+  const budgetMinor = body.budgetMinor === null || body.budgetMinor === void 0 ? null : Number(body.budgetMinor);
+  const deliveryMode = body.deliveryMode === "livraison" ? "livraison" : "retrait";
+  const note = typeof body.note === "string" && body.note.trim().length > 0 ? body.note.trim() : null;
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(productId) || facilityIds.length < 2 || facilityIds.some((id) => !uuidPattern.test(id)) || new Set(facilityIds).size !== facilityIds.length || !Number.isInteger(quantity) || quantity < 1 || budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0) || typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+    throw new ApiInputError("A valid product, at least 2 distinct facility ids and a stable idempotency key are required for a bulk request.");
+  }
+  return { authUserId, productId, facilityIds, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
 }
 function extractFedaPayTransaction(payload) {
   const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : null;
@@ -4747,6 +4838,20 @@ async function handleApi(req, res, pathname, url) {
       const idempotencyKey = typeof rawIdempotencyKey === "string" ? rawIdempotencyKey : "";
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest(validated);
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/bulk-availability") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Create your account or sign in to verify bulk availability."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const rawIdempotencyKey = req.headers["idempotency-key"] ?? input.idempotencyKey;
+      const idempotencyKey = typeof rawIdempotencyKey === "string" ? rawIdempotencyKey : "";
+      const validated = validateBulkAvailabilityRequestCreate(input, idempotencyKey, authUserId);
+      const result = await repository.createBulkAvailabilityRequest(validated);
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

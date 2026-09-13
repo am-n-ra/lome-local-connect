@@ -297,14 +297,11 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalance
           <textarea className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
           {creditSummary && (
             <div className="row" style={{ marginTop: 8, alignItems: 'center', gap: 6 }}>
-              <span className="tiny muted">Crédits bulk — {creditSummary.creditsRemaining} restant{creditSummary.creditsRemaining > 1 ? 's' : ''} / {creditSummary.monthlyQuota}</span>
-              {creditSummary.creditsRemaining <= 0 && <span className="status gray">Épuisé</span>}
+              <span className="tiny muted">Solde bulk : {creditSummary.creditsRemaining} crédit{creditSummary.creditsRemaining > 1 ? 's' : ''}</span>
+              <span className="status ok">Vérification manuelle gratuite</span>
             </div>
           )}
-          <button className="btn ok" type="submit" disabled={busy || (creditSummary !== null && creditSummary.creditsRemaining <= 0)} style={{ marginTop: 10 }}>Envoyer la demande</button>
-          {creditSummary !== null && creditSummary.creditsRemaining <= 0 && (
-            <p className="tiny muted" style={{ marginTop: 6 }}>Vos crédits bulk de ce mois sont épuisés — rechargez en packs pour continuer.</p>
-          )}
+          <button className="btn ok" type="submit" disabled={busy} style={{ marginTop: 10 }}>Envoyer la demande</button>
         </form>
       )}
 

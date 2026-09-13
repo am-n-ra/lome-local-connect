@@ -170,29 +170,28 @@ describe('public facility trust boundary', () => {
 });
 
 describe('availability repository Root seam', () => {
-  it('keeps account, wallet, request and bulk-credit debit in guarded statements and replays the canonical request', async () => {
-    const firstCall = stubSqlAlternating([[creditStandingRow], [resultRow]]);
+  it('keeps account, wallet and request in guarded statements; manual check is free and replays the canonical request', async () => {
+    const firstCall = stubSqlSequence([[resultRow], [creditStandingRow], [resultRow], [creditStandingRow]]);
     const repository = createTrunkRepository(firstCall.sql);
 
     const first = await repository.createAvailabilityRequest(availabilityInput);
     const replay = await repository.createAvailabilityRequest(availabilityInput);
 
     expect(first.requestId).toBe('request-1');
-    expect(first).toMatchObject({ creditCost: 1, creditsRemaining: 2, monthlyQuota: 3, plan: 'free' });
+    expect(first).toMatchObject({ creditCost: 0, creditsRemaining: 3, monthlyQuota: 3, plan: 'free' });
     expect(replay).toEqual(first);
     expect(firstCall.queries).toHaveLength(4);
-    expect(firstCall.queries[0]).toContain('v2_buyer_credit_accounts');
-    expect(firstCall.queries[0]).toContain("'free', 3");
-    expect(firstCall.queries[0]).toContain('to_char(now(),');
-    expect(firstCall.queries[1]).toContain('with valid_selection as');
-    expect(firstCall.queries[1]).toContain('on conflict (auth_user_id)');
-    expect(firstCall.queries[1]).toContain('on conflict (account_id)');
-    expect(firstCall.queries[1]).toContain('on conflict (buyer_account_id, idempotency_key)');
-    expect(firstCall.queries[1]).toContain("p.publication_state = 'published'");
-    expect(firstCall.queries[1]).toContain("f.trust_state in ('certified', 'unconfirmed', 'confirmed')");
-    expect(firstCall.queries[1]).toContain('credit_spend as');
-    expect(firstCall.queries[1]).toContain('cardinality(facility_scope)');
-    expect(firstCall.queries[1]).toContain('v2_availability_credit_ledger');
+    expect(firstCall.queries[1]).toContain('v2_buyer_credit_accounts');
+    expect(firstCall.queries[1]).toContain("'free', 3");
+    expect(firstCall.queries[1]).toContain('to_char(now(),');
+    expect(firstCall.queries[0]).toContain('with valid_selection as');
+    expect(firstCall.queries[0]).toContain('on conflict (auth_user_id)');
+    expect(firstCall.queries[0]).toContain('on conflict (account_id)');
+    expect(firstCall.queries[0]).toContain('on conflict (buyer_account_id, idempotency_key)');
+    expect(firstCall.queries[0]).toContain("p.publication_state = 'published'");
+    expect(firstCall.queries[0]).toContain("f.trust_state in ('certified', 'unconfirmed', 'confirmed')");
+    expect(firstCall.queries[0]).not.toContain('credit_spend as');
+    expect(firstCall.queries[0]).not.toContain('v2_availability_credit_ledger');
   });
 
   it('does not provision an account or wallet when the selected product is outside the requested facility or unpublished', async () => {
@@ -200,12 +199,12 @@ describe('availability repository Root seam', () => {
     const repository = createTrunkRepository(call.sql);
 
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toBeInstanceOf(AvailabilityPolicyError);
-    expect(call.queries).toHaveLength(2);
-    expect(call.queries[1]).toContain('where exists (select 1 from valid_selection)');
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('where exists (select 1 from valid_selection)');
   });
 
   it('rejects an idempotency replay whose request shape differs from the stored response', async () => {
-    const call = stubSqlAlternating([[creditStandingRow], [{ ...resultRow, requested_quantity: 1 }]]);
+    const call = stubSqlSequence([[{ ...resultRow, requested_quantity: 1 }], [creditStandingRow]]);
     const repository = createTrunkRepository(call.sql);
 
     await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toThrow(
@@ -213,12 +212,68 @@ describe('availability repository Root seam', () => {
     );
   });
 
+  it('debites ceil(N/100) credits for a bulk request over N facilities and stores every facility in the scope', async () => {
+    const bulkResultRow = {
+      ...resultRow,
+      facility_id: undefined,
+      facility_scope: ['facility-1', 'facility-2', 'facility-3'],
+      credits_used_result: 1,
+      is_new: 1,
+      debited: 1,
+    };
+    const call = stubSqlAlternating([[creditStandingRow], [bulkResultRow]]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.createBulkAvailabilityRequest({
+      ...availabilityInput,
+      facilityIds: ['facility-1', 'facility-2', 'facility-3'],
+      idempotencyKey: 'bulk-key-1',
+    });
+
+    expect(result).toMatchObject({ facilityIds: ['facility-1', 'facility-2', 'facility-3'], facilityCount: 3, creditCost: 1, monthlyQuota: 3, plan: 'free', creditsRemaining: 2 });
+    expect(call.queries).toHaveLength(2);
+    expect(call.queries[1]).toContain('credit_spend as');
+    expect(call.queries[1]).toContain('v2_availability_credit_ledger');
+    expect(call.queries[1]).toContain('bulk-availability over');
+    expect(call.queries[1]).toContain('::text[]::uuid[]');
+  });
+
   it('throws InsufficientCreditsError before touching the DB when the monthly bulk credits are exhausted', async () => {
     const call = stubSql([{ ...creditStandingRow, credits_used: 3 }]);
     const repository = createTrunkRepository(call.sql);
 
-    await expect(repository.createAvailabilityRequest(availabilityInput)).rejects.toBeInstanceOf(InsufficientCreditsError);
+    await expect(repository.createBulkAvailabilityRequest({ ...availabilityInput, facilityIds: ['facility-1', 'facility-2'], idempotencyKey: 'bulk-key-1' })).rejects.toBeInstanceOf(InsufficientCreditsError);
     expect(call.queries).toHaveLength(1);
+  });
+
+  it('caps no bulk: 150 facilities = ceil(150/100) = 2 credits, following the founder formula', async () => {
+    const ids = Array.from({ length: 150 }, (_, i) => `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`);
+    const bulk150Row = {
+      ...resultRow,
+      facility_id: undefined,
+      facility_scope: ids,
+      credits_used_result: 2,
+      is_new: 1,
+      debited: 1,
+    };
+    const call = stubSqlAlternating([[creditStandingRow], [bulk150Row]]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.createBulkAvailabilityRequest({ ...availabilityInput, facilityIds: ids, idempotencyKey: 'bulk-150' });
+
+    expect(result.creditCost).toBe(2);
+    expect(result.facilityCount).toBe(150);
+    expect(call.queries[1]).toContain('set credits_used = c.credits_used +');
+    expect(call.queries[1]).toContain("'bulk_debit', - ");
+    expect(call.queries[1]).toContain('credit_spend as');
+  });
+
+  it('rejects a bulk request targeting fewer than 2 facilities', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+
+    await expect(repository.createBulkAvailabilityRequest({ ...availabilityInput, facilityIds: ['facility-1'], idempotencyKey: 'bulk-key-1' })).rejects.toThrow('A bulk request must target at least 2 facilities');
+    expect(call.queries).toHaveLength(0);
   });
 
   it('creates the monthly credit standing with a free quota of 3 and does not reset used credits mid-month', async () => {

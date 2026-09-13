@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -129,6 +129,38 @@ export async function requestAvailability(input: {
     }),
   });
   return parse<AvailabilityResult>(response);
+}
+
+export async function requestBulkAvailability(input: {
+  productId: string;
+  facilityIds: string[];
+  quantity: number;
+  budgetMode: 'unlimited' | 'maximum';
+  budgetMinor: number | null;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
+  token: string;
+  idempotencyKey: string;
+}): Promise<ApiResult<BulkAvailabilityResult>> {
+  const response = await fetchWithRecovery('/api/v2/bulk-availability', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${input.token}`,
+      'Idempotency-Key': input.idempotencyKey,
+    },
+    body: JSON.stringify({
+      productId: input.productId,
+      facilityIds: input.facilityIds,
+      quantity: input.quantity,
+      budgetMode: input.budgetMode,
+      budgetMinor: input.budgetMinor,
+      deliveryMode: input.deliveryMode,
+      note: input.note,
+    }),
+  });
+  return parse<BulkAvailabilityResult>(response);
 }
 
 export async function getBuyerCreditSummary(input: { token: string }): Promise<ApiResult<BuyerCreditSummary>> {

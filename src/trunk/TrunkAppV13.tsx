@@ -7,12 +7,12 @@ import {
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
-  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getClaimStorageStatus, getFacilityDetail,
-  getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, submitFacilityClaim, uploadFacilityEvidence,
+  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getClaimStorageStatus, getFacilityDetail,
+  getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
-  AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
+  AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
@@ -97,6 +97,21 @@ const SEARCH_PLACEHOLDER: Record<Role, string> = {
   operator: 'Claim, création, facilité…',
 };
 
+function bulkKmBetween(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const la1 = (a.latitude * Math.PI) / 180;
+  const la2 = (b.latitude * Math.PI) / 180;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function bulkBoundsCenter(bounds: [number, number, number, number] | null): { latitude: number; longitude: number } | null {
+  if (!bounds) return null;
+  return { latitude: (bounds[1] + bounds[3]) / 2, longitude: (bounds[0] + bounds[2]) / 2 };
+}
+
 export function TrunkAppV13() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   useViewportInsets(stageRef);
@@ -124,13 +139,15 @@ export function TrunkAppV13() {
   const resultsFollowKeyCounter = useRef(0);
 const [bulkFacilities, setBulkFacilities] = useState<PublicFacility[] | null>(null);
 const [bulkDetails, setBulkDetails] = useState<Record<string, FacilityDetail | null>>({});
-const [bulkSelection, setBulkSelection] = useState<Record<string, string>>({});
+const [bulkSelection, setBulkSelection] = useState<Record<string, boolean>>({});
+const [bulkRayon, setBulkRayon] = useState<number | null>(null);
+const [bulkCreditSummary, setBulkCreditSummary] = useState<BuyerCreditSummary | null>(null);
 const [stockEventProductId, setStockEventProductId] = useState<string | null>(null);
 const [pendingSearch, setPendingSearch] = useState('');
 const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 const [bulkLoading, setBulkLoading] = useState(false);
 const [bulkSending, setBulkSending] = useState(false);
-const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
+const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productId: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
 const [bulkErrors, setBulkErrors] = useState<string | null>(null);
 const [compareResults, setCompareResults] = useState<PublicFacility[]>([]);
 const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 'remise'>('match');
@@ -139,6 +156,24 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const [revealPending, setRevealPending] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
   const [simMode, setSimMode] = useState<'normal' | 'vide' | 'lent' | 'erreur'>('normal');
+
+  const bulkCost = useMemo(() => {
+    const facilities = bulkFacilities ?? [];
+    const center = bulkBoundsCenter(bounds);
+    const targets = facilities.filter((facility) => {
+      if (!bulkSelection[facility.id]) return false;
+      if (bulkRayon !== null && center) {
+        return bulkKmBetween(center, { latitude: facility.latitude, longitude: facility.longitude }) <= bulkRayon;
+      }
+      return true;
+    });
+    return {
+      targets,
+      count: targets.length,
+      cost: targets.length === 0 ? 0 : Math.ceil(targets.length / 100),
+      remaining: (bulkCreditSummary?.creditsRemaining ?? 0) - (targets.length === 0 ? 0 : Math.ceil(targets.length / 100)),
+    };
+  }, [bulkFacilities, bulkSelection, bulkRayon, bounds, bulkCreditSummary]);
 
   // Espace Buyer — demandes
   const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestSummary[]>([]);
@@ -430,17 +465,21 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     setBulkSending(false);
     setBulkResults(null);
     setBulkErrors(null);
+    setBulkRayon(null);
     setBulkFacilities(results.length > 0 ? results : null);
     if (results.length === 0) { setBulkErrors('Aucune facilité en résultat. Lancez d\'abord une recherche.'); return; }
     setBulkLoading(true);
     const token = await requireAuth();
     if (!token) { setBulkLoading(false); return; }
     try {
+      setBulkSelection(Object.fromEntries(results.map((facility) => [facility.id, true])));
+      if (token) {
+        const summary = await getBuyerCreditSummary({ token });
+        if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
+      }
       await Promise.all(results.map(async (facility) => {
         const detail = bulkDetails[facility.id] ?? (await getFacilityDetail(facility.id)).data ?? null;
         setBulkDetails((current) => ({ ...current, [facility.id]: detail }));
-        const productId = detail?.products?.find((p) => p.stockLoueOmni > 0)?.id ?? detail?.products?.[0]?.id;
-        if (productId) setBulkSelection((current) => ({ ...current, [facility.id]: productId }));
       }));
     } catch { /* per-facility detail errors handled per row */ }
     setBulkLoading(false);
@@ -449,51 +488,69 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   const sendBulk = useCallback(async () => {
     const token = await requireAuth();
     if (!token || bulkSending) return;
-    const entries = Object.entries(bulkSelection).filter(([, productId]) => Boolean(productId));
-    if (entries.length === 0) { setBulkErrors('Sélectionnez au moins une facilité.'); return; }
+    if (bulkCost.count === 0) { setBulkErrors('Sélectionnez au moins une facilité pour le bulk.'); return; }
+    if (bulkCost.cost === 0 && bulkCost.count > 0) { setBulkErrors('Ce bulk ne peut pas être nul.'); return; }
+    const productRef = bulkCost.targets
+      .map((facility) => bulkDetails[facility.id]?.products)
+      .filter((products): products is NonNullable<typeof products> => Boolean(products && products.length > 0))
+      .flat()
+      .sort((a, b) => (b.stockLoueOmni ?? 0) - (a.stockLoueOmni ?? 0))[0];
+    if (!productRef) { setBulkErrors('Aucun produit de référence publié dans les facilités sélectionnées.'); return; }
     setBulkSending(true); setBulkErrors(null);
-    const submitted = await Promise.all(entries.map(async ([facilityId, productId]) => {
-      const facilityName = (bulkFacilities ?? []).find((f) => f.id === facilityId)?.name ?? facilityId;
-      const productName = bulkDetails[facilityId]?.products?.find((p) => p.id === productId)?.name ?? 'Produit';
-      try {
-        if (simMode === 'erreur') {
-          await new Promise((r) => setTimeout(r, 500));
-          return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
-        }
-        if (simMode === 'lent') {
-          await new Promise((r) => setTimeout(r, 8000));
-        }
-        if (simMode === 'vide') {
-          await new Promise((r) => setTimeout(r, 300));
-          return { facilityId, facilityName, productName, status: 'unavailable' as const, quantityAvailable: 0, observedAt: new Date().toISOString() };
-        }
-        const result = await requestAvailability({
-          productId, facilityId, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, token,
-          deliveryMode: 'retrait',
-          note: null,
-          idempotencyKey: 'bulk-' + facilityId + '-' + crypto.randomUUID(),
-        });
-        if (!result.ok || !result.data) return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
-        const requestId = result.data.requestId;
-        const poll = async (): Promise<{ facilityId: string; facilityName: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired'; quantityAvailable: number | null; observedAt: string | null }> => {
-          for (let attempt = 0; attempt < 4; attempt++) {
-            await new Promise((resolve) => window.setTimeout(resolve, 3000));
-            const res = await getAvailabilityResponses({ requestId, token });
-            if (res.ok && res.data && res.data.responses.length > 0) {
-              const r = res.data.responses[0];
-              return { facilityId, facilityName, productName, status: r.status === 'available' ? 'available' : r.status === 'partial' ? 'partial' : r.status === 'unavailable' ? 'unavailable' : 'expired', quantityAvailable: r.quantityAvailable ?? null, observedAt: r.observedAt ?? null };
+    try {
+      if (simMode === 'erreur') {
+        await new Promise((r) => setTimeout(r, 500));
+        setBulkResults(bulkCost.targets.map((facility) => ({
+          facilityId: facility.id, facilityName: facility.name, productId: productRef.id, productName: productRef.name, status: 'error' as const, quantityAvailable: null, observedAt: null,
+        })));
+        setBulkSending(false);
+        return;
+      }
+      const result = await requestBulkAvailability({
+        productId: productRef.id,
+        facilityIds: bulkCost.targets.map((facility) => facility.id),
+        quantity: 1,
+        budgetMode: 'unlimited',
+        budgetMinor: null,
+        deliveryMode: 'retrait',
+        note: null,
+        token,
+        idempotencyKey: 'bulk-' + token.slice(0, 8) + '-' + crypto.randomUUID(),
+      });
+      if (!result.ok || !result.data) {
+        setBulkErrors(result.error?.message ?? 'La demande bulk a échoué.');
+        setBulkSending(false);
+        return;
+      }
+      const requestId = result.data.requestId;
+      type BulkRowStatus = 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error';
+      const rows: Array<{ facilityId: string; facilityName: string; productId: string; productName: string; status: BulkRowStatus; quantityAvailable: number | null; observedAt: string | null }> = (bulkFacilities ?? []).filter((facility) => bulkCost.targets.some((t) => t.id === facility.id)).map((facility) => ({
+        facilityId: facility.id, facilityName: facility.name, productId: productRef.id, productName: productRef.name, status: 'submitted', quantityAvailable: null, observedAt: null,
+      }));
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await new Promise((resolve) => window.setTimeout(resolve, 3000));
+        const res = await getAvailabilityResponses({ requestId, token });
+        if (res.ok && res.data && res.data.responses.length > 0) {
+          const byFacility = new Map(res.data.responses.map((r) => [r.facilityId, r]));
+          for (const row of rows) {
+            const r = byFacility.get(row.facilityId);
+            if (r) {
+              row.status = r.status === 'available' ? 'available' : r.status === 'partial' ? 'partial' : r.status === 'unavailable' ? 'unavailable' : 'expired';
+              row.quantityAvailable = r.quantityAvailable ?? null;
+              row.observedAt = r.observedAt ?? null;
             }
           }
-          return { facilityId, facilityName, productName, status: 'submitted' as const, quantityAvailable: null, observedAt: null };
-        };
-        return await poll();
-      } catch {
-        return { facilityId, facilityName, productName, status: 'error' as const, quantityAvailable: null, observedAt: null };
+        }
       }
-    }));
-    setBulkResults(submitted);
-    setBulkSending(false);
-  }, [bulkSelection, bulkFacilities, bulkDetails, bulkSending]);
+      setBulkResults(rows);
+    } catch {
+      setBulkErrors('La demande bulk a échoué sur le réseau.');
+    } finally {
+      setBulkSending(false);
+      const summary = await getBuyerCreditSummary({ token });
+      if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
+    }
+  }, [bulkCost, bulkFacilities, bulkDetails, bulkSending]);
 
   const openCompare = useCallback(async () => {
     setSheet('compare');
@@ -988,9 +1045,39 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
         <section className="sheet h-mid" data-sheet="bulk" role="region" aria-label="Disponibilité groupée">
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Disponibilité groupée</div><h1>Interroger plusieurs facilités</h1></div>
+            <div><div className="eyebrow">Demande bulk</div><h1>Un besoin, plusieurs facilités</h1></div>
           </div>
-          <p className="tiny muted">Interroger plusieurs facilités en une fois — chaque facilité reçoit sa propre demande reel.faible 1 requête groupée restante ce mois (plan gratuit).</p>
+          <p className="tiny muted">La demande part vers chaque facilité sélectionnée. Le coût se compte en bulks : 1 crédit par tranche de 100 facilités payante (1 à 100 = 1, 101 à 200 = 2…). La vérification d'une seule facilité reste gratuite.</p>
+          {!bulkLoading && !bulkResults && bulkCreditSummary && (
+            <div className={`cardbox ${bulkCost.cost > (bulkCreditSummary?.creditsRemaining ?? 0) ? 'dash' : ''}`} style={{ marginTop: 8 }}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div>
+                  <b>{bulkCost.count} facilité(s) sélectionnée(s)</b><br />
+                  <span className="tiny muted">coût : <b>{bulkCost.cost} crédit(s) bulk</b></span>
+                </div>
+                <span className="status ok">solde : {bulkCreditSummary?.creditsRemaining ?? 0} · après envoi : {bulkCost.remaining}</span>
+              </div>
+              {bulkCost.remaining < 0 && <p className="sub" role="alert" style={{ marginTop: 6 }}>Crédits insuffisants — il manque {-bulkCost.remaining} crédit(s). Rechargez en packs pour envoyer ce bulk.</p>}
+            </div>
+          )}
+          {!bulkLoading && !bulkResults && bulkFacilities && (
+            <div className="sortbar" style={{ marginTop: 8 }}>
+              {([null, 5, 10, 25, 50] as const).map((rayon) => (
+                <button key={String(rayon)} type="button" className={`sortchip${bulkRayon === rayon ? ' active' : ''}`} onClick={() => setBulkRayon(rayon)}>
+                  {rayon === null ? 'Toutes' : `≤ ${rayon} km`}
+                </button>
+              ))}
+            </div>
+          )}
+          {!bulkLoading && !bulkResults && bulkFacilities && (
+            <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
+              <span className="tiny muted">Rayon mesuré depuis le centre de la carte.</span>
+              <span>
+                <button type="button" className="textbtn" onClick={() => setBulkSelection(Object.fromEntries((bulkFacilities ?? []).map((facility) => [facility.id, true])))}>Tout cocher</button>
+                <button type="button" className="textbtn" style={{ marginLeft: 8 }} onClick={() => setBulkSelection({})}>Aucune</button>
+              </span>
+            </div>
+          )}
           {bulkLoading && <p className="sub" role="status">Chargement des facilités…</p>}
           {bulkErrors && !bulkLoading && !bulkSending && !bulkResults && <p className="sub" role="alert">{bulkErrors}</p>}
           {!bulkLoading && !bulkResults && (
@@ -998,29 +1085,23 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               {(bulkFacilities ?? []).map((facility) => {
                 const detail = bulkDetails[facility.id];
                 const products = detail?.products ?? [];
-                const selected = bulkSelection[facility.id];
+                const selected = bulkSelection[facility.id] ?? false;
                 return (
-                  <div key={facility.id} className="pitem" style={{ alignItems: 'center', cursor: 'default' }}>
+                  <button key={facility.id} type="button" className="pitem" style={{ alignItems: 'center', width: '100%', textAlign: 'left' }} onClick={() => setBulkSelection((current) => ({ ...current, [facility.id]: !current[facility.id] }))}>
                     <span className="chk" aria-hidden="true">{selected ? '✓' : ''}</span>
                     <span style={{ flex: 1 }}>
                       <b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan} · {facility.productCount} produits</span>
-                      {products.length > 0 ? (
-                        <select className="field fs-9" style={{ marginTop: 4, height: 26 }} value={selected ?? ''} onChange={(event) => setBulkSelection((current) => ({ ...current, [facility.id]: event.target.value }))}>
-                          {products.filter((p) => p.stockLoueOmni > 0).map((product) => (<option key={product.id} value={product.id}>{product.name} · {moneyOrQty(product.stockLoueOmni)} dispo</option>))}
-                          {products.length === 0 && <option value="">Aucun produit</option>}
-                        </select>
-                      ) : (
-                        <span className="status gray" style={{ marginTop: 4 }}>Aucun produit référencé</span>
-                      )}
+                      {products.filter((p) => p.stockLoueOmni > 0).length > 0 && <span className="tiny muted" style={{ display: 'block', marginTop: 2 }}>ex. {products.filter((p) => p.stockLoueOmni > 0)[0].name} · {moneyOrQty(products.filter((p) => p.stockLoueOmni > 0)[0].stockLoueOmni)} dispo</span>}
+                      {products.length === 0 && <span className="status gray" style={{ marginTop: 4 }}>Aucun produit référencé</span>}
                     </span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
           {!bulkLoading && !bulkResults && (
-            <button className="btn ok" type="button" disabled={bulkSending || Object.keys(bulkSelection).length === 0} onClick={() => void sendBulk()} style={{ marginTop: 10 }}>
-              {bulkSending ? 'Envoi en cours…' : 'Envoyer aux facilités sélectionnées'}
+            <button className="btn ok" type="button" disabled={bulkSending || bulkCost.count === 0 || (bulkCost.remaining < 0 && bulkCost.cost > 0)} onClick={() => void sendBulk()} style={{ marginTop: 10 }}>
+              {bulkSending ? 'Envoi en cours…' : bulkCost.count === 0 ? 'Aucune facilité sélectionnée' : `Envoyer la demande bulk (${bulkCost.count} commerces = ${bulkCost.cost} crédit(s))`}
             </button>
           )}
           {!bulkLoading && bulkResults && (
@@ -1144,9 +1225,16 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                     if (picked.length === 1) {
                       setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name }); setFlowProduct({ id: picked[0].id, name: picked[0].name }); setSheet('flow');
                     } else {
-                      setBulkFacilities([{ ...selectedFacility, productCount: picked.length }]);
-                      setBulkSelection({ [selectedFacility.id]: picked[0].id });
-                      setSheet('bulk');
+                      void (async () => {
+                        const token = await requireAuth();
+                        if (!token) return;
+                        setBulkResults(null); setBulkErrors(null); setSheet('bulk');
+                        const rows = await Promise.all(picked.map(async (product) => {
+                          const res = await requestAvailability({ productId: product.id, facilityId: selectedFacility.id, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, token, idempotencyKey: 'fac-' + selectedFacility.id + '-' + product.id + '-' + crypto.randomUUID() });
+                          return { facilityId: selectedFacility.id, facilityName: selectedFacility.name, productId: product.id, productName: product.name, status: (res.ok && res.data ? 'submitted' : 'error') as 'submitted' | 'error', quantityAvailable: null, observedAt: null };
+                        }));
+                        setBulkResults(rows);
+                      })();
                     }
                   }}>Demander la disponibilité (<span id="selCount">{facProductSel.length}</span>)</button>
                   <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Contact vendeur & chat débloqués après intention d’achat.</p>

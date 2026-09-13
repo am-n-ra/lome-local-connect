@@ -414,3 +414,29 @@ Un acheteur envoie une demande de dispo; le serveur (v2) vérifie le solde mensu
 > **Residual gap:** achat packs réel ( tunnel paiement Mobile Money = **NW-13i**; `extra_credits` capacité stockée, pas de vente ( ; plan buyer Pro ≈100/mois = **NW-13h** ( quota 3 free appliqué aujourd'hui (.
 > **Next smallest action:** sur **ordre fondateur** → push prod + proof navigateur réel; ensuite **NW-13e** ( slice suivante (.
 > **Re-plan trigger:** 045 rejeté Postgres ( revoir CHECK (; INSUFFICIENT_CREDITS non levé en demande; divergence solde UI vs serveur.
+
+## Slice borné — P1-B2 NW-13d-2 « Facturation bulk `ceil(N/100)` » (amendement D-G, 2026-09-13)
+
+> **Handoff:** fondateur « oui approuve go » 2026-09-13 ( amendement D-G ( → **NW-13d-2 lancé** sur `omni-v2-rebuild`.
+> **Decision verrouillée:** vérif manuelle (1 facilité) = **0 crédit**; bulk = **`ceil(N/100)` crédits SANS plafond**; insuffisant → **montant manquant spécifié**; UX sélection facilités **et/ou rayon** avec **coût en direct**.
+
+### Gate plan ( NW-13d-2(
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Serveur — `createBulkAvailabilityRequest` (facilityIds[], scope array, débit `ceil(N/100)`, refus chiffré) + manuel = 0 crédit | `facilityIds[]` ≥2 distincts; scope array complet; débit `Math.ceil(N/100)` guarded; message « Missing M » | Tests repo (3 bulk + 1 borne + 1 rejet + manuel adapté) | `done` |
+| 2 | HTTP — `validateBulkAvailabilityRequestCreate` + route `POST /api/v2/bulk-availability` | Validator pur (≥2 distincts uuid); route 201; 403 chiffré via `toApiErrorResponse` | Tests http (4 nouveaux + 4 adaptés) | `done` |
+| 3 | Client/types — `requestBulkAvailability` + `BulkAvailabilityResult` | Serialize `facilityIds[]` + idempotency header | Test api (1 nouveau) | `done` |
+| 4 | UI — sheet bulk refondu (rayon + cases + coût direct + UN bulk) + BuyerFlowV13 manuel gratuit | Encart coût live; rayon 5/10/25/50; bouton désactivé si vide/insuffisant avec « il manque M »; envoi UN bulk + poll groupé | tsc + build; visuel navigateur = résidu | `done` (code(; navigateur réel = résidu |
+| 5 | Preuve locale complète | tsc clean; suite; build; boundary | commandes sorties | `done` (55f/375t(+8), build `index-5yeSIqD5.js`, boundary clean) |
+| 6 | Preuve canonique live (Neon MCP) | manuel 0, bulk 2→1, refus 250→3 (missing 1), cleanup 0 trace | requêtes live T1-T5 | `done` ( preuve live tracée, 0 trace ( |
+
+### Handoff ( NW-13d-2( — retour fondateur
+
+> **Local status:** `verified` — tsc clean, 55 files/375 tests (+8 ( repo 5, http 4, api 1, adaptés 4 (), `tsc -b` + vite build verts ( bundle `index-5yeSIqD5.js` (, `check:boundary` clean; bundles serverless (12( régénérés ( nouvelle route bulk-availability ).
+> **Gate decision:** `advance` — NW-13d-2 ( amendement D-G ( livré branch-only; **Gate 6 reste CLOSED** ( verdict fondateur « Go with limits » maintenu ( ; Gate 7 = watch.
+> **Closed:** serveur ( manuel 0 crédit + `createBulkAvailabilityRequest` avec scope array/ceil/refus chiffré, paramétrisation `(${ids})::text[]::uuid[]` sans concaténation (; HTTP ( validator + route bulk (; client/types ( `requestBulkAvailability` + `BulkAvailabilityResult` (; UI ( encart coût live + rayon + cases + UN bulk; BuyerFlowV13 « vérification manuelle gratuite » sans blocage (; preuve DB canonique T1-T5 ( manuel 0, bulk +1, refus 250 « Missing 1 », cleanup 0 trace (.
+> **Open or blocked:** rien côté DB ( aucune migration requise : 045 déjà appliquée supporte le scope array ( ; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur (.
+> **Residual gap:** achat packs réel ( tunnel paiement Mobile Money = **NW-13i**; `extra_credits` capacité stockée, pas de vente ( ; plan buyer Pro ≈100/mois = **NW-13h** ( quota 3 free appliqué aujourd'hui ( ; route bulk non exercée end-to-end en prod ( pas de push (.
+> **Next smallest action:** sur **ordre fondateur** → push prod + proof navigateur réel (encart coût bulk); ensuite **NW-13e** ( slice suivante (.
+> **Re-plan trigger:** le coût affiché en UI diverge du débit en base; bulk accepte des facilités hors scope produit; refus sans montant manquant.

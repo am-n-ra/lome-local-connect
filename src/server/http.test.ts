@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
 import { AvailabilityPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -89,6 +89,47 @@ describe('Root HTTP error boundary', () => {
   it('rejects an availability-request create with an unknown product or a too-short idempotency key', () => {
     expect(() => validateAvailabilityRequestCreate({ productId: 'not-a-uuid', quantity: 1, idempotencyKey: 'short' }, 'short', 'auth-user-1')).toThrow(ApiInputError);
     expect(() => validateAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 0, idempotencyKey: 'https://x' }, 'https://x', 'auth-user-1')).toThrow('A valid product, facility, positive quantity and a stable idempotency key are required.');
+  });
+
+  it('maps a disruptive-missing bulk request to a non-retryable 409 POLICY_REJECTED', () => {
+    const response = toApiErrorResponse('corr-bulk-reject', new AvailabilityPolicyError('A bulk request must target at least 2 facilities. Use single availability request for one facility.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+
+  it('maps insufficient bulk credits to a non-retryable 403 INSUFFICIENT_CREDITS with the exact counted shortfall', () => {
+    const response = toApiErrorResponse('corr-bulk-credits', new InsufficientCreditsError('This bulk addresses 250 facility(ies) = 3 bulk credit(s). You have 1. Missing 2. Recharge with packs to send.'));
+    expect(response).toEqual({
+      status: 403,
+      body: {
+        ok: false,
+        correlationId: 'corr-bulk-credits',
+        error: {
+          code: 'INSUFFICIENT_CREDITS',
+          message: 'This bulk addresses 250 facility(ies) = 3 bulk credit(s). You have 1. Missing 2. Recharge with packs to send.',
+          retryable: false,
+        },
+      },
+    });
+  });
+
+  it('normalizes a valid bulk-availability create with 2+ distinct facility ids', () => {
+    const validated = validateBulkAvailabilityRequestCreate(
+      { productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: ['1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', '9d3f6a1b-1d1e-4c7a-8f0c-0d0c0f0a0b0c'], quantity: 1, idempotencyKey: 'bulk-key-https' },
+      'bulk-key-https',
+      'auth-user-1',
+    );
+    expect(validated).toEqual({ authUserId: 'auth-user-1', productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: ['1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', '9d3f6a1b-1d1e-4c7a-8f0c-0d0c0f0a0b0c'], quantity: 1, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, idempotencyKey: 'bulk-key-https' });
+  });
+
+  it('rejects a bulk-availability create with a single facility, duplicates or malformed ids', () => {
+    const validA = '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01';
+    const validB = '9d3f6a1b-1d1e-4c7a-8f0c-0d0c0f0a0b0c';
+    expect(() => validateBulkAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: [validA], idempotencyKey: 'bulk-key-https' }, 'bulk-key-https', 'auth-user-1')).toThrow('A valid product, at least 2 distinct facility ids and a stable idempotency key are required');
+    expect(() => validateBulkAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: [validA, validA], idempotencyKey: 'bulk-key-https' }, 'bulk-key-https', 'auth-user-1')).toThrow('A valid product, at least 2 distinct facility ids and a stable idempotency key are required');
+    expect(() => validateBulkAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: [validA, 'not-a-uuid'], idempotencyKey: 'bulk-key-https' }, 'bulk-key-https', 'auth-user-1')).toThrow('A valid product, at least 2 distinct facility ids and a stable idempotency key are required');
+    expect(() => validateBulkAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityIds: [validA, validB], idempotencyKey: 'short' }, 'short', 'auth-user-1')).toThrow(ApiInputError);
   });
 
   it('maps external-payment policy rejection to a non-retryable 409', () => {

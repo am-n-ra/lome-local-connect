@@ -79,6 +79,22 @@ export interface BuyerCreditSummary {
   periodMonth: string;
 }
 
+export interface BulkAvailabilityResult {
+  requestId: string;
+  productId: string;
+  facilityIds: string[];
+  facilityCount: number;
+  status: AvailabilityRequestState;
+  expiresAt: string;
+  deliveryMode: 'retrait' | 'livraison';
+  note: string | null;
+  message: string;
+  creditCost: number;
+  creditsRemaining: number;
+  monthlyQuota: number;
+  plan: 'free' | 'pro';
+}
+
 export interface BuyerAvailabilityResponse {
   id: string;
   requestId: string;
