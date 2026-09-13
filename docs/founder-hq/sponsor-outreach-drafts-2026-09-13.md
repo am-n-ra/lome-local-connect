@@ -19,18 +19,18 @@ Merci pour notre précédent échange. Je reviens vers vous avec une mise à jou
 **Où en est OMNI :**
 - Produit en production (omni.sparkafrika.online), avec un parcours testé (commerçants Pro, achats, portefeuille, renouvellement, packs de crédits Mobile Money).
 - **13 commerçants ont déjà payé** pour l'accès Pro (65 000 F, reçus en cash avant notre nouvelle grille USD). C'est une première preuve de demande, volontairement petite.
-- Nous préparons une **cohorte terrain multi-zone à Lomé** (10–15 jours, données d'acquisition réelles par segment — buyer/seller/free/pro — et par zone) pour transformer cette première traction en unités économiques démontrées, puis Aflao.
+- Nous préparons un **pilote terrain d'un mois, multi-zone, à Lomé** — équipe d'≥ 2 agents par zone, données d'acquisition réelles par segment (buyer/seller/free/pro) et par quartier — pour transformer cette première traction en unités économiques démontrées, puis Aflao. Un ticket de votre ordre de grandeur (~$10K) le finance entièrement et proprement.
 
 **Ce que je propose :** un échange pour discuter si un **premier soutien OMNI** peut s'inscrire dans vos critères actuels — que ce soit un appui direct ou une introduction vers des contacts pertinents (banques/angels). Je suis ouvert à discuter du cadre qui vous convient (montant, forme, jalons).
 
-Nous savons que vos engagements se situent à partir de montants importants ; si notre stade actuel n'est pas encore aligné, dites-le-moi franchement — nous reviendrons vers vous avec davantage de résultats mesurés d'ici quelques semaines.
+Votre plafond d'engagement (~$10K) correspond exactement au budget de ce pilote d'un mois — c'est pourquoi je viens vers vous maintenant : c'est un **montant dans vos cordes, avec des livrables précis et mesurables** en échange.
 
 Seriez-vous disponible pour 20–30 minutes cette semaine ou la semaine prochaine ?
 
 Cordialement,
 [Nom, fondateur]
 
-> **Note d'honnêteté interne:** HERLOG plancher ~50M + entité pas encore incorporée → premier échange réaliste = conversation/termes, pas un wiring. Ce brouillon le dit implicitement (montant/forme/jalons à discuter).
+> **Note d'honnêteté interne:** HERLOG plafond ~$10K (corrigé par le fondateur, 2026-09-13 — l'ancien « plancher ~50M » était une erreur). Entité pas encore incorporée → premier échange réaliste = conversation/termes, pas un wiring. Le montant demandé (≤ $10K) est calibré pour entrer dans leur plafond + démonter les livrables mesurés.
 
 ---
 
@@ -46,9 +46,9 @@ Nous construisons **OMNI, le moteur de recherche de l'offre et de la demande** :
 
 Nous avons une **première traction concrète** : 13 commerçants payants, un produit en production, et un plan pour une cohorte terrain multi-zone mesurée à Lomé. Plutôt qu'un sponsoring générique, nous vous proposons une **expérimentation limitée et traçable** :
 
-**Le pilote (multi-zone, 10–15 agent-jours, mesuré par segment)**
-- **Design :** plusieurs zones échantillons représentatives de Lomé (dense/marché, résidentiel/commerce) pour couvrir la variance — pas une seule zone.
-- Coût approximatif : 350 000–525 000 F par tranche (transport + repas, plafonné 25 000 F/jour/membre), **co-financement à discuter**.
+**Le pilote (1 mois, multi-zone, ≥ 2 agents/zone, mesuré par segment)**
+- **Design :** plusieurs zones échantillons représentatives de Lomé (dense/marché, résidentiel/commerce) pour couvrir la variance — pas une seule zone. **1 mois de terrain (22 jours ouvrés).**
+- Coût approximatif : ≈ 660 000 F/zone/mois (terrain, 2 agents/zone) + OSM (1 000 F/établissement) + base agents + 10 % ops — **co-financement à discuter; budget borné ≤ ~$10K**.
 - **Livrables précis :** cohorte instrumentée **par segment** (buyer/seller/free/pro) et par zone (inscriptions vérifiées, vendeurs activés, premiers paiements réconciliés, **CAC segmenté**, choix effectués), rapport de synthèse 2–3 pages.
 - **Pour vous :** accès mesuré aux micro-commerçants **et** aux demandeurs de Lomé, données anonymisées par segment sur votre canal (SMS/Data/Moov Money), cas d'usage transactionnel marchand.
 
@@ -71,7 +71,7 @@ Cordialement,
 
 Bonjour [Programmes PME / Direction CCI],
 
-OMNI, le moteur de recherche de l'offre et de la demande, digitalise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit la meilleure option disponible. Nous avons une première preuve de demande — 13 commerçants payants, produit en production — et nous lançons une **cohorte terrain multi-zone mesurée** (par segment et par quartier).
+OMNI, le moteur de recherche de l'offre et de la demande, digitalise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit la meilleure option disponible. Nous avons une première preuve de demande — 13 commerçants payants, produit en production — et nous lançons un **pilote terrain d'un mois multi-zone mesuré** (par segment — buyer/seller/free/pro — et par quartier, ≥ 2 agents/zone).
 
 Nous serions intéressés par deux types de collaboration avec la CCI :
 1. **Accès encadré à vos réseaux de commerçants** pour conduire le pilote (validation des catégories, sessions d'information, retour d'expérience terrain).
@@ -96,9 +96,9 @@ Cordialement,
 
 Bonjour [Direction],
 
-OMNI, le moteur de recherche de l'offre et de la demande, organise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit réellement la meilleure option disponible. Nous démarrons une **cohorte terrain multi-zone mesurée** (inscriptions vérifiées, vendeurs activés, premiers paiements, **CAC par segment** — buyer/seller/free/pro — et par zone) et cherchons un partenaire financier pour : **canal marchands / paiement / encadrement du segment**.
+OMNI, le moteur de recherche de l'offre et de la demande, organise la visibilité des micro-commerçants de Lomé : chacun trouve ce qui correspond à ses contraintes et choisit réellement la meilleure option disponible. Nous démarrons un **pilote terrain d'un mois multi-zone mesuré** (inscriptions vérifiées, vendeurs activés, premiers paiements, **CAC par segment** — buyer/seller/free/pro — et par zone, ≥ 2 agents/zone) et cherchons un partenaire financier pour : **canal marchands / paiement / encadrement du segment**.
 
-Le pilote a un coût limité (~350–525k F) et des livrables précis. Seriez-vous ouverts à un échange pour en discuter ?
+Le pilote a un coût borné (≈ 660 000 F/zone/mois + OSM + base agents, budget ≤ ~$10K) et des livrables précis. Seriez-vous ouverts à un échange pour en discuter ?
 
 Cordialement,
 [Nom, fondateur — OMNI]

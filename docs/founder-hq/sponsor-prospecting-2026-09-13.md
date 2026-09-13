@@ -8,7 +8,7 @@
 
 | # | Sponsor | Type | Pourquoi eux | Ask | Canal de contact | Statut | Prochaine action |
 |---|---|---|---|---|---|---|---|
-| 1 | **Moov Africa Togo** | Opérateur / paiement | Distribution SMS/data + Flooz/Moov Money, réseau marchands | Co-financer micro-cohorte + canal SMS/data + paiement | Formulaire site / sponsoring path + email direction Entreprise | `todo` | Identifier contact direction Entreprise/Moov Money; adapter pitch (pilote 10–15 j) |
+| 1 | **Moov Africa Togo** | Opérateur / paiement | Distribution SMS/data + Flooz/Moov Money, réseau marchands | Co-financer pilote 1 mois multi-zone + canal SMS/data + paiement | Formulaire site / sponsoring path + email direction Entreprise | `todo` | Identifier contact direction Entreprise/Moov Money; adapter pitch (pilote 1 mois, ≥2 agents/zone) |
 | 2 | (à étendre) Banques locales / IMF | Banque / microfinance | Canal marchands + paiement, ancrage local | Pilote marchands + paiement | — | `todo` | Lister banques/IMF actives à Lomé (à faire avec fondateur) |
 | 3 | **CCI-Togo** | Chambre de commerce | Accès réseaux commerçants, lettre d'appui, fonds startup 2026 annoncé | Accès encadré marchands + appui + intro fonds | Programmes PME / commerce | `todo` | Vérifier état du fonds 2026 (annonce Togo First); demander atelier PME |
 
@@ -21,9 +21,9 @@
 
 ## Livrables sponsor (remembered in pitch)
 
-- Tableau de cohorte instrumentée (par agent/zone/jour, statut vendeur, paiements réconciliés, CAC).
+- Tableau de cohorte instrumentée **par segment** (buyer/seller/free/pro) et par zone (statut vendeur, paiements réconciliés, CAC segmenté).
 - Rapport 2–3 pages + crédit visuel au sponsor.
-- Règle: pilot = mesure, pas volume brut; co-financement d'une expérience de 10–20 agent-jours, jamais un sponsoring générique.
+- Règle: pilot = mesure, pas volume brut; co-financement d'un **pilote 1 mois multi-zone bien dimensionné (≥2 agents/zone)**, jamais un sponsoring générique ni un mini-test. HERLOG plafond $10K corrigé (2026-09-13).
 
 ## Notes
 
