@@ -207,6 +207,71 @@ export async function getBuyerCreditSummary(input: { token: string }): Promise<A
   return parse<BuyerCreditSummary>(response);
 }
 
+export async function getBuyerProStatus(input: { token: string }): Promise<ApiResult<import('./types').BuyerProStatus>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/pro-status', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').BuyerProStatus>(response);
+}
+
+export async function activateBuyerPro(input: { token: string; idempotencyKey: string }): Promise<ApiResult<import('./types').BuyerProActivationResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/pro', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ reference: input.idempotencyKey }),
+  });
+  return parse<import('./types').BuyerProActivationResult>(response);
+}
+
+export async function listFavorites(input: { token: string }): Promise<ApiResult<import('./types').FavoritesResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/favorites', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').FavoritesResult>(response);
+}
+
+export async function addFavorite(input: { token: string; facilityId: string }): Promise<ApiResult<{ favoriteId: string; facilityId: string }>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/favorites', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ facilityId: input.facilityId }),
+  });
+  return parse<{ favoriteId: string; facilityId: string }>(response);
+}
+
+export async function removeFavorite(input: { token: string; facilityId: string }): Promise<ApiResult<{ removed: true }>> {
+  const response = await fetchWithRecovery(`/api/v2/buyer/favorites/${input.facilityId}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<{ removed: true }>(response);
+}
+
+export async function getBuyerProRenewalStatus(input: { token: string }): Promise<ApiResult<import('./types').BuyerProStatus>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/pro/renewal-status', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').BuyerProStatus>(response);
+}
+
+export async function setBuyerProRenewalOptIn(input: { token: string; optIn: boolean }): Promise<ApiResult<import('./types').BuyerProOptInResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/pro/renewal-opt-in', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ optIn: input.optIn }),
+  });
+  return parse<import('./types').BuyerProOptInResult>(response);
+}
+
+export async function renewBuyerPro(input: { token: string }): Promise<ApiResult<import('./types').BuyerProRenewalResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/pro/renew', {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+    body: '{}',
+  });
+  return parse<import('./types').BuyerProRenewalResult>(response);
+}
+
 export async function getBuyerAvailabilityRequests(input: { token: string }): Promise<ApiResult<BuyerAvailabilityRequestList>> {
   const response = await fetchWithRecovery('/api/v2/availability-responses', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

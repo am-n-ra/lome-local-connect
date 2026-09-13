@@ -62,6 +62,7 @@ export type WalletEntryKind =
   | 'coupon_credit'
   | 'bonus_grant'
   | 'bonus_spend'
+  | 'buyer_pro_spend'
   | 'reversal';
 
 export type ErrorCode =

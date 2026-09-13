@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerCreditSummary, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -116,7 +116,7 @@ export interface QrTokenIssuePersistenceResult {
   expiresAt: string;
 }
 
-export type WalletSpendKind = Extract<WalletEntryKind, 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'bonus_spend'>;
+export type WalletSpendKind = Extract<WalletEntryKind, 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'bonus_spend' | 'buyer_pro_spend'>;
 
 export interface WalletSpendPersistenceResult {
   ledgerEntryId: string;
@@ -3369,6 +3369,347 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+// ── Buyer Pro (NW-13h, D-K). Favorites + compare quota + account Pro plan. ──────────
+
+    async listFavorites(input: { authUserId: string }): Promise<FavoritesResult> {
+      const rows = await retryDatabase(() => sql`
+        select f.id as favorite_id, f.facility_id, fac.name as facility_name, fac.category as facility_category, f.created_at
+        from v2_account_favorites f
+        join v2_accounts a on a.id = f.account_id
+        join v2_facilities fac on fac.id = f.facility_id
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        order by f.created_at desc, f.id desc
+        limit 100
+      `);
+      return {
+        favorites: (rows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.favorite_id),
+          facilityId: String(row.facility_id),
+          facilityName: String(row.facility_name),
+          facilityCategory: String(row.facility_category ?? 'Local supply'),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
+    async addFavorite(input: { authUserId: string; facilityId: string }): Promise<{ favoriteId: string; facilityId: string }> {
+      const rows = await retryDatabase(() => sql`
+        insert into v2_account_favorites (account_id, facility_id)
+        select a.id, ${input.facilityId}::uuid
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        on conflict (account_id, facility_id) do nothing
+        returning id, facility_id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new BuyerSearchPolicyError('ACCOUNT_UNAVAILABLE');
+      return { favoriteId: String(row.id), facilityId: String(row.facility_id) };
+    },
+
+    async removeFavorite(input: { authUserId: string; facilityId: string }): Promise<{ removed: true }> {
+      const rows = await retryDatabase(() => sql`
+        delete from v2_account_favorites f
+        using v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and f.facility_id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+        returning f.id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new BuyerSearchPolicyError('NOT_FOUND');
+      return { removed: true };
+    },
+
+    async getBuyerProStatus(input: { authUserId: string }): Promise<BuyerProStatus> {
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), entitlement as (
+          select e.id, e.state, e.starts_at, e.ends_at, e.price_minor, e.billing_currency, e.renewal_opt_in
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          order by e.created_at desc, e.id desc
+          limit 1
+        ), wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join account a on a.account_id = w.account_id
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), credits as (
+          select coalesce(plan, 'free') as plan, monthly_quota
+          from v2_buyer_credit_accounts c
+          join account a on a.account_id = c.buyer_account_id
+        )
+        select
+          a.account_id,
+          e.id as entitlement_id, e.state as entitlement_state, e.starts_at, e.ends_at,
+          coalesce(e.renewal_opt_in, false) as renewal_opt_in,
+          coalesce(e.price_minor, 250000)::int as pro_price_minor,
+          coalesce(e.billing_currency, 'XOF') as billing_currency,
+          b.balance_minor,
+          coalesce(c.plan, 'free') as credit_plan
+        from account a
+        cross join lateral (select * from entitlement) e
+        cross join lateral (select * from balance) b
+        cross join lateral (select * from credits) c
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new BuyerSearchPolicyError('ACCOUNT_UNAVAILABLE');
+      const nowMs = Date.now();
+      const endsAtMs = row.ends_at ? new Date(String(row.ends_at)).getTime() : null;
+      const daysLeft = endsAtMs !== null ? Math.max(0, Math.ceil((endsAtMs - nowMs) / 86400000)) : 0;
+      const activeNow = String(row.entitlement_state) === 'active' && (endsAtMs === null || endsAtMs > nowMs);
+      const plan: BuyerProStatus['plan'] = activeNow ? 'pro_active' : row.entitlement_id ? 'pro_expired' : 'free';
+      const price = Number(row.pro_price_minor);
+      const balanceMinor = Number(row.balance_minor ?? 0);
+      return {
+        accountId: String(row.account_id),
+        plan,
+        entitlementId: row.entitlement_id ? String(row.entitlement_id) : null,
+        startsAt: row.starts_at ? new Date(String(row.starts_at)).toISOString() : null,
+        endsAt: row.ends_at ? new Date(String(row.ends_at)).toISOString() : null,
+        renewalOptIn: Boolean(row.renewal_opt_in),
+        daysLeft,
+        proPriceMinor: price,
+        billingCurrency: String(row.billing_currency),
+        walletBalanceMinor: balanceMinor,
+        sufficientFunds: balanceMinor >= price,
+        compareQuota: plan === 'pro_active' ? 5 : 1,
+      };
+    },
+
+    async activateBuyerPro(input: { authUserId: string; now: string }): Promise<BuyerProActivationResult> {
+      const reference = `buyer-pro:${input.authUserId}:${input.now.slice(0, 7)}`;
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          for update of a
+        ), existing_active as (
+          select e.id, e.ends_at
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          where e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          limit 1
+        ), wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join account a on a.account_id = w.account_id
+          for update of w
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), existing_spend as (
+          select e.id, e.wallet_id, e.amount_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = 'buyer_pro_spend' and e.reference = ${reference}
+          limit 1
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select w.wallet_id, 'buyer_pro_spend', 250000, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from wallet w cross join balance b
+          where not exists (select 1 from existing_active)
+            and b.balance_minor >= 250000
+            and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, amount_minor
+        ), effective_spend as (
+          select id from spend
+          union all
+          select id from existing_spend
+          limit 1
+        ), entitlement as (
+          insert into v2_buyer_pro_entitlements (account_id, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', 250000, 'XOF', false
+          from account a cross join effective_spend s
+          where not exists (select 1 from existing_active)
+          returning id, account_id, ends_at
+        ), upgraded_plan as (
+          insert into v2_buyer_credit_accounts (buyer_account_id, plan, monthly_quota, period_month)
+          select a.account_id, 'pro', 100, to_char(${input.now}::timestamptz, 'YYYY-MM')
+          from account a cross join effective_spend s
+          on conflict (buyer_account_id) do update set
+            plan = 'pro', monthly_quota = 100, updated_at = ${input.now}::timestamptz
+          returning buyer_account_id, plan
+        )
+        select e.id, e.account_id, e.ends_at, s.id as spend_ledger_entry_id
+        from entitlement e cross join effective_spend s
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new WalletPolicyError('Insufficient wallet balance to activate Buyer Pro.');
+      return {
+        accountId: String(row.account_id),
+        entitlementId: String(row.id),
+        plan: 'pro_active',
+        endsAt: new Date(String(row.ends_at)).toISOString(),
+        spendLedgerEntryId: String(row.spend_ledger_entry_id),
+      };
+    },
+
+    async setBuyerProRenewalOptIn(input: { authUserId: string; optIn: boolean }): Promise<BuyerProOptInResult> {
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), latest as (
+          select e.id
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          order by e.created_at desc, e.id desc
+          limit 1
+        ), updated as (
+          update v2_buyer_pro_entitlements e
+          set renewal_opt_in = ${input.optIn}
+          from latest l
+          where e.id = l.id
+          returning e.account_id, e.renewal_opt_in
+        )
+        select account_id, renewal_opt_in from updated
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new WalletPolicyError('Activate Buyer Pro once before choosing auto-renewal.');
+      return { accountId: String(row.account_id), renewalOptIn: Boolean(row.renewal_opt_in) };
+    },
+
+    async renewBuyerPro(input: { authUserId: string; now: string }): Promise<BuyerProRenewalResult> {
+      const periodKey = new Date(input.now).toISOString().slice(0, 7);
+      const reference = `buyer-pro-renew:${input.authUserId}:${periodKey}`;
+      const rows = await retryDatabase(() => sql`
+        with account as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          for update of a
+        ), existing_active as (
+          select e.id
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          where e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          limit 1
+        ), wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join account a on a.account_id = w.account_id
+          for update of w
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), existing_spend as (
+          select e.id
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = 'buyer_pro_spend' and e.reference = ${reference}
+          limit 1
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, created_at, confirmed_at)
+          select w.wallet_id, 'buyer_pro_spend', 250000, 'confirmed', ${reference}, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from wallet w cross join balance b
+          where not exists (select 1 from existing_active)
+            and b.balance_minor >= 250000
+            and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id
+        ), effective_spend as (
+          select id from spend
+          union all
+          select id from existing_spend
+          limit 1
+        ), entitlement as (
+          insert into v2_buyer_pro_entitlements (account_id, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select a.account_id, 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', 250000, 'XOF', true
+          from account a cross join effective_spend s
+          where not exists (select 1 from existing_active)
+          returning id, account_id, ends_at
+        )
+        select e.id as entitlement_id, e.account_id, e.ends_at, s.id as spend_ledger_entry_id
+        from entitlement e cross join effective_spend s
+      `);
+      const renewedRow = (rows as Record<string, unknown>[])[0];
+      if (renewedRow) {
+        return {
+          accountId: String(renewedRow.account_id),
+          renewed: true,
+          reason: 'renewed',
+          newEntitlementId: String(renewedRow.entitlement_id),
+          endsAt: new Date(String(renewedRow.ends_at)).toISOString(),
+          spendLedgerEntryId: String(renewedRow.spend_ledger_entry_id ?? ''),
+          status: 'succeeded',
+        };
+      }
+      const staleRows = await retryDatabase(() => sql`
+        with account as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), latest as (
+          select e.id as entitlement_id, coalesce(e.renewal_opt_in, false) as renewal_opt_in
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          order by e.created_at desc, e.id desc
+          limit 1
+        ), active_entitlement as (
+          select e.id
+          from v2_buyer_pro_entitlements e
+          join account a on a.account_id = e.account_id
+          where e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          limit 1
+        ), spent_this_period as (
+          select e.id
+          from v2_wallet_ledger_entries e
+          join v2_wallets w on w.id = e.wallet_id
+          join account a on a.account_id = w.account_id
+          where e.kind = 'buyer_pro_spend' and e.reference = ${reference}
+          limit 1
+        )
+        insert into v2_buyer_pro_renewal_runs (account_id, prior_entitlement_id, run_at, status, note)
+        select a.account_id, l.entitlement_id, ${input.now}::timestamptz,
+               case
+                 when exists (select 1 from active_entitlement) then 'skipped'
+                 when exists (select 1 from spent_this_period) then 'skipped'
+                 when coalesce(l.renewal_opt_in, false) = false then 'skipped'
+                 else 'insufficient_funds'
+               end,
+               case
+                 when exists (select 1 from active_entitlement) then 'Buyer Pro still active; nothing to renew.'
+                 when exists (select 1 from spent_this_period) then 'Already renewed for this period; nothing to renew.'
+                 when coalesce(l.renewal_opt_in, false) = false then 'No renewal opt-in; buyer stays pro_expired.'
+                 else 'Opt-in set but wallet balance is below the Buyer Pro price.'
+               end
+        from account a left join lateral (select * from latest) l on true
+        returning account_id, status
+      `);
+      const staleRow = (staleRows as Record<string, unknown>[])[0];
+      return {
+        accountId: staleRow ? String(staleRow.account_id) : input.authUserId,
+        renewed: false,
+        reason: staleRow && String(staleRow.status) === 'insufficient_funds' ? 'insufficient_funds' : 'not_due_or_no_opt_in',
+        newEntitlementId: null,
+        endsAt: null,
+        spendLedgerEntryId: null,
+        status: staleRow ? String(staleRow.status) : 'skipped',
+      };
+    },
     async respondAvailability(input: {
       authUserId: string;
       requestId: string;

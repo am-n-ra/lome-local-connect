@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, renewFacilityPro, requestBulkAvailability, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -88,6 +88,101 @@ describe('listPublicFacilities search contract', () => {
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
     expect(result).toEqual({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'free', monthlyQuota: 3, creditsUsed: 1, extraCredits: 0, creditsRemaining: 2, periodMonth: '2026-09' } });
+  });
+
+  it('reads the buyer pro status with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'free', entitlementId: null, startsAt: null, endsAt: null, renewalOptIn: false, daysLeft: 0, proPriceMinor: 250000, billingCurrency: 'XOF', walletBalanceMinor: 0, sufficientFunds: false, compareQuota: 1 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await getBuyerProStatus({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/pro-status',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+    expect(result.data?.compareQuota).toBe(1);
+    expect(result.data?.plan).toBe('free');
+  });
+
+  it('activates buyer pro through one endpoint with an idempotency key', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', entitlementId: 'ent-1', plan: 'pro_active', endsAt: '2026-10-13T00:00:00.000Z', spendLedgerEntryId: 'ledger-1' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await activateBuyerPro({ token: 'session-token', idempotencyKey: 'buyer-pro-key-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/pro',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'buyer-pro-key-1' }, body: JSON.stringify({ reference: 'buyer-pro-key-1' }) },
+    );
+    expect(result.data?.plan).toBe('pro_active');
+  });
+
+  it('lists favorite establishments with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { favorites: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await listFavorites({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/favorites',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { favorites: [] } });
+  });
+
+  it('adds a favorite establishment to the buyer favorites endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { favoriteId: 'fav-1', facilityId: 'facility-1' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await addFavorite({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/favorites',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ facilityId: 'facility-1' }) },
+    );
+    expect(result.data?.favoriteId).toBe('fav-1');
+  });
+
+  it('removes a favorite establishment by facility id', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { removed: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await removeFavorite({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/favorites/facility-1',
+      { method: 'DELETE', headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('reads the buyer pro renewal status with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', plan: 'pro_expired', entitlementId: 'ent-1', startsAt: '2026-08-13T00:00:00.000Z', endsAt: '2026-09-12T00:00:00.000Z', renewalOptIn: true, daysLeft: 0, proPriceMinor: 250000, billingCurrency: 'XOF', walletBalanceMinor: 250000, sufficientFunds: true, compareQuota: 1 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await getBuyerProRenewalStatus({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/pro/renewal-status',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+    expect(result.data?.plan).toBe('pro_expired');
+  });
+
+  it('sets the buyer pro renewal opt-in', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', renewalOptIn: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await setBuyerProRenewalOptIn({ token: 'session-token', optIn: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/pro/renewal-opt-in',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ optIn: true }) },
+    );
+  });
+
+  it('renews buyer pro through the renewal endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { accountId: 'account-1', renewed: true, reason: 'renewed', newEntitlementId: 'ent-2', endsAt: '2026-10-13T00:00:00.000Z', spendLedgerEntryId: 'ledger-2', status: 'succeeded' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await renewBuyerPro({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/pro/renew',
+      { method: 'POST', headers: { Accept: 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
+    );
+    expect(result.data?.renewed).toBe(true);
   });
 
   it('serializes a bulk-availability create with facilityIds and idempotency headers', async () => {

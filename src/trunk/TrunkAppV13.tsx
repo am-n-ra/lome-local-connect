@@ -2,13 +2,14 @@ import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, u
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
   Compass, Home, LogOut, MapPin, Menu, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
-  Trash2, User, Wallet, X,
+  Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
-  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getClaimStorageStatus, getFacilityDetail,
+  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
+  addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
@@ -33,7 +34,7 @@ import { chipHintFor, chipStatusFor, chipsToSearchOptions, RAYON_SCOPE_LABELS, s
 import { compareFacilities } from './v13-compare';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -151,6 +152,15 @@ const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facil
 const [bulkErrors, setBulkErrors] = useState<string | null>(null);
 const [compareResults, setCompareResults] = useState<PublicFacility[]>([]);
 const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 'remise'>('match');
+const [favorites, setFavorites] = useState<import('./types').AccountFavorite[]>([]);
+const [favoritesState, setFavoritesState] = useState<'idle' | 'loading' | 'error'>('idle');
+const [favoritesError, setFavoritesError] = useState('');
+const [favoriteFacilityIds, setFavoriteFacilityIds] = useState<Set<string>>(new Set());
+const [buyerProStatus, setBuyerProStatus] = useState<import('./types').BuyerProStatus | null>(null);
+const [buyerProState, setBuyerProState] = useState<'idle' | 'loading' | 'error'>('idle');
+const [buyerProError, setBuyerProError] = useState('');
+const [buyerProActivating, setBuyerProActivating] = useState(false);
+const [compareBlocked, setCompareBlocked] = useState(0);
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const [revealActive, setRevealActive] = useState(false);
   const [revealPending, setRevealPending] = useState(false);
@@ -209,7 +219,7 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'auth']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -293,6 +303,8 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
             if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
           }
+          void loadFavorites();
+          void loadBuyerProStatus();
         }
       }
       } catch { /* session restore */ }
@@ -559,11 +571,22 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
     if (facilities.length === 0) return;
     const token = await requireAuth();
     if (!token) return;
-    await Promise.all(facilities.map(async (facility) => {
+    if (!buyerProStatus) {
+      const status = await getBuyerProStatus({ token });
+      if (status.ok && status.data) setBuyerProStatus(status.data);
+    }
+    const quota = buyerProStatus?.plan === 'pro_active' ? 5 : 1;
+    if (facilities.length > quota) {
+      setCompareResults(facilities.slice(0, quota));
+      setCompareBlocked(facilities.length - quota);
+    } else {
+      setCompareBlocked(0);
+    }
+    await Promise.all(facilities.slice(0, quota).map(async (facility) => {
       const detail = bulkDetails[facility.id] ?? (await getFacilityDetail(facility.id)).data ?? null;
       setBulkDetails((current) => ({ ...current, [facility.id]: detail }));
     }));
-  }, [compareResults, results, bulkDetails]);
+  }, [compareResults, results, bulkDetails, buyerProStatus]);
 
   const openHome = useCallback(async () => {
     const token = await requireAuth();
@@ -621,6 +644,132 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
       setSavedError(caught instanceof Error ? caught.message : 'Vos recherches ne peuvent pas être chargées pour le moment.');
     }
   }, [requireAuth]);
+
+  const loadFavorites = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return false;
+    setFavoritesState('loading'); setFavoritesError('');
+    try {
+      const result = await listFavorites({ token });
+      if (result.ok && result.data) {
+        setFavorites(result.data.favorites ?? []);
+        setFavoriteFacilityIds(new Set((result.data.favorites ?? []).map((item) => item.facilityId)));
+        setFavoritesState('idle');
+        return true;
+      }
+      setFavoritesState('error');
+      setFavoritesError(result.error?.message ?? 'Vos favoris ne peuvent pas être chargés pour le moment.');
+      return false;
+    } catch (caught) {
+      setFavoritesState('error');
+      setFavoritesError(caught instanceof Error ? caught.message : 'Vos favoris ne peuvent pas être chargés pour le moment.');
+      return false;
+    }
+  }, [requireAuth]);
+
+  const openFavorites = useCallback(async () => {
+    setSheet('favorites');
+    await loadFavorites();
+  }, [loadFavorites]);
+
+  const toggleFavorite = useCallback(async (facilityId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    const isStarred = favoriteFacilityIds.has(facilityId);
+    try {
+      if (isStarred) {
+        const result = await removeFavorite({ token, facilityId });
+        if (result.ok) {
+          setFavoriteFacilityIds((current) => {
+            const next = new Set(current);
+            next.delete(facilityId);
+            return next;
+          });
+          setFavorites((current) => current.filter((item) => item.facilityId !== facilityId));
+        }
+      } else {
+        const result = await addFavorite({ token, facilityId });
+        if (result.ok) {
+          setFavoriteFacilityIds((current) => new Set(current).add(facilityId));
+        }
+      }
+    } catch {
+      // Networking errors are surfaced on the next favorites sheet open.
+    }
+  }, [requireAuth, favoriteFacilityIds]);
+
+  const loadBuyerProStatus = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return false;
+    setBuyerProState('loading'); setBuyerProError('');
+    try {
+      const result = await getBuyerProStatus({ token });
+      if (result.ok && result.data) {
+        setBuyerProStatus(result.data);
+        setBuyerProState('idle');
+        return true;
+      }
+      setBuyerProState('error');
+      setBuyerProError(result.error?.message ?? 'Votre plan Buyer Pro ne peut pas être chargé pour le moment.');
+      return false;
+    } catch (caught) {
+      setBuyerProState('error');
+      setBuyerProError(caught instanceof Error ? caught.message : 'Votre plan Buyer Pro ne peut pas être chargé pour le moment.');
+      return false;
+    }
+  }, [requireAuth]);
+
+  const activateBuyerProUI = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setBuyerProActivating(true); setBuyerProError('');
+    try {
+      const result = await activateBuyerPro({ token, idempotencyKey: 'buyer-pro-' + crypto.randomUUID() });
+      if (result.ok && result.data) {
+        await loadBuyerProStatus();
+        setBuyerProActivating(false);
+      } else {
+        setBuyerProError(result.error?.message ?? 'La souscription Buyer Pro n’a pas pu être confirmée.');
+        setBuyerProActivating(false);
+      }
+    } catch (caught) {
+      setBuyerProError(caught instanceof Error ? caught.message : 'La souscription Buyer Pro n’a pas pu être confirmée.');
+      setBuyerProActivating(false);
+    }
+  }, [requireAuth, loadBuyerProStatus]);
+
+  const toggleBuyerProRenewal = useCallback(async () => {
+    if (!buyerProStatus) return;
+    const token = await requireAuth();
+    if (!token) return;
+    setBuyerProError('');
+    try {
+      const result = await setBuyerProRenewalOptIn({ token, optIn: !buyerProStatus.renewalOptIn });
+      if (result.ok && result.data) {
+        setBuyerProStatus((current) => current ? { ...current, renewalOptIn: result.data!.renewalOptIn } : current);
+      } else {
+        setBuyerProError(result.error?.message ?? 'Le renouvellement automatique n’a pas pu être mis à jour.');
+      }
+    } catch (caught) {
+      setBuyerProError(caught instanceof Error ? caught.message : 'Le renouvellement automatique n’a pas pu être mis à jour.');
+    }
+  }, [requireAuth, buyerProStatus]);
+
+  const renewBuyerProUI = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setBuyerProError('');
+    try {
+      const result = await renewBuyerPro({ token });
+      if (result.ok && result.data) {
+        await loadBuyerProStatus();
+      } else {
+        setBuyerProError(result.error?.message ?? 'Le renouvellement Buyer Pro n’a pas pu être effectué.');
+      }
+    } catch (caught) {
+      setBuyerProError(caught instanceof Error ? caught.message : 'Le renouvellement Buyer Pro n’a pas pu être effectué.');
+    }
+  }, [requireAuth, loadBuyerProStatus]);
 
   const saveCurrentSearch = useCallback(async () => {
     const q = query.trim() || (results.length ? 'résultats courants' : '');
@@ -1136,6 +1285,14 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
               <button key={key} type="button" className={`sortchip${compareSort === key ? ' active' : ''}`} onClick={() => setCompareSort(key)}>{label}</button>
             ))}
           </div>
+          {compareBlocked > 0 && (
+            <div className="cardbox" style={{ marginTop: 8 }}>
+              <div className="row" style={{ justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+                <p className="sub" style={{ flex: 1, minWidth: 0 }}><b>Buyer Pro</b> · vous ne voyez que {buyerProStatus?.plan === 'pro_active' ? 5 : 1} de {compareBlocked + (buyerProStatus?.plan === 'pro_active' ? 5 : 1)} établissements. Passez Pro pour comparer jusqu’à 5.</p>
+                <button className="btn sm" style={{ width: 'auto', minHeight: 28, flexShrink: 0 }} onClick={() => { setSheet('plans'); }}>Passer Pro</button>
+              </div>
+            </div>
+          )}
           <div className="cardbox" style={{ marginTop: 8 }}>
             {[...compareResults].sort((a2,b2) => compareFacilities(a2,b2,compareSort, bulkDetails)).map((facility) => {
               const detail = bulkDetails[facility.id];
@@ -1170,6 +1327,11 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? '—'}</h1></div>
+            {selectedFacility && (
+              <button type="button" className="iconbtn" aria-label={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} title={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} style={{ color: favoriteFacilityIds.has(selectedFacility.id) ? '#2E8B6F' : 'var(--ink)', background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => void toggleFavorite(selectedFacility.id)}>
+                <Star size={20} fill={favoriteFacilityIds.has(selectedFacility.id) ? 'currentColor' : 'none'} />
+              </button>
+            )}
           </div>
           {facilityLoading && <p className="sub">Chargement…</p>}
           {!facilityLoading && selectedFacility && (
@@ -1300,8 +1462,9 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>vos établissements</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>niveau de recherche</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => { setSheet('plans'); void loadBuyerProStatus(); }}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>niveau de recherche</small></span></button>
                   </>
                 )}
                 {role === 'seller' && (
@@ -1466,6 +1629,32 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                   ))}
                 </div>
               )}
+              <div className="cardbox">
+                <div className="eyebrow">Buyer Pro</div>
+                {buyerProState === 'loading' && <p className="sub" role="status">Vérification de votre plan…</p>}
+                {buyerProState === 'error' && <p className="sub" role="alert">{buyerProError}</p>}
+                {buyerProStatus?.plan === 'pro_active' && (
+                  <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+                    <span><b>Buyer Pro actif</b>{buyerProStatus.daysLeft > 0 ? <span className="tiny muted"> · {buyerProStatus.daysLeft} j restants</span> : null}</span>
+                    <span className="status ok">Comparateur 5</span>
+                  </div>
+                )}
+                {buyerProStatus?.plan === 'pro_expired' && (
+                  <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+                    <span><b>Buyer Pro expiré</b></span>
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler (2 500 F)</button>
+                  </div>
+                )}
+                {!buyerProStatus || buyerProStatus.plan === 'free' ? (
+                  <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
+                    <span>Découverte · comparateur 1 établissement</span>
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => { setSheet('plans'); }}>Passer Pro</button>
+                  </div>
+                ) : null}
+                {buyerProStatus?.renewalOptIn && buyerProStatus.plan !== 'free' && !buyerProStatus.sufficientFunds && (
+                  <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto (2 500 F).</p>
+                )}
+              </div>
               {wallet.entries.length > 0 && (
                 <div className="cardbox">
                   <div className="eyebrow">Dernières écritures</div>
@@ -1488,18 +1677,58 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Seller' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Buyer'}</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          {(role === 'buyer' || role === 'seller') ? (
+          {(role === 'buyer') ? (
             <>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Free</b><br /><span className="tiny muted">{role === 'buyer' ? 'Découverte + recherches' : 'Découverte + 5 produits'}</span></div>
+                  <div><b>Découverte</b><br /><span className="tiny muted">Recherche + favoris + 1 comparaison</span></div>
+                  <span className="status gray">Actuel</span>
+                </div>
+                <p className="tiny muted" style={{ marginTop: 6 }}>Le comparateur est limité à <b>1 établissement</b>. Passez Pro pour comparer jusqu’à 5.</p>
+              </div>
+              <div className="cardbox">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>Buyer Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
+                  <span className="status ink">2 500 F/mois</span>
+                </div>
+                {buyerProState === 'loading' && <p className="sub" role="status" style={{ marginTop: 8 }}>Vérification de votre plan…</p>}
+                {buyerProState === 'error' && <p className="sub" role="alert" style={{ marginTop: 8 }}>{buyerProError}</p>}
+                {buyerProStatus?.plan === 'pro_active' && (
+                  <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
+                    <p className="sub"><CheckCircle2 size={14} /> Buyer Pro actif{buyerProStatus.daysLeft > 0 ? ` · ${buyerProStatus.daysLeft} j restants` : ''}</p>
+                    <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
+                      <span className="tiny muted">Renouvellement auto</span>
+                      <button type="button" className={`btn ${buyerProStatus.renewalOptIn ? 'ok' : 'ghost'} sm`} style={{ width: 'auto', minHeight: 26 }} onClick={() => void toggleBuyerProRenewal()}>{buyerProStatus.renewalOptIn ? 'Activé' : 'Désactivé'}</button>
+                    </div>
+                    {buyerProStatus.renewalOptIn && !buyerProStatus.sufficientFunds && (
+                      <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le prochain renouvellement (2 500 F).</p>
+                    )}
+                  </div>
+                )}
+                {buyerProStatus?.plan === 'pro_expired' && (
+                  <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
+                    <p className="sub">Pro expiré.{buyerProStatus.renewalOptIn && buyerProStatus.sufficientFunds ? ' Renouvellement disponible.' : ''}</p>
+                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro (2 500 F)</button>
+                  </div>
+                )}
+                {(buyerProStatus?.plan === 'free' || !buyerProStatus) && (
+                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : 'Passer à Buyer Pro (2 500 F/mois)'}</button>
+                )}
+                {buyerProError && <p className="sub" role="alert" style={{ marginTop: 6 }}>{buyerProError}</p>}
+              </div>
+            </>
+          ) : role === 'seller' ? (
+            <>
+              <div className="cardbox">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>Free</b><br /><span className="tiny muted">Découverte + 5 produits</span></div>
                   <span className="status gray">Actuel</span>
                 </div>
               </div>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Pro</b><br /><span className="tiny muted">{role === 'buyer' ? 'Recherches illimitées + alertes' : 'Stock Omni + dispo auto'}</span></div>
-                  <span className="status ink">{role === 'buyer' ? '5 $/mois' : '10 $/mois'}</span>
+                  <div><b>Pro</b><br /><span className="tiny muted">Stock Omni + dispo auto</span></div>
+                  <span className="status ink">10 $/mois</span>
                 </div>
                 <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => void openWallet()}>Passer au niveau supérieur</button>
               </div>
@@ -1549,6 +1778,41 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
             </div>
           ))}
           <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28, marginTop: 10 }} onClick={() => void saveCurrentSearch()}>+ Enregistrer la recherche courante</button>
+        </section>
+      )}
+      {sheet === 'favorites' && (
+        <section className="sheet h-mid" data-sheet="favorites" role="dialog" aria-modal="false" aria-label="Favoris" onKeyDown={trapDrawerFocus}>
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Favoris</div><h1>Vos établissements</h1></div>
+            <span className="status gray">{favorites.length}</span>
+          </div>
+          {favoritesState === 'loading' && <p className="sub" role="status">Chargement de vos favoris…</p>}
+          {favoritesState === 'error' && (
+            <div role="alert">
+              <p className="sub">{favoritesError}</p>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => void loadFavorites()}><RefreshCw size={14} /> Réessayer</button>
+            </div>
+          )}
+          {favoritesState === 'idle' && favorites.length === 0 && (
+            <div className="cardbox">
+              <p className="tiny muted">Aucun favori. Ouvrez une facilité puis touchez l’étoile pour la garder ici.</p>
+            </div>
+          )}
+          {favorites.map((favorite) => (
+            <div className="cardbox" key={favorite.id}>
+              <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <b className="fs-13" style={{ display: 'block' }}>{favorite.facilityName}</b>
+                  <span className="tiny muted">{favorite.facilityCategory ?? 'Établissement'}</span>
+                </div>
+                <button className="btn ghost sm" type="button" aria-label="Retirer des favoris" onClick={() => void toggleFavorite(favorite.facilityId)}><Star size={13} fill="currentColor" /> Retirer</button>
+              </div>
+              <div className="btnrow" style={{ marginTop: 8 }}>
+                <button className="btn ok sm" type="button" onClick={() => { setSheet('facility'); void handlePinSelect({ id: favorite.facilityId, name: favorite.facilityName } as PublicFacility); }}>Voir la facilité</button>
+              </div>
+            </div>
+          ))}
         </section>
       )}
       {sheet === 'claim' && claimResult && (

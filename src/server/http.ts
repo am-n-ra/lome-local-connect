@@ -1336,6 +1336,103 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/pro-status') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your Buyer Pro plan.'));
+        return true;
+      }
+      const result = await repository.getBuyerProStatus({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/pro') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before activating Buyer Pro.'));
+        return true;
+      }
+      const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+      const input = await parseRequestBody(req);
+      const reference = typeof input.reference === 'string' ? input.reference.trim() : idempotencyKey;
+      if (!reference || reference !== idempotencyKey || !idempotencyKey || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A matching Idempotency-Key is required to activate Buyer Pro.'));
+        return true;
+      }
+      const result = await repository.activateBuyerPro({ authUserId, now: new Date().toISOString() });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/favorites') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your favorite establishments.'));
+        return true;
+      }
+      const result = await repository.listFavorites({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/favorites') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to save a favorite establishment.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const facilityId = typeof input.facilityId === 'string' ? input.facilityId.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid establishment.'));
+        return true;
+      }
+      const result = await repository.addFavorite({ authUserId, facilityId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const favoriteFacilityMatch = pathname.match(/^\/api\/v2\/buyer\/favorites\/([0-9a-f-]{36})$/i);
+    if (favoriteFacilityMatch && req.method === 'DELETE') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to manage your favorite establishments.'));
+        return true;
+      }
+      const result = await repository.removeFavorite({ authUserId, facilityId: favoriteFacilityMatch[1] });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/pro/renewal-status') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your Buyer Pro renewal settings.'));
+        return true;
+      }
+      const result = await repository.getBuyerProStatus({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/pro/renewal-opt-in') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to update Buyer Pro auto-renewal.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const optIn = input.optIn === true || input.optIn === 'true';
+      const result = await repository.setBuyerProRenewalOptIn({ authUserId, optIn });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/pro/renew') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to renew Buyer Pro.'));
+        return true;
+      }
+      const result = await repository.renewBuyerPro({ authUserId, now: new Date().toISOString() });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

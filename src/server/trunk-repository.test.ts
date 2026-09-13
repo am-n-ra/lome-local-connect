@@ -1109,6 +1109,192 @@ describe('facility pro renewal Root seam', () => {
   });
 });
 
+describe('buyer pro Root seam (NW-13h D-K)', () => {
+  it('returns the honest plan, price, balance and compare quota for an active entitlement', async () => {
+    const call = stubSql([{
+      account_id: 'account-1',
+      entitlement_id: 'ent-1',
+      entitlement_state: 'active',
+      starts_at: '2026-08-01T00:00:00.000Z',
+      ends_at: '2028-01-01T00:00:00.000Z',
+      renewal_opt_in: true,
+      pro_price_minor: 250000,
+      billing_currency: 'XOF',
+      balance_minor: 400000,
+      credit_plan: 'pro',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
+    expect(result.plan).toBe('pro_active');
+    expect(result.proPriceMinor).toBe(250000);
+    expect(result.walletBalanceMinor).toBe(400000);
+    expect(result.sufficientFunds).toBe(true);
+    expect(result.renewalOptIn).toBe(true);
+    expect(result.compareQuota).toBe(5);
+    expect(call.queries[0]).toContain('v2_buyer_pro_entitlements');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('returns free, quota 1, when the buyer has never had Pro', async () => {
+    const call = stubSql([{
+      account_id: 'account-1',
+      entitlement_id: null,
+      entitlement_state: null,
+      starts_at: null,
+      ends_at: null,
+      renewal_opt_in: false,
+      pro_price_minor: 250000,
+      billing_currency: 'XOF',
+      balance_minor: 0,
+      credit_plan: 'free',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
+    expect(result.plan).toBe('free');
+    expect(result.compareQuota).toBe(1);
+    expect(result.entitlementId).toBeNull();
+  });
+
+  it('returns pro_expired when the entitlement ended even with opt-in still on', async () => {
+    const call = stubSql([{
+      account_id: 'account-1',
+      entitlement_id: 'ent-1',
+      entitlement_state: 'expired',
+      starts_at: '2026-06-01T00:00:00.000Z',
+      ends_at: '2026-07-01T00:00:00.000Z',
+      renewal_opt_in: true,
+      pro_price_minor: 250000,
+      billing_currency: 'XOF',
+      balance_minor: 250000,
+      credit_plan: 'free',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
+    expect(result.plan).toBe('pro_expired');
+    expect(result.sufficientFunds).toBe(true);
+    expect(result.compareQuota).toBe(1);
+  });
+
+  it('activates buyer pro from the wallet with spend, entitlement and pro credit plan', async () => {
+    const call = stubSql([{
+      id: 'ent-new-1',
+      account_id: 'account-1',
+      ends_at: '2026-10-13T00:00:00.000Z',
+      spend_ledger_entry_id: 'spend-1',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.activateBuyerPro({ authUserId: 'auth-user-1', now: '2026-09-13T00:00:00.000Z' });
+    expect(result).toEqual({
+      accountId: 'account-1',
+      entitlementId: 'ent-new-1',
+      plan: 'pro_active',
+      endsAt: '2026-10-13T00:00:00.000Z',
+      spendLedgerEntryId: 'spend-1',
+    });
+    expect(call.queries[0]).toContain('insert into v2_wallet_ledger_entries');
+    expect(call.queries[0]).toContain('buyer_pro_spend');
+    expect(call.queries[0]).toContain('insert into v2_buyer_pro_entitlements');
+    expect(call.queries[0]).toContain('insert into v2_buyer_credit_accounts');
+    expect(call.queries[0]).toContain("'pro'");
+  });
+
+  it('refuses to activate buyer pro when the wallet is short', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.activateBuyerPro({ authUserId: 'auth-user-1', now: '2026-09-13T00:00:00.000Z' }))
+      .rejects.toThrow('Insufficient wallet balance to activate Buyer Pro.');
+  });
+
+  it('flips the buyer pro opt-in and refuses it before any activation', async () => {
+    const call = stubSql([{ account_id: 'account-1', renewal_opt_in: true }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setBuyerProRenewalOptIn({ authUserId: 'auth-user-1', optIn: true });
+    expect(result).toEqual({ accountId: 'account-1', renewalOptIn: true });
+    expect(call.queries[0]).toContain('set renewal_opt_in =');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+
+    const emptyCall = stubSql([]);
+    const emptyRepository = createTrunkRepository(emptyCall.sql);
+    await expect(emptyRepository.setBuyerProRenewalOptIn({ authUserId: 'auth-user-1', optIn: true }))
+      .rejects.toThrow('Activate Buyer Pro once before choosing auto-renewal.');
+  });
+
+  it('renews a due buyer pro from the wallet when opt-in is on', async () => {
+    const call = stubSql([{
+      entitlement_id: 'ent-new-2',
+      account_id: 'account-1',
+      ends_at: '2026-10-13T00:00:00.000Z',
+      spend_ledger_entry_id: 'spend-2',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.renewBuyerPro({ authUserId: 'auth-user-1', now: '2026-09-13T00:00:00.000Z' });
+    expect(result.renewed).toBe(true);
+    expect(result.status).toBe('succeeded');
+    expect(result.newEntitlementId).toBe('ent-new-2');
+    expect(call.queries[0]).toContain('buyer_pro_spend');
+  });
+
+  it('records an insufficient_funds buyer pro renewal run when the wallet is short', async () => {
+    const call = stubSqlAlternating([[], [{ account_id: 'account-1', status: 'insufficient_funds' }]]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.renewBuyerPro({ authUserId: 'auth-user-1', now: '2026-09-13T00:00:00.000Z' });
+    expect(result.renewed).toBe(false);
+    expect(result.status).toBe('insufficient_funds');
+    expect(result.reason).toBe('insufficient_funds');
+    expect(result.accountId).toBe('account-1');
+    expect(call.queries[1]).toContain("'insufficient_funds'");
+  });
+});
+
+describe('account favorites Root seam (NW-13h D-K)', () => {
+  it('lists the buyer favorites joined to facility names, newest first', async () => {
+    const call = stubSql([{
+      favorite_id: 'fav-1',
+      facility_id: 'facility-1',
+      facility_name: 'Marché de Hanoukope',
+      facility_category: 'Fresh produce',
+      created_at: '2026-09-13T10:00:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listFavorites({ authUserId: 'auth-user-1' });
+    expect(result.favorites).toEqual([{
+      id: 'fav-1',
+      facilityId: 'facility-1',
+      facilityName: 'Marché de Hanoukope',
+      facilityCategory: 'Fresh produce',
+      createdAt: '2026-09-13T10:00:00.000Z',
+    }]);
+    expect(call.queries[0]).toContain('v2_account_favorites');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('adds a favorite idempotently and refuses when the account is unavailable', async () => {
+    const call = stubSql([{ id: 'fav-1', facility_id: 'facility-1' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.addFavorite({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result).toEqual({ favoriteId: 'fav-1', facilityId: 'facility-1' });
+    expect(call.queries[0]).toContain('on conflict (account_id, facility_id) do nothing');
+
+    const emptyCall = stubSql([]);
+    const emptyRepository = createTrunkRepository(emptyCall.sql);
+    await expect(emptyRepository.addFavorite({ authUserId: 'auth-user-1', facilityId: 'facility-1' }))
+      .rejects.toThrow('ACCOUNT_UNAVAILABLE');
+  });
+
+  it('removes a favorite and throws NOT_FOUND when it is absent', async () => {
+    const call = stubSql([{ id: 'fav-1' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.removeFavorite({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result).toEqual({ removed: true });
+    expect(call.queries[0]).toContain('delete from v2_account_favorites');
+
+    const emptyCall = stubSql([]);
+    const emptyRepository = createTrunkRepository(emptyCall.sql);
+    await expect(emptyRepository.removeFavorite({ authUserId: 'auth-user-1', facilityId: 'facility-1' }))
+      .rejects.toThrow('NOT_FOUND');
+  });
+});
+
 describe('wallet spend persistence Root seam', () => {
   it('uses the authenticated account, facility ownership, confirmed balance and append-only spend shape', async () => {
     const call = stubSql([{

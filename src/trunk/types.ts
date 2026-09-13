@@ -513,7 +513,7 @@ export interface AccountCapabilitiesResult {
   };
 }
 
-export type WalletLedgerKind = 'recharge' | 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'coupon_credit' | 'bonus_grant' | 'bonus_spend' | 'reversal';
+export type WalletLedgerKind = 'recharge' | 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'coupon_credit' | 'bonus_grant' | 'bonus_spend' | 'buyer_pro_spend' | 'reversal';
 export interface WalletLedgerSummary {
   id: string;
   kind: WalletLedgerKind;
@@ -597,6 +597,53 @@ export interface FacilityRenewalOptInResult {
 }
 export interface FacilityRenewalResult {
   facilityId: string;
+  renewed: boolean;
+  reason: string;
+  newEntitlementId: string | null;
+  endsAt: string | null;
+  spendLedgerEntryId: string | null;
+  status: string;
+}
+
+export interface AccountFavorite {
+  id: string;
+  facilityId: string;
+  facilityName: string;
+  facilityCategory: string;
+  createdAt: string;
+}
+export interface FavoritesResult {
+  favorites: AccountFavorite[];
+}
+
+export type BuyerProPlan = 'free' | 'pro_active' | 'pro_expired';
+export interface BuyerProStatus {
+  accountId: string;
+  plan: BuyerProPlan;
+  entitlementId: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  renewalOptIn: boolean;
+  daysLeft: number;
+  proPriceMinor: number;
+  billingCurrency: string;
+  walletBalanceMinor: number;
+  sufficientFunds: boolean;
+  compareQuota: number;
+}
+export interface BuyerProActivationResult {
+  accountId: string;
+  entitlementId: string;
+  plan: 'pro_active';
+  endsAt: string;
+  spendLedgerEntryId: string;
+}
+export interface BuyerProOptInResult {
+  accountId: string;
+  renewalOptIn: boolean;
+}
+export interface BuyerProRenewalResult {
+  accountId: string;
   renewed: boolean;
   reason: string;
   newEntitlementId: string | null;

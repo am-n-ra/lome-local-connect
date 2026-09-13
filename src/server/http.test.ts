@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
-import { AvailabilityPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
+import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
 const requestWithBody = (value: string) => ({
@@ -170,6 +170,18 @@ describe('Root HTTP error boundary', () => {
 
   it('maps the Pro auto-renewal opt-in WalletPolicyError to a non-retryable 409', () => {
     const response = toApiErrorResponse('corr-renew-optin', new WalletPolicyError('Activate Omni Pro once before choosing auto-renewal.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+  it('maps a favorites buyer-search policy rejection to a non-retryable 409', () => {
+    const response = toApiErrorResponse('corr-favorites', new BuyerSearchPolicyError('NOT_FOUND'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+  it('maps a buyer pro activation shortfall to a non-retryable 409', () => {
+    const response = toApiErrorResponse('corr-buyer-pro', new WalletPolicyError('Insufficient wallet balance to activate Buyer Pro.'));
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('POLICY_REJECTED');
     expect(response.body.error.retryable).toBe(false);
