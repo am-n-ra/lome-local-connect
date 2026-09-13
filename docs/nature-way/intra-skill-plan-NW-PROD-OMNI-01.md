@@ -480,3 +480,53 @@ Le vendeur voit un bandeau « Bonus confiance » : X/3 acheteurs distincts, 20 U
 > **Residual gap:** `seller_unlocks` legacy supabase (020/021) non branché ( le trunk v2 a son objet propre ( ; le grant reste dans le wallet v2 ( non withdrawable par design D-H (.
 > **Next smallest action:** sur **ordre fondateur** → apply 046 canonical + push prod + proof navigateur réel (bandeau bonus); ensuite **NW-13g** ( prochaine slice P1 (.
 > **Re-plan trigger:** le comptage distinct diverge du nombre réel de transactions closed; statut eligible mais grant rejeté; le même buyer compte deux fois.
+
+
+## Slice borné — P1-D NW-13g « Renouvellement Pro auto » (D-I, 2026-09-13)
+
+> **Handoff:** fondateur verrouille D-I ( auto-renouvellement Pro via wallet + opt-out explicite + rappel ( → **NW-13g livré sur `omni-v2-rebuild`**; apply canonical + push = ordre fondateur ( exécuté 2026-09-13 (. Evidence register: `docs/nature-way/omni-nw13g-facility-pro-renewal-evidence-2026-09-13.md`.
+
+- **Migration `047_v2_facility_pro_renewal.sql`** → `v2_facility_renewal_runs` (audit: facility_id FK CASCADE, prior/new_entitlement_id, spend_ledger_entry_id, run_at, status CHECK `(succeeded, insufficient_funds, skipped, failed)`, note, created_at, comment D-I, index (facility_id, run_at desc)) — additive+idempotent; **APPLIED canonical `br-dawn-hill-am5amy22` 2026-09-13 12:15:28Z (registre `7d021a17…`)**; preuve branche temp `br-divine-mouse-amlmqnmf` T1-T7.
+- **Repo**: `getFacilityRenewalStatus` ( plan véridique pro_active/pro_expired/free dérivé de l'entitlement ( ; `setFacilityRenewalOptIn` ( refuse sans activation, 409 ( ; `renewFacilityPro` ( spend wallet ref `facility-pro-renew:{id}:{period}` + entitlement 30 j + `pro_active` + audit; insufficient_funds sans spend ( ; `getWalletOverview` enrichi.
+- **HTTP**: GET renewal-status + POST renewal-opt-in + POST renew — owner-only; 401/400; 409 WalletPolicyError.
+- **Client/UI**: `getFacilityRenewalStatus`/`setFacilityRenewalOptIn`/`renewFacilityPro`; SellerV13 carte « Pro · renouvellement » + wallet sheet « renouvellement auto ON ».
+- **Preuve**: tsc clean; **55 files/393 tests** (+12); build `index-DHes2HoI.js`; boundary clean.
+- **Après apply+push (2026-09-13)**: prod sert `index-DHes2HoI.js` + `index-CXK07M8c.css` === dist local byte-identical ( T-07d ✅ (; 3 routes renewal 401 owner-only en prod; chaînes UI NW-13g présentes dans le bundle prod.
+
+## Slice borné — P3 NW-13h « Acheteur Pro » (D-K, 2026-09-13)
+
+> **Handoff:** fondateur verrouille D-K ( **Acheteur Pro lancé maintenant (favoris + comparateur; recommandations ensuite)** ( → **NW-13h prochaine tranche** après clôture P1 vendeur ( livré + prod (.
+
+### Start-of-slice
+
+> **Structural path:** product > trunk buyer > acheteur Pro ( plans Free/Pro ( D-K (
+> **Phase:** Trunk/Branches — tranche acheteur monétisée ( P3 dans NW-14 ordre P0→P1→P2→P3 (
+> **Slice:** l'acheteur peut passer son compte en **Pro ( 2 500 XOF/mois (**, obtenir des **favoris établissements persistants** + un **comparateur multi-critères jusqu'à 5 comparaisons actives** + **crédits bulk ≈ 100/mois**, avec activation wallet + entitlement + quotas véridiques.
+> **Dependencies:** wallet v2 ( kinds + entitlement `facility_pro` existants (; `v2_buyer_credit_accounts` ( plan free/pro ( ; migration buyer-favoris ( nouvelle table (; quota comparateur ( colonne ou dérivation ( ; HTTP owner-only.
+> **Non-goals:** recommandations automatisées ( = NW-13h+ ou slice ultérieure (; packs payants mobile money ( = NW-13i (; catalogue illimité vendeur déjà live.
+> **Definition of done:** activation Pro buyer payée wallet ( kind `buyer_pro_spend` ), entitlement 30 j, plan crédits → `pro` + monthly_quota ≈100, favoris établissements persistants ( bookmark toggle ), comparateur quota Free=1 / Pro=5, preuves tests+build+DB.
+
+> ⚠️ **Arbitrage fondateur requis avant code** ( D-K est un niveau décision, pas un contrat de tranche (:
+> 1. **« Favoris persistants » = ?** (a) établissements favoris ( nouvelle table `v2_account_favorites`, toggle étoile sur carte/détail ( ( recommandé, vs (b) seulement sauvegarder des recherches ( déjà existant (`v2_saved_searches`) (.
+> 2. **Quota comparateur = ?** (a) « N comparaisons actives » simultanées (Free 1 / Pro 5) avec compteur ( ( recommandé, vs (b) libérations illimitées pour Free mais **1 seule active** ( déjà vrai implicitement (.
+> 3. **Activation Pro buyer = ?** (a) paiement wallet 2 500 XOF/mois ( nouveau kind `buyer_pro_spend` + entitlement + opt-out/rappel symétrique été NW-13g ( ( recommandé, vs (b) activation gratuite pilote ( dérive du revenu figé D-K (
+> 4. **Crédits Pro ≈100** : dériver de `monthly_quota=100` quand plan=`pro` ( vérif mensuelle existante déjà en place (.
+
+### Gate plan ( NW-13h ( — provisoire jusqu'à arbitrage fondateur
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Migration — favoris établissements (+ quota comparateur si (a( | Additive, idempotent | Fichier SQL; preuve branche temp Neon | `todo` ( attend arbitrage ( |
+| 2 | Wallet — kind `buyer_pro_spend` + entitlement buyer Pro 30 j + plan crédits → pro/≈100 | Paiement wallet véridique; transition plan | Tests repo + preuve DB | `todo` ( attend arbitrage ( |
+| 3 | Repo — favoris ( add/remove/list ( + quota comparateur actives | Persistance + comptage; refus Free >1 ; déblocage Pro ≤5 | Tests repo | `todo` ( attend arbitrage ( |
+| 4 | HTTP — routes favoris owner + routes Pro buyer (status/activate( | 401/400/409 owner-only | Tests http | `todo` ( attend arbitrage ( |
+| 5 | Client/types + UI — étoile favori, écran favoris, comparateur quota, plans (carte Pro acheteur( | Serialize + types; UI cohérente | tsc + build; navigateur résidu | `todo` ( attend arbitrage ( |
+| 6 | Preuve locale complète | tsc clean; suite; build; boundary | commandes sorties | `todo` |
+| 7 | Preuve DB live (Neon MCP) | favoris persistés; quota enforce; activation Pro véridique | requêtes live ( branche temp ( | `todo` |
+
+### Handoff ( NW-13h ( — attente arbitrage fondateur
+
+> **Local status:** `ready` ( cadrage; attend arbitrage 1-4 (.
+> **Gate decision:** `pause at decision boundary` — NW-13h nécessite la composition exacte avant code ( D-K verrouillée mais composition non spécifiée (.
+> **Next smallest action:** fondateur répond aux 4 points d'arbitrage ( ou « vas-y » → défauts recommandés (a(; puis code la tranche verticale.
+> **Re-plan trigger:** l'arbitrage change la portée ( favoris absence, quota différent, activation gratuite (; une migration nickel produit un schéma divergent.
