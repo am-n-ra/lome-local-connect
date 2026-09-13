@@ -586,16 +586,38 @@ function createTrunkRepository(sql = database()) {
       return { authorized: true, events: rows.map((row) => ({ id: String(row.id), eventType: String(row.event_type), entityType: String(row.entity_type), entityId: String(row.entity_id), actorAccountId: row.actor_account_id === null ? null : String(row.actor_account_id), reason: row.reason === null ? null : String(row.reason), createdAt: new Date(String(row.created_at)).toISOString(), facilityName: row.facility_name === null ? null : String(row.facility_name), latitude: row.latitude === null ? null : Number(row.latitude), longitude: row.longitude === null ? null : Number(row.longitude) })) };
     },
     async createSellerFacility(input) {
-      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180 || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+      const typeValid = input.facilityType === "fixe" || input.facilityType === "mobile" || input.facilityType === "digital";
+      const nameValid = input.name.trim().length > 0 && input.name.trim().length <= 180;
+      const keyValid = input.idempotencyKey.trim().length > 0 && input.idempotencyKey.length <= 180;
+      const latitudeValid = input.latitude === null || Number.isFinite(input.latitude) && input.latitude >= -90 && input.latitude <= 90;
+      const longitudeValid = input.longitude === null || Number.isFinite(input.longitude) && input.longitude >= -180 && input.longitude <= 180;
+      const rayonValid = input.rayonKm === null || Number.isFinite(input.rayonKm) && input.rayonKm > 0 && input.rayonKm <= 500;
+      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid) {
         throw new SellerCataloguePolicyError("INVALID_INPUT");
       }
+      if (input.facilityType !== "digital" && (input.latitude === null || input.longitude === null)) {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      if (input.rayonKm !== null && input.facilityType !== "mobile") {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      await retryDatabase(() => sql`
+        insert into v2_facility_slots (account_id, source)
+        select a.id, 'free'
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and not exists (
+            select 1 from v2_facility_slots fs where fs.account_id = a.id and fs.source = 'free'
+          )
+        on conflict (account_id) where source = 'free' do nothing
+      `);
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id
           from v2_accounts a
           where a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
-            and a.onboarding_state = 'seller_ready'
         ), existing as (
           select f.id as facility_id, fs.id as slot_id, false as created
           from v2_facilities f
@@ -612,8 +634,8 @@ function createTrunkRepository(sql = database()) {
           limit 1
         ), inserted as (
           insert into v2_facilities
-            (account_id, source_kind, source_name, source_ref, name, category, description, latitude, longitude, address, trust_state)
-          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.address?.trim() || null}, 'verification_draft'
+            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, 'unconfirmed'
           from available_slot
           where not exists (select 1 from existing)
           returning id as facility_id
@@ -631,7 +653,7 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
-      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: "verification_draft", created: row.created === true };
+      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: "unconfirmed", facilityType: input.facilityType, created: row.created === true };
     },
     async createPublicFacilityImport(input) {
       if (input.provider !== "openstreetmap" || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
@@ -1399,7 +1421,6 @@ function createTrunkRepository(sql = database()) {
         from v2_accounts a
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-          and a.onboarding_state = 'seller_ready'
         limit 1
       `);
       if (!authorizationRows[0]) return { authorized: false, catalogReady: false, facilities: [], products: [] };
@@ -1410,6 +1431,9 @@ function createTrunkRepository(sql = database()) {
           coalesce(f.category, 'Autre') as category,
           f.address,
           f.operational_state,
+          f.facility_type,
+          f.rayon_km,
+          f.trust_state,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -1418,7 +1442,6 @@ function createTrunkRepository(sql = database()) {
         left join v2_products p on p.facility_id = f.id and p.publication_state <> 'archived'
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-          and a.onboarding_state = 'seller_ready'
         group by f.id
         order by f.name asc, f.id asc
       `);
@@ -1430,7 +1453,10 @@ function createTrunkRepository(sql = database()) {
         currency: String(row.currency),
         slotState: "active",
         operationalState: ["ouvert", "ferme", "temporairement_indisponible"].includes(String(row.operational_state)) ? String(row.operational_state) : "ouvert",
-        productCount: Number(row.product_count ?? 0)
+        productCount: Number(row.product_count ?? 0),
+        facilityType: row.facility_type === "fixe" || row.facility_type === "mobile" || row.facility_type === "digital" ? String(row.facility_type) : null,
+        rayonKm: row.rayon_km === null ? null : Number(row.rayon_km),
+        trustState: String(row.trust_state ?? "unclaimed")
       }));
       const rows = await retryDatabase(() => sql`
         select
@@ -3387,6 +3413,26 @@ async function parseRequestBody(req) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new ApiInputError("Request body must be an object.");
   return parsed;
 }
+function validateSellerFacilityCreate(body, idempotencyKey, authUserId) {
+  const name = typeof body.name === "string" ? body.name : "";
+  const facilityType = typeof body.facilityType === "string" ? body.facilityType : "";
+  const category = body.category === null || body.category === void 0 ? null : typeof body.category === "string" ? body.category : "";
+  const description = body.description === null || body.description === void 0 ? null : typeof body.description === "string" ? body.description : "";
+  const address = body.address === null || body.address === void 0 ? null : typeof body.address === "string" ? body.address : "";
+  const latitude = body.latitude === null || body.latitude === void 0 || body.latitude === "" ? null : Number(body.latitude);
+  const longitude = body.longitude === null || body.longitude === void 0 || body.longitude === "" ? null : Number(body.longitude);
+  const rayonKm = body.rayonKm === null || body.rayonKm === void 0 || body.rayonKm === "" ? null : Number(body.rayonKm);
+  if (facilityType !== "fixe" && facilityType !== "mobile" && facilityType !== "digital") {
+    throw new ApiInputError("A valid facility type (fixe, mobile, digital) is required.");
+  }
+  const type = facilityType;
+  const coordsRequired = type !== "digital";
+  const validCoords = (v, min, max) => v === null || Number.isFinite(v) && v >= min && v <= max;
+  if (!name.trim() || name.length > 180 || coordsRequired && (latitude === null || longitude === null) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || type === "mobile" && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500) || type !== "mobile" && rayonKm !== null || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+    throw new ApiInputError("A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.");
+  }
+  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, idempotencyKey };
+}
 function extractFedaPayTransaction(payload) {
   const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : null;
   const nested = object && object.transaction && typeof object.transaction === "object" && !Array.isArray(object.transaction) ? object.transaction : object ?? null;
@@ -4370,17 +4416,10 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const input = await parseRequestBody(req);
-      const name = typeof input.name === "string" ? input.name : "";
-      const category = input.category === null || input.category === void 0 ? null : typeof input.category === "string" ? input.category : "";
-      const description = input.description === null || input.description === void 0 ? null : typeof input.description === "string" ? input.description : "";
-      const address = input.address === null || input.address === void 0 ? null : typeof input.address === "string" ? input.address : "";
-      const latitude = Number(input.latitude);
-      const longitude = Number(input.longitude);
-      const idempotencyKey = req.headers["idempotency-key"];
-      if (!name.trim() || name.length > 180 || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
-        throw new ApiInputError("A valid facility name, coordinates and idempotency key are required.");
-      }
-      const result = await repository.createSellerFacility({ authUserId, name, category, description, address, latitude, longitude, idempotencyKey });
+      const rawIdempotencyKey = req.headers["idempotency-key"];
+      const idempotencyKey = Array.isArray(rawIdempotencyKey) ? rawIdempotencyKey[0] : rawIdempotencyKey ?? "";
+      const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
+      const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }

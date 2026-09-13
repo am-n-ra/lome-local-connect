@@ -325,8 +325,44 @@ Preuves globales: `npx tsc --noEmit` clean; `npx vitest run` **55 files / 347 te
 > **Local status:** `verified` — tsc clean, 347/347 tests, build OK, boundary clean
 > **Gate decision:** `advance` — P0 clôturé; **Gate 6 CLOSED sur verdict fondateur「 Go with limits 」 2026-09-11**; passe à P1 (∥ ou séquentiel) selon ordre validé fondateur
 > **Closed:** P0-A (`952df28`), P0-B (`5cd175c`), P0-C (`5cd175c`); **Gate 6 Canopy/launch-readiness CLOSED (verdict fondateur「 Go with limits 」 2026-09-11)**
-> **Open or blocked:** rien; **P1** ( NW-13c→13d→13e→13g( et **P2** ( gouvernance team/operator( = `planned`, post-verdict fondateur Gate 6
+> **Open or blocked:** rien; **P1** ( NW-13c→13d→13e→13g( actif — **NW-13c (P1-A) `done` 2026-09-11**; NW-13d/e/g + **P2** ( gouvernance( = `planned` (tranches suivantes)
 > **Resource Receipt:** `intra-skill-plan` + `fallback-map-surface` + `search-constraints` + maquette V1.3
 > **Residual gap:** P0-C « Monde », 0 km (null rayon( reste **intention non câblée** ( `rayonScopeStatusFor('Monde')` = wired mais `rayonScopeOptionsFor('Monde')` = undefined (; le serveur api.ts:91 attend `rayon_km` numérique; null = « pas de filtre rayon » → UI le rend active sans option serveur. Verdict honnête: le chip Monde reste un no-op serveur jusqu'à tranche rayon-serveur additionnelle — documenté, pas masqué.
 > **Next smallest action:** fermer le chip « Monde » en tranche mini P0-C-2 ( serveur `rayon_km`: accepte absent = monde entier( ou le marquer `soon` honnêtement, selon décision fondateur.
 > **Re-plan trigger:** erreur runtime fallback ( eslint/build ⁠(; retour fondateur « countmark non visible »; divergence prod hash.
+
+
+## Slice borné — P1-A NW-13c « Création de facilité serveur+UI » ( HO-OMNI-13, 2026-09-11
+
+> **Handoff:** `docs/founder-hq/handoff-receipt-HO-OMNI-13.md` — fondateur : « /nature-way go with limits /nature-way-founder-hq » → **P1 lancé**; ordre NW-13c→13d→13e→13g.
+> **Gate:** Gate 6 `CLOSED` (maintient); P1-A ( NW-13c(. Gate 7 Venture Lifecycle = watch.
+> **Maturité cible:** facility creation serveur+UI — formulaire minimal, 3 types (`fixe`/`mobile`/`digital`), zone/rayon mobile, digital sans point géo, trust `unconfirmed`, puis proof flow; vendeur universel ( tout compte authentifié peut créer (.
+
+### Resource Receipt ( P1-A(
+
+| Status | Exact path |
+|---|---|
+| Loaded | `.agents/skills/nature-way/SKILL.md`; `references/execution-controller.md`, `references/intra-skill-execution-controller.md`, `references/proof-and-decision-ledger.md`, `references/autonomous-delivery-gates.md`, `references/anti-slop-and-debt-review.md`; NW-13 spec `docs/nature-way/omni-nw-13-seller-entry-respec-2026-09-10.md`; NW-13b `omni-nw-13b-plans-free-pro-spec-2026-09-10.md` ( D-E…D-J ( |
+| Template instantiated | `templates/intra-skill-plan.md` → cette section; `templates/skill-handoff-receipt.md` → `handoff-receipt-HO-OMNI-13.md`; `templates/production-evidence-register.md` → `docs/nature-way/omni-nw13c-facility-creation-evidence-2026-09-11.md` |
+| Not loaded / reason | `launch-envelope.md` ( pas de release; pas de push prod sans ordre fondateur ( guardrail T-07d ( ; `portable-starter` ( pas de transfert ( |
+
+### Gate plan ( P1-A(
+
+| Order | Workstream | Gate condition | Evidence required | Status |
+|---|---|---|---|---|
+| 1 | Migration 044 ( facility_type/rayon/lat-lng nullable ( | Additive, idempotent, apply fondateur sur Neon | Fichier SQL; registry post-apply | `ready` (écrit; **apply = fondateur**) |
+| 2 | Repo `createSellerFacility` | Type strict + coords/rayon validation; provision slot free (D-J(; trust `unconfirmed` (D-B(; vendeur universel (D-A( | Tests repo 5 | `done` |
+| 3 | HTTP route + validator | Validator pur `validateSellerFacilityCreate`; per-type; 401 sans auth; 201/200 | Tests http 6 | `done` |
+| 4 | Client `createSellerFacility` + types | Serialize facilityType/rayonKm/coords nullable; `CreateSellerFacilityResult` | Tests api 2 | `done` |
+| 5 | UI SellerV13 formulaire | Hint → formulaire minimal 3 types → POST → refresh → P3; « Me localiser » | tsc + build; visuel navigateur = résidu | `done` (code(; navigateur réel = résidu |
+| 6 | Preuve locale complète | tsc clean; suite; build; boundary | commandes sorties | `done` |
+
+### Handoff ( P1-A( — retour fondateur
+
+> **Local status:** `verified` — tsc clean, 55 files/360 tests ( (+13(, `tsc -b` + vite build verts ( bundle `index-CBKUqllX.js` (, `check:boundary` clean; bundles serverless (12( régénérés ( route `POST /api/v2/seller/facilities` → catch-all → `handleApi` (.
+> **Gate decision:** `advance` — NW-13c ( P1-A( livré branch-only; **Gate 6 reste CLOSED** ( rien n'a changé le verdict fondateur ( ; Gate 7 = watch.
+> **Closed:** migration 044 ( écrit, non appliqué (; repo; HTTP; client; types; UI SellerV13 ( formulaire minimal 3 types (.
+> **Open or blocked:** **apply 044 sur Neon = fondateur** ( classe manuelle, même classe que 038/039/043 ( ; proof navigateur réel non exécuté ( sandbox sans DB/Auth ( ; prod non poussé ( guardrail T-07d, push = ordre fondateur ( ; digital facility non visible publiquement jusqu'à une tranche vitrine ( not in NW-13c scope (.
+> **Residual gap:** apply Neon; spot-check navigateur formulaire; prod-hash une fois poussé par ordre fondateur.
+> **Next smallest action:** fondateur applique `044` sur Neon puis, sur ordre explicite, push prod + proof navigateur; ensuite **NW-13d ( crédits bulk ( 3 Free/mois, Pro ≈ 100/mois ( **.
+> **Re-plan trigger:** 044 rejeté par Postgres ( revoir CHECK/type (; divergence prod-hash au push; retour fondateur sur l'UI formulaire.

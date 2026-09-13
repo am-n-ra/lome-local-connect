@@ -237,6 +237,8 @@ export interface SellerAvailabilityQueue {
 
 export type SellerCataloguePublicationState = 'draft' | 'pending_validation' | 'published' | 'sold_out' | 'archived';
 
+export type FacilityType = 'fixe' | 'mobile' | 'digital';
+
 export interface SellerCatalogueFacility {
   id: string;
   name: string;
@@ -246,6 +248,17 @@ export interface SellerCatalogueFacility {
   slotState: 'active' | 'missing';
   operationalState: FacilityOperationalState;
   productCount: number;
+  facilityType: FacilityType | null;
+  rayonKm: number | null;
+  trustState: string;
+}
+
+export interface CreateSellerFacilityResult {
+  facilityId: string;
+  slotId: string;
+  trustState: 'unconfirmed';
+  facilityType: FacilityType;
+  created: boolean;
 }
 
 export type ProductAvailabilityState = 'en_stock' | 'verifie' | 'a_valider' | 'bientot';

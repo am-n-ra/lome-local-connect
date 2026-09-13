@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, setSellerAccountSuspension, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -164,6 +164,37 @@ describe('listPublicFacilities search contract', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/demo-rebind',
       { method: 'POST', headers: { Accept: 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
+    );
+  });
+});
+
+
+describe('createSellerFacility contract (NW-13c)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('serializes a typed facility with optional rayon to the seller facility endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', slotId: 'slot-1', trustState: 'unconfirmed', facilityType: 'mobile', created: true } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createSellerFacility({ token: 'session-token', name: 'Échoppe mobile', facilityType: 'mobile', category: 'Épicerie', description: null, address: 'Lomé', latitude: 6.13, longitude: 1.22, rayonKm: 5, idempotencyKey: 'nwc13-client-key-0001' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'nwc13-client-key-0001' }),
+        body: JSON.stringify({ name: 'Échoppe mobile', facilityType: 'mobile', category: 'Épicerie', description: null, address: 'Lomé', latitude: 6.13, longitude: 1.22, rayonKm: 5 }),
+      }),
+    );
+  });
+
+  it('serializes a digital facility without coordinates', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-2', slotId: 'slot-2', trustState: 'unconfirmed', facilityType: 'digital', created: true } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createSellerFacility({ token: 'session-token', name: 'Boutique en ligne', facilityType: 'digital', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null, idempotencyKey: 'nwc13-client-key-0002' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities',
+      expect.objectContaining({ body: JSON.stringify({ name: 'Boutique en ligne', facilityType: 'digital', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null }) }),
     );
   });
 });

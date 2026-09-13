@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, FacilityOperationalState, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -175,11 +175,11 @@ export async function getSellerAvailabilityQueue(input: { token: string }): Prom
   return parse<SellerAvailabilityQueue>(response);
 }
 
-export async function createSellerFacility(input: { token: string; name: string; category?: string | null; description?: string | null; address?: string | null; latitude: number; longitude: number; idempotencyKey: string }): Promise<ApiResult<{ facilityId: string; slotId: string; trustState: 'verification_draft'; created: boolean }>> {
+export async function createSellerFacility(input: { token: string; name: string; facilityType: FacilityType; category?: string | null; description?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; rayonKm?: number | null; idempotencyKey: string }): Promise<ApiResult<CreateSellerFacilityResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/facilities', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
-    body: JSON.stringify({ name: input.name, category: input.category ?? null, description: input.description ?? null, address: input.address ?? null, latitude: input.latitude, longitude: input.longitude }),
+    body: JSON.stringify({ name: input.name, facilityType: input.facilityType, category: input.category ?? null, description: input.description ?? null, address: input.address ?? null, latitude: input.latitude ?? null, longitude: input.longitude ?? null, rayonKm: input.rayonKm ?? null }),
   });
   return parse(response);
 }

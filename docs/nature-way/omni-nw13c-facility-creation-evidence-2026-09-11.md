@@ -1,0 +1,27 @@
+# Production Evidence Register — NW-13c « Création de facilité » (P1-A)
+
+> **Target maturity:** M-01 pilot-ready V1 (canopy/launch-readiness)
+> **Decision:** Gate 6 `CLOSED` `Go with limits` (verdict fondateur 2026-09-11); P1 ordre NW-13c→13d→13e→13g verrouillé, code débloqué.
+> **As of:** 2026-09-11
+> **Release owner:** Nature Way (route `/nature-way`); arbitre fondateur.
+> **Scope NW-13c (P1-A, validé fondateur):** facility creation server+UI — formulaire minimal, 3 types strictes (`fixe`/`mobile`/`digital`), zone/rayon pour mobile, digital sans point géo, trust `unconfirmed`, puis proof flow; **vendeur universel** (: tout compte authentifié peut créer (.
+
+| Acceptance / control | Method or scenario | Environment and data basis | Result / evidence link | Evidence class | Residual gap / limit | Owner and review trigger |
+|---|---|---|---|---|---|---|
+| Migration 044 — schéma | `facility_type` strict (fixe/mobile/digital), `rayon_km` (mobile), lat/lng nullable (digital sans point). Additive, idempotent, re-run sûr | `db/migrations/044_v2_facility_type_rayon.sql`; style 043 (ADD COLUMN IF NOT EXISTS / DROP CONSTRAINT IF EXISTS / DROP NOT NULL) | Fichier créé; non encore appliqué sur Neon par fondateur (classe manuelle, même classe que 038/039/043) | `static` ( code SQL lisible ( + `observed` ( diff ( | **Application Neon requise (fondateur)** — vérification colonnes/contraintes après apply; backfill registre `omni_schema_migrations` | Fondateur (apply-migration / SQL editor)(; Nature Way / re-vérifier post-apply |
+| Repo — `createSellerFacility` étendu | Type strict + validation coords/rayon; provision slot free si absent (D-J `v2_one_free_slot_per_account`); trust `unconfirmed` (D-B); autorise account non-`seller_ready` (vendeur universel D-A) | `src/server/trunk-repository.ts` `createSellerFacility`; tests repo (5 nouveaux) | Repo tests verts; retours: `INVALID_INPUT` (type/coords/rayon(, `FORBIDDEN_OR_SLOT_REQUIRED` | `reproduced` ( unitaire, code ( | PS l'idempotence re-joue la provision slot ( harmless(; pas de test navigateur réel ( pas de DB locale ( | Nature Way / spot-check navigateur après déploiement |
+| HTTP — `POST /api/v2/seller/facilities` | Validator pur `validateSellerFacilityCreate` (type/coords/digital sans point / rayon mobile; route 401 sans auth; 201 créé / 200 idempotent | `src/server/http.ts` + `src/server/http.test.ts` (6 nouveaux) | tsc clean; http.test vert | `reproduced` ( unitaire, code ( | Route non exercée end-to-end en prod ( nécessite Neon + Auth ( | Nature Way / proof API après apply+push |
+| Client — `createSellerFacility` | Serialize `facilityType` + `rayonKm` + coords nullables; résultat `trustState:'unconfirmed'`,types partagés | `src/trunk/api.ts` + `src/trunk/api.test.ts` (2 nouveaux( | tsc clean; api.test vert | `reproduced` ( unitaire, code ( | — | — |
+| UI — formulaire SellerV13 | Remplacer hint « la création arrive avec la spec Free/Pro » par un formulaire réel: type (fixe/mobile/digital(, nom, catégorie/description, adresse, coords si fixe/mobile (btn « Me localiser »), rayon si mobile, **zéro point si digital**; POST + refresh → P3; toast | `src/trunk/SellerV13.tsx` (vide P2→formulaire→P3(; build vert | tsc clean; suite 55f/360t; build vert; boundary clean | `reproduced` ( code ( ; visuel navigateur non capturé | Aucun navigateur réel ouvert ( pas de capture flux créations ( | Nature Way / audit visuel navigateur + fondateur spot-check |
+| ListSellerCatalogue aligné | Retire la garde `seller_ready` (vendeur universel(; expose `facilityType`/`rayonKm`/`trustState` pour vitrine | `src/server/trunk-repository.ts` `listSellerCatalogue` | tsc clean; suite vert | `reproduced` ( code + tests fixtures ( | — | — |
+| Guardrail T-07d (prod hash === local( | Vercel Hobby 12 functions + catch-all; route `seller/facilities` passe par catch-all `availability.js?__path=` → `handleApi` | `vercel.json` rewrite `/api/v2/:path*` → `/api/v2/availability`; `src/server/vercel/availability.ts` | Bundles Vercel regénérés (12 .js(; build vert | `observed` ( config + bundle généré ( | Prod serve toujours l'ancien bundle (`index-CMHAUJH7.js`( — **pousse prod = ordre fondateur explicite**, puis re-hash-check | Fondateur / ordre push |
+
+## History and rationalité
+
+- **NW-13c tranche P1-A** — coverage des 4 plaintes fondateur NW-13: le nouveau vendeur légitime peut (1( voir l'espace seller (universel, `eligibleRoles` + garde `seller_ready` retirée(, (2( **créer sa facilité** ( formulaire minimal multi-type ( , (3( **claim depuis le bon endroit** ( P2 carte pour revendiquer / P2 formulaire pour créer → P3 catalogue (.
+- Suite monte **347 → 360 tests** (+13): repo 5, http 6, client 2.
+- **Guardrail T-07d:** non poussé (pas d'ordre fondateur); le futur push prod devra vérifier que prod sert le bundle local (`index-CBKUqllX.js`).
+
+## Exposure plan
+
+Audience: fondateur ( verdict Gate 6 / ordre push ( + pionnier Lomé. Rollout: branch `omni-v2-rebuild` uniquement; pousse prod = ordre fondateur (guardrail T-07d(. Guardrail: ne jamais merger vers `main`. Rollback: revert commit + rebuild. Limites assumées: migration 044 non encore appliquée ( grind fondateur (; proof navigateur réel non exécuté ( sandbox sans DB/Auth (; prod hash non mis à jour ( pas de push (.

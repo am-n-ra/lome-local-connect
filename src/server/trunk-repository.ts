@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, FacilityDetail, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -704,23 +704,52 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     async createSellerFacility(input: {
       authUserId: string;
       name: string;
+      facilityType: FacilityType;
       category: string | null;
       description: string | null;
       address: string | null;
-      latitude: number;
-      longitude: number;
+      latitude: number | null;
+      longitude: number | null;
+      rayonKm: number | null;
       idempotencyKey: string;
-    }): Promise<{ facilityId: string; slotId: string; trustState: 'verification_draft'; created: boolean }> {
-      if (!input.name.trim() || input.name.trim().length > 180 || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180 || !input.idempotencyKey.trim() || input.idempotencyKey.length > 180) {
+    }): Promise<CreateSellerFacilityResult> {
+      const typeValid = input.facilityType === 'fixe' || input.facilityType === 'mobile' || input.facilityType === 'digital';
+      const nameValid = input.name.trim().length > 0 && input.name.trim().length <= 180;
+      const keyValid = input.idempotencyKey.trim().length > 0 && input.idempotencyKey.length <= 180;
+      const latitudeValid = input.latitude === null || (Number.isFinite(input.latitude) && input.latitude >= -90 && input.latitude <= 90);
+      const longitudeValid = input.longitude === null || (Number.isFinite(input.longitude) && input.longitude >= -180 && input.longitude <= 180);
+      const rayonValid = input.rayonKm === null || (Number.isFinite(input.rayonKm) && input.rayonKm > 0 && input.rayonKm <= 500);
+      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid) {
         throw new SellerCataloguePolicyError('INVALID_INPUT');
       }
+      // D-F: a physical facility (fixe/mobile) needs coordinates; a digital facility has no point.
+      if (input.facilityType !== 'digital' && (input.latitude === null || input.longitude === null)) {
+        throw new SellerCataloguePolicyError('INVALID_INPUT');
+      }
+      // The discovery radius only applies to mobile facilities.
+      if (input.rayonKm !== null && input.facilityType !== 'mobile') {
+        throw new SellerCataloguePolicyError('INVALID_INPUT');
+      }
+      // The universal seller (D-A) can create a facility from an account that is not yet
+      // `seller_ready`: creation is the P2→P3 hand-off. A free slot is provisioned if the
+      // account has none (D-J Free = 1 free slot per account).
+      await retryDatabase(() => sql`
+        insert into v2_facility_slots (account_id, source)
+        select a.id, 'free'
+        from v2_accounts a
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and not exists (
+            select 1 from v2_facility_slots fs where fs.account_id = a.id and fs.source = 'free'
+          )
+        on conflict (account_id) where source = 'free' do nothing
+      `);
       const rows = await retryDatabase(() => sql`
         with seller as (
           select a.id
           from v2_accounts a
           where a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
-            and a.onboarding_state = 'seller_ready'
         ), existing as (
           select f.id as facility_id, fs.id as slot_id, false as created
           from v2_facilities f
@@ -737,8 +766,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), inserted as (
           insert into v2_facilities
-            (account_id, source_kind, source_name, source_ref, name, category, description, latitude, longitude, address, trust_state)
-          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.address?.trim() || null}, 'verification_draft'
+            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, 'unconfirmed'
           from available_slot
           where not exists (select 1 from existing)
           returning id as facility_id
@@ -756,7 +785,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
-      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: 'verification_draft', created: row.created === true };
+      return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: 'unconfirmed', facilityType: input.facilityType, created: row.created === true };
     },
     async createPublicFacilityImport(input: PublicFacilityImportInput): Promise<PublicFacilityImportResult> {
       if (input.provider !== 'openstreetmap' || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
@@ -1537,7 +1566,6 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from v2_accounts a
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-          and a.onboarding_state = 'seller_ready'
         limit 1
       `);
       if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, catalogReady: false, facilities: [], products: [] };
@@ -1548,6 +1576,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           coalesce(f.category, 'Autre') as category,
           f.address,
           f.operational_state,
+          f.facility_type,
+          f.rayon_km,
+          f.trust_state,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -1556,7 +1587,6 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_products p on p.facility_id = f.id and p.publication_state <> 'archived'
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-          and a.onboarding_state = 'seller_ready'
         group by f.id
         order by f.name asc, f.id asc
       `);
@@ -1569,6 +1599,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         slotState: 'active' as const,
         operationalState: (['ouvert', 'ferme', 'temporairement_indisponible'].includes(String(row.operational_state)) ? String(row.operational_state) : 'ouvert') as SellerCatalogueFacility['operationalState'],
         productCount: Number(row.product_count ?? 0),
+        facilityType: (row.facility_type === 'fixe' || row.facility_type === 'mobile' || row.facility_type === 'digital' ? String(row.facility_type) : null) as SellerCatalogueFacility['facilityType'],
+        rayonKm: row.rayon_km === null ? null : Number(row.rayon_km),
+        trustState: String(row.trust_state ?? 'unclaimed'),
       }));
       const rows = await retryDatabase(() => sql`
         select

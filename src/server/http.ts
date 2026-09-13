@@ -4,7 +4,7 @@ import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPo
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
-import type { ClaimEvidenceItem } from '../trunk/types';
+import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
 import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
@@ -64,6 +64,40 @@ export async function parseRequestBody(req: IncomingMessage): Promise<Record<str
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new ApiInputError('Request body must be an object.');
   return parsed as Record<string, unknown>;
     }
+
+export type SellerFacilityCreateInput = {
+  authUserId: string;
+  name: string;
+  facilityType: FacilityType;
+  category: string | null;
+  description: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  rayonKm: number | null;
+  idempotencyKey: string;
+};
+
+export function validateSellerFacilityCreate(body: Record<string, unknown>, idempotencyKey: string, authUserId: string): SellerFacilityCreateInput {
+  const name = typeof body.name === 'string' ? body.name : '';
+  const facilityType = typeof body.facilityType === 'string' ? body.facilityType : '';
+  const category = body.category === null || body.category === undefined ? null : typeof body.category === 'string' ? body.category : '';
+  const description = body.description === null || body.description === undefined ? null : typeof body.description === 'string' ? body.description : '';
+  const address = body.address === null || body.address === undefined ? null : typeof body.address === 'string' ? body.address : '';
+  const latitude = body.latitude === null || body.latitude === undefined || body.latitude === '' ? null : Number(body.latitude);
+  const longitude = body.longitude === null || body.longitude === undefined || body.longitude === '' ? null : Number(body.longitude);
+  const rayonKm = body.rayonKm === null || body.rayonKm === undefined || body.rayonKm === '' ? null : Number(body.rayonKm);
+  if (facilityType !== 'fixe' && facilityType !== 'mobile' && facilityType !== 'digital') {
+    throw new ApiInputError('A valid facility type (fixe, mobile, digital) is required.');
+  }
+  const type = facilityType as FacilityType;
+  const coordsRequired = type !== 'digital';
+  const validCoords = (v: number | null, min: number, max: number) => v === null || (Number.isFinite(v) && v >= min && v <= max);
+  if (!name.trim() || name.length > 180 || (coordsRequired && (latitude === null || longitude === null)) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || (type === 'mobile' && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500)) || (type !== 'mobile' && rayonKm !== null) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+    throw new ApiInputError('A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.');
+  }
+  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, idempotencyKey };
+}
 
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
@@ -1069,17 +1103,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const input = await parseRequestBody(req);
-      const name = typeof input.name === 'string' ? input.name : '';
-      const category = input.category === null || input.category === undefined ? null : typeof input.category === 'string' ? input.category : '';
-      const description = input.description === null || input.description === undefined ? null : typeof input.description === 'string' ? input.description : '';
-      const address = input.address === null || input.address === undefined ? null : typeof input.address === 'string' ? input.address : '';
-      const latitude = Number(input.latitude);
-      const longitude = Number(input.longitude);
-      const idempotencyKey = req.headers['idempotency-key'];
-      if (!name.trim() || name.length > 180 || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
-        throw new ApiInputError('A valid facility name, coordinates and idempotency key are required.');
-      }
-      const result = await repository.createSellerFacility({ authUserId, name, category, description, address, latitude, longitude, idempotencyKey });
+      const rawIdempotencyKey = req.headers['idempotency-key'];
+      const idempotencyKey = Array.isArray(rawIdempotencyKey) ? rawIdempotencyKey[0] : rawIdempotencyKey ?? '';
+      const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
+      const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }

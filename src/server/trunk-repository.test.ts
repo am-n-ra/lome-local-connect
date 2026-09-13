@@ -1431,3 +1431,111 @@ describe('admin audit log Root seam (T-07a)', () => {
     expect(call.queries[1]).not.toContain('where e.event_type');
   });
 });
+
+
+describe('seller facility creation Root seam (NW-13c)', () => {
+  it('rejects an invalid facility type before touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Le Fournil',
+      facilityType: 'parking' as never,
+      category: null,
+      description: null,
+      address: null,
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      idempotencyKey: 'nwc13-facility-key-0000001',
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('requires coordinates for a physical (fixe) facility', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Le Fournil',
+      facilityType: 'fixe',
+      category: null,
+      description: null,
+      address: null,
+      latitude: null,
+      longitude: null,
+      rayonKm: null,
+      idempotencyKey: 'nwc13-facility-key-0000002',
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects a rayon on a fixe facility', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Le Fournil',
+      facilityType: 'fixe',
+      category: null,
+      description: null,
+      address: null,
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: 10,
+      idempotencyKey: 'nwc13-facility-key-0000003',
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('provisions a free slot and creates an unconfirmed typed facility', async () => {
+    const call = stubSqlSequence([
+      [], // slot provision: insert ... on conflict
+      [{ facility_id: 'facility-9', slot_id: 'slot-9', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Ma petite échoppe mobile',
+      facilityType: 'mobile',
+      category: 'Épicerie',
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: 5,
+      idempotencyKey: 'nwc13-facility-key-0000004',
+    });
+    expect(result).toEqual({ facilityId: 'facility-9', slotId: 'slot-9', trustState: 'unconfirmed', facilityType: 'mobile', created: true });
+    expect(call.queries[0]).toContain('insert into v2_facility_slots');
+    expect(call.queries[0]).toContain("source = 'free'");
+    expect(call.queries[1]).toContain('facility_type');
+    expect(call.queries[1]).toContain('rayon_km');
+    expect(call.queries[1]).toContain("trust_state)");
+    expect(call.queries[1]).toContain('source_name');
+  });
+
+  it('allows a digital facility without coordinates and without a rayon', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ facility_id: 'facility-10', slot_id: 'slot-10', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Boutique en ligne',
+      facilityType: 'digital',
+      category: 'Textile',
+      description: null,
+      address: 'Lomé (en ligne)',
+      latitude: null,
+      longitude: null,
+      rayonKm: null,
+      idempotencyKey: 'nwc13-facility-key-0000005',
+    });
+    expect(result.created).toBe(true);
+    expect(result.trustState).toBe('unconfirmed');
+    expect(call.queries[1]).toContain('facility_type');
+    expect(call.queries[1]).toContain('rayon_km');
+  });
+});

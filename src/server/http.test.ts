@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateSellerFacilityCreate } from './http';
 import { AvailabilityPolicyError, EvidenceStoragePolicyError, PurchaseIntentPolicyError, TransactionPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -129,5 +129,36 @@ describe('Root HTTP error boundary', () => {
     const { transaction, metadata } = extractFedaPayTransaction(payload);
     expect(transaction.id).toBe('trx_1');
     expect(metadata.omni_recharge_id).toBe('recharge-1');
+  });
+});
+
+
+describe('seller facility create validator (NW-13c)', () => {
+  const key = 'nwc13-http-key-0001';
+
+  it('accepts a fixe facility with coordinates and no rayon', () => {
+    const out = validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1');
+    expect(out).toMatchObject({ name: 'Boutique A', facilityType: 'fixe', latitude: 6.13, longitude: 1.22, rayonKm: null });
+  });
+
+  it('accepts a digital facility without coordinates', () => {
+    const out = validateSellerFacilityCreate({ name: 'En ligne', facilityType: 'digital', category: null, description: null, address: 'Lomé', latitude: null, longitude: null, rayonKm: null }, key, 'auth-user-1');
+    expect(out).toMatchObject({ facilityType: 'digital', latitude: null, longitude: null, rayonKm: null });
+  });
+
+  it('rejects a fixe facility missing coordinates', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: null, longitude: null, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+
+  it('rejects an unknown facility type', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'parking', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+
+  it('rejects a rayon on a fixe facility', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: 10 }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+
+  it('requires a rayon on a mobile facility', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Échoppe', facilityType: 'mobile', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
   });
 });

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshCw, ScanLine } from 'lucide-react';
+import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState } from './api';
+import { createSellerFacility, getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { FacilityOperationalState, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
+import type { FacilityOperationalState, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -22,12 +22,21 @@ type SellerV13Props = {
 
 export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
-  const [showCreateHint, setShowCreateHint] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [catalogue, setCatalogue] = useState<SellerCatalogueResult | null>(null);
   const [queue, setQueue] = useState<SellerAvailabilityRequest[]>([]);
   const [toast, setToast] = useState('');
   const [toogleBusy, setToogleBusy] = useState(false);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [facilityType, setFacilityType] = useState<FacilityType>('fixe');
+  const [facilityName, setFacilityName] = useState('');
+  const [facilityCategory, setFacilityCategory] = useState('');
+  const [facilityAddress, setFacilityAddress] = useState('');
+  const [facilityLat, setFacilityLat] = useState('');
+  const [facilityLng, setFacilityLng] = useState('');
+  const [facilityRayon, setFacilityRayon] = useState('5');
 
   const load = useCallback(async () => {
     setError('');
@@ -49,6 +58,51 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
 
   useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
 
+  const locateMe = useCallback(() => {
+    if (!('geolocation' in navigator)) { setCreateError('Géolocalisation indisponible — saisissez les coordonnées manuellement.'); return; }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFacilityLat(position.coords.latitude.toFixed(6));
+        setFacilityLng(position.coords.longitude.toFixed(6));
+        setCreateError('');
+      },
+      () => setCreateError('Géolocalisation refusée — saisissez les coordonnées manuellement.'),
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }, []);
+
+  const submitCreate = useCallback(async () => {
+    setCreateError('');
+    if (!facilityName.trim()) { setCreateError('Le nom de la facilité est requis.'); return; }
+    if (facilityType !== 'digital' && (!facilityLat.trim() || !facilityLng.trim())) { setCreateError('Saisissez vos coordonnées (ou « Me localiser »).'); return; }
+    const latitude = facilityLat.trim() ? Number(facilityLat) : null;
+    const longitude = facilityLng.trim() ? Number(facilityLng) : null;
+    if (latitude !== null && (Number.isNaN(latitude) || latitude < -90 || latitude > 90)) { setCreateError('Latitude invalide (entre -90 et 90).'); return; }
+    if (longitude !== null && (Number.isNaN(longitude) || longitude < -180 || longitude > 180)) { setCreateError('Longitude invalide (entre -180 et 180).'); return; }
+    const rayonKm = facilityType === 'mobile' ? Number(facilityRayon) : null;
+    if (rayonKm !== null && (Number.isNaN(rayonKm) || rayonKm <= 0 || rayonKm > 500)) { setCreateError('Rayon invalide (entre 1 et 500 km).'); return; }
+    const token = await getAuthToken();
+    if (!token) { setCreateError('Connectez-vous pour créer une facilité.'); return; }
+    setCreateBusy(true);
+    try {
+      const idempotencyKey = crypto.randomUUID();
+      const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, idempotencyKey });
+      if (result.ok && result.data) {
+        setToast('Facilité créée — complétez le parcours de preuve pour être trouvé.');
+        setShowCreateForm(false);
+        setFacilityName('');
+        setFacilityCategory('');
+        setFacilityAddress('');
+        setFacilityLat('');
+        setFacilityLng('');
+        setFacilityRayon('5');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setCreateError(result.error?.message ?? 'Création non enregistrée.');
+      }
+    } catch { setCreateError('Création non enregistrée.'); }
+    finally { setCreateBusy(false); }
+  }, [facilityName, facilityType, facilityCategory, facilityAddress, facilityLat, facilityLng, facilityRayon, onRefresh, load]);
 
   const lang = sellerRouteLabels();
   const ws = buildSellerWorkspace({
@@ -109,13 +163,51 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         <div className="cardbox" style={{ marginTop: 9 }}>
           <div className="eyebrow">Bienvenue — espace vendeur</div>
           <p className="sub">Tout compte Omni peut vendre: une facilité d'abord, puis un catalogue et des offres.</p>
-          <p className="tiny muted">Commencez par revendiquer une facilité déjà sur la carte, ou créez la vôtre( la création arrive avec la spec Free/Pro(.</p>
+          <p className="tiny muted">Commencez par revendiquer une facilité déjà sur la carte, ou créez la vôtre en 2 minutes.</p>
           <div className="btnrow" style={{ marginTop: 7 }}>
             <button className="btn" type="button" onClick={onMap}>Ouvrir la carte pour revendiquer</button>
-            <button className="btn ghost" type="button" onClick={() => setShowCreateHint((v) => !v)}>Créer une facilité</button>
+            <button className="btn ghost" type="button" onClick={() => { setCreateError(''); setShowCreateForm((v) => !v); }}>Créer une facilité</button>
           </div>
-          {showCreateHint && (
-            <p className="tiny muted" style={{ marginTop: 6 }} role="status">La création de facilité arrive avec la spécification Free/Pro( bientôt(. En attendant, l'option la plus proche est la revendication d'une facilité existante.</p>
+          {showCreateForm && (
+            <div className="cardbox" style={{ marginTop: 9, padding: 11 }}>
+              {createError && <p className="sub" role="alert">{createError}</p>}
+              <label className="tiny muted" style={{ display: 'block' }}>Type d'établissement</label>
+              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                {(['fixe', 'mobile', 'digital'] as FacilityType[]).map((t) => (
+                  <button key={t} type="button" className={facilityType === t ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setFacilityType(t)}>{t === 'fixe' ? 'Fixe' : t === 'mobile' ? 'Mobile / ambulant' : 'Digital / en ligne'}</button>
+                ))}
+              </div>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Nom</label>
+              <input className="input" type="text" value={facilityName} onChange={(e) => setFacilityName(e.target.value)} maxLength={180} placeholder="Ex: Le Fournil d'Or" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Catégorie (optionnel)</label>
+              <input className="input" type="text" value={facilityCategory} onChange={(e) => setFacilityCategory(e.target.value)} maxLength={120} placeholder="Ex: Boulangerie & Pâtisserie" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Adresse (optionnel)</label>
+              <input className="input" type="text" value={facilityAddress} onChange={(e) => setFacilityAddress(e.target.value)} maxLength={200} placeholder="Quartier, rue…" style={{ width: '100%' }} />
+              {facilityType !== 'digital' ? (
+                <>
+                  <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', marginTop: 9 }}>
+                    <label className="tiny muted">Position</label>
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={locateMe}><LocateFixed size={13} /> Me localiser</button>
+                  </div>
+                  <div className="row" style={{ gap: 6, marginTop: 4 }}>
+                    <input className="input" type="number" inputMode="decimal" value={facilityLat} onChange={(e) => setFacilityLat(e.target.value)} placeholder="Latitude" style={{ flex: 1, minWidth: 0 }} />
+                    <input className="input" type="number" inputMode="decimal" value={facilityLng} onChange={(e) => setFacilityLng(e.target.value)} placeholder="Longitude" style={{ flex: 1, minWidth: 0 }} />
+                  </div>
+                </>
+              ) : (
+                <p className="tiny muted" style={{ marginTop: 9 }}>Un établissement digital n'a pas de point physique — il sera découvert par nom/catégorie.</p>
+              )}
+              {facilityType === 'mobile' && (
+                <>
+                  <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Rayon de découverte (km)</label>
+                  <input className="input" type="number" inputMode="decimal" min={1} max={500} value={facilityRayon} onChange={(e) => setFacilityRayon(e.target.value)} style={{ width: '100%' }} />
+                </>
+              )}
+              <div className="btnrow" style={{ marginTop: 11 }}>
+                <button className="btn" type="button" disabled={createBusy} onClick={() => void submitCreate()}>{createBusy ? 'Création…' : 'Créer ma facilité'}</button>
+                <button className="btn ghost" type="button" disabled={createBusy} onClick={() => setShowCreateForm(false)}>Annuler</button>
+              </div>
+            </div>
           )}
         </div>
       )}
