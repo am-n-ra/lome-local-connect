@@ -15,8 +15,9 @@ Founder HQ has kept **Gate 7 (Venture Lifecycle — Lomé pilot demand/proof) in
 |---|---|---|
 | **First revenue** | **13 sellers paid 65,000 FCFA total** to be **early Pro users** | `founder-stated`; internal consistency = 13 × 5,000 F = 65,000 F ✅ |
 | **Pricing regime of the 65k** | **The 5,000 F were collected BEFORE the new USD pricing structure** (old D-J barème: Seller Pro 5,000 XOF/mo) — founder-confirmed 2026-09-13 | historical fact; **do NOT re-rate at the new USD price** |
+| **Payment method** | **Received in cash (main à main)** — no digital wallet/ledger trail for these 13 payments | `founder-stated` 2026-09-13; **verification = manual receipts / cash book, NOT a DB query** |
 | New pricing (2026-09-13+) | **Seller Pro $10 / Buyer Pro $5** converted to local (founder decision, NW-13h), applies to new sales | context; affects forward revenue, not the 13 paid sellers |
-| Verification task | Confirm the 13 payments in `v2_wallet` / ledger (`facility_pro_spend` or recharge records) | owner: Founder HQ / Nature Way proof |
+| Verification task | Confirm the 13 payments via **manual receipts / cash book** (no wallet trail, cash received) + set up a standardized collection protocol (cash receipt + ledger entry) for future field collections | owner: Founder HQ / Nature Way proof |
 
 What it proves: sellers will pay for Pro ahead of production depth — a **willingness-to-pay signal**, low absolute amount (~US$110 at the old rate; ≈ US$130 at the new rate). Not scalable traction yet — do not inflate.
 
