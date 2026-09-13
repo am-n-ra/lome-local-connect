@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>OMNI — Pilote sponsorisé · Proposition en une page</title>
+<style>
+  :root{
+    --accent:#2e8b6f; /* palette verrouillée: monochrome + UN accent */
+    --accent-dark:#234d40;
+    --ink:#1f1f1f;
+    --paper:#f9f7f2;
+    --paper2:#ffffff;
+    --muted:#5a5a5a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{size:A4;margin:0;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);background:var(--paper);font-size:10pt;line-height:1.4;}
+  .page{width:210mm;height:297mm;margin:0 auto;background:var(--paper2);padding:11mm 14mm 7mm;display:flex;flex-direction:column;overflow:hidden;}
+  /* header */
+  header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--accent);padding-bottom:3mm;margin-bottom:4mm;}
+  .logo img{height:10mm;width:auto;}
+  .tag{font-size:8pt;color:var(--muted);text-align:right;line-height:1.3;}
+  .tag b{color:var(--accent-dark);}
+  h1{font-size:16pt;line-height:1.2;margin-bottom:1mm;}
+  h1 .accent{color:var(--accent);}
+  .lead{font-size:9.5pt;color:var(--muted);margin-bottom:3.5mm;}
+  /* sections */
+  h2{font-size:9.5pt;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-dark);border-bottom:1px solid #e2ddd2;padding-bottom:.8mm;margin:3mm 0 1.6mm;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:5mm;}
+  .pill{display:inline-block;font-size:8pt;font-weight:600;padding:1px 7px;border-radius:999px;background:var(--accent);color:#fff;margin-right:3px;}
+  .muted{color:var(--muted);font-size:9pt;}
+  table{width:100%;border-collapse:collapse;font-size:8.8pt;}
+  th{background:var(--paper);color:var(--accent-dark);text-align:left;padding:1.8mm 2mm;border-bottom:2px solid var(--accent);}
+  td{padding:1.8mm 2mm;border-bottom:1px solid #eee8dd;vertical-align:top;}
+  .pitch{background:var(--paper);border-left:3px solid var(--accent);padding:2.5mm 3.5mm;margin:1.8mm 0;font-size:9.3pt;}
+  ul{padding-left:4.5mm;}
+  li{margin-bottom:.8mm;}
+  .kpi{display:flex;gap:4mm;text-align:center;margin:2mm 0;}
+  .kpi>div{flex:1;background:var(--paper);border:1px solid #e4dccd;border-radius:8px;padding:2mm 1.5mm;}
+  .kpi b{display:block;font-size:12pt;color:var(--accent-dark);}
+  .kpi span{font-size:7.4pt;color:var(--muted);}
+  .cost{font-size:10.5pt;}
+  .cost b{color:var(--accent-dark);}
+  footer{margin-top:auto;padding-top:3mm;border-top:1px solid #eee8dd;font-size:7.8pt;color:var(--muted);display:flex;justify-content:space-between;gap:6mm;}
+  .badge{display:inline-block;background:var(--ink);color:#fff;font-size:7.5pt;padding:1px 6px;border-radius:3px;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div>
+    <div class="tag"><b>OMNI</b> · l'offre locale, recherchable, disponible, exploitable<br/>Proposition de pilote co-financé · Lomé, [date]</div>
+  </header>
+
+  <h1>Expérimentez avec les micro-commerçants de Lomé,<br/><span class="accent">mesuré en chiffres, pas en impressions.</span></h1>
+  <p class="lead">Une cohorte terrain de 10–15 jours, financée à coût limité, avec des livrables réels : inscrip­tions vérifiées, vendeurs activés, paiements réconciliés, coût d'acquisition.
+
+  <div class="kpi">
+    <div><b>13</b><span>commerçants ont déjà payé<br/>pour l'accès Pro (65 000 F)</span></div>
+    <div><b>1</b><span>produit en production, testé<br/>(56 fichiers · 424 tests)</span></div>
+    <div><b>10–15 j</b><span>de cohorte terrain<br/>1 zone de Lomé</span></div>
+    <div><b>≈350 000 F</b><span>coût pilote plafonné<br/>25 000 F/jour/membre</span></div>
+  </div>
+
+  <h2>Ce que nous proposons</h2>
+  <p class="pitch" style="background:none;padding-left:0;margin:0;">Co-financez une <b>expérience contrôlée</b>, pas une campagne de marque : un pilote court et traçable, qui démontre notre modèle sur un périmètre réduit — avec des données que vous conservez.</p>
+
+  <h2>Le pilote</h2>
+  <table>
+    <tr><th width="26%">Élément</th><th>Détail</th></tr>
+    <tr><td><b>Périmètre</b></td><td>1 zone pilote de Lomé, 2 agents × 5–7 jours (10–15 agent-jours)</td></tr>
+    <tr><td><b>Coût</b></td><td class="cost">≈ <b>350 000 – 525 000 F</b> (transport 10 000 + repas 5 000 F/jour/agent, plafond 25 000 F/jour/membre) — <b>co-financement à discuter</b></td></tr>
+    <tr><td><b>Rôle du sponsor</b></td><td>Financement du terrain + accès/canal (réseau marchands, SMS/Data, paiement Mobile Money, espace pilote)</td></tr>
+    <tr><td><b>Livrables</b></td><td>Rapport de cohorte instrumentée : inscriptions par agent/zone/jour, vendeurs activés, premiers paiements, CAC réel · synthèse 2–3 pages · crédit visible sponsor</td></tr>
+    <tr><td><b>Durée</b></td><td>10–15 jours terrain + 1 semaine de rapport</td></tr>
+  </table>
+
+  <h2>Pourquoi vous gagnez à ce pilote</h2>
+  <div class="grid2">
+    <div class="pitch"><b>Accès mesuré</b> au segment micro-commerçants de Lomé, organisé et digitalisé.</div>
+    <div class="pitch"><b>Données anonymisées</b> de conversion et d'usage sur votre canal (SMS/Data/Flooz/Moov Money).</div>
+    <div class="pitch"><b>Cas d'usage transactionnel réel</b> pour votre réseau marchand — une démonstration, pas un power-point.</div>
+    <div class="pitch"><b>Dérisqué</b> : coût limité, expérience traçable — « cofinancer une expérience, pas une startup ».</div>
+  </div>
+
+  <h2>Ce que le pilote débloque</h2>
+  <p>Une <b>preuve mesurable</b> (cohortes instrumentées) au lieu d'hypothèses · un argument de <b>financement (bridge)</b> solide · le <b>passage Lomé → Aflao</b> avec coûts comparés.</p>
+
+  <h2>Preuve déjà en main</h2>
+  <p><span class="badge">FAIT</span> &nbsp;13 commerçants ont payé l'accès Pro (65 000 F, reçus en cash, avant notre grille USD). Produit en production, testé (56 fichiers / 424 tests) : comparateur, favoris, portefeuille, renouvellement, packs de crédits Mobile Money.</p>
+
+  <footer>
+    <div><b>Contact</b> : [nom] · [email] · [téléphone] · omni.sparkafrika.online</div>
+    <div>Document d'information — ne constitue ni une offre ni un engagement.  Données traction `founder-stated`, à vérifier.</div>
+  </footer>
+</div>
+</body>
+</html>

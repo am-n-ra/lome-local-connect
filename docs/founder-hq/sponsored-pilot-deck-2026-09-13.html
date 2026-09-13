@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>OMNI — Pilote sponsorisé · Deck</title>
+<style>
+  :root{
+    --accent:#2e8b6f; --accent-dark:#234d40; --ink:#1f1f1f;
+    --paper:#f9f7f2; --white:#ffffff; --muted:#5a5a5a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @page{size:339mm 190.5mm;margin:0;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:var(--ink);background:#ddd;font-size:16pt;}
+  .slide{width:339mm;height:190.5mm;background:var(--white);margin:0 auto;padding:18mm 20mm;position:relative;overflow:hidden;page-break-after:always;}
+  .slide.sheet{background:linear-gradient(160deg,var(--paper) 0%, #ffffff 55%);}
+  header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--accent);padding-bottom:5mm;margin-bottom:9mm;}
+  .logo img{height:15mm;}
+  .pageno{font-size:11pt;color:var(--muted);}
+  h1{font-size:34pt;line-height:1.12;margin-bottom:6mm;}
+  h1 .accent{color:var(--accent);}
+  .lead{font-size:16.5pt;color:var(--muted);margin-bottom:10mm;max-width:75%;}
+  h2{font-size:15pt;text-transform:uppercase;letter-spacing:.06em;color:var(--accent-dark);margin:.5mm 0 6mm;border-bottom:1px solid #e2ddd2;padding-bottom:2mm;}
+  .kpi{display:flex;gap:8mm;margin:12mm 0;}
+  .kpi>div{flex:1;background:var(--paper);border:1px solid #e4dccd;border-radius:10px;padding:9mm 8mm;text-align:center;}
+  .kpi b{display:block;font-size:30pt;color:var(--accent-dark);}
+  .kpi span{font-size:12pt;color:var(--muted);}
+  table{width:100%;border-collapse:collapse;font-size:13.5pt;}
+  td{padding:4mm 3mm;border-bottom:1px solid #eee8dd;vertical-align:top;}
+  th{background:var(--paper);color:var(--accent-dark);text-align:left;padding:3.5mm 3mm;border-bottom:2px solid var(--accent);font-size:13pt;}
+  .pitch{background:var(--paper);border-left:4px solid var(--accent);padding:5mm 7mm;margin:4mm 0;font-size:14.5pt;line-height:1.5;}
+  ul{padding-left:8mm;font-size:15pt;}
+  li{margin-bottom:3mm;line-height:1.4;}
+  .mention{position:absolute;bottom:10mm;left:20mm;right:20mm;font-size:9.5pt;color:var(--muted);border-top:1px solid #eee8dd;padding-top:3mm;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10mm;}
+  .big{font-size:18pt;}
+</style>
+</head>
+<body>
+
+<!-- 1. Cover -->
+<div class="slide sheet">
+  <header>
+    <div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div>
+    <div class="pageno">OMNI · [date]</div>
+  </header>
+  <h1>Co-financez une expérience avec<br/>les micro-commerçants de Lomé<br/><span class="accent">— mesurée, pas impressionnée.</span></h1>
+  <p class="lead">Pilote terrain 10–15 jours · 1 zone de Lomé · livrables en chiffres<br/>Inscriptions vérifiées · vendeurs activés · paiements réconciliés · coût d'acquisition</p>
+  <div class="kpi">
+    <div><b>13</b><span>commerçants ont payé pour l'accès Pro (65 000 F)</span></div>
+    <div><b>56/424</b><span>fichiers / tests — produit en production</span></div>
+    <div><b>~350k F</b><span>coût pilote, plafonné 25k F/j/membre</span></div>
+  </div>
+  <div class="mention">OMNI rend l'offre locale recherchable, disponible et exploitable. Document d'information — aucune offre ni engagement.</div>
+</div>
+
+<!-- 2. Le problème -->
+<div class="slide">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">02 · Le problème</div></header>
+  <h2>Le marché local reste invisible et non transactionnel</h2>
+  <div class="grid2">
+    <div class="pitch"><b>Pour l'acheteur</b> — difficile de savoir ce qui est proche, disponible, en stock ; on se déplace pour rien.</div>
+    <div class="pitch"><b>Pour le micro-commerçant</b> — aucune visibilité en ligne, clientèle limitée au quartier, pas de canal pour vendre plus.</div>
+    <div class="pitch"><b>Pour l'opérateur / le sponsor</b> — le segment micro-marchand est massif mais non organisé, non digitalisé, hors des radars de données.</div>
+    <div class="pitch"><b>Résultat</b> — l'économie locale fonctionne sans données mesurables : pas de parcours, pas de preuve, pas d'échelle.</div>
+  </div>
+  <div class="mention">OMNI répond en organisant cette offre locale sur une couche géospatiale, avec un parcours transactionnel réel.</div>
+</div>
+
+<!-- 3. La solution -->
+<div class="slide">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">03 · La solution</div></header>
+  <h2>OMNI — l'offre locale, recherchable et exploitable</h2>
+  <ul>
+    <li><b>Recherchable</b> : une couche géospatiale où l'offre proche et en stock est trouvable en quelques gestes.</li>
+    <li><b>Disponible</b> : état, stock et portefeuille en temps réel (fraîcheur, expiration, disponibilité déterministe).</li>
+    <li><b>Transactionnel</b> : portefeuille, paiement Mobile Money, demandes, renouvellement, packs de crédits — du concret, pas une vitrine.</li>
+    <li><b>Exploitable</b> : chaque parcours produit des données de cohorte mesurables (acquisition, activation, paiement).</li>
+  </ul>
+  <div class="pitch" style="margin-top:8mm;">Produit <b>en production</b> (omni.sparkafrika.online), testé (56 fichiers / 424 tests), parcours vérifiés : comparateur, favoris, portefeuille, renouvellement Pro, packs de crédits Mobile Money.</div>
+  <div class="mention">Charte visuelle verrouillée (monochrome + accent unique) — le produit est livré, pas en maquette.</div>
+</div>
+
+<!-- 4. Traction -->
+<div class="slide">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">04 · Traction</div></header>
+  <h2>Une première preuve, déjà payante</h2>
+  <div class="kpi">
+    <div><b>13</b><span>commerçants ont payé l'accès Pro, avant notre nouvelle grille USD</span></div>
+    <div><b>65 000 F</b><span>encaissés (cash, reçus) — volonté de payer démontrée</span></div>
+    <div><b>~30</b><span>early joiners en attente d'un vrai parcours</span></div>
+  </div>
+  <div class="pitch">Ce que cela prouve : des micro-commerçants <b>paient</b> pour être visibles et exploitables, avant même la maturité du produit. Ce qui reste à prouver : le <b>coût réel d'acquisition</b> et le <b>passage à l'échelle</b> — c'est l'objet du pilote.</div>
+  <div class="mention">Chiffres `founder-stated` — à vérifier (reçus / livre de caisse). Jamais présentés comme audités.</div>
+</div>
+
+<!-- 5. Le pilote -->
+<div class="slide">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">05 · Le pilote</div></header>
+  <h2>Un pilote court, contrôlé, mesuré</h2>
+  <table>
+    <tr><th width="26%">Élément</th><th>Détail</th></tr>
+    <tr><td><b>Périmètre</b></td><td>1 zone de Lomé · 2 agents × 5–7 jours (10–15 agent-jours)</td></tr>
+    <tr><td><b>Coût</b></td><td>≈ 350 000 – 525 000 F (transport 10k + repas 5k F/j/agent, plafond 25k F/j/membre) · <b>co-financement à discuter</b></td></tr>
+    <tr><td><b>Rôle sponsor</b></td><td>Terrain + canal (réseau marchands, SMS/Data, paiement Mobile Money, espace pilote)</td></tr>
+    <tr><td><b>Livrables</b></td><td>Rapport de cohorte : inscriptions/agent/zone/jour, vendeurs activés, paiements réconciliés, CAC · synthèse 2–3 pages · crédit sponsor</td></tr>
+    <tr><td><b>Calendrier</b></td><td>10–15 jours terrain + 1 semaine de rapport</td></tr>
+  </table>
+  <div class="mention">Principe : cofinancer une expérience, jamais un sponsoring de marque générique.</div>
+</div>
+
+<!-- 6. Pour le sponsor -->
+<div class="slide">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">06 · Votre part du contrat</div></header>
+  <h2>Ce que vous en retirez, en clair</h2>
+  <ul>
+    <li><b>Accès mesuré</b> au segment micro-commerçants de Lomé — organisé, digitalisé, avec des données.</li>
+    <li><b>Données anonymisées</b> de conversion et d'usage sur votre canal (SMS/Data/Flomo/Moov Money).</li>
+    <li><b>Cas d'usage transactionnel réel</b> présentable à votre réseau marchand.</li>
+    <li><b>Coût limité et dérisqué</b> : une expérience de 10–15 jours avec un rapport de données, pas une campagne aveugle.</li>
+    <li><b>Une relation de long terme possible</b> : si les chiffres parlent, le pilote est le premier étage d'un partenariat plus large.</li>
+  </ul>
+  <div class="mention">Le partage de données se fait de façon contrôlée et anonymisée, négociée avec conseil.</div>
+</div>
+
+<!-- 7. Ask -->
+<div class="slide sheet">
+  <header><div class="logo"><img src="../public/omni-logo-transparent.png" alt="OMNI"/></div><div class="pageno">07 · L'ask</div></header>
+  <h1>Discutons des termes d'un <span class="accent">pilote de 350–525 k F</span><br/>avec des livrables mesurés.</h1>
+  <div class="pitch big" style="margin-top:12mm;"><b>Ce que nous demandons :</b> co-financer une expérience limitée (canal + terrain) pour générer une cohorte de données réelles. En échange : rapport complet, crédit visible, accès aux enseignements.</div>
+  <div class="pitch big"><b>Ce que nous excluons :</b> aucun sponsoring de marque générique, aucune promesse de volume brut, aucune donnée marchands brute partagée.</div>
+  <div class="kpi" style="margin-top:14mm;">
+    <div><b>20 min</b><span>pour décider si ça vous ressemble</span></div>
+    <div><b>10–15 j</b><span>de pilote, ensuite une série de chiffres</span></div>
+  </div>
+  <div class="mention">Contact : [nom] · [email] · [téléphone] · omni.sparkafrika.online</div>
+</div>
+
+</body>
+</html>
