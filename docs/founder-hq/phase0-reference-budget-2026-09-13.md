@@ -115,6 +115,30 @@ Registrations at yield: team 5 → ~9,900 / team 8 → ~15,840 / team 10 → ~19
 - The **≥50M hypothesis therefore does NOT automatically follow** from the founder's ambition. It holds only with an **extended horizon (6 months) and/or heavier lines** (larger dev/mobile budget, vehicle fleet, higher salaries, bigger legal + reserve cushion).
 - This is a **founder ambition decision, not a model consequence.** The fundraising specialist must (a) run the ≥50M stress check honestly, (b) weigh bridge size vs HERLOG floor vs YC W27 timing, (c) decide whether the bridge is genuinely ≥50M or whether HERLOG becomes the *next* round post-proof. HQ does not decide.
 
+## 9b. ≥50M stress check (6-month horizon + vehicles + agency dev + support)
+
+> Placeholders to validate (esp. **vehicle price & running costs — founder must local-source**; dev in-house vs agency; support headcount). Vehicle price used below: **10,000,000 F** purchase + 200,000 F/month running (HQ placeholder — **not sourced**).
+
+| Line | LEAN 6mo (5 agents, no veh) | MODERATE 6mo (8 agents, 1 veh) | FULL 6mo (10 agents, 2 veh) |
+|---|---|---|---|
+| Field agents | 13,200,000 F | 21,120,000 F | 26,400,000 F |
+| OSM credit (1,000 F/facility) | 10,560,000 F | 10,560,000 F | 15,840,000 F |
+| OSM labor | 2,640,000 F | 2,640,000 F | 3,960,000 F |
+| Vehicles (purchase + running) | 0 | 11,200,000 F | 22,400,000 F |
+| Mobile dev (agency) | 1,000,000 F | 4,000,000 F | 8,000,000 F |
+| Legal (incl. Delaware) | 1,500,000 F | 3,000,000 F | 4,000,000 F |
+| Support team (placeholder) | 1,800,000 F | 3,000,000 F | 4,800,000 F |
+| **Operating subtotal** | **30,700,000 F** | **55,520,000 F** | **85,400,000 F** |
+| Ops & contingency (10%) | 3,070,000 F | 5,552,000 F | 8,540,000 F |
+| **Total** | **≈ 33.8M F** | **≈ 61.1M F** | **≈ 93.9M F** |
+
+### Honest read of the stress
+
+- **On 6 months, the ≥50M hypothesis becomes achievable** — the MODERATE scenario (8 agents, 1 vehicle, 4M dev, 3M legal, support) lands ≈ **61M F**; FULL ≈ 94M F.
+- **Reaches the floor only because of two volatile placeholders:** vehicles (11–22M) and agency dev (4–8M). Both must be **priced locally before any commitment** — a cheaper/leased vehicle or an in-house dev team could bring the same ambition below 50M; an expensive build-out pushes above.
+- **The gap between ≤31M (3 months) and ≥50M (6 months) is real capital** (≈ 20–30M) buying 3 extra months of coverage — the founder must decide whether that extra runway before YC W27 is worth the corresponding dilution vs. a lean first bridge and a follow-on (HERLOG) after proof.
+- This remains a **direction for the specialist**, not an ask.
+
 ## 10. Open items to close before `/nature-way-fundraising`
 
 | # | Open item | Owner |
@@ -122,7 +146,7 @@ Registrations at yield: team 5 → ~9,900 / team 8 → ~15,840 / team 10 → ~19
 | R-01 | City zoning: how many Lomé zones/quarters in scope → 5-10 agent split | Founder |
 | R-02 | Agent base salary/commission model (beyond 15k/day) | Founder + Lifecycle |
 | R-03 | Caller team size + facilities/month volume | Founder |
-| R-04 | Vehicle sourcing (price + running costs) or keep daily transport | Founder (local sourcing) |
+| R-04 | **Vehicle pricing / local sourcing (10M purchase + 200k/mo placeholder — validate: lease vs buy, real market price, running costs)** | Founder (local sourcing) |
 | R-05 | Delaware legal line (with counsel) + mobile dev cost (in-house vs agency) | Founder + counsel + dev lead |
 | R-06 | Runway horizon: months before YC W27 + default-alive plan (C-06) | Founder |
 | R-07 | Validate working days/month, ops %, caller load, mobile dev timeline (1 mo iOS+Android realistic?) | Lifecycle + specialist |
