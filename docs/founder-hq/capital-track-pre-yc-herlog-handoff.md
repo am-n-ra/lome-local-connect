@@ -1,43 +1,51 @@
 # Capital Track — Pre-YC Bridge via HERLOG S.A. (Handoff Input for `/nature-way-fundraising`)
 
 > **Status:** Founder HQ handoff preparation. This is **not** the specialist's capital thesis, readiness score, or investor narrative. The capital gate belongs to `/nature-way-fundraising`. Founder HQ preserves the founder's intent and the factual inputs so the specialist does not start from zero.
-> **As of:** 2026-09-13 (UTC).
+> **As of:** 2026-09-13 (UTC), updated same day with founder-confirmed relationship facts.
 
 ## Founder intent (verbatim, translated by HQ)
 
 > "Je veux aussi demander à lever des fonds pour les premiers mois d'activité pré-YC au travers de HERLOG SA. Maintenant Nature Way doit pouvoir me guider proprement."
->
 > = "I also want to raise funds for the first months of pre-YC activity through HERLOG S.A. Now Nature Way needs to guide me properly."
+
+> **Founder update (2026-09-13):** « allons y aussi herlog je suis en contact avec eux et ils investissent eux-mêmes de même qu'ils facilitent aussi les investissements via banques angels et autres... »
+> = "Let's go with HERLOG too — I'm already in contact with them, and they **invest directly themselves** as well as **facilitating investments via banks, angels, and others**."
+
+This establishes two things the previous pass marked unknown:
+- **C-02 resolved** → HERLOG relationship is **already open** (founder in contact).
+- **C-04 resolved (founder-confirmed)** → HERLOG operates in **two roles** relevant to Omni: (a) **direct investor** in ventures, and (b) **facilitator/arranger** channeling investment from banks, business angels, and others.
+
+> **Source-provenance note (honest labelling):** C-02 and C-04 are `founder-stated`, not independently source-verified in this repo. The public record (herlog-sa.com) confirms HERLOG S.A. is a strategy & financial-engineering firm in Lomé. Whether the direct-investment mandate and the facilitation network apply to Omni's exact case is a **verification step for the specialist**, not a claim HQ can assert.
 
 The founder wants two things addressed together, in order:
 1. **Pre-YC operational runway** — capital to cover the first months of activity *before* a YC batch.
 2. **A proper guided process** through the Nature Way ecosystem (not an ad-hoc deck).
 
-## Who HERLOG S.A. is (public record, factual)
+## Who HERLOG S.A. is (public record + founder-stated)
 
-| Field | Value | Source |
+| Field | Value | Source / class |
 |---|---|---|
-| Name | HERLOG S.A. (also "HERLOG"), société de conseil en stratégie et ingénierie financière | herlog-sa.com |
-| Location | 37, Rue Amoussimé, Abové, Lomé, Togo | herlog-sa.com / GoAfrica |
-| Activity | Strategy consulting and financial engineering; structuring/financing advisory | herlog-sa.com |
-| Notable leadership | PDG with a background at the West African Development Bank (BOAD), finance & economics | LinkedIn (public) |
-| Legal form / capital | Early record (HERLOG CONSEAUX SARL) shows SARL with 1,000,000 FCFA capital; **current legal form and status must be re-verified against official registries (RCCM/CFE) before any capital decision** | cfetogo.tg (old record, SARL era) |
+| Name | HERLOG S.A. (also "HERLOG"), société de conseil en stratégie et ingénierie financière | herlog-sa.com / `public-record` |
+| Location | 37, Rue Amoussimé, Abové, Lomé, Togo | herlog-sa.com / `public-record` |
+| Activity | Strategy consulting and financial engineering; structuring/financing advisory | herlog-sa.com / `public-record` |
+| Role per founder | **Invests directly in ventures AND facilitates investment via banks, angels, and others** | founder 2026-09-13 / `founder-stated` — verify with HERLOG directly |
+| Relationship | **Already in contact (open)** | founder 2026-09-13 / `founder-stated` |
+| Notable leadership | PDG with a background at the West African Development Bank (BOAD), finance & economics | LinkedIn (public) / `public-record` |
+| Legal form / capital | Early record (HERLOG CONSEAUX SARL) shows SARL with 1,000,000 FCFA capital; **current legal form and status must be re-verified against official registries (RCCM/CFE) before any capital decision** | cfetogo.tg (old record) / needs verification |
 
-**Important honesty note:** The public footprint does not, by itself, establish that HERLOG S.A. is an *investor*, an *arranger*, or a *lender* for startups. It is a strategy and financial-engineering firm. Whether the right relationship is advisory, structuring, bridge debt, or equity — **and whether it fits Omni's capital thesis — is the `/nature-way-fundraising` decision**, not a fact we can assert here.
+**Honest note (updated):** the founder's statement that HERLOG invests directly and facilitates via banks/angels is the *working premise* the fundraising specialist must now verify — what kind of instrument (equity, bridge debt, revenue-based, convertible), what cheque size, what decision speed, what reporting, and what conflict/exclusivity. The public footprint alone does not establish those facts.
 
-## Inputs the fundraising specialist needs from the founder
-
-To run **Phase 0 (Capital thesis)** honestly, the founder must provide:
+## Founder inputs required by the fundraising specialist
 
 | # | Required input (owner: founder) | Why | Current status |
 |---|---|---|---|
 | C-01 | **Legal identity** of the entity that would raise (Omni SAS? new entity? personal?) | Determines the capital type and who signs | Unknown — **founder decision** |
-| C-02 | HERLOG contact/interaction status (first conversation, existing relationship, RFP, meeting) | Determines `research` vs `relationship` pipeline state | Unknown |
+| C-02 | HERLOG contact/interaction status | Determines `research` vs `relationship` pipeline state | **RESOLVED (founder-stated): open contact** |
 | C-03 | Amount and duration: how many months of pre-YC runway, monthly burn, total ask | Phase 0 milestone-to-buy logic | Unknown |
-| C-04 | Whether HERLOG is a **lender**, **arranger**, **advisor**, or **equity partner** per their own positioning | Required for capital fit | Unknown |
-| C-05 | Any existing evidence (product proof, prod, tests) the founder wants to use — or leave this to the specialist to assemble from the capital-proof packet | Evidence basis | Omni holds strong product proof (see below) |
+| C-04 | HERLOG role: direct investor, facilitator, or both? | Required for capital fit | **RESOLVED (founder-stated): both direct + facilitation (banks/angels/others)** — terms to verify |
+| C-05 | Any existing evidence (product proof, prod, tests) the founder wants to use | Evidence basis | Omni holds strong product proof (see below) |
 | C-06 | Default-alive position: what operating commitments continue if the bridge does not close | Contingency plan basis | Unknown |
-| C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone (e.g., NW-13h Acheteur Pro, Lomé pilot demand proof — Gate 7)? | Capital tied to a milestone, not a wish list | Unknown |
+| C-07 | Do the founder's numbers (amount, months, use of funds) map to a measurable milestone? | Capital tied to a milestone, not a wish list | Unknown |
 
 ## Product evidence Omni already holds (factual, from repository proof — invite the specialist to classify)
 
@@ -54,4 +62,4 @@ To run **Phase 0 (Capital thesis)** honestly, the founder must provide:
 
 Founder HQ stops here. The next step is the specialist: the founder should invoke **`/nature-way-fundraising`** with this file as the handoff input. HQ will not produce the capital thesis, readiness score, investor pipeline, or deck under its own authority.
 
-**No HERLOG contact has been made by this session. No term, amount, or instrument is proposed here.**
+**No HERLOG contact has been made by this session (the founder's own contact predates it). No term, amount, or instrument is proposed here.**

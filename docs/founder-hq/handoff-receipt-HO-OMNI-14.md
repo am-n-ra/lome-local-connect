@@ -32,10 +32,10 @@
 | Field | Value |
 |---|---|
 | Capital request | raise for first months of pre-YC activity via HERLOG S.A. |
-| Factual company record | see `capital-track-pre-yc-herlog-handoff.md` (strategy & financial engineering firm, Lomé; not asserted as investor/arranger/debt source) |
-| Required founder inputs | C-01 entity, C-02 HERLOG relationship status, C-03 amount+duration+burn, C-04 instrument type, C-05 evidence basis, C-06 default-alive plan, C-07 milestone mapping |
-| Requested decision | Phase 0 capital thesis + next capital gate (fit, not prestige) |
-| Constraint | No deck, no investor contact, no term advice without specialist + qualified counsel |
+| Factual company record | see `capital-track-pre-yc-herlog-handoff.md` (strategy & financial engineering firm, Lomé; **founder-stated 2026-09-13: HERLOG already in contact + invests directly AND facilitates via banks/angels/others** — founder-stated, pending direct verification of terms) |
+| Required founder inputs | **C-02 resolved** (open contact), **C-04 resolved** (direct investor + facilitator — founder-stated); still required: C-01 entity, C-03 amount+duration+burn, C-05 evidence basis, C-06 default-alive plan, C-07 milestone mapping |
+| Requested decision | Phase 0 capital thesis + next capital gate (fit, not prestige); verify HERLOG's direct-investment mandate/terms + facilitation network directly |
+| Constraint | No deck, no new investor contact, no term advice without specialist + qualified counsel |
 
 ## Specialist resource receipt (Founder HQ preparation context — **not** the specialists' own receipts)
 
