@@ -551,6 +551,9 @@ export interface WalletFacilitySummary {
   slotState: 'active';
   proPriceMinor: number;
   billingCurrency: string;
+  proEndsAt: string | null;
+  renewalOptIn: boolean;
+  daysLeft: number;
 }
 export interface WalletOverviewResult {
   walletId: string;
@@ -573,6 +576,33 @@ export interface FacilityProActivationResult {
   plan: 'pro_active';
   endsAt: string;
   spendLedgerEntryId: string;
+}
+export interface FacilityRenewalStatus {
+  facilityId: string;
+  facilityName: string;
+  plan: 'free' | 'pro_active' | 'pro_expired';
+  entitlementId: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  renewalOptIn: boolean;
+  daysLeft: number;
+  proPriceMinor: number;
+  billingCurrency: string;
+  walletBalanceMinor: number;
+  sufficientFunds: boolean;
+}
+export interface FacilityRenewalOptInResult {
+  facilityId: string;
+  renewalOptIn: boolean;
+}
+export interface FacilityRenewalResult {
+  facilityId: string;
+  renewed: boolean;
+  reason: string;
+  newEntitlementId: string | null;
+  endsAt: string | null;
+  spendLedgerEntryId: string | null;
+  status: string;
 }
 
 /** Cible du tracé itinéraire in-app (écran 10 — tracé Evergreen sur la carte). */

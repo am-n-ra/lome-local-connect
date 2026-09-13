@@ -168,6 +168,12 @@ describe('Root HTTP error boundary', () => {
     expect(response.body.error.retryable).toBe(false);
   });
 
+  it('maps the Pro auto-renewal opt-in WalletPolicyError to a non-retryable 409', () => {
+    const response = toApiErrorResponse('corr-renew-optin', new WalletPolicyError('Activate Omni Pro once before choosing auto-renewal.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
   it('redacts unexpected internal details behind a recoverable 500', () => {
     const response = toApiErrorResponse('corr-internal', new Error('database password leaked'));
     expect(response.status).toBe(500);

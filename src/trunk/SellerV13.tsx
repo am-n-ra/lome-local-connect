@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, getFacilityBonusStatus, getSellerCatalogue, getSellerAvailabilityQueue, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
+import { createSellerFacility, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { FacilityBonusStatus, FacilityOperationalState, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
+import type { FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult } from './types';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -162,6 +162,49 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     finally { setBonusBusy(false); }
   }, [ws.selFacilityId]);
 
+  const [renewalStatus, setRenewalStatus] = useState<FacilityRenewalStatus | null>(null);
+  const [renewalBusy, setRenewalBusy] = useState(false);
+  const loadRenewal = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) { setRenewalStatus(null); return; }
+    try {
+      const result = await getFacilityRenewalStatus({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) setRenewalStatus(result.data);
+    } catch { /* renewal status is best-effort */ }
+  }, [ws.selFacilityId]);
+  useEffect(() => { void loadRenewal(); }, [loadRenewal]);
+  const toggleRenewalOptIn = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId || !renewalStatus) return;
+    setRenewalBusy(true); setError('');
+    try {
+      const result = await setFacilityRenewalOptIn({ token, facilityId: ws.selFacilityId, optIn: !renewalStatus.renewalOptIn });
+      if (result.ok && result.data) {
+        setRenewalStatus((cur) => cur ? { ...cur, renewalOptIn: result.data?.renewalOptIn ?? !cur.renewalOptIn } : cur);
+        setToast(result.data.renewalOptIn ? 'Renouvellement automatique activé.' : 'Renouvellement automatique désactivé.');
+      } else {
+        setError(result.error?.message ?? 'Impossible de changer le renouvellement automatique.');
+      }
+    } catch { setError('Impossible de changer le renouvellement automatique.'); }
+    finally { setRenewalBusy(false); }
+  }, [ws.selFacilityId, renewalStatus]);
+  const runRenewNow = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) return;
+    setRenewalBusy(true); setError('');
+    try {
+      const result = await renewFacilityPro({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) {
+        if (result.data.renewed) setToast('Pro renouvelé pour 30 jours.');
+        else setToast(result.data.status === 'insufficient_funds' ? 'Solde insuffisant — rechargez votre portefeuille pour prolonger Pro.' : 'Pas de renouvellement dû pour le moment.');
+        void loadRenewal();
+      } else {
+        setError(result.error?.message ?? 'Impossible de renouveler Pro.');
+      }
+    } catch { setError('Impossible de renouveler Pro.'); }
+    finally { setRenewalBusy(false); }
+  }, [ws.selFacilityId, loadRenewal]);
+
   const stockSignal = ws.stockCount > 0 ? `${ws.stockCount} produit${ws.stockCount > 1 ? 's' : ''} · ${ws.stockTotal} unité${ws.stockTotal > 1 ? 's' : ''} Omni` : 'Aucun produit publié';
   const onMapCount = ws.ownedPublic.length;
   const hasData = (propsCatalogue ?? catalogue) !== null;
@@ -267,6 +310,34 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <button className="btn sm" type="button" disabled={bonusBusy} onClick={() => void claimBonus()}>{bonusBusy ? '…' : 'Débloquer'}</button>
             )}
           </div>
+        </div>
+      )}
+      {hasData && ws.selFacilityCatalogue?.name && renewalStatus && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Pro · renouvellement</b>
+              {renewalStatus.plan === 'pro_active' ? (
+                <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {renewalStatus.proPriceMinor} {renewalStatus.billingCurrency}/mois</span>
+              ) : renewalStatus.plan === 'pro_expired' ? (
+                <span className="tiny muted">Expiré — renouvellement via portefeuille</span>
+              ) : (
+                <span className="tiny muted">Free — le Pro débloque catalogue + dispo auto</span>
+              )}
+            </div>
+            {renewalStatus.plan !== 'free' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span className="tiny muted">{renewalStatus.renewalOptIn ? 'Auto ON' : 'Auto OFF'}</span>
+                <button className={`btn sm ${renewalStatus.renewalOptIn ? '' : 'ghost'}`} type="button" disabled={renewalBusy || !ws.selFacilityId} onClick={() => void toggleRenewalOptIn()}>{renewalBusy ? '…' : renewalStatus.renewalOptIn ? 'Désactiver' : 'Activer'}</button>
+              </div>
+            )}
+          </div>
+          {renewalStatus.plan === 'pro_expired' && renewalStatus.renewalOptIn && !renewalStatus.sufficientFunds && (
+            <p className="tiny" style={{ marginTop: 6, color: 'var(--warn)' }}>Solde insuffisant pour le renouvellement auto ({renewalStatus.walletBalanceMinor} {renewalStatus.billingCurrency} sur {renewalStatus.proPriceMinor}). Rechargez votre portefeuille.</p>
+          )}
+          {renewalStatus.plan === 'pro_expired' && (
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={renewalBusy} onClick={() => void runRenewNow()}>{renewalBusy ? '…' : 'Renouveler Pro maintenant'}</button>
+          )}
         </div>
       )}
       <div className="row" style={{ justifyContent: 'space-between', marginTop: 9 }}>

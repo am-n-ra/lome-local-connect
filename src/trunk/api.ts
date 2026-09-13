@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -70,6 +70,29 @@ export async function getFacilityBonusStatus(input: { token: string; facilityId:
 
 export async function unlockFacilityBonus(input: { token: string; facilityId: string }): Promise<ApiResult<FacilityBonusPersistenceResult>> {
   const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/bonus/unlock`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse(response);
+}
+
+export async function getFacilityRenewalStatus(input: { token: string; facilityId: string }): Promise<ApiResult<FacilityRenewalStatus>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/pro/renewal-status`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function setFacilityRenewalOptIn(input: { token: string; facilityId: string; optIn: boolean }): Promise<ApiResult<FacilityRenewalOptInResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/pro/renewal-opt-in`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ optIn: input.optIn }),
+  });
+  return parse(response);
+}
+
+export async function renewFacilityPro(input: { token: string; facilityId: string }): Promise<ApiResult<FacilityRenewalResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/pro/renew`, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({}),

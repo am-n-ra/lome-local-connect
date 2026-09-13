@@ -1452,9 +1452,16 @@ const [compareSort, setCompareSort] = useState<'match' | 'distance' | 'price' | 
                 <div className="cardbox">
                   <div className="eyebrow">Plans par facilité</div>
                   {wallet.facilities.map((facility) => (
-                    <div className="kv" key={facility.facilityId}>
-                      <span>{facility.facilityName}</span>
-                      <b>{facility.plan === 'pro_active' ? 'Pro actif' : facility.plan === 'pro_expired' ? 'Pro expiré' : 'Free · 5 offres max'}</b>
+                    <div className="kv" key={facility.facilityId} style={{ gap: 8 }}>
+                      <span>
+                        {facility.facilityName}
+                        {facility.plan !== 'free' && (
+                          <span className="tiny muted" style={{ display: 'block' }}>
+                            {facility.renewalOptIn ? '· renouvellement auto ON' : ''}
+                          </span>
+                        )}
+                      </span>
+                      <b>{facility.plan === 'pro_active' ? `Pro actif${facility.daysLeft > 0 ? ` · ${facility.daysLeft} j` : ''}` : facility.plan === 'pro_expired' ? 'Pro expiré' : 'Free · 5 offres max'}</b>
                     </div>
                   ))}
                 </div>

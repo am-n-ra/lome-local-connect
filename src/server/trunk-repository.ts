@@ -4,7 +4,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerCreditSummary, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerCreditSummary, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -2579,15 +2579,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         retryDatabase(() => sql`
           select f.id as facility_id, f.name as facility_name, f.commercial_plan,
                  coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
-                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 last_entitlement.id as entitlement_id,
+                 last_entitlement.starts_at,
+                 last_entitlement.ends_at,
+                 last_entitlement.state as entitlement_state,
+                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in
           from v2_facilities f
           join v2_accounts a on a.id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
           left join lateral (
-            select e.price_minor, e.billing_currency
+            select e.price_minor, e.billing_currency, e.renewal_opt_in, e.starts_at, e.ends_at, e.state, e.id
             from v2_facility_entitlements e
             where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
-            order by e.created_at desc
+            order by e.created_at desc, e.id desc
             limit 1
           ) last_entitlement on true
           where a.auth_user_id = ${input.authUserId}
@@ -2610,14 +2615,24 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           createdAt: new Date(String(row.created_at)).toISOString(),
           confirmedAt: row.confirmed_at === null || row.confirmed_at === undefined ? null : new Date(String(row.confirmed_at)).toISOString(),
         })),
-        facilities: (facilityRows as Record<string, unknown>[]).map((row) => ({
-          facilityId: String(row.facility_id),
-          facilityName: String(row.facility_name),
-          plan: String(row.commercial_plan) as WalletOverviewResult['facilities'][number]['plan'],
-          slotState: 'active' as const,
-          proPriceMinor: Number(row.pro_price_minor),
-          billingCurrency: String(row.billing_currency),
-        })),
+        facilities: (facilityRows as Record<string, unknown>[]).map((row) => {
+          const nowMs = Date.now();
+          const endsAtMs = row.ends_at ? new Date(String(row.ends_at)).getTime() : null;
+          const activeNow = String(row.entitlement_state) === 'active' && (endsAtMs === null || endsAtMs > nowMs);
+          const daysLeft = endsAtMs !== null ? Math.max(0, Math.ceil((endsAtMs - nowMs) / 86400000)) : 0;
+          const plan = activeNow ? 'pro_active' : row.entitlement_id ? 'pro_expired' : String(row.commercial_plan) === 'pro_active' ? 'pro_active' : String(row.commercial_plan) === 'pro_expired' ? 'pro_expired' : 'free';
+          return {
+            facilityId: String(row.facility_id),
+            facilityName: String(row.facility_name),
+            plan,
+            slotState: 'active' as const,
+            proPriceMinor: Number(row.pro_price_minor),
+            billingCurrency: String(row.billing_currency),
+            proEndsAt: row.ends_at ? new Date(String(row.ends_at)).toISOString() : null,
+            renewalOptIn: Boolean(row.renewal_opt_in),
+            daysLeft,
+          };
+        }),
       };
     },
 
@@ -3098,6 +3113,260 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new WalletPolicyError('Pro activation requires an assigned facility slot and sufficient confirmed Wallet funds.');
       return { facilityId: String(row.facility_id), entitlementId: String(row.entitlement_id), endsAt: new Date(String(row.ends_at)).toISOString(), spendLedgerEntryId: String(row.spend_ledger_entry_id ?? '') };
+    },
+
+    async getFacilityRenewalStatus(input: { authUserId: string; facilityId: string }): Promise<FacilityRenewalStatus> {
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.name as facility_name, f.account_id,
+                 coalesce(last_entitlement.price_minor, 1000)::int as pro_price_minor,
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in,
+                 last_entitlement.id as entitlement_id,
+                 last_entitlement.starts_at,
+                 last_entitlement.ends_at,
+                 last_entitlement.state as entitlement_state
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          left join lateral (
+            select e.id, e.state, e.starts_at, e.ends_at, e.price_minor, e.billing_currency, e.renewal_opt_in
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc, e.id desc
+            limit 1
+          ) last_entitlement on true
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join facility f on f.account_id = w.account_id
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        )
+        select
+          f.facility_id, f.facility_name, f.pro_price_minor, f.billing_currency,
+          f.renewal_opt_in, f.entitlement_id, f.starts_at, f.ends_at, f.entitlement_state,
+          b.balance_minor
+        from facility f cross join balance b
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerAuthorizationPolicyError('Facility not found or not owned by the current user.');
+      const nowMs = Date.now();
+      const endsAtMs = row.ends_at ? new Date(String(row.ends_at)).getTime() : null;
+      const daysLeft = endsAtMs !== null ? Math.max(0, Math.ceil((endsAtMs - nowMs) / 86400000)) : 0;
+      const activeNow = String(row.entitlement_state) === 'active' && (endsAtMs === null || endsAtMs > nowMs);
+      const plan = activeNow ? 'pro_active' : row.entitlement_id || String(row.entitlement_state) === 'active' || String(row.entitlement_state) === 'expired' ? 'pro_expired' : 'free';
+      const price = Number(row.pro_price_minor);
+      const balanceMinor = Number(row.balance_minor ?? 0);
+      return {
+        facilityId: String(row.facility_id),
+        facilityName: String(row.facility_name),
+        plan,
+        entitlementId: row.entitlement_id ? String(row.entitlement_id) : null,
+        startsAt: row.starts_at ? new Date(String(row.starts_at)).toISOString() : null,
+        endsAt: row.ends_at ? new Date(String(row.ends_at)).toISOString() : null,
+        renewalOptIn: Boolean(row.renewal_opt_in),
+        daysLeft,
+        proPriceMinor: price,
+        billingCurrency: String(row.billing_currency),
+        walletBalanceMinor: balanceMinor,
+        sufficientFunds: balanceMinor >= price,
+      };
+    },
+
+    async setFacilityRenewalOptIn(input: { authUserId: string; facilityId: string; optIn: boolean }): Promise<FacilityRenewalOptInResult> {
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.account_id
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          for update of f
+        ), latest as (
+          select e.id, e.facility_id
+          from v2_facility_entitlements e
+          join facility f on f.facility_id = e.facility_id
+          where e.entitlement_kind = 'facility_pro'
+          order by e.created_at desc, e.id desc
+          limit 1
+        ), updated as (
+          update v2_facility_entitlements e
+          set renewal_opt_in = ${input.optIn}
+          from latest l
+          where e.id = l.id
+          returning e.facility_id, e.renewal_opt_in
+        )
+        select facility_id, renewal_opt_in from updated
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) {
+        throw new WalletPolicyError('Activate Omni Pro once before choosing auto-renewal.');
+      }
+      return { facilityId: String(row.facility_id), renewalOptIn: Boolean(row.renewal_opt_in) };
+    },
+
+    async renewFacilityPro(input: { authUserId: string; facilityId: string; now: string }): Promise<FacilityRenewalResult> {
+      const periodKey = new Date(input.now).toISOString().slice(0, 7);
+      const reference = `facility-pro-renew:${input.facilityId}:${periodKey}`;
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.name as facility_name, f.account_id,
+                 coalesce(last_entitlement.price_minor, 1000)::int as price_minor,
+                 coalesce(last_entitlement.billing_currency, 'XOF') as billing_currency,
+                 last_entitlement.id as entitlement_id,
+                 last_entitlement.ends_at as prior_ends_at,
+                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = f.account_id and fs.status = 'assigned'
+          left join lateral (
+            select e.id, e.ends_at, e.price_minor, e.billing_currency, e.renewal_opt_in
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc, e.id desc
+            limit 1
+          ) last_entitlement on true
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          for update of f
+        ), active_entitlement as (
+          select e.id, e.ends_at
+          from v2_facility_entitlements e
+          join facility f on f.facility_id = e.facility_id
+          where e.entitlement_kind = 'facility_pro' and e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          order by e.ends_at desc
+          limit 1
+        ), wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join facility f on f.account_id = w.account_id
+          for update of w
+        ), balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ), existing_spend as (
+          select e.id, e.wallet_id, e.amount_minor, e.facility_id
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = 'facility_pro_spend' and e.reference = ${reference}
+          limit 1
+        ), spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select w.wallet_id, 'facility_pro_spend', f.price_minor, 'confirmed', ${reference}, f.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          from wallet w cross join facility f cross join balance b
+          where b.balance_minor >= f.price_minor
+            and not exists (select 1 from active_entitlement)
+            and f.renewal_opt_in = true
+            and not exists (select 1 from existing_spend)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, amount_minor, facility_id
+        ), effective_spend as (
+          select id, wallet_id, amount_minor, facility_id from spend
+          union all
+          select id, wallet_id, amount_minor, facility_id from existing_spend
+          limit 1
+        ), new_entitlement as (
+          insert into v2_facility_entitlements (facility_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select f.facility_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, true
+          from facility f join effective_spend s on s.facility_id = f.facility_id
+          where not exists (select 1 from active_entitlement)
+          returning id, facility_id, ends_at
+        ), updated as (
+          update v2_facilities f
+          set commercial_plan = 'pro_active', updated_at = ${input.now}::timestamptz
+          from new_entitlement e
+          where f.id = e.facility_id
+          returning f.id
+        ), renewal_run as (
+          insert into v2_facility_renewal_runs (facility_id, prior_entitlement_id, new_entitlement_id, spend_ledger_entry_id, run_at, status, note)
+          select f.facility_id, f.entitlement_id, ne.id, s.id, ${input.now}::timestamptz, 'succeeded', 'auto-renew 30d via wallet (opt-in)'
+          from facility f join new_entitlement ne on ne.facility_id = f.facility_id join effective_spend s on s.facility_id = f.facility_id
+          returning id
+        )
+        select ne.facility_id, ne.id as new_entitlement_id, ne.ends_at, s.id as spend_ledger_entry_id
+        from new_entitlement ne join effective_spend s on s.facility_id = ne.facility_id
+      `);
+      const renewedRow = (rows as Record<string, unknown>[])[0];
+      if (renewedRow) {
+        return {
+          facilityId: String(renewedRow.facility_id),
+          renewed: true,
+          reason: 'renewed',
+          newEntitlementId: String(renewedRow.new_entitlement_id),
+          endsAt: new Date(String(renewedRow.ends_at)).toISOString(),
+          spendLedgerEntryId: String(renewedRow.spend_ledger_entry_id ?? ''),
+          status: 'succeeded',
+        };
+      }
+      const staleRows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.account_id,
+                 coalesce(last_entitlement.renewal_opt_in, false) as renewal_opt_in,
+                 last_entitlement.id as entitlement_id
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          left join lateral (
+            select e.id, e.renewal_opt_in
+            from v2_facility_entitlements e
+            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            order by e.created_at desc, e.id desc
+            limit 1
+          ) last_entitlement on true
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ), active_entitlement as (
+          select e.id
+          from v2_facility_entitlements e
+          join facility f on f.facility_id = e.facility_id
+          where e.entitlement_kind = 'facility_pro' and e.state = 'active' and e.ends_at > ${input.now}::timestamptz
+          limit 1
+        ), spent_this_period as (
+          select e.id
+          from v2_wallet_ledger_entries e
+          join v2_wallets w on w.id = e.wallet_id
+          join facility f on f.account_id = w.account_id
+          where e.kind = 'facility_pro_spend' and e.reference = ${reference}
+          limit 1
+        )
+        insert into v2_facility_renewal_runs (facility_id, prior_entitlement_id, run_at, status, note)
+        select f.facility_id, f.entitlement_id, ${input.now}::timestamptz,
+               case
+                 when exists (select 1 from active_entitlement) then 'skipped'
+                 when exists (select 1 from spent_this_period) then 'skipped'
+                 when f.renewal_opt_in = false then 'skipped'
+                 else 'insufficient_funds'
+               end,
+               case
+                 when exists (select 1 from active_entitlement) then 'Pro still active; nothing to renew.'
+                 when exists (select 1 from spent_this_period) then 'Already renewed for this period; nothing to renew.'
+                 when f.renewal_opt_in = false then 'No renewal opt-in; facility stays pro_expired.'
+                 else 'Opt-in set but wallet balance is below the Pro price.'
+               end
+        from facility f
+        returning facility_id, status, note
+      `);
+      const staleRow = (staleRows as Record<string, unknown>[])[0];
+      const fallbackStatus = staleRow ? String(staleRow.status) : 'skipped';
+      return {
+        facilityId: input.facilityId,
+        renewed: false,
+        reason: fallbackStatus === 'insufficient_funds' ? 'insufficient_funds' : 'not_due_or_no_opt_in',
+        newEntitlementId: null,
+        endsAt: null,
+        spendLedgerEntryId: null,
+        status: fallbackStatus,
+      };
     },
 
     async respondAvailability(input: {

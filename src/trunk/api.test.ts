@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getFacilityBonusStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, requestBulkAvailability, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateSellerAccount, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listPublicFacilities, rebindDemoSeller, renewFacilityPro, requestBulkAvailability, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -245,6 +245,42 @@ describe('facility trust bonus contract (NW-13e)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities/facility-1/bonus/unlock',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
+    );
+  });
+});
+describe('facility pro renewal contract (NW-13g)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the renewal status from the facility pro renewal-status endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', facilityName: 'Atelier', plan: 'pro_active', entitlementId: 'ent-1', startsAt: '2026-08-01T00:00:00.000Z', endsAt: '2027-01-01T00:00:00.000Z', renewalOptIn: true, proPriceMinor: 1000, billingCurrency: 'XOF', walletBalanceMinor: 5000, sufficientFunds: true, daysLeft: 112 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await getFacilityRenewalStatus({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/pro/renewal-status',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('posts the opt-in change to the facility pro renewal-opt-in endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', renewalOptIn: true } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await setFacilityRenewalOptIn({ token: 'session-token', facilityId: 'facility-1', optIn: true });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/pro/renewal-opt-in',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: '{"optIn":true}' },
+    );
+  });
+
+  it('posts a manual renewal to the facility pro renew endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-1', renewed: true, reason: 'renewed', newEntitlementId: 'ent-new', endsAt: '2026-10-22T00:00:00.000Z', spendLedgerEntryId: 'spend-1', status: 'succeeded' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await renewFacilityPro({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/pro/renew',
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: '{}' },
     );
   });

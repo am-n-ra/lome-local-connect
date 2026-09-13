@@ -1251,6 +1251,56 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/pro/renewal-status')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to view the Pro renewal status.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/pro/renewal-status'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility.'));
+        return true;
+      }
+      const result = await repository.getFacilityRenewalStatus({ authUserId, facilityId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/pro/renewal-opt-in')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to set Pro auto-renewal.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/pro/renewal-opt-in'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const optIn = input.optIn === true || input.optIn === 'true';
+      const result = await repository.setFacilityRenewalOptIn({ authUserId, facilityId, optIn });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/pro/renew')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to run the Pro renewal.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/pro/renew'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility.'));
+        return true;
+      }
+      const result = await repository.renewFacilityPro({ authUserId, facilityId, now: new Date().toISOString() });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
         if (req.method === 'GET' && pathname === '/api/v2/availability-responses') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

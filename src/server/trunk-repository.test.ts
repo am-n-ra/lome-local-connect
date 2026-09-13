@@ -966,6 +966,148 @@ describe('wallet persistence Root seam', () => {
     });
   });
 });
+describe('facility pro renewal Root seam', () => {
+  it('returns the honest plan, opt-in, days left and balance for an active entitlement', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      facility_name: 'Atelier Test',
+      pro_price_minor: 1000,
+      billing_currency: 'XOF',
+      renewal_opt_in: true,
+      entitlement_id: 'ent-1',
+      starts_at: '2026-08-01T00:00:00.000Z',
+      ends_at: '2028-01-01T00:00:00.000Z',
+      entitlement_state: 'active',
+      balance_minor: 25000,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getFacilityRenewalStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.plan).toBe('pro_active');
+    expect(result.renewalOptIn).toBe(true);
+    expect(result.sufficientFunds).toBe(true);
+    expect(result.walletBalanceMinor).toBe(25000);
+    expect(result.daysLeft).toBeGreaterThan(100);
+    expect(call.queries[0]).toContain('v2_facility_entitlements');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('marks the plan pro_expired when the entitlement ended, even if renewal_opt_in stayed on', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      facility_name: 'Atelier Test',
+      pro_price_minor: 1000,
+      billing_currency: 'XOF',
+      renewal_opt_in: true,
+      entitlement_id: 'ent-1',
+      starts_at: '2026-06-01T00:00:00.000Z',
+      ends_at: '2026-07-01T00:00:00.000Z',
+      entitlement_state: 'expired',
+      balance_minor: 0,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getFacilityRenewalStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.plan).toBe('pro_expired');
+    expect(result.renewalOptIn).toBe(true);
+    expect(result.sufficientFunds).toBe(false);
+    expect(result.daysLeft).toBe(0);
+  });
+
+  it('returns free when the facility has never had a Pro entitlement', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      facility_name: 'Atelier Test',
+      pro_price_minor: 1000,
+      billing_currency: 'XOF',
+      renewal_opt_in: false,
+      entitlement_id: null,
+      starts_at: null,
+      ends_at: null,
+      entitlement_state: null,
+      balance_minor: 5000,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getFacilityRenewalStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.plan).toBe('free');
+    expect(result.daysLeft).toBe(0);
+  });
+
+  it('rejects a facility that is not owned by the current user', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getFacilityRenewalStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' }))
+      .rejects.toThrow('Facility not found or not owned by the current user.');
+  });
+
+  it('flips the opt-in on the latest Pro entitlement and returns the new state', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      renewal_opt_in: true,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setFacilityRenewalOptIn({ authUserId: 'auth-user-1', facilityId: 'facility-1', optIn: true });
+    expect(result).toEqual({ facilityId: 'facility-1', renewalOptIn: true });
+    expect(call.queries[0]).toContain('set renewal_opt_in =');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('for update of f');
+  });
+
+  it('refuses the opt-in before any Pro activation exists', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setFacilityRenewalOptIn({ authUserId: 'auth-user-1', facilityId: 'facility-1', optIn: true }))
+      .rejects.toThrow('Activate Omni Pro once before choosing auto-renewal.');
+  });
+  it('renews a due Pro facility from the wallet when opt-in is on and funds cover the price', async () => {
+      const call = stubSql([{
+        facility_id: 'facility-1',
+        new_entitlement_id: 'ent-new-1',
+        ends_at: '2026-10-22T00:00:00.000Z',
+        spend_ledger_entry_id: 'spend-1',
+      }]);
+      const repository = createTrunkRepository(call.sql);
+      const result = await repository.renewFacilityPro({ authUserId: 'auth-user-1', facilityId: 'facility-1', now: '2026-09-22T00:00:00.000Z' });
+      expect(result).toEqual({
+        facilityId: 'facility-1',
+        renewed: true,
+        reason: 'renewed',
+        newEntitlementId: 'ent-new-1',
+        endsAt: '2026-10-22T00:00:00.000Z',
+        spendLedgerEntryId: 'spend-1',
+        status: 'succeeded',
+      });
+      expect(call.queries[0]).toContain('insert into v2_wallet_ledger_entries');
+      expect(call.queries[0]).toContain('facility_pro_spend');
+      expect(call.queries[0]).toContain('insert into v2_facility_renewal_runs');
+      expect(call.queries[0]).toContain("'succeeded'");
+    });
+
+  it('records an insufficient_funds renewal run and stays expired when opt-in is on but the wallet is short', async () => {
+    const call = stubSqlAlternating([[], [{ facility_id: 'facility-1', status: 'insufficient_funds' }]]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.renewFacilityPro({ authUserId: 'auth-user-1', facilityId: 'facility-1', now: '2026-09-22T00:00:00.000Z' });
+    expect(result).toEqual({
+      facilityId: 'facility-1',
+      renewed: false,
+      reason: 'insufficient_funds',
+      newEntitlementId: null,
+      endsAt: null,
+      spendLedgerEntryId: null,
+      status: 'insufficient_funds',
+    });
+    expect(call.queries[1]).toContain("'insufficient_funds'");
+  });
+
+  it('skips without spending when the facility is still active or has no opt-in', async () => {
+    const call = stubSqlAlternating([[], [{ facility_id: 'facility-1', status: 'skipped' }]]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.renewFacilityPro({ authUserId: 'auth-user-1', facilityId: 'facility-1', now: '2026-09-22T00:00:00.000Z' });
+    expect(result.renewed).toBe(false);
+    expect(result.status).toBe('skipped');
+    expect(result.reason).toBe('not_due_or_no_opt_in');
+    expect(call.queries[0]).toContain('facility_pro_spend');
+    expect(call.queries[1]).toContain('insert into v2_facility_renewal_runs');
+  });
+});
 
 describe('wallet spend persistence Root seam', () => {
   it('uses the authenticated account, facility ownership, confirmed balance and append-only spend shape', async () => {
