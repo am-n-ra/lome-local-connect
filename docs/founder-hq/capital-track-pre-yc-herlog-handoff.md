@@ -65,14 +65,15 @@ The founder wants two things addressed together, in order:
 
 Updated with founder decisions + external reference (2026-09-13):
 
-- **Structure direction (from reference, founder-endorsed):** syndicated Proof Round ~$150K, first closing ~$75K, HERLOG as candidate anchor/lead, milestone disbursement; **<>$100K honestly requires 6-month scenarios** (mid+veh ≈ $102K, full no-veh ≈ $106K, full+veh ≈ $143K at 25k/day cap).
+- **HERLOG-first option (founder, 2026-09-13):** « si c'est le cas on peut toujours essayer avec HERLOG non, si c'est le montant le problème, et si on est pris c'est bon, au cas contraire on pourra toujours les recontacter quand ce sera avec plus de traction ». → **Tentative HERLOG en parallèle = option réelle à coût quasi nul** (contact ouvert). Deux notes d'honnêteté: (a) avec entité pas encore incorporée + plancher ~50M, le réaliste d'un premier échange = **conversation/termes**, pas un wiring; (b) HERLOG reste une **option en parallèle**, pas la base du plan de survie — sponsor/grant restent le moteur speed-to-first-money car plus rapides et plus petits.
+- **Structure direction (from reference, founder-endorsed):** syndicated Proof Round ~$150K, first closing ~$75K, HERLOG as candidate anchor/lead, milestone disbursement; **<>$100K honestly requires 6-month scenarios** (mid+veh ≈ $117K, full no-veh ≈ $118K, full+veh ≈ $166K at 25k/day cap, incl. mkt/ops/leadership).
 - **Field cost basis to reconcile:** our observed estimate ≈15,000 F/day (10k transport + 5k food); founder cap = 25,000 F/day; external reference used 35,000 F/day. The specialist must fix one working figure.
-- **Need (6-month, at 25k cap):** field team 5–10 + calls/OSM + mobile dev + legal + vehicles + support ⇒ ≈ $83–143K FCFA. Covers the founder's >$100K and the HERLOG ~50M floor (≈ $76–83K at 6-month mid) when dev/legal/vehicles are included.
+- **Need (6-month, at 25k cap):** field team 5–10 + calls/OSM + mobile dev + legal + vehicles + support + mkt/ops/leadership ⇒ ≈ $98–166K. Covers the founder's >$100K (6-month) and the HERLOG ~50M floor (≈ $76–83K at 6-month mid) when dev/legal/vehicles are included.
 - **First-revenue note:** 13 paid Pro sellers (65,000 F) — founder-stated, **received in cash (main à main), no digital wallet trail** → verification via manual receipts/cash book, NOT a DB query; do not upgrade to ARPA/LTV.
 - **Entity sequencing:** Delaware C-Corp target, not yet incorporated — raise before/after = counsel.
-- **Instrument/terms/anchoring:** to be negotiated by the specialist with HERLOG (equity? SAFE? tranches?), no commitment made by HQ.
+- **Instrument/terms/anchoring:** to be negotiated by the specialist with HERLOG (equity? SAFE? tranches? sponsorship?), no commitment made by HQ.
 
-HQ does **not** propose an amount, instrument, or sequencing here; it records founder decisions D-01…D-04 and the reference for the specialist.
+HQ does **not** propose an amount, instrument, or sequencing here; it records founder decisions D-01…D-04, the HERLOG-first option, and the reference for the specialist.
 
 ## Product evidence Omni already holds (factual, from repository proof — invite the specialist to classify)
 

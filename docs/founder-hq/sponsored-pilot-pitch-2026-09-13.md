@@ -43,15 +43,16 @@ OMNI rend **l'offre locale recherchable, disponible et exploitable** (couche gé
 - Alimente la candidature **YC Winter 2027** (traction instrumentée).
 - Valide le passage **Lomé → Aflao** avec des coûts comparés.
 
-## 7. Contacts cibles (rail partenaire)
+## 7. Contacts cibles (rail partenaire + option HERLOG first)
 
 | Sponsor potentiel | Angle | Canal recherché |
 |---|---|---|
+| **HERLOG (option « essayer maintenant »)** | Contact déjà ouvert — discuter les termes d'un premier soutien (le plancher ~50M et l'entité pas encore incorporée font de l'échange de termes la première étape réaliste; si pris = excellent, sinon réengager plus tard avec traction) | conversation directe déjà ouverte |
 | Moov Africa Togo | Co-financer une micro-cohorte marchands + campagne SMS/data + Flooz | Direction Entreprise / Moov Money / innovation |
-| Gozem | Pilote avec un segment de commerçants, cas transactionnel réel | Country management / merchant network |
-| Djanta Tech Hub | Espace de pilote, recrutement d'agents, relais crédibilité | Programme / incubation |
 | CCI-Togo / assos pro | Accès aux réseaux de commerçants, lettre d'appui, fonds annoncé | Programmes PME / commerce |
 | (à étendre) | Banques locales / institutions microfinance | Canal marchands + paiement |
+
+**Retirés sur décision fondateur (2026-09-13):** **Gozem** (concurrent potentiel — super-app réseau marchands à Lomé; pas de partage de données de cohorte) et **Djanta Tech Hub** (relais exécution/crédibilité seulement; pas un sponsor actif; reste utile comme preuve narrative YC historique).
 
 ## Boundary
 

@@ -9,10 +9,15 @@
 | # | Sponsor | Type | Pourquoi eux | Ask | Canal de contact | Statut | Prochaine action |
 |---|---|---|---|---|---|---|---|
 | 1 | **Moov Africa Togo** | Opérateur / paiement | Distribution SMS/data + Flooz/Moov Money, réseau marchands | Co-financer micro-cohorte + canal SMS/data + paiement | Formulaire site / sponsoring path + email direction Entreprise | `todo` | Identifier contact direction Entreprise/Moov Money; adapter pitch (pilote 10–15 j) |
-| 2 | **Gozem Togo** | Super-app transport/livraison/services | Segment commerçants, cas transactionnel réel, présence Lomé | Pilote avec un segment de commerçants, co-marketing | `group@gozem.co` + country management | `todo` | Adapter pitch (canal livraison/services financiers); tenter intro fondateur |
-| 3 | **Djanta Tech Hub** | Hub incubation (gouv) | Relais local, recrutement d'agents, espace pilote, crédibilité | Héberger le pilote + recruter agents + sessions vendeurs | Contact programme/incubation | `todo` | Pitch version « exécution locale / validation » — pas investisseur |
-| 4 | **CCI-Togo** | Chambre de commerce | Accès réseaux commerçants, lettre d'appui, fonds startup 2026 annoncé | Accès encadré marchands + appui + intro fonds | Programmes PME / commerce | `todo` | Vérifier état du fonds 2026 (annonce Togo First); demander atelier PME |
-| 5 | (à étendre) Banques locales / IMF | Banque / microfinance | Canal marchands + paiement, ancrage local | Pilote marchands + paiement | — | `todo` | Lister banques/IMF actives à Lomé (à faire avec fondateur) |
+| 2 | (à étendre) Banques locales / IMF | Banque / microfinance | Canal marchands + paiement, ancrage local | Pilote marchands + paiement | — | `todo` | Lister banques/IMF actives à Lomé (à faire avec fondateur) |
+| 3 | **CCI-Togo** | Chambre de commerce | Accès réseaux commerçants, lettre d'appui, fonds startup 2026 annoncé | Accès encadré marchands + appui + intro fonds | Programmes PME / commerce | `todo` | Vérifier état du fonds 2026 (annonce Togo First); demander atelier PME |
+
+## Retirés du pipeline (décision fondateur, 2026-09-13)
+
+| Cible | Raison du retrait | Note |
+|---|---|---|
+| **Gozem** | Fondateur le perçoit comme **concurrent potentiel** (super-app mobilité/livraison/services financiers construisant un réseau de commerçants à Lomé) | Retiré pour risque de partage de données de cohorte / réseau marchands. Réévaluer uniquement comme partenaire transactionnel si la dynamique change — pas par défaut |
+| **Djanta Tech Hub** | Fondateur demande de l'oublier (relais exécution/crédibilité uniquement, jamais investisseur; historique 11e/10 de 500+ = pas de relation chaleureuse attestée) | Retiré. Noter: Djanta reste utile comme preuve narrative YC (historique), pas comme sponsor/partenaire actif |
 
 ## Livrables sponsor (remembered in pitch)
 
