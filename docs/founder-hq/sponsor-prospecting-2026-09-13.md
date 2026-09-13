@@ -1,7 +1,7 @@
 # Sponsor prospecting — tracking sheet (pilote sponsorisé)
 
 > **Purpose:** tracker l'activation des sponsors pour le pilote sponsorisé (speed-to-first-money, zero-runway).
-> **As of:** 2026-09-13. Pitch: `docs/founder-hq/sponsored-pilot-pitch-2026-09-13.md`.
+> **As of:** 2026-09-13. Pitch: `docs/founder-hq/sponsored-pilot-pitch-2026-09-13.md`. **Brouillons email:** `docs/founder-hq/sponsor-outreach-drafts-2026-09-13.md` (HERLOG/Moov/CCI/banques, à personnaliser, rien envoyé).
 > **Status key:** `todo` (cible identifiée, pas contacté) / `contacted` (email/form/envoyé) / `follow-up` (relance) / `meeting` (échange planifié/fait) / `committed` (accord pilote) / `closed` (répondu non / inéligible).
 
 ## Pipeline
