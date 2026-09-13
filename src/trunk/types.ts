@@ -571,6 +571,15 @@ export interface WalletRechargeResult {
   currency: string;
   checkoutUrl: string;
   providerTransactionId: string;
+  purpose: 'wallet' | 'pack';
+  packCredits: number | null;
+}
+
+export interface BulkPack {
+  id: string;
+  credits: number;
+  priceMinor: number;
+  billingCurrency: string;
 }
 export interface FacilityProActivationResult {
   facilityId: string;

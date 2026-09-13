@@ -46,6 +46,17 @@ function convertUsdMinorToLocal(usdMinor, currency) {
   if (!rate || usdMinor <= 0) return usdMinor;
   return Math.round(usdMinor * rate);
 }
+var BULK_PACKS = [
+  { id: "starter", credits: 10, priceMinor: 5e4, billingCurrency: "XOF" },
+  // 500  F  → 10 crédits
+  { id: "growth", credits: 30, priceMinor: 12e4, billingCurrency: "XOF" },
+  // 1 200 F → 30 crédits
+  { id: "scale", credits: 100, priceMinor: 35e4, billingCurrency: "XOF" }
+  // 3 500 F → 100 crédits
+];
+function bulkPackById(id) {
+  return BULK_PACKS.find((p) => p.id === id);
+}
 
 // src/server/evidence-contract.ts
 import { head } from "@vercel/blob";
@@ -2524,8 +2535,13 @@ function createTrunkRepository(sql = database()) {
       if (!isFedaPayConfigured()) {
         throw new WalletPolicyError("FedaPay recharge is not configured for this environment.");
       }
+      const purpose = input.purpose === "pack" ? "pack" : "wallet";
+      const packCredits = purpose === "pack" && Number.isInteger(input.packCredits) && Number(input.packCredits) > 0 ? Number(input.packCredits) : null;
+      if (purpose === "pack" && (packCredits === null || input.amountMinor < 100)) {
+        throw new WalletPolicyError("A bulk pack recharge requires a positive pack size and a valid amount.");
+      }
       const existingRows = await retryDatabase(() => sql`
-        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url
+        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url, r.purpose, r.pack_credits
         from v2_wallet_recharge_intents r
         join v2_accounts a on a.id = r.account_id
         where a.auth_user_id = ${input.authUserId}
@@ -2541,11 +2557,11 @@ function createTrunkRepository(sql = database()) {
         if (!existing.provider_transaction_id || !existing.checkout_url || String(existing.status) !== "pending") {
           throw new WalletPolicyError("The existing recharge cannot be resumed automatically.");
         }
-        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: "pending", providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url) };
+        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: "pending", providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url), purpose: String(existing.purpose) === "pack" ? "pack" : "wallet", packCredits: existing.pack_credits === null || existing.pack_credits === void 0 ? null : Number(existing.pack_credits) };
       }
       const intentRows = await retryDatabase(() => sql`
-        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key)
-        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}
+        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key, purpose, pack_credits)
+        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}, ${purpose}, ${packCredits}
         from v2_accounts a
         join v2_wallets w on w.account_id = a.id
         where a.auth_user_id = ${input.authUserId}
@@ -2558,7 +2574,7 @@ function createTrunkRepository(sql = database()) {
         rechargeId: String(intent.id),
         amountMinor: input.amountMinor,
         currency,
-        description: "Recharge Omni Wallet",
+        description: purpose === "pack" ? `Pack cr\xE9dits bulk ${packCredits ?? ""}` : "Recharge Omni Wallet",
         callbackUrl: input.callbackUrl,
         customer: input.customer
       });
@@ -2566,11 +2582,28 @@ function createTrunkRepository(sql = database()) {
         update v2_wallet_recharge_intents
         set provider_transaction_id = ${checkout.transactionId}, checkout_url = ${checkout.checkoutUrl}, updated_at = now()
         where id = ${String(intent.id)}::uuid and status = 'pending'
-        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url
+        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url, purpose, pack_credits
       `);
       const updated = updatedRows[0];
       if (!updated) throw new WalletPolicyError("Recharge state changed while creating the provider checkout.");
-      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: "pending", providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url) };
+      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: "pending", providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url), purpose: String(updated.purpose) === "pack" ? "pack" : "wallet", packCredits: updated.pack_credits === null || updated.pack_credits === void 0 ? null : Number(updated.pack_credits) };
+    },
+    async getBulkPacks() {
+      return BULK_PACKS.map((p) => ({ id: p.id, credits: p.credits, priceMinor: p.priceMinor, billingCurrency: p.billingCurrency }));
+    },
+    async createBulkPackRecharge(input) {
+      const pack = bulkPackById(input.packId.trim());
+      if (!pack) throw new WalletPolicyError("The requested bulk pack does not exist.");
+      return this.createWalletRecharge({
+        authUserId: input.authUserId,
+        amountMinor: pack.priceMinor,
+        currency: pack.billingCurrency,
+        idempotencyKey: input.idempotencyKey,
+        callbackUrl: input.callbackUrl,
+        customer: input.customer,
+        purpose: "pack",
+        packCredits: pack.credits
+      });
     },
     async reconcileWalletRecharge(input) {
       const providerTransactionId = input.providerTransactionId.trim();
@@ -2599,7 +2632,7 @@ function createTrunkRepository(sql = database()) {
       if (nextStatus === "pending") return { status: "pending", rechargeId: String(intent.id) };
       const rows = await retryDatabase(() => sql`
         with locked as (
-          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency, r.purpose, r.pack_credits
           from v2_wallet_recharge_intents r
           join v2_accounts a on a.id = r.account_id
           where r.id = ${String(intent.id)}::uuid and r.status = 'pending' and a.suspended_at is null
@@ -2617,12 +2650,29 @@ function createTrunkRepository(sql = database()) {
           from locked l
           where r.id = l.id
           returning r.id
+        ), pack_credit as (
+          insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, recharge_intent_id)
+          select l.account_id, 'pack_credit', l.pack_credits, ${`bulk pack recharge ${providerTransactionId}`}, l.id
+          from locked l
+          where ${nextStatus} = 'confirmed' and l.purpose = 'pack'
+          on conflict (recharge_intent_id) do nothing
+          returning id, recharge_intent_id
+        ), grant_extra as (
+          insert into v2_buyer_credit_accounts (buyer_account_id, plan, monthly_quota, period_month, extra_credits)
+          select l.account_id, 'free', 3, to_char(now(), 'YYYY-MM'), l.pack_credits
+          from pack_credit pc
+          join locked l on l.id = pc.recharge_intent_id
+          where l.purpose = 'pack' and ${nextStatus} = 'confirmed'
+          on conflict (buyer_account_id) do update set
+            extra_credits = v2_buyer_credit_accounts.extra_credits + excluded.extra_credits,
+            updated_at = now()
+          returning buyer_account_id
         )
-        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id from updated u
+        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id, (select id from pack_credit limit 1) as pack_credit_id, (select l.pack_credits from pack_credit pc join locked l on l.id = pc.recharge_intent_id limit 1) as pack_credits_granted from updated u
       `);
       const row = rows[0];
       if (!row) return { status: "ignored" };
-      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : void 0 };
+      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : void 0, packCreditsGranted: row.pack_credits_granted === null || row.pack_credits_granted === void 0 ? void 0 : Number(row.pack_credits_granted) };
     },
     async reconcilePendingRecharges(input) {
       const actorRows = await retryDatabase(() => sql`
@@ -5514,6 +5564,48 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.getAvailabilityResponses({ authUserId, requestId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/buyer/credit-packs") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view bulk credit packs."));
+        return true;
+      }
+      const packs = await repository.getBulkPacks();
+      json(res, 200, { ok: true, correlationId, data: packs });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/buyer/credit-packs") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before purchasing bulk credit packs."));
+        return true;
+      }
+      const idempotencyKey = String(req.headers["idempotency-key"] ?? "").trim();
+      if (!idempotencyKey || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A valid Idempotency-Key is required to purchase a bulk pack."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const packId = typeof input.packId === "string" ? input.packId.trim() : "";
+      if (!packId) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A pack id is required to purchase a bulk pack."));
+        return true;
+      }
+      const customer = input.customer && typeof input.customer === "object" && !Array.isArray(input.customer) ? input.customer : {};
+      const result = await repository.createBulkPackRecharge({
+        authUserId,
+        packId,
+        idempotencyKey,
+        callbackUrl: typeof input.callbackUrl === "string" ? input.callbackUrl : "",
+        customer: {
+          email: typeof customer.email === "string" ? customer.email : null,
+          firstName: typeof customer.firstName === "string" ? customer.firstName : null,
+          lastName: typeof customer.lastName === "string" ? customer.lastName : null
+        }
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "GET" && pathname === "/api/v2/buyer/credits") {

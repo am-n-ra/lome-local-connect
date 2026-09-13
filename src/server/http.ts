@@ -1322,6 +1322,48 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/credit-packs') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view bulk credit packs.'));
+        return true;
+      }
+      const packs = await repository.getBulkPacks();
+      json(res, 200, { ok: true, correlationId, data: packs });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/credit-packs') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before purchasing bulk credit packs.'));
+        return true;
+      }
+      const idempotencyKey = String(req.headers['idempotency-key'] ?? '').trim();
+      if (!idempotencyKey || idempotencyKey.length < 8) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A valid Idempotency-Key is required to purchase a bulk pack.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const packId = typeof input.packId === 'string' ? input.packId.trim() : '';
+      if (!packId) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A pack id is required to purchase a bulk pack.'));
+        return true;
+      }
+      const customer = input.customer && typeof input.customer === 'object' && !Array.isArray(input.customer) ? input.customer as Record<string, unknown> : {};
+      const result = await repository.createBulkPackRecharge({
+        authUserId,
+        packId,
+        idempotencyKey,
+        callbackUrl: typeof input.callbackUrl === 'string' ? input.callbackUrl : '',
+        customer: {
+          email: typeof customer.email === 'string' ? customer.email : null,
+          firstName: typeof customer.firstName === 'string' ? customer.firstName : null,
+          lastName: typeof customer.lastName === 'string' ? customer.lastName : null,
+        },
+      });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/buyer/credits') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

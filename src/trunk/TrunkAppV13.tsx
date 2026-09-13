@@ -7,13 +7,13 @@ import {
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
-  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
+  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
-  addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro,
+  addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
-  AvailabilityResponseStatus, AvailabilityResponsesResult, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
+  AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
@@ -212,6 +212,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [rechargeState, setRechargeState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [rechargeError, setRechargeError] = useState('');
   const [rechargeResult, setRechargeResult] = useState<WalletRechargeResult | null>(null);
+  // Packs crédits bulk (NW-13i)
+  const [bulkPacks, setBulkPacks] = useState<BulkPack[]>([]);
+  const [bulkPacksState, setBulkPacksState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [bulkPacksError, setBulkPacksError] = useState('');
+  const [packBuyingId, setPackBuyingId] = useState<string | null>(null);
 // Recherches enregistrées
   const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([]);
   const [savedState, setSavedState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -344,6 +349,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (!token) return;
       const result = await getWalletOverview({ token });
       if (result.ok && result.data) { setWallet(result.data); setWalletState('idle'); }
+      const packs = await getBulkPacks({ token });
+      if (packs.ok && packs.data) { setBulkPacks(packs.data); setBulkPacksState('idle'); }
+      const summary = await getBuyerCreditSummary({ token });
+      if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
     })();
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
@@ -622,6 +631,55 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth]);
 
+  const refreshCreditSummary = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    const summary = await getBuyerCreditSummary({ token });
+    if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
+  }, [requireAuth]);
+
+  const loadPacks = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setBulkPacksState('loading'); setBulkPacksError('');
+    try {
+      const result = await getBulkPacks({ token });
+      if (result.ok && result.data) { setBulkPacks(result.data); setBulkPacksState('idle'); }
+      else { setBulkPacksState('error'); setBulkPacksError(result.error?.message ?? 'Les packs ne peuvent pas être chargés pour le moment.'); }
+    } catch (caught) {
+      setBulkPacksState('error');
+      setBulkPacksError(caught instanceof Error ? caught.message : 'Les packs ne peuvent pas être chargés pour le moment.');
+    }
+  }, [requireAuth]);
+
+  const purchasePack = useCallback(async (pack: BulkPack) => {
+    const token = await requireAuth();
+    if (!token) return;
+    if (packBuyingId) return;
+    setPackBuyingId(pack.id);
+    setBulkPacksError('');
+    try {
+      const result = await purchaseBulkPack({
+        token, packId: pack.id,
+        callbackUrl: `${window.location.origin}/?wallet=recharge`,
+        customer: { email: sessionUser?.email ?? null, firstName: sessionUser?.name ?? null },
+        idempotencyKey: `bulk-pack:${pack.id}:${crypto.randomUUID()}`,
+      });
+      if (result.ok && result.data) {
+        // Direction continuée vers FedaPay (paiement Mobile Money au checkout).
+        window.location.assign(result.data.checkoutUrl);
+      } else {
+        setBulkPacksState('error');
+        setBulkPacksError(result.error?.message ?? 'L’achat du pack n’a pas pu être préparé.');
+        setPackBuyingId(null);
+      }
+    } catch (caught) {
+      setBulkPacksState('error');
+      setBulkPacksError(caught instanceof Error ? caught.message : 'L’achat du pack n’a pas pu être préparé.');
+      setPackBuyingId(null);
+    }
+  }, [requireAuth, sessionUser, packBuyingId]);
+
   const openWallet = useCallback(async () => {
     const token = await requireAuth();
     if (!token) return;
@@ -639,7 +697,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setWalletState('error');
       setWalletError(caught instanceof Error ? caught.message : 'Le Wallet ne peut pas être chargé pour le moment.');
     }
-  }, [requireAuth]);
+    void loadPacks();
+    void refreshCreditSummary();
+  }, [requireAuth, loadPacks, refreshCreditSummary]);
 
   const openSaved = useCallback(async () => {
     const token = await requireAuth();
@@ -1221,7 +1281,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 <span className="status ok">solde : {bulkCreditSummary?.creditsRemaining ?? 0} · après envoi : {bulkCost.remaining}</span>
               </div>
-              {bulkCost.remaining < 0 && <p className="sub" role="alert" style={{ marginTop: 6 }}>Crédits insuffisants — il manque {-bulkCost.remaining} crédit(s). Rechargez en packs pour envoyer ce bulk.</p>}
+              {bulkCost.remaining < 0 && (
+                <p className="sub" role="alert" style={{ marginTop: 6 }}>
+                  Crédits insuffisants — il manque {-bulkCost.remaining} crédit(s).{' '}
+                  <button type="button" className="textbtn" style={{ textDecoration: 'underline' }} onClick={() => void openWallet()}>Rechargez en packs</button> pour envoyer ce bulk.
+                </p>
+              )}
             </div>
           )}
           {!bulkLoading && !bulkResults && bulkFacilities && (
@@ -1668,6 +1733,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 ) : null}
                 {buyerProStatus?.renewalOptIn && buyerProStatus.plan !== 'free' && !buyerProStatus.sufficientFunds && (
                   <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto ({localPlanPriceLabel('buyerPro')}).</p>
+                )}
+              </div>
+              <div className="cardbox">
+                <div className="eyebrow">Packs crédits bulk</div>
+                <p className="tiny muted">Des crédits surplus pour vos demandes multi-commerces. Payés via FedaPay (Mobile Money au paiement), confirmés par webhook.</p>
+                {bulkCreditSummary && (
+                  <p className="sub" style={{ marginTop: 4 }}>Solde actuel : <b>{bulkCreditSummary.creditsRemaining} crédit(s)</b> {bulkCreditSummary.plan === 'pro' ? '· plan Pro' : '· plan Free (3/mois)'}</p>
+                )}
+                {bulkPacksState === 'loading' && <p className="sub" role="status">Chargement des packs…</p>}
+                {bulkPacksState === 'error' && <p className="sub" role="alert">{bulkPacksError}</p>}
+                {bulkPacksState === 'idle' && bulkPacks.length > 0 && (
+                  <div style={{ marginTop: 6, display: 'grid', gap: 6 }}>
+                    {bulkPacks.map((pack) => (
+                      <div className="kv" key={pack.id} style={{ gap: 8 }}>
+                        <span><b>{pack.credits} crédit(s)</b><span className="tiny muted" style={{ display: 'block' }}>surplus de crédits bulk</span></span>
+                        <button className="btn sm" type="button" disabled={packBuyingId !== null} style={{ minHeight: 28 }} onClick={() => void purchasePack(pack)}>{packBuyingId === pack.id ? 'Préparation…' : `Acheter ${money(pack.priceMinor, pack.billingCurrency)}`}</button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
               {wallet.entries.length > 0 && (

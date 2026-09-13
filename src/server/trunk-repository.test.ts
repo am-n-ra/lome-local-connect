@@ -2062,3 +2062,67 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     expect(call.queries[1]).toContain('rayon_km');
   });
 });
+
+describe('bulk credit packs (NW-13i)', () => {
+  it('exposes the catalog from the single pricing source without DB access', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const packs = await repository.getBulkPacks();
+    expect(packs.length).toBeGreaterThan(0);
+    expect(packs[0]).toMatchObject({ id: expect.any(String), credits: expect.any(Number), priceMinor: expect.any(Number), billingCurrency: 'XOF' });
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects an unknown pack id before touching the provider boundary', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createBulkPackRecharge({
+      authUserId: 'auth-user-1',
+      packId: 'bogus',
+      idempotencyKey: 'bulk-pack-key-0000001',
+      callbackUrl: 'https://omni.test/callback',
+      customer: { email: 'buyer@omni.test' },
+    })).rejects.toBeInstanceOf(WalletPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('derives a pack recharge from the catalog (amount + purpose + credits) when FedaPay is configured', async () => {
+      const previous = new Map<string, string | undefined>();
+      for (const key of ['FEDAPAY_ENV', 'FEDAPAY_SANDBOX_SECRET_KEY', 'FEDAPAY_SANDBOX_WEBHOOK_SECRET']) {
+        previous.set(key, process.env[key]);
+      }
+      process.env.FEDAPAY_ENV = 'sandbox';
+      process.env.FEDAPAY_SANDBOX_SECRET_KEY = 'sandbox-secret-test';
+      process.env.FEDAPAY_SANDBOX_WEBHOOK_SECRET = 'sandbox-webhook-test';
+      const fetchStub = async () => new Response(JSON.stringify({ id: 'trx_bulk1', status: 'pending', url: 'https://checkout.test' }), { status: 200, headers: { 'content-type': 'application/json' } });
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = fetchStub as typeof fetch;
+      try {
+        const call = stubSqlSequence([
+          [], // existing intent lookup → none
+          [{ id: 'pack-intent-1', account_id: 'account-1' }], // insert intent
+          [{ id: 'pack-intent-1', account_id: 'account-1', amount_minor: 50000, currency: 'XOF', status: 'pending', provider_transaction_id: 'trx_bulk1', checkout_url: 'https://checkout.test', purpose: 'pack', pack_credits: 10 }], // updated
+        ]);
+        const repository = createTrunkRepository(call.sql);
+        const result = await repository.createBulkPackRecharge({
+          authUserId: 'auth-user-1',
+          packId: 'starter',
+          idempotencyKey: 'bulk-pack-key-0000003',
+          callbackUrl: 'https://omni.test/callback',
+          customer: { email: 'buyer@omni.test' },
+        });
+        expect(result.purpose).toBe('pack');
+        expect(result.packCredits).toBe(10);
+        expect(result.amountMinor).toBe(50000);
+        expect(call.queries[1]).toContain('purpose');
+        expect(call.queries[1]).toContain('pack_credits');
+        expect(call.queries[1]).toContain('pack');
+      } finally {
+        for (const [key, value] of previous) {
+          if (value === undefined) delete process.env[key];
+          else process.env[key] = value;
+        }
+        globalThis.fetch = originalFetch;
+      }
+    });
+  });

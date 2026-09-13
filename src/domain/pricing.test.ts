@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR,
-  convertUsdMinorToLocal, planBaseUsdMinor,
+  BULK_PACKS, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR,
+  bulkPackById, convertUsdMinorToLocal, planBaseUsdMinor,
 } from './pricing';
 
 describe('pricing canonical USD base (founder correction 2026-09-13)', () => {
@@ -33,5 +33,23 @@ describe('pricing canonical USD base (founder correction 2026-09-13)', () => {
   it('returns 0 for unknown plan kinds', () => {
     expect(planBaseUsdMinor('sellerPro' as 'sellerPro')).toBeGreaterThan(0);
     expect(planBaseUsdMinor('bogus' as 'buyerPro')).toBe(0);
+  });
+});
+
+describe('bulk credit packs (NW-13i, D-J hypothesis)', () => {
+  it('exposes a small positive catalog in XOF, prices above the FedaPay minimum', () => {
+    expect(BULK_PACKS.length).toBeGreaterThan(0);
+    const ids = new Set(BULK_PACKS.map((pack) => pack.id));
+    expect(ids.size).toBe(BULK_PACKS.length);
+    for (const pack of BULK_PACKS) {
+      expect(pack.credits).toBeGreaterThan(0);
+      expect(pack.priceMinor).toBeGreaterThanOrEqual(10000); // ≥ 100 F — FedaPay recharge minimum
+      expect(pack.billingCurrency).toBe('XOF');
+    }
+  });
+
+  it('resolves a known pack by id and rejects unknown ones', () => {
+    expect(bulkPackById(BULK_PACKS[0].id)).toBeDefined();
+    expect(bulkPackById('bogus')).toBeUndefined();
   });
 });

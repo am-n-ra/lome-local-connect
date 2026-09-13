@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
-import { convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR } from '../domain/pricing';
+import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR } from '../domain/pricing';
 
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
@@ -136,6 +136,15 @@ export interface WalletRechargePersistenceResult {
   status: 'pending';
   providerTransactionId: string;
   checkoutUrl: string;
+  purpose: 'wallet' | 'pack';
+  packCredits: number | null;
+}
+
+export interface BulkPackCatalogItem {
+  id: string;
+  credits: number;
+  priceMinor: number;
+  billingCurrency: string;
 }
 
 export interface FacilityProActivationPersistenceResult {
@@ -2771,6 +2780,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       idempotencyKey: string;
       callbackUrl: string;
       customer: { email: string | null; firstName?: string | null; lastName?: string | null };
+      purpose?: 'wallet' | 'pack';
+      packCredits?: number | null;
     }): Promise<WalletRechargePersistenceResult> {
       if (!Number.isInteger(input.amountMinor) || input.amountMinor < 100 || input.amountMinor > 100000000) {
         throw new WalletPolicyError('Recharge amount must be between 100 and 100,000,000 minor units.');
@@ -2782,8 +2793,13 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!isFedaPayConfigured()) {
         throw new WalletPolicyError('FedaPay recharge is not configured for this environment.');
       }
+      const purpose = input.purpose === 'pack' ? 'pack' : 'wallet';
+      const packCredits = purpose === 'pack' && Number.isInteger(input.packCredits) && Number(input.packCredits) > 0 ? Number(input.packCredits) : null;
+      if (purpose === 'pack' && (packCredits === null || input.amountMinor < 100)) {
+        throw new WalletPolicyError('A bulk pack recharge requires a positive pack size and a valid amount.');
+      }
       const existingRows = await retryDatabase(() => sql`
-        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url
+        select r.id, r.account_id, r.amount_minor, r.currency, r.status, r.provider_transaction_id, r.checkout_url, r.purpose, r.pack_credits
         from v2_wallet_recharge_intents r
         join v2_accounts a on a.id = r.account_id
         where a.auth_user_id = ${input.authUserId}
@@ -2799,11 +2815,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         if (!existing.provider_transaction_id || !existing.checkout_url || String(existing.status) !== 'pending') {
           throw new WalletPolicyError('The existing recharge cannot be resumed automatically.');
         }
-        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: 'pending', providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url) };
+        return { rechargeId: String(existing.id), accountId: String(existing.account_id), amountMinor: Number(existing.amount_minor), currency, status: 'pending', providerTransactionId: String(existing.provider_transaction_id), checkoutUrl: String(existing.checkout_url), purpose: String(existing.purpose) === 'pack' ? 'pack' : 'wallet', packCredits: existing.pack_credits === null || existing.pack_credits === undefined ? null : Number(existing.pack_credits) };
       }
       const intentRows = await retryDatabase(() => sql`
-        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key)
-        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}
+        insert into v2_wallet_recharge_intents (account_id, wallet_id, amount_minor, currency, idempotency_key, purpose, pack_credits)
+        select a.id, w.id, ${input.amountMinor}, ${currency}, ${input.idempotencyKey}, ${purpose}, ${packCredits}
         from v2_accounts a
         join v2_wallets w on w.account_id = a.id
         where a.auth_user_id = ${input.authUserId}
@@ -2816,7 +2832,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         rechargeId: String(intent.id),
         amountMinor: input.amountMinor,
         currency,
-        description: 'Recharge Omni Wallet',
+        description: purpose === 'pack' ? `Pack crédits bulk ${packCredits ?? ''}` : 'Recharge Omni Wallet',
         callbackUrl: input.callbackUrl,
         customer: input.customer,
       });
@@ -2824,11 +2840,36 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         update v2_wallet_recharge_intents
         set provider_transaction_id = ${checkout.transactionId}, checkout_url = ${checkout.checkoutUrl}, updated_at = now()
         where id = ${String(intent.id)}::uuid and status = 'pending'
-        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url
+        returning id, account_id, amount_minor, currency, status, provider_transaction_id, checkout_url, purpose, pack_credits
       `);
       const updated = (updatedRows as Record<string, unknown>[])[0];
       if (!updated) throw new WalletPolicyError('Recharge state changed while creating the provider checkout.');
-      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: 'pending', providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url) };
+      return { rechargeId: String(updated.id), accountId: String(updated.account_id), amountMinor: Number(updated.amount_minor), currency: String(updated.currency), status: 'pending', providerTransactionId: String(updated.provider_transaction_id), checkoutUrl: String(updated.checkout_url), purpose: String(updated.purpose) === 'pack' ? 'pack' : 'wallet', packCredits: updated.pack_credits === null || updated.pack_credits === undefined ? null : Number(updated.pack_credits) };
+    },
+
+    async getBulkPacks(): Promise<BulkPackCatalogItem[]> {
+      return BULK_PACKS.map((p) => ({ id: p.id, credits: p.credits, priceMinor: p.priceMinor, billingCurrency: p.billingCurrency }));
+    },
+
+    async createBulkPackRecharge(input: {
+      authUserId: string;
+      packId: string;
+      idempotencyKey: string;
+      callbackUrl: string;
+      customer: { email: string | null; firstName?: string | null; lastName?: string | null };
+    }): Promise<WalletRechargePersistenceResult> {
+      const pack = bulkPackById(input.packId.trim());
+      if (!pack) throw new WalletPolicyError('The requested bulk pack does not exist.');
+      return this.createWalletRecharge({
+        authUserId: input.authUserId,
+        amountMinor: pack.priceMinor,
+        currency: pack.billingCurrency,
+        idempotencyKey: input.idempotencyKey,
+        callbackUrl: input.callbackUrl,
+        customer: input.customer,
+        purpose: 'pack',
+        packCredits: pack.credits,
+      });
     },
 
     async reconcileWalletRecharge(input: {
@@ -2839,7 +2880,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       currency: string;
       omniRechargeId: string | null;
       now: string;
-    }): Promise<{ status: 'pending' | 'confirmed' | 'failed' | 'canceled' | 'ignored'; rechargeId?: string; ledgerEntryId?: string }> {
+    }): Promise<{ status: 'pending' | 'confirmed' | 'failed' | 'canceled' | 'ignored'; rechargeId?: string; ledgerEntryId?: string; packCreditsGranted?: number | null }> {
       const providerTransactionId = input.providerTransactionId.trim();
       const providerEventId = input.providerEventId.trim();
       if (!providerTransactionId || !providerEventId || !Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {
@@ -2866,7 +2907,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (nextStatus === 'pending') return { status: 'pending', rechargeId: String(intent.id) };
       const rows = await retryDatabase(() => sql`
         with locked as (
-          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency
+          select r.id, r.wallet_id, r.account_id, r.amount_minor, r.currency, r.purpose, r.pack_credits
           from v2_wallet_recharge_intents r
           join v2_accounts a on a.id = r.account_id
           where r.id = ${String(intent.id)}::uuid and r.status = 'pending' and a.suspended_at is null
@@ -2884,12 +2925,29 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           from locked l
           where r.id = l.id
           returning r.id
+        ), pack_credit as (
+          insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, recharge_intent_id)
+          select l.account_id, 'pack_credit', l.pack_credits, ${`bulk pack recharge ${providerTransactionId}`}, l.id
+          from locked l
+          where ${nextStatus} = 'confirmed' and l.purpose = 'pack'
+          on conflict (recharge_intent_id) do nothing
+          returning id, recharge_intent_id
+        ), grant_extra as (
+          insert into v2_buyer_credit_accounts (buyer_account_id, plan, monthly_quota, period_month, extra_credits)
+          select l.account_id, 'free', 3, to_char(now(), 'YYYY-MM'), l.pack_credits
+          from pack_credit pc
+          join locked l on l.id = pc.recharge_intent_id
+          where l.purpose = 'pack' and ${nextStatus} = 'confirmed'
+          on conflict (buyer_account_id) do update set
+            extra_credits = v2_buyer_credit_accounts.extra_credits + excluded.extra_credits,
+            updated_at = now()
+          returning buyer_account_id
         )
-        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id from updated u
+        select u.id as recharge_id, (select id from ledger limit 1) as ledger_entry_id, (select id from pack_credit limit 1) as pack_credit_id, (select l.pack_credits from pack_credit pc join locked l on l.id = pc.recharge_intent_id limit 1) as pack_credits_granted from updated u
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) return { status: 'ignored' };
-      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : undefined };
+      return { status: nextStatus, rechargeId: String(row.recharge_id), ledgerEntryId: row.ledger_entry_id ? String(row.ledger_entry_id) : undefined, packCreditsGranted: row.pack_credits_granted === null || row.pack_credits_granted === undefined ? undefined : Number(row.pack_credits_granted) };
     },
 
     async reconcilePendingRecharges(input: { authUserId: string; now: string }): Promise<{

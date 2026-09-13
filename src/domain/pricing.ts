@@ -42,3 +42,27 @@ export function convertUsdMinorToLocal(usdMinor: number, currency: string): numb
 export function planBaseUsdMinor(plan: 'sellerPro' | 'buyerPro'): number {
   return OMNI_PLAN_PRICES_USD_MINOR[plan] ?? 0;
 }
+
+/**
+ * Bulk-credit pack catalog (NW-13i). Packs are bought via a FedaPay Wallet
+ * recharge (XOF-only for the Lomé pilot), so prices are expressed in the local
+ * currency (XOF minor units). The number granted is a volume unit.
+ *
+ * **HYPOTHESIS (D-J)** — founder has NOT locked pack pricing yet ("packs bulk à
+ * fixer", NW-13b spec line 106). Values below are a reversible hypothesis only
+ * (volume discount, ~35–50 F per bulk credit); the mechanism is decoupled from
+ * the table. Update this constant when the founder fixes D-J; the API + UI read
+ * it as the single source of truth.
+ */
+export const BULK_PACKS = [
+  { id: 'starter', credits: 10, priceMinor: 50000, billingCurrency: 'XOF' },   // 500  F  → 10 crédits
+  { id: 'growth', credits: 30, priceMinor: 120000, billingCurrency: 'XOF' },   // 1 200 F → 30 crédits
+  { id: 'scale', credits: 100, priceMinor: 350000, billingCurrency: 'XOF' },   // 3 500 F → 100 crédits
+] as const;
+
+export type BulkPackId = (typeof BULK_PACKS)[number]['id'];
+
+/** Returns the pack for the given id, or undefined when unknown. */
+export function bulkPackById(id: string): (typeof BULK_PACKS)[number] | undefined {
+  return BULK_PACKS.find((p) => p.id === id);
+}
