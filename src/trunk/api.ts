@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -70,6 +70,20 @@ export async function getFacilityBonusStatus(input: { token: string; facilityId:
 
 export async function getFacilityAnalytics(input: { token: string; facilityId: string }): Promise<ApiResult<SellerFacilityAnalytics>> {
   const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/analytics`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function listFacilityAdCampaigns(input: { token: string; facilityId: string }): Promise<ApiResult<AdCampaignListResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/campaigns`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
+export async function createFacilityAdCampaign(input: { token: string; facilityId: string; name: string; budgetMinor: number; startsAt: string; endsAt: string; idempotencyKey: string }): Promise<ApiResult<AdCampaignCreateResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${encodeURIComponent(input.facilityId)}/campaigns`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
+    body: JSON.stringify({ name: input.name, budgetMinor: input.budgetMinor, startsAt: input.startsAt, endsAt: input.endsAt }),
+  });
   return parse(response);
 }
 

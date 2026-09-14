@@ -1178,6 +1178,111 @@ describe('facility analytics Root seam (NW-13f)', () => {
   });
 });
 
+describe('facility ad campaign Root seam (NW-13j)', () => {
+  it('creates an ad campaign for an active Pro facility, debiting the wallet once with an ad_spend ledger entry', async () => {
+    const call = stubSql([{
+      campaign_id: 'campaign-1',
+      facility_id: 'facility-1',
+      name: 'Coup de projecteur',
+      budget_minor: 50000,
+      spent_minor: 0,
+      status: 'active',
+      starts_at: '2026-09-13T00:00:00.000Z',
+      ends_at: '2026-10-13T00:00:00.000Z',
+      created_at: '2026-09-13T00:00:00.000Z',
+      spend_ledger_entry_id: 'spend-1',
+      budget_remaining_minor: 100000,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createAdCampaign({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      name: 'Coup de projecteur',
+      budgetMinor: 50000,
+      startsAt: '2026-09-13T00:00:00.000Z',
+      endsAt: '2026-10-13T00:00:00.000Z',
+    });
+    expect(result.campaign).toMatchObject({ id: 'campaign-1', facilityId: 'facility-1', name: 'Coup de projecteur', budgetMinor: 50000, spentMinor: 0, status: 'active' });
+    expect(result.spendLedgerEntryId).toBe('spend-1');
+    expect(result.budgetRemainingMinor).toBe(100000);
+    expect(call.queries[0]).toContain('v2_wallet_ledger_entries');
+    expect(call.queries[0]).toContain("'ad_spend'");
+    expect(call.queries[0]).toContain('v2_ad_campaigns');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('rejects a Free facility with a Pro-only policy error', async () => {
+    const call = stubSqlAlternating([[], [{ commercial_plan: 'free' }]]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createAdCampaign({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      name: 'Boost',
+      budgetMinor: 10000,
+      startsAt: '2026-09-13T00:00:00.000Z',
+      endsAt: '2026-10-13T00:00:00.000Z',
+    })).rejects.toThrow('Sponsored ad campaigns require an active Pro plan on the facility.');
+  });
+
+  it('rejects a non-owned facility with the seller authorization error', async () => {
+    const call = stubSqlAlternating([[], []]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createAdCampaign({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      name: 'Boost',
+      budgetMinor: 10000,
+      startsAt: '2026-09-13T00:00:00.000Z',
+      endsAt: '2026-10-13T00:00:00.000Z',
+    })).rejects.toThrow('Facility not found or not owned by the current user.');
+  });
+
+  it('rejects a positive budget with a valid window requirement', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createAdCampaign({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      name: 'Boost',
+      budgetMinor: 0,
+      startsAt: '2026-10-13T00:00:00.000Z',
+      endsAt: '2026-09-13T00:00:00.000Z',
+    })).rejects.toThrow('Ad campaign requires a positive budget and a window where the start is before the end.');
+    expect(call.queries.length).toBe(0);
+  });
+
+  it('lists the facility ad campaigns for the owning seller with the current wallet balance', async () => {
+    const call = stubSql([{
+      campaigns: [{
+        id: 'campaign-1',
+        facilityId: 'facility-1',
+        name: 'Coup de projecteur',
+        budgetMinor: 50000,
+        spentMinor: 10000,
+        status: 'active',
+        startsAt: '2026-09-13T00:00:00.000Z',
+        endsAt: '2026-10-13T00:00:00.000Z',
+        createdAt: '2026-09-13T00:00:00.000Z',
+      }],
+      budget_remaining_minor: 150000,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listFacilityAdCampaigns({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.campaigns).toHaveLength(1);
+    expect(result.campaigns[0]).toMatchObject({ id: 'campaign-1', name: 'Coup de projecteur', budgetMinor: 50000, spentMinor: 10000, status: 'active' });
+    expect(result.budgetRemainingMinor).toBe(150000);
+    expect(call.queries[0]).toContain('v2_ad_campaigns');
+    expect(call.queries[0]).toContain('a.auth_user_id');
+  });
+
+  it('rejects listing campaigns for a non-owned facility', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listFacilityAdCampaigns({ authUserId: 'auth-user-1', facilityId: 'facility-1' }))
+      .rejects.toThrow('Facility not found or not owned by the current user.');
+  });
+});
+
 describe('buyer pro Root seam (NW-13h D-K)', () => {
   it('returns the honest plan, price, balance and compare quota for an active entitlement', async () => {
     const call = stubSql([{

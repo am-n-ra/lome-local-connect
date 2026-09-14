@@ -1255,6 +1255,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div className="body">
                   <b>{facility.name}</b>
                   <small>{facility.category} · {facility.productCount} produits</small>
+                  {facility.sponsored && <span className="status ok" style={{ display: 'inline-block', marginTop: 3, fontSize: 9 }}>Sponsorisé</span>}
                 </div>
               </button>
             ))}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -391,6 +391,31 @@ describe('facility analytics contract (NW-13f)', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities/facility-1/analytics',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+});
+describe('facility ad campaign contract (NW-13j)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('lists the campaigns from the facilities campaigns endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { campaigns: [], budgetRemainingMinor: 100000, billingCurrency: 'XOF' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listFacilityAdCampaigns({ token: 'session-token', facilityId: 'facility-1' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/campaigns',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('creates a campaign with the Idempotency-Key header and the ad body', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { campaign: { id: 'campaign-1', facilityId: 'facility-1', name: 'Coup de projecteur', budgetMinor: 50000, spentMinor: 0, status: 'active', startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z', createdAt: '2026-09-13T00:00:00.000Z' }, spendLedgerEntryId: 'spend-1', budgetRemainingMinor: 100000, billingCurrency: 'XOF' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createFacilityAdCampaign({ token: 'session-token', facilityId: 'facility-1', name: 'Coup de projecteur', budgetMinor: 50000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z', idempotencyKey: 'nw13j-key-0001' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/seller/facilities/facility-1/campaigns',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'nw13j-key-0001' }, body: JSON.stringify({ name: 'Coup de projecteur', budgetMinor: 50000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }) },
     );
   });
 });

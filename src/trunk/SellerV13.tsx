@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
+import { createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics } from './types';
+import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics } from './types';
 
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
@@ -163,6 +163,41 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     } catch { /* analytics is best-effort */ }
   }, [ws.selFacilityId]);
   useEffect(() => { void loadAnalytics(); }, [loadAnalytics]);
+
+  const [adCampaigns, setAdCampaigns] = useState<SellerAdCampaign[] | null>(null);
+  const [adBudgetRemaining, setAdBudgetRemaining] = useState<number | null>(null);
+  const [adName, setAdName] = useState('');
+  const [adBudget, setAdBudget] = useState('');
+  const [adBusy, setAdBusy] = useState(false);
+  const loadAdCampaigns = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) { setAdCampaigns(null); setAdBudgetRemaining(null); return; }
+    try {
+      const result = await listFacilityAdCampaigns({ token, facilityId: ws.selFacilityId });
+      if (result.ok && result.data) {
+        setAdCampaigns(result.data.campaigns);
+        setAdBudgetRemaining(result.data.budgetRemainingMinor);
+      }
+    } catch { /* campaigns are best-effort */ }
+  }, [ws.selFacilityId]);
+  useEffect(() => { void loadAdCampaigns(); }, [loadAdCampaigns]);
+
+  const createCampaign = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId || !adName.trim() || adBudget.trim() === '') return;
+    setAdBusy(true); setError('');
+    const budgetMinor = Math.round(Number(adBudget) * 100);
+    const startsAt = new Date().toISOString();
+    const endsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const result = await createFacilityAdCampaign({ token, facilityId: ws.selFacilityId, name: adName.trim(), budgetMinor, startsAt, endsAt, idempotencyKey: `ad-campaign:${ws.selFacilityId}:${Date.now()}` });
+    setAdBusy(false);
+    if (result.ok && result.data) {
+      setAdName(''); setAdBudget('');
+      await loadAdCampaigns();
+    } else {
+      setError(result.error?.message ?? 'Impossible de créer la campagne sponsorisée.');
+    }
+  }, [ws.selFacilityId, adName, adBudget, loadAdCampaigns]);
 
   useEffect(() => { void loadBonus(); }, [loadBonus]);
 
@@ -389,6 +424,49 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                 <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>QR vérifiés</small>
                 <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{analytics.qrScansVerified}</strong>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+      {hasData && ws.selFacilityCatalogue?.name && renewalStatus && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Campagnes sponsorisées</b>
+              <span className="tiny muted">
+                {renewalStatus.plan === 'pro_active'
+                  ? `Budget portefeuille restant ${adBudgetRemaining === null ? '…' : money(adBudgetRemaining, 'XOF')}`
+                  : 'Réservé aux facilités Pro actives'}
+              </span>
+            </div>
+            {renewalStatus.plan === 'pro_active' && (
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => void loadAdCampaigns()}>Actualiser</button>
+            )}
+          </div>
+          {renewalStatus.plan !== 'pro_active' ? (
+            <p className="tiny muted" style={{ marginTop: 6 }}>Activez Omni Pro pour lancer une campagne sponsorisée — votre facilité apparaît en premier dans la recherche avec le badge « Sponsorisé ».</p>
+          ) : (
+            <div style={{ marginTop: 9 }}>
+              <div className="row" style={{ gap: 6, marginBottom: 6 }}>
+                <input className="fld" style={{ flex: 2 }} value={adName} onChange={(e) => setAdName(e.target.value)} placeholder="Nom de la campagne" disabled={adBusy} />
+                <input className="fld" style={{ flex: 1 }} type="number" min="0" step="0.01" value={adBudget} onChange={(e) => setAdBudget(e.target.value)} placeholder="Budget (XOF)" disabled={adBusy} />
+                <button className="btn sm" type="button" disabled={adBusy || !adName.trim() || adBudget.trim() === ''} onClick={() => void createCampaign()}>{adBusy ? '…' : 'Lancer'}</button>
+              </div>
+              {(!adCampaigns || adCampaigns.length === 0) ? (
+                <p className="tiny muted">Aucune campagne. Budget réservé dans le portefeuille au lancement (30 jours).</p>
+              ) : (
+                <div style={{ display: 'grid', gap: 6 }}>
+                  {adCampaigns.map((c) => (
+                    <div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 8, background: 'var(--panel)', borderRadius: 10, padding: '6px 8px' }}>
+                      <div>
+                        <b className="tiny" style={{ display: 'block' }}>{c.name}</b>
+                        <span className="tiny muted">{money(c.budgetMinor, 'XOF')} · dépensé {money(c.spentMinor, 'XOF')} · du {new Date(c.startsAt).toLocaleDateString('fr-FR')} au {new Date(c.endsAt).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                      <span className={`status ${c.status === 'active' ? 'ok' : c.status === 'terminee' ? 'dash' : 'warn'}`}>{c.status === 'active' ? 'Active' : c.status === 'planifiee' ? 'Planifiée' : c.status === 'pausee' ? 'En pause' : 'Terminée'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

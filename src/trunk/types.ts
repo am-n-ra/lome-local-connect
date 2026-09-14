@@ -23,6 +23,8 @@ export interface PublicFacility {
   plan: 'free' | 'pro_active' | 'pro_expired';
   productCount: number;
   source?: 'database' | 'osm';
+  /** NW-13j: true when the facility has an active sponsored ad campaign (boost in buyer search). */
+  sponsored?: boolean;
 }
 
 export interface PublicProduct {
@@ -555,6 +557,29 @@ export interface SellerFacilityAnalytics {
   grossRevenueMinor: number;
   billingCurrency: string;
   scanToVerifyAvgMs: number | null;
+}
+export type AdCampaignStatus = 'planifiee' | 'active' | 'terminee' | 'pausee';
+export interface SellerAdCampaign {
+  id: string;
+  facilityId: string;
+  name: string;
+  budgetMinor: number;
+  spentMinor: number;
+  status: AdCampaignStatus;
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+}
+export interface AdCampaignCreateResult {
+  campaign: SellerAdCampaign;
+  spendLedgerEntryId: string;
+  budgetRemainingMinor: number;
+  billingCurrency: string;
+}
+export interface AdCampaignListResult {
+  campaigns: SellerAdCampaign[];
+  budgetRemainingMinor: number;
+  billingCurrency: string;
 }
 export interface WalletFacilitySummary {
   facilityId: string;

@@ -156,6 +156,29 @@ export function validateBulkAvailabilityRequestCreate(body: Record<string, unkno
   return { authUserId, productId, facilityIds, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
 }
 
+export interface AdCampaignCreateInput {
+  authUserId: string;
+  facilityId: string;
+  name: string;
+  budgetMinor: number;
+  startsAt: string;
+  endsAt: string;
+  idempotencyKey: string;
+}
+
+export function validateAdCampaignCreate(body: Record<string, unknown>, facilityId: string, idempotencyKey: string, authUserId: string): AdCampaignCreateInput {
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const budgetMinor = Number(body.budgetMinor);
+  const startsAt = typeof body.startsAt === 'string' ? body.startsAt : '';
+  const endsAt = typeof body.endsAt === 'string' ? body.endsAt : '';
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const windowsOk = startsAt !== '' && endsAt !== '' && new Date(startsAt).getTime() < new Date(endsAt).getTime();
+  if (!uuidPattern.test(facilityId) || name.length === 0 || name.length > 60 || !Number.isFinite(budgetMinor) || !Number.isInteger(budgetMinor) || budgetMinor <= 0 || !windowsOk || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+    throw new ApiInputError('A campaign name (≤60 chars), a positive integer budget in minor units and a window where the start is before the end are required.');
+  }
+  return { authUserId, facilityId, name, budgetMinor, startsAt, endsAt, idempotencyKey };
+}
+
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
     ? payload.object as Record<string, unknown>
@@ -1249,6 +1272,36 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.getFacilityAnalytics({ authUserId, facilityId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/campaigns')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to view ad campaigns.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/campaigns'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility.'));
+        return true;
+      }
+      const result = await repository.listFacilityAdCampaigns({ authUserId, facilityId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/campaigns')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to create an ad campaign.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/campaigns'.length);
+      const idempotencyKey = typeof req.headers['idempotency-key'] === 'string' ? req.headers['idempotency-key'] : '';
+      const input = await parseRequestBody(req);
+      const validated = validateAdCampaignCreate(input, facilityId, idempotencyKey, authUserId);
+      const result = await repository.createAdCampaign({ authUserId: validated.authUserId, facilityId: validated.facilityId, name: validated.name, budgetMinor: validated.budgetMinor, startsAt: validated.startsAt, endsAt: validated.endsAt });
+      json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/bonus/unlock')) {

@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -262,5 +262,35 @@ describe('seller facility create validator (NW-13c)', () => {
 
   it('requires a rayon on a mobile facility', () => {
     expect(() => validateSellerFacilityCreate({ name: 'Échoppe', facilityType: 'mobile', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+});
+
+describe('ad campaign validator (NW-13j)', () => {
+  const key = 'nw13j-http-key-0001';
+  const facilityId = '8e0e2268-b5bb-4b8c-9b3e-1f0a90d6f7c2';
+  it('accepts a valid manual campaign', () => {
+    const input = validateAdCampaignCreate({ name: 'Coup de projecteur', budgetMinor: 50000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1');
+    expect(input).toMatchObject({ authUserId: 'auth-user-1', facilityId, name: 'Coup de projecteur', budgetMinor: 50000 });
+  });
+  it('rejects a blank or over-long name', () => {
+    expect(() => validateAdCampaignCreate({ name: '   ', budgetMinor: 5000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAdCampaignCreate({ name: 'x'.repeat(61), budgetMinor: 5000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+  it('rejects a non-positive or non-integer budget', () => {
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 0, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 50.5, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+  it('rejects an invalid window', () => {
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 5000, startsAt: '2026-10-13T00:00:00.000Z', endsAt: '2026-09-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 5000, startsAt: 'nope', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+  it('rejects a malformed facility id or short idempotency key', () => {
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 5000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, 'not-a-uuid', key, 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAdCampaignCreate({ name: 'Boost', budgetMinor: 5000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }, facilityId, 'short', 'auth-user-1')).toThrow(ApiInputError);
+  });
+  it('maps WalletPolicyError to a 409 POLICY_REJECTED non-retryable response', () => {
+    const response = toApiErrorResponse('corr-1', new WalletPolicyError('Insufficient wallet balance to reserve the campaign budget.'));
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({ ok: false, error: { code: 'POLICY_REJECTED', retryable: false } });
   });
 });

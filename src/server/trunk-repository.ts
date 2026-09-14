@@ -5,7 +5,7 @@ import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, O
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -32,6 +32,8 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   trust: PUBLIC_TRUST_STATES.has(String(row.trust_state) as PublicFacility['trust']) ? String(row.trust_state) as PublicFacility['trust'] : 'unclaimed',
   plan: String(row.commercial_plan) as PublicFacility['plan'],
   productCount: Number(row.product_count ?? 0),
+  // NW-13j: an active sponsored campaign exists when the aggregate row carries a sponsored campaign id.
+  sponsored: row.sponsored_campaign_id !== undefined && row.sponsored_campaign_id !== null,
 });
 
 const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -1460,10 +1462,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
             f.trust_state, f.commercial_plan,
-            count(p.id)::int as product_count
+            count(p.id)::int as product_count,
+            min(camp.id) as sponsored_campaign_id
           from v2_facilities f
           left join v2_products p
             on p.facility_id = f.id and p.publication_state = 'published'
+          left join v2_ad_campaigns camp
+            on camp.facility_id = f.id
+               and camp.status = 'active'
+               and camp.starts_at <= now() and camp.ends_at > now()
           where f.longitude between ${west} and ${east}
             and f.latitude between ${south} and ${north}
             and (${queryText} = ''
@@ -1495,7 +1502,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             ) <= ${rayonKm}`}
             ${operationalState === null ? sql`` : sql`and (f.operational_state = ${operationalState} or f.operational_state is null)`}
           group by f.id
-          order by f.trust_state = 'unclaimed', f.name
+          order by (count(camp.id) > 0)::int desc, f.trust_state = 'unclaimed', f.name
           limit 250
         `;
         return (rows as Record<string, unknown>[]).map(toFacility);
@@ -3325,6 +3332,159 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         grossRevenueMinor: Number(row.gross_revenue_minor),
         billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY,
         scanToVerifyAvgMs: row.scan_to_verify_avg_ms === null || row.scan_to_verify_avg_ms === undefined ? null : Number(row.scan_to_verify_avg_ms),
+      };
+    },
+
+    async createAdCampaign(input: { authUserId: string; facilityId: string; name: string; budgetMinor: number; startsAt: string; endsAt: string }): Promise<AdCampaignCreateResult> {
+      if (input.budgetMinor <= 0 || input.startsAt >= input.endsAt) {
+        throw new WalletPolicyError('Ad campaign requires a positive budget and a window where the start is before the end.');
+      }
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.name as facility_name, f.account_id,
+                 f.commercial_plan, f.trust_state, f.operational_state
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          for update of f
+        ),
+        plan_check as (
+          select case
+            when not exists (select 1 from facility) then null
+            when exists (select 1 from facility where commercial_plan <> 'pro_active') then 'pro_only'
+            else null end as failure
+        ),
+        wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join facility f on f.account_id = w.account_id
+          for update of w
+        ),
+        balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        ),
+        existing as (
+          select e.id, e.wallet_id, e.amount_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.kind = 'ad_spend' and e.reference = ${`ad-budget:${input.facilityId}:${input.startsAt}`}
+          limit 1
+        ),
+        spend as (
+          insert into v2_wallet_ledger_entries (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+          select w.wallet_id, 'ad_spend', ${input.budgetMinor}, 'confirmed', ${`ad-budget:${input.facilityId}:${input.startsAt}`}, f.facility_id, now(), now()
+          from facility f join wallet w on true
+          join (select * from balance) b on true
+          join (select * from plan_check) pc on true
+          where pc.failure is null
+            and b.balance_minor >= ${input.budgetMinor}
+            and not exists (select 1 from existing)
+          on conflict (wallet_id, kind, reference) do nothing
+          returning id, wallet_id, amount_minor
+        ),
+        campaign_insert as (
+          insert into v2_ad_campaigns (facility_id, name, budget_minor, spent_minor, status, starts_at, ends_at)
+          select f.facility_id, ${input.name}, ${input.budgetMinor}, 0,
+                 case when ${input.startsAt}::timestamptz <= now() then 'active' else 'planifiee' end,
+                 ${input.startsAt}::timestamptz, ${input.endsAt}::timestamptz
+          from facility f
+          where exists (select 1 from spend)
+            and not exists (select 1 from plan_check pc where pc.failure is not null)
+          returning id, facility_id, name, budget_minor, spent_minor, status, starts_at, ends_at, created_at
+        )
+        select c.id as campaign_id, c.facility_id, c.name, c.budget_minor, c.spent_minor,
+               c.status, c.starts_at, c.ends_at, c.created_at,
+               s.id as spend_ledger_entry_id,
+               (select b.balance_minor from balance b) - ${input.budgetMinor} as budget_remaining_minor
+        from campaign_insert c join spend s on true
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) {
+        const [probe] = await retryDatabase(() => sql`
+          select f.commercial_plan
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+          limit 1
+        `) as Record<string, unknown>[];
+        if (!probe) throw new SellerAuthorizationPolicyError('Facility not found or not owned by the current user.');
+        if (probe.commercial_plan !== 'pro_active') throw new WalletPolicyError('Sponsored ad campaigns require an active Pro plan on the facility.');
+        throw new WalletPolicyError('Insufficient wallet balance to reserve the campaign budget.');
+      }
+      return {
+        campaign: {
+          id: String(row.campaign_id),
+          facilityId: String(row.facility_id),
+          name: String(row.name),
+          budgetMinor: Number(row.budget_minor),
+          spentMinor: Number(row.spent_minor),
+          status: String(row.status) as SellerAdCampaign['status'],
+          startsAt: String(row.starts_at),
+          endsAt: String(row.ends_at),
+          createdAt: String(row.created_at),
+        },
+        spendLedgerEntryId: String(row.spend_ledger_entry_id),
+        budgetRemainingMinor: Number(row.budget_remaining_minor),
+        billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY,
+      };
+    },
+
+    async listFacilityAdCampaigns(input: { authUserId: string; facilityId: string }): Promise<AdCampaignListResult> {
+      const rows = await retryDatabase(() => sql`
+        with facility as (
+          select f.id as facility_id, f.account_id
+          from v2_facilities f
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        wallet as (
+          select w.id as wallet_id
+          from v2_wallets w
+          join facility f on f.account_id = w.account_id
+        ),
+        balance as (
+          select coalesce(sum(case when e.kind in ('recharge', 'bonus_grant', 'reversal', 'coupon_credit') then e.amount_minor else -e.amount_minor end), 0)::int as balance_minor
+          from v2_wallet_ledger_entries e
+          join wallet w on w.wallet_id = e.wallet_id
+          where e.status = 'confirmed'
+        )
+        select
+          coalesce(array_agg(json_build_object(
+            'id', c.id, 'facilityId', c.facility_id, 'name', c.name,
+            'budgetMinor', c.budget_minor, 'spentMinor', c.spent_minor,
+            'status', c.status, 'startsAt', c.starts_at, 'endsAt', c.ends_at, 'createdAt', c.created_at
+          ) order by c.created_at desc), '{}'::json) as campaigns,
+          (select b.balance_minor from balance b) as budget_remaining_minor
+        from facility f
+        left join v2_ad_campaigns c on c.facility_id = f.facility_id
+        group by f.facility_id
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerAuthorizationPolicyError('Facility not found or not owned by the current user.');
+      const campaigns = (row.campaigns as unknown as (Record<string, unknown>)[] ?? []).map((c) => ({
+        id: String(c.id),
+        facilityId: String(c.facilityId),
+        name: String(c.name),
+        budgetMinor: Number(c.budgetMinor),
+        spentMinor: Number(c.spentMinor),
+        status: String(c.status) as SellerAdCampaign['status'],
+        startsAt: String(c.startsAt),
+        endsAt: String(c.endsAt),
+        createdAt: String(c.createdAt),
+      }));
+      return {
+        campaigns,
+        budgetRemainingMinor: Number(row.budget_remaining_minor),
+        billingCurrency: OMNI_DEFAULT_LOCAL_CURRENCY,
       };
     },
 
