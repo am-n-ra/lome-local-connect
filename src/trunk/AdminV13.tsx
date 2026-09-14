@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount } from './api';
-import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount } from './types';
+import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount } from './api';
+import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
   onClose: () => void;
@@ -26,6 +26,12 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [roleDraftText, setRoleDraftText] = useState('');
   const [sellerCandidates, setSellerCandidates] = useState<Array<{ accountId: string; authUserId: string; onboardingState: string; facilityCount: number; createdAt: string; suspended: boolean }>>([]);
   const [sellerActivationBusy, setSellerActivationBusy] = useState<string | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamInvites, setTeamInvites] = useState<TeamInvite[]>([]);
+  const [teamDraft, setTeamDraft] = useState({ name: '', zone: '', description: '' });
+  const [inviteDraft, setInviteDraft] = useState<{ teamId: string; email: string; roleInTeam: 'lead' | 'member' } | null>(null);
+  const [teamBusy, setTeamBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -33,12 +39,13 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     try {
       const token = await getAuthToken();
       if (!token) { setState('unauthorized'); return; }
-      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult] = await Promise.all([
+      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult, teamResult] = await Promise.all([
         getAdminConsole({ token }),
         getReviewQueue({ token }),
         listAdminAuditEvents({ token, limit: 12 }),
         getRoleManagementAccounts({ token }),
         getAdminSellerActivationQueue({ token }),
+        listTeams({ token }),
       ]);
       if (!consoleResult.ok || !consoleResult.data) {
         setState('unauthorized');
@@ -50,6 +57,15 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setAudits(auditResult.ok && auditResult.data ? auditResult.data.events : []);
       setRoleAccounts(roleResult.ok && roleResult.data ? roleResult.data.accounts : []);
       setSellerCandidates(sellerActivationResult.ok && sellerActivationResult.data ? sellerActivationResult.data.candidates : []);
+      if (teamResult.ok && teamResult.data) {
+        setTeams(teamResult.data.teams ?? []);
+        setTeamMembers(teamResult.data.members ?? []);
+        setTeamInvites(teamResult.data.invites ?? []);
+      } else {
+        setTeams([]);
+        setTeamMembers([]);
+        setTeamInvites([]);
+      }
       setState('ready');
     } catch (caught) {
       setState('error');
@@ -165,6 +181,95 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [load]);
 
+  const submitTeamCreate = useCallback(async () => {
+    const name = teamDraft.name.trim();
+    if (name.length < 1) { setToast({ kind: 'err', text: 'Un nom est requis pour le groupe.' }); return; }
+    setTeamBusy('create');
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await createTeam({ token, name, zone: teamDraft.zone.trim() || null, description: teamDraft.description.trim() || null });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: 'Équipe créée.' });
+        setTeamDraft({ name: '', zone: '', description: '' });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Équipe non créée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Équipe non créée.' });
+    } finally {
+      setTeamBusy(null);
+    }
+  }, [teamDraft, load]);
+
+  const submitTeamInvite = useCallback(async (teamId: string) => {
+    if (!inviteDraft || inviteDraft.teamId !== teamId) return;
+    const email = inviteDraft.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setToast({ kind: 'err', text: 'Adresse e-mail invalide.' }); return; }
+    setTeamBusy(`invite:${teamId}`);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await inviteTeamMember({ token, teamId, email, roleInTeam: inviteDraft.roleInTeam });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: `Invitation envoyée à ${email}.` });
+        setInviteDraft(null);
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Invitation non envoyée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Invitation non envoyée.' });
+    } finally {
+      setTeamBusy(null);
+    }
+  }, [inviteDraft, load]);
+
+  const submitTeamInviteRevoke = useCallback(async (invite: TeamInvite) => {
+    if (!window.confirm(`Révoquer l'invitation de ${invite.email} ?`)) return;
+    setTeamBusy(`revoke:${invite.id}`);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await revokeTeamInvite({ token, inviteId: invite.id, reason: `Révocation invitation ${invite.email}` });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: 'Invitation révoquée.' });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Révocation non enregistrée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Révocation non enregistrée.' });
+    } finally {
+      setTeamBusy(null);
+    }
+  }, [load]);
+
+  const submitTeamMemberStatus = useCallback(async (member: TeamMember, status: 'active' | 'revoked') => {
+    if (status === 'revoked' && !window.confirm(`Retirer ${member.authUserId || member.accountId} de l'équipe ?`)) return;
+    setTeamBusy(`member:${member.id}`);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await setTeamMemberStatus({ token, teamId: member.teamId, accountId: member.accountId, roleInTeam: member.roleInTeam, status, reason: status === 'revoked' ? `Retrait manuel de ${member.authUserId || member.accountId}` : `Réactivation de ${member.authUserId || member.accountId}` });
+      if (result.ok) {
+        setToast({ kind: 'ok', text: status === 'revoked' ? 'Membre retiré de l’équipe.' : 'Membre réactivé.' });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Changement non enregistré.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Changement non enregistré.' });
+    } finally {
+      setTeamBusy(null);
+    }
+  }, [load]);
+
   const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
   const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
     const active = account.roles.includes(role);
@@ -268,6 +373,73 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               ))}
             </div>
           )}
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="eyebrow">Équipe · Groupes</div>
+            <p className="tiny muted" style={{ marginBottom: 6 }}>Créer des groupes de travail, inviter des comptes et organiser la zone ( motif audité pour tout changement ).</p>
+            <div style={{ display: 'grid', gap: 6, marginBottom: 6 }}>
+              <input className="fld" type="text" value={teamDraft.name} onChange={(e) => setTeamDraft((d) => ({ ...d, name: e.target.value }))} placeholder="Nom de l’équipe (ex. Lomé Est)" disabled={teamBusy !== null} />
+              <input className="fld" type="text" value={teamDraft.zone} onChange={(e) => setTeamDraft((d) => ({ ...d, zone: e.target.value }))} placeholder="Zone (optionnel)" disabled={teamBusy !== null} />
+              <input className="fld" type="text" value={teamDraft.description} onChange={(e) => setTeamDraft((d) => ({ ...d, description: e.target.value }))} placeholder="Description (optionnel)" disabled={teamBusy !== null} />
+            </div>
+            <button className="btn sm" type="button" disabled={teamBusy !== null} onClick={() => void submitTeamCreate()}>{teamBusy === 'create' ? 'Création…' : 'Créer le groupe'}</button>
+            {teams.length === 0 && teamBusy !== 'create' && <p className="tiny muted" style={{ marginTop: 6 }}>Aucun groupe créé pour le moment.</p>}
+            {teams.map((team) => {
+              const members = teamMembers.filter((m) => m.teamId === team.id);
+              const invites = teamInvites.filter((i) => i.teamId === team.id && i.status === 'pending');
+              return (
+                <div key={team.id} style={{ marginTop: 8, borderTop: '1px solid var(--line, #e8e8e6)', paddingTop: 8 }}>
+                  <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <b>{team.name}</b>
+                      <br />
+                      <span className="tiny muted">{team.zone || 'Pas de zone'} · {team.memberCount} membre{team.memberCount === 1 ? '' : 's'} {new Date(team.createdAt).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    {team.description && <span className="tiny muted" style={{ maxWidth: 180, textAlign: 'right' }}>{team.description}</span>}
+                  </div>
+                  {members.length > 0 && (
+                    <div style={{ marginTop: 4, display: 'grid', gap: 2 }}>
+                      {members.map((member) => (
+                        <div className="kv" key={member.id} style={{ padding: '4px 0' }}>
+                          <span className="tiny">
+                            {member.authUserId || member.accountId} <span className="muted">· {member.roleInTeam === 'lead' ? 'Responsable' : 'Membre'} {member.status === 'revoked' ? '· retiré' : ''}</span>
+                          </span>
+                          {member.status === 'active' && (
+                            <button className="btn ghost sm" type="button" disabled={teamBusy !== null} onClick={() => void submitTeamMemberStatus(member, 'revoked')}>Retirer</button>
+                          )}
+                          {member.status === 'revoked' && (
+                            <button className="btn ghost sm" type="button" disabled={teamBusy !== null} onClick={() => void submitTeamMemberStatus(member, 'active')}>Réactiver</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {invites.length > 0 && (
+                    <div style={{ marginTop: 4, display: 'grid', gap: 2 }}>
+                      {invites.map((invite) => (
+                        <div className="kv" key={invite.id} style={{ padding: '4px 0' }}>
+                          <span className="tiny">Invitation · <b>{invite.email}</b> <span className="muted">· {invite.roleInTeam === 'lead' ? 'Responsable' : 'Membre'}</span></span>
+                          <button className="btn ghost sm" type="button" disabled={teamBusy !== null} onClick={() => void submitTeamInviteRevoke(invite)}>Révoquer</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, marginTop: 4 }} disabled={teamBusy !== null} onClick={() => { setInviteDraft(inviteDraft?.teamId === team.id ? null : { teamId: team.id, email: '', roleInTeam: 'member' }); }}>
+                    {inviteDraft?.teamId === team.id ? 'Fermer l’invitation' : '+ Inviter un compte'}
+                  </button>
+                  {inviteDraft?.teamId === team.id && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+                      <input className="fld" type="text" style={{ flex: 1, minWidth: 150 }} value={inviteDraft.email} onChange={(e) => setInviteDraft((d) => (d ? { ...d, email: e.target.value } : d))} placeholder="email@exemple.com" disabled={teamBusy !== null} />
+                      <select className="fld" value={inviteDraft.roleInTeam} onChange={(e) => setInviteDraft((d) => (d ? { ...d, roleInTeam: e.target.value === 'lead' ? 'lead' : 'member' } : d))} disabled={teamBusy !== null}>
+                        <option value="member">Membre</option>
+                        <option value="lead">Responsable</option>
+                      </select>
+                      <button className="btn sm" type="button" disabled={teamBusy !== null} onClick={() => void submitTeamInvite(team.id)}>Envoyer</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
           {toast && <p className="sub" role="status">{toast.text}</p>}
           {queue.length === 0 && <p className="sub" style={{ marginTop: 8 }}>Aucune demande en attente.</p>}
           {queue.map((item) => (

@@ -41,11 +41,13 @@ export async function setManagedStaffRole(input: { token: string; accountId: str
   return parse(response);
 }
 
-export async function listTeams(input: { token: string }): Promise<ApiResult<{ authorized: boolean; data: TeamListResult }>> {
+export async function listTeams(input: { token: string }): Promise<ApiResult<TeamListResult>> {
   const response = await fetchWithRecovery('/api/v2/admin/teams', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
-  return parse(response);
+  const result = await parse<{ authorized: boolean; data: TeamListResult }>(response);
+  if (!result.ok || !result.data) return { ok: false, correlationId: result.correlationId, error: result.error };
+  return { ok: true, correlationId: result.correlationId, data: result.data.data };
 }
 
 export async function createTeam(input: { token: string; name: string; zone?: string | null; description?: string | null }): Promise<ApiResult<CreateTeamResult>> {
