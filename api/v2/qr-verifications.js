@@ -3144,7 +3144,7 @@ function createTrunkRepository(sql = database()) {
             'id', c.id, 'facilityId', c.facility_id, 'name', c.name,
             'budgetMinor', c.budget_minor, 'spentMinor', c.spent_minor,
             'status', c.status, 'startsAt', c.starts_at, 'endsAt', c.ends_at, 'createdAt', c.created_at
-          ) order by c.created_at desc), '{}'::json) as campaigns,
+          ) order by c.created_at desc), '[]'::json) as campaigns,
           (select b.balance_minor from balance b) as budget_remaining_minor
         from facility f
         left join v2_ad_campaigns c on c.facility_id = f.facility_id

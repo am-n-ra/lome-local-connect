@@ -1275,6 +1275,18 @@ describe('facility ad campaign Root seam (NW-13j)', () => {
     expect(call.queries[0]).toContain('a.auth_user_id');
   });
 
+  it('lists zero campaigns as an empty array for an owner without campaigns (regression: don\'t 500 on zero)', async () => {
+    const call = stubSql([{
+      campaigns: [],
+      budget_remaining_minor: 10000,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listFacilityAdCampaigns({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(result.campaigns).toEqual([]);
+    expect(result.budgetRemainingMinor).toBe(10000);
+    expect(call.queries[0]).toContain(`'[]'::json`);
+  });
+
   it('rejects listing campaigns for a non-owned facility', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);
