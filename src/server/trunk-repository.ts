@@ -32,8 +32,8 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   trust: PUBLIC_TRUST_STATES.has(String(row.trust_state) as PublicFacility['trust']) ? String(row.trust_state) as PublicFacility['trust'] : 'unclaimed',
   plan: String(row.commercial_plan) as PublicFacility['plan'],
   productCount: Number(row.product_count ?? 0),
-  // NW-13j: an active sponsored campaign exists when the aggregate row carries a sponsored campaign id.
-  sponsored: row.sponsored_campaign_id !== undefined && row.sponsored_campaign_id !== null,
+  // NW-13j: an active sponsored campaign exists when the aggregate row says so.
+  sponsored: row.sponsored !== undefined ? Boolean(row.sponsored) : (row.sponsored_campaign_id !== undefined && row.sponsored_campaign_id !== null),
 });
 
 const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -1463,7 +1463,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
             f.trust_state, f.commercial_plan,
             count(p.id)::int as product_count,
-            min(camp.id) as sponsored_campaign_id
+            (count(camp.id) > 0) as sponsored
           from v2_facilities f
           left join v2_products p
             on p.facility_id = f.id and p.publication_state = 'published'

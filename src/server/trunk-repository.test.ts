@@ -167,6 +167,31 @@ describe('public facility trust boundary', () => {
     expect(result).toHaveLength(1);
     expect(result[0]).toMatchObject({ name: 'Marche de Hanoukope', trust: 'unclaimed' });
   });
+
+  it('derives the sponsored flag from a count, not a min(uuid) aggregate (regression: don\'t 500)', async () => {
+    const call = stubSql([{
+      id: 'facility-1',
+      name: 'Boulangerie du Marché d\'Adawlato',
+      category: 'Boulangerie',
+      address: 'Marché d\'Adawlato, Lomé, Togo',
+      latitude: 6.1319,
+      longitude: 1.2225,
+      trust_state: 'confirmed',
+      commercial_plan: 'free',
+      product_count: 3,
+      sponsored: false,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.listPublicFacilities();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].sponsored).toBe(false);
+    // Real Postgres has no min(uuid); the NW-13j boost must use a count predicate.
+    const query = call.queries.join('¦');
+    expect(query).not.toContain('min(camp.id)');
+    expect(query).toContain('(count(camp.id) > 0) as sponsored');
+  });
 });
 
 describe('availability repository Root seam', () => {
