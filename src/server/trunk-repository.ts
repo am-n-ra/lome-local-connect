@@ -5,7 +5,7 @@ import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, O
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, CreateTeamResult, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -577,6 +577,209 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the target account is unavailable.');
       return { accountId: String(row.account_id), role: String(row.role) as ManagedStaffRole, status: String(row.status) as 'active' | 'revoked' };
+    },
+
+    async listTeams(input: { authUserId: string }): Promise<{ authorized: boolean; data: TeamListResult }> {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select
+          exists (select 1 from admin) as authorized,
+          coalesce((select json_agg(row_to_json(t)) from (
+            select t.id, t.name, t.zone, t.description, t.created_by_account_id, t.created_at,
+              (select count(*)::int from v2_team_members tm where tm.team_id = t.id and tm.status = 'active') as member_count
+            from v2_teams t
+            order by t.created_at desc, t.id
+            limit 100
+          ) t), '[]'::json) as teams,
+          coalesce((select json_agg(row_to_json(m)) from (
+            select tm.id, tm.team_id, tm.account_id, a.auth_user_id, tm.role_in_team, tm.status, tm.added_by_account_id, tm.created_at, tm.revoked_at
+            from v2_team_members tm
+            join v2_accounts a on a.id = tm.account_id
+            order by tm.created_at desc, tm.id
+            limit 200
+          ) m), '[]'::json) as members,
+          coalesce((select json_agg(row_to_json(i)) from (
+            select ti.id, ti.team_id, ti.email, ti.role_in_team, ti.status, ti.invited_by_account_id, ti.created_at, ti.accepted_at, ti.revoked_at
+            from v2_team_invites ti
+            order by ti.created_at desc, ti.id
+            limit 200
+          ) i), '[]'::json) as invites
+        from admin
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('Team listing is unavailable.');
+      const parseArray = (raw: unknown): Record<string, unknown>[] => {
+        if (!Array.isArray(raw)) return [];
+        return raw as Record<string, unknown>[];
+      };
+      const teams: Team[] = parseArray(row.teams).map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        zone: r.zone === null || r.zone === undefined ? null : String(r.zone),
+        description: r.description === null || r.description === undefined ? null : String(r.description),
+        createdByAccountId: r.created_by_account_id === null || r.created_by_account_id === undefined ? null : String(r.created_by_account_id),
+        createdAt: String(r.created_at),
+        memberCount: Number(r.member_count ?? 0),
+      }));
+      const members: TeamMember[] = parseArray(row.members).map((r) => ({
+        id: String(r.id),
+        teamId: String(r.team_id),
+        accountId: String(r.account_id),
+        authUserId: String(r.auth_user_id ?? ''),
+        roleInTeam: String(r.role_in_team) as TeamMember['roleInTeam'],
+        status: String(r.status) as TeamMember['status'],
+        addedByAccountId: r.added_by_account_id === null || r.added_by_account_id === undefined ? null : String(r.added_by_account_id),
+        createdAt: String(r.created_at),
+        revokedAt: r.revoked_at === null || r.revoked_at === undefined ? null : String(r.revoked_at),
+      }));
+      const invites: TeamInvite[] = parseArray(row.invites).map((r) => ({
+        id: String(r.id),
+        teamId: String(r.team_id),
+        email: String(r.email),
+        roleInTeam: String(r.role_in_team) as TeamInvite['roleInTeam'],
+        status: String(r.status) as TeamInvite['status'],
+        invitedByAccountId: r.invited_by_account_id === null || r.invited_by_account_id === undefined ? null : String(r.invited_by_account_id),
+        createdAt: String(r.created_at),
+        acceptedAt: r.accepted_at === null || r.accepted_at === undefined ? null : String(r.accepted_at),
+        revokedAt: r.revoked_at === null || r.revoked_at === undefined ? null : String(r.revoked_at),
+      }));
+      return { authorized: Boolean(row.authorized), data: { teams, members, invites } };
+    },
+
+    async createTeam(input: { authUserId: string; name: string; zone?: string | null; description?: string | null; correlationId: string }): Promise<CreateTeamResult> {
+      const name = input.name.trim();
+      if (name.length < 1 || name.length > 60) throw new FieldPilotPolicyError('A team name between 1 and 60 characters is required.');
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), created as (
+          insert into v2_teams (name, zone, description, created_by_account_id)
+          select ${name}, ${input.zone?.trim() || null}, ${input.description?.trim() || null}, admin.id
+          from admin
+          returning id, name, zone, created_by_account_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select created.created_by_account_id, 'team_created', 'team', created.id::text, ${input.correlationId}, ${'Created team ' + name}
+          from created
+          returning entity_id
+        )
+        select created.id, created.name, created.zone
+        from created
+        where exists (select 1 from audit where audit.entity_id = created.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized to create teams.');
+      return { id: String(row.id), name: String(row.name), zone: row.zone === null || row.zone === undefined ? null : String(row.zone) };
+    },
+
+    async inviteTeamMember(input: { authUserId: string; teamId: string; email: string; roleInTeam: 'lead' | 'member'; correlationId: string }): Promise<TeamInviteResult> {
+      const email = input.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new FieldPilotPolicyError('A valid email is required for the invite.');
+      if (input.roleInTeam !== 'lead' && input.roleInTeam !== 'member') throw new FieldPilotPolicyError('roleInTeam must be lead or member.');
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), team as (
+          select t.id
+          from v2_teams t cross join admin
+          where t.id = ${input.teamId}::uuid
+            and not exists (select 1 from v2_team_members tm where tm.team_id = t.id and tm.account_id = admin.id)
+        ), invite as (
+          insert into v2_team_invites (team_id, email, role_in_team, status, invited_by_account_id)
+          select team.id, ${email}, ${input.roleInTeam}, 'pending', admin.id
+          from team cross join admin
+          returning id, team_id, email, role_in_team, status, invited_by_account_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'team_invite_created', 'team_invite', invite.id::text, ${input.correlationId}, ${'Invited ' + email + ' to team ' + input.teamId}
+          from invite cross join admin
+          returning entity_id
+        )
+        select invite.id, invite.team_id, invite.email, invite.role_in_team, invite.status
+        from invite
+        where exists (select 1 from audit where audit.entity_id = invite.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the team is unavailable.');
+      return { id: String(row.id), teamId: String(row.team_id), email: String(row.email), roleInTeam: String(row.role_in_team) as 'lead' | 'member', status: String(row.status) as 'pending' | 'accepted' | 'revoked' };
+    },
+
+    async revokeTeamInvite(input: { authUserId: string; invokeId: string; correlationId: string; reason: string }): Promise<{ id: string; status: 'revoked' }> {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_team_invites ti
+          set status = 'revoked', revoked_at = now()
+          where ti.id = ${input.invokeId}::uuid
+            and ti.status = 'pending'
+            and exists (select 1 from admin)
+          returning id, status
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'team_invite_revoked', 'team_invite', updated.id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated cross join admin
+          returning entity_id
+        )
+        select updated.id, updated.status
+        from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the invite is no longer pending.');
+      return { id: String(row.id), status: 'revoked' };
+    },
+
+    async setTeamMemberStatus(input: { authUserId: string; teamId: string; accountId: string; roleInTeam: 'lead' | 'member'; status: 'active' | 'revoked'; correlationId: string; reason: string }): Promise<TeamMemberResult> {
+      if (input.roleInTeam !== 'lead' && input.roleInTeam !== 'member') throw new FieldPilotPolicyError('roleInTeam must be lead or member.');
+      if (input.status !== 'active' && input.status !== 'revoked') throw new FieldPilotPolicyError('status must be active or revoked.');
+      if (input.reason.trim().length < 3) throw new FieldPilotPolicyError('A reason at least 3 characters is required.');
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_team_members tm
+          set role_in_team = ${input.roleInTeam}, status = ${input.status},
+              revoked_at = case when ${input.status} = 'revoked' then now() else tm.revoked_at end
+          where tm.team_id = ${input.teamId}::uuid
+            and tm.account_id = ${input.accountId}::uuid
+            and exists (select 1 from admin)
+          returning id, team_id, account_id, role_in_team, status
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, case when ${input.status} = 'active' then 'team_member_active' else 'team_member_revoked' end, 'team_member', updated.id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated cross join admin
+          returning entity_id
+        )
+        select updated.team_id, updated.account_id, updated.role_in_team, updated.status
+        from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the membership is unavailable.');
+      return { teamId: String(row.team_id), accountId: String(row.account_id), roleInTeam: String(row.role_in_team) as 'lead' | 'member', status: String(row.status) as 'active' | 'revoked' };
     },
 
     async getAdminConsole(input: { authUserId: string }): Promise<AdminConsoleResult> {

@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -37,6 +37,49 @@ export async function setManagedStaffRole(input: { token: string; accountId: str
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ accountId: input.accountId, role: input.role, status: input.status, reason: input.reason }),
+  });
+  return parse(response);
+}
+
+export async function listTeams(input: { token: string }): Promise<ApiResult<{ authorized: boolean; data: TeamListResult }>> {
+  const response = await fetchWithRecovery('/api/v2/admin/teams', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse(response);
+}
+
+export async function createTeam(input: { token: string; name: string; zone?: string | null; description?: string | null }): Promise<ApiResult<CreateTeamResult>> {
+  const response = await fetchWithRecovery('/api/v2/admin/teams', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ name: input.name, zone: input.zone ?? null, description: input.description ?? null }),
+  });
+  return parse(response);
+}
+
+export async function inviteTeamMember(input: { token: string; teamId: string; email: string; roleInTeam: 'lead' | 'member' }): Promise<ApiResult<TeamInviteResult>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/teams/${input.teamId}/invite`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ email: input.email, roleInTeam: input.roleInTeam }),
+  });
+  return parse(response);
+}
+
+export async function revokeTeamInvite(input: { token: string; inviteId: string; reason: string }): Promise<ApiResult<{ id: string; status: 'revoked' }>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/team-invites/${input.inviteId}/revoke`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ reason: input.reason }),
+  });
+  return parse(response);
+}
+
+export async function setTeamMemberStatus(input: { token: string; teamId: string; accountId: string; roleInTeam: 'lead' | 'member'; status: 'active' | 'revoked'; reason: string }): Promise<ApiResult<TeamMemberResult>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/teams/${input.teamId}/members/${input.accountId}/status`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ roleInTeam: input.roleInTeam, status: input.status, reason: input.reason }),
   });
   return parse(response);
 }

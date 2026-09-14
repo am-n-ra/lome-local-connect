@@ -465,6 +465,204 @@ function createTrunkRepository(sql = database()) {
       if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the target account is unavailable.");
       return { accountId: String(row.account_id), role: String(row.role), status: String(row.status) };
     },
+    async listTeams(input) {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select
+          exists (select 1 from admin) as authorized,
+          coalesce((select json_agg(row_to_json(t)) from (
+            select t.id, t.name, t.zone, t.description, t.created_by_account_id, t.created_at,
+              (select count(*)::int from v2_team_members tm where tm.team_id = t.id and tm.status = 'active') as member_count
+            from v2_teams t
+            order by t.created_at desc, t.id
+            limit 100
+          ) t), '[]'::json) as teams,
+          coalesce((select json_agg(row_to_json(m)) from (
+            select tm.id, tm.team_id, tm.account_id, a.auth_user_id, tm.role_in_team, tm.status, tm.added_by_account_id, tm.created_at, tm.revoked_at
+            from v2_team_members tm
+            join v2_accounts a on a.id = tm.account_id
+            order by tm.created_at desc, tm.id
+            limit 200
+          ) m), '[]'::json) as members,
+          coalesce((select json_agg(row_to_json(i)) from (
+            select ti.id, ti.team_id, ti.email, ti.role_in_team, ti.status, ti.invited_by_account_id, ti.created_at, ti.accepted_at, ti.revoked_at
+            from v2_team_invites ti
+            order by ti.created_at desc, ti.id
+            limit 200
+          ) i), '[]'::json) as invites
+        from admin
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("Team listing is unavailable.");
+      const parseArray = (raw) => {
+        if (!Array.isArray(raw)) return [];
+        return raw;
+      };
+      const teams = parseArray(row.teams).map((r) => ({
+        id: String(r.id),
+        name: String(r.name),
+        zone: r.zone === null || r.zone === void 0 ? null : String(r.zone),
+        description: r.description === null || r.description === void 0 ? null : String(r.description),
+        createdByAccountId: r.created_by_account_id === null || r.created_by_account_id === void 0 ? null : String(r.created_by_account_id),
+        createdAt: String(r.created_at),
+        memberCount: Number(r.member_count ?? 0)
+      }));
+      const members = parseArray(row.members).map((r) => ({
+        id: String(r.id),
+        teamId: String(r.team_id),
+        accountId: String(r.account_id),
+        authUserId: String(r.auth_user_id ?? ""),
+        roleInTeam: String(r.role_in_team),
+        status: String(r.status),
+        addedByAccountId: r.added_by_account_id === null || r.added_by_account_id === void 0 ? null : String(r.added_by_account_id),
+        createdAt: String(r.created_at),
+        revokedAt: r.revoked_at === null || r.revoked_at === void 0 ? null : String(r.revoked_at)
+      }));
+      const invites = parseArray(row.invites).map((r) => ({
+        id: String(r.id),
+        teamId: String(r.team_id),
+        email: String(r.email),
+        roleInTeam: String(r.role_in_team),
+        status: String(r.status),
+        invitedByAccountId: r.invited_by_account_id === null || r.invited_by_account_id === void 0 ? null : String(r.invited_by_account_id),
+        createdAt: String(r.created_at),
+        acceptedAt: r.accepted_at === null || r.accepted_at === void 0 ? null : String(r.accepted_at),
+        revokedAt: r.revoked_at === null || r.revoked_at === void 0 ? null : String(r.revoked_at)
+      }));
+      return { authorized: Boolean(row.authorized), data: { teams, members, invites } };
+    },
+    async createTeam(input) {
+      const name = input.name.trim();
+      if (name.length < 1 || name.length > 60) throw new FieldPilotPolicyError("A team name between 1 and 60 characters is required.");
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), created as (
+          insert into v2_teams (name, zone, description, created_by_account_id)
+          select ${name}, ${input.zone?.trim() || null}, ${input.description?.trim() || null}, admin.id
+          from admin
+          returning id, name, zone, created_by_account_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select created.created_by_account_id, 'team_created', 'team', created.id::text, ${input.correlationId}, ${"Created team " + name}
+          from created
+          returning entity_id
+        )
+        select created.id, created.name, created.zone
+        from created
+        where exists (select 1 from audit where audit.entity_id = created.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized to create teams.");
+      return { id: String(row.id), name: String(row.name), zone: row.zone === null || row.zone === void 0 ? null : String(row.zone) };
+    },
+    async inviteTeamMember(input) {
+      const email = input.email.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new FieldPilotPolicyError("A valid email is required for the invite.");
+      if (input.roleInTeam !== "lead" && input.roleInTeam !== "member") throw new FieldPilotPolicyError("roleInTeam must be lead or member.");
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), team as (
+          select t.id
+          from v2_teams t cross join admin
+          where t.id = ${input.teamId}::uuid
+            and not exists (select 1 from v2_team_members tm where tm.team_id = t.id and tm.account_id = admin.id)
+        ), invite as (
+          insert into v2_team_invites (team_id, email, role_in_team, status, invited_by_account_id)
+          select team.id, ${email}, ${input.roleInTeam}, 'pending', admin.id
+          from team cross join admin
+          returning id, team_id, email, role_in_team, status, invited_by_account_id
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'team_invite_created', 'team_invite', invite.id::text, ${input.correlationId}, ${"Invited " + email + " to team " + input.teamId}
+          from invite cross join admin
+          returning entity_id
+        )
+        select invite.id, invite.team_id, invite.email, invite.role_in_team, invite.status
+        from invite
+        where exists (select 1 from audit where audit.entity_id = invite.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the team is unavailable.");
+      return { id: String(row.id), teamId: String(row.team_id), email: String(row.email), roleInTeam: String(row.role_in_team), status: String(row.status) };
+    },
+    async revokeTeamInvite(input) {
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_team_invites ti
+          set status = 'revoked', revoked_at = now()
+          where ti.id = ${input.invokeId}::uuid
+            and ti.status = 'pending'
+            and exists (select 1 from admin)
+          returning id, status
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'team_invite_revoked', 'team_invite', updated.id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated cross join admin
+          returning entity_id
+        )
+        select updated.id, updated.status
+        from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the invite is no longer pending.");
+      return { id: String(row.id), status: "revoked" };
+    },
+    async setTeamMemberStatus(input) {
+      if (input.roleInTeam !== "lead" && input.roleInTeam !== "member") throw new FieldPilotPolicyError("roleInTeam must be lead or member.");
+      if (input.status !== "active" && input.status !== "revoked") throw new FieldPilotPolicyError("status must be active or revoked.");
+      if (input.reason.trim().length < 3) throw new FieldPilotPolicyError("A reason at least 3 characters is required.");
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_team_members tm
+          set role_in_team = ${input.roleInTeam}, status = ${input.status},
+              revoked_at = case when ${input.status} = 'revoked' then now() else tm.revoked_at end
+          where tm.team_id = ${input.teamId}::uuid
+            and tm.account_id = ${input.accountId}::uuid
+            and exists (select 1 from admin)
+          returning id, team_id, account_id, role_in_team, status
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, case when ${input.status} = 'active' then 'team_member_active' else 'team_member_revoked' end, 'team_member', updated.id::text, ${input.correlationId}, ${input.reason.trim()}
+          from updated cross join admin
+          returning entity_id
+        )
+        select updated.team_id, updated.account_id, updated.role_in_team, updated.status
+        from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The Admin session is not authorized or the membership is unavailable.");
+      return { teamId: String(row.team_id), accountId: String(row.account_id), roleInTeam: String(row.role_in_team), status: String(row.status) };
+    },
     async getAdminConsole(input) {
       const rows = await retryDatabase(() => sql`
         with admin as (
@@ -4746,6 +4944,99 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.setManagedStaffRole({ authUserId, accountId, role, status, reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/admin/teams") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to manage teams."));
+        return true;
+      }
+      const result = await repository.listTeams({ authUserId });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, "FORBIDDEN", "An active Omni Admin role is required for team management."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/admin/teams") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to manage teams."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const name = typeof input.name === "string" ? input.name.trim() : "";
+      const zone = typeof input.zone === "string" ? input.zone.trim() : "";
+      const description = typeof input.description === "string" ? input.description.trim() : "";
+      if (name.length < 1 || name.length > 60 || zone.length > 120 || description.length > 1e3) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a team name (1..60), optional zone (<=120) and description (<=1000)."));
+        return true;
+      }
+      const result = await repository.createTeam({ authUserId, name, zone: zone || null, description: description || null, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/admin/teams/") && pathname.endsWith("/invite")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to invite team members."));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/teams\/([0-9a-f-]{36})\/invite$/.exec(pathname);
+      const teamId = match ? match[1] : "";
+      const input = await parseRequestBody(req);
+      const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
+      const roleInTeam = input.roleInTeam === "lead" || input.roleInTeam === "member" ? input.roleInTeam : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(teamId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !roleInTeam) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid team, email and roleInTeam (lead|member)."));
+        return true;
+      }
+      const result = await repository.inviteTeamMember({ authUserId, teamId, email, roleInTeam, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/admin/team-invites/") && pathname.endsWith("/revoke")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to revoke team invites."));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/team-invites\/([0-9a-f-]{36})\/revoke$/.exec(pathname);
+      const invokeId = match ? match[1] : "";
+      const input = await parseRequestBody(req);
+      const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(invokeId) || reason.length < 3 || reason.length > 1e3) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid invite id and a reason (3..1000)."));
+        return true;
+      }
+      const result = await repository.revokeTeamInvite({ authUserId, invokeId, correlationId, reason });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/admin/teams/") && pathname.includes("/members/") && pathname.endsWith("/status")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni Admin to manage team members."));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/teams\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/status$/.exec(pathname);
+      const teamId = match ? match[1] : "";
+      const accountId = match ? match[2] : "";
+      const input = await parseRequestBody(req);
+      const roleInTeam = input.roleInTeam === "lead" || input.roleInTeam === "member" ? input.roleInTeam : "";
+      const status = input.status === "active" || input.status === "revoked" ? input.status : "";
+      const reason = typeof input.reason === "string" ? input.reason.trim() : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(teamId) || !uuidPattern.test(accountId) || !roleInTeam || !status || reason.length < 3 || reason.length > 1e3) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a valid team, member, roleInTeam, status and reason."));
+        return true;
+      }
+      const result = await repository.setTeamMemberStatus({ authUserId, teamId, accountId, roleInTeam, status, correlationId, reason });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

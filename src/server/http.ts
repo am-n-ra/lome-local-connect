@@ -287,6 +287,99 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/admin/teams') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to manage teams.'));
+        return true;
+      }
+      const result = await repository.listTeams({ authUserId });
+      if (!result.authorized) {
+        json(res, 403, errorBody(correlationId, 'FORBIDDEN', 'An active Omni Admin role is required for team management.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/admin/teams') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to manage teams.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const name = typeof input.name === 'string' ? input.name.trim() : '';
+      const zone = typeof input.zone === 'string' ? input.zone.trim() : '';
+      const description = typeof input.description === 'string' ? input.description.trim() : '';
+      if (name.length < 1 || name.length > 60 || zone.length > 120 || description.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a team name (1..60), optional zone (<=120) and description (<=1000).'));
+        return true;
+      }
+      const result = await repository.createTeam({ authUserId, name, zone: zone || null, description: description || null, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/teams/') && pathname.endsWith('/invite')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to invite team members.'));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/teams\/([0-9a-f-]{36})\/invite$/.exec(pathname);
+      const teamId = match ? match[1] : '';
+      const input = await parseRequestBody(req);
+      const email = typeof input.email === 'string' ? input.email.trim().toLowerCase() : '';
+      const roleInTeam = input.roleInTeam === 'lead' || input.roleInTeam === 'member' ? input.roleInTeam : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(teamId) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !roleInTeam) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid team, email and roleInTeam (lead|member).'));
+        return true;
+      }
+      const result = await repository.inviteTeamMember({ authUserId, teamId, email, roleInTeam, correlationId });
+      json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/team-invites/') && pathname.endsWith('/revoke')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to revoke team invites.'));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/team-invites\/([0-9a-f-]{36})\/revoke$/.exec(pathname);
+      const invokeId = match ? match[1] : '';
+      const input = await parseRequestBody(req);
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(invokeId) || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid invite id and a reason (3..1000).'));
+        return true;
+      }
+      const result = await repository.revokeTeamInvite({ authUserId, invokeId, correlationId, reason });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/teams/') && pathname.includes('/members/') && pathname.endsWith('/status')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to manage team members.'));
+        return true;
+      }
+      const match = /^\/api\/v2\/admin\/teams\/([0-9a-f-]{36})\/members\/([0-9a-f-]{36})\/status$/.exec(pathname);
+      const teamId = match ? match[1] : '';
+      const accountId = match ? match[2] : '';
+      const input = await parseRequestBody(req);
+      const roleInTeam = input.roleInTeam === 'lead' || input.roleInTeam === 'member' ? input.roleInTeam : '';
+      const status = input.status === 'active' || input.status === 'revoked' ? input.status : '';
+      const reason = typeof input.reason === 'string' ? input.reason.trim() : '';
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(teamId) || !uuidPattern.test(accountId) || !roleInTeam || !status || reason.length < 3 || reason.length > 1000) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid team, member, roleInTeam, status and reason.'));
+        return true;
+      }
+      const result = await repository.setTeamMemberStatus({ authUserId, teamId, accountId, roleInTeam, status, correlationId, reason });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/admin/console') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

@@ -498,6 +498,68 @@ export interface RoleManagementResult {
   status: 'active' | 'revoked';
 }
 
+// ---- Team governance (P2-A) ----
+export interface Team {
+  id: string;
+  name: string;
+  zone: string | null;
+  description: string | null;
+  createdByAccountId: string | null;
+  createdAt: string;
+  memberCount: number;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  accountId: string;
+  authUserId: string;
+  roleInTeam: 'lead' | 'member';
+  status: 'active' | 'revoked';
+  addedByAccountId: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+export interface TeamInvite {
+  id: string;
+  teamId: string;
+  email: string;
+  roleInTeam: 'lead' | 'member';
+  status: 'pending' | 'accepted' | 'revoked';
+  invitedByAccountId: string | null;
+  createdAt: string;
+  acceptedAt: string | null;
+  revokedAt: string | null;
+}
+
+export interface TeamListResult {
+  teams: Team[];
+  members: TeamMember[];
+  invites: TeamInvite[];
+}
+
+export interface CreateTeamResult {
+  id: string;
+  name: string;
+  zone: string | null;
+}
+
+export interface TeamMemberResult {
+  teamId: string;
+  accountId: string;
+  roleInTeam: 'lead' | 'member';
+  status: 'active' | 'revoked';
+}
+
+export interface TeamInviteResult {
+  id: string;
+  teamId: string;
+  email: string;
+  roleInTeam: 'lead' | 'member';
+  status: 'pending' | 'accepted' | 'revoked';
+}
+
 export interface AccountCapabilitiesResult {
   accountId: string;
   roles: Array<'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer'>;
