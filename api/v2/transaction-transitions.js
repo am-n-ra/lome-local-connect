@@ -3140,11 +3140,11 @@ function createTrunkRepository(sql = database()) {
           where e.status = 'confirmed'
         )
         select
-          coalesce(array_agg(json_build_object(
+          coalesce(json_agg(json_build_object(
             'id', c.id, 'facilityId', c.facility_id, 'name', c.name,
             'budgetMinor', c.budget_minor, 'spentMinor', c.spent_minor,
             'status', c.status, 'startsAt', c.starts_at, 'endsAt', c.ends_at, 'createdAt', c.created_at
-          ) order by c.created_at desc), '[]'::json) as campaigns,
+          ) order by c.created_at desc) filter (where c.id is not null), '[]'::json) as campaigns,
           (select b.balance_minor from balance b) as budget_remaining_minor
         from facility f
         left join v2_ad_campaigns c on c.facility_id = f.facility_id

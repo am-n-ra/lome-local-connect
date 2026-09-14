@@ -1284,6 +1284,8 @@ describe('facility ad campaign Root seam (NW-13j)', () => {
     const result = await repository.listFacilityAdCampaigns({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
     expect(result.campaigns).toEqual([]);
     expect(result.budgetRemainingMinor).toBe(10000);
+    // json_agg (json not json[]) so COALESCE types match on real Postgres.
+    expect(call.queries[0]).toContain('json_agg(json_build_object');
     expect(call.queries[0]).toContain(`'[]'::json`);
   });
 
