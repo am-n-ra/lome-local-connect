@@ -486,6 +486,8 @@ export interface ApiResult<T> {
 export interface RoleManagementAccount {
   accountId: string;
   authUserId: string;
+  email: string | null;
+  name: string | null;
   roles: Array<'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer'>;
   onboardingState: string;
   suspended: boolean;

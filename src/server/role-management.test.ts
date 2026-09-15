@@ -38,19 +38,21 @@ describe('admin role management Root seam ( NW-12.5)', () => {
 
   it('maps real accounts with active roles and facility counts', async () => {
     const rows = [
-      { account_id: 'account-1', auth_user_id: 'auth-1', onboarding_state: 'seller_ready', suspended_at: null, facility_count: 2, roles: ['buyer', 'seller', 'operator', 'revoked'] },
-      { account_id: 'account-2', auth_user_id: 'auth-2', onboarding_state: 'created', suspended_at: '2026-09-01T10:00:00.000Z', facility_count:  ​0, roles: ['buyer', 'reviewer'] },
+      { account_id: 'account-1', auth_user_id: 'auth-1', email: 'a@example.com', name: 'Alpha', onboarding_state: 'seller_ready', suspended_at: null, facility_count: 2, roles: ['buyer', 'seller', 'operator', 'revoked'] },
+      { account_id: 'account-2', auth_user_id: 'auth-2', email: null, name: null, onboarding_state: 'created', suspended_at: '2026-09-01T10:00:00.000Z', facility_count: 0, roles: ['buyer', 'reviewer'] },
     ];
     const call = stubSql(rows);
     const repository = createTrunkRepository(call.sql);
     const result = await repository.listRoleManagementAccounts({ authUserId: 'auth-admin' });
     expect(result.authorized).toBe(true);
     expect(result.accounts).toEqual([
-      { accountId: 'account-1', authUserId: 'auth-1', roles: ['buyer', 'seller', 'operator'], onboardingState: 'seller_ready', suspended: false, facilityCount: 2 },
-      { accountId: 'account-2', authUserId: 'auth-2', roles: ['buyer', 'reviewer'], onboardingState: 'created', suspended: true, facilityCount:  ​0 },
+      { accountId: 'account-1', authUserId: 'auth-1', email: 'a@example.com', name: 'Alpha', roles: ['buyer', 'seller', 'operator'], onboardingState: 'seller_ready', suspended: false, facilityCount: 2 },
+      { accountId: 'account-2', authUserId: 'auth-2', email: null, name: null, roles: ['buyer', 'reviewer'], onboardingState: 'created', suspended: true, facilityCount: 0 },
     ]);
     expect(call.queries[0]).toContain('count(distinct f.id)::int as facility_count');
     expect(call.queries[0]).toContain('left join v2_account_roles ar');
+    expect(call.queries[0]).toContain('left join neon_auth."user" u on u.id::text = candidate.auth_user_id');
+    expect(call.queries[0]).toContain('u.email, u.name');
   });
 
   it('grants and revokes a managed staff role with an audit trail', async () => {

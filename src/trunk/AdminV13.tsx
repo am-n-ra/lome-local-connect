@@ -322,9 +322,16 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               {roleAccounts.map((account) => (
                 <div className="kv" key={account.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line, #e8e8e6)' }}>
                   <span>
-                    <b>{account.onboardingState === 'seller_ready' ? 'Vendeur prêt' : 'Compte'}</b>
+                    <b>{account.name || account.email || (account.onboardingState === 'seller_ready' ? 'Vendeur prêt' : 'Compte')}</b>
+                    {account.name && account.email && <span className="tiny muted"> · {account.email}</span>}
+                    {!account.name && account.email && (
+                      <>
+                        <br />
+                        <span className="tiny">{account.email}</span>
+                      </>
+                    )}
                     <br />
-                    <span className="tiny muted">{account.suspended ? 'Suspendu' : 'Actif'} · {account.facilityCount} facilité{account.facilityCount === 1 ? '' : 's'}</span>
+                    <span className="tiny muted">{account.suspended ? 'Suspendu' : 'Actif'} · {account.facilityCount} facilité{account.facilityCount === 1 ? '' : 's'} · {account.onboardingState === 'seller_ready' ? 'Vendeur prêt' : 'Compte'}</span>
                   </span>
                   <span className="btnrow" style={{ gap: 4 }}>
                     {!account.roles.includes('operator') && roleChip(account, 'operator', 'active')}

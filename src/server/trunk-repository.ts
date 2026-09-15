@@ -344,6 +344,8 @@ export type ManagedStaffRole = 'operator' | 'reviewer';
 export interface RoleManagementAccount {
   accountId: string;
   authUserId: string;
+  email: string | null;
+  name: string | null;
   roles: Array<'buyer' | 'seller' | 'admin' | 'operator' | 'reviewer'>;
   onboardingState: string;
   suspended: boolean;
@@ -521,19 +523,23 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         )
         select candidate.id as account_id, candidate.auth_user_id, candidate.onboarding_state, candidate.suspended_at,
+          u.email, u.name,
           count(distinct f.id)::int as facility_count,
           coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
         from admin
         cross join v2_accounts candidate
+        left join neon_auth."user" u on u.id::text = candidate.auth_user_id
         left join v2_account_roles ar on ar.account_id = candidate.id
         left join v2_facilities f on f.account_id = candidate.id
-        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.suspended_at
+        group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.suspended_at, u.email, u.name
         order by candidate.created_at asc, candidate.id asc
         limit 200
       `);
       const accounts = (rows as Record<string, unknown>[]).map((row) => ({
         accountId: String(row.account_id),
         authUserId: String(row.auth_user_id),
+        email: row.email ? String(row.email) : null,
+        name: row.name ? String(row.name) : null,
         roles: (Array.isArray(row.roles) ? row.roles.map(String) : []).filter((role): role is RoleManagementAccount['roles'][number] => ['buyer', 'seller', 'admin', 'operator', 'reviewer'].includes(role)),
         onboardingState: String(row.onboarding_state),
         suspended: row.suspended_at !== null,
