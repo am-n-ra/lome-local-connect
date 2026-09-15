@@ -273,12 +273,14 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
   const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
     const active = account.roles.includes(role);
+    const relevant = desired === 'active' ? !active : active;
     return (
       <button
         className="chip"
         type="button"
-        disabled={roleBusy !== null || active !== (desired === 'active')}
+        disabled={roleBusy !== null || !relevant}
         onClick={() => openRoleComposer(account.accountId, role, desired)}
+        aria-pressed={active}
       >
         {desired === 'active' ? '+' : '−'} {roleLabel(role)}
       </button>
