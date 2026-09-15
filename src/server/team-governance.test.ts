@@ -135,4 +135,87 @@ describe('team governance Root seam (NW-15 P2-A)', () => {
     await expect(repository.setTeamMemberStatus({ authUserId: 'auth-admin', teamId: 'team-1', accountId: 'account-1', roleInTeam: 'boss' as TeamMemberResult['roleInTeam'], status: 'active' as TeamMemberResult['status'], correlationId: 'c', reason: 'Motif' })).rejects.toThrow(FieldPilotPolicyError);
     await expect(repository.setTeamMemberStatus({ authUserId: 'auth-admin', teamId: 'team-1', accountId: 'account-1', roleInTeam: 'member' as TeamMemberResult['roleInTeam'], status: 'bogus' as TeamMemberResult['status'], correlationId: 'c', reason: 'Motif' })).rejects.toThrow(FieldPilotPolicyError);
   });
+
+  it('lists my pending team invites by resolving the account email from neon_auth', async () => {
+    const call = stubSqlSequence([
+      [{ id: 'account-1' }],
+      [
+        { id: 'inv-1', team_id: 'team-1', team_name: 'Équipe Lomé Est', team_zone: 'Lomé Est', role_in_team: 'member', status: 'pending', invited_by_account_id: 'admin-1', created_at: '2026-09-14T09:00:00.000Z', accepted_at: null },
+      ],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listMyTeamInvites({ authUserId: 'auth-invitee' });
+    expect(result.authorized).toBe(true);
+    expect(result.invites).toEqual([
+      { id: 'inv-1', teamId: 'team-1', teamName: 'Équipe Lomé Est', teamZone: 'Lomé Est', roleInTeam: 'member', status: 'pending', invitedByAccountId: 'admin-1', createdAt: '2026-09-14T09:00:00.000Z', acceptedAt: null },
+    ]);
+    expect(call.queries[1]).toContain('join neon_auth."user" u on u.id::text = a.auth_user_id');
+    expect(call.queries[1]).toContain("ti.status = 'pending'");
+  });
+
+  it('locks my team invites list for a session with no active account', async () => {
+    const call = stubSqlSequence([[]]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listMyTeamInvites({ authUserId: 'auth-ghost' });
+    expect(result.authorized).toBe(false);
+    expect(result.invites).toEqual([]);
+  });
+
+  it('accepts a pending invite and creates the membership with an audit trail', async () => {
+    const call = stubSqlSequence([
+      [{ id: 'inv-1', team_id: 'team-1', member_id: 'tm-1', role_in_team: 'member' }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.acceptTeamInvite({ authUserId: 'auth-invitee', inviteId: 'inv-1', correlationId: 'corr-accept' });
+    expect(result).toMatchObject({ id: 'inv-1', teamId: 'team-1', roleInTeam: 'member', status: 'accepted', memberId: 'tm-1' });
+    expect(call.queries[0]).toContain('insert into v2_team_members');
+    expect(call.queries[0]).toContain("on conflict (team_id, account_id) do update set status = 'active'");
+    expect(call.queries[0]).toContain("'team_invite_accepted'");
+  });
+
+  it('rejects accepting an invite that is not pending or not addressed to the caller', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.acceptTeamInvite({ authUserId: 'auth-invitee', inviteId: 'inv-9', correlationId: 'corr-accept' })).rejects.toThrow(FieldPilotPolicyError);
+    expect(call.queries[0]).toContain("ti.status = 'pending'");
+  });
+
+  it('assigns a facility zone as admin with an audit trail', async () => {
+    const call = stubSqlSequence([
+      [{ facility_id: 'facility-1', zone: 'Lomé Est' }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.assignFacilityZone({ authUserId: 'auth-admin', facilityId: 'facility-1', zone: '  Lomé Est  ', correlationId: 'corr-zone' });
+    expect(result).toMatchObject({ facilityId: 'facility-1', zone: 'Lomé Est' });
+    expect(call.queries[0]).toContain('update v2_facilities f');
+    expect(call.queries[0]).toContain("set zone =");
+    expect(call.queries[0]).toContain("'facility_zone_assigned'");
+  });
+
+  it('clears a facility zone with a null assignment', async () => {
+    const call = stubSqlSequence([
+      [{ facility_id: 'facility-1', zone: null }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.assignFacilityZone({ authUserId: 'auth-admin', facilityId: 'facility-1', zone: null, correlationId: 'corr-zone-clear' });
+    expect(result).toEqual({ facilityId: 'facility-1', zone: null });
+  });
+
+  it('scopes the reviewer queue to the facilities of their zoned team', async () => {
+    const call = stubSqlSequence([
+      [{ id: 'account-reviewer' }],
+      [
+        { request_id: 'request-1', facility_id: 'facility-1', facility_name: 'Boutique Est', trust_state: 'verification_submitted', latitude: 6.13, longitude: 1.22, state: 'submitted', version: 1, created_at: '2026-09-14T09:00:00.000Z', submitted_at: '2026-09-14T09:00:00.000Z', evidence_count: 1, evidence_kinds: ['photo'] },
+      ],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listReviewQueue({ authUserId: 'auth-reviewer' });
+    expect(result.authorized).toBe(true);
+    expect(result.requests).toHaveLength(1);
+    expect(result.requests[0]).toMatchObject({ requestId: 'request-1', facilityId: 'facility-1', facilityName: 'Boutique Est', state: 'submitted', evidenceCount: 1 });
+    const query = call.queries[1];
+    expect(query).toContain('v2_team_members');
+    expect(query).toContain('t.zone = f.zone');
+    expect(query).toContain('not exists');
+  });
 });

@@ -5,7 +5,7 @@ import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, O
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, CreateTeamResult, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -584,6 +584,123 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the target account is unavailable.');
       return { accountId: String(row.account_id), role: String(row.role) as ManagedStaffRole, status: String(row.status) as 'active' | 'revoked' };
     },
+
+    async listMyTeamInvites(input: { authUserId: string }): Promise<{ authorized: boolean; invites: MyTeamInvite[] }> {
+        const accountRows = await retryDatabase(() => sql`
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        `);
+        if (!(accountRows as Record<string, unknown>[])[0]) return { authorized: false, invites: [] };
+        const rows = await retryDatabase(() => sql`
+          select ti.id, ti.team_id, t.name as team_name, t.zone as team_zone, ti.role_in_team, ti.status,
+            ti.invited_by_account_id, ti.created_at, ti.accepted_at
+          from v2_accounts a
+          join neon_auth."user" u on u.id::text = a.auth_user_id
+          join v2_team_invites ti on lower(ti.email) = lower(u.email)
+          join v2_teams t on t.id = ti.team_id
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and ti.status = 'pending'
+          order by ti.created_at desc, ti.id
+          limit 50
+        `);
+        return {
+          authorized: true,
+          invites: (rows as Record<string, unknown>[]).map((row) => ({
+            id: String(row.id),
+            teamId: String(row.team_id),
+            teamName: String(row.team_name),
+            teamZone: row.team_zone === null || row.team_zone === undefined ? null : String(row.team_zone),
+            roleInTeam: String(row.role_in_team) as 'lead' | 'member',
+            status: String(row.status) as 'pending' | 'accepted' | 'revoked',
+            invitedByAccountId: row.invited_by_account_id === null || row.invited_by_account_id === undefined ? null : String(row.invited_by_account_id),
+            createdAt: String(row.created_at),
+            acceptedAt: row.accepted_at === null || row.accepted_at === undefined ? null : String(row.accepted_at),
+          })),
+        };
+      },
+
+      async acceptTeamInvite(input: { authUserId: string; inviteId: string; correlationId: string }): Promise<TeamInviteAcceptResult> {
+        const rows = await retryDatabase(() => sql`
+          with me as (
+            select a.id as account_id, lower(u.email) as my_email
+            from v2_accounts a
+            join neon_auth."user" u on u.id::text = a.auth_user_id
+            where a.auth_user_id = ${input.authUserId}
+              and a.suspended_at is null
+            limit 1
+          ), invite as (
+            select ti.id as invite_id, ti.team_id, ti.role_in_team
+            from v2_team_invites ti
+            join me on lower(ti.email) = me.my_email
+            where ti.id = ${input.inviteId}::uuid
+              and ti.status = 'pending'
+              and not exists (
+                select 1 from v2_team_members tm
+                join me on me.account_id = tm.account_id
+                where tm.team_id = ti.team_id and tm.status = 'active'
+              )
+            limit 1
+          ), membership as (
+            insert into v2_team_members (team_id, account_id, role_in_team, status)
+            select invite.team_id, me.account_id, invite.role_in_team, 'active'
+            from invite cross join me
+            on conflict (team_id, account_id) do update set status = 'active', revoked_at = null
+            returning id as member_id, team_id
+          ), accept as (
+            update v2_team_invites ti
+            set status = 'accepted', accepted_at = now()
+            from invite
+            where ti.id = invite.invite_id
+            returning ti.id as id, invite.team_id as team_id
+          ), audit as (
+            insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+            select me.account_id, 'team_invite_accepted', 'team_invite', accept.id::text, ${input.correlationId}, 'Accepted invitation to join team'
+            from accept cross join me
+            returning entity_id
+          )
+          select accept.id as id, accept.team_id as team_id, membership.member_id as member_id, invite.role_in_team as role_in_team
+          from invite
+          join membership on true
+          join accept on true
+          join audit on audit.entity_id = accept.id::text
+        `);
+        const row = (rows as Record<string, unknown>[])[0];
+        if (!row) throw new FieldPilotPolicyError('The invitation is not available for this account or is no longer pending.');
+        return { id: String(row.id), teamId: String(row.team_id), roleInTeam: String(row.role_in_team) as 'lead' | 'member', status: 'accepted', memberId: String(row.member_id) };
+      },
+
+      async assignFacilityZone(input: { authUserId: string; facilityId: string; zone: string | null; correlationId: string }): Promise<FacilityZoneAssignment> {
+        const zone = input.zone === null ? null : input.zone.trim();
+        const rows = await retryDatabase(() => sql`
+          with admin as (
+            select a.id
+            from v2_accounts a
+            join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+            where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+            limit 1
+          ), updated as (
+            update v2_facilities f
+            set zone = ${zone}, updated_at = now()
+            from admin
+            where f.id = ${input.facilityId}::uuid
+            returning f.id, f.zone
+          ), audit as (
+            insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+            select admin.id, 'facility_zone_assigned', 'facility', updated.id::text, ${input.correlationId}, ${'Assigned zone ' + (zone ?? '∅')}
+            from updated cross join admin
+            returning entity_id
+          )
+          select updated.id as facility_id, updated.zone
+          from updated
+          where exists (select 1 from audit where audit.entity_id = updated.id::text)
+        `);
+        const row = (rows as Record<string, unknown>[])[0];
+        if (!row) throw new FieldPilotPolicyError('The Admin session is not authorized or the facility is unavailable.');
+        return { facilityId: String(row.facility_id), zone: row.zone === null || row.zone === undefined ? null : String(row.zone) };
+      },
 
     async listTeams(input: { authUserId: string }): Promise<{ authorized: boolean; data: TeamListResult }> {
       const rows = await retryDatabase(() => sql`
@@ -1385,18 +1502,31 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         limit 1
       `);
       if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, requests: [] };
+      const reviewerAccountId = String((authorizationRows as Record<string, unknown>[])[0].id);
       const rows = await retryDatabase(() => sql`
-        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, f.latitude, f.longitude, vr.state, vr.version, vr.created_at, vr.submitted_at,
+        select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, f.latitude, f.longitude, f.zone, vr.state, vr.version, vr.created_at, vr.submitted_at,
           count(ve.id)::int as evidence_count, coalesce(array_agg(distinct ve.evidence_kind) filter (where ve.id is not null), '{}'::text[]) as evidence_kinds
         from v2_verification_requests vr
         join v2_facilities f on f.id = vr.facility_id
         left join v2_verification_evidence ve on ve.request_id = vr.id and ve.visibility in ('private', 'admin_only')
         where vr.state in ('submitted', 'admin_review')
+          and (
+            not exists (
+              select 1 from v2_team_members tmz
+              join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
+              where tmz.account_id = ${reviewerAccountId}::uuid and tmz.status = 'active'
+            )
+            or exists (
+              select 1 from v2_team_members tm
+              join v2_teams t on t.id = tm.team_id and t.zone is not null and t.zone = f.zone
+              where tm.account_id = ${reviewerAccountId}::uuid and tm.status = 'active'
+            )
+          )
         group by vr.id, f.id
         order by vr.submitted_at nulls last, vr.created_at asc, vr.id asc
         limit 100
       `);
-      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), latitude: Number(row.latitude), longitude: Number(row.longitude), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString(), evidenceCount: Number(row.evidence_count ?? 0), evidenceKinds: Array.isArray(row.evidence_kinds) ? row.evidence_kinds.map(String) : [] })) };
+      return { authorized: true, requests: (rows as Record<string, unknown>[]).map((row) => ({ requestId: String(row.request_id), facilityId: String(row.facility_id), facilityName: String(row.facility_name), facilityTrust: String(row.trust_state), latitude: Number(row.latitude), longitude: Number(row.longitude), state: String(row.state), version: Number(row.version), createdAt: new Date(String(row.created_at)).toISOString(), submittedAt: row.submitted_at === null ? null : new Date(String(row.submitted_at)).toISOString(), evidenceCount: Number(row.evidence_count ?? 0), evidenceKinds: Array.isArray(row.evidence_kinds) ? row.evidence_kinds.map(String) : [], zone: row.zone === null || row.zone === undefined ? null : String(row.zone) })) };
     },
 
     async reviewFacilityClaim(input: { authUserId: string; requestId: string; outcome: ReviewOutcome; reason: string; correlationId: string }): Promise<ReviewClaimResult> {
@@ -1483,6 +1613,18 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from reviewer
         join v2_accounts candidate on true
         join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
+        where (
+          not exists (
+            select 1 from v2_team_members tmz
+            join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
+            where tmz.account_id = reviewer.id and tmz.status = 'active'
+          )
+          or exists (
+            select 1 from v2_team_members tm
+            join v2_teams t on t.id = tm.team_id and t.zone is not null and t.zone = f.zone
+            where tm.account_id = reviewer.id and tm.status = 'active'
+          )
+        )
         group by candidate.id, candidate.auth_user_id, candidate.onboarding_state, candidate.created_at, candidate.suspended_at
         order by candidate.suspended_at nulls first, candidate.created_at asc
         limit 100

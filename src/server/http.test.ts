@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateSellerFacilityCreate } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateFacilityZoneAssignment, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -292,5 +292,27 @@ describe('ad campaign validator (NW-13j)', () => {
     const response = toApiErrorResponse('corr-1', new WalletPolicyError('Insufficient wallet balance to reserve the campaign budget.'));
     expect(response.status).toBe(409);
     expect(response.body).toMatchObject({ ok: false, error: { code: 'POLICY_REJECTED', retryable: false } });
+  });
+});
+
+describe('team invite / facility zone validators (NW-15 P2-C)', () => {
+  const inviteId = '6d8f7a1e-2f2a-4e22-9d1c-7b5c88a1e9d4';
+  const facilityId = '8e0e2268-b5bb-4b8c-9b3e-1f0a90d6f7c2';
+
+  it('accepts a valid team invite id', () => {
+    expect(validateTeamInviteAccept({}, inviteId)).toEqual({ inviteId });
+  });
+  it('rejects a malformed team invite id', () => {
+    expect(() => validateTeamInviteAccept({}, 'not-a-uuid')).toThrow(ApiInputError);
+  });
+
+  it('accepts an optional zone on a valid facility id', () => {
+    expect(validateFacilityZoneAssignment({ zone: 'Lomé Est' }, facilityId)).toEqual({ facilityId, zone: 'Lomé Est' });
+    expect(validateFacilityZoneAssignment({ zone: null }, facilityId)).toEqual({ facilityId, zone: null });
+    expect(validateFacilityZoneAssignment({}, facilityId)).toEqual({ facilityId, zone: null });
+  });
+  it('rejects a malformed facility id or an over-long zone', () => {
+    expect(() => validateFacilityZoneAssignment({ zone: 'A' }, 'not-a-uuid')).toThrow(ApiInputError);
+    expect(() => validateFacilityZoneAssignment({ zone: 'x'.repeat(121) }, facilityId)).toThrow(ApiInputError);
   });
 });

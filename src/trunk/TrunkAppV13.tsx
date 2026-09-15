@@ -10,11 +10,12 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
+  listMyTeamInvites, acceptTeamInvite,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
-  FacilityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
@@ -162,6 +163,10 @@ const [stockEventProductId, setStockEventProductId] = useState<string | null>(nu
 const [pendingSearch, setPendingSearch] = useState('');
 const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 const [bulkLoading, setBulkLoading] = useState(false);
+  const [myTeamInvites, setMyTeamInvites] = useState<MyTeamInvite[]>([]);
+  const [myTeamInvitesState, setMyTeamInvitesState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [myTeamInvitesError, setMyTeamInvitesError] = useState('');
+  const [myTeamInviteBusy, setMyTeamInviteBusy] = useState<string | null>(null);
 const [bulkSending, setBulkSending] = useState(false);
 const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productId: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
 const [bulkErrors, setBulkErrors] = useState<string | null>(null);
@@ -638,6 +643,53 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (summary.ok && summary.data) setBulkCreditSummary(summary.data);
   }, [requireAuth]);
 
+  const loadMyTeamInvites = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setMyTeamInvitesState('loading'); setMyTeamInvitesError('');
+    try {
+      const result = await listMyTeamInvites({ token });
+      if (result.ok && result.data) {
+        setMyTeamInvites(result.data.invites ?? []);
+        setMyTeamInvitesState('idle');
+      } else {
+        setMyTeamInvites([]);
+        setMyTeamInvitesState('error');
+        setMyTeamInvitesError(result.error?.message ?? 'Vos invitations d’équipe ne peuvent pas être chargées.');
+      }
+    } catch (caught) {
+      setMyTeamInvites([]);
+      setMyTeamInvitesState('error');
+      setMyTeamInvitesError(caught instanceof Error ? caught.message : 'Vos invitations d’équipe ne peuvent pas être chargées.');
+    }
+  }, [requireAuth]);
+
+  const acceptOneTeamInvite = useCallback(async (inviteId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    setMyTeamInviteBusy(inviteId);
+    try {
+      const result = await acceptTeamInvite({ token, inviteId });
+      if (result.ok && result.data) {
+        setMyTeamInvites((prev) => prev.filter((i) => i.id !== inviteId));
+      } else {
+        window.alert(result.error?.message ?? 'Impossible d’accepter l’invitation.');
+      }
+    } catch (caught) {
+      window.alert(caught instanceof Error ? caught.message : 'Impossible d’accepter l’invitation.');
+    } finally {
+      setMyTeamInviteBusy(null);
+    }
+  }, [requireAuth]);
+
+  const accountOpenedRef = useRef(false);
+  useEffect(() => {
+    if (sheet !== 'account') { accountOpenedRef.current = false; return; }
+    if (accountOpenedRef.current) return;
+    accountOpenedRef.current = true;
+    void loadMyTeamInvites();
+  }, [sheet, loadMyTeamInvites]);
+
   const loadPacks = useCallback(async () => {
     const token = await requireAuth();
     if (!token) return;
@@ -982,6 +1034,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   const rolesRef = useRef<HTMLDivElement | null>(null);
   const rolesIndRef = useRef<HTMLSpanElement | null>(null);
+
+  const groupInvites = myTeamInvites.filter((i) => i.status === 'pending');
 
   const eligibleRoles = useMemo<Role[]>(() => {
     const base: Role[] = ['buyer'];
@@ -1584,6 +1638,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className="kv"><span>Facilité affiliée</span><b>{sellerAvailable ? 'Accès vendeur' : 'Aucune'}</b></div>
             <div className="kv"><span>Compte</span><b>{sessionUser.email}</b></div>
           </div>
+          {groupInvites.length > 0 && (
+            <div className="cardbox" style={{ marginTop: 8 }}>
+              <div className="kv"><span>Invitations d’équipe</span><b>{groupInvites.length} en attente</b></div>
+              {groupInvites.map((invite) => (
+                <div key={invite.id} className="row" style={{ justifyContent: 'space-between', marginTop: 6, gap: 8 }}>
+                  <div>
+                    <b>{invite.teamName}</b>
+                    <br />
+                    <span className="tiny muted">Invité comme {invite.roleInTeam === 'lead' ? 'responsable' : 'membre'}</span>
+                  </div>
+                  <button className="btn sm" type="button" disabled={myTeamInviteBusy === invite.id} onClick={() => void acceptOneTeamInvite(invite.id)}>{myTeamInviteBusy === invite.id ? '…' : 'Accepter'}</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {myTeamInvitesState === 'loading' && groupInvites.length === 0 && (
+            <p className="tiny muted" style={{ marginTop: 8 }}>Vérification des invitations d’équipe…</p>
+          )}
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? `${((wallet.balanceMinor ?? 0) / 100).toFixed(2)} ${wallet.currency ?? 'XOF'}` : '—'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>

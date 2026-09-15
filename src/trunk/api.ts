@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, PurchaseIntentResult, QrTokenIssueResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -82,6 +82,31 @@ export async function setTeamMemberStatus(input: { token: string; teamId: string
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ roleInTeam: input.roleInTeam, status: input.status, reason: input.reason }),
+  });
+  return parse(response);
+}
+
+export async function listMyTeamInvites(input: { token: string }): Promise<ApiResult<{ invites: MyTeamInvite[] }>> {
+  const response = await fetchWithRecovery('/api/v2/team/invites', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse(response);
+}
+
+export async function acceptTeamInvite(input: { token: string; inviteId: string }): Promise<ApiResult<TeamInviteAcceptResult>> {
+  const response = await fetchWithRecovery(`/api/v2/team/invites/${input.inviteId}/accept`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse(response);
+}
+
+export async function assignFacilityZone(input: { token: string; facilityId: string; zone: string | null }): Promise<ApiResult<FacilityZoneAssignment>> {
+  const response = await fetchWithRecovery(`/api/v2/admin/facilities/${input.facilityId}/zone`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ zone: input.zone ?? null }),
   });
   return parse(response);
 }

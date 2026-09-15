@@ -406,6 +406,7 @@ export interface ReviewQueueItem {
   submittedAt: string | null;
   evidenceCount: number;
   evidenceKinds: string[];
+  zone?: string | null;
 }
 
 export type FacilityOperationalState = 'ouvert' | 'ferme' | 'temporairement_indisponible';
@@ -560,6 +561,31 @@ export interface TeamInviteResult {
   email: string;
   roleInTeam: 'lead' | 'member';
   status: 'pending' | 'accepted' | 'revoked';
+}
+
+export interface MyTeamInvite {
+  id: string;
+  teamId: string;
+  teamName: string;
+  teamZone: string | null;
+  roleInTeam: 'lead' | 'member';
+  status: 'pending' | 'accepted' | 'revoked';
+  invitedByAccountId: string | null;
+  createdAt: string;
+  acceptedAt: string | null;
+}
+
+export interface TeamInviteAcceptResult {
+  id: string;
+  teamId: string;
+  roleInTeam: 'lead' | 'member';
+  status: 'accepted';
+  memberId: string;
+}
+
+export interface FacilityZoneAssignment {
+  facilityId: string;
+  zone: string | null;
 }
 
 export interface AccountCapabilitiesResult {

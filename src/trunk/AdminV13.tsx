@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount } from './api';
+import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
 import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
@@ -32,6 +32,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [teamDraft, setTeamDraft] = useState({ name: '', zone: '', description: '' });
   const [inviteDraft, setInviteDraft] = useState<{ teamId: string; email: string; roleInTeam: 'lead' | 'member' } | null>(null);
   const [teamBusy, setTeamBusy] = useState<string | null>(null);
+  const [zoneDrafts, setZoneDrafts] = useState<Record<string, string>>({});
+  const [zoneBusy, setZoneBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setState('loading');
@@ -94,6 +96,29 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setActingId(null);
     }
   }, [load]);
+
+  const assignZone = useCallback(async (facilityId: string, facilityName: string) => {
+    const zone = (zoneDrafts[facilityId] ?? '').trim();
+    setZoneBusy(facilityId);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await assignFacilityZone({ token, facilityId, zone: zone || null });
+      if (result.ok && result.data) {
+        const assignedZone = result.data.zone ?? '';
+        setToast({ kind: 'ok', text: `${facilityName}: zone ${assignedZone || 'retirée'}.` });
+        setZoneDrafts((d) => ({ ...d, [facilityId]: assignedZone }));
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Zone non assignée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Zone non assignée.' });
+    } finally {
+      setZoneBusy(null);
+    }
+  }, [load, zoneDrafts]);
 
   const reconcile = useCallback(async () => {
     setReconciling(true);
@@ -464,6 +489,10 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               {(onFocusFacility && item.latitude && item.longitude) && (
                 <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop:  ​6 }} onClick={() => onFocusFacility(item.latitude, item.longitude, `review-${item.requestId}`)}><ShieldCheck size={13} /> Voir sur la carte</button>
               )}
+              <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                <input className="fld" style={{ flex: 1, minHeight: 32 }} type="text" value={zoneDrafts[item.facilityId] ?? item.zone ?? ''} onChange={(e) => setZoneDrafts((d) => ({ ...d, [item.facilityId]: e.target.value }))} placeholder="Zone de mission (ex. Lomé Est)" aria-label={`Zone de ${item.facilityName}`} />
+                <button className="btn ghost sm" type="button" disabled={zoneBusy === item.facilityId} onClick={() => void assignZone(item.facilityId, item.facilityName)}>{zoneBusy === item.facilityId ? '…' : 'Zone'}</button>
+              </div>
               <div className="btnrow">
                 <button className="btn sm" disabled={actingId === item.requestId} onClick={() => void review(item.requestId, 'certified', item.facilityName)}><CheckCircle2 size={14} /> Valider</button>
                 <button className="btn ghost sm" disabled={actingId === item.requestId} onClick={() => void review(item.requestId, 'needs_more_evidence', item.facilityName)}><Archive size={14} /> Preuve</button>

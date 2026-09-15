@@ -179,6 +179,21 @@ export function validateAdCampaignCreate(body: Record<string, unknown>, facility
   return { authUserId, facilityId, name, budgetMinor, startsAt, endsAt, idempotencyKey };
 }
 
+export function validateTeamInviteAccept(body: Record<string, unknown>, inviteId: string): { inviteId: string } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(inviteId)) throw new ApiInputError('A valid team invite id is required.');
+  return { inviteId };
+}
+
+export function validateFacilityZoneAssignment(body: Record<string, unknown>, facilityId: string): { facilityId: string; zone: string | null } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const zone = body.zone === null || body.zone === undefined ? null : typeof body.zone === 'string' ? body.zone.trim() : '';
+  if (!uuidPattern.test(facilityId) || (zone !== null && (zone.length < 1 || zone.length > 120))) {
+    throw new ApiInputError('A valid facility id and an optional zone (≤120 chars) are required.');
+  }
+  return { facilityId, zone };
+}
+
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
     ? payload.object as Record<string, unknown>
@@ -358,6 +373,34 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/team/invites') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your team invitations.'));
+        return true;
+      }
+      const result = await repository.listMyTeamInvites({ authUserId });
+      if (!result.authorized) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'No active account is linked to this session.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { invites: result.invites } });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/team/invites/') && pathname.endsWith('/accept')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to accept your team invitation.'));
+        return true;
+      }
+      const match = /^\/api\/v2\/team\/invites\/([0-9a-f-]{36})\/accept$/.exec(pathname);
+      const inviteId = match ? match[1] : '';
+      const input = await parseRequestBody(req);
+      const validated = validateTeamInviteAccept(input, inviteId);
+      const result = await repository.acceptTeamInvite({ authUserId, inviteId: validated.inviteId, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/teams/') && pathname.includes('/members/') && pathname.endsWith('/status')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
@@ -426,6 +469,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.setFacilityOperationalState({ authUserId, facilityId, state: state as 'ouvert' | 'ferme' | 'temporairement_indisponible', reason, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/admin/facilities/') && pathname.endsWith('/zone')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni Admin to assign a facility zone.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/admin/facilities/'.length, -'/zone'.length);
+      const input = await parseRequestBody(req);
+      const validated = validateFacilityZoneAssignment(input, facilityId);
+      const result = await repository.assignFacilityZone({ authUserId, facilityId: validated.facilityId, zone: validated.zone, correlationId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
