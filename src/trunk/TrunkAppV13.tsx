@@ -13,6 +13,7 @@ import {
   listMyTeamInvites, acceptTeamInvite,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, MyTeamInvite, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -143,7 +144,10 @@ export function TrunkAppV13() {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedFacility, setSelectedFacility] = useState<FacilityDetail | null>(null);
-  const [facProductSel, setFacProductSel] = useState<string[]>([]);
+  const [carts, setCarts] = useState<FacilityCarts>(() => {
+    try { return parseCarts(typeof window === 'undefined' ? null : window.sessionStorage.getItem(FACILITY_CARTS_STORAGE_KEY)); }
+    catch { return {}; }
+  });
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrScanKey, setQrScanKey] = useState(0);
@@ -257,6 +261,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     return () => { if (mq.removeEventListener) mq.removeEventListener('change', apply); else mq.removeListener(apply); };
   }, []);
   useEffect(() => { document.body.classList.toggle('desktop', desktop); }, [desktop]);
+
+  // COR-7c: le panier par vendeur survit aux sheets et à un rechargement d'onglet,
+  // et est oublié à la fermeture de la session (sessionStorage, pas localStorage).
+  useEffect(() => {
+    try { window.sessionStorage.setItem(FACILITY_CARTS_STORAGE_KEY, serializeCarts(carts)); } catch { /* storage indisponible */ }
+  }, [carts]);
 
   const loadPublic = useCallback(async (bbox?: [number, number, number, number]) => {
     if (simMode === 'vide') {
@@ -461,7 +471,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const handlePinSelect = useCallback(async (facility: PublicFacility) => {
     setSelectedId(facility.id);
     setSelectedFacility(null);
-    setFacProductSel([]);
     // Défilement contextuel bidirectionnel (v1.3 §4.4): un tap marker pendant
     // une session résultats fait aussi défiler la grille vers la carte correspondante.
 
@@ -471,7 +480,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setSheet('facility');
     try {
       const detail = await getFacilityDetail(facility.id);
-      setSelectedFacility(detail.ok && detail.data ? detail.data : null);
+      const resolved = detail.ok && detail.data ? detail.data : null;
+      setSelectedFacility(resolved);
+      // COR-7c: le panier du vendeur est conservé entre deux ouvertures de fiche ;
+      // seuls les produits retirés du catalogue sont élagués.
+      if (resolved) setCarts((current) => pruneCart(current, facility.id, resolved.products.map((p) => p.id)));
     } catch {
       setSelectedFacility(null);
     } finally {
@@ -1191,6 +1204,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   // COR-7b: produit réellement recherché mis en avant dans la fiche facilité
   // (badge + tri en tête), le reste gardant l'ordre « en stock d'abord ».
+  const facProductSel = useMemo(
+    () => (selectedFacility ? cartProductsFor(carts, selectedFacility.id) : []),
+    [carts, selectedFacility],
+  );
   const highlightedProductId = useMemo(
     () => (selectedFacility ? highlightSearchedProduct(selectedFacility.products, searchedTerm) : null),
     [selectedFacility, searchedTerm],
@@ -1542,7 +1559,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 const on = facProductSel.includes(product.id);
                 const highlighted = product.id === highlightedProductId;
                 return (
-                  <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setFacProductSel((current) => on ? current.filter((id) => id !== product.id) : [...current, product.id])}>
+                  <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
@@ -1567,9 +1584,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                           return { facilityId: selectedFacility.id, facilityName: selectedFacility.name, productId: product.id, productName: product.name, status: (res.ok && res.data ? 'submitted' : 'error') as 'submitted' | 'error', quantityAvailable: null, observedAt: null };
                         }));
                         setBulkResults(rows);
+                        setCarts((current) => clearFacilityCart(current, selectedFacility.id));
                       })();
                     }
                   }}>Demander la disponibilité (<span id="selCount">{facProductSel.length}</span>)</button>
+                  <button className="btn ghost sm" type="button" style={{ marginTop: 7 }} onClick={() => setCarts((current) => clearFacilityCart(current, selectedFacility.id))}>Vider le panier</button>
                   <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Contact vendeur & chat débloqués après intention d’achat.</p>
                 </div>
               )}
