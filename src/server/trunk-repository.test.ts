@@ -2456,3 +2456,43 @@ describe('RAC-1 seller contact Root seam', () => {
     expect(call.queries[1]).toContain('contact_whatsapp');
   });
 });
+describe('FF-2 open transactions Root seam', () => {
+  it('lists non-terminal transactions for the caller, member-scoped, newest first', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      current_state: 'qr_ready',
+      actor_role: 'buyer',
+      product_id: 'product-1',
+      product_name: 'Chaise',
+      facility_id: 'facility-1',
+      facility_name: 'Boutique A',
+      quantity: 10,
+      net_amount_minor: 95000,
+      last_event_at: '2026-09-16T10:00:00.000Z',
+      created_at: '2026-09-16T09:00:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listOpenTransactions({ authUserId: 'auth-user-1' });
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]).toMatchObject({
+      transactionId: 'transaction-1',
+      state: 'qr_ready',
+      actorRole: 'buyer',
+      productName: 'Chaise',
+      facilityName: 'Boutique A',
+      quantity: 10,
+      netAmountMinor: 95000,
+    });
+    expect(call.queries[0]).toContain('join v2_transaction_members');
+    expect(call.queries[0]).toContain("current_state <> 'closed'");
+    expect(call.queries[0]).toContain('left join v2_products p');
+  });
+
+  it('returns an empty list when the caller has no open transaction', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listOpenTransactions({ authUserId: 'auth-user-empty' });
+    expect(result.transactions).toEqual([]);
+  });
+});
+

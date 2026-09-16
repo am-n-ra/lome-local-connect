@@ -4,6 +4,7 @@ import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { useFreshnessTimer } from './useFreshnessTimer';
+import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
 
 type FlowProduct = { id: string; name: string };
@@ -17,6 +18,8 @@ type BuyerFlowV13Props = {
   onGate?: (action: PendingAction) => boolean;
   onRoute?: (longitude: number, latitude: number, name: string) => void;
   walletBalanceMinor?: number | null;
+  /** FF-2 — si fourni, on saute directement au suivi de la transaction (reprise). */
+  resumeTxnId?: string | null;
 };
 
 function money(minor: number, currency = 'XOF'): string {
@@ -50,7 +53,7 @@ export function qrPayload(transactionId: string, token: string): string {
   return `${transactionId}:${token}`;
 }
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor, resumeTxnId }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -110,6 +113,13 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
     if (result.ok && result.data) { setTxn(result.data); setTxnId(id); setStage('txn'); }
     if (messagesResult?.ok && messagesResult.data) setMessages(messagesResult.data.messages.slice(-4));
   }, []);
+
+  // FF-2 — reprise : si on arrive avec un id de transaction en cours, on court-circuite
+  // la phase dispo et on rejoue le suivi. La transaction verrouillée n'est jamais annulée.
+  useEffect(() => {
+    if (resumeTxnId) void loadTxn(resumeTxnId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeTxnId]);
 
   const sendChat = useCallback(async () => {
     const body = chatDraft.trim();
@@ -352,6 +362,21 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       )}
       {stage === 'txn' && (
         <div>
+          {(() => {
+            const currentState = txn?.state ?? 'intent_created';
+            const lastEvent = messages.length > 0 ? messages[messages.length - 1].createdAt : null;
+            const dl = deadlineState(currentState, lastEvent ?? null);
+            const responsible = transactionStateResponsible(currentState);
+            const who = responsible === 'buyer' ? 'À vous d’agir' : responsible === 'seller' ? 'En attente du vendeur' : 'Traitement Omni';
+            return (
+              <div className="cardbox" style={{ marginTop: 8 }} role="status" aria-live="polite">
+                <div className="kv"><span>Étape</span><b>{transactionStateLabel(currentState)}</b></div>
+                <div className="kv"><span>Qui agit</span><b>{who}</b></div>
+                {dl && <div className="kv"><span>Échéance</span><b>{deadlineLabel(dl.minutesLeft)}</b></div>}
+                <p className="tiny muted" style={{ marginTop: 6 }}>Transaction verrouillée : elle ne peut pas être annulée. Vous pouvez quitter et la reprendre depuis « Transactions en cours ».</p>
+              </div>
+            );
+          })()}
           <div className="txntrack" style={{ marginTop: 8 }}>
             {[
               { id: 'intent', label: 'Intention d\'achat', sub: 'enregistrée côté Omni' },

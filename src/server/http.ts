@@ -1610,6 +1610,16 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/transactions') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your transactions.'));
+        return true;
+      }
+      const result = await repository.listOpenTransactions({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/buyer/credits') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

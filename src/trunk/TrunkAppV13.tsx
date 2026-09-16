@@ -10,14 +10,16 @@ import {
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
+  listOpenTransactions, getTransaction,
   listMyTeamInvites, acceptTeamInvite,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
-  FacilityDetail, MyTeamInvite, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
+import { relativeAge, transactionStateLabel } from './transaction-time';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -215,6 +217,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [buyerRequests, setBuyerRequests] = useState<BuyerAvailabilityRequestSummary[]>([]);
   const [buyerRequestsState, setBuyerRequestsState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [buyerRequestsError, setBuyerRequestsError] = useState('');
+  const [openTxn, setOpenTxn] = useState<OpenTransactionSummary[]>([]);
+  const [openTxnState, setOpenTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [pendingResumeTxnId, setPendingResumeTxnId] = useState<string | null>(null);
   // Wallet
   const [wallet, setWallet] = useState<WalletOverviewResult | null>(null);
   const [walletState, setWalletState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -637,6 +642,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token) return;
     setSheet('home'); setBuyerRequestsState('loading'); setBuyerRequestsError('');
+    setOpenTxnState('loading');
+    void listOpenTransactions({ token }).then((res) => {
+      if (res.ok && res.data) { setOpenTxn(res.data.transactions ?? []); setOpenTxnState('idle'); }
+      else setOpenTxnState('error');
+    }).catch(() => setOpenTxnState('error'));
     try {
       const result = await getBuyerAvailabilityRequests({ token });
       if (result.ok && result.data) {
@@ -651,6 +661,30 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setBuyerRequestsError(caught instanceof Error ? caught.message : 'Vos demandes ne peuvent pas être chargées pour le moment.');
     }
   }, [requireAuth]);
+
+  // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
+  // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
+  const resumeTransaction = useCallback(async (transaction: OpenTransactionSummary) => {
+    const token = await requireAuth();
+    if (!token) return;
+    const result = await getTransaction({ transactionId: transaction.transactionId, token });
+    if (!result.ok || !result.data) {
+      setBuyerRequestsError(result.error?.message ?? 'Cette transaction ne peut pas être reprise pour le moment.');
+      return;
+    }
+    setFlowFacility({ id: result.data.facilityId, name: result.data.sellerFacilityName ?? transaction.facilityName ?? '' });
+    setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
+    setPendingResumeTxnId(transaction.transactionId);
+    setSheet('flow');
+  }, [requireAuth]);
+
+  // Démarre un flux d'achat NEUF (pas une reprise) : on purge tout id de reprise résiduel.
+  const startFlow = useCallback((facility: { id: string; name: string; latitude?: number | null; longitude?: number | null }, product: { id: string; name: string }) => {
+    setPendingResumeTxnId(null);
+    setFlowFacility(facility);
+    setFlowProduct(product);
+    setSheet('flow');
+  }, []);
 
   const refreshCreditSummary = useCallback(async () => {
     const token = await requireAuth();
@@ -1096,16 +1130,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setSheet(target);
   }, [sheet]);
 
-  type DockItem = { icon: string; label: string; target: Sheet | 'back' | 'cancel'; center: boolean; active: boolean };
+  type DockItem = { icon: string; label: string; target: Sheet | 'back'; center: boolean; active: boolean };
 
   // Dock contextuel — miroir réact de la fonction `dockFor()` de la maquette V1.3:
   // jamais d'icônes fixes; 5 cas (transaction, destination, menu, équipe, seller, défaut.
+  // FF-1: plus de cible 'cancel' trompeuse — dans un flux verrouillé, l'action sort
+  // vers la carte SANS annuler la transaction (elle se reprend depuis « En cours »).
   const dockItems = useMemo<DockItem[]>(() => {
     const team = role === 'admin' || role === 'operator';
     const currentSheet: Sheet = sheet;
     const homeLike = sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results');
     if (sheet === 'flow' || sheet === 'claim') return [
-      { icon: 'cancel', label: 'Annuler', target: 'none', center: false, active: false },
+      { icon: 'back', label: 'Quitter', target: 'none', center: false, active: false },
       { icon: 'qr', label: 'QR', target: 'qr', center: true, active: false },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
@@ -1148,11 +1184,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   };
 
-  const handleDock = useCallback((target: Sheet | 'back' | 'cancel') => {
-    if (target === 'cancel') {
-      if (sheet === 'flow' || sheet === 'claim') setSheet(sheet === 'flow' ? 'facility' : 'facility');
-      return;
-    }
+  const handleDock = useCallback((target: Sheet | 'back') => {
     if (target === 'back') {
       if (sheet === 'bulk' || sheet === 'compare') { setSheet('results'); return; }
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
@@ -1258,7 +1290,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             className={`
               ${item.center ? 'center' : ''}${item.active ? ' active' : ''}
             `}
-            onClick={() => handleDock(item.target as Sheet | 'back' | 'cancel')}
+            onClick={() => handleDock(item.target as Sheet | 'back')}
           >
             <span className="icon-in">{dockIcon(item.icon)}</span>
             <span className="sr-only">{item.label}</span>
@@ -1437,7 +1469,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="freshbar" style={{ marginTop: 8 }}><span className="fdot" />Fraîcheur : reflète l'allocation Omni, pas l'inventaire total du vendeur</div>
               <div className="btnrow">
                 <button className="btn ghost sm" type="button" onClick={() => { setBulkResults(null);}}>Voir d'autres facilités</button>
-                <button className="btn ok sm" type="button" disabled={bulkSending || bulkResults.every((r) => r.status !== 'available' && r.status !== 'partial')} onClick={() => { const pick = bulkResults.find((r) => r.status === 'available' || r.status === 'partial'); if (pick) { setFlowFacility({ id: pick.facilityId, name: pick.facilityName }); setFlowProduct({ id: '', name: pick.productName }); setSheet('flow'); } }}>Je veux acheter</button>
+                <button className="btn ok sm" type="button" disabled={bulkSending || bulkResults.every((r) => r.status !== 'available' && r.status !== 'partial')} onClick={() => { const pick = bulkResults.find((r) => r.status === 'available' || r.status === 'partial'); if (pick) { startFlow({ id: pick.facilityId, name: pick.facilityName }, { id: '', name: pick.productName }); } }}>Je veux acheter</button>
               </div>
             </>
           )}
@@ -1467,7 +1499,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               const detail = bulkDetails[facility.id];
               const product = detail?.products?.find((p) => p.stockLoueOmni > 0) ?? detail?.products?.[0];
               return (
-                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { setFlowFacility({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
+                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
                     {detail?.products?.length ? <span className="status ok">dès {Math.min(...detail.products.map((p) => p.prixReduit)) / 100} F</span> : <span className="status gray">Non transactable</span>}
@@ -1477,7 +1509,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               );
             })}
           </div>
-          <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { setFlowFacility({ id: pick.id,name: pick.name, latitude: pick.latitude, longitude: pick.longitude }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } } }}>Choisir & acheter</button>
+          <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { startFlow({ id: pick.id, name: pick.name, latitude: pick.latitude, longitude: pick.longitude }, { id: product.id, name: product.name }); } } }}>Choisir & acheter</button>
         </section>
       )}
       {sheet === 'qr' && (
@@ -1573,7 +1605,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     const picked = selectedFacility.products.filter((p) => facProductSel.includes(p.id));
                     if (picked.length === 0) return;
                     if (picked.length === 1) {
-                      setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }); setFlowProduct({ id: picked[0].id, name: picked[0].name }); setSheet('flow');
+                      startFlow({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }, { id: picked[0].id, name: picked[0].name });
                     } else {
                       void (async () => {
                         const token = await requireAuth();
@@ -1623,14 +1655,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           const resume = pendingActionResume(act);
           setPendingAction(null);
           if (resume.sheet === 'flow') {
-            setFlowFacility({ id: resume.facilityId,name: resume.facilityName }); setFlowProduct({ id: resume.productId,name: resume.productName }); setSheet('flow');
+            startFlow({ id: resume.facilityId, name: resume.facilityName }, { id: resume.productId, name: resume.productName });
           } else {
             setSheet(resume.sheet);
           }
         }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => { setPendingResumeTxnId(null); setSheet('facility'); }} resumeTxnId={pendingResumeTxnId} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
@@ -1651,6 +1683,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {role === 'buyer' && (
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><RefreshCw size={15} /></span><span><b>Transactions en cours</b><small>reprendre où vous en êtes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>vos établissements</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
@@ -1757,6 +1790,23 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
               <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
+            </button>
+          ))}
+          <div className="eyebrow" style={{ marginTop: 14 }}>Transactions en cours</div>
+          {openTxnState === 'loading' && <p className="tiny muted" style={{ marginTop: 6 }}>Chargement de vos transactions…</p>}
+          {openTxnState === 'error' && (
+            <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Vos transactions ne peuvent pas être chargées pour le moment.</p></div>
+          )}
+          {openTxnState === 'idle' && openTxn.length === 0 && (
+            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction en cours. Une intention d’achat reste verrouillée jusqu’à la clôture — vous pouvez quitter et revenir ici à tout moment.</p>
+          )}
+          {openTxn.map((transaction) => (
+            <button key={transaction.transactionId} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => void resumeTransaction(transaction)}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                <span className="status gray">{transactionStateLabel(transaction.state)}</span>
+              </div>
+              <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
             </button>
           ))}
           <div className="btnrow" style={{ marginTop: 10 }}>

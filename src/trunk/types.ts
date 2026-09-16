@@ -230,6 +230,27 @@ export interface TransactionSnapshotResult {
   sellerFacilityName: string | null;
 }
 
+/** FF-2 — une transaction non terminale de l'utilisateur connecté, pour l'écran
+ *  « En cours » : permet de la REPRENDRE après avoir quitté (jamais annulée). */
+export interface OpenTransactionSummary {
+  transactionId: string;
+  state: TransactionState;
+  actorRole: 'buyer' | 'seller';
+  productId: string;
+  productName: string | null;
+  facilityId: string;
+  facilityName: string | null;
+  quantity: number;
+  netAmountMinor: number;
+  /** Horodatage du dernier événement — sert d'ETA/âge dans la liste. */
+  lastEventAt: string;
+  createdAt: string;
+}
+
+export interface OpenTransactionsResult {
+  transactions: OpenTransactionSummary[];
+}
+
 export interface ExternalPaymentDeclarationResult {
   declarationId: string;
   transactionId: string;

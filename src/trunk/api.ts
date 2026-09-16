@@ -504,6 +504,13 @@ export async function getTransaction(input: { transactionId: string; token: stri
   return parse<import('./types').TransactionSnapshotResult>(response);
 }
 
+export async function listOpenTransactions(input: { token: string }): Promise<ApiResult<import('./types').OpenTransactionsResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/transactions', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').OpenTransactionsResult>(response);
+}
+
 export async function createPurchaseIntent(input: { responseId: string; token: string; idempotencyKey: string }): Promise<ApiResult<PurchaseIntentResult>> {
   const response = await fetchWithRecovery('/api/v2/purchase-intents', {
     method: 'POST',

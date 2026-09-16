@@ -4988,6 +4988,92 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    // FF-2 — transactions non terminales de l'appelant (acheteur ou vendeur), pour
+    // permettre de REPRENDRE une transaction en cours après avoir quitté l'écran.
+    // Lecture seule : aucune mutation, aucune annulation possible ici.
+    async listOpenTransactions(input: { authUserId: string }): Promise<{ transactions: Array<{
+      transactionId: string;
+      state: string;
+      actorRole: 'buyer' | 'seller';
+      productId: string;
+      productName: string | null;
+      facilityId: string;
+      facilityName: string | null;
+      quantity: number;
+      netAmountMinor: number;
+      lastEventAt: string;
+      createdAt: string;
+    }> }> {
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        mine as (
+          select
+            s.transaction_id,
+            s.product_id,
+            s.facility_id,
+            s.quantity,
+            s.net_amount_minor,
+            s.created_at,
+            m.role as actor_role,
+            coalesce((
+              select e.state
+              from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), 'intent_created') as current_state,
+            coalesce((
+              select e.created_at
+              from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+              order by e.created_at desc, e.id desc
+              limit 1
+            ), s.created_at) as last_event_at
+          from v2_transaction_snapshots s
+          join v2_transaction_members m on m.transaction_id = s.transaction_id
+          join actor a on a.account_id = m.account_id
+        )
+        select
+          mi.transaction_id,
+          mi.current_state,
+          mi.actor_role,
+          mi.product_id,
+          p.name as product_name,
+          mi.facility_id,
+          f.name as facility_name,
+          mi.quantity,
+          mi.net_amount_minor,
+          mi.last_event_at,
+          mi.created_at
+        from mine mi
+        left join v2_products p on p.id = mi.product_id
+        left join v2_facilities f on f.id = mi.facility_id
+        where mi.current_state <> 'closed'
+        order by mi.last_event_at desc
+        limit 50
+      `);
+      return {
+        transactions: (rows as Record<string, unknown>[]).map((row) => ({
+          transactionId: String(row.transaction_id),
+          state: String(row.current_state),
+          actorRole: String(row.actor_role) as 'buyer' | 'seller',
+          productId: String(row.product_id),
+          productName: row.product_name === null || row.product_name === undefined ? null : String(row.product_name),
+          facilityId: String(row.facility_id),
+          facilityName: row.facility_name === null || row.facility_name === undefined ? null : String(row.facility_name),
+          quantity: Number(row.quantity),
+          netAmountMinor: Number(row.net_amount_minor),
+          lastEventAt: new Date(String(row.last_event_at)).toISOString(),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
     async getOrCreateCreditStanding(input: { authUserId: string }): Promise<BuyerCreditSummary | null> {
       const rows = await retryDatabase(() => sql`
         with account as (
