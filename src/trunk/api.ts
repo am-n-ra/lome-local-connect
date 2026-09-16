@@ -419,11 +419,20 @@ export async function getSellerAvailabilityQueue(input: { token: string }): Prom
   return parse<SellerAvailabilityQueue>(response);
 }
 
-export async function createSellerFacility(input: { token: string; name: string; facilityType: FacilityType; category?: string | null; description?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; rayonKm?: number | null; idempotencyKey: string }): Promise<ApiResult<CreateSellerFacilityResult>> {
+export async function createSellerFacility(input: { token: string; name: string; facilityType: FacilityType; category?: string | null; description?: string | null; address?: string | null; latitude?: number | null; longitude?: number | null; rayonKm?: number | null; contactPhone?: string | null; contactWhatsapp?: string | null; idempotencyKey: string }): Promise<ApiResult<CreateSellerFacilityResult>> {
   const response = await fetchWithRecovery('/api/v2/seller/facilities', {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}`, 'Idempotency-Key': input.idempotencyKey },
-    body: JSON.stringify({ name: input.name, facilityType: input.facilityType, category: input.category ?? null, description: input.description ?? null, address: input.address ?? null, latitude: input.latitude ?? null, longitude: input.longitude ?? null, rayonKm: input.rayonKm ?? null }),
+    body: JSON.stringify({ name: input.name, facilityType: input.facilityType, category: input.category ?? null, description: input.description ?? null, address: input.address ?? null, latitude: input.latitude ?? null, longitude: input.longitude ?? null, rayonKm: input.rayonKm ?? null, contactPhone: input.contactPhone ?? null, contactWhatsapp: input.contactWhatsapp ?? null }),
+  });
+  return parse(response);
+}
+
+export async function updateSellerFacilityContact(input: { token: string; facilityId: string; contactPhone: string | null; contactWhatsapp: string | null }): Promise<ApiResult<{ facilityId: string; contactPhone: string | null; contactWhatsapp: string | null }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/facilities/${input.facilityId}/contact`, {
+    method: 'PATCH',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ contactPhone: input.contactPhone, contactWhatsapp: input.contactWhatsapp }),
   });
   return parse(response);
 }

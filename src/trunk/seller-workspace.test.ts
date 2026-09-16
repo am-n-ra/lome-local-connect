@@ -3,8 +3,8 @@ import type { PublicFacility, SellerCatalogueFacility, SellerCatalogueProduct } 
 import { buildSellerWorkspace, sellerRouteLabels, selectSellerFacility, isSellerWorkspaceRoute, sellerMenuHasFunctionalRoutes } from './seller-workspace';
 
 const catalogFacilities: SellerCatalogueFacility[] = [
-  { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 2, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed' },
-  { id: 'facility-2', name: 'Boutique B', category: 'Épicerie', address: 'Lomé', currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 1, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed' },
+  { id: 'facility-1', name: 'Boutique A', category: 'Marché', address: null, currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 2, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed', contactPhone: null, contactWhatsapp: null },
+  { id: 'facility-2', name: 'Boutique B', category: 'Épicerie', address: 'Lomé', currency: 'XOF', slotState: 'active', operationalState: 'ouvert', productCount: 1, facilityType: 'fixe', rayonKm: null, trustState: 'confirmed', contactPhone: '+22890000000', contactWhatsapp: null },
 ];
 
 const publicFacilities: PublicFacility[] = [

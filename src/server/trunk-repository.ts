@@ -1081,6 +1081,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       latitude: number | null;
       longitude: number | null;
       rayonKm: number | null;
+      contactPhone: string | null;
+      contactWhatsapp: string | null;
       idempotencyKey: string;
     }): Promise<CreateSellerFacilityResult> {
       const typeValid = input.facilityType === 'fixe' || input.facilityType === 'mobile' || input.facilityType === 'digital';
@@ -1089,7 +1091,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const latitudeValid = input.latitude === null || (Number.isFinite(input.latitude) && input.latitude >= -90 && input.latitude <= 90);
       const longitudeValid = input.longitude === null || (Number.isFinite(input.longitude) && input.longitude >= -180 && input.longitude <= 180);
       const rayonValid = input.rayonKm === null || (Number.isFinite(input.rayonKm) && input.rayonKm > 0 && input.rayonKm <= 500);
-      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid) {
+      const contactValid = (v: string | null) => v === null || (v.trim().length >= 5 && v.trim().length <= 40);
+      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid || !contactValid(input.contactPhone) || !contactValid(input.contactWhatsapp)) {
         throw new SellerCataloguePolicyError('INVALID_INPUT');
       }
       // D-F: a physical facility (fixe/mobile) needs coordinates; a digital facility has no point.
@@ -1136,8 +1139,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           limit 1
         ), inserted as (
           insert into v2_facilities
-            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, trust_state)
-          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, 'unconfirmed'
+            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, contact_phone, contact_whatsapp, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, ${input.contactPhone?.trim() || null}, ${input.contactWhatsapp?.trim() || null}, 'unconfirmed'
           from available_slot
           where not exists (select 1 from existing)
           returning id as facility_id
@@ -1156,6 +1159,35 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
       return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: 'unconfirmed', facilityType: input.facilityType, created: row.created === true };
+    },
+    async updateSellerFacilityContact(input: {
+      authUserId: string;
+      facilityId: string;
+      contactPhone: string | null;
+      contactWhatsapp: string | null;
+    }): Promise<{ facilityId: string; contactPhone: string | null; contactWhatsapp: string | null }> {
+      const contactValid = (v: string | null) => v === null || (v.trim().length >= 5 && v.trim().length <= 40);
+      if (!contactValid(input.contactPhone) || !contactValid(input.contactWhatsapp)) {
+        throw new SellerCataloguePolicyError('INVALID_INPUT');
+      }
+      const rows = await retryDatabase(() => sql`
+        update v2_facilities f
+        set contact_phone = ${input.contactPhone?.trim() || null},
+            contact_whatsapp = ${input.contactWhatsapp?.trim() || null}
+        from v2_accounts a
+        where f.id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning f.id as facility_id, f.contact_phone, f.contact_whatsapp
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_FACILITY_NOT_FOUND');
+      return {
+        facilityId: String(row.facility_id),
+        contactPhone: row.contact_phone === null || row.contact_phone === undefined ? null : String(row.contact_phone),
+        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === undefined ? null : String(row.contact_whatsapp),
+      };
     },
     async createPublicFacilityImport(input: PublicFacilityImportInput): Promise<PublicFacilityImportResult> {
       if (input.provider !== 'openstreetmap' || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
@@ -1979,6 +2011,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.facility_type,
           f.rayon_km,
           f.trust_state,
+          f.contact_phone,
+          f.contact_whatsapp,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -2002,6 +2036,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         facilityType: (row.facility_type === 'fixe' || row.facility_type === 'mobile' || row.facility_type === 'digital' ? String(row.facility_type) : null) as SellerCatalogueFacility['facilityType'],
         rayonKm: row.rayon_km === null ? null : Number(row.rayon_km),
         trustState: String(row.trust_state ?? 'unclaimed'),
+        contactPhone: row.contact_phone === null || row.contact_phone === undefined ? null : String(row.contact_phone),
+        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === undefined ? null : String(row.contact_whatsapp),
       }));
       const rows = await retryDatabase(() => sql`
         select
@@ -4914,6 +4950,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           s.unit_price_minor,
           s.coupon_code,
           s.net_amount_minor,
+          f.name as seller_facility_name,
+          f.contact_phone as seller_contact_phone,
+          f.contact_whatsapp as seller_contact_whatsapp,
           m.role as actor_role,
           coalesce((
             select e.state
@@ -4925,6 +4964,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         from v2_transaction_snapshots s
         join v2_transaction_members m on m.transaction_id = s.transaction_id
         join v2_accounts a on a.id = m.account_id
+        left join v2_facilities f on f.id = s.facility_id
         where s.transaction_id = ${input.transactionId}::uuid
           and a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
@@ -4942,6 +4982,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         unitPriceMinor: Number(row.unit_price_minor),
         couponCode: row.coupon_code === null || row.coupon_code === undefined ? null : String(row.coupon_code),
         netAmountMinor: Number(row.net_amount_minor),
+        sellerFacilityName: row.seller_facility_name === null || row.seller_facility_name === undefined ? null : String(row.seller_facility_name),
+        sellerContactPhone: row.seller_contact_phone === null || row.seller_contact_phone === undefined ? null : String(row.seller_contact_phone),
+        sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === undefined ? null : String(row.seller_contact_whatsapp),
       };
     },
 

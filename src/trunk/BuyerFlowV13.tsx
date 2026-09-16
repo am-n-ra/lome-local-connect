@@ -396,6 +396,16 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           {facility.latitude != null && facility.longitude != null && onRoute && (
             <div className="cardbox" style={{ marginTop: 8 }}>
               <div className="kv"><span>Vendeur</span><b>{facility.name}</b></div>
+              {(txn?.sellerContactPhone || txn?.sellerContactWhatsapp) && (
+                <div className="row" style={{ justifyContent: 'space-between', marginTop: 8 }}>
+                  <span className="tiny muted">Contact</span>
+                  <span style={{ textAlign: 'right' }}>
+                    {txn?.sellerContactPhone && <b>{txn.sellerContactPhone}</b>}
+                    {txn?.sellerContactPhone && txn?.sellerContactWhatsapp && <span style={{ margin: '0 4px' }}>·</span>}
+                    {txn?.sellerContactWhatsapp && <b>WhatsApp {txn.sellerContactWhatsapp}</b>}
+                  </span>
+                </div>
+              )}
               <button
                 className="btn"
                 style={{ marginTop: 8, width: '100%' }}
@@ -404,7 +414,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
               >
                 <Navigation size={15} /> Itinéraire vers le vendeur
               </button>
-              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Voir la localisation sur la carte — le chat transactionnel reste disponible ici.</p>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Contact & localisation visibles après votre intention — le chat transactionnel reste disponible ici.</p>
             </div>
           )}
           <div className="btnrow">

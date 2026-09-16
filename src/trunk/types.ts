@@ -223,6 +223,11 @@ export interface TransactionSnapshotResult {
   unitPriceMinor: number;
   couponCode: string | null;
   netAmountMinor: number;
+  /** Contact vendeur (RAC-1) — exposé UNIQUEMENT dans le contexte d'une transaction
+   *  dont l'appelant est membre (après intention d'achat), jamais publiquement. */
+  sellerContactPhone: string | null;
+  sellerContactWhatsapp: string | null;
+  sellerFacilityName: string | null;
 }
 
 export interface ExternalPaymentDeclarationResult {
@@ -283,6 +288,9 @@ export interface SellerCatalogueFacility {
   facilityType: FacilityType | null;
   rayonKm: number | null;
   trustState: string;
+  /** Contact vendeur — visible uniquement dans le contexte transactionnel (RAC-1). */
+  contactPhone: string | null;
+  contactWhatsapp: string | null;
 }
 
 export interface CreateSellerFacilityResult {

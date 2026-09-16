@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus } from './api';
+import { createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics } from './types';
 
@@ -46,6 +46,8 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [facilityLat, setFacilityLat] = useState('');
   const [facilityLng, setFacilityLng] = useState('');
   const [facilityRayon, setFacilityRayon] = useState('5');
+  const [facilityPhone, setFacilityPhone] = useState('');
+  const [facilityWhatsapp, setFacilityWhatsapp] = useState('');
 
   const load = useCallback(async () => {
     setError('');
@@ -95,7 +97,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     setCreateBusy(true);
     try {
       const idempotencyKey = crypto.randomUUID();
-      const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, idempotencyKey });
+      const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, contactPhone: facilityPhone.trim() || null, contactWhatsapp: facilityWhatsapp.trim() || null, idempotencyKey });
       if (result.ok && result.data) {
         setToast('Facilité créée — complétez le parcours de preuve pour être trouvé.');
         setShowCreateForm(false);
@@ -105,6 +107,8 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
         setFacilityLat('');
         setFacilityLng('');
         setFacilityRayon('5');
+        setFacilityPhone('');
+        setFacilityWhatsapp('');
         if (onRefresh) onRefresh(); else void load();
       } else {
         setCreateError(result.error?.message ?? 'Création non enregistrée.');
@@ -216,6 +220,33 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     } catch { setError('Le bonus ne peut pas être débloqué.'); }
     finally { setBonusBusy(false); }
   }, [ws.selFacilityId]);
+
+  const [contactPhoneDraft, setContactPhoneDraft] = useState('');
+  const [contactWhatsappDraft, setContactWhatsappDraft] = useState('');
+  const [contactEditOpen, setContactEditOpen] = useState(false);
+  const [contactBusy, setContactBusy] = useState(false);
+  useEffect(() => {
+    if (!contactEditOpen && activeFacility) {
+      setContactPhoneDraft(activeFacility.contactPhone ?? '');
+      setContactWhatsappDraft(activeFacility.contactWhatsapp ?? '');
+    }
+  }, [activeFacility, contactEditOpen]);
+  const saveContact = useCallback(async () => {
+    const token = await getAuthToken();
+    if (!token || !ws.selFacilityId) return;
+    setContactBusy(true); setError('');
+    try {
+      const result = await updateSellerFacilityContact({ token, facilityId: ws.selFacilityId, contactPhone: contactPhoneDraft.trim() || null, contactWhatsapp: contactWhatsappDraft.trim() || null });
+      if (result.ok && result.data) {
+        setContactEditOpen(false);
+        setToast('Contact enregistré — visible par les acheteurs après intention.');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setError(result.error?.message ?? 'Contact non enregistré.');
+      }
+    } catch { setError('Contact non enregistré.'); }
+    finally { setContactBusy(false); }
+  }, [ws.selFacilityId, contactPhoneDraft, contactWhatsappDraft, onRefresh, load]);
 
   const [renewalStatus, setRenewalStatus] = useState<FacilityRenewalStatus | null>(null);
   const [renewalBusy, setRenewalBusy] = useState(false);
@@ -331,6 +362,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                   <input className="input" type="number" inputMode="decimal" min={1} max={500} value={facilityRayon} onChange={(e) => setFacilityRayon(e.target.value)} style={{ width: '100%' }} />
                 </>
               )}
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Téléphone (optionnel)</label>
+              <input className="input" type="tel" value={facilityPhone} onChange={(e) => setFacilityPhone(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>WhatsApp (optionnel)</label>
+              <input className="input" type="tel" value={facilityWhatsapp} onChange={(e) => setFacilityWhatsapp(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+              <p className="tiny muted" style={{ marginTop: 6 }}>Le contact n'est visible par les acheteurs qu'après une intention d'achat (jamais sur la fiche publique).</p>
               <div className="btnrow" style={{ marginTop: 11 }}>
                 <button className="btn" type="button" disabled={createBusy} onClick={() => void submitCreate()}>{createBusy ? 'Création…' : 'Créer ma facilité'}</button>
                 <button className="btn ghost" type="button" disabled={createBusy} onClick={() => setShowCreateForm(false)}>Annuler</button>
@@ -365,6 +401,36 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <button className="btn sm" type="button" disabled={bonusBusy} onClick={() => void claimBonus()}>{bonusBusy ? '…' : 'Débloquer'}</button>
             )}
           </div>
+        </div>
+      )}
+      {hasData && ws.selFacilityCatalogue?.name && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Contact vendeur</b>
+              {activeFacility?.contactPhone || activeFacility?.contactWhatsapp ? (
+                <span className="tiny muted">
+                  {activeFacility?.contactPhone && <b>{activeFacility.contactPhone}</b>}
+                  {activeFacility?.contactPhone && activeFacility?.contactWhatsapp && ' · '}
+                  {activeFacility?.contactWhatsapp && <b>WhatsApp {activeFacility.contactWhatsapp}</b>}
+                </span>
+              ) : (
+                <span className="tiny muted">Aucun contact renseigné</span>
+              )}
+              <br />
+              <span className="tiny muted">Visible par les acheteurs après intention d'achat.</span>
+            </div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30 }} type="button" onClick={() => setContactEditOpen((v) => !v)}>{contactEditOpen ? 'Fermer' : 'Modifier'}</button>
+          </div>
+          {contactEditOpen && (
+            <div style={{ marginTop: 8 }}>
+              <label className="tiny muted" style={{ display: 'block' }}>Téléphone</label>
+              <input className="input" type="tel" value={contactPhoneDraft} onChange={(e) => setContactPhoneDraft(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>WhatsApp</label>
+              <input className="input" type="tel" value={contactWhatsappDraft} onChange={(e) => setContactWhatsappDraft(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
+              <button className="btn sm" style={{ marginTop: 8 }} type="button" disabled={contactBusy} onClick={() => void saveContact()}>{contactBusy ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
+            </div>
+          )}
         </div>
       )}
       {hasData && ws.selFacilityCatalogue?.name && renewalStatus && (

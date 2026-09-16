@@ -2174,6 +2174,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       latitude: 6.13,
       longitude: 1.22,
       rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
       idempotencyKey: 'nwc13-facility-key-0000001',
     })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
     expect(call.queries).toHaveLength(0);
@@ -2192,6 +2194,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       latitude: null,
       longitude: null,
       rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
       idempotencyKey: 'nwc13-facility-key-0000002',
     })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
     expect(call.queries).toHaveLength(0);
@@ -2210,6 +2214,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       latitude: 6.13,
       longitude: 1.22,
       rayonKm: 10,
+      contactPhone: null,
+      contactWhatsapp: null,
       idempotencyKey: 'nwc13-facility-key-0000003',
     })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
     expect(call.queries).toHaveLength(0);
@@ -2231,6 +2237,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       latitude: 6.13,
       longitude: 1.22,
       rayonKm: 5,
+      contactPhone: null,
+      contactWhatsapp: null,
       idempotencyKey: 'nwc13-facility-key-0000004',
     });
     expect(result).toEqual({ facilityId: 'facility-9', slotId: 'slot-9', trustState: 'unconfirmed', facilityType: 'mobile', created: true });
@@ -2258,6 +2266,8 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       latitude: null,
       longitude: null,
       rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
       idempotencyKey: 'nwc13-facility-key-0000005',
     });
     expect(result.created).toBe(true);
@@ -2330,3 +2340,119 @@ describe('bulk credit packs (NW-13i)', () => {
       }
     });
   });
+describe('RAC-1 seller contact Root seam', () => {
+  it('exposes the seller contact only within a transaction snapshot (member-scoped)', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-1',
+      product_id: 'product-1',
+      facility_id: 'facility-1',
+      quantity: 2,
+      unit_price_minor: 1000,
+      coupon_code: null,
+      net_amount_minor: 2000,
+      seller_facility_name: 'Boutique A',
+      seller_contact_phone: '+22890000000',
+      seller_contact_whatsapp: '+22890000001',
+      actor_role: 'buyer',
+      current_state: 'intent_created',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getTransaction({ authUserId: 'auth-user-1', transactionId: 'transaction-1' });
+    expect(result).toMatchObject({
+      transactionId: 'transaction-1',
+      sellerFacilityName: 'Boutique A',
+      sellerContactPhone: '+22890000000',
+      sellerContactWhatsapp: '+22890000001',
+    });
+    expect(call.queries[0]).toContain('join v2_transaction_members');
+    expect(call.queries[0]).toContain('join v2_accounts');
+    expect(call.queries[0]).toContain('left join v2_facilities f');
+    expect(call.queries[0]).toContain('f.contact_phone as seller_contact_phone');
+    expect(call.queries[0]).toContain('f.contact_whatsapp as seller_contact_whatsapp');
+  });
+
+  it('returns null contact fields when the facility has none set', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-2',
+      product_id: 'product-1',
+      facility_id: 'facility-1',
+      quantity: 1,
+      unit_price_minor: 500,
+      coupon_code: null,
+      net_amount_minor: 500,
+      seller_facility_name: 'Boutique B',
+      seller_contact_phone: null,
+      seller_contact_whatsapp: null,
+      actor_role: 'seller',
+      current_state: 'payment_declared',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getTransaction({ authUserId: 'auth-user-1', transactionId: 'transaction-2' });
+    expect(result).toMatchObject({
+      sellerFacilityName: 'Boutique B',
+      sellerContactPhone: null,
+      sellerContactWhatsapp: null,
+    });
+  });
+
+  it('updates the seller contact only for the owning account', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      contact_phone: '+22891111111',
+      contact_whatsapp: '+22891111112',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.updateSellerFacilityContact({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      contactPhone: ' +22891111111 ',
+      contactWhatsapp: '+22891111112',
+    });
+    expect(result).toEqual({
+      facilityId: 'facility-1',
+      contactPhone: '+22891111111',
+      contactWhatsapp: '+22891111112',
+    });
+    expect(call.queries[0]).toContain('update v2_facilities f');
+    expect(call.queries[0]).toContain('f.account_id = a.id');
+    expect(call.queries[0]).toContain('a.auth_user_id =');
+  });
+
+  it('rejects an invalid contact length without touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.updateSellerFacilityContact({
+      authUserId: 'auth-user-1',
+      facilityId: 'facility-1',
+      contactPhone: '1234',
+      contactWhatsapp: null,
+    })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('createSellerFacility accepts and persists optional contact fields', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ facility_id: 'facility-9', slot_id: 'slot-9', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Boutique Contact',
+      facilityType: 'fixe',
+      category: 'Marché',
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: '+22890000000',
+      contactWhatsapp: '+22890000001',
+      idempotencyKey: 'rac1-facility-contact-0001',
+    });
+    expect(result.facilityId).toBe('facility-9');
+    expect(result.created).toBe(true);
+    expect(call.queries[1]).toContain('contact_phone');
+    expect(call.queries[1]).toContain('contact_whatsapp');
+  });
+});

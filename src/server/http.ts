@@ -78,6 +78,8 @@ export type SellerFacilityCreateInput = {
   latitude: number | null;
   longitude: number | null;
   rayonKm: number | null;
+  contactPhone: string | null;
+  contactWhatsapp: string | null;
   idempotencyKey: string;
 };
 
@@ -90,16 +92,19 @@ export function validateSellerFacilityCreate(body: Record<string, unknown>, idem
   const latitude = body.latitude === null || body.latitude === undefined || body.latitude === '' ? null : Number(body.latitude);
   const longitude = body.longitude === null || body.longitude === undefined || body.longitude === '' ? null : Number(body.longitude);
   const rayonKm = body.rayonKm === null || body.rayonKm === undefined || body.rayonKm === '' ? null : Number(body.rayonKm);
+  const contactPhone = body.contactPhone === null || body.contactPhone === undefined || body.contactPhone === '' ? null : typeof body.contactPhone === 'string' ? body.contactPhone.trim() : null;
+  const contactWhatsapp = body.contactWhatsapp === null || body.contactWhatsapp === undefined || body.contactWhatsapp === '' ? null : typeof body.contactWhatsapp === 'string' ? body.contactWhatsapp.trim() : null;
+  const validContact = (v: string | null) => v === null || (v.length >= 5 && v.length <= 40);
   if (facilityType !== 'fixe' && facilityType !== 'mobile' && facilityType !== 'digital') {
     throw new ApiInputError('A valid facility type (fixe, mobile, digital) is required.');
   }
   const type = facilityType as FacilityType;
   const coordsRequired = type !== 'digital';
   const validCoords = (v: number | null, min: number, max: number) => v === null || (Number.isFinite(v) && v >= min && v <= max);
-  if (!name.trim() || name.length > 180 || (coordsRequired && (latitude === null || longitude === null)) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || (type === 'mobile' && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500)) || (type !== 'mobile' && rayonKm !== null) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+  if (!name.trim() || name.length > 180 || (coordsRequired && (latitude === null || longitude === null)) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || (type === 'mobile' && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500)) || (type !== 'mobile' && rayonKm !== null) || !validContact(contactPhone) || !validContact(contactWhatsapp) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
     throw new ApiInputError('A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.');
   }
-  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, idempotencyKey };
+  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
 }
 
 export interface AvailabilityRequestCreateInput {
@@ -1337,6 +1342,29 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
       const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'PATCH' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/contact')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the facility owner to update its contact.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/contact'.length);
+      const input = await parseRequestBody(req);
+      const contactPhone = input.contactPhone === null || input.contactPhone === undefined || input.contactPhone === '' ? null : typeof input.contactPhone === 'string' ? input.contactPhone.trim() : undefined;
+      const contactWhatsapp = input.contactWhatsapp === null || input.contactWhatsapp === undefined || input.contactWhatsapp === '' ? null : typeof input.contactWhatsapp === 'string' ? input.contactWhatsapp.trim() : undefined;
+      if (contactPhone === undefined || contactWhatsapp === undefined) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'contactPhone and contactWhatsapp must be strings (nullable).'));
+        return true;
+      }
+      const validContact = (v: string | null) => v === null || (v.length >= 5 && v.length <= 40);
+      if (!validContact(contactPhone) || !validContact(contactWhatsapp)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Contact fields must each be 5-40 characters when set.'));
+        return true;
+      }
+      const result = await repository.updateSellerFacilityContact({ authUserId, facilityId, contactPhone, contactWhatsapp });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/seller/catalogue') {

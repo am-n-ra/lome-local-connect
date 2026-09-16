@@ -263,6 +263,19 @@ describe('seller facility create validator (NW-13c)', () => {
   it('requires a rayon on a mobile facility', () => {
     expect(() => validateSellerFacilityCreate({ name: 'Échoppe', facilityType: 'mobile', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
   });
+
+  it('accepts optional contact fields (RAC-1)', () => {
+    const out = validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null, contactPhone: '+22890000000', contactWhatsapp: '' }, key, 'auth-user-1');
+    expect(out).toMatchObject({ contactPhone: '+22890000000', contactWhatsapp: null });
+  });
+
+  it('rejects a too-short contact phone (RAC-1)', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null, contactPhone: '1234', contactWhatsapp: null }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+
+  it('rejects an over-long contact whatsapp (RAC-1)', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null, contactPhone: null, contactWhatsapp: 'x'.repeat(41) }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
 });
 
 describe('ad campaign validator (NW-13j)', () => {

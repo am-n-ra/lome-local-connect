@@ -946,7 +946,8 @@ function createTrunkRepository(sql = database()) {
       const latitudeValid = input.latitude === null || Number.isFinite(input.latitude) && input.latitude >= -90 && input.latitude <= 90;
       const longitudeValid = input.longitude === null || Number.isFinite(input.longitude) && input.longitude >= -180 && input.longitude <= 180;
       const rayonValid = input.rayonKm === null || Number.isFinite(input.rayonKm) && input.rayonKm > 0 && input.rayonKm <= 500;
-      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid) {
+      const contactValid = (v) => v === null || v.trim().length >= 5 && v.trim().length <= 40;
+      if (!typeValid || !nameValid || !keyValid || !latitudeValid || !longitudeValid || !rayonValid || !contactValid(input.contactPhone) || !contactValid(input.contactWhatsapp)) {
         throw new SellerCataloguePolicyError("INVALID_INPUT");
       }
       if (input.facilityType !== "digital" && (input.latitude === null || input.longitude === null)) {
@@ -988,8 +989,8 @@ function createTrunkRepository(sql = database()) {
           limit 1
         ), inserted as (
           insert into v2_facilities
-            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, trust_state)
-          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, 'unconfirmed'
+            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, contact_phone, contact_whatsapp, trust_state)
+          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, ${input.contactPhone?.trim() || null}, ${input.contactWhatsapp?.trim() || null}, 'unconfirmed'
           from available_slot
           where not exists (select 1 from existing)
           returning id as facility_id
@@ -1008,6 +1009,30 @@ function createTrunkRepository(sql = database()) {
       const row = rows[0];
       if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_SLOT_REQUIRED");
       return { facilityId: String(row.facility_id), slotId: String(row.slot_id), trustState: "unconfirmed", facilityType: input.facilityType, created: row.created === true };
+    },
+    async updateSellerFacilityContact(input) {
+      const contactValid = (v) => v === null || v.trim().length >= 5 && v.trim().length <= 40;
+      if (!contactValid(input.contactPhone) || !contactValid(input.contactWhatsapp)) {
+        throw new SellerCataloguePolicyError("INVALID_INPUT");
+      }
+      const rows = await retryDatabase(() => sql`
+        update v2_facilities f
+        set contact_phone = ${input.contactPhone?.trim() || null},
+            contact_whatsapp = ${input.contactWhatsapp?.trim() || null}
+        from v2_accounts a
+        where f.id = ${input.facilityId}::uuid
+          and f.account_id = a.id
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        returning f.id as facility_id, f.contact_phone, f.contact_whatsapp
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_FACILITY_NOT_FOUND");
+      return {
+        facilityId: String(row.facility_id),
+        contactPhone: row.contact_phone === null || row.contact_phone === void 0 ? null : String(row.contact_phone),
+        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp)
+      };
     },
     async createPublicFacilityImport(input) {
       if (input.provider !== "openstreetmap" || !input.sourceRef.trim() || !input.name.trim() || !Number.isFinite(input.latitude) || !Number.isFinite(input.longitude) || input.latitude < -90 || input.latitude > 90 || input.longitude < -180 || input.longitude > 180) {
@@ -1818,6 +1843,8 @@ function createTrunkRepository(sql = database()) {
           f.facility_type,
           f.rayon_km,
           f.trust_state,
+          f.contact_phone,
+          f.contact_whatsapp,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
@@ -1840,7 +1867,9 @@ function createTrunkRepository(sql = database()) {
         productCount: Number(row.product_count ?? 0),
         facilityType: row.facility_type === "fixe" || row.facility_type === "mobile" || row.facility_type === "digital" ? String(row.facility_type) : null,
         rayonKm: row.rayon_km === null ? null : Number(row.rayon_km),
-        trustState: String(row.trust_state ?? "unclaimed")
+        trustState: String(row.trust_state ?? "unclaimed"),
+        contactPhone: row.contact_phone === null || row.contact_phone === void 0 ? null : String(row.contact_phone),
+        contactWhatsapp: row.contact_whatsapp === null || row.contact_whatsapp === void 0 ? null : String(row.contact_whatsapp)
       }));
       const rows = await retryDatabase(() => sql`
         select
@@ -4535,6 +4564,9 @@ function createTrunkRepository(sql = database()) {
           s.unit_price_minor,
           s.coupon_code,
           s.net_amount_minor,
+          f.name as seller_facility_name,
+          f.contact_phone as seller_contact_phone,
+          f.contact_whatsapp as seller_contact_whatsapp,
           m.role as actor_role,
           coalesce((
             select e.state
@@ -4546,6 +4578,7 @@ function createTrunkRepository(sql = database()) {
         from v2_transaction_snapshots s
         join v2_transaction_members m on m.transaction_id = s.transaction_id
         join v2_accounts a on a.id = m.account_id
+        left join v2_facilities f on f.id = s.facility_id
         where s.transaction_id = ${input.transactionId}::uuid
           and a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
@@ -4562,7 +4595,10 @@ function createTrunkRepository(sql = database()) {
         quantity: Number(row.quantity),
         unitPriceMinor: Number(row.unit_price_minor),
         couponCode: row.coupon_code === null || row.coupon_code === void 0 ? null : String(row.coupon_code),
-        netAmountMinor: Number(row.net_amount_minor)
+        netAmountMinor: Number(row.net_amount_minor),
+        sellerFacilityName: row.seller_facility_name === null || row.seller_facility_name === void 0 ? null : String(row.seller_facility_name),
+        sellerContactPhone: row.seller_contact_phone === null || row.seller_contact_phone === void 0 ? null : String(row.seller_contact_phone),
+        sellerContactWhatsapp: row.seller_contact_whatsapp === null || row.seller_contact_whatsapp === void 0 ? null : String(row.seller_contact_whatsapp)
       };
     },
     async getOrCreateCreditStanding(input) {
@@ -4949,16 +4985,19 @@ function validateSellerFacilityCreate(body, idempotencyKey, authUserId) {
   const latitude = body.latitude === null || body.latitude === void 0 || body.latitude === "" ? null : Number(body.latitude);
   const longitude = body.longitude === null || body.longitude === void 0 || body.longitude === "" ? null : Number(body.longitude);
   const rayonKm = body.rayonKm === null || body.rayonKm === void 0 || body.rayonKm === "" ? null : Number(body.rayonKm);
+  const contactPhone = body.contactPhone === null || body.contactPhone === void 0 || body.contactPhone === "" ? null : typeof body.contactPhone === "string" ? body.contactPhone.trim() : null;
+  const contactWhatsapp = body.contactWhatsapp === null || body.contactWhatsapp === void 0 || body.contactWhatsapp === "" ? null : typeof body.contactWhatsapp === "string" ? body.contactWhatsapp.trim() : null;
+  const validContact = (v) => v === null || v.length >= 5 && v.length <= 40;
   if (facilityType !== "fixe" && facilityType !== "mobile" && facilityType !== "digital") {
     throw new ApiInputError("A valid facility type (fixe, mobile, digital) is required.");
   }
   const type = facilityType;
   const coordsRequired = type !== "digital";
   const validCoords = (v, min, max) => v === null || Number.isFinite(v) && v >= min && v <= max;
-  if (!name.trim() || name.length > 180 || coordsRequired && (latitude === null || longitude === null) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || type === "mobile" && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500) || type !== "mobile" && rayonKm !== null || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
+  if (!name.trim() || name.length > 180 || coordsRequired && (latitude === null || longitude === null) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || type === "mobile" && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500) || type !== "mobile" && rayonKm !== null || !validContact(contactPhone) || !validContact(contactWhatsapp) || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
     throw new ApiInputError("A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.");
   }
-  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, idempotencyKey };
+  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
 }
 function validateAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
   const productId = typeof body.productId === "string" ? body.productId : "";
@@ -6135,6 +6174,29 @@ async function handleApi(req, res, pathname, url) {
       const validated = validateSellerFacilityCreate(input, idempotencyKey, authUserId);
       const result = await repository.createSellerFacility(validated);
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "PATCH" && pathname.startsWith("/api/v2/seller/facilities/") && pathname.endsWith("/contact")) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as the facility owner to update its contact."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/seller/facilities/".length, -"/contact".length);
+      const input = await parseRequestBody(req);
+      const contactPhone = input.contactPhone === null || input.contactPhone === void 0 || input.contactPhone === "" ? null : typeof input.contactPhone === "string" ? input.contactPhone.trim() : void 0;
+      const contactWhatsapp = input.contactWhatsapp === null || input.contactWhatsapp === void 0 || input.contactWhatsapp === "" ? null : typeof input.contactWhatsapp === "string" ? input.contactWhatsapp.trim() : void 0;
+      if (contactPhone === void 0 || contactWhatsapp === void 0) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "contactPhone and contactWhatsapp must be strings (nullable)."));
+        return true;
+      }
+      const validContact = (v) => v === null || v.length >= 5 && v.length <= 40;
+      if (!validContact(contactPhone) || !validContact(contactWhatsapp)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Contact fields must each be 5-40 characters when set."));
+        return true;
+      }
+      const result = await repository.updateSellerFacilityContact({ authUserId, facilityId, contactPhone, contactWhatsapp });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/seller/catalogue") {
