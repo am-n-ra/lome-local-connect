@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundsOfPoints, centerOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming } from './map-reveal';
+import { arrivalTargetFor, boundsOfPoints, centerOfPoints, computeSearchFlight, DEFAULT_ARRIVAL_TARGET, labelForZoom, pointsForResultFraming } from './map-reveal';
 
 const facilities = [
   { longitude: 1, latitude: 6 },
@@ -36,5 +36,20 @@ describe('map search flight contract V1.3', () => {
     const pts = pointsForResultFraming(facilities, { longitude: 0, latitude: 5 });
     expect(pts).toHaveLength(3);
     expect(boundsOfPoints(pts)).toEqual([[0, 5], [2, 7]]);
+  });
+});
+
+describe('COR-1a initial arrival recenter contract', () => {
+  it('recenters on the real user location when it is available', () => {
+    expect(arrivalTargetFor({ longitude: 1.2228, latitude: 6.1319 })).toEqual({ center: [1.2228, 6.1319], hasUserLocation: true });
+  });
+
+  it('falls back to the Lomé default only when no valid user location exists', () => {
+    expect(arrivalTargetFor(null)).toEqual({ center: DEFAULT_ARRIVAL_TARGET, hasUserLocation: false });
+    expect(arrivalTargetFor({ longitude: Number.NaN, latitude: 6.13 })).toEqual({ center: DEFAULT_ARRIVAL_TARGET, hasUserLocation: false });
+  });
+
+  it('treats the user (0,0) as a real location, not a missing one', () => {
+    expect(arrivalTargetFor({ longitude: 0, latitude: 0 })).toEqual({ center: [0, 0], hasUserLocation: true });
   });
 });

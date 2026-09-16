@@ -12,7 +12,7 @@ import type { PublicFacility, RouteTarget } from './types';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
-import { boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
@@ -380,6 +380,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
         geolocationResolvedRef.current = true;
         const approximate = position.coords.accuracy > 500;
         const nextPosition = { longitude: position.coords.longitude, latitude: position.coords.latitude };
+        // COR-1a: écrire la ref AVANT le setState — beginArrival (poll 100ms)
+        // lit userPositionRef de façon synchrone dès que geolocationResolvedRef
+        // passe à true; sans ça l'arrival vole vers la position par défaut
+        // (Lomé) car React n'a pas encore re-rendu.
+        userPositionRef.current = nextPosition;
         setUserPosition(nextPosition);
         setLocationState(approximate ? 'approximate' : 'exact');
         if (recenter) {
@@ -709,8 +714,9 @@ const syncCameraPadding = () => {
         if ('disable' in map.touchZoomRotate) map.touchZoomRotate.disable();
       }
 
-      const lng = userPositionRef.current?.longitude ?? 1.22;
-      const lat = userPositionRef.current?.latitude ?? 6.13;
+      const arrivalTarget = arrivalTargetFor(userPositionRef.current);
+      const lng = arrivalTarget.center[0];
+      const lat = arrivalTarget.center[1];
       const stops = buildStops(lng, lat);
       void runStep(0, stops, { lat, lng });
     };

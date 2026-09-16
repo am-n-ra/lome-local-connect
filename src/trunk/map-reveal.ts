@@ -39,6 +39,17 @@ export function centerOfPoints(points: readonly RevealPoint[], fallback: [number
   ];
 }
 
+// COR-1a: cible d'arrivée initiale. La caméra doit se recentrer sur la position
+// RÉELLE de l'utilisateur dès qu'elle est disponible (réf. écrite de façon
+// synchrone dans le callback géoloc), sinon retomber sur Lomé. Centralisé ici
+// pour rendre le contrat d'arrivée testable sans DOM.
+export const DEFAULT_ARRIVAL_TARGET: [number, number] = [1.22, 6.13];
+
+export function arrivalTargetFor(user: RevealPoint | null): { center: [number, number]; hasUserLocation: boolean } {
+  if (user && validPoint(user)) return { center: [user.longitude, user.latitude], hasUserLocation: true };
+  return { center: DEFAULT_ARRIVAL_TARGET, hasUserLocation: false };
+}
+
 export function boundsOfPoints(points: readonly RevealPoint[]): [[number, number], [number, number]] | null {
   const valid = points.filter(validPoint);
   if (!valid.length) return null;
