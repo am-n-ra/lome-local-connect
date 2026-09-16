@@ -270,4 +270,10 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Preuve** : +3 tests contrat (match exact/token multi-mots, null si aucun match ou requête vide) — le cas « bureau » remonte bien `Bureau` et non `Chaise de bureau`. **482/482 tests**, tsc clean, boundary clean, build `index-zgFQEqso.js`; push `275cc7c..8d24c63` → prod `index-zgFQEqso.js` === local (T-07d ✅).
 - **Reste du plan ordonné §4** : COR-7c (panier vendeur multi-produits) → TEC-1 → PRE-1 → **alors seulement Gate 7 (terrain)**. Résidu honnête : preuve navigateur réelle de ces 3 tranches groupée dans **PRE-1** (session fondateur, 4 largeurs) ; Gate 6 CLOSED maintenu.
 
+## COR-7c (livré 2026-09-16, commit `eb508fa`) — panier par vendeur persistant
+- **Gap (audit §2 7c PARTIAL)** : la sélection multi-produits `facProductSel` était **éphémère** (perdue dès qu'on quittait la fiche, reset à chaque `handlePinSelect`).
+- **Livré** : module pur **`facility-cart.ts`** (`FacilityCarts = Record<facilityId, productId[]>`) — toggle/clear/prune/parse/serialize ; **sessionStorage** (survit aux sheets + rechargement d'onglet, oublié à la fermeture de session). `TrunkAppV13` : `facProductSel` dérivé du panier du vendeur courant, `handlePinSelect` **conserve** la sélection et **élague** les produits retirés (`pruneCart`), bouton **« Vider le panier »**, panier vidé après envoi bulk. Un panier **par vendeur** — jamais mélangé entre facilités.
+- **Preuve** : +5 tests contrat (`facility-cart.test.ts`) — isolation inter-vendeurs, dernier produit retire l'entrée, clear ciblé, prune, round-trip + rejet de junk. **487/487 tests**, tsc clean, boundary clean, build `index-Coa4DsCu.js`; push `19ce2e2..eb508fa` → prod `index-Coa4DsCu.js` === local (T-07d ✅).
+- **Reste du plan ordonné §4** : TEC-1 (audit technique transversal) → PRE-1 (preuve navigateur cycle complet) → **alors seulement Gate 7 (terrain)**. Résidu honnête : preuve navigateur réelle de COR-1a/3b/7b/7c groupée dans **PRE-1** (session fondateur, 4 largeurs) ; Gate 6 CLOSED maintenu.
+
 ## COR-1a (livré 2026-09-16, commit `837e28c`, branche `omni-v2-rebuild` — recentrage auto initial garanti)
