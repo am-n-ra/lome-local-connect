@@ -12,7 +12,7 @@ import {
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
   listMyTeamInvites, acceptTeamInvite,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
   FacilityDetail, MyTeamInvite, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -136,6 +136,7 @@ export function TrunkAppV13() {
   const [mapState, setMapState] = useState<MapState>('loading');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [searchedTerm, setSearchedTerm] = useState('');
   const [constraintsOpen, setConstraintsOpen] = useState(false);
   const [activeConstraints, setActiveConstraints] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<PublicFacility[]>([]);
@@ -366,6 +367,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const runSearch = useCallback(async (raw: string, opts?: SearchOptions) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
+    setSearchedTerm(trimmed);
     setResultsLoading(true);
     setSheet('none');
     try {
@@ -1187,6 +1189,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     return null;
   }, [sheet, results, selectedId]);
 
+  // COR-7b: produit réellement recherché mis en avant dans la fiche facilité
+  // (badge + tri en tête), le reste gardant l'ordre « en stock d'abord ».
+  const highlightedProductId = useMemo(
+    () => (selectedFacility ? highlightSearchedProduct(selectedFacility.products, searchedTerm) : null),
+    [selectedFacility, searchedTerm],
+  );
+  const rankedFacilityProducts = useMemo(() => {
+    const sorted = sortProductsStockFirst(selectedFacility?.products ?? []);
+    if (!highlightedProductId) return sorted;
+    return [...sorted].sort((a2, b2) => Number(b2.id === highlightedProductId) - Number(a2.id === highlightedProductId));
+  }, [selectedFacility, highlightedProductId]);
+
   return (
     <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
       <section className="mapbase" aria-label="Carte Omni">
@@ -1523,13 +1537,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
               {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
-              {sortProductsStockFirst(selectedFacility.products).map((product) => {
+              {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
+              {rankedFacilityProducts.map((product) => {
                 const on = facProductSel.includes(product.id);
+                const highlighted = product.id === highlightedProductId;
                 return (
-                  <div className="pitem" key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => setFacProductSel((current) => on ? current.filter((id) => id !== product.id) : [...current, product.id])}>
+                  <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setFacProductSel((current) => on ? current.filter((id) => id !== product.id) : [...current, product.id])}>
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
-                    <span><b>{product.name}</b><small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
+                    <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
                     <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
                   </div>
                 );

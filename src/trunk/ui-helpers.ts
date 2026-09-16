@@ -106,6 +106,28 @@ export function sortProductsStockFirst<T extends { stockLoueOmni: number }>(prod
   );
 }
 
+// COR-7b: après une recherche, la fiche facilité doit mettre en avant le produit
+// réellement recherché (badge + tri en tête). Matching simple et prévisible :
+// le nom du produit contient un mot significatif de la requête (>= 3 lettres),
+// sinon le nom complet contient la requête. Retourne l'id à surligner ou null.
+const SEARCH_STOPWORDS = new Set(['pour', 'avec', 'dans', 'chez', 'les', 'des', 'une', 'mes', 'mon', 'sur', 'pas', 'que']);
+
+export function highlightSearchedProduct<T extends { id: string; name: string }>(products: readonly T[], query: string): string | null {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) return null;
+  const tokens = normalizedQuery.split(/\s+/).filter((token) => token.length >= 3 && !SEARCH_STOPWORDS.has(token));
+  let best: { id: string; score: number; length: number } | null = null;
+  for (const product of products) {
+    const name = product.name.toLowerCase();
+    let score = name === normalizedQuery ? 1000 : name.includes(normalizedQuery) ? 100 : 0;
+    for (const token of tokens) if (name.includes(token)) score += 10;
+    if (score > 0 && (!best || score > best.score || (score === best.score && name.length < best.length))) {
+      best = { id: product.id, score, length: name.length };
+    }
+  }
+  return best?.id ?? null;
+}
+
 export interface WalletBucketTotals { creditMinor: number; spendMinor: number }
 
 export function walletBucketTotals(entries: Array<{ kind: string; amountMinor: number }>): WalletBucketTotals {
