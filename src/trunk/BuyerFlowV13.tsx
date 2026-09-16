@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
@@ -7,7 +7,7 @@ import { useFreshnessTimer } from './useFreshnessTimer';
 import type { PendingAction } from './ui-helpers';
 
 type FlowProduct = { id: string; name: string };
-type FlowFacility = { id: string; name: string };
+type FlowFacility = { id: string; name: string; latitude?: number | null; longitude?: number | null };
 type Stage = 'avail' | 'pending' | 'result' | 'intent' | 'txn' | 'qr' | 'pay' | 'rate';
 
 type BuyerFlowV13Props = {
@@ -15,6 +15,7 @@ type BuyerFlowV13Props = {
   product: FlowProduct;
   onClose: () => void;
   onGate?: (action: PendingAction) => boolean;
+  onRoute?: (longitude: number, latitude: number, name: string) => void;
   walletBalanceMinor?: number | null;
 };
 
@@ -49,7 +50,7 @@ export function qrPayload(transactionId: string, token: string): string {
   return `${transactionId}:${token}`;
 }
 
-export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalanceMinor }: BuyerFlowV13Props) {
+export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
@@ -392,6 +393,20 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, walletBalance
             <button className="btn" type="button" disabled={busy} onClick={() => void issueQr()}><QrCode size={15} /> Mon QR</button>
             <button className="btn ghost" type="button" disabled={busy || !qrToken} onClick={() => void verifyQr()}>Vérifier</button>
           </div>
+          {facility.latitude != null && facility.longitude != null && onRoute && (
+            <div className="cardbox" style={{ marginTop: 8 }}>
+              <div className="kv"><span>Vendeur</span><b>{facility.name}</b></div>
+              <button
+                className="btn"
+                style={{ marginTop: 8, width: '100%' }}
+                type="button"
+                onClick={() => { onClose(); onRoute(facility.longitude!, facility.latitude!, facility.name); }}
+              >
+                <Navigation size={15} /> Itinéraire vers le vendeur
+              </button>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Voir la localisation sur la carte — le chat transactionnel reste disponible ici.</p>
+            </div>
+          )}
           <div className="btnrow">
             <button className="btn ghost" type="button" disabled={busy} onClick={() => setStage('pay')}><Wallet size={15} /> Déclarer le paiement</button>
             {(txn?.state === 'received' || txn?.state === 'fulfilled') && (

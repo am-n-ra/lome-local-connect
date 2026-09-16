@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
-  Compass, Home, LogOut, MapPin, Menu, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
+  Compass, Home, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
@@ -149,8 +149,9 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [routeTarget, setRouteTarget] = useState<import('./types').RouteTarget | null>(null);
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
   const resultsFollowKeyCounter = useRef(0);
@@ -1199,6 +1200,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             revealKey={revealKey}
             focusTarget={focusTarget}
             followTarget={followTarget}
+            routeTarget={routeTarget}
+            onRouteClose={() => setRouteTarget(null)}
             ownedFacilityIds={ownedFacilityIds.length ? ownedFacilityIds : null}
             dimMode={dimMode}
             resultCount={results.length > 0 ? results.length : null}
@@ -1433,7 +1436,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               const detail = bulkDetails[facility.id];
               const product = detail?.products?.find((p) => p.stockLoueOmni > 0) ?? detail?.products?.[0];
               return (
-                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { setFlowFacility({ id: facility.id,name: facility.name }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
+                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { setFlowFacility({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
                     {detail?.products?.length ? <span className="status ok">dès {Math.min(...detail.products.map((p) => p.prixReduit)) / 100} F</span> : <span className="status gray">Non transactable</span>}
@@ -1443,7 +1446,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               );
             })}
           </div>
-          <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { setFlowFacility({ id: pick.id,name: pick.name }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } } }}>Choisir & acheter</button>
+          <button className="btn ok" type="button" style={{ marginTop: 10 }} onClick={() => { const pick = [...compareResults].find((f) => f.trust && f.trust !== 'unclaimed'); if (pick) { const product = bulkDetails[pick.id]?.products?.find((p) => p.stockLoueOmni > 0) ?? bulkDetails[pick.id]?.products?.[0]; if (product) { setFlowFacility({ id: pick.id,name: pick.name, latitude: pick.latitude, longitude: pick.longitude }); setFlowProduct({ id: product.id,name: product.name }); setSheet('flow'); } } }}>Choisir & acheter</button>
         </section>
       )}
       {sheet === 'qr' && (
@@ -1500,6 +1503,23 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <div className="kv"><span>Adresse</span><b>{selectedFacility.address ?? 'Non renseignée'}</b></div>
                 </div>
               )}
+              {selectedFacility.latitude != null && selectedFacility.longitude != null && (
+                <div className="cardbox" style={{ marginTop: 8 }}>
+                  <div className="kv"><span>Localisation</span><b>{selectedFacility.latitude.toFixed(5)}, {selectedFacility.longitude.toFixed(5)}</b></div>
+                  <button
+                    className="btn"
+                    style={{ marginTop: 8, width: '100%' }}
+                    type="button"
+                    onClick={() => {
+                      setRouteTarget({ longitude: selectedFacility.longitude, latitude: selectedFacility.latitude, name: selectedFacility.name });
+                      setSheet('none');
+                    }}
+                  >
+                    <Navigation size={15} /> Itinéraire vers ce vendeur
+                  </button>
+                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Disponible sans générer d’intention d’achat. Contact & chat restent débloqués après intention.</p>
+                </div>
+              )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
               {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
@@ -1520,7 +1540,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     const picked = selectedFacility.products.filter((p) => facProductSel.includes(p.id));
                     if (picked.length === 0) return;
                     if (picked.length === 1) {
-                      setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name }); setFlowProduct({ id: picked[0].id, name: picked[0].name }); setSheet('flow');
+                      setFlowFacility({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }); setFlowProduct({ id: picked[0].id, name: picked[0].name }); setSheet('flow');
                     } else {
                       void (async () => {
                         const token = await requireAuth();
@@ -1575,7 +1595,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         }} />
       )}
       {sheet === 'flow' && flowFacility && flowProduct && (
-        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} walletBalanceMinor={wallet?.balanceMinor ?? null} />
+        <BuyerFlowV13 facility={flowFacility} product={flowProduct} onClose={() => setSheet('facility')} onGate={gateRequest} onRoute={(longitude: number, latitude: number, name: string) => { setRouteTarget({ longitude, latitude, name }); setSheet('none'); }} walletBalanceMinor={wallet?.balanceMinor ?? null} />
       )}
       {sheet === 'admin' && adminTools && (
         <AdminV13 onClose={() => setSheet('menu')} onFocusFacility={(latitude: number, longitude: number, key: string) => { setFocusTarget({ latitude, longitude, key }); setSheet('none'); }} />
