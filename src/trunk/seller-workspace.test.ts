@@ -55,4 +55,25 @@ describe('seller workspace map-first (V-7a', () => {
     expect(sellerMenuHasFunctionalRoutes(catalogFacilities)).toBe(true);
     expect(sellerMenuHasFunctionalRoutes([])).toBe(false);
   });
+
+  // Le catalogue renvoie {facilities:[],products:[]} — objet truthy — pour un
+  // compte sans facilité. Sans `hasFacility`, l'entrée vendeur était sauté et
+  // l'UI montrait la coquille d'un vendeur installé (barre, ON/OFF, catalogue).
+  it('flags an account with no facility so the entry shows claim/create, not the installed shell', () => {
+    const empty = buildSellerWorkspace({ facilities: [], products: [], ownedIds: [], publicFacilities, selFacilityId: null });
+    expect(empty.hasFacility).toBe(false);
+    expect(empty.selFacilityId).toBeNull();
+    const filled = buildSellerWorkspace({ facilities: catalogFacilities, products, ownedIds: ['facility-1'], publicFacilities, selFacilityId: null });
+    expect(filled.hasFacility).toBe(true);
+  });
+
+  it('offers only unclaimed, non-owned public facilities as claimable', () => {
+    const mixed: PublicFacility[] = [
+      { id: 'f-open', name: 'Étal libre', category: 'Marché', address: 'Lomé', latitude: 6.14, longitude: 1.23, trust: 'unclaimed', plan: 'free', productCount: 0 },
+      { id: 'f-mine', name: 'Boutique A', category: 'Marché', address: null, latitude: 6.1319, longitude: 1.2223, trust: 'unclaimed', plan: 'free', productCount: 0 },
+      { id: 'f-other', name: 'Boutique C', category: 'Épicerie', address: null, latitude: 6.12, longitude: 1.21, trust: 'confirmed', plan: 'free', productCount: 3 },
+    ];
+    const state = buildSellerWorkspace({ facilities: catalogFacilities, products, ownedIds: ['f-mine'], publicFacilities: mixed, selFacilityId: null });
+    expect(state.claimable.map((facility) => facility.id)).toEqual(['f-open']);
+  });
 });

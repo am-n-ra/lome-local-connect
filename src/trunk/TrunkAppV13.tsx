@@ -158,7 +158,11 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
+  // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
+  // formulaire à chaque retour sur l'espace vendeur.
+  const [sellerCreateIntent, setSellerCreateIntent] = useState(false);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [routeTarget, setRouteTarget] = useState<import('./types').RouteTarget | null>(null);
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
@@ -1293,7 +1297,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
           {(switchRoles.length ? switchRoles : ['buyer'] as Role[]).map((r: Role) => (
-            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : r === 'seller' && sessionUser && !sellerAvailable ? 'seller' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : r === 'seller' ? 'seller' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
           ))}
         </div>
       </div>
@@ -1568,7 +1572,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div className="cardbox" style={{ marginTop: 8 }}>
                   <p className="sub">Cette facilité est découvrable, elle contribue à la représentation de la fourniture, mais n'a pas de gestionnaire — elle ne peut pas encore recevoir de transaction Omni.</p>
                   <button className="btn" type="button" disabled={claimState === 'loading'} style={{ marginTop: 10 }} onClick={() => void startClaim(selectedFacility!)}>{claimState === 'loading' ? 'Ouverture du brouillon…' : 'Revendiquer cette facilité'}</button>
-                  <button className="btn ghost" style={{ marginTop: 7 }} onClick={() => alert('Créer une nouvelle facilité (si absente)')}>La facilité n'est pas sur la carte? Créer</button>
+                  <button className="btn ghost" style={{ marginTop: 7 }} onClick={() => { setSellerCreateIntent(true); setSheet('seller'); }}>La facilité n'est pas sur la carte? Créer</button>
                 </div>
               )}
               {claimState === 'success' && claimResult && (
@@ -1645,7 +1649,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} startInCreate={sellerCreateIntent} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />

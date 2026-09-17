@@ -14,6 +14,11 @@ export interface SellerWorkspaceState {
   ownedPublic: PublicFacility[];
   selFacilityId: string | null;
   selFacilityCatalogue: SellerCatalogueFacility | null;
+  /** Aucune facilité possédée ⇒ l'espace vendeur doit montrer l'entrée
+   *  (revendiquer / créer), pas la coquille d'un vendeur déjà installé. */
+  hasFacility: boolean;
+  /** Facilités publiques non revendiquées et non possédées, à revendiquer. */
+  claimable: PublicFacility[];
   stockCount: number;
   pendingCount: number;
   stockTotal: number;
@@ -45,6 +50,10 @@ const ROUTE_LABELS: Record<RouteKind, string> = {
   const sel = input.facilities.find((facility) => facility.id === wanted);
   const selFacilityId = sel ? sel.id : (input.facilities[0]?.id ?? null);
   const selFacilityCatalogue = input.facilities.find((facility) => facility.id === selFacilityId) ?? null;
+  const hasFacility = input.facilities.length > 0;
+  const claimable = input.publicFacilities.filter(
+    (facility) => facility.trust === 'unclaimed' && !ownedSet.has(facility.id),
+  );
   const stockCount = input.products.filter((product) => product.publicationState === 'published' && (product.availabilityState === 'en_stock' || product.availabilityState === 'verifie')).length;
   const pendingCount = input.products.filter((product) => product.publicationState === 'draft' || product.publicationState === 'pending_validation').length;
   const stockTotal = input.products.reduce((sum, product) => sum + product.stockLoueOmni, 0);
@@ -53,7 +62,7 @@ const ROUTE_LABELS: Record<RouteKind, string> = {
     return true;
   });
   const labels = sellerRouteLabels();
-  return { ownedPublic, selFacilityId, selFacilityCatalogue, stockCount, pendingCount, stockTotal, activeRoutes, labels };
+  return { ownedPublic, selFacilityId, selFacilityCatalogue, hasFacility, claimable, stockCount, pendingCount, stockTotal, activeRoutes, labels };
 }
 
 /** Sélection par pin/list/sélecteur — jamais un changement de route. */
