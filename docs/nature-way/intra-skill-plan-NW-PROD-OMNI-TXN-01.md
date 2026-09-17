@@ -25,11 +25,11 @@
 | 3 | Décisions D-TXN-1…10 | fondateur tranche | message de confirmation | `done` (GO 2026-09-16) | décision rendue |
 | 4 | FF-1 (correction trompeuse) | bouton renommé, code mort supprimé | tests + build + prod===local | `done` (code) — push bloqué | D-TXN-1 refusée |
 | 5 | FF-2 (Transactions en cours) | endpoint + écran reprenable | tests + preuve navigateur | `done` (code) — push bloqué | D-TXN-2 refusée |
-| 6 | FF-3 (expiration + intents.state) | planificateur + mutation état | tests + preuve DB | `todo` | D-TXN-3 modifiée |
-| 7 | FF-4 (cancel demande dispo) | route + UI Phase A | tests | `todo` | D-TXN-4 refusée |
-| 8 | FF-5 (QR ré-émission) | route + TTL paramétrable | tests | `todo` | D-TXN-3 modifiée |
-| 9 | FF-6 (timer + estimation) | mini-species puis UI | tests + preuve navigateur | `done` (code) — push bloqué | D-TXN-6 refusée |
-| 10 | FF-7 (notifications txn) | push sur événements | tests | `todo` | — |
+| 6 | FF-3 (expiration + intents.state) | planificateur + mutation état | tests + preuve DB | `done` (code, poussé) | D-TXN-3 modifiée |
+| 7 | FF-4 (cancel demande dispo) | route + UI Phase A | tests | `done` (code, poussé) | D-TXN-4 refusée |
+| 8 | FF-5 (QR ré-émission) | route + TTL paramétrable | tests | `done` (code, poussé) | D-TXN-3 modifiée |
+| 9 | FF-6 (timer + estimation) | mini-species puis UI | tests + preuve navigateur | `done` (code, poussé) | D-TXN-6 refusée |
+| 10 | FF-7 (notifications txn) | push sur événements | tests | `done` (code, poussé) | — |
 | 11 | FF-8 (réservation stock) | réservation/libération/décrément | tests + preuve DB | `todo` | D-TXN-7 refusée |
 | 12 | FF-9 (litige) | — | — | `deferred` | watch Gate 7 |
 
@@ -49,14 +49,16 @@
 | 2026-09-16 | Demande fondateur : « pas d'annulation, verrouillage, sortir/revenir, timer + temps estimé par étape, pas de dette » | W-01/W-02 créés et `done`; FF-1…FF-9 planifiés | `advance` (Root) | Nature Way | à la confirmation D-TXN |
 | 2026-09-16 | Fondateur « oui go » sur D-TXN-1…10 / FF-1…9 | FF-1 + FF-2 + FF-6 **codés** (commit `2408add`), 497/497 | `advance` | Nature Way | push + PRE-1 |
 | 2026-09-16 | Jeton GitHub (remote `ghu_…` **et** `GITHUB_TOKEN`) rejeté par GitHub | Commit `2408add` local, ahead-1 | `pause` (push bloqué) | Founder | fournir un jeton `repo` |
+| 2026-09-17 | Jeton GitHub rétabli ; FF-3/FF-4/FF-5/FF-7 codés et poussés (`bb906a3`→`f46330f`) | FF-3/FF-4/FF-5/FF-7 `todo`→`done` | `advance` | Nature Way | FF-8 |
+| 2026-09-17 | Bug prod `r.on2 is not a function` : SQL collé `s.transaction_idand m.role` (join invalide) | Correctif `cf1d07d`, scan glue=0 | `advance` | Nature Way | surveiller la console prod |
 
 ## Handoff to Founder HQ
 
-> **Local status:** `partial` (FF-1/FF-2/FF-6 codés et verts; FF-3/4/5/7/8 restants; push bloqué)
-> **Gate decision:** `pause` (push prod bloqué — jeton GitHub invalide)
-> **Closed:** W-01, W-02 + docs `af806a1`; FF-1 + FF-2 + FF-6 code `2408add`
-> **Open or blocked:** push `2408add` (jeton `repo` requis); FF-3/FF-4/FF-5/FF-7/FF-8 `todo`; FF-9 `deferred`
+> **Local status:** `partial` (FF-1…FF-7 codés et poussés; FF-8 restant; FF-9 `deferred`)
+> **Gate decision:** `advance` (FF-8 réservation stock = prochaine tranche)
+> **Closed:** W-01, W-02 + docs `af806a1`; FF-1/FF-2/FF-6 `2408add`; FF-4 `12de520`; glue fix `cf1d07d`; FF-3/FF-5/FF-7 poussés jusqu'à `f46330f`
+> **Open or blocked:** FF-8 `todo`; FF-9 `deferred` (watch Gate 7)
 > **Resource Receipt:** 2 références + 1 template chargés, 2 ressources justifiées non chargées
-> **Residual gap:** aucune exécution HTTP authentifiée (sandbox); table des temps (D-TXN-3) = hypothèse à ajuster; FF-4 nécessite un statut `cancelled` de demande de dispo (migration additive)
-> **Next smallest action:** fournir un jeton `repo` → pousser `2408add` → vérifier hash prod === local (T-07d); puis FF-4
+> **Residual gap:** aucune exécution HTTP authentifiée (sandbox); table des temps (D-TXN-3) = hypothèse à ajuster; FF-8 nécessite réservation/libération/décrément de stock (migration additive probable)
+> **Next smallest action:** FF-8 réservation stock (contrat + migration additive) → tests → push → hash prod === local (T-07d)
 > **Re-plan trigger:** jeton fourni, ajustement D-TXN-3, ou nouvelle dette découverte au code
