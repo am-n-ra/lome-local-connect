@@ -51,6 +51,7 @@
 | 2026-09-16 | Jeton GitHub (remote `ghu_…` **et** `GITHUB_TOKEN`) rejeté par GitHub | Commit `2408add` local, ahead-1 | `pause` (push bloqué) | Founder | fournir un jeton `repo` |
 | 2026-09-17 | Jeton GitHub rétabli ; FF-3/FF-4/FF-5/FF-7 codés et poussés (`bb906a3`→`f46330f`) | FF-3/FF-4/FF-5/FF-7 `todo`→`done` | `advance` | Nature Way | FF-8 |
 | 2026-09-17 | Bug prod `r.on2 is not a function` : SQL collé `s.transaction_idand m.role` (join invalide) | Correctif `cf1d07d`, scan glue=0 | `advance` | Nature Way | surveiller la console prod |
+| 2026-09-17 | Preuve E2E du cycle transactionnel (`scripts/prove-v2-transaction-lifecycle.mjs`) pilote le code livré à travers tout le flux verrouillé : T1–T8 PASS ; **découvre un vrai bug** — le bloc QR de `createPurchaseIntent` était mort (`qr_eligible` relisait snapshot/members insérés dans la même instruction) → `qrToken` toujours null | correctif `qr_eligible` (RETURNING) `e4948a5`, poussé, prod === local | `advance` | Nature Way | FF-9 (watch Gate 7) / verdict fondateur |
 | 2026-09-17 | Preuve E2E FF-8 (`scripts/prove-v2-stock-reservation.mjs`) pilote le code livré sur branche jetable : T1–T6 PASS ; **découvre un vrai bug** — `submitTransactionRating` relisait `v2_ratings` dans la même instruction (snapshot Postgres) → 1er appel de notation échouait tout en persistant | correctif `rating_present` (RETURNING) `65d81cb`, poussé, prod === local | `advance` | Nature Way | FF-9 (watch Gate 7) / verdict fondateur |
 | 2026-09-17 | FF-8 codé et poussé (`b2ce397`) ; migration 055 appliquée sur la branche canonique `br-dawn-hill-am5amy22` (colonne + CHECK + index partiel, 16/16 produits à 0) et enregistrée au registre (`75640c2d…`) ; preuves live T1–T6 | FF-8 `todo`→`done` | `advance` | Nature Way | FF-9 (watch Gate 7) / verdict fondateur |
 
@@ -58,9 +59,9 @@
 
 > **Local status:** `partial` (FF-1…FF-8 codés et poussés; FF-9 `deferred` — plan FF soldé hors litige)
 > **Gate decision:** `advance` (plan FF soldé ; FF-9 = watch Gate 7)
-> **Closed:** W-01, W-02 + docs `af806a1`; FF-1/FF-2/FF-6 `2408add`; FF-4 `12de520`; glue fix `cf1d07d`; FF-3/FF-5/FF-7 jusqu'à `f46330f`; correctif cron déploiement `8f5258b`; FF-8 `b2ce397`
+> **Closed:** W-01, W-02 + docs `af806a1`; FF-1/FF-2/FF-6 `2408add`; FF-4 `12de520`; glue fix `cf1d07d`; FF-3/FF-5/FF-7 jusqu'à `f46330f`; correctif cron déploiement `8f5258b`; FF-8 `b2ce397`→`65d81cb`; preuve cycle `e4948a5`
 > **Open or blocked:** FF-9 `deferred` (watch Gate 7 — litige hors-V1)
 > **Resource Receipt:** 2 références + 1 template chargés, 2 ressources justifiées non chargées
-> **Residual gap:** aucune exécution HTTP authentifiée (sandbox) ; table des temps (D-TXN-3) = hypothèse à ajuster ; FF-8 prouvé E2E par le code livré sur branche jetable (`scripts/prove-v2-stock-reservation.mjs`, T1–T6 PASS) mais pas par un parcours navigateur complet
+> **Residual gap:** aucune exécution HTTP authentifiée (sandbox) ; table des temps (D-TXN-3) = hypothèse à ajuster ; FF-8 et le cycle verrouillé prouvés E2E par le code livré sur branche jetable (`proof:stock-reservation` T1–T6, `proof:transaction-lifecycle` T1–T8) mais pas par un parcours navigateur complet
 > **Next smallest action:** verdict fondateur sur le plan FF soldé, ou FF-9 si Gate 7 s'ouvre
 > **Re-plan trigger:** jeton fourni, ajustement D-TXN-3, ou nouvelle dette découverte au code
