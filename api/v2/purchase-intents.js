@@ -4583,13 +4583,38 @@ function createTrunkRepository(sql = database()) {
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
         )
-        select i.id, i.response_id, i.transaction_id, i.buyer_account_id, i.state, q.expires_at
+        select i.id, i.response_id, i.transaction_id, i.buyer_account_id, i.state, q.expires_at,
+               (select count(*)::int from eligible) as eligible_count,
+               (select count(*)::int from stock_ok) as stock_ok_count
         from intent_result i
         left join qr_token_insert q on q.transaction_id = i.transaction_id
         limit 1
       `);
       const row = rows[0];
-      if (!row) throw new PurchaseIntentPolicyError("No eligible availability response belongs to the authenticated buyer.");
+      if (!row) {
+        const diagnostic = await retryDatabase(() => sql`
+          select
+            (select count(*)::int from v2_availability_responses ar
+             join v2_availability_requests r on r.id = ar.request_id
+             join v2_facilities f on f.id = ar.facility_id
+             join v2_accounts b on b.id = r.buyer_account_id
+             where ar.id = ${input.responseId}::uuid
+               and ar.status in ('available', 'partial', 'corrected')
+               and b.auth_user_id = ${input.authUserId}
+               and b.suspended_at is null) as eligible_count,
+            (select greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0)
+             from v2_products p
+             join v2_availability_responses ar on ar.id = ${input.responseId}::uuid
+             join v2_availability_requests r on r.id = ar.request_id
+             where p.id = r.product_id) as available
+        `);
+        const eligibleCount = Number(diagnostic[0]?.eligible_count ?? 0);
+        const available = diagnostic[0]?.available === null || diagnostic[0]?.available === void 0 ? null : Number(diagnostic[0].available);
+        if (eligibleCount > 0 && available !== null) {
+          throw new PurchaseIntentPolicyError("This offer is no longer available: the remaining stock has been reserved by another transaction.");
+        }
+        throw new PurchaseIntentPolicyError("No eligible availability response belongs to the authenticated buyer.");
+      }
       if (String(row.response_id) !== input.responseId) {
         throw new PurchaseIntentPolicyError("The idempotency key is already used for a different purchase intent.");
       }
