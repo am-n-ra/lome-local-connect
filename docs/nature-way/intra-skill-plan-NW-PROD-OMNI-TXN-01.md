@@ -30,7 +30,7 @@
 | 8 | FF-5 (QR ré-émission) | route + TTL paramétrable | tests | `done` (code, poussé) | D-TXN-3 modifiée |
 | 9 | FF-6 (timer + estimation) | mini-species puis UI | tests + preuve navigateur | `done` (code, poussé) | D-TXN-6 refusée |
 | 10 | FF-7 (notifications txn) | push sur événements | tests | `done` (code, poussé) | — |
-| 11 | FF-8 (réservation stock) | réservation/libération/décrément | tests + preuve DB | `todo` | D-TXN-7 refusée |
+| 11 | FF-8 (réservation stock) | réserver au verrou / libérer à l'expiration / décrémenter à la clôture | tests + preuve DB live (T1–T6) + prod===local | `done` (code, poussé, migration appliquée) | — |
 | 12 | FF-9 (litige) | — | — | `deferred` | watch Gate 7 |
 
 ## Dependency-aware task tree
@@ -51,14 +51,15 @@
 | 2026-09-16 | Jeton GitHub (remote `ghu_…` **et** `GITHUB_TOKEN`) rejeté par GitHub | Commit `2408add` local, ahead-1 | `pause` (push bloqué) | Founder | fournir un jeton `repo` |
 | 2026-09-17 | Jeton GitHub rétabli ; FF-3/FF-4/FF-5/FF-7 codés et poussés (`bb906a3`→`f46330f`) | FF-3/FF-4/FF-5/FF-7 `todo`→`done` | `advance` | Nature Way | FF-8 |
 | 2026-09-17 | Bug prod `r.on2 is not a function` : SQL collé `s.transaction_idand m.role` (join invalide) | Correctif `cf1d07d`, scan glue=0 | `advance` | Nature Way | surveiller la console prod |
+| 2026-09-17 | FF-8 codé et poussé (`b2ce397`) ; migration 055 appliquée sur la branche canonique `br-dawn-hill-am5amy22` (colonne + CHECK + index partiel, 16/16 produits à 0) et enregistrée au registre (`75640c2d…`) ; preuves live T1–T6 | FF-8 `todo`→`done` | `advance` | Nature Way | FF-9 (watch Gate 7) / verdict fondateur |
 
 ## Handoff to Founder HQ
 
-> **Local status:** `partial` (FF-1…FF-7 codés et poussés; FF-8 restant; FF-9 `deferred`)
-> **Gate decision:** `advance` (FF-8 réservation stock = prochaine tranche)
-> **Closed:** W-01, W-02 + docs `af806a1`; FF-1/FF-2/FF-6 `2408add`; FF-4 `12de520`; glue fix `cf1d07d`; FF-3/FF-5/FF-7 poussés jusqu'à `f46330f`
-> **Open or blocked:** FF-8 `todo`; FF-9 `deferred` (watch Gate 7)
+> **Local status:** `partial` (FF-1…FF-8 codés et poussés; FF-9 `deferred` — plan FF soldé hors litige)
+> **Gate decision:** `advance` (plan FF soldé ; FF-9 = watch Gate 7)
+> **Closed:** W-01, W-02 + docs `af806a1`; FF-1/FF-2/FF-6 `2408add`; FF-4 `12de520`; glue fix `cf1d07d`; FF-3/FF-5/FF-7 jusqu'à `f46330f`; correctif cron déploiement `8f5258b`; FF-8 `b2ce397`
+> **Open or blocked:** FF-9 `deferred` (watch Gate 7 — litige hors-V1)
 > **Resource Receipt:** 2 références + 1 template chargés, 2 ressources justifiées non chargées
-> **Residual gap:** aucune exécution HTTP authentifiée (sandbox); table des temps (D-TXN-3) = hypothèse à ajuster; FF-8 nécessite réservation/libération/décrément de stock (migration additive probable)
-> **Next smallest action:** FF-8 réservation stock (contrat + migration additive) → tests → push → hash prod === local (T-07d)
+> **Residual gap:** aucune exécution HTTP authentifiée (sandbox); table des temps (D-TXN-3) = hypothèse à ajuster; FF-8 prouvé au niveau SQL (T1–T6 sur branche vivante) mais pas par un parcours navigateur complet
+> **Next smallest action:** verdict fondateur sur le plan FF soldé, ou FF-9 si Gate 7 s'ouvre
 > **Re-plan trigger:** jeton fourni, ajustement D-TXN-3, ou nouvelle dette découverte au code
