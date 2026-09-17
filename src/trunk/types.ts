@@ -50,7 +50,7 @@ export interface FacilityDetail extends PublicFacility {
   products: PublicProduct[];
 }
 
-export type AvailabilityRequestState = 'submitted' | 'responding' | 'responses' | 'expired';
+export type AvailabilityRequestState = 'submitted' | 'responding' | 'responses' | 'expired' | 'cancelled';
 
 export type AvailabilityResponseStatus = 'available' | 'partial' | 'unavailable' | 'corrected';
 
@@ -147,6 +147,14 @@ export interface BuyerAvailabilityRequestSummary {
 
 export interface BuyerAvailabilityRequestList {
   requests: BuyerAvailabilityRequestSummary[];
+}
+
+/** FF-4 — annulation acheteur d'une demande de dispo (Phase A uniquement, sans effet
+ *  monétaire). Refusée dès qu'une intention d'achat existe (le verrou est engagé). */
+export interface CancelAvailabilityRequestResult {
+  requestId: string;
+  status: 'cancelled';
+  cancelled: boolean;
 }
 
 export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed';

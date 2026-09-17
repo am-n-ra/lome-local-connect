@@ -5,7 +5,7 @@ import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, O
 import type { QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 
 export interface DatabaseClient {
@@ -2378,7 +2378,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           on ar.request_id = r.id
          and ar.facility_id = f.id
          and ar.responder_account_id = ${sellerAccountId}::uuid
-        where r.expires_at > now() or ar.id is not null
+        where r.status <> 'cancelled' and (r.expires_at > now() or ar.id is not null)
         order by r.created_at desc, r.id desc
         limit 100
       `);
@@ -2446,6 +2446,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           r.expires_at,
           count(ar.id)::int as response_count,
           case
+            when r.status = 'cancelled' then 'cancelled'
             when r.expires_at <= now() then 'expired'
             when count(ar.id) > 0 then 'responses'
             when r.status = 'responding' then 'responding'
@@ -2483,6 +2484,45 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           longitude: Number(row.facility_longitude),
         })),
       };
+    },
+
+    // FF-4 — l'acheteur annule sa PROPRE demande de dispo tant que rien n'est engagé.
+    // Phase A uniquement : refusé si une intention d'achat existe (le verrou est pris),
+    // si la demande est déjà annulée/expirée, ou si elle n'appartient pas à l'appelant.
+    // Aucun effet monétaire : la vérification manuelle est gratuite.
+    async cancelAvailabilityRequest(input: { authUserId: string; requestId: string }): Promise<CancelAvailabilityRequestResult> {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select r.id, r.status, r.expires_at
+          from v2_availability_requests r
+          join v2_accounts a on a.id = r.buyer_account_id
+          where r.id = ${input.requestId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        locked as (
+          select 1
+          from v2_purchase_intents pi
+          join v2_availability_responses ar on ar.id = pi.response_id
+          join owned o on o.id = ar.request_id
+          limit 1
+        ),
+        cancelled as (
+          update v2_availability_requests r
+            set status = 'cancelled'
+          where r.id = (select id from owned)
+            and r.status in ('draft', 'submitted', 'responding')
+            and r.expires_at > now()
+            and not exists (select 1 from locked)
+          returning r.id, r.status
+        )
+        select id, status from cancelled
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) {
+        throw new AvailabilityPolicyError("Cette demande ne peut pas être annulée : elle est déjà engagée, expirée ou introuvable.");
+      }
+      return { requestId: String(row.id), status: 'cancelled', cancelled: true };
     },
 
     async getAvailabilityResponses(input: { authUserId: string; requestId: string }): Promise<AvailabilityResponsesResult> {
@@ -2550,13 +2590,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           observedAt: new Date(String(row.observed_at)).toISOString(),
           freshness: String(row.freshness) as AvailabilityResponsesResult['responses'][number]['freshness'],
         }));
-      const requestStatus: AvailabilityResponsesResult['requestStatus'] = responses.length > 0
-        ? 'responses'
-        : new Date(expiresAt).getTime() <= now
-          ? 'expired'
-          : String(first.request_status) === 'responding'
-            ? 'responding'
-            : 'submitted';
+      const requestStatus: AvailabilityResponsesResult['requestStatus'] = String(first.request_status) === 'cancelled'
+        ? 'cancelled'
+        : responses.length > 0
+          ? 'responses'
+          : new Date(expiresAt).getTime() <= now
+            ? 'expired'
+            : String(first.request_status) === 'responding'
+              ? 'responding'
+              : 'submitted';
       return {
         requestId: String(first.request_id),
         productId: String(first.product_id),

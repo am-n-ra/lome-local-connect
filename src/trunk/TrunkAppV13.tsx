@@ -8,6 +8,7 @@ import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
+  cancelAvailabilityRequest,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
   listOpenTransactions, getTransaction,
@@ -72,6 +73,7 @@ function statusLabel(requestStatus: string): string {
   if (requestStatus === 'partial') return 'Partielle';
   if (requestStatus === 'corrected') return 'Corrigée';
   if (requestStatus === 'expired') return 'Expirée';
+  if (requestStatus === 'cancelled') return 'Annulée';
   return 'Indisponible';
 }
 
@@ -660,6 +662,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setBuyerRequestsState('error');
       setBuyerRequestsError(caught instanceof Error ? caught.message : 'Vos demandes ne peuvent pas être chargées pour le moment.');
     }
+  }, [requireAuth]);
+
+  // FF-4 — annulation d'une demande de dispo (Phase A uniquement). Sans effet monétaire ;
+  // refusée par le serveur si une intention est déjà engagée (le verrou est pris).
+  const cancelBuyerRequest = useCallback(async (requestId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    setBuyerRequestsError('');
+    const result = await cancelAvailabilityRequest({ requestId, token });
+    if (!result.ok) {
+      setBuyerRequestsError(result.error?.message ?? "Cette demande ne peut pas être annulée.");
+      return;
+    }
+    setBuyerRequests((current) => current.map((request) => (request.id === requestId ? { ...request, requestStatus: 'cancelled' } : request)));
   }, [requireAuth]);
 
   // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
@@ -1778,20 +1794,28 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           {buyerRequestsState === 'idle' && buyerRequests.length === 0 && (
             <p className="sub" style={{ marginTop: 8 }}>Aucune demande enregistrée. Lancez une recherche, puis demandez la dispo d’un produit.</p>
           )}
-          {buyerRequests.map((request) => (
-            <button key={request.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: request.latitude, longitude: request.longitude, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <div><b>{request.productName}</b><br /><span className="tiny muted">{request.facilityName} · {request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'}</span></div>
-                <span className="status gray">{statusLabel(request.requestStatus)}</span>
-              </div>
-              <div className="row" style={{ gap: 4, marginTop: 4 }}>
-                <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
-                {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {money(request.budgetMinor, 'XOF')}</span>}
-              </div>
-              {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
-              <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
-            </button>
-          ))}
+          {buyerRequests.map((request) => {
+            const cancellable = request.requestStatus === 'submitted' || request.requestStatus === 'responding';
+            return (
+            <div key={request.id} className="cardbox" style={{ width: '100%', marginTop: 6 }}>
+              <button type="button" style={{ textAlign: 'left', width: '100%', background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', cursor: 'pointer' }} onClick={() => { setSelectedId(request.facilityId); setSheet('facility'); void handlePinSelect({ id: request.facilityId, name: request.facilityName, category: request.facilityCategory, address: null, latitude: request.latitude, longitude: request.longitude, trust: 'unclaimed', plan: 'free', productCount: 0 } as PublicFacility); }}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>{request.productName}</b><br /><span className="tiny muted">{request.facilityName} · {request.requestedQuantity} unité{request.requestedQuantity === 1 ? '' : 's'}</span></div>
+                  <span className="status gray">{statusLabel(request.requestStatus)}</span>
+                </div>
+                <div className="row" style={{ gap: 4, marginTop: 4 }}>
+                  <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
+                  {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {money(request.budgetMinor, 'XOF')}</span>}
+                </div>
+                {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
+                <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
+              </button>
+              {cancellable && (
+                <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} onClick={() => void cancelBuyerRequest(request.id)}>Annuler la demande</button>
+              )}
+            </div>
+            );
+          })}
           <div className="eyebrow" style={{ marginTop: 14 }}>Transactions en cours</div>
           {openTxnState === 'loading' && <p className="tiny muted" style={{ marginTop: 6 }}>Chargement de vos transactions…</p>}
           {openTxnState === 'error' && (

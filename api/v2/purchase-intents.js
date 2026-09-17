@@ -2165,7 +2165,7 @@ function createTrunkRepository(sql = database()) {
           on ar.request_id = r.id
          and ar.facility_id = f.id
          and ar.responder_account_id = ${sellerAccountId}::uuid
-        where r.expires_at > now() or ar.id is not null
+        where r.status <> 'cancelled' and (r.expires_at > now() or ar.id is not null)
         order by r.created_at desc, r.id desc
         limit 100
       `);
@@ -2214,6 +2214,7 @@ function createTrunkRepository(sql = database()) {
           r.expires_at,
           count(ar.id)::int as response_count,
           case
+            when r.status = 'cancelled' then 'cancelled'
             when r.expires_at <= now() then 'expired'
             when count(ar.id) > 0 then 'responses'
             when r.status = 'responding' then 'responding'
@@ -2251,6 +2252,44 @@ function createTrunkRepository(sql = database()) {
           longitude: Number(row.facility_longitude)
         }))
       };
+    },
+    // FF-4 — l'acheteur annule sa PROPRE demande de dispo tant que rien n'est engagé.
+    // Phase A uniquement : refusé si une intention d'achat existe (le verrou est pris),
+    // si la demande est déjà annulée/expirée, ou si elle n'appartient pas à l'appelant.
+    // Aucun effet monétaire : la vérification manuelle est gratuite.
+    async cancelAvailabilityRequest(input) {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select r.id, r.status, r.expires_at
+          from v2_availability_requests r
+          join v2_accounts a on a.id = r.buyer_account_id
+          where r.id = ${input.requestId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        locked as (
+          select 1
+          from v2_purchase_intents pi
+          join v2_availability_responses ar on ar.id = pi.response_id
+          join owned o on o.id = ar.request_id
+          limit 1
+        ),
+        cancelled as (
+          update v2_availability_requests r
+            set status = 'cancelled'
+          where r.id = (select id from owned)
+            and r.status in ('draft', 'submitted', 'responding')
+            and r.expires_at > now()
+            and not exists (select 1 from locked)
+          returning r.id, r.status
+        )
+        select id, status from cancelled
+      `);
+      const row = rows[0];
+      if (!row) {
+        throw new AvailabilityPolicyError("Cette demande ne peut pas \xEAtre annul\xE9e : elle est d\xE9j\xE0 engag\xE9e, expir\xE9e ou introuvable.");
+      }
+      return { requestId: String(row.id), status: "cancelled", cancelled: true };
     },
     async getAvailabilityResponses(input) {
       const rows = await retryDatabase(() => sql`
@@ -2315,7 +2354,7 @@ function createTrunkRepository(sql = database()) {
         observedAt: new Date(String(row.observed_at)).toISOString(),
         freshness: String(row.freshness)
       }));
-      const requestStatus = responses.length > 0 ? "responses" : new Date(expiresAt).getTime() <= now ? "expired" : String(first.request_status) === "responding" ? "responding" : "submitted";
+      const requestStatus = String(first.request_status) === "cancelled" ? "cancelled" : responses.length > 0 ? "responses" : new Date(expiresAt).getTime() <= now ? "expired" : String(first.request_status) === "responding" ? "responding" : "submitted";
       return {
         requestId: String(first.request_id),
         productId: String(first.product_id),
@@ -6753,6 +6792,17 @@ async function handleApi(req, res, pathname, url) {
       const validated = validateAvailabilityRequestCreate(input, idempotencyKey, authUserId);
       const result = await repository.createAvailabilityRequest(validated);
       json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const availabilityCancelMatch = pathname.match(/^\/api\/v2\/buyer\/availability-requests\/([0-9a-f-]{36})\/cancel$/i);
+    if (req.method === "POST" && availabilityCancelMatch) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to cancel your availability request."));
+        return true;
+      }
+      const result = await repository.cancelAvailabilityRequest({ authUserId, requestId: availabilityCancelMatch[1] });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/bulk-availability") {

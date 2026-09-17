@@ -139,6 +139,13 @@ describe('Root HTTP error boundary', () => {
     expect(response.body.error.retryable).toBe(false);
   });
 
+  it('maps a refused availability-request cancel to a non-retryable 409 POLICY_REJECTED', () => {
+    const response = toApiErrorResponse('corr-cancel', new AvailabilityPolicyError("Cette demande ne peut pas être annulée : elle est déjà engagée, expirée ou introuvable."));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+
   it('accepts only the locked transaction states at the HTTP boundary', () => {
     expect(isTransactionState('qr_verified')).toBe(true);
     expect(isTransactionState('closed')).toBe(true);

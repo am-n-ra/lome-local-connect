@@ -1850,6 +1850,17 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
+    const availabilityCancelMatch = pathname.match(/^\/api\/v2\/buyer\/availability-requests\/([0-9a-f-]{36})\/cancel$/i);
+    if (req.method === 'POST' && availabilityCancelMatch) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to cancel your availability request.'));
+        return true;
+      }
+      const result = await repository.cancelAvailabilityRequest({ authUserId, requestId: availabilityCancelMatch[1] });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname === '/api/v2/bulk-availability') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

@@ -2496,3 +2496,27 @@ describe('FF-2 open transactions Root seam', () => {
   });
 });
 
+describe('FF-4 buyer cancels an availability request (Phase A only)', () => {
+  it('cancels an owned, non-expired request while no purchase intent exists', async () => {
+    const call = stubSql([{ id: 'request-1', status: 'cancelled' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.cancelAvailabilityRequest({ authUserId: 'auth-user-1', requestId: 'request-1' });
+    expect(result).toEqual({ requestId: 'request-1', status: 'cancelled', cancelled: true });
+    const query = call.queries[0];
+    expect(query).toContain('v2_availability_requests');
+    expect(query).toContain('a.auth_user_id =');
+    expect(query).toContain('v2_purchase_intents');
+    expect(query).toContain("set status = 'cancelled'");
+    expect(query).toContain("r.status in ('draft', 'submitted', 'responding')");
+    expect(query).toContain('r.expires_at > now()');
+    expect(query).toContain('not exists (select 1 from locked)');
+  });
+
+  it('refuses when the request is not owned, already engaged, expired or missing', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.cancelAvailabilityRequest({ authUserId: 'auth-user-1', requestId: 'request-9' }))
+      .rejects.toThrow(AvailabilityPolicyError);
+  });
+});
+
