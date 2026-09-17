@@ -4790,7 +4790,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           select i.transaction_id, m.account_id as buyer_account_id
           from intent_result i
           join v2_transaction_snapshots s on s.transaction_id = i.transaction_id
-          join v2_transaction_members m on m.transaction_id = s.transaction_idand m.role = 'buyer'
+          join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'buyer'
         ),
         qr_token_insert as (
           insert into v2_qr_tokens (transaction_id, token_hash, expires_at, verified_at, replay_count)
