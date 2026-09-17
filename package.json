@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "check:boundary": "node scripts/check-client-boundary.mjs",
     "proof:live-seller": "node scripts/prove-v2-live-seller.mjs",
+    "proof:stock-reservation": "tsx scripts/prove-v2-stock-reservation.mjs",
     "seed:demo": "node scripts/seed-demo-lome.mjs",
     "seed:demo:emit": "node scripts/seed-demo-lome.mjs --emit-json",
     "server": "tsx server/index.ts",
