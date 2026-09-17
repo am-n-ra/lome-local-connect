@@ -6716,6 +6716,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.listOpenTransactions({ authUserId });
+      void repository.sweepExpiredIntents({ now: (/* @__PURE__ */ new Date()).toISOString(), correlationId }).catch(() => void 0);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

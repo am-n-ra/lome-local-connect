@@ -1617,6 +1617,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.listOpenTransactions({ authUserId });
+      // FF-3 (complément) — balayage opportuniste si le plan Vercel ne peut pas exécuter
+      // le cron : chaque consultation des transactions en cours expire les intentions
+      // échues avant le verrou. Idempotent ; un échec ne casse jamais la lecture.
+      void repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId }).catch(() => undefined);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
