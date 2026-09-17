@@ -4562,11 +4562,12 @@ function createTrunkRepository(sql = database()) {
           on conflict (transaction_id, state) do nothing
           returning transaction_id
         ),
+        -- L'éligibilité QR consomme le RETURNING de intent_upsert : les lignes
+        -- insérées (snapshot/members) ne sont pas visibles par un re-scan dans la
+        -- même instruction (snapshot Postgres), ce qui laissait le QR mort.
         qr_eligible as (
-          select i.transaction_id, m.account_id as buyer_account_id
-          from intent_result i
-          join v2_transaction_snapshots s on s.transaction_id = i.transaction_id
-          join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'buyer'
+          select i.transaction_id, i.buyer_account_id
+          from intent_upsert i
         ),
         qr_token_insert as (
           insert into v2_qr_tokens (transaction_id, token_hash, expires_at, verified_at, replay_count)

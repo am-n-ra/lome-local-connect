@@ -1703,8 +1703,12 @@ describe('purchase-intent persistence Root seam', () => {
     expect(call.queries[0]).toContain("'auto_at_intent'");
     // Régression : le mot-clé AND ne doit jamais être soudé à l'identifiant
     // (bug 'transaction_idand' qui rendait la requête SQL invalide).
-    expect(call.queries[0]).toContain('s.transaction_id and m.role');
     expect(call.queries[0]).not.toContain('transaction_idand');
+    // L'éligibilité QR consomme le RETURNING d'intent_upsert : un re-scan de
+    // snapshot/members ne voit pas les lignes insérées dans la même instruction.
+    expect(call.queries[0]).toContain('qr_eligible as (');
+    expect(call.queries[0]).toContain('select i.transaction_id, i.buyer_account_id');
+    expect(call.queries[0]).toContain('from intent_upsert i');
     // FF-8 : le verrou réserve le stock et refuse la survente.
     expect(call.queries[0]).toContain('greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0) as available');
     expect(call.queries[0]).toContain('rs.available >= e.quantity');
