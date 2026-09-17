@@ -1850,6 +1850,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
+    // FF-3 — planificateur d'expiration. Déclenché par Vercel Cron (Authorization: Bearer
+    // $CRON_SECRET) ; idempotent et sans effet monétaire avant le verrou.
+    if (req.method === 'GET' && pathname === '/api/v2/cron/expire-intents') {
+      const cronSecret = process.env.CRON_SECRET?.trim();
+      const authorization = String(req.headers.authorization ?? '');
+      if (!cronSecret || authorization !== `Bearer ${cronSecret}`) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Cron authorization is required.'));
+        return true;
+      }
+      const result = await repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     const availabilityCancelMatch = pathname.match(/^\/api\/v2\/buyer\/availability-requests\/([0-9a-f-]{36})\/cancel$/i);
     if (req.method === 'POST' && availabilityCancelMatch) {
       const authUserId = await getAuthUserId(req.headers);

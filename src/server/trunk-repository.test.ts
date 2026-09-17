@@ -1624,6 +1624,10 @@ describe('purchase-intent persistence Root seam', () => {
     expect(call.queries[0]).toContain('insert into v2_qr_tokens');
     expect(call.queries[0]).toContain("'qr_ready'");
     expect(call.queries[0]).toContain("'auto_at_intent'");
+    // Régression : le mot-clé AND ne doit jamais être soudé à l'identifiant
+    // (bug 'transaction_idand' qui rendait la requête SQL invalide).
+    expect(call.queries[0]).toContain('s.transaction_id and m.role');
+    expect(call.queries[0]).not.toContain('transaction_idand');
   });
 
   it('rejects an unavailable or out-of-scope response without returning an intent', async () => {
@@ -1902,6 +1906,10 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
     expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
     expect(call.queries[0]).toContain("'pro_test_credit_20_usd'");
+    // FF-3 : la clôture de la transaction marque l'intention 'completed'.
+    expect(call.queries[0]).toContain('update v2_purchase_intents pi');
+    expect(call.queries[0]).toContain("set state = 'completed'");
+    expect(call.queries[0]).toContain('pi.id = s.intent_id');
   });
 
   it('rejects an invalid score before touching the database', async () => {
@@ -2517,6 +2525,31 @@ describe('FF-4 buyer cancels an availability request (Phase A only)', () => {
     const repository = createTrunkRepository(call.sql);
     await expect(repository.cancelAvailabilityRequest({ authUserId: 'auth-user-1', requestId: 'request-9' }))
       .rejects.toThrow(AvailabilityPolicyError);
+  });
+});
+
+describe('FF-3 expiration sweep (server, pre-lock only)', () => {
+  it('expires stalled pre-lock intents, expires the linked request and audits', async () => {
+    const call = stubSql([{ transaction_id: 'transaction-1', request_id: 'request-1' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.sweepExpiredIntents({ now: '2026-09-17T10:00:00.000Z', correlationId: 'corr-sweep-1' });
+    expect(result).toEqual({ expired: 1, requestIds: ['request-1'] });
+    const query = call.queries[0];
+    expect(query).toContain("pi.state = 'active'");
+    expect(query).toContain("set state = 'expired'");
+    expect(query).toContain("e.state = 'qr_verified'");
+    expect(query).toContain('not exists');
+    expect(query).toContain("r.status in ('draft', 'submitted', 'responding')");
+    expect(query).toContain("'intent_expired'");
+    expect(query).toContain("'stalled_before_lock'");
+    expect(query).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
+  });
+
+  it('reports zero when nothing is stalled (idempotent no-op)', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.sweepExpiredIntents({ now: '2026-09-17T10:00:00.000Z', correlationId: 'corr-sweep-2' });
+    expect(result).toEqual({ expired: 0, requestIds: [] });
   });
 });
 

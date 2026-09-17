@@ -2,6 +2,9 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "crons": [
+    { "path": "/api/v2/cron/expire-intents", "schedule": "0 * * * *" }
+  ],
   "rewrites": [
     { "source": "/auth", "destination": "/" },
     { "source": "/auth/:path*", "destination": "/" },

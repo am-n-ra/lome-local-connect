@@ -2906,6 +2906,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           where e.current_state in ('received', 'rated')
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        intent_completed as (
+          update v2_purchase_intents pi
+          set state = 'completed'
+          from closed_event c
+          join v2_transaction_snapshots s on s.transaction_id = c.transaction_id
+          where pi.id = s.intent_id
+            and pi.state <> 'completed'
+          returning pi.id
         )
         select r.id, r.transaction_id, r.score, r.note
         from v2_ratings r
@@ -5113,6 +5122,63 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           lastEventAt: new Date(String(row.last_event_at)).toISOString(),
           createdAt: new Date(String(row.created_at)).toISOString(),
         })),
+      };
+    },
+
+    // FF-3 — planificateur d'expiration (serveur). Une intention parquée non verrouillée
+    // (aucun événement 'qr_verified') qui dépasse sa fenêtre est expirée ; la demande de
+    // dispo associée passe 'expired'. Après le verrou, le temps ne libère jamais : il ne
+    // fait que relancer/notifier (D-TXN-8). Idempotent : la clause where n'attrape que
+    // les états vivants.
+    async sweepExpiredIntents(input: { now: string; correlationId: string; windowMinutes?: number }): Promise<{ expired: number; requestIds: string[] }> {
+      const windowMinutes = Number.isInteger(input.windowMinutes) && (input.windowMinutes as number) > 0 ? (input.windowMinutes as number) : 60;
+      const rows = await retryDatabase(() => sql`
+        with stale as (
+          select s.intent_id, s.transaction_id, pi.buyer_account_id, r.id as request_id
+          from v2_purchase_intents pi
+          join v2_transaction_snapshots s on s.intent_id = pi.id
+          join v2_availability_responses ar on ar.id = pi.response_id
+          join v2_availability_requests r on r.id = ar.request_id
+          where pi.state = 'active'
+            and s.created_at < ${input.now}::timestamptz - (${windowMinutes} * interval '1 minute')
+            and not exists (
+              select 1 from v2_transaction_events e
+              where e.transaction_id = s.transaction_id
+                and e.state = 'qr_verified'
+            )
+        ),
+        intent_expired as (
+          update v2_purchase_intents pi
+          set state = 'expired'
+          from stale st
+          where pi.id = st.intent_id
+            and pi.state = 'active'
+          returning pi.id
+        ),
+        request_expired as (
+          update v2_availability_requests r
+          set status = 'expired'
+          from stale st
+          join intent_expired ie on ie.id = st.intent_id
+          where r.id = st.request_id
+            and r.status in ('draft', 'submitted', 'responding')
+          returning r.id
+        ),
+        audited as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select st.buyer_account_id, 'intent_expired', 'transaction', st.transaction_id::text, ${input.correlationId}, 'stalled_before_lock', ${input.now}::timestamptz
+          from stale st
+          join intent_expired ie on ie.id = st.intent_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select st.transaction_id, st.request_id from stale st
+        join intent_expired ie on ie.id = st.intent_id
+      `);
+      const typed = rows as Record<string, unknown>[];
+      return {
+        expired: typed.length,
+        requestIds: typed.map((row) => String(row.request_id)),
       };
     },
 
