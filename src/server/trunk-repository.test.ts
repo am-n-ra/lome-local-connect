@@ -1996,6 +1996,13 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('set quantity_allocated_omni = greatest(p.quantity_allocated_omni - s.quantity, 0)');
     expect(call.queries[0]).toContain('quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)');
     expect(call.queries[0]).toContain('from closed_event c');
+    // La notation insérée n'est pas relisible dans la même instruction (snapshot
+    // Postgres) : le RETURNING alimente rating_present, sinon le premier appel
+    // échouerait tout en ayant persisté la notation.
+    expect(call.queries[0]).toContain('rating_present as (');
+    expect(call.queries[0]).toContain('select id, transaction_id, score, note from inserted_rating');
+    expect(call.queries[0]).toContain('join rating_present r');
+    expect(call.queries[0]).toContain('from rating_present r');
   });
 
   it('rejects an invalid score before touching the database', async () => {

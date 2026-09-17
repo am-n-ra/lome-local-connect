@@ -2824,11 +2824,24 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           where e.current_state = 'received'
           on conflict (transaction_id) do nothing
           returning id, transaction_id, score, note
-        ),         rated_event as (
+        ),
+        -- La notation insérée n'est pas visible par un simple re-scan de
+        -- v2_ratings dans la même instruction (sémantique de snapshot Postgres).
+        -- On reprend donc la ligne via le RETURNING, sinon le premier appel
+        -- échouerait tout en ayant persisté la notation.
+        rating_present as (
+          select id, transaction_id, score, note from inserted_rating
+          union all
+          select r.id, r.transaction_id, r.score, r.note
+          from v2_ratings r
+          join eligible e on e.transaction_id = r.transaction_id
+          where not exists (select 1 from inserted_rating)
+        ),
+        rated_event as (
           insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
           select e.transaction_id, e.actor_account_id, 'rated', jsonb_build_object('score', r.score), ${input.now}::timestamptz
           from eligible e
-          join v2_ratings r on r.transaction_id = e.transaction_id
+          join rating_present r on r.transaction_id = e.transaction_id
           where e.current_state = 'received'
           on conflict (transaction_id, state) do nothing
           returning transaction_id
@@ -2837,7 +2850,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
           select e.transaction_id, e.actor_account_id, 'closed', jsonb_build_object('reason', 'buyer_rating_completed'), ${input.now}::timestamptz
           from eligible e
-          join v2_ratings r on r.transaction_id = e.transaction_id
+          join rating_present r on r.transaction_id = e.transaction_id
           where e.current_state in ('received', 'rated')
           on conflict (transaction_id, state) do nothing
           returning transaction_id
@@ -2931,7 +2944,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning p.id
         )
         select r.id, r.transaction_id, r.score, r.note
-        from v2_ratings r
+        from rating_present r
         join eligible e on e.transaction_id = r.transaction_id
         limit 1
       `);
