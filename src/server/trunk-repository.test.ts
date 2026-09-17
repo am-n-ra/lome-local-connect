@@ -1995,6 +1995,11 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('update v2_purchase_intents pi');
     expect(call.queries[0]).toContain("set state = 'completed'");
     expect(call.queries[0]).toContain('pi.id = s.intent_id');
+    // D-TXN-11 : l'état courant se départage sur state_rank, jamais sur l'uuid
+    // aléatoire de l'événement (deux états écrits dans la même instruction
+    // partagent leur created_at → un tri par id serait non déterministe).
+    expect(call.queries[0]).toContain('order by e.created_at desc, e.state_rank desc');
+    expect(call.queries[0]).not.toContain('order by e.created_at desc, e.id desc');
     // FF-8 : la clôture décrémente le stock déclaré ET la réservation, ancré sur
     // closed_event (replay-safe : la CTE est vide si l'événement existe déjà).
     expect(call.queries[0]).toContain('set quantity_allocated_omni = greatest(p.quantity_allocated_omni - s.quantity, 0)');

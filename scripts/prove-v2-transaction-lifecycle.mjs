@@ -68,7 +68,7 @@ try {
     authUserId: buyerAuth, responseId, idempotencyKey: `txn-intent-${tag}`, correlationId,
   });
   const currentState = async () => (await sql`select state from v2_transaction_events
-    where transaction_id = ${intent.transactionId}::uuid order by created_at desc, id desc limit 1`)[0]?.state;
+    where transaction_id = ${intent.transactionId}::uuid order by created_at desc, state_rank desc limit 1`)[0]?.state;
   step('intent created + QR issued', Boolean(intent.transactionId && intent.qrToken) && (await currentState()) === 'qr_ready',
     `txn=${intent.transactionId} qr=${Boolean(intent.qrToken)} state=${await currentState()}`);
 
@@ -139,6 +139,13 @@ try {
   const requestStatus = (await sql`select status from v2_availability_requests where id = ${requestId}::uuid`)[0].status;
   step('no cancellation once the transaction is locked', cancelResult === 'refused' && requestStatus !== 'cancelled',
     `cancel=${cancelResult} requestStatus=${requestStatus}`);
+
+  // 9. The closed transaction is no longer "open": resuming only surfaces work
+  //    that is still in flight, so the list is empty for both parties.
+  const openBuyer = await repository.listOpenTransactions({ authUserId: buyerAuth });
+  const openSeller = await repository.listOpenTransactions({ authUserId: sellerAuth });
+  step('closed transaction is not resumable', openBuyer.transactions.length === 0 && openSeller.transactions.length === 0,
+    `buyerOpen=${openBuyer.transactions.length} sellerOpen=${openSeller.transactions.length}`);
 } catch (error) {
   console.error('txn-proof: UNEXPECTED', String(error?.stack ?? error));
   failures += 1;

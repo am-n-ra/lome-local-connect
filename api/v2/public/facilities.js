@@ -2389,7 +2389,7 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = s.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') as current_state
           from v2_transaction_snapshots s
@@ -2472,7 +2472,7 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = s.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') as current_state
           from v2_transaction_snapshots s
@@ -2552,7 +2552,7 @@ function createTrunkRepository(sql = database()) {
             and m.transaction_id = ${input.transactionId}::uuid
         ), locked as (
           select s.transaction_id, a.actor_account_id,
-            coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') as current_state
+            coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.state_rank desc limit 1), 'intent_created') as current_state
           from v2_transaction_snapshots s
           join actor a on true
           where s.transaction_id = ${input.transactionId}::uuid
@@ -2710,7 +2710,7 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = s.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') as current_state
           from v2_transaction_snapshots s
@@ -4299,7 +4299,7 @@ function createTrunkRepository(sql = database()) {
           join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'buyer'
           join buyer b on b.buyer_account_id = m.account_id
           where s.transaction_id = ${input.transactionId}::uuid
-            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') in ('intent_created', 'qr_ready')
+            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.state_rank desc limit 1), 'intent_created') in ('intent_created', 'qr_ready')
         ),
         inserted as (
           insert into v2_qr_tokens (transaction_id, token_hash, expires_at, verified_at, replay_count)
@@ -4358,7 +4358,7 @@ function createTrunkRepository(sql = database()) {
           join v2_transaction_members m on m.transaction_id = s.transaction_id and m.role = 'seller'
           join seller a on a.seller_account_id = m.account_id
           where s.transaction_id = ${input.transactionId}::uuid
-            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.id desc limit 1), 'intent_created') = 'intent_created'
+            and coalesce((select e.state from v2_transaction_events e where e.transaction_id = s.transaction_id order by e.created_at desc, e.state_rank desc limit 1), 'intent_created') = 'intent_created'
         ),
         inserted as (
           insert into v2_qr_tokens (transaction_id, token_hash, expires_at)
@@ -4651,7 +4651,7 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = q.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') as current_state
           from v2_qr_tokens q
@@ -4670,7 +4670,7 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = q.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') = 'qr_ready'
           for update of q
@@ -4795,7 +4795,7 @@ function createTrunkRepository(sql = database()) {
             select e.state
             from v2_transaction_events e
             where e.transaction_id = s.transaction_id
-            order by e.created_at desc, e.id desc
+            order by e.created_at desc, e.state_rank desc
             limit 1
           ), 'intent_created') as current_state
         from v2_transaction_snapshots s
@@ -4848,14 +4848,14 @@ function createTrunkRepository(sql = database()) {
               select e.state
               from v2_transaction_events e
               where e.transaction_id = s.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), 'intent_created') as current_state,
             coalesce((
               select e.created_at
               from v2_transaction_events e
               where e.transaction_id = s.transaction_id
-              order by e.created_at desc, e.id desc
+              order by e.created_at desc, e.state_rank desc
               limit 1
             ), s.created_at) as last_event_at
           from v2_transaction_snapshots s
