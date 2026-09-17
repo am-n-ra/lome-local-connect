@@ -2737,6 +2737,39 @@ function createTrunkRepository(sql = database()) {
           from result r
           on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
           returning entity_id
+        ),
+        -- FF-7 — notifie la contrepartie (« à vous d'agir ») à chaque transition acceptée.
+        counterparty as (
+          select distinct r.transaction_id, m.account_id as recipient_account_id
+          from result r
+          join v2_transaction_members m on m.transaction_id = r.transaction_id
+          where m.role <> ${input.actorRole}::text
+        ),
+        notified as (
+          insert into v2_notification_events (recipient_account_id, event_type, entity_type, entity_id, dedupe_key, payload, correlation_id)
+          select c.recipient_account_id, 'transaction_turn', 'transaction', c.transaction_id::text,
+                 c.transaction_id::text || ':' || ${input.to}::text || ':turn',
+                 jsonb_build_object('state', ${input.to}::text, 'from', ${input.from}::text, 'actorRole', ${input.actorRole}::text),
+                 ${input.correlationId}
+          from counterparty c
+          on conflict (recipient_account_id, dedupe_key) do nothing
+          returning id, recipient_account_id
+        ),
+        deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select id, 'in_app', 'queued' from notified
+          on conflict (event_id, channel) do nothing
+          returning id
+        ),
+        -- Push web seulement si le destinataire a un abonnement actif (canal existant).
+        push_deliveries as (
+          insert into v2_notification_deliveries (event_id, channel, state)
+          select n.id, 'web_push', 'queued'
+          from notified n
+          join v2_web_push_subscriptions s on s.account_id = n.recipient_account_id
+          where s.permission_state = 'granted' and s.revoked_at is null
+          on conflict (event_id, channel) do nothing
+          returning id
         )
         select transaction_id, current_state, event_state, actor_account_id from result
         limit 1

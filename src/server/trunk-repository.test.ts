@@ -892,6 +892,13 @@ describe('transaction persistence Root seam', () => {
     expect(call.queries[0]).toContain("on conflict (transaction_id, state) do nothing");
     expect(call.queries[0]).toContain('insert into v2_audit_events');
     expect(call.queries[0]).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
+    // FF-7 : la contrepartie est notifiée (« à vous d'agir »).
+    expect(call.queries[0]).toContain('insert into v2_notification_events');
+    expect(call.queries[0]).toContain("'transaction_turn'");
+    expect(call.queries[0]).toContain("m.role <> ");
+    expect(call.queries[0]).toContain('insert into v2_notification_deliveries');
+    expect(call.queries[0]).toContain("'web_push'");
+    expect(call.queries[0]).toContain('on conflict (recipient_account_id, dedupe_key) do nothing');
   });
 
   it('rejects a stale or unauthorized transaction transition when the guarded query matches no row', async () => {
