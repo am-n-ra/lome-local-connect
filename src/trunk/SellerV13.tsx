@@ -27,13 +27,15 @@ type SellerV13Props = {
   onClaim?: (facility: PublicFacility) => void;
   /** Entrée directe dans le formulaire de création (ex. depuis « la facilité n'est pas sur la carte »). */
   startInCreate?: boolean;
+  /** Signale que l'intention de création a été consommée (le formulaire est ouvert). */
+  onConsumeCreateIntent?: () => void;
   catalogue?: SellerCatalogueResult | null;
   queue?: SellerAvailabilityRequest[];
   publicFacilities?: PublicFacility[];
   ownedIds?: string[];
 };
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, startInCreate = false, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(startInCreate);
   const [busy, setBusy] = useState(false);
@@ -72,6 +74,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   }, []);
 
   useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
+
+  // L'intention de création ne vaut que pour la montée qui l'a reçue : on la
+  // consomme aussitôt, sinon le formulaire se rouvrirait à chaque retour sur
+  // l'espace vendeur.
+  useEffect(() => { if (startInCreate) onConsumeCreateIntent?.(); }, [startInCreate, onConsumeCreateIntent]);
 
   const locateMe = useCallback(() => {
     if (!('geolocation' in navigator)) { setCreateError('Géolocalisation indisponible — saisissez les coordonnées manuellement.'); return; }

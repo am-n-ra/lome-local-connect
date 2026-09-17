@@ -92,4 +92,12 @@ describe('SellerV13 entry boundary (founder bug: switch → installed shell inst
     expect(text()).toContain("Type d'établissement");
     expect(text()).toContain('Créer ma facilité');
   });
+
+  it('consumes the create intent once so a later visit does not reopen the form', () => {
+    let consumed = 0;
+    act(() => {
+      root.render(<SellerV13 onClose={() => {}} catalogue={emptyCatalogue} publicFacilities={[]} ownedIds={[]} startInCreate onConsumeCreateIntent={() => { consumed += 1; }} />);
+    });
+    expect(consumed).toBe(1);
+  });
 });

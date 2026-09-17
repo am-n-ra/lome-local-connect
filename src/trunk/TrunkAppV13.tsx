@@ -1649,7 +1649,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} startInCreate={sellerCreateIntent} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
