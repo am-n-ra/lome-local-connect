@@ -366,7 +366,7 @@ var toProduct = (row) => {
     unit: String(row.unit ?? "unit"),
     couponLabel: row.coupon_label ? String(row.coupon_label) : null,
     currency: String(row.currency ?? "XOF"),
-    stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Number(row.quantity_allocated_omni),
+    stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Math.max(0, Number(row.quantity_allocated_omni) - Number(row.quantity_reserved_omni ?? 0)),
     prixOriginal: priceMinor,
     prixReduit,
     pourcentageReduction: percentage
@@ -1714,7 +1714,7 @@ function createTrunkRepository(sql = database()) {
               select 1 from v2_products avqp
               where avqp.facility_id = f.id
                 and avqp.publication_state = 'published'
-                and avqp.quantity_allocated_omni >= ${quantiteMin}
+                and greatest(avqp.quantity_allocated_omni - avqp.quantity_reserved_omni, 0) >= ${quantiteMin}
             )`}
             ${budgetMaxMinor === null ? sql`` : sql`and exists (
               select 1 from v2_products bpp
@@ -1753,7 +1753,7 @@ function createTrunkRepository(sql = database()) {
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
-               p.quantity_allocated_omni,
+               p.quantity_allocated_omni, p.quantity_reserved_omni,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
@@ -1892,6 +1892,7 @@ function createTrunkRepository(sql = database()) {
           p.discount_kind,
           p.discount_value_minor,
           p.quantity_allocated_omni,
+          p.quantity_reserved_omni,
           case
             when p.discount_kind = 'percentage' and p.discount_value_minor between 1 and 90
               then p.price_minor - floor((p.price_minor * p.discount_value_minor) / 100.0)
@@ -1922,7 +1923,7 @@ function createTrunkRepository(sql = database()) {
         description: row.description === null ? null : String(row.description),
         unit: String(row.unit),
         currency: String(row.currency),
-        stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Number(row.quantity_allocated_omni),
+        stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Math.max(0, Number(row.quantity_allocated_omni) - Number(row.quantity_reserved_omni ?? 0)),
         prixOriginal: Number(row.price_minor),
         prixReduit: row.net_price_minor === null || row.net_price_minor === void 0 ? Number(row.price_minor) : Number(row.net_price_minor),
         pourcentageReduction: row.discount_kind === "percentage" ? Math.round(Number(row.discount_value_minor ?? 0)) : 0,
@@ -2658,6 +2659,18 @@ function createTrunkRepository(sql = database()) {
           where pi.id = s.intent_id
             and pi.state <> 'completed'
           returning pi.id
+        ),
+        -- FF-8 : décrément du stock à la clôture. Ancré sur closed_event, qui est
+        -- « on conflict do nothing returning » : sur un replay de notation la CTE
+        -- est vide, donc le stock n'est décrémenté qu'une fois par transaction.
+        stock_settle as (
+          update v2_products p
+          set quantity_allocated_omni = greatest(p.quantity_allocated_omni - s.quantity, 0),
+              quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)
+          from closed_event c
+          join v2_transaction_snapshots s on s.transaction_id = c.transaction_id
+          where p.id = s.product_id
+          returning p.id
         )
         select r.id, r.transaction_id, r.score, r.note
         from v2_ratings r
@@ -4203,7 +4216,7 @@ function createTrunkRepository(sql = database()) {
             and f.id = any(r.facility_scope)
             and p.publication_state = 'published'
             and r.product_id = p.id
-            and ${input.quantityAvailable} <= p.quantity_allocated_omni
+            and ${input.quantityAvailable} <= greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0)
         ),
         inserted as (
           insert into v2_availability_responses
@@ -4458,16 +4471,49 @@ function createTrunkRepository(sql = database()) {
             and ar.facility_id = any(r.facility_scope)
             and f.account_id is not null
         ),
+        -- FF-8 : pas de survente au verrou. Le stock disponible est le stock déclaré
+        -- moins les réservations vivantes ; une intention déjà existante (replay
+        -- idempotent) ne déréserve pas et ne revérifie donc pas la garde.
+        reserved as (
+          select p.id as product_id,
+                 greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0) as available
+          from v2_products p
+          join eligible e on e.product_id = p.id
+        ),
+        stock_ok as (
+          select e.*
+          from eligible e
+          join reserved rs on rs.product_id = e.product_id
+          where rs.available >= e.quantity
+             or exists (select 1 from existing)
+        ),
         intent_upsert as (
           insert into v2_purchase_intents
             (buyer_account_id, response_id, transaction_id, idempotency_key, state)
           select b.buyer_account_id, e.response_id, gen_random_uuid(), ${input.idempotencyKey}, 'active'
           from buyer b
-          cross join eligible e
+          cross join stock_ok e
           where not exists (select 1 from existing)
           on conflict (buyer_account_id, idempotency_key)
           do update set idempotency_key = excluded.idempotency_key
           returning id, response_id, transaction_id, buyer_account_id, state
+        ),
+        -- FF-8 : seule une intention réellement créée réserve du stock ; un replay
+        -- idempotent retrouve la ligne existante et ne réserve pas deux fois.
+        fresh_intent as (
+          select i.* from intent_upsert i
+          where not exists (select 1 from existing x where x.id = i.id)
+        ),
+        product_reserve as (
+          update v2_products p
+          set quantity_reserved_omni = p.quantity_reserved_omni + fi.quantity
+          from (
+            select e.product_id, e.quantity
+            from fresh_intent i
+            join stock_ok e on e.response_id = i.response_id
+          ) fi
+          where p.id = fi.product_id
+          returning p.id
         ),
         intent_result as (
           select id, response_id, transaction_id, buyer_account_id, state from intent_upsert
@@ -4850,6 +4896,17 @@ function createTrunkRepository(sql = database()) {
           where r.id = st.request_id
             and r.status in ('draft', 'submitted', 'responding')
           returning r.id
+        ),
+        -- FF-8 : libération du stock à l'expiration. Ancré sur intent_expired
+        -- (update … returning) : idempotent, une intention déjà expirée ne libère
+        -- pas deux fois. Le stock déclaré est intact, seule la réservation tombe.
+        stock_release as (
+          update v2_products p
+          set quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)
+          from intent_expired ie
+          join v2_transaction_snapshots s on s.intent_id = ie.id
+          where p.id = s.product_id
+          returning p.id
         ),
         audited as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)

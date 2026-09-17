@@ -132,6 +132,15 @@ describe('public product boundary (v3 model)', () => {
     expect(product.stockLoueOmni).toBe(3);
   });
 
+  it('projects reserved units out of the advertised stock (FF-8 no oversell)', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 10, quantity_reserved_omni: 4 });
+    expect(product.stockLoueOmni).toBe(6);
+    // Une réservation historique supérieure au stock déclaré ne doit jamais
+    // produire une disponibilité négative.
+    const overReserved = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 2, quantity_reserved_omni: 5 });
+    expect(overReserved.stockLoueOmni).toBe(0);
+  });
+
   it('a discount-less row maps to 0% (creation itself rejects discount-less products)', () => {
     const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
     expect(product.pourcentageReduction).toBe(0);
@@ -1696,6 +1705,10 @@ describe('purchase-intent persistence Root seam', () => {
     // (bug 'transaction_idand' qui rendait la requête SQL invalide).
     expect(call.queries[0]).toContain('s.transaction_id and m.role');
     expect(call.queries[0]).not.toContain('transaction_idand');
+    // FF-8 : le verrou réserve le stock et refuse la survente.
+    expect(call.queries[0]).toContain('greatest(p.quantity_allocated_omni - p.quantity_reserved_omni, 0) as available');
+    expect(call.queries[0]).toContain('rs.available >= e.quantity');
+    expect(call.queries[0]).toContain('set quantity_reserved_omni = p.quantity_reserved_omni + fi.quantity');
   });
 
   it('rejects an unavailable or out-of-scope response without returning an intent', async () => {
@@ -1978,6 +1991,11 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('update v2_purchase_intents pi');
     expect(call.queries[0]).toContain("set state = 'completed'");
     expect(call.queries[0]).toContain('pi.id = s.intent_id');
+    // FF-8 : la clôture décrémente le stock déclaré ET la réservation, ancré sur
+    // closed_event (replay-safe : la CTE est vide si l'événement existe déjà).
+    expect(call.queries[0]).toContain('set quantity_allocated_omni = greatest(p.quantity_allocated_omni - s.quantity, 0)');
+    expect(call.queries[0]).toContain('quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)');
+    expect(call.queries[0]).toContain('from closed_event c');
   });
 
   it('rejects an invalid score before touching the database', async () => {
@@ -2611,6 +2629,9 @@ describe('FF-3 expiration sweep (server, pre-lock only)', () => {
     expect(query).toContain("'intent_expired'");
     expect(query).toContain("'stalled_before_lock'");
     expect(query).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
+    // FF-8 : l'expiration libère la réservation, sans toucher au stock déclaré.
+    expect(query).toContain('set quantity_reserved_omni = greatest(p.quantity_reserved_omni - s.quantity, 0)');
+    expect(query).toContain('join v2_transaction_snapshots s on s.intent_id = ie.id');
   });
 
   it('reports zero when nothing is stalled (idempotent no-op)', async () => {
