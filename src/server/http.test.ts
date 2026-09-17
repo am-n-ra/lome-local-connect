@@ -146,6 +146,13 @@ describe('Root HTTP error boundary', () => {
     expect(response.body.error.retryable).toBe(false);
   });
 
+  it('maps a refused QR revocation to a non-retryable 409 POLICY_REJECTED (FF-5)', () => {
+    const response = toApiErrorResponse('corr-qr-revoke', new TransactionPolicyError('QR revocation requires an authorized unverified transaction QR.'));
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('POLICY_REJECTED');
+    expect(response.body.error.retryable).toBe(false);
+  });
+
   it('accepts only the locked transaction states at the HTTP boundary', () => {
     expect(isTransactionState('qr_verified')).toBe(true);
     expect(isTransactionState('closed')).toBe(true);

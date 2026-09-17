@@ -83,3 +83,13 @@ export function deadlineLabel(minutesLeft: number): string {
   const human = abs < 60 ? `${abs} min` : abs < 1440 ? `${Math.floor(abs / 60)} h ${abs % 60 ? (abs % 60) + ' min' : ''}`.trim() : `${Math.floor(abs / 1440)} j`;
   return overdue ? `dépassé de ${human}` : `${human} restant`;
 }
+
+/** FF-5 — borne le TTL QR demandé sur la fenêtre 1..60 min (défaut 10). */
+export function resolveQrTtlMinutes(requested: unknown): number {
+  return Number.isInteger(requested) && (requested as number) > 0 && (requested as number) <= 60 ? (requested as number) : 10;
+}
+
+/** FF-5 — échéance ISO d'un QR émis, à partir de l'instant d'émission et du TTL (minutes). */
+export function qrExpiryFrom(issuedAtIso: string, ttlMinutes: number): string {
+  return new Date(new Date(issuedAtIso).getTime() + ttlMinutes * 60 * 1000).toISOString();
+}

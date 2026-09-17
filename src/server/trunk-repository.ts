@@ -7,6 +7,7 @@ import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfig
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
 import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
+import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -4584,10 +4585,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       authUserId: string;
       transactionId: string;
       correlationId: string;
+      now?: string;
+      /** FF-5 — TTL paramétrable de la fenêtre QR (minutes). Défaut 10. */
+      ttlMinutes?: number;
     }): Promise<QrTokenIssuePersistenceResult> {
       const token = randomBytes(32).toString('base64url');
       const tokenHash = createHash('sha256').update(token).digest('hex');
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+      const issuedAt = input.now ?? new Date().toISOString();
+      const ttlMinutes = resolveQrTtlMinutes(input.ttlMinutes);
+      const expiresAt = qrExpiryFrom(issuedAt, ttlMinutes);
       const rows = await retryDatabase(() => sql`
         with buyer as (
           select a.id as buyer_account_id
@@ -4701,6 +4707,59 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         token,
         expiresAt: new Date(String(row.expires_at)).toISOString(),
       };
+    },
+
+    // FF-5 — révocation d'un QR non encore vérifié. Le vendeur (ou un opérateur)
+    // peut invalider un lien QR émis par erreur avant tout scan ; l'acheteur peut
+    // alors ré-émettre. Sans effet après vérification (verrou).
+    async revokeQrToken(input: {
+      authUserId: string;
+      transactionId: string;
+      correlationId: string;
+      now?: string;
+    }): Promise<{ transactionId: string; revoked: boolean }> {
+      const now = input.now ?? new Date().toISOString();
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        eligible as (
+          select q.transaction_id, act.actor_account_id
+          from v2_qr_tokens q
+          join v2_transaction_members m on m.transaction_id = q.transaction_id
+          join v2_accounts a2 on a2.id = m.account_id
+          join actor act on true
+          where q.transaction_id = ${input.transactionId}::uuid
+            and a2.auth_user_id = ${input.authUserId}
+            and q.verified_at is null
+            and q.replay_count = 0
+            and q.expires_at > ${now}::timestamptz
+          for update of q
+        ),
+        revoked as (
+          update v2_qr_tokens q
+          set expires_at = ${now}::timestamptz
+          from eligible e
+          where q.transaction_id = e.transaction_id
+          returning q.transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'qr_revoked', 'transaction', e.transaction_id::text, ${input.correlationId}, 'revoked_before_scan', ${now}::timestamptz
+          from eligible e
+          join revoked r on r.transaction_id = e.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id from revoked limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new TransactionPolicyError('QR revocation requires an authorized unverified transaction QR.');
+      return { transactionId: String(row.transaction_id), revoked: true };
     },
 
     async createPurchaseIntent(input: {

@@ -176,6 +176,12 @@ export interface QrTokenIssueResult {
   expiresAt: string;
 }
 
+/** FF-5 — résultat de la révocation d'un QR non encore scanné. */
+export interface QrRevocationResult {
+  transactionId: string;
+  revoked: boolean;
+}
+
 export interface QrVerificationResult {
   accepted: boolean;
   transactionId: string;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
+import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -658,6 +659,66 @@ describe('Buyer QR issuance persistence Root seam', () => {
     expect(call.queries[0]).toContain('on conflict (transaction_id) do update');
     expect(call.queries[0]).toContain('verified_at = null');
     expect(call.queries[0]).toContain('replay_count = 0');
+  });
+
+  it('honours a configurable QR TTL when the caller shortens or lengthens the window', async () => {
+    const call = stubSql([{ transaction_id: 'transaction-1', expires_at: '2026-08-23T00:30:00.000Z' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.issueBuyerQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-buyer-qr-ttl',
+      now: '2026-08-23T00:00:00.000Z',
+      ttlMinutes: 30,
+    });
+    expect(result.transactionId).toBe('transaction-1');
+    // La fenêtre demandée fixe l'échéance (paramètre lié, calculé côté serveur).
+    expect(qrExpiryFrom('2026-08-23T00:00:00.000Z', resolveQrTtlMinutes(30))).toBe('2026-08-23T00:30:00.000Z');
+  });
+
+  it('clamps an out-of-range TTL back to the 10 minute default', async () => {
+    const call = stubSql([{ transaction_id: 'transaction-1', expires_at: '2026-08-23T00:10:00.000Z' }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.issueBuyerQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-buyer-qr-ttl-bad',
+      now: '2026-08-23T00:00:00.000Z',
+      ttlMinutes: 9999,
+    });
+    expect(resolveQrTtlMinutes(9999)).toBe(10);
+    expect(qrExpiryFrom('2026-08-23T00:00:00.000Z', resolveQrTtlMinutes(9999))).toBe('2026-08-23T00:10:00.000Z');
+  });
+});
+
+describe('FF-5 QR revocation Root seam', () => {
+  it('revokes an unverified QR held by a participant and audits the action', async () => {
+    const call = stubSql([{ transaction_id: 'transaction-1' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.revokeQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-1',
+      correlationId: 'corr-qr-revoke-1',
+      now: '2026-09-17T10:00:00.000Z',
+    });
+    expect(result).toEqual({ transactionId: 'transaction-1', revoked: true });
+    const query = call.queries[0];
+    expect(query).toContain('q.verified_at is null');
+    expect(query).toContain('q.replay_count = 0');
+    expect(query).toContain('set expires_at =');
+    expect(query).toContain("'qr_revoked'");
+    expect(query).toContain("'revoked_before_scan'");
+    expect(query).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
+  });
+
+  it('refuses to revoke when the QR is already scanned or unknown', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.revokeQrToken({
+      authUserId: 'auth-buyer-1',
+      transactionId: 'transaction-9',
+      correlationId: 'corr-qr-revoke-2',
+    })).rejects.toBeInstanceOf(TransactionPolicyError);
   });
 });
 

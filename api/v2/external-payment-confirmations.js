@@ -255,6 +255,14 @@ function verifyFedaPayWebhookSignature(rawBody, signature) {
   }
 }
 
+// src/trunk/transaction-time.ts
+function resolveQrTtlMinutes(requested) {
+  return Number.isInteger(requested) && requested > 0 && requested <= 60 ? requested : 10;
+}
+function qrExpiryFrom(issuedAtIso, ttlMinutes) {
+  return new Date(new Date(issuedAtIso).getTime() + ttlMinutes * 60 * 1e3).toISOString();
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -4216,7 +4224,9 @@ function createTrunkRepository(sql = database()) {
     async issueBuyerQrToken(input) {
       const token = randomBytes(32).toString("base64url");
       const tokenHash = createHash("sha256").update(token).digest("hex");
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1e3).toISOString();
+      const issuedAt = input.now ?? (/* @__PURE__ */ new Date()).toISOString();
+      const ttlMinutes = resolveQrTtlMinutes(input.ttlMinutes);
+      const expiresAt = qrExpiryFrom(issuedAt, ttlMinutes);
       const rows = await retryDatabase(() => sql`
         with buyer as (
           select a.id as buyer_account_id
@@ -4325,6 +4335,53 @@ function createTrunkRepository(sql = database()) {
         token,
         expiresAt: new Date(String(row.expires_at)).toISOString()
       };
+    },
+    // FF-5 — révocation d'un QR non encore vérifié. Le vendeur (ou un opérateur)
+    // peut invalider un lien QR émis par erreur avant tout scan ; l'acheteur peut
+    // alors ré-émettre. Sans effet après vérification (verrou).
+    async revokeQrToken(input) {
+      const now = input.now ?? (/* @__PURE__ */ new Date()).toISOString();
+      const rows = await retryDatabase(() => sql`
+        with actor as (
+          select a.id as actor_account_id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+        ),
+        eligible as (
+          select q.transaction_id, act.actor_account_id
+          from v2_qr_tokens q
+          join v2_transaction_members m on m.transaction_id = q.transaction_id
+          join v2_accounts a2 on a2.id = m.account_id
+          join actor act on true
+          where q.transaction_id = ${input.transactionId}::uuid
+            and a2.auth_user_id = ${input.authUserId}
+            and q.verified_at is null
+            and q.replay_count = 0
+            and q.expires_at > ${now}::timestamptz
+          for update of q
+        ),
+        revoked as (
+          update v2_qr_tokens q
+          set expires_at = ${now}::timestamptz
+          from eligible e
+          where q.transaction_id = e.transaction_id
+          returning q.transaction_id
+        ),
+        audit as (
+          insert into v2_audit_events
+            (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)
+          select e.actor_account_id, 'qr_revoked', 'transaction', e.transaction_id::text, ${input.correlationId}, 'revoked_before_scan', ${now}::timestamptz
+          from eligible e
+          join revoked r on r.transaction_id = e.transaction_id
+          on conflict (correlation_id, event_type, entity_type, entity_id) do nothing
+          returning entity_id
+        )
+        select transaction_id from revoked limit 1
+      `);
+      const row = rows[0];
+      if (!row) throw new TransactionPolicyError("QR revocation requires an authorized unverified transaction QR.");
+      return { transactionId: String(row.transaction_id), revoked: true };
     },
     async createPurchaseIntent(input) {
       const token = randomBytes(32).toString("base64url");
@@ -6802,8 +6859,31 @@ async function handleApi(req, res, pathname, url) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
         return true;
       }
-      const result = await repository.issueBuyerQrToken({ authUserId, transactionId, correlationId });
+      const result = await repository.issueBuyerQrToken({
+        authUserId,
+        transactionId,
+        correlationId,
+        // FF-5 — TTL paramétrable (minutes) ; borné par le repo (1..60, défaut 10).
+        ttlMinutes: typeof input.ttlMinutes === "number" ? input.ttlMinutes : void 0
+      });
       json(res, 201, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/qr-revocations") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before revoking a transaction QR code."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const transactionId = typeof input.transactionId === "string" ? input.transactionId : "";
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(transactionId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid transaction."));
+        return true;
+      }
+      const result = await repository.revokeQrToken({ authUserId, transactionId, correlationId });
+      json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/qr-issuances") {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
+import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { useFreshnessTimer } from './useFreshnessTimer';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
@@ -78,6 +78,10 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
   const [creditSummary, setCreditSummary] = useState<BuyerCreditSummary | null>(null);
   const pollRef = useRef<number | null>(null);
   const freshness = useFreshnessTimer(liveResponse?.observedAt ?? null);
+
+  // FF-5 — expiration locale du QR émis (dérivée de l'échéance serveur).
+  const qrMinutesLeft = qrExpires ? Math.ceil((new Date(qrExpires).getTime() - Date.now()) / 60000) : 0;
+  const qrExpired = Boolean(qrExpires) && qrMinutesLeft <= 0;
 
   const refreshCredits = useCallback(async () => {
     const token = await getAuthToken();
@@ -219,6 +223,38 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setQrExpires(result.data.expiresAt);
         setStage('qr');
       } else { setError(result.error?.message ?? 'QR non émis.'); }
+    } finally { setBusy(false); }
+  }, [needAuth, txnId]);
+
+  // FF-5 — ré-émission : nouveau QR (nouveau TTL) si l'ancien a expiré.
+  const reissueQr = useCallback(async () => {
+    const token = await needAuth();
+    if (!token || !txnId) return;
+    setBusy(true);
+    try {
+      const result = await issueBuyerQrToken({ transactionId: txnId, token });
+      if (result.ok && result.data) {
+        setQrToken(result.data.token);
+        setQrExpires(result.data.expiresAt);
+        setStage('qr');
+        setToast('Nouveau QR émis.');
+      } else { setError(result.error?.message ?? 'QR non ré-émis.'); }
+    } finally { setBusy(false); }
+  }, [needAuth, txnId]);
+
+  // FF-5 — révocation avant scan (le QR n'est plus valable).
+  const revokeQr = useCallback(async () => {
+    const token = await needAuth();
+    if (!token || !txnId) return;
+    setBusy(true);
+    try {
+      const result = await revokeQrToken({ transactionId: txnId, token });
+      if (result.ok) {
+        setQrToken(null);
+        setQrExpires('');
+        setStage('txn');
+        setToast('QR révoqué — vous pouvez en émettre un nouveau.');
+      } else { setError(result.error?.message ?? 'QR non révoqué.'); }
     } finally { setBusy(false); }
   }, [needAuth, txnId]);
 
@@ -454,9 +490,16 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div className="cardbox" style={{ textAlign: 'center' }}>
           <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  ​1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  ​8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
           <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
-          <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')}</p>
+          {qrExpired ? (
+            <p className="tiny" style={{ color: 'var(--warn, #8a5a00)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>
+          ) : (
+            <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')} ({deadlineLabel(qrMinutesLeft)})</p>
+          )}
           <div className="btnrow">
-            <button className="btn" type="button" onClick={() => void copyQr()}><Copy size={15} /> {copied ? 'Copié' : 'Copier'}</button>
+            <button className="btn" type="button" disabled={busy} onClick={() => void copyQr()}><Copy size={15} /> {copied ? 'Copié' : 'Copier'}</button>
+            {qrExpired
+              ? <button className="btn" type="button" disabled={busy} onClick={() => void reissueQr()}><QrCode size={15} /> Ré-émettre le QR</button>
+              : <button className="btn ghost" type="button" disabled={busy} onClick={() => void revokeQr()}>Révoquer</button>}
             <button className="btn ghost" type="button" onClick={() => setStage('txn')}>Retour</button>
           </div>
         </div>
