@@ -8,7 +8,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // exact same build, so map tile/feature data deserializes correctly in production
 // (previously: blank map, "can't deserialize StructArrayLayout ..." in the console).
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-import type { PublicFacility, RouteTarget } from './types';
+import type { PublicFacility, RouteTarget, RoutingAvailable } from './types';
+import { getRoadRoute } from './api';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
@@ -263,6 +264,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const routeOriginRequestKey = useRef<string | null>(null);
   const lastRouteDrawKey = useRef<string | null>(null);
   const [routeStatus, setRouteStatus] = useState<string | null>(null);
+  const [roadRoute, setRoadRoute] = useState<RoutingAvailable | null>(null);
+  const [roadRouteReason, setRoadRouteReason] = useState<string | null>(null);
 
   const updateScreenUserPosition = useCallback(() => {
     const map = mapRef.current;
@@ -1279,6 +1282,32 @@ const syncCameraPadding = () => {
     map.easeTo({ center: [followTarget.longitude, followTarget.latitude], zoom: followZoom, duration:500, essential: true });
   }, [followTarget]);
 
+  // Real road geometry from the server proxy. Independent of the trace effect
+  // below so a slow or unavailable provider never blocks the honest fallback.
+  useEffect(() => {
+    if (!routeTarget) {
+      setRoadRoute(null);
+      setRoadRouteReason(null);
+      return;
+    }
+    const origin = userPositionRef.current;
+    if (!origin || !Number.isFinite(origin.latitude) || !Number.isFinite(origin.longitude)) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await getRoadRoute({ from: origin, to: routeTarget });
+      if (cancelled) return;
+      const data = result.ok ? result.data : undefined;
+      if (data?.available) {
+        setRoadRoute(data);
+        setRoadRouteReason(null);
+        return;
+      }
+      setRoadRoute(null);
+      setRoadRouteReason(result.ok ? data?.message ?? null : null);
+    })();
+    return () => { cancelled = true; };
+  }, [routeTarget, userPosition]);
+
   // Evergreen route trace (écran 10): update the GeoJSON source data when the
   // route target or the user position changes; clear it when closed. Camera
   // framing happens once per drawn route, never on unrelated re-renders.
@@ -1296,18 +1325,24 @@ const syncCameraPadding = () => {
     }
     const origin = userPositionRef.current;
     if (origin && Number.isFinite(origin.latitude) && Number.isFinite(origin.longitude)) {
-      const drawKey = `${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}>${routeTarget.latitude.toFixed(5)},${routeTarget.longitude.toFixed(5)}`;
+      const roadKey = roadRoute ? `road:${roadRoute.distanceMeters.toFixed(2)}` : `direct:${roadRouteReason ?? ''}`;
+      const drawKey = `${origin.latitude.toFixed(5)},${origin.longitude.toFixed(5)}>${routeTarget.latitude.toFixed(5)},${routeTarget.longitude.toFixed(5)}|${roadKey}`;
       if (lastRouteDrawKey.current !== drawKey) {
         lastRouteDrawKey.current = drawKey;
-        source.setData(routeFeatureCollection(routeTarget, origin));
-        setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct)`);
+        if (roadRoute) {
+          source.setData({ type: 'FeatureCollection', features: [{ type: 'Feature', geometry: { type: 'LineString', coordinates: roadRoute.coordinates }, properties: { name: routeTarget.name } }] });
+          setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${roadRoute.distanceLabel} · ${roadRoute.durationLabel}`);
+        } else {
+          source.setData(routeFeatureCollection(routeTarget, origin));
+          setRouteStatus(`Itinéraire vers ${routeTarget.name} · ${routeDistanceLabel(origin, routeTarget)} (tracé direct — ${roadRouteReason ?? 'itinéraire routier indisponible'})`);
+        }
         pauseMotion('interaction', false);
         const isDesktop = window.innerWidth >= 1040;
+        const points = roadRoute ? roadRoute.coordinates : [[origin.longitude, origin.latitude], [routeTarget.longitude, routeTarget.latitude]];
+        const lngs = points.map((point) => point[0]);
+        const lats = points.map((point) => point[1]);
         map.fitBounds(
-          [
-            [Math.min(origin.longitude, routeTarget.longitude), Math.min(origin.latitude, routeTarget.latitude)],
-            [Math.max(origin.longitude, routeTarget.longitude), Math.max(origin.latitude, routeTarget.latitude)],
-          ],
+          [[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]],
           { padding: { top: 96, right: 76, bottom: 220, left: isDesktop ? 430 : 76 }, maxZoom: 14, duration: 900, essential: true },
         );
       }
@@ -1325,7 +1360,7 @@ const syncCameraPadding = () => {
         ? 'Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire ».'
         : 'Recherche de votre position pour tracer l’itinéraire…',
     );
-  }, [routeTarget, userPosition, locationState]);
+  }, [routeTarget, userPosition, locationState, roadRoute, roadRouteReason]);
 
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'

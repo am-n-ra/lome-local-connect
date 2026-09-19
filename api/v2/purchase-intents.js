@@ -5283,6 +5283,120 @@ async function readPrivateEvidence(objectKey) {
   return { body, contentType: result.blob.contentType ?? "application/octet-stream", size: body.length };
 }
 
+// src/server/routing-adapter.ts
+var PILOT_ZONE_BOUNDS = { west: 1, south: 5.85, east: 2.45, north: 6.5 };
+var RoutingOutOfZoneError = class extends Error {
+  constructor() {
+    super("This facility is outside the Omni pilot zone, so a road itinerary is not offered.");
+    this.name = "RoutingOutOfZoneError";
+  }
+};
+var RoutingConfigurationError = class extends Error {
+  constructor() {
+    super("Routing provider is not configured.");
+    this.name = "RoutingConfigurationError";
+  }
+};
+var RoutingProviderError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "RoutingProviderError";
+  }
+};
+function isInsidePilotZone(point) {
+  return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && point.longitude >= PILOT_ZONE_BOUNDS.west && point.longitude <= PILOT_ZONE_BOUNDS.east && point.latitude >= PILOT_ZONE_BOUNDS.south && point.latitude <= PILOT_ZONE_BOUNDS.north;
+}
+var CACHE_TTL_MS = 5 * 60 * 1e3;
+var CACHE_MAX_ENTRIES = 200;
+var cache = /* @__PURE__ */ new Map();
+function cacheKey(from, to, profile) {
+  const r = (n) => n.toFixed(5);
+  return `${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
+}
+var REQUEST_TIMEOUT_MS = 6e3;
+async function fetchRoadRoute(input) {
+  const profile = input.profile ?? "driving";
+  if (!isInsidePilotZone(input.from) || !isInsidePilotZone(input.to)) {
+    throw new RoutingOutOfZoneError();
+  }
+  const baseUrl2 = process.env.OSRM_BASE_URL?.trim();
+  if (!baseUrl2) throw new RoutingConfigurationError();
+  const key = cacheKey(input.from, input.to, profile);
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
+  const coords = `${input.from.longitude},${input.from.latitude};${input.to.longitude},${input.to.latitude}`;
+  const url = `${baseUrl2.replace(/\/+$/, "")}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let response;
+  try {
+    response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+  } catch (error) {
+    throw new RoutingProviderError(
+      error instanceof Error && error.name === "AbortError" ? "The routing provider did not respond in time." : "The routing provider could not be reached."
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) throw new RoutingProviderError(`The routing provider returned ${response.status}.`);
+  const payload = await response.json();
+  const route = payload.routes?.[0];
+  const coordinates = route?.geometry?.coordinates ?? [];
+  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
+    throw new RoutingProviderError("The routing provider returned no usable itinerary.");
+  }
+  const value = {
+    provider: "osrm",
+    profile,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+    coordinates,
+    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
+      instruction: formatStepInstruction(step),
+      distanceMeters: step.distance ?? 0,
+      durationSeconds: step.duration ?? 0
+    }))
+  };
+  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+function formatStepInstruction(step) {
+  const modifier = step.maneuver?.modifier;
+  const name = step.name?.trim();
+  const on = name ? ` sur ${name}` : "";
+  switch (step.maneuver?.type) {
+    case "depart":
+      return name ? `Partez${on}` : "Partez";
+    case "arrive":
+      return "Vous \xEAtes arriv\xE9";
+    case "roundabout":
+      return name ? `Au rond-point, continuez${on}` : "Au rond-point, continuez";
+    case "merge":
+      return `Ins\xE9rez-vous${on}`;
+    case "fork":
+      return `\xC0 la bifurcation, gardez${modifier === "left" ? " la gauche" : " la droite"}`;
+    case "end of road":
+      return `Au bout de la route, tournez${modifier === "left" ? " \xE0 gauche" : " \xE0 droite"}${on}`;
+    case "turn": {
+      const dir = modifier === "left" || modifier === "sharp left" || modifier === "slight left" ? " \xE0 gauche" : modifier === "right" || modifier === "sharp right" || modifier === "slight right" ? " \xE0 droite" : "";
+      return `Tournez${dir}${on}`;
+    }
+    case "new name":
+    case "continue":
+    default:
+      return name ? `Continuez${on}` : "Continuez tout droit";
+  }
+}
+function formatDistanceLabel(meters) {
+  return meters < 1e3 ? `${Math.round(meters)} m` : `${(meters / 1e3).toFixed(1).replace(".", ",")} km`;
+}
+function formatDurationLabel(seconds) {
+  const minutes = Math.max(1, Math.round(seconds / 60));
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, "0")}`;
+}
+
 // src/server/http.ts
 var json = (res, status, body) => {
   res.statusCode = status;
@@ -5442,6 +5556,12 @@ function numberParam(url, key, fallback) {
   const value = Number(url.searchParams.get(key));
   return Number.isFinite(value) ? value : fallback;
 }
+function coordinateParam(url, key) {
+  const raw = url.searchParams.get(key)?.trim();
+  if (!raw) return Number.NaN;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : Number.NaN;
+}
 async function handleApi(req, res, pathname, url) {
   const correlationId = crypto.randomUUID();
   if (req.method === "OPTIONS") {
@@ -5455,6 +5575,55 @@ async function handleApi(req, res, pathname, url) {
   if (!pathname.startsWith("/api/v2/")) return false;
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN ?? "*");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Idempotency-Key");
+  if (req.method === "GET" && pathname === "/api/v2/public/routing") {
+    const from = {
+      latitude: coordinateParam(url, "from_lat"),
+      longitude: coordinateParam(url, "from_lng")
+    };
+    const to = {
+      latitude: coordinateParam(url, "to_lat"),
+      longitude: coordinateParam(url, "to_lng")
+    };
+    if (![from.latitude, from.longitude, to.latitude, to.longitude].every(Number.isFinite)) {
+      json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide from_lat, from_lng, to_lat and to_lng."));
+      return true;
+    }
+    const requestedProfile = url.searchParams.get("profile");
+    const profile = requestedProfile === "foot" ? "foot" : "driving";
+    try {
+      const route = await fetchRoadRoute({ from, to, profile });
+      json(res, 200, {
+        ok: true,
+        correlationId,
+        data: {
+          available: true,
+          provider: route.provider,
+          profile: route.profile,
+          distanceMeters: route.distanceMeters,
+          durationSeconds: route.durationSeconds,
+          distanceLabel: formatDistanceLabel(route.distanceMeters),
+          durationLabel: formatDurationLabel(route.durationSeconds),
+          coordinates: route.coordinates,
+          steps: route.steps
+        }
+      });
+    } catch (error) {
+      if (error instanceof RoutingConfigurationError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: "PROVIDER_NOT_CONFIGURED", message: "No routing provider is configured for this environment." } });
+        return true;
+      }
+      if (error instanceof RoutingOutOfZoneError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: "OUT_OF_ZONE", message: error.message } });
+        return true;
+      }
+      if (error instanceof RoutingProviderError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: "PROVIDER_ERROR", message: error.message } });
+        return true;
+      }
+      throw error;
+    }
+    return true;
+  }
   try {
     const repository = createTrunkRepository();
     if (req.method === "GET" && pathname === "/api/v2/account/context") {
@@ -5735,11 +5904,13 @@ async function handleApi(req, res, pathname, url) {
         }
         return { sourceRef, name, category, address, latitude, longitude };
       });
+      const inZone = normalized.filter((item) => isInsidePilotZone(item));
+      const skippedOutOfZone = normalized.length - inZone.length;
       const results = [];
-      for (const item of normalized) {
+      for (const item of inZone) {
         results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
       }
-      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, results } });
+      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone, results } });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/public/facilities" && url.searchParams.get("action") === "operator-import") {
@@ -5759,6 +5930,10 @@ async function handleApi(req, res, pathname, url) {
       const attribution = typeof input.attribution === "string" ? input.attribution.trim() : "";
       if (provider !== "openstreetmap" || !sourceRef || !name || !attribution || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || sourceRef.length > 180 || name.length > 180) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates."));
+        return true;
+      }
+      if (!isInsidePilotZone({ latitude, longitude })) {
+        json(res, 400, errorBody(correlationId, "OUT_OF_PILOT_ZONE", "This facility is outside the Omni pilot zone and cannot be imported."));
         return true;
       }
       const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, correlationId });

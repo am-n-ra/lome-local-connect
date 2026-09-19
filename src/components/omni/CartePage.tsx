@@ -872,6 +872,12 @@ export function CartePage({
     setSearchRunKey(`${Date.now()}:${query.trim()}:${category ?? ""}`);
   }
 
+  // DEAD CODE — the trunk rebuild orphaned this file: `src/main.tsx` mounts only
+  // `TrunkAppV13`, and nothing imports `CartePage`. It is kept as reference for
+  // the legacy turn-by-turn surface. If it is ever revived, it must NOT call a
+  // routing provider from the browser (it used to hit the public OSRM demo
+  // server, whose policy allows only reasonable non-commercial use); go through
+  // `GET /api/v2/public/routing` like `TrunkMap` does.
   async function buildItinerary(f: MapFacility) {
     if (!preciseUserPos) {
       toast.info(
@@ -882,29 +888,30 @@ export function CartePage({
     const from = preciseUserPos;
     setRoutingBusy(true);
     try {
-      const url = `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${f.longitude},${f.latitude}?overview=full&geometries=geojson&steps=true`;
-      const res = await fetch(url);
-      const json = (await res.json()) as {
-        routes?: {
-          geometry: { coordinates: [number, number][] };
-          legs: {
-            steps: {
-              maneuver: { type: string; modifier?: string };
-              name: string;
-              distance: number;
-            }[];
-          }[];
-        }[];
+      const params = new URLSearchParams({
+        from_lat: String(from.lat),
+        from_lng: String(from.lng),
+        to_lat: String(f.latitude),
+        to_lng: String(f.longitude),
+        profile: "foot",
+      });
+      const res = await fetch(`/api/v2/public/routing?${params.toString()}`, { headers: { Accept: "application/json" } });
+      const payload = (await res.json()) as {
+        data?: {
+          available?: boolean;
+          coordinates?: [number, number][];
+          steps?: { instruction: string; distanceMeters: number }[];
+        };
       };
-      const route = json.routes?.[0];
-      if (!route) {
-        toast.error("Itinéraire indisponible.");
+      const route = payload.data;
+      if (!route?.available || !route.coordinates) {
+        toast.error("Itinéraire routier indisponible pour ce lieu.");
         return;
       }
-      setRouteCoords(route.geometry.coordinates);
-      const list: RouteStep[] = (route.legs[0]?.steps ?? []).map((s) => ({
-        instruction: `${translateManeuver(s.maneuver.type, s.maneuver.modifier)}${s.name ? ` sur ${s.name}` : ""}`,
-        distance: s.distance,
+      setRouteCoords(route.coordinates);
+      const list: RouteStep[] = (route.steps ?? []).map((s) => ({
+        instruction: s.instruction,
+        distance: s.distanceMeters,
       }));
       setSteps(list);
       speak(`Itinéraire vers ${f.name}. ${list[0]?.instruction ?? ""}`);

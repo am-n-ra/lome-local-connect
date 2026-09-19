@@ -408,6 +408,37 @@ export interface PublicFacilityImportResult {
   trust: 'unclaimed';
 }
 
+/** Result of the server-side routing proxy (`GET /api/v2/public/routing`).
+ * `available: false` is a normal, honest outcome: the caller keeps its own
+ * labelled fallback instead of pretending a straight line is a road route. */
+export type RoutingUnavailableReason = 'PROVIDER_NOT_CONFIGURED' | 'OUT_OF_ZONE' | 'PROVIDER_ERROR';
+
+export interface RoutingStep {
+  instruction: string;
+  distanceMeters: number;
+  durationSeconds: number;
+}
+
+export interface RoutingAvailable {
+  available: true;
+  provider: 'osrm';
+  profile: 'driving' | 'foot';
+  distanceMeters: number;
+  durationSeconds: number;
+  distanceLabel: string;
+  durationLabel: string;
+  coordinates: [number, number][];
+  steps: RoutingStep[];
+}
+
+export interface RoutingUnavailable {
+  available: false;
+  reason: RoutingUnavailableReason;
+  message: string;
+}
+
+export type RoutingResult = RoutingAvailable | RoutingUnavailable;
+
 export type ClaimRequestState = 'draft' | 'submitted' | 'admin_review' | 'needs_more_evidence';
 
 export type EvidenceKind = 'identity' | 'company' | 'facility' | 'product' | 'service' | 'location';

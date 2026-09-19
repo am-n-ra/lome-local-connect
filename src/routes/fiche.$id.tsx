@@ -71,22 +71,30 @@ function FichePage() {
     );
   }, []);
 
+  // DEAD CODE — orphaned in the trunk rebuild (`src/main.tsx` mounts only
+  // `TrunkAppV13`). Kept as reference. Routing must go through the Omni proxy
+  // (`GET /api/v2/public/routing`), never a browser call to a public provider.
   async function itinerary() {
     if (!facility) return;
     const from = userPos ?? fallbackCenter;
     setBusy(true);
     try {
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/foot/${from.lng},${from.lat};${facility.longitude},${facility.latitude}?overview=full&geometries=geojson`,
-      );
-      const json = (await res.json()) as {
-        routes?: { geometry: { coordinates: [number, number][] } }[];
+      const params = new URLSearchParams({
+        from_lat: String(from.lat),
+        from_lng: String(from.lng),
+        to_lat: String(facility.latitude),
+        to_lng: String(facility.longitude),
+        profile: "foot",
+      });
+      const res = await fetch(`/api/v2/public/routing?${params.toString()}`, { headers: { Accept: "application/json" } });
+      const payload = (await res.json()) as {
+        data?: { available?: boolean; coordinates?: [number, number][] };
       };
-      if (!json.routes?.[0]) {
-        toast.error("Itinéraire indisponible.");
+      if (!payload.data?.available || !payload.data.coordinates) {
+        toast.error("Itinéraire routier indisponible pour ce lieu.");
         return;
       }
-      setRouteCoords(json.routes[0].geometry.coordinates);
+      setRouteCoords(payload.data.coordinates);
     } catch {
       toast.error("Impossible de calculer l'itinéraire.");
     } finally {

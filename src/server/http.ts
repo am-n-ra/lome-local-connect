@@ -6,6 +6,15 @@ import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvide
 import type { TransactionState } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
 import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
+import {
+  RoutingConfigurationError,
+  RoutingOutOfZoneError,
+  RoutingProviderError,
+  fetchRoadRoute,
+  formatDistanceLabel,
+  formatDurationLabel,
+  isInsidePilotZone,
+} from './routing-adapter';
 
 const json = (res: ServerResponse, status: number, body: unknown) => {
   res.statusCode = status;
@@ -241,7 +250,17 @@ export const isTransactionState = (value: unknown): value is TransactionState =>
 function numberParam(url: URL, key: string, fallback: number): number {
   const value = Number(url.searchParams.get(key));
   return Number.isFinite(value) ? value : fallback;
-    }
+}
+
+/** Coordinate param that distinguishes "absent/blank" from a real value.
+ * `numberParam` cannot be used here: `Number(null)` is 0 (not NaN), so a
+ * request omitting its coordinates would silently route to 0,0. */
+function coordinateParam(url: URL, key: string): number {
+  const raw = url.searchParams.get(key)?.trim();
+  if (!raw) return Number.NaN;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : Number.NaN;
+}
 
 export async function handleApi(req: IncomingMessage, res: ServerResponse, pathname: string, url: URL) {
   const correlationId = crypto.randomUUID();
@@ -256,6 +275,58 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
   if (!pathname.startsWith('/api/v2/')) return false;
   res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN ?? '*');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key');
+
+  // Routing is served BEFORE the repository is created: it needs no database,
+  // and a database outage must not turn a working itinerary into a 500.
+  if (req.method === 'GET' && pathname === '/api/v2/public/routing') {
+    const from = {
+      latitude: coordinateParam(url, 'from_lat'),
+      longitude: coordinateParam(url, 'from_lng'),
+    };
+    const to = {
+      latitude: coordinateParam(url, 'to_lat'),
+      longitude: coordinateParam(url, 'to_lng'),
+    };
+    if (![from.latitude, from.longitude, to.latitude, to.longitude].every(Number.isFinite)) {
+      json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide from_lat, from_lng, to_lat and to_lng.'));
+      return true;
+    }
+    const requestedProfile = url.searchParams.get('profile');
+    const profile = requestedProfile === 'foot' ? 'foot' as const : 'driving' as const;
+    try {
+      const route = await fetchRoadRoute({ from, to, profile });
+      json(res, 200, {
+        ok: true,
+        correlationId,
+        data: {
+          available: true,
+          provider: route.provider,
+          profile: route.profile,
+          distanceMeters: route.distanceMeters,
+          durationSeconds: route.durationSeconds,
+          distanceLabel: formatDistanceLabel(route.distanceMeters),
+          durationLabel: formatDurationLabel(route.durationSeconds),
+          coordinates: route.coordinates,
+          steps: route.steps,
+        },
+      });
+    } catch (error) {
+      if (error instanceof RoutingConfigurationError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'PROVIDER_NOT_CONFIGURED', message: 'No routing provider is configured for this environment.' } });
+        return true;
+      }
+      if (error instanceof RoutingOutOfZoneError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'OUT_OF_ZONE', message: error.message } });
+        return true;
+      }
+      if (error instanceof RoutingProviderError) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'PROVIDER_ERROR', message: error.message } });
+        return true;
+      }
+      throw error;
+    }
+    return true;
+  }
 
   try {
     const repository = createTrunkRepository();
@@ -537,11 +608,18 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         }
         return { sourceRef, name, category, address, latitude, longitude };
       });
+      // Perimeter guard: public imports carry facilities from the whole OSM
+      // extract, including points across the Ghana border. Importing them puts
+      // unroutable, placeholder-named supply on the map (see
+      // omni-route-supply-data-evidence-2026-09-17.md), so they are refused at
+      // the source. The skipped count is returned, never dropped silently.
+      const inZone = normalized.filter((item) => isInsidePilotZone(item));
+      const skippedOutOfZone = normalized.length - inZone.length;
       const results = [];
-      for (const item of normalized) {
+      for (const item of inZone) {
         results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
       }
-      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, results } });
+      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone, results } });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import') {
@@ -561,6 +639,12 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const attribution = typeof input.attribution === 'string' ? input.attribution.trim() : '';
       if (provider !== 'openstreetmap' || !sourceRef || !name || !attribution || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180 || sourceRef.length > 180 || name.length > 180) {
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates.'));
+        return true;
+      }
+      // Same perimeter guard as the batch import: refuse supply the pilot
+      // cannot route to, instead of publishing a pin nobody can reach.
+      if (!isInsidePilotZone({ latitude, longitude })) {
+        json(res, 400, errorBody(correlationId, 'OUT_OF_PILOT_ZONE', 'This facility is outside the Omni pilot zone and cannot be imported.'));
         return true;
       }
       const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, correlationId });
