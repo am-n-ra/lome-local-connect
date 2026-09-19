@@ -1,5 +1,12 @@
 # Handoff HO-OMNI-18 — Dispatch itinéraire + deux bugs console corrigés (2026-09-17)
 
+> **MISE À JOUR (2026-09-17, directive « fix ») :** sur ré-invocation
+> `/nature-way /nature-way-founder-hq`, le blocage fournisseur a été **contourné par
+> l'architecture plutôt que par une décision** : l'itinéraire routier réel est
+> désormais **livré et en prod** via un proxy serveur, activable en posant
+> `OSRM_BASE_URL`. Voir §« Livraison » ci-dessous et
+> `docs/nature-way/omni-routing-proof-2026-09-17.md`. Commit `fa524f3`.
+
 ## Dispatch Record
 
 | Champ | Valeur |
@@ -15,17 +22,59 @@
 
 | Champ | Valeur |
 |---|---|
-| Invocation exacte | `/nature-way` |
+| Invocation exacte | `/nature-way` puis `/nature-way-founder-hq` (directive « fix ») |
 | Statut d'activation | **`user invocation required`** |
 | Motif d'honnêteté | Les skills `nature-way` / `nature-way-founder-hq` vivent dans `.agents/skills/` du dépôt et ne sont **pas** enregistrées dans l'environnement d'exécution : l'appel programmatique renvoie `Unknown skill`. La méthode a donc été **appliquée depuis les fichiers chargés** (protocole, gates, Resource Receipt respectés), mais l'invocation dynamique par l'outil n'a pas eu lieu et n'est **pas** revendiquée. |
-| Ressources chargées | `nature-way/SKILL.md`, `nature-way-founder-hq/SKILL.md`, `references/intra-skill-execution-controller.md`, `references/prerequisite-architecture.md` |
-| Artefact retourné | `docs/nature-way/omni-route-directions-contract-2026-09-17.md` |
-| Prochaine action | fondateur tranche D-ROUTE-1…5 |
+| Ressources chargées | `nature-way/SKILL.md`, `nature-way-founder-hq/SKILL.md`, `references/intra-skill-execution-controller.md`, `references/prerequisite-architecture.md`, `references/autonomous-delivery-gates.md`, `references/risk-and-escalation-matrix.md` |
+| Artefact retourné | `docs/nature-way/omni-route-directions-contract-2026-09-17.md` puis `omni-routing-proof-2026-09-17.md` + `intra-skill-plan-NW-PROD-OMNI-ROUTE-01-execution.md` |
+| Prochaine action | fondateur tranche RT-D1 (fournisseur + `OSRM_BASE_URL`) et RT-D2 (sort des 17 facilités hors zone) |
+
+## Livraison — itinéraires routiers réels (directive « fix », `fa524f3`)
+
+### Découverte qui requalifie le diagnostic
+
+Le routage réel **existait déjà et a été orpheliné** : `src/components/omni/CartePage.tsx`
+et `src/routes/fiche.$id.tsx` appelaient OSRM avec `overview=full&steps=true`
+(turn-by-turn complet, en français). Or `src/main.tsx` ne monte que `TrunkAppV13` :
+ces deux fichiers sont **du code mort**. La ligne droite du tronc est donc une
+**régression de la reconstruction**, pas un manque initial. Le diagnostic précédent
+(« aucune ligne de code d'itinéraire ») était exact pour le tronc, mais incomplet sur
+l'histoire du dépôt.
+
+### Ce qui est livré
+
+| Livrable | Détail |
+|---|---|
+| `GET /api/v2/public/routing` | Proxy serveur. Servi **avant** `createTrunkRepository()` : le routage n'a besoin d'aucune base, donc une panne DB ne doit pas transformer un itinéraire valide en 500. |
+| `src/server/routing-adapter.ts` | Fournisseur choisi par `OSRM_BASE_URL` (OSRM auto-hébergé Togo ou tout hôte compatible) — **sans changement de code**. Cache mémoire borné (5 min, 200 entrées), timeout 6 s. |
+| Garde de zone pilote | Refuse les **17 facilités de coordonnées ghanéennes** (lng < 0) au lieu de router vers un résultat absurde. |
+| Garde d'import | Même périmètre appliqué aux **deux** endpoints d'import (batch + unitaire), avec compteur `skippedOutOfZone` — jamais silencieux. |
+| `TrunkMap` | Consomme la géométrie réelle ; la ligne droite reste un repli **explicitement étiqueté** `tracé direct`. |
+| Code mort neutralisé | Les deux fichiers orphelins passent par le proxy, donc les ressusciter ne peut plus contourner le contrat. |
+| Bogues corrigés | `Number(null)` vaut `0` (pas `NaN`) → une requête sans coordonnées partait de **0,0** ; `coordinateParam` distingue l'absence d'une valeur et renvoie **400**. |
+
+### Preuves
+
+- **Prod (3/3) :** coordonnées absentes → **400** ; fournisseur non configuré → **200 `PROVIDER_NOT_CONFIGURED`** ; destination Ghana réelle → **200 `OUT_OF_ZONE`**.
+- **Bout en bout sur réponse fournisseur réelle :** Adawlato → Tokoin = **5,4 km / 6 min**, **181 points** de géométrie, **8 instructions** nommant de vraies rues de Lomé (« Boulevard du 13 Janvier », « Avenue Maman N'Danida »).
+- **Frontière de sécurité (bundle) :** `router.project-osrm.org` **0**, `OSRM_BASE_URL` **0**, `route/v1` **0** dans le bundle client ; l'adaptateur n'existe que dans le bundle serverless.
+- **545 tests** (523 avant), `tsc` + frontière client clean, build ✅.
+- **Falsifications :** garde de zone/configuration neutralisée → **2 échecs** ; zone élargie au monde → **2 échecs** ; retour à `numberParam` → **3 échecs**.
+
+### Ce qui reste bloqué, et sur qui
+
+| ID | Décision | Owner | Pourquoi je ne peux pas la prendre |
+|---|---|---|---|
+| RT-D1 | Fournisseur de routage + budget, puis définir `OSRM_BASE_URL` | fondateur | Créer un compte et engager une dépense récurrente dépasse mon autorité |
+| RT-D2 | Sort des 17 facilités hors zone (masquer / marquer / supprimer) | fondateur | Choisir entre supprimer de la donnée et la garder visible est une décision produit |
+
+Tant que RT-D1 n'est pas tranchée, l'itinéraire reste honnêtement étiqueté `tracé direct` :
+aucune fausse promesse n'est faite à l'utilisateur.
 
 ## État au handoff
-- HEAD `5a31ebc` poussé sur `omni-v2-rebuild`.
-- Prod sert `index-DUw7RWKU.js` === dist local (**sha256 `f3727dce…` identique**).
-- Working tree propre. **61 files / 523 tests**, `tsc --noEmit` exit 0.
+- HEAD `fa524f3` poussé sur `omni-v2-rebuild` (**après** `5a31ebc`).
+- Prod sert `index-BUMFRcnb.js` === dist local ; endpoint `/api/v2/public/routing` **live en prod** (3 comportements vérifiés).
+- Working tree propre. **64 files / 545 tests**, `tsc --noEmit` exit 0, frontière client clean.
 
 ## Ce qui a été corrigé dans ce passage
 
@@ -63,9 +112,10 @@
 **Point ouvert qui ne dépend d'aucun fournisseur — vérifié en base :** seulement **2,9 % des facilités (6/206)** ont une adresse renseignée. Même le meilleur moteur de routage produit un mauvais itinéraire sur un point mal géocodé. C'est un travail de **données Omni**.
 
 ## Ce qui n'est PAS prouvé
-- Aucune ligne de code d'itinéraire n'a été écrite — le gate est un **choix de fournisseur et de périmètre**.
+- ~~Aucune ligne de code d'itinéraire n'a été écrite~~ **OBSOLÈTE depuis `fa524f3`** : le proxy serveur, la garde de zone, la garde d'import et le câblage `TrunkMap` sont livrés, testés et en prod. Ce qui reste est bien un **choix de fournisseur** (RT-D1) et de **sort des données hors zone** (RT-D2).
 - Aucune mesure de latence ni de coût réel du fournisseur retenu.
-- Aucun test du réseau routier de Lomé **via le code Omni** (uniquement par requête directe).
+- ~~Aucun test du réseau routier de Lomé **via le code Omni**~~ **OBSOLÈTE depuis `fa524f3`** : validé via le handler complet — 181 points, 8 instructions, rues réelles de Lomé.
+- **Aucune mesure de latence ni de coût réel du fournisseur retenu** : toujours vrai, car aucun fournisseur n'est configuré en prod (RT-D1 ouverte).
 - Le fallback DOM ne sait pas afficher un tracé (`addSource`/`addLayer` = no-op, `fallback-map-surface.ts:227`).
 
 ## Suites immédiates
