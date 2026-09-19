@@ -54,7 +54,7 @@
 
 **Le réseau OpenStreetMap couvre bien Lomé** : la route réelle remonte des rues nommées (Rue de L'Avenir, Rue Khra, Rue Kamé, Rue Slt Gnémégnah, Avenue Maman N'Danida, Boulevard de la Paix) avec turn-by-turn exploitable en français. La couverture n'est donc pas le problème.
 
-**Le nœud réel est le fournisseur.** Le serveur de démonstration OSRM **interdit** l'usage en production et classe ce volume en « usage très lourd ». Il faut soit un fournisseur hébergé avec clé et proxy serveur, soit un OSRM auto-hébergé pour le Togo. Dans les deux cas la clé ne doit **jamais** partir dans le bundle client, et un cache serveur est nécessaire.
+**Le nœud réel est le fournisseur.** Le serveur de démonstration OSRM **restreint l'usage aux cas raisonnables non commerciaux et à ≤ 1 requête/seconde**, sans garantie d'uptime ni de fraîcheur — une application commerciale avec ce volume sort du cadre. Il faut soit un fournisseur hébergé avec clé et proxy serveur, soit un OSRM auto-hébergé pour le Togo. Dans les deux cas la clé ne doit **jamais** partir dans le bundle client, et un cache serveur est nécessaire.
 
 **Contradiction de spec bloquante :** la maquette Species (S11/S22/S23/S25/S33) dit itinéraire **verrouillé jusqu'à l'intention** ; la correction fondateur du 2026-09-14 dit itinéraire **ouvert sur chaque fiche**, sans intention. Le code suit le fondateur. **La maquette n'a jamais été réconciliée** — un futur contributeur pourrait « corriger » le code à l'envers.
 

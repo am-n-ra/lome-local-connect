@@ -60,7 +60,9 @@ Le réseau OpenStreetMap couvre donc bien Lomé, et le turn-by-turn est exploita
 
 ## 3. Contrainte de production à trancher (le vrai nœud)
 
-Le serveur de démonstration OSRM **n'est pas utilisable en production** — sa politique d'usage l'interdit explicitement, et une application où chaque utilisateur appelle le service est classée « usage très lourd ».
+Le serveur de démonstration OSRM (FOSSGIS, `router.project-osrm.org`) **n'est pas utilisable en production** : sa politique d'usage le **restreint aux cas raisonnables non commerciaux et à ≤ 1 requête/seconde**, sans garantie d'uptime, de latence ni de fraîcheur des données. Une application commerciale où **chaque utilisateur** appelle le service sort de ce cadre, même en restant techniquement sous la limite.
+
+> **Source de la contrainte** (vérifiée 2026-09-17) : `https://github.com/Project-OSRM/osrm-backend/wiki/Demo-server` — « the demo server usage is restricted to reasonable, non-commercial use-cases. Do not exceed 1 request per second. We provide no guarantees wrt. uptime, latency, or data updates. »
 
 Options réelles :
 

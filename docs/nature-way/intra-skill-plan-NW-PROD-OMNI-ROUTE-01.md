@@ -52,7 +52,7 @@
 |---|---|---|---|---|---|
 | 2026-09-17 | Demande fondateur « itinéraires aussi parfaits que Google Maps » | RT-01 créé et `done` ; RT-02…RT-09 planifiés | `advance` jusqu'au gate Root | Nature Way | décision D-ROUTE-1…5 |
 | 2026-09-17 | Mesure réelle : 4,91 km ligne droite vs 6,19 km route (+26 %) ; rues nommées de Lomé confirmées | RT-01 accepté | `advance` | Nature Way | — |
-| 2026-09-17 | Le serveur OSRM de démo interdit l'usage en production | RT-02 `blocked` sur décision fournisseur | `pause` | Founder | fournisseur tranché |
+| 2026-09-17 | Le serveur OSRM de démo restreint l'usage aux cas non commerciaux et à ≤ 1 req/s | RT-02 `blocked` sur décision fournisseur | `pause` | Founder | fournisseur tranché |
 | 2026-09-17 | Maquette S33 dit « route après intention », correction fondateur 2026-09-14 dit l'inverse ; le code suit le fondateur | RT-03 créé, `blocked` | `pause` | Founder | règle d'accès confirmée |
 
 ## Handoff to Founder HQ
