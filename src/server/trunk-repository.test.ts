@@ -1417,15 +1417,15 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     }]);
     const repository = createTrunkRepository(call.sql);
     const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
-    expect(result.plan).toBe('pro_active');
-    expect(result.proPriceMinor).toBe(250000);
-    expect(result.billingCurrency).toBe('XOF');
-    expect(result.baseProPriceUsdMinor).toBe(500);
-    expect(result.baseBillingCurrency).toBe('USD');
-    expect(result.walletBalanceMinor).toBe(400000);
-    expect(result.sufficientFunds).toBe(true);
-    expect(result.renewalOptIn).toBe(true);
-    expect(result.compareQuota).toBe(5);
+    expect(result!.plan).toBe('pro_active');
+    expect(result!.proPriceMinor).toBe(250000);
+    expect(result!.billingCurrency).toBe('XOF');
+    expect(result!.baseProPriceUsdMinor).toBe(500);
+    expect(result!.baseBillingCurrency).toBe('USD');
+    expect(result!.walletBalanceMinor).toBe(400000);
+    expect(result!.sufficientFunds).toBe(true);
+    expect(result!.renewalOptIn).toBe(true);
+    expect(result!.compareQuota).toBe(5);
     expect(call.queries[0]).toContain('v2_buyer_pro_entitlements');
     expect(call.queries[0]).toContain('a.auth_user_id');
     expect(call.queries[0]).toContain('base_pro_price_usd_minor');
@@ -1448,10 +1448,10 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     }]);
     const repository = createTrunkRepository(call.sql);
     const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
-    expect(result.plan).toBe('free');
-    expect(result.compareQuota).toBe(1);
-    expect(result.entitlementId).toBeNull();
-    expect(result.baseProPriceUsdMinor).toBe(500);
+    expect(result!.plan).toBe('free');
+    expect(result!.compareQuota).toBe(1);
+    expect(result!.entitlementId).toBeNull();
+    expect(result!.baseProPriceUsdMinor).toBe(500);
   });
 
   it('returns pro_expired when the entitlement ended even with opt-in still on', async () => {
@@ -1471,10 +1471,19 @@ describe('buyer pro Root seam (NW-13h D-K)', () => {
     }]);
     const repository = createTrunkRepository(call.sql);
     const result = await repository.getBuyerProStatus({ authUserId: 'auth-user-1' });
-    expect(result.plan).toBe('pro_expired');
-    expect(result.sufficientFunds).toBe(true);
-    expect(result.compareQuota).toBe(1);
-    expect(result.baseProPriceUsdMinor).toBe(500);
+    expect(result!.plan).toBe('pro_expired');
+    expect(result!.sufficientFunds).toBe(true);
+    expect(result!.compareQuota).toBe(1);
+    expect(result!.baseProPriceUsdMinor).toBe(500);
+  });
+
+  it('returns null when the authenticated identity has no account row yet', async () => {
+    // Regression: this used to throw BuyerSearchPolicyError('ACCOUNT_UNAVAILABLE'),
+    // which the HTTP layer mapped to 409 POLICY_REJECTED for what is really an
+    // account-provisioning precondition. Sibling reads answer 403 instead.
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getBuyerProStatus({ authUserId: 'auth-without-account' })).resolves.toBeNull();
   });
 
   it('activates buyer pro from the wallet with spend, entitlement and pro credit plan', async () => {

@@ -3935,7 +3935,7 @@ function createTrunkRepository(sql = database()) {
         cross join lateral (select * from credits) c
       `);
       const row = rows[0];
-      if (!row) throw new BuyerSearchPolicyError("ACCOUNT_UNAVAILABLE");
+      if (!row) return null;
       const nowMs = Date.now();
       const endsAtMs = row.ends_at ? new Date(String(row.ends_at)).getTime() : null;
       const daysLeft = endsAtMs !== null ? Math.max(0, Math.ceil((endsAtMs - nowMs) / 864e5)) : 0;
@@ -6837,6 +6837,10 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.getBuyerProStatus({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
+        return true;
+      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -6902,6 +6906,10 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.getBuyerProStatus({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
+        return true;
+      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

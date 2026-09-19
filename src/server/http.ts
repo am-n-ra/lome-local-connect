@@ -1645,6 +1645,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.getBuyerProStatus({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account context is not available yet.'));
+        return true;
+      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
@@ -1710,6 +1714,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.getBuyerProStatus({ authUserId });
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account context is not available yet.'));
+        return true;
+      }
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

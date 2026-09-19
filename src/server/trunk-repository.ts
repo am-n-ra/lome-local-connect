@@ -4230,7 +4230,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       return { removed: true };
     },
 
-    async getBuyerProStatus(input: { authUserId: string }): Promise<BuyerProStatus> {
+    async getBuyerProStatus(input: { authUserId: string }): Promise<BuyerProStatus | null> {
       const rows = await retryDatabase(() => sql`
         with account as (
           select a.id as account_id
@@ -4273,7 +4273,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         cross join lateral (select * from credits) c
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new BuyerSearchPolicyError('ACCOUNT_UNAVAILABLE');
+      // A missing row means the authenticated identity has no account yet — a
+      // provisioning precondition, not a policy violation. Returning null lets
+      // the HTTP layer answer 403 ACCOUNT_UNAVAILABLE like /api/v2/account/context
+      // instead of surfacing 409 POLICY_REJECTED.
+      if (!row) return null;
       const nowMs = Date.now();
       const endsAtMs = row.ends_at ? new Date(String(row.ends_at)).getTime() : null;
       const daysLeft = endsAtMs !== null ? Math.max(0, Math.ceil((endsAtMs - nowMs) / 86400000)) : 0;

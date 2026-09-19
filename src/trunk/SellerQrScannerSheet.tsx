@@ -31,6 +31,22 @@ export function extractTransactionPayload(raw: string): { transactionId: string;
   return null;
 }
 
+// html5-qrcode signals "not running" by throwing a *string* synchronously, so
+// `.catch()` cannot intercept it: unmounting before `start()` resolves, or a tab
+// going hidden during startup, escaped as an uncaught error. Both stop() and
+// clear() can throw this way, so each is guarded independently.
+export function teardownScanner(scanner: Html5Qrcode | null): void {
+  if (!scanner) return;
+  const safeClear = () => { try { scanner.clear(); } catch { /* already cleared or still scanning */ } };
+  try {
+    const stopping = scanner.stop();
+    if (stopping && typeof stopping.then === 'function') stopping.then(safeClear).catch(safeClear);
+    else safeClear();
+  } catch {
+    safeClear();
+  }
+}
+
 export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
   const [state, setState] = useState<'starting' | 'scanning' | 'error'>('starting');
   const [error, setError] = useState('');
@@ -70,8 +86,9 @@ export function SellerQrScannerSheet({ onClose, onVerified }: Props) {
     const teardown = () => {
       stream?.getTracks().forEach((track) => track.stop());
       stream = null;
-      scannerRef.current?.stop().then(() => scannerRef.current?.clear()).catch(() => undefined);
+      const scanner = scannerRef.current;
       scannerRef.current = null;
+      teardownScanner(scanner);
     };
     const stopOnHidden = () => {
       if (document.visibilityState === 'hidden') {
