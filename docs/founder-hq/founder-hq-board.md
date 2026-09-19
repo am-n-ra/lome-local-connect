@@ -1,6 +1,6 @@
 # Founder HQ Board — Omni
 
-**As of:** 2026-09-17 (UTC) — reconciled to repo truth at `5a31ebc` (`omni-v2-rebuild`, prod `index-DUw7RWKU.js` === build local, sha256 `f3727dce…`)  
+**As of:** 2026-09-17 (UTC) — reconciled to repo truth : correctifs livrés par `5a31ebc`, prod `index-DUw7RWKU.js` === build local (sha256 `f3727dce…`, T-07d ✅) ; documents de dispatch ajoutés ensuite (`HO-OMNI-18`), bundle servi inchangé  
 **Plan:** `HQ-OMNI-2026-09-02` (`docs/founder-hq/founder-hq-master-plan.md`)  
 **Supersedes:** `v2-founder-hq.md` (2026-08-25) as the operating index. That file is kept as history.  
 **Reconciliation note (2026-09-17):** la board était figée au 2026-09-13/14 et **omettait 9 tranches livrées depuis** : l'audit cycle V1 + son plan ordonné §4, RAC-1, COR-1a/3b/7b/7c, TEC-1, FF-1…FF-8, les bugs racines E2E (D-TXN-11), le bug de déploiement critique, le correctif glyphes MapLibre et **PRE-1**. Ces lignes sont désormais présentes. **Le plan ordonné §4 de l'audit cycle V1 est intégralement exécuté.**
