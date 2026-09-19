@@ -134,6 +134,33 @@ export function rewriteOpenFreeMapGlyphUrl(url: string) {
     .replace(/Open(?:%20|\s)Sans(?:%20|\s)Italic/g, "Noto%20Sans%20Italic");
 }
 
+/**
+ * The CARTO Positron style points `glyphs` at tiles.basemaps.cartocdn.com, which
+ * serves every family the style asks for *except* `Noto Sans Bold` — that range
+ * 404s with no CORS header, so MapLibre logs "Rendering codepoint locally
+ * instead" and the Omni cluster counts / bold labels silently degrade to raw
+ * digits. fonts.openmaptiles.org serves the same families with
+ * `access-control-allow-origin: *`.
+ */
+export const CARTO_GLYPH_HOST_PATTERN = /^https:\/\/[^/]*cartocdn\.com\/fonts\//;
+export const GLYPH_HOST_WITH_BOLD = "https://fonts.openmaptiles.org/";
+
+/**
+ * A MapLibre `transformRequest` that reroutes only the glyph requests the broken
+ * host would fail, leaving every other resource (tiles, sprites, style JSON) and
+ * every healthy glyph host — notably OpenFreeMap, which serves its own fonts —
+ * exactly as the style declared them.
+ */
+export function createGlyphTransformRequest() {
+  return (url: string, resourceType?: string) => {
+    // MapLibre passes ResourceType.Glyphs === "Glyphs" (capital G).
+    if (resourceType?.toLowerCase() !== "glyphs" || !CARTO_GLYPH_HOST_PATTERN.test(url)) {
+      return undefined;
+    }
+    return { url: url.replace(CARTO_GLYPH_HOST_PATTERN, GLYPH_HOST_WITH_BOLD) };
+  };
+}
+
 const PASTEL = {
   water: "#2d3335",
   green: "#ffffff",

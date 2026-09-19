@@ -16,6 +16,7 @@ import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, po
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
+import { createGlyphTransformRequest } from '../lib/maplibre';
 import { type MapBasemap, RASTER_STYLE_URL, shouldFallbackToRaster, styleChoiceFor, STYLE_WATCHDOG_MS, VECTOR_STYLE_URL } from './map-style-fallback';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
@@ -179,19 +180,6 @@ function setGlobeContextLabelVisibility(map: MapEngine, visible: boolean) {
       // Positron revisions may omit a rank layer; keep the other layers usable.
     }
   }
-}
-
-function rewriteGlyphUrl(url: string) {
-  // CARTO's font host (tiles.basemaps.cartocdn.com/fonts) does NOT send CORS
-  // headers in the deployed environment, so every label glyph request is blocked
-  // ("Access ... had been blocked by CORS policy") and MapLibre falls back to
-  // rendering each codepoint locally as a raw digit
-  // ("Unable to load glyph range ... Rendering codepoint U+0030 locally instead").
-  // Route glyph requests to the CORS-enabled openmaptiles font CDN
-  // (annotated with access-control-allow-origin: *), which serves the same
-  // Open Sans / Noto Sans / Montserrat families the CARTO style and the Omni
-  // cluster layers declare. Font names are preserved, so no style edits needed.
-  return url.replace(/^https:\/\/[^/]+\/fonts\//, 'https://fonts.openmaptiles.org/');
 }
 
 function waitForMapMove(map: Map, timeout = 1500) {
@@ -458,6 +446,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
       engine = new Map({
       container: container.current,
       style: styleChoiceFor(initialBasemap, mapRetryKey > 0).url,
+      transformRequest: createGlyphTransformRequest(),
       center: [10, 8],
       zoom:  ​1.25,
       minZoom:  ​1,

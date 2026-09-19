@@ -6,3 +6,6 @@ dist/
 !.env.example
 
 .env.local
+
+# Local-only proof fixtures (regenerate from prod API; do not commit)
+.tmp-*
