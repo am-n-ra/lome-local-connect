@@ -1,0 +1,499 @@
+{
+  "baseUrl": "https://omni.sparkafrika.online/",
+  "asOf": "2026-09-19T18:28:48.949Z",
+  "widths": [
+    360,
+    768,
+    1280,
+    1920
+  ],
+  "query": "boulangerie",
+  "summary": {
+    "total": 80,
+    "pass": 80,
+    "fail": 0,
+    "blocked": 0
+  },
+  "results": [
+    {
+      "width": 360,
+      "step": "arrival",
+      "status": "PASS",
+      "detail": "title=\"Omni — Voir avant de bouger\""
+    },
+    {
+      "width": 360,
+      "step": "map-renders",
+      "status": "PASS",
+      "detail": "canvas 360x780"
+    },
+    {
+      "width": 360,
+      "step": "map-not-error",
+      "status": "PASS",
+      "detail": "banner count=0"
+    },
+    {
+      "width": 360,
+      "step": "supply-present",
+      "status": "PASS",
+      "detail": "206 pins ouvrables"
+    },
+    {
+      "width": 360,
+      "step": "search-affordance",
+      "status": "PASS",
+      "detail": "bouton Recherche"
+    },
+    {
+      "width": 360,
+      "step": "search-sheet-open",
+      "status": "PASS",
+      "detail": "champ de recherche visible"
+    },
+    {
+      "width": 360,
+      "step": "constraints-chips",
+      "status": "PASS",
+      "detail": "bloc Contraintes ouvert après saisie"
+    },
+    {
+      "width": 360,
+      "step": "radius-chips",
+      "status": "PASS",
+      "detail": "portée = 6/6"
+    },
+    {
+      "width": 360,
+      "step": "honest-soon-labels",
+      "status": "PASS",
+      "detail": "chips « bientôt » présentes"
+    },
+    {
+      "width": 360,
+      "step": "soon-chips-disabled",
+      "status": "PASS",
+      "detail": ".chip.soon aria-disabled=true"
+    },
+    {
+      "width": 360,
+      "step": "search-results",
+      "status": "PASS",
+      "detail": "sheet=results"
+    },
+    {
+      "width": 360,
+      "step": "result-item-present",
+      "status": "PASS",
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+    },
+    {
+      "width": 360,
+      "step": "facility-fiche",
+      "status": "PASS",
+      "detail": "fiche facilité ouverte"
+    },
+    {
+      "width": 360,
+      "step": "trust-state-honest",
+      "status": "PASS",
+      "detail": "libellé de confiance"
+    },
+    {
+      "width": 360,
+      "step": "route-available-before-intent",
+      "status": "PASS",
+      "detail": "bouton itinéraire sur la fiche, avant intention"
+    },
+    {
+      "width": 360,
+      "step": "route-promise-honest",
+      "status": "PASS",
+      "detail": "promesse contact/chat honnête"
+    },
+    {
+      "width": 360,
+      "step": "contact-gated-before-intent",
+      "status": "PASS",
+      "detail": "aucun numéro exposé avant intention"
+    },
+    {
+      "width": 360,
+      "step": "route-render",
+      "status": "PASS",
+      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
+    },
+    {
+      "width": 360,
+      "step": "route-degraded-honest",
+      "status": "PASS",
+      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+    },
+    {
+      "width": 360,
+      "step": "no-console-errors",
+      "status": "PASS",
+      "detail": "console propre"
+    },
+    {
+      "width": 768,
+      "step": "arrival",
+      "status": "PASS",
+      "detail": "title=\"Omni — Voir avant de bouger\""
+    },
+    {
+      "width": 768,
+      "step": "map-renders",
+      "status": "PASS",
+      "detail": "canvas 768x900"
+    },
+    {
+      "width": 768,
+      "step": "map-not-error",
+      "status": "PASS",
+      "detail": "banner count=0"
+    },
+    {
+      "width": 768,
+      "step": "supply-present",
+      "status": "PASS",
+      "detail": "206 pins ouvrables"
+    },
+    {
+      "width": 768,
+      "step": "search-affordance",
+      "status": "PASS",
+      "detail": "bouton Recherche"
+    },
+    {
+      "width": 768,
+      "step": "search-sheet-open",
+      "status": "PASS",
+      "detail": "champ de recherche visible"
+    },
+    {
+      "width": 768,
+      "step": "constraints-chips",
+      "status": "PASS",
+      "detail": "bloc Contraintes ouvert après saisie"
+    },
+    {
+      "width": 768,
+      "step": "radius-chips",
+      "status": "PASS",
+      "detail": "portée = 6/6"
+    },
+    {
+      "width": 768,
+      "step": "honest-soon-labels",
+      "status": "PASS",
+      "detail": "chips « bientôt » présentes"
+    },
+    {
+      "width": 768,
+      "step": "soon-chips-disabled",
+      "status": "PASS",
+      "detail": ".chip.soon aria-disabled=true"
+    },
+    {
+      "width": 768,
+      "step": "search-results",
+      "status": "PASS",
+      "detail": "sheet=results"
+    },
+    {
+      "width": 768,
+      "step": "result-item-present",
+      "status": "PASS",
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+    },
+    {
+      "width": 768,
+      "step": "facility-fiche",
+      "status": "PASS",
+      "detail": "fiche facilité ouverte"
+    },
+    {
+      "width": 768,
+      "step": "trust-state-honest",
+      "status": "PASS",
+      "detail": "libellé de confiance"
+    },
+    {
+      "width": 768,
+      "step": "route-available-before-intent",
+      "status": "PASS",
+      "detail": "bouton itinéraire sur la fiche, avant intention"
+    },
+    {
+      "width": 768,
+      "step": "route-promise-honest",
+      "status": "PASS",
+      "detail": "promesse contact/chat honnête"
+    },
+    {
+      "width": 768,
+      "step": "contact-gated-before-intent",
+      "status": "PASS",
+      "detail": "aucun numéro exposé avant intention"
+    },
+    {
+      "width": 768,
+      "step": "route-render",
+      "status": "PASS",
+      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
+    },
+    {
+      "width": 768,
+      "step": "route-degraded-honest",
+      "status": "PASS",
+      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+    },
+    {
+      "width": 768,
+      "step": "no-console-errors",
+      "status": "PASS",
+      "detail": "console propre"
+    },
+    {
+      "width": 1280,
+      "step": "arrival",
+      "status": "PASS",
+      "detail": "title=\"Omni — Voir avant de bouger\""
+    },
+    {
+      "width": 1280,
+      "step": "map-renders",
+      "status": "PASS",
+      "detail": "canvas 1216x900"
+    },
+    {
+      "width": 1280,
+      "step": "map-not-error",
+      "status": "PASS",
+      "detail": "banner count=0"
+    },
+    {
+      "width": 1280,
+      "step": "supply-present",
+      "status": "PASS",
+      "detail": "206 pins ouvrables"
+    },
+    {
+      "width": 1280,
+      "step": "search-affordance",
+      "status": "PASS",
+      "detail": "bouton Recherche"
+    },
+    {
+      "width": 1280,
+      "step": "search-sheet-open",
+      "status": "PASS",
+      "detail": "champ de recherche visible"
+    },
+    {
+      "width": 1280,
+      "step": "constraints-chips",
+      "status": "PASS",
+      "detail": "bloc Contraintes ouvert après saisie"
+    },
+    {
+      "width": 1280,
+      "step": "radius-chips",
+      "status": "PASS",
+      "detail": "portée = 6/6"
+    },
+    {
+      "width": 1280,
+      "step": "honest-soon-labels",
+      "status": "PASS",
+      "detail": "chips « bientôt » présentes"
+    },
+    {
+      "width": 1280,
+      "step": "soon-chips-disabled",
+      "status": "PASS",
+      "detail": ".chip.soon aria-disabled=true"
+    },
+    {
+      "width": 1280,
+      "step": "search-results",
+      "status": "PASS",
+      "detail": "sheet=results"
+    },
+    {
+      "width": 1280,
+      "step": "result-item-present",
+      "status": "PASS",
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+    },
+    {
+      "width": 1280,
+      "step": "facility-fiche",
+      "status": "PASS",
+      "detail": "fiche facilité ouverte"
+    },
+    {
+      "width": 1280,
+      "step": "trust-state-honest",
+      "status": "PASS",
+      "detail": "libellé de confiance"
+    },
+    {
+      "width": 1280,
+      "step": "route-available-before-intent",
+      "status": "PASS",
+      "detail": "bouton itinéraire sur la fiche, avant intention"
+    },
+    {
+      "width": 1280,
+      "step": "route-promise-honest",
+      "status": "PASS",
+      "detail": "promesse contact/chat honnête"
+    },
+    {
+      "width": 1280,
+      "step": "contact-gated-before-intent",
+      "status": "PASS",
+      "detail": "aucun numéro exposé avant intention"
+    },
+    {
+      "width": 1280,
+      "step": "route-render",
+      "status": "PASS",
+      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
+    },
+    {
+      "width": 1280,
+      "step": "route-degraded-honest",
+      "status": "PASS",
+      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+    },
+    {
+      "width": 1280,
+      "step": "no-console-errors",
+      "status": "PASS",
+      "detail": "console propre"
+    },
+    {
+      "width": 1920,
+      "step": "arrival",
+      "status": "PASS",
+      "detail": "title=\"Omni — Voir avant de bouger\""
+    },
+    {
+      "width": 1920,
+      "step": "map-renders",
+      "status": "PASS",
+      "detail": "canvas 1856x900"
+    },
+    {
+      "width": 1920,
+      "step": "map-not-error",
+      "status": "PASS",
+      "detail": "banner count=0"
+    },
+    {
+      "width": 1920,
+      "step": "supply-present",
+      "status": "PASS",
+      "detail": "206 pins ouvrables"
+    },
+    {
+      "width": 1920,
+      "step": "search-affordance",
+      "status": "PASS",
+      "detail": "bouton Recherche"
+    },
+    {
+      "width": 1920,
+      "step": "search-sheet-open",
+      "status": "PASS",
+      "detail": "champ de recherche visible"
+    },
+    {
+      "width": 1920,
+      "step": "constraints-chips",
+      "status": "PASS",
+      "detail": "bloc Contraintes ouvert après saisie"
+    },
+    {
+      "width": 1920,
+      "step": "radius-chips",
+      "status": "PASS",
+      "detail": "portée = 6/6"
+    },
+    {
+      "width": 1920,
+      "step": "honest-soon-labels",
+      "status": "PASS",
+      "detail": "chips « bientôt » présentes"
+    },
+    {
+      "width": 1920,
+      "step": "soon-chips-disabled",
+      "status": "PASS",
+      "detail": ".chip.soon aria-disabled=true"
+    },
+    {
+      "width": 1920,
+      "step": "search-results",
+      "status": "PASS",
+      "detail": "sheet=results"
+    },
+    {
+      "width": 1920,
+      "step": "result-item-present",
+      "status": "PASS",
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+    },
+    {
+      "width": 1920,
+      "step": "facility-fiche",
+      "status": "PASS",
+      "detail": "fiche facilité ouverte"
+    },
+    {
+      "width": 1920,
+      "step": "trust-state-honest",
+      "status": "PASS",
+      "detail": "libellé de confiance"
+    },
+    {
+      "width": 1920,
+      "step": "route-available-before-intent",
+      "status": "PASS",
+      "detail": "bouton itinéraire sur la fiche, avant intention"
+    },
+    {
+      "width": 1920,
+      "step": "route-promise-honest",
+      "status": "PASS",
+      "detail": "promesse contact/chat honnête"
+    },
+    {
+      "width": 1920,
+      "step": "contact-gated-before-intent",
+      "status": "PASS",
+      "detail": "aucun numéro exposé avant intention"
+    },
+    {
+      "width": 1920,
+      "step": "route-render",
+      "status": "PASS",
+      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
+    },
+    {
+      "width": 1920,
+      "step": "route-degraded-honest",
+      "status": "PASS",
+      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+    },
+    {
+      "width": 1920,
+      "step": "no-console-errors",
+      "status": "PASS",
+      "detail": "console propre"
+    }
+  ]
+}
