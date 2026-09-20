@@ -188,6 +188,14 @@ Only omni-v2-rebuild is touched. Never merge to main. "Merge" = "push prod branc
 >
 > **Trou de test réel :** la branche `intent` de `http.ts` (le refus `INTENT_REQUIRED`) **n'a aucun test HTTP** ; `INTENT_REQUIRED` n'existe que dans les types et l'UI. Le dépôt n'utilise aucun `vi.mock` et `createTrunkRepository` est un import direct : il n'y a **aucun seam** pour prouver ce refus sans base réelle. À traiter avant d'activer le verrou.
 >
+> **POURQUOI L'ITINÉRAIRE EST « UN TRAIT, UNE LIGNE » — CAUSE RACINE ÉTABLIE ET CORRIGÉE (2026-09-20, 15:30Z).** Le fondateur l'a signalé : la ligne droite n'est **pas** un bug de tracé, c'est le **dégradé honnête** — mais son message était **faux**, et c'est ça le vrai défaut.
+>
+> **Ce que la sonde navigateur a capturé :** géolocalisation accordée, fiche ouverte, bouton itinéraire cliqué → le serveur répond **`HTTP 401 AUTH_REQUIRED`** (aucun jeton envoyé), et le client affichait « tracé direct — **itinéraire routier indisponible** ». Traduction : l'acheteur se voyait annoncer une **panne inexistante**, alors que l'action attendue était simplement de **se connecter**.
+>
+> **Pourquoi :** un refus arrive en `error.code` (HTTP 4xx), une décision produit en `data.reason` (HTTP 200). Le client ne mappait **que** `data.reason` et **jetait le code d'erreur** → raison perdue, générique trompeur. Corrigé : les deux familles sont mappées en un seul endroit, chaque libellé nomme **l'action** (« connectez-vous pour obtenir l'itinéraire routier »), et le chip dégradé est étiqueté `unavailable` au lieu de se présenter comme actif. **Vérifié en production.**
+>
+> **Conséquence produit, à trancher :** le moteur facturé exige une identité depuis `RT-D1`, donc **un visiteur non connecté n'obtiendra jamais de vraie route** — il obtient toujours le trait droit. Ce n'est pas un défaut technique, c'est **le choix de coût qui remonte à l'écran**. Deux issues possibles : prompter la connexion au clic (le message le dit maintenant), ou rouvrir l'anonyme (`ROUTING_ACCESS_MODE=never`) en assumant la facture Mapbox.
+>
 > **RÉCONCILIATION AU VRAI DÉPÔT ET À LA VRAIE PROD (2026-09-20) — trois écarts entre le board et la réalité, vérifiés sur la prod elle-même.**
 >
 > **1. Les deux bugs « live » étaient déjà corrigés ET déjà en prod.** `5a31ebc` (`fix(scanner,buyer-pro)`) est **ancêtre de HEAD et poussé sur `origin/omni-v2-rebuild`** depuis le 2026-09-19. Vérifié par appel réel : `GET /api/v2/buyer/pro-status` sur la prod canonique renvoie **401 `AUTH_REQUIRED`**, pas 409. Le correctif scanner est présent dans la source (`teardownScanner` garde `stop()` **et** `clear()`, qui lèvent tous deux une *chaîne* de façon synchrone — c'est pour ça que `.then().catch()` seul ne pouvait pas l'intercepter). **Il n'y avait rien à corriger : c'était un écart de déploiement, pas de code.** Ce qui manquait, c'était de **le prouver**.

@@ -93,6 +93,8 @@
 | `PR-RT1-05` | `feature > access gate` | le refus d'intention se produit pour un acheteur sans intention vivante | `unproven` | — | — | NW | 2026-09-20 | **gap** : exige une identité acheteur ; aucun seam de test |
 | `PR-RT1-06` | `product > buyer journey` | PRE-1 passe aux 4 largeurs | `reproduced` | Playwright sur la prod | 360/768/1280/1920 | NW | 2026-09-20 | **80/80 PASS**, console propre ; artefacts `docs/nature-way/pre1-proof/` |
 | `PR-RT1-07` | `feature > real road route` | une géométrie d'itinéraire réelle est servie | `unproven` | — | — | NW | 2026-09-20 | **gap** : exige un acheteur authentifié ; non contournable sans franchir le gate |
+| `PR-RT1-08` | `feature > road route` | la ligne droite est un dégradé **explicable** par l'acheteur | `reproduced` | sonde navigateur avec géoloc accordée, réponse HTTP capturée | prod, `Boulangerie du Marché d'Adawlato` | NW | 2026-09-20 | **cause trouvée** : le serveur répond `401 AUTH_REQUIRED` ; le client ne mappait que `data.reason` et **jetait le code d'erreur**, affichant un générique faux |
+| `PR-RT1-09` | `feature > road route` | un refus nomme l'action à faire, pas seulement le manque | `reproduced` | sonde navigateur après correctif | prod, `data-state=unavailable` | NW | 2026-09-20 | « connectez-vous pour obtenir l'itinéraire routier » ; 5 cas de test, dont un qui interdit de réafficher un code brut |
 
 | Decision ID | Decision | Why now | Options rejected | Owner | Trigger to revisit | Downstream artifacts |
 |---|---|---|---|---|---|---|
