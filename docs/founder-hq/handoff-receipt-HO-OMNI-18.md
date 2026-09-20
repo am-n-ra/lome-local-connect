@@ -63,13 +63,14 @@ l'histoire du dépôt.
 
 ### Ce qui reste bloqué, et sur qui
 
-| ID | Décision | Owner | Pourquoi je ne peux pas la prendre |
+| ID | Décision | Owner | État |
 |---|---|---|---|
-| RT-D1 | Fournisseur de routage + budget, puis définir `OSRM_BASE_URL` | fondateur | Créer un compte et engager une dépense récurrente dépasse mon autorité |
-| RT-D2 | Sort des 17 facilités hors zone (masquer / marquer / supprimer) | fondateur | Choisir entre supprimer de la donnée et la garder visible est une décision produit |
+| **RT-D1** | Fournisseur de routage | fondateur | **TRANCHÉE 2026-09-17 : « prenons mapbox comme fournisseur d'itinéraire »** → Mapbox Directions implémenté (`afffe29`). Action de configuration restante : poser `MAPBOX_ACCESS_TOKEN` dans Vercel |
+| RT-D2 | Sort des 17 facilités hors zone (masquer / marquer / supprimer) | fondateur | **ouverte** — choisir entre supprimer de la donnée et la garder visible est une décision produit |
 
-Tant que RT-D1 n'est pas tranchée, l'itinéraire reste honnêtement étiqueté `tracé direct` :
-aucune fausse promesse n'est faite à l'utilisateur.
+Mapbox est implémenté et `OSRM_BASE_URL` reste supporté ; Mapbox gagne si les deux sont posés. Tant que
+`MAPBOX_ACCESS_TOKEN` n'est pas posé dans Vercel, la prod répond `PROVIDER_NOT_CONFIGURED` et l'UI garde son repli
+**honnêtement étiqueté `tracé direct`** : aucune fausse promesse n'est faite à l'utilisateur.
 
 ## État au handoff
 - HEAD `fa524f3` poussé sur `omni-v2-rebuild` (**après** `5a31ebc`).

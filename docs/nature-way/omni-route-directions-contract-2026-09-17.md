@@ -117,17 +117,18 @@ Il faut distinguer ce qui est atteignable de ce qui ne l'est pas, sinon on prome
 
 | # | Décision | Options | Recommandation |
 |---|---|---|---|
-| D-ROUTE-1 | Fournisseur de routage | A ligne droite / B hébergé avec clé / C OSRM auto-hébergé | **B** pour V1, C à l'échelle |
-| D-ROUTE-2 | Qui paie l'appel | navigatrice seule / jamais de repli payant | proxy serveur + cache obligatoires |
-| D-ROUTE-3 | Règle d'accès | maquette (verrouillé) vs fondateur (ouvert sur fiche) | **règle fondateur**, amender S11/S22/S23/S25/S33 |
-| D-ROUTE-4 | Repli si fournisseur indisponible | ligne droite visible / `unavailable` seul | à trancher |
+| D-ROUTE-1 | Fournisseur de routage | A ligne droite / B hébergé avec clé / C OSRM auto-hébergé | **B — tranché par le fondateur le 2026-09-17 : Mapbox Directions** (`af…`, commit « feat(routing): make Mapbox Directions the routing provider »). Activation par `MAPBOX_ACCESS_TOKEN` ; OSRM reste supporté par `OSRM_BASE_URL` pour un auto-hébergement Togo |
+| D-ROUTE-2 | Qui paie l'appel | navigatrice seule / jamais de repli payant | proxy serveur + cache obligatoires — **implémenté** : le jeton ne quitte jamais le serveur, le cache (5 min / 200 entrées) est **clé par fournisseur** pour ne pas servir une route OSRM après bascule |
+| D-ROUTE-3 | Règle d'accès | maquette (verrouillé) vs fondateur (ouvert sur fiche) | **règle fondateur**, amender S11/S22/S23/S25/S33 — **toujours non réconcilié** |
+| D-ROUTE-4 | Repli si fournisseur indisponible | ligne droite visible / `unavailable` seul | **ligne droite visible et étiquetée** `tracé direct`, jamais présentée comme une route |
 | D-ROUTE-5 | Périmètre honnête | « routier fiable à Lomé » vs « égalité Google » | **routier fiable**, assumé |
 
 ## 8. Ce qui n'est pas prouvé à ce stade
 
-- Aucune mesure de latence ou de coût réel du fournisseur retenu.
-- Aucun test sur le réseau routier de Lomé **via le code Omni** (seulement par requête directe OSRM).
+- ~~Aucun fournisseur n'est configuré~~ **OBSOLÈTE (fondateur, 2026-09-17) : Mapbox est choisi et implémenté.** Reste à poser `MAPBOX_ACCESS_TOKEN` dans l'environnement Vercel.
+- Aucune mesure de latence ou de coût réel du fournisseur retenu : **toujours vrai** — aucun appel Mapbox facturé n'a encore été fait depuis Omni. Le tarif Mapbox Directions doit être confirmé sur le compte avant mise en service.
+- Aucun test du réseau routier de Lomé **via le code Omni avec un vrai jeton** : la forme de la requête et de la réponse est testée, et un appel réel atteint bien `api.mapbox.com` (un jeton invalide remonte **401** proprement), mais un itinéraire Mapbox authentifié n'a pas encore été dessiné.
+- Le repli DOM ne sait toujours pas afficher un tracé (`addSource`/`addLayer` = no-op, `fallback-map-surface.ts:227`).
 - Aucune validation de la qualité du tracé aux 4 largeurs avec une vraie géométrie routière.
-- Aucune vérification que le fallback DOM sait afficher un tracé (aujourd'hui non : no-op).
 
-Aucune ligne de code d'itinéraire n'a été écrite. Le gate est un **choix de fournisseur et de périmètre**, pas un travail d'implémentation.
+~~Aucune ligne de code d'itinéraire n'a été écrite. Le gate est un **choix de fournisseur et de périmètre**, pas un travail d'implémentation.~~ **OBSOLÈTE** : le gate fournisseur est **tranché (Mapbox)** et l'implémentation est **livrée, testée et poussée**. Ce qui reste est l'**activation opérationnelle** (poser `MAPBOX_ACCESS_TOKEN`) et la réconciliation de spec D-ROUTE-3.

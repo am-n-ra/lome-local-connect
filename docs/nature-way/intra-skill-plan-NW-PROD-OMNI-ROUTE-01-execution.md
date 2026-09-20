@@ -3,8 +3,9 @@
 > **Skill :** `/nature-way` (+ `/nature-way-founder-hq`)
 > **Handoff :** `HO-OMNI-18`
 > **Décision fondateur :** « fix » — corriger la qualité d'itinéraire
+> **Puis décision fournisseur :** « prenons mapbox comme fournisseur d'itinéraire » (RT-D1, 2026-09-17)
 > **Date :** 2026-09-17
-> **Statut :** exécution en cours
+> **Statut :** **mécanisme livré** (`fa524f3` proxy + gardes ; `afffe29` Mapbox). Reste l'activation opérationnelle (poser `MAPBOX_ACCESS_TOKEN`) et RT-D2/D-ROUTE-3.
 > **Plan parent :** `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-ROUTE-01.md` (diagnostic)
 
 ## Découvertes qui changent le plan
