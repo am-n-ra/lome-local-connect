@@ -188,6 +188,17 @@ Only omni-v2-rebuild is touched. Never merge to main. "Merge" = "push prod branc
 >
 > **Trou de test réel :** la branche `intent` de `http.ts` (le refus `INTENT_REQUIRED`) **n'a aucun test HTTP** ; `INTENT_REQUIRED` n'existe que dans les types et l'UI. Le dépôt n'utilise aucun `vi.mock` et `createTrunkRepository` est un import direct : il n'y a **aucun seam** pour prouver ce refus sans base réelle. À traiter avant d'activer le verrou.
 >
+> **DEUXIÈME CAUSE TROUVÉE : LE MOTEUR REFUSE (2026-09-20, 16:30Z).** Le fondateur signale « le service d'itinéraire est momentanément indisponible » — donc il est **connecté** (le gate d'identité est franchi) et c'est **Mapbox** qui échoue. Le trait droit persiste pour une **seconde raison, distincte de la première**.
+>
+> **Le défaut de méthode, plus grave que le bug :** le serveur ne **journalisait pas** les échecs de routage, et le message affiché est volontairement générique. Conséquence : un trait droit ne portait **aucune trace de sa propre cause**. Un bug de production, pourtant déclenché par un clic, était indiagnosticable de l'intérieur. Corrigé : chaque échec porte désormais un `causeKind` (`auth` / `rate_limit` / `unreachable` / `timeout` / `malformed` / `no_route` / `server`) et le statut amont, journalisés sans jamais écrire l'URL (elle porte le jeton).
+>
+> **Action fondateur, 2 minutes, et c'est tout ce qui débloque :** ouvrir les logs du déploiement et filtrer `routing_provider_error`.
+> - `causeKind=auth` → **le jeton Mapbox est le problème** : scope Directions absent, ou — piège que le dépôt avait déjà documenté — une **URL restriction** dessus (ces appels serveur n'envoient aucun `Referer`, donc une restriction par URL donne 403 sur chaque requête).
+> - `causeKind=no_route` → Mapbox **n'a pas de couverture routière** sur ce couple de points.
+> - `unreachable`/`timeout` → panne amont, se réessaie.
+>
+> **Je ne peux pas trancher à ta place :** `MAPBOX_ACCESS_TOKEN` est enregistré `sensitive`, donc **illisible même avec ton token Vercel** (`valeur=…(0)`). Je n'ai donc jamais pu confirmer que Mapbox répond. Le fond de carte, lui, est Carto Positron — donc la voirie visible vient d'OSM, la même source que Mapbox : une absence totale de couverture serait surprenante, ce qui **pointe vers le jeton**.
+>
 > **POURQUOI L'ITINÉRAIRE EST « UN TRAIT, UNE LIGNE » — CAUSE RACINE ÉTABLIE ET CORRIGÉE (2026-09-20, 15:30Z).** Le fondateur l'a signalé : la ligne droite n'est **pas** un bug de tracé, c'est le **dégradé honnête** — mais son message était **faux**, et c'est ça le vrai défaut.
 >
 > **Ce que la sonde navigateur a capturé :** géolocalisation accordée, fiche ouverte, bouton itinéraire cliqué → le serveur répond **`HTTP 401 AUTH_REQUIRED`** (aucun jeton envoyé), et le client affichait « tracé direct — **itinéraire routier indisponible** ». Traduction : l'acheteur se voyait annoncer une **panne inexistante**, alors que l'action attendue était simplement de **se connecter**.
