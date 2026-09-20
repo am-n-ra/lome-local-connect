@@ -64,9 +64,17 @@ export class RoutingConfigurationError extends Error {
 }
 
 export class RoutingProviderError extends Error {
-  constructor(message: string) {
+  /** Why the provider failed, kept so the caller can tell an operator problem
+   * (bad token) from a transient one (outage) instead of flattening both into
+   * one message the buyer cannot act on. */
+  readonly causeKind: 'auth' | 'rate_limit' | 'unreachable' | 'timeout' | 'malformed' | 'no_route' | 'server';
+  readonly providerStatus: number | null;
+
+  constructor(message: string, causeKind: RoutingProviderError['causeKind'] = 'server', providerStatus: number | null = null) {
     super(message);
     this.name = 'RoutingProviderError';
+    this.causeKind = causeKind;
+    this.providerStatus = providerStatus;
   }
 }
 
@@ -92,6 +100,15 @@ export function activeRoutingProvider(): RoutingProvider | null {
 
 export function routingProviderConfigured(): boolean {
   return activeRoutingProvider() !== null;
+}
+
+/** Map an HTTP failure from a routing provider to a kind an operator can act on.
+ * Exported because the classification is the part worth pinning in a test: the
+ * response the buyer receives is deliberately generic either way. */
+export function classifyProviderStatus(status: number): 'auth' | 'rate_limit' | 'server' {
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  return 'server';
 }
 
 /** Bounded in-process cache keyed by provider, profile and the rounded endpoint
@@ -164,19 +181,33 @@ async function fetchJson(url: string, providerLabel: string): Promise<unknown> {
   try {
     response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
   } catch (error) {
+    const timedOut = error instanceof Error && error.name === 'AbortError';
     throw new RoutingProviderError(
-      error instanceof Error && error.name === 'AbortError'
+      timedOut
         ? `The ${providerLabel} routing provider did not respond in time.`
         : `The ${providerLabel} routing provider could not be reached.`,
+      timedOut ? 'timeout' : 'unreachable',
     );
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.`);
+  if (!response.ok) {
+    // 401/403 almost always means the server-side token, not the buyer's request:
+    // a URL-restricted token is the documented trap, since these calls carry no
+    // browser Referer. Classifying it separately is what makes that findable.
+    const kind = classifyProviderStatus(response.status);
+    // Naming the likely cause in the message itself matters: this string is what
+    // reaches the server log, and an operator reading "401" needs to know that a
+    // URL restriction on the token is the usual reason.
+    const hint = kind === 'auth'
+      ? ' (check MAPBOX_ACCESS_TOKEN: it must have no URL restriction, since these calls send no browser Referer)'
+      : '';
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.${hint}`, kind, response.status);
+  }
   try {
     return await response.json();
   } catch {
-    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`);
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`, 'malformed');
   }
 }
 
@@ -215,13 +246,14 @@ async function fetchFromMapbox(from: RoutePoint, to: RoutePoint, profile: RouteP
       payload.code === 'NoRoute' || payload.code === 'NoSegment'
         ? 'No road itinerary could be found between these two points.'
         : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`,
+      payload.code === 'NoRoute' || payload.code === 'NoSegment' ? 'no_route' : 'server',
     );
   }
 
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== 'number' || typeof route.duration !== 'number') {
-    throw new RoutingProviderError('The Mapbox routing provider returned no usable itinerary.');
+    throw new RoutingProviderError('The Mapbox routing provider returned no usable itinerary.', 'no_route');
   }
 
   return {
@@ -252,7 +284,7 @@ async function fetchFromOsrm(from: RoutePoint, to: RoutePoint, profile: RoutePro
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== 'number' || typeof route.duration !== 'number') {
-    throw new RoutingProviderError('The OSRM routing provider returned no usable itinerary.');
+    throw new RoutingProviderError('The OSRM routing provider returned no usable itinerary.', 'no_route');
   }
 
   return {

@@ -366,6 +366,17 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       if (error instanceof RoutingProviderError) {
+        // A buyer cannot act on a provider fault, so the response stays generic.
+        // The operator, however, needs to know WHICH fault: an auth failure means
+        // the token is misconfigured (the URL-restriction trap), while a timeout
+        // or 5xx is transient. Without this line the distinction was invisible in
+        // production, which is precisely why the straight line went undiagnosed.
+        console.error('routing_provider_error', {
+          causeKind: error.causeKind,
+          providerStatus: error.providerStatus,
+          // Never log the request URL: it carries MAPBOX_ACCESS_TOKEN.
+          message: error.message,
+        });
         json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'PROVIDER_ERROR', message: error.message } });
         return true;
       }

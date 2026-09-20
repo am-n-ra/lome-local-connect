@@ -12,6 +12,7 @@ import {
   isInsidePilotZone,
   routingProviderConfigured,
   activeRoutingProvider,
+  classifyProviderStatus,
 } from './routing-adapter';
 
 const OSRM_OK = {
@@ -309,6 +310,62 @@ describe('routing adapter provider calls', () => {
     const route = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
     expect(route.distanceMeters).toBe(5390.2);
     expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** RT-D1: the buyer gets one generic message either way, so the classification
+ * exists only for the operator. It is pinned here because losing it was what
+ * made a production straight line take a full session to explain. */
+describe('routing provider failure classification', () => {
+  beforeEach(() => {
+    process.env.OSRM_BASE_URL = 'https://routing.example.test';
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    clearRoutingCache();
+  });
+  afterEach(() => {
+    delete process.env.OSRM_BASE_URL;
+    vi.restoreAllMocks();
+    clearRoutingCache();
+  });
+
+  it('classifies an auth failure apart from a transient one', () => {
+    expect(classifyProviderStatus(401)).toBe('auth');
+    expect(classifyProviderStatus(403)).toBe('auth');
+    expect(classifyProviderStatus(429)).toBe('rate_limit');
+    expect(classifyProviderStatus(500)).toBe('server');
+    expect(classifyProviderStatus(502)).toBe('server');
+  });
+
+  it('carries the kind and the status out of a refused provider call', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('denied', { status: 403 }));
+    const error = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN }).catch((e) => e);
+    expect(error).toBeInstanceOf(RoutingProviderError);
+    expect(error.causeKind).toBe('auth');
+    expect(error.providerStatus).toBe(403);
+    // An operator reading the log must be told the usual cause, not just "403".
+    expect(error.message).toMatch(/URL restriction/);
+  });
+
+  it('separates a provider timeout from an unreachable host', async () => {
+    const abort = new Error('aborted');
+    abort.name = 'AbortError';
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(abort);
+    const timeout = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN }).catch((e) => e);
+    expect(timeout.causeKind).toBe('timeout');
+
+    clearRoutingCache();
+    vi.restoreAllMocks();
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('connect ECONNREFUSED'));
+    const unreachable = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN }).catch((e) => e);
+    expect(unreachable.causeKind).toBe('unreachable');
+  });
+
+  it('marks a routable pair with no road as no_route, not as a provider fault', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ routes: [{ distance: 1, duration: 1, geometry: { coordinates: [] } }] }), { status: 200 }),
+    );
+    const error = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN }).catch((e) => e);
+    expect(error.causeKind).toBe('no_route');
   });
 });
 

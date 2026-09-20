@@ -85,7 +85,12 @@ for (const call of routingCalls) {
   const err = call.body?.error;
   console.log(`  HTTP ${call.status} auth=${call.hassAuth}`);
   console.log(`    available=${data?.available} reason=${data?.reason ?? err?.code ?? '-'} points=${data?.coordinates?.length ?? '-'}`);
-  if (err?.message) console.log(`    message="${err.message}"`);
+  // Le message brut porte la cause exacte (ex. « returned 401 », « NoSegment »).
+  // Le libellé affiché, lui, est volontairement générique : ne pas confondre les deux.
+  const detail = data?.message ?? err?.message;
+  if (detail) console.log(`    message brut="${detail}"`);
+  if (data?.provider) console.log(`    provider=${data.provider} profile=${data.profile}`);
+  if (data?.distanceMeters != null) console.log(`    distance=${data.distanceMeters}m durée=${data.durationSeconds}s`);
 }
 
 await page.screenshot({ path: 'docs/nature-way/pre1-proof/probe-route-1280.png' });
