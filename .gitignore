@@ -9,3 +9,6 @@ dist/
 
 # Local-only proof fixtures (regenerate from prod API; do not commit)
 .tmp-*
+
+# Agent scratch space (plans, temp observations) — never product code
+.agents_tmp/

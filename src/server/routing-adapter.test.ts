@@ -11,6 +11,7 @@ import {
   formatStepInstruction,
   isInsidePilotZone,
   routingProviderConfigured,
+  activeRoutingProvider,
 } from './routing-adapter';
 
 const OSRM_OK = {
@@ -60,19 +61,24 @@ describe('routing pilot-zone guard', () => {
 
 describe('routing adapter configuration', () => {
   const original = process.env.OSRM_BASE_URL;
+  const originalToken = process.env.MAPBOX_ACCESS_TOKEN;
   afterEach(() => {
     if (original === undefined) delete process.env.OSRM_BASE_URL;
     else process.env.OSRM_BASE_URL = original;
+    if (originalToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
+    else process.env.MAPBOX_ACCESS_TOKEN = originalToken;
     clearRoutingCache();
   });
 
   it('reports the provider as unconfigured when no base URL is set', () => {
     delete process.env.OSRM_BASE_URL;
+    delete process.env.MAPBOX_ACCESS_TOKEN;
     expect(routingProviderConfigured()).toBe(false);
   });
 
   it('refuses to fall back to a public demo server when unconfigured', async () => {
     delete process.env.OSRM_BASE_URL;
+    delete process.env.MAPBOX_ACCESS_TOKEN;
     await expect(fetchRoadRoute({ from: ADAWLATO, to: TOKOIN })).rejects.toBeInstanceOf(RoutingConfigurationError);
   });
 
@@ -86,9 +92,168 @@ describe('routing adapter configuration', () => {
   });
 });
 
+describe('routing provider selection', () => {
+  const originalToken = process.env.MAPBOX_ACCESS_TOKEN;
+  const originalOsrm = process.env.OSRM_BASE_URL;
+  afterEach(() => {
+    if (originalToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
+    else process.env.MAPBOX_ACCESS_TOKEN = originalToken;
+    if (originalOsrm === undefined) delete process.env.OSRM_BASE_URL;
+    else process.env.OSRM_BASE_URL = originalOsrm;
+    delete process.env.MAPBOX_DRIVING_PROFILE;
+    vi.restoreAllMocks();
+    clearRoutingCache();
+  });
+
+  it('selects Mapbox when the access token is set', () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-token';
+    delete process.env.OSRM_BASE_URL;
+    expect(activeRoutingProvider()).toBe('mapbox');
+  });
+
+  it('selects OSRM when only the base URL is set', () => {
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    process.env.OSRM_BASE_URL = 'https://routing.example.test';
+    expect(activeRoutingProvider()).toBe('osrm');
+  });
+
+  it('prefers Mapbox when both are configured, matching the founder decision', () => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-token';
+    process.env.OSRM_BASE_URL = 'https://routing.example.test';
+    expect(activeRoutingProvider()).toBe('mapbox');
+  });
+
+  it('treats a blank token as unconfigured instead of attempting a doomed call', () => {
+    process.env.MAPBOX_ACCESS_TOKEN = '   ';
+    delete process.env.OSRM_BASE_URL;
+    expect(activeRoutingProvider()).toBeNull();
+  });
+});
+
+describe('routing adapter Mapbox provider', () => {
+  const MAPBOX_OK = {
+    code: 'Ok',
+    routes: [{
+      distance: 5390.2,
+      duration: 342,
+      geometry: { coordinates: [[1.2138, 6.1315], [1.218, 6.15], [1.2226, 6.1655]] },
+      legs: [{
+        steps: [
+          { name: 'Boulevard du 13 Janvier', distance: 1084, duration: 90, maneuver: { type: 'turn', modifier: 'right', instruction: 'Tournez à droite sur Boulevard du 13 Janvier' } },
+          { name: 'Avenue Maman N\'Danida', distance: 1480, duration: 120, maneuver: { type: 'turn', modifier: 'left', instruction: 'Tournez à gauche sur Avenue Maman N\'Danida' } },
+        ],
+      }],
+    }],
+  };
+
+  const originalToken = process.env.MAPBOX_ACCESS_TOKEN;
+  beforeEach(() => {
+    process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-token';
+    delete process.env.OSRM_BASE_URL;
+    clearRoutingCache();
+  });
+  afterEach(() => {
+    if (originalToken === undefined) delete process.env.MAPBOX_ACCESS_TOKEN;
+    else process.env.MAPBOX_ACCESS_TOKEN = originalToken;
+    delete process.env.MAPBOX_DRIVING_PROFILE;
+    vi.restoreAllMocks();
+    clearRoutingCache();
+  });
+
+  it('calls api.mapbox.com with a full-geometry, French, stepped request', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(MAPBOX_OK), { status: 200 }));
+    const route = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+
+    const requested = String(spy.mock.calls[0]?.[0]);
+    expect(requested).toContain('api.mapbox.com/directions/v5/mapbox/driving/');
+    expect(requested).toContain('geometries=geojson');
+    expect(requested).toContain('overview=full');
+    expect(requested).toContain('steps=true');
+    // French keeps the turn-by-turn consistent with the rest of the product.
+    expect(requested).toContain('language=fr');
+    expect(route.provider).toBe('mapbox');
+    expect(route.distanceMeters).toBe(5390.2);
+    expect(route.coordinates).toHaveLength(3);
+  });
+
+  it('uses the walking profile for a foot itinerary instead of driving', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(MAPBOX_OK), { status: 200 }));
+    await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN, profile: 'foot' });
+    expect(String(spy.mock.calls[0]?.[0])).toContain('mapbox/walking');
+  });
+
+  it('stays on mapbox/driving by default and only opts into traffic explicitly', async () => {
+    // A fresh Response per call: a single mocked Response body can only be read once.
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () => new Response(JSON.stringify(MAPBOX_OK), { status: 200 }),
+    );
+    await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(String(spy.mock.calls[0]?.[0])).toContain('mapbox/driving/');
+    expect(String(spy.mock.calls[0]?.[0])).not.toContain('driving-traffic');
+
+    clearRoutingCache();
+    process.env.MAPBOX_DRIVING_PROFILE = 'driving-traffic';
+    await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(String(spy.mock.calls[1]?.[0])).toContain('mapbox/driving-traffic');
+  });
+
+  it('uses Mapbox own French instructions rather than composing its own', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(MAPBOX_OK), { status: 200 }));
+    const route = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(route.steps[0]?.instruction).toBe('Tournez à droite sur Boulevard du 13 Janvier');
+    expect(route.steps[1]?.instruction).toBe('Tournez à gauche sur Avenue Maman N\'Danida');
+  });
+
+  it('falls back to the local formatter when Mapbox omits an instruction', async () => {
+    const payload = {
+      code: 'Ok',
+      routes: [{
+        distance: 1000,
+        duration: 60,
+        geometry: { coordinates: [[1.2138, 6.1315], [1.2226, 6.1655]] },
+        legs: [{ steps: [{ name: 'Rue Khra', distance: 1000, duration: 60, maneuver: { type: 'turn', modifier: 'left' } }] }],
+      }],
+    };
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(payload), { status: 200 }));
+    const route = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(route.steps[0]?.instruction).toBe('Tournez à gauche sur Rue Khra');
+  });
+
+  it('never leaks the token into the client-visible result', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(MAPBOX_OK), { status: 200 }));
+    const route = await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(JSON.stringify(route)).not.toContain('pk.test-token');
+  });
+
+  it('distinguishes a 200 NoRoute body from an HTTP failure', async () => {
+    // Mapbox reports "no route" with HTTP 200, so status alone would look fine.
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'NoRoute', message: 'No route found' }), { status: 200 }));
+    await expect(fetchRoadRoute({ from: ADAWLATO, to: TOKOIN })).rejects.toThrow(/No road itinerary/);
+  });
+
+  it('surfaces an expired token as a provider error, not a silent straight line', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ code: 'TokenExpired', message: 'Token expired' }), { status: 200 }));
+    await expect(fetchRoadRoute({ from: ADAWLATO, to: TOKOIN })).rejects.toBeInstanceOf(RoutingProviderError);
+  });
+
+  it('surfaces a 401 from Mapbox as a provider error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('nope', { status: 401 }));
+    await expect(fetchRoadRoute({ from: ADAWLATO, to: TOKOIN })).rejects.toThrow(/returned 401/);
+  });
+
+  it('caches a Mapbox itinerary so a UI reopen is not billed twice', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify(MAPBOX_OK), { status: 200 }));
+    await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    await fetchRoadRoute({ from: ADAWLATO, to: TOKOIN });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('routing adapter provider calls', () => {
   beforeEach(() => {
     process.env.OSRM_BASE_URL = 'https://routing.example.test';
+    // A leaked Mapbox token would silently switch the provider under test.
+    delete process.env.MAPBOX_ACCESS_TOKEN;
     clearRoutingCache();
   });
   afterEach(() => {

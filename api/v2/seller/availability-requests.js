@@ -5306,12 +5306,17 @@ var RoutingProviderError = class extends Error {
 function isInsidePilotZone(point) {
   return Number.isFinite(point.latitude) && Number.isFinite(point.longitude) && point.longitude >= PILOT_ZONE_BOUNDS.west && point.longitude <= PILOT_ZONE_BOUNDS.east && point.latitude >= PILOT_ZONE_BOUNDS.south && point.latitude <= PILOT_ZONE_BOUNDS.north;
 }
+function activeRoutingProvider() {
+  if (process.env.MAPBOX_ACCESS_TOKEN?.trim()) return "mapbox";
+  if (process.env.OSRM_BASE_URL?.trim()) return "osrm";
+  return null;
+}
 var CACHE_TTL_MS = 5 * 60 * 1e3;
 var CACHE_MAX_ENTRIES = 200;
 var cache = /* @__PURE__ */ new Map();
-function cacheKey(from, to, profile) {
+function cacheKey(provider, from, to, profile) {
   const r = (n) => n.toFixed(5);
-  return `${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
+  return `${provider}:${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
 }
 var REQUEST_TIMEOUT_MS = 6e3;
 async function fetchRoadRoute(input) {
@@ -5319,13 +5324,17 @@ async function fetchRoadRoute(input) {
   if (!isInsidePilotZone(input.from) || !isInsidePilotZone(input.to)) {
     throw new RoutingOutOfZoneError();
   }
-  const baseUrl2 = process.env.OSRM_BASE_URL?.trim();
-  if (!baseUrl2) throw new RoutingConfigurationError();
-  const key = cacheKey(input.from, input.to, profile);
+  const provider = activeRoutingProvider();
+  if (!provider) throw new RoutingConfigurationError();
+  const key = cacheKey(provider, input.from, input.to, profile);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
-  const coords = `${input.from.longitude},${input.from.latitude};${input.to.longitude},${input.to.latitude}`;
-  const url = `${baseUrl2.replace(/\/+$/, "")}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const value = provider === "mapbox" ? await fetchFromMapbox(input.from, input.to, profile) : await fetchFromOsrm(input.from, input.to, profile);
+  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+async function fetchJson(url, providerLabel) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response;
@@ -5333,19 +5342,67 @@ async function fetchRoadRoute(input) {
     response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
   } catch (error) {
     throw new RoutingProviderError(
-      error instanceof Error && error.name === "AbortError" ? "The routing provider did not respond in time." : "The routing provider could not be reached."
+      error instanceof Error && error.name === "AbortError" ? `The ${providerLabel} routing provider did not respond in time.` : `The ${providerLabel} routing provider could not be reached.`
     );
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) throw new RoutingProviderError(`The routing provider returned ${response.status}.`);
-  const payload = await response.json();
+  if (!response.ok) throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.`);
+  try {
+    return await response.json();
+  } catch {
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`);
+  }
+}
+async function fetchFromMapbox(from, to, profile) {
+  const token = process.env.MAPBOX_ACCESS_TOKEN?.trim();
+  if (!token) throw new RoutingConfigurationError();
+  const wantTraffic = profile === "driving" && process.env.MAPBOX_DRIVING_PROFILE?.trim() === "driving-traffic";
+  const mapboxProfile = profile === "foot" ? "mapbox/walking" : wantTraffic ? "mapbox/driving-traffic" : "mapbox/driving";
+  const params = new URLSearchParams({
+    geometries: "geojson",
+    overview: "full",
+    steps: "true",
+    language: "fr",
+    access_token: token
+  });
+  const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?${params.toString()}`;
+  const payload = await fetchJson(url, "Mapbox");
+  if (payload.code && payload.code !== "Ok") {
+    throw new RoutingProviderError(
+      payload.code === "NoRoute" || payload.code === "NoSegment" ? "No road itinerary could be found between these two points." : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`
+    );
+  }
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
-    throw new RoutingProviderError("The routing provider returned no usable itinerary.");
+    throw new RoutingProviderError("The Mapbox routing provider returned no usable itinerary.");
   }
-  const value = {
+  return {
+    provider: "mapbox",
+    profile,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+    coordinates,
+    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
+      instruction: step.maneuver?.instruction?.trim() || formatStepInstruction(step),
+      distanceMeters: step.distance ?? 0,
+      durationSeconds: step.duration ?? 0
+    }))
+  };
+}
+async function fetchFromOsrm(from, to, profile) {
+  const baseUrl2 = process.env.OSRM_BASE_URL?.trim();
+  if (!baseUrl2) throw new RoutingConfigurationError();
+  const coords = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
+  const url = `${baseUrl2.replace(/\/+$/, "")}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const payload = await fetchJson(url, "OSRM");
+  const route = payload.routes?.[0];
+  const coordinates = route?.geometry?.coordinates ?? [];
+  if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
+    throw new RoutingProviderError("The OSRM routing provider returned no usable itinerary.");
+  }
+  return {
     provider: "osrm",
     profile,
     distanceMeters: route.distance,
@@ -5357,9 +5414,6 @@ async function fetchRoadRoute(input) {
       durationSeconds: step.duration ?? 0
     }))
   };
-  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value);
-  cache.set(key, { at: Date.now(), value });
-  return value;
 }
 function formatStepInstruction(step) {
   const modifier = step.maneuver?.modifier;

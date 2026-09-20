@@ -7,9 +7,16 @@
  * to a routing engine, and it is only reachable through the authenticated-free
  * `GET /api/v2/public/routing` proxy route.
  *
- * The provider is chosen by `OSRM_BASE_URL` so the same code runs against a
- * self-hosted OSRM for Togo or any OSRM-compatible host, without a code change.
- * When it is unset we do NOT fall back to the public demo server: its usage
+ * The provider is chosen from the environment:
+ *   - `MAPBOX_ACCESS_TOKEN` selects Mapbox Directions, the founder's choice for
+ *     RT-D1 (2026-09-17). The token is secret and stays server-side; only this
+ *     module ever reads it. `MAPBOX_DRIVING_PROFILE=driving-traffic` opts into
+ *     traffic-aware ETAs (a higher-priced Mapbox tier), never enabled silently.
+ *   - `OSRM_BASE_URL` selects OSRM, so the same code runs against a self-hosted
+ *     engine for Togo or any OSRM-compatible host, without a code change.
+ * Mapbox wins when both are configured, because it is the provider the founder
+ * chose; OSRM stays supported because self-hosting remains a valid fallback.
+ * When neither is set we do NOT fall back to the public demo server: its usage
  * policy restricts it to reasonable, non-commercial use and <= 1 request per
  * second, which a commercial app cannot rely on. The caller then degrades to an
  * explicitly labelled straight line.
@@ -22,15 +29,19 @@ export const PILOT_ZONE_BOUNDS = { west: 1.0, south: 5.85, east: 2.45, north: 6.
 
 export type RoutePoint = { latitude: number; longitude: number };
 
+export type RouteProfile = 'driving' | 'foot';
+
 export interface RoutingStep {
   instruction: string;
   distanceMeters: number;
   durationSeconds: number;
 }
 
+export type RoutingProvider = 'mapbox' | 'osrm';
+
 export interface RoutingResult {
-  provider: 'osrm';
-  profile: 'driving' | 'foot';
+  provider: RoutingProvider;
+  profile: RouteProfile;
   distanceMeters: number;
   durationSeconds: number;
   /** GeoJSON [lng, lat] pairs, ready for the map source. */
@@ -70,20 +81,29 @@ export function isInsidePilotZone(point: RoutePoint): boolean {
   );
 }
 
-export function routingProviderConfigured(): boolean {
-  return Boolean(process.env.OSRM_BASE_URL?.trim());
+/** Which engine will answer, or `null` when none is configured. Exported so the
+ * HTTP layer and tests can reason about the choice instead of duplicating it. */
+export function activeRoutingProvider(): RoutingProvider | null {
+  // Mapbox first: it is the provider the founder chose for RT-D1.
+  if (process.env.MAPBOX_ACCESS_TOKEN?.trim()) return 'mapbox';
+  if (process.env.OSRM_BASE_URL?.trim()) return 'osrm';
+  return null;
 }
 
-/** Bounded in-process cache keyed by the rounded endpoint pair. Two reasons:
- * never pay twice for the same itinerary, and keep repeated UI opens from
- * becoming repeated upstream calls. */
+export function routingProviderConfigured(): boolean {
+  return activeRoutingProvider() !== null;
+}
+
+/** Bounded in-process cache keyed by provider, profile and the rounded endpoint
+ * pair. Two reasons: never pay twice for the same itinerary, and keep repeated
+ * UI opens from becoming repeated billed upstream calls. */
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX_ENTRIES = 200;
 const cache = new Map<string, { at: number; value: RoutingResult }>();
 
-function cacheKey(from: RoutePoint, to: RoutePoint, profile: string): string {
+function cacheKey(provider: RoutingProvider, from: RoutePoint, to: RoutePoint, profile: string): string {
   const r = (n: number) => n.toFixed(5);
-  return `${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
+  return `${provider}:${profile}:${r(from.latitude)},${r(from.longitude)}>${r(to.latitude)},${r(to.longitude)}`;
 }
 
 export function clearRoutingCache(): void {
@@ -100,21 +120,44 @@ const REQUEST_TIMEOUT_MS = 6000;
 export async function fetchRoadRoute(input: {
   from: RoutePoint;
   to: RoutePoint;
-  profile?: 'driving' | 'foot';
+  profile?: RouteProfile;
 }): Promise<RoutingResult> {
   const profile = input.profile ?? 'driving';
   if (!isInsidePilotZone(input.from) || !isInsidePilotZone(input.to)) {
     throw new RoutingOutOfZoneError();
   }
-  const baseUrl = process.env.OSRM_BASE_URL?.trim();
-  if (!baseUrl) throw new RoutingConfigurationError();
+  const provider = activeRoutingProvider();
+  if (!provider) throw new RoutingConfigurationError();
 
-  const key = cacheKey(input.from, input.to, profile);
+  const key = cacheKey(provider, input.from, input.to, profile);
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
 
-  const coords = `${input.from.longitude},${input.from.latitude};${input.to.longitude},${input.to.latitude}`;
-  const url = `${baseUrl.replace(/\/+$/, '')}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const value = provider === 'mapbox'
+    ? await fetchFromMapbox(input.from, input.to, profile)
+    : await fetchFromOsrm(input.from, input.to, profile);
+
+  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value as string);
+  cache.set(key, { at: Date.now(), value });
+  return value;
+}
+
+type RouteStepShape = {
+  name?: string;
+  distance?: number;
+  duration?: number;
+  maneuver?: { type?: string; modifier?: string; instruction?: string };
+};
+type RouteShape = {
+  distance?: number;
+  duration?: number;
+  geometry?: { coordinates?: [number, number][] };
+  legs?: { steps?: RouteStepShape[] }[];
+};
+
+/** Shared fetch with a hard timeout, mapping transport failures to a typed error
+ * so the caller never mistakes "unreachable" for "no route". */
+async function fetchJson(url: string, providerLabel: string): Promise<unknown> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response: Response;
@@ -123,24 +166,96 @@ export async function fetchRoadRoute(input: {
   } catch (error) {
     throw new RoutingProviderError(
       error instanceof Error && error.name === 'AbortError'
-        ? 'The routing provider did not respond in time.'
-        : 'The routing provider could not be reached.',
+        ? `The ${providerLabel} routing provider did not respond in time.`
+        : `The ${providerLabel} routing provider could not be reached.`,
     );
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) throw new RoutingProviderError(`The routing provider returned ${response.status}.`);
+  if (!response.ok) throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.`);
+  try {
+    return await response.json();
+  } catch {
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`);
+  }
+}
 
-  const payload = (await response.json()) as {
-    routes?: { distance?: number; duration?: number; geometry?: { coordinates?: [number, number][] }; legs?: { steps?: { name?: string; distance?: number; duration?: number; maneuver?: { type?: string; modifier?: string } }[] }[] }[];
+/** Mapbox Directions. `language=fr` makes Mapbox return its own localised,
+ * human-readable `maneuver.instruction`, which reads better than anything this
+ * module could compose from the raw manoeuvre vocabulary. */
+async function fetchFromMapbox(from: RoutePoint, to: RoutePoint, profile: RouteProfile): Promise<RoutingResult> {
+  const token = process.env.MAPBOX_ACCESS_TOKEN?.trim();
+  if (!token) throw new RoutingConfigurationError();
+
+  // Traffic-aware ETAs need an opt-in: they bill at a higher Mapbox tier, so they
+  // must never be switched on by a default.
+  const wantTraffic = profile === 'driving' && process.env.MAPBOX_DRIVING_PROFILE?.trim() === 'driving-traffic';
+  const mapboxProfile = profile === 'foot'
+    ? 'mapbox/walking'
+    : wantTraffic ? 'mapbox/driving-traffic' : 'mapbox/driving';
+
+  const params = new URLSearchParams({
+    geometries: 'geojson',
+    overview: 'full',
+    steps: 'true',
+    language: 'fr',
+    access_token: token,
+  });
+  const url = `https://api.mapbox.com/directions/v5/${mapboxProfile}/${from.longitude},${from.latitude};${to.longitude},${to.latitude}?${params.toString()}`;
+  const payload = (await fetchJson(url, 'Mapbox')) as {
+    code?: string;
+    message?: string;
+    routes?: RouteShape[];
   };
+
+  // Mapbox reports "no route" in the body with HTTP 200, so a missing route is
+  // not an HTTP failure and must be told apart from one.
+  if (payload.code && payload.code !== 'Ok') {
+    throw new RoutingProviderError(
+      payload.code === 'NoRoute' || payload.code === 'NoSegment'
+        ? 'No road itinerary could be found between these two points.'
+        : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`,
+    );
+  }
+
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== 'number' || typeof route.duration !== 'number') {
-    throw new RoutingProviderError('The routing provider returned no usable itinerary.');
+    throw new RoutingProviderError('The Mapbox routing provider returned no usable itinerary.');
   }
 
-  const value: RoutingResult = {
+  return {
+    provider: 'mapbox',
+    profile,
+    distanceMeters: route.distance,
+    durationSeconds: route.duration,
+    coordinates,
+    steps: (route.legs?.[0]?.steps ?? []).map((step) => ({
+      instruction: step.maneuver?.instruction?.trim() || formatStepInstruction(step),
+      distanceMeters: step.distance ?? 0,
+      durationSeconds: step.duration ?? 0,
+    })),
+  };
+}
+
+/** OSRM. Kept because self-hosting for Togo remains a valid option and costs
+ * nothing to support. OSRM returns no text instructions, so the local formatter
+ * composes them. */
+async function fetchFromOsrm(from: RoutePoint, to: RoutePoint, profile: RouteProfile): Promise<RoutingResult> {
+  const baseUrl = process.env.OSRM_BASE_URL?.trim();
+  if (!baseUrl) throw new RoutingConfigurationError();
+
+  const coords = `${from.longitude},${from.latitude};${to.longitude},${to.latitude}`;
+  const url = `${baseUrl.replace(/\/+$/, '')}/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true`;
+  const payload = (await fetchJson(url, 'OSRM')) as { routes?: RouteShape[] };
+
+  const route = payload.routes?.[0];
+  const coordinates = route?.geometry?.coordinates ?? [];
+  if (!route || coordinates.length < 2 || typeof route.distance !== 'number' || typeof route.duration !== 'number') {
+    throw new RoutingProviderError('The OSRM routing provider returned no usable itinerary.');
+  }
+
+  return {
     provider: 'osrm',
     profile,
     distanceMeters: route.distance,
@@ -152,14 +267,10 @@ export async function fetchRoadRoute(input: {
       durationSeconds: step.duration ?? 0,
     })),
   };
-  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value as string);
-  cache.set(key, { at: Date.now(), value });
-  return value;
 }
 
-/** Turn an OSRM step into a short French instruction. OSRM's own `osrm-text-
- * instructions` package exists, but it is not a project dependency and this
- * covers the manoeuvre vocabulary the Lomé network actually produces. */
+/** Compose a short French instruction from an OSRM manoeuvre. Used for OSRM, and
+ * as the fallback when Mapbox omits its own `instruction` string. */
 export function formatStepInstruction(step: { name?: string; maneuver?: { type?: string; modifier?: string } }): string {
   const modifier = step.maneuver?.modifier;
   const name = step.name?.trim();

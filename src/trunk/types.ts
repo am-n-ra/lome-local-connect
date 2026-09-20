@@ -411,6 +411,9 @@ export interface PublicFacilityImportResult {
 /** Result of the server-side routing proxy (`GET /api/v2/public/routing`).
  * `available: false` is a normal, honest outcome: the caller keeps its own
  * labelled fallback instead of pretending a straight line is a road route. */
+/** Which engine answered. Only the server chooses, so the client only reports it. */
+export type RoutingProvider = 'mapbox' | 'osrm';
+
 export type RoutingUnavailableReason = 'PROVIDER_NOT_CONFIGURED' | 'OUT_OF_ZONE' | 'PROVIDER_ERROR';
 
 export interface RoutingStep {
@@ -421,7 +424,7 @@ export interface RoutingStep {
 
 export interface RoutingAvailable {
   available: true;
-  provider: 'osrm';
+  provider: RoutingProvider;
   profile: 'driving' | 'foot';
   distanceMeters: number;
   durationSeconds: number;
