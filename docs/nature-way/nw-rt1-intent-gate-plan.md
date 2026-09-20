@@ -70,10 +70,45 @@
 ## Handoff to Founder HQ
 
 > **Local status:** `partial`
-> **Gate decision:** `advance`
-> **Closed:** `T-01` — branche applicative identifiée par empreinte de données (`v2_facilities` = 206, identique au comptage prod).
-> **Open or blocked:** `T-02`…`T-07` — voir l'arbre ; aucun bloqueur technique à ce stade.
-> **Resource Receipt:** 6 ressources chargées, 1 template instancié (ce document), 3 non chargées avec motif.
-> **Residual gap:** la **vraie route** (géométrie d'itinéraire) n'est pas encore prouvée : elle exige une identité acheteur et une intention vivante. L'anonyme est refusé par conception.
-> **Next smallest action:** prouver `057` sur une branche jetable, puis l'appliquer sur la branche applicative.
-> **Re-plan trigger:** échec SQL, refus d'écriture Vercel, ou gate qui reste `identity` après redéploiement.
+> **Gate decision:** `pause` sur le verrou d'intention ; `advance` sur la borne de coût (fermée).
+> **Closed:** `T-01` (branche applicative identifiée par empreinte de données), `T-02` (057 prouvée sur clone jetable), `T-03` (057 appliquée via le runner canonique), `T-04` (variable créée puis retirée), `T-05` (le build portant l'état voulu sert bien l'alias canonique).
+> **Open or blocked:**
+> - `T-06` **non prouvable aujourd'hui** — prouver `INTENT_REQUIRED` exige une identité acheteur authentifiée que je n'ai pas ; l'anonyme est refusé avant (401), par conception.
+> - `T-08` **trou de test réel** — la branche `intent` de `http.ts` n'a aucun test HTTP ; aucun seam (`createTrunkRepository` importé directement, dépôt sans `vi.mock`).
+> - `T-09` **décision fondateur** — le verrou exige un QR vivant, TTL 10 min : il refuserait des acheteurs déjà engagés.
+> - `T-07` dépend de `T-09`.
+> **Resource Receipt:** 6 ressources chargées (SKILL, intra-skill-execution-controller, risk-and-escalation-matrix, proof-and-decision-ledger, launch-envelope) + 1 template instancié ; 3 non chargées avec motif explicite.
+> **Residual gap:** la **vraie route** (géométrie d'itinéraire réelle) n'est toujours pas prouvée en production ; elle exige une session acheteur. La borne de coût, elle, est active et **ne dépend d'aucune session**.
+> **Next smallest action:** obtenir une identité acheteur de preuve (variables `OMNI_PROOF_*`) pour prouver `INTENT_REQUIRED` **et** capturer un itinéraire réel.
+> **Re-plan trigger:** décision fondateur sur `T-09`, ou fourniture d'identifiants de preuve.
+
+## Proof and Decision Ledger
+
+| Proof ID | Structural path | Acceptance criterion | Evidence class | Method / source | Environment / data basis | Owner | As of | Result / residual gap |
+|---|---|---|---|---|---|---|---|---|
+| `PR-RT1-01` | `root > migration` | `057` crée la table et l'index sans toucher aux données | `reproduced` | SQL sur clone jetable + rejeu idempotent | clone `br-sparkling-mud-am851hb3` (parent = branche applicative) | NW | 2026-09-20 | `cols=3`, `indexes=2`, 206 facilités intactes, rejeu → aucune erreur |
+| `PR-RT1-02` | `root > quota` | le compteur borne par utilisateur et par fenêtre | `reproduced` | requêtes réelles de `route-quota.ts` | clone jetable | NW | 2026-09-20 | 60/h détecté, 500/j cohérent, lignes > 48 h exclues ; purge 70 → 60 sans toucher au compteur vivant |
+| `PR-RT1-03` | `root > migration` | `057` appliquée sur la base **réellement lue** par l'app | `observed` | runner canonique + registre | branche `br-dawn-hill-am5amy22`, checksum `d3ad51ef…` | NW | 2026-09-20 | table présente, 0 ligne, 206 facilités intactes |
+| `PR-RT1-04` | `feature > access gate` | un appel anonyme est refusé quand le fournisseur est facturé | `observed` | appel prod répété | `omni.sparkafrika.online` | NW | 2026-09-20 | `401 AUTH_REQUIRED` stable sur 2 déploiements |
+| `PR-RT1-05` | `feature > access gate` | le refus d'intention se produit pour un acheteur sans intention vivante | `unproven` | — | — | NW | 2026-09-20 | **gap** : exige une identité acheteur ; aucun seam de test |
+| `PR-RT1-06` | `product > buyer journey` | PRE-1 passe aux 4 largeurs | `reproduced` | Playwright sur la prod | 360/768/1280/1920 | NW | 2026-09-20 | **80/80 PASS**, console propre ; artefacts `docs/nature-way/pre1-proof/` |
+| `PR-RT1-07` | `feature > real road route` | une géométrie d'itinéraire réelle est servie | `unproven` | — | — | NW | 2026-09-20 | **gap** : exige un acheteur authentifié ; non contournable sans franchir le gate |
+
+| Decision ID | Decision | Why now | Options rejected | Owner | Trigger to revisit | Downstream artifacts |
+|---|---|---|---|---|---|---|
+| `DR-RT1-A` | Appliquer `057` sur `br-dawn-hill-am5amy22` | l'app sert 206 facilités depuis cette branche ; la branche nommée `production` n'en a que 4 | appliquer sur la branche par défaut (aurait été appliqué au mauvais endroit, en silence) | fondateur (autorisé), NW (exécuté) | la branche applicative change | `057`, `route-quota.ts` |
+| `DR-RT1-B` | **NON activer** `ROUTING_REQUIRE_INTENT` aujourd'hui | le verrou exige un QR vivant (TTL 10 min) et refuserait des acheteurs déjà engagés ; la borne de coût suffit à protéger la facture | activer sans mesure (aurait refusé des acheteurs engagés) | **fondateur** (décision réservée) | l'expiration du QR est dissociée de l'intention, ou le fondateur tranche | `routing-gate.ts`, `.env.example`, `http.ts` |
+| `DR-RT1-C` | Ne pas tester le refus `INTENT_REQUIRED` par mock | le dépôt n'utilise aucun `vi.mock` ; introduire un mock serait une décision d'architecture | ajouter `vi.mock` localement (aurait introduit un patron absent du dépôt) | NW | le fondateur demande une couverture, ou un seam d'injection est introduit | `http-routing.test.ts` |
+
+## Launch envelope — borne de coût du routage
+
+| Field | Decision |
+|---|---|
+| Intended outcome | Aucune facture Mapbox ne peut être gonflée par un appelant anonyme ou une boucle. |
+| Success signal | Le nombre d'itinéraires servis par acheteur reste sous 60/h et 500/j. |
+| Guardrail | Un acheteur légitime ne doit **jamais** être bloqué à tort ; le quota échoue en **fail-open**. |
+| Audience / exposure | Production complète, tous acheteurs connectés. |
+| Rollout sequence | Appliqué d'emblée : c'est un plafond, pas une fonctionnalité visible. |
+| Reversal | `drop table v2_route_requests` restaure l'état antérieur (le code retombe en fail-open, sans erreur). |
+| Observation window | À la prochaine session avec identité : vérifier qu'une ligne est écrite et qu'un acheteur normal n'est pas refusé. |
+| Communication | Le board fondateur porte la décision et l'écart restant. |
