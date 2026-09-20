@@ -30,6 +30,7 @@
     "@radix-ui/react-slider": "^1.4.7",
     "@radix-ui/react-switch": "^1.3.7",
     "@tailwindcss/vite": "^4.3.3",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.8.0",
     "@vitejs/plugin-react": "latest",
     "fedapay": "^1.2.5",
