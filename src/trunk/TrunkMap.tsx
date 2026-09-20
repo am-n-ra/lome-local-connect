@@ -10,6 +10,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import type { PublicFacility, RouteTarget, RoutingAvailable } from './types';
 import { getRoadRoute } from './api';
+import { routeReasonLabel } from './route-reason-label';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
@@ -269,16 +270,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const [routeStatus, setRouteStatus] = useState<string | null>(null);
   const [roadRoute, setRoadRoute] = useState<RoutingAvailable | null>(null);
   const [roadRouteReason, setRoadRouteReason] = useState<string | null>(null);
-  // RT-D1: codes are stable, so the client owns the wording. Without this the
-  // buyer would see a raw English API message inside a French sentence.
-  const routeReasonLabel = (reason: string | undefined, fallback: string | undefined): string | null => {
-    if (reason === 'QUOTA_HOURLY') return 'vous avez atteint votre nombre d’itinéraires pour cette heure';
-    if (reason === 'QUOTA_DAILY') return 'vous avez atteint votre nombre d’itinéraires pour la journée';
-    if (reason === 'INTENT_REQUIRED') return 'choisissez cette offre pour en afficher l’itinéraire';
-    if (reason === 'PROVIDER_NOT_CONFIGURED') return 'aucun service d’itinéraire n’est configuré';
-    return fallback ?? null;
-  };
-
+  // RT-D1: codes are stable, so the client owns the wording. See
+  // `route-reason-label.ts` for why an unlabelled reason is a real defect and
+  // not a cosmetic one.
   const updateScreenUserPosition = useCallback(() => {
     const map = mapRef.current;
     const currentUser = userPositionRef.current;
@@ -1315,7 +1309,15 @@ const syncCameraPadding = () => {
         return;
       }
       setRoadRoute(null);
-      setRoadRouteReason(result.ok ? routeReasonLabel(data?.reason, data?.message) : null);
+      // A refusal arrives as `error.code` (HTTP 4xx/5xx), a product decision as
+      // `data.reason` (HTTP 200, available:false). Passing only the latter threw
+      // away the reason on every refusal, so the buyer saw "itinéraire routier
+      // indisponible" when the truth was "sign in".
+      setRoadRouteReason(
+        result.ok
+          ? routeReasonLabel(data?.reason, data?.message)
+          : routeReasonLabel(result.error?.code, result.error?.message),
+      );
     })();
     return () => { cancelled = true; };
   }, [routeTarget, userPosition, authToken]);
@@ -1395,7 +1397,7 @@ const syncCameraPadding = () => {
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {resultCount !== null && resultCount > 0 && <div className="countmark" role="status">{(resultCount > 999 ? '999+' : resultCount)}</div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
-      {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
+      {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') || routeStatus?.includes('tracé direct') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
         {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
