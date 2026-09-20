@@ -70,4 +70,34 @@ describe('GET /api/v2/public/routing', () => {
     expect(result.body.data.reason).toBe('OUT_OF_ZONE');
     expect(result.body.data.message).toEqual(expect.any(String));
   });
+
+  // RT-D1: the founder's cost rule. A billed provider (Mapbox) must require an
+  // identity; a self-hosted OSRM costs nothing and must stay open, or the pilot
+  // loses anonymous previews for no saving at all.
+  describe('access gate (RT-D1)', () => {
+    afterEach(() => {
+      delete process.env.MAPBOX_ACCESS_TOKEN;
+      delete process.env.ROUTING_ACCESS_MODE;
+      delete process.env.ROUTING_REQUIRE_INTENT;
+      delete process.env.V2_DATABASE_URL;
+    });
+
+    it('requires sign-in once a billed provider is configured', async () => {
+      process.env.MAPBOX_ACCESS_TOKEN = 'pk.test-token';
+      process.env.V2_DATABASE_URL = 'postgres://unused-in-this-case';
+      const result = await call(`/api/v2/public/routing?${ADAWLATO}&${TOKOIN}`);
+      expect(result.status).toBe(401);
+      expect(result.body.error.code).toBe('AUTH_REQUIRED');
+    });
+
+    it('keeps anonymous itineraries open on a free provider', async () => {
+      process.env.OSRM_BASE_URL = 'https://osrm.invalid';
+      const result = await call(`/api/v2/public/routing?${ADAWLATO}&${TOKOIN}`);
+      // Not a 401: the request reaches the provider layer, which then fails on
+      // the unreachable host and is reported honestly.
+      expect(result.status).toBe(200);
+      expect(result.body.error?.code).toBeUndefined();
+      expect(result.body.data.reason).toBe('PROVIDER_ERROR');
+    });
+  });
 });

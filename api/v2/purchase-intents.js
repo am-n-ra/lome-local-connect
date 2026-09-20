@@ -24,8 +24,63 @@ async function getAuthUserId(headers) {
   }
 }
 
-// src/server/trunk-repository.ts
+// src/server/routing-gate.ts
+function routingGate(input) {
+  const env = input.env ?? process.env;
+  const override = env.ROUTING_ACCESS_MODE?.trim().toLowerCase();
+  if (override === "never") return "none";
+  if (override === "always") return env.ROUTING_REQUIRE_INTENT === "1" ? "intent" : "identity";
+  if (override === "billed") {
+    if (input.provider !== "mapbox") return "none";
+    return env.ROUTING_REQUIRE_INTENT === "1" ? "intent" : "identity";
+  }
+  if (input.provider !== "mapbox") return "none";
+  return env.ROUTING_REQUIRE_INTENT === "1" ? "intent" : "identity";
+}
+
+// src/server/route-quota.ts
 import { neon } from "@neondatabase/serverless";
+var ROUTE_QUOTA = {
+  perHour: 60,
+  perDay: 500
+};
+var WINDOWS = [
+  { reason: "QUOTA_HOURLY", interval: "1 hour", limit: ROUTE_QUOTA.perHour },
+  { reason: "QUOTA_DAILY", interval: "24 hours", limit: ROUTE_QUOTA.perDay }
+];
+function routeQuotaSql() {
+  const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
+  if (!url) return null;
+  return neon(url);
+}
+async function recordRouteRequest(input) {
+  const sql = input.sql === void 0 ? routeQuotaSql() : input.sql;
+  if (!sql) return;
+  await sql`insert into v2_route_requests (auth_user_id) values (${input.authUserId})`;
+}
+async function pruneRouteRequests(input = {}) {
+  const sql = input.sql === void 0 ? routeQuotaSql() : input.sql;
+  if (!sql) return;
+  await sql`delete from v2_route_requests where occurred_at < now() - interval '48 hours'`;
+}
+async function routeQuotaExceeded(input) {
+  const sql = input.sql === void 0 ? routeQuotaSql() : input.sql;
+  if (!sql) return null;
+  for (const window of WINDOWS) {
+    const rows = await sql`
+      select count(*)::int as used
+      from v2_route_requests
+      where auth_user_id = ${input.authUserId}
+        and occurred_at > now() - ${window.interval}::interval
+    `;
+    const used = Number(rows[0]?.used ?? 0);
+    if (used >= window.limit) return window.reason;
+  }
+  return null;
+}
+
+// src/server/trunk-repository.ts
+import { neon as neon2 } from "@neondatabase/serverless";
 import { createHash, randomBytes } from "node:crypto";
 
 // src/domain/pricing.ts
@@ -267,7 +322,7 @@ function qrExpiryFrom(issuedAtIso, ttlMinutes) {
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
   if (!url) throw new Error("V2_DATABASE_URL is not configured for the server runtime.");
-  return neon(url);
+  return neon2(url);
 }
 var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
 var toFacility = (row) => ({
@@ -4642,6 +4697,33 @@ function createTrunkRepository(sql = database()) {
         qrExpiresAt: row.expires_at ? new Date(String(row.expires_at)).toISOString() : null
       };
     },
+    /**
+     * RT-D1 — un acheteur détient-il une intention vivante ?
+     *
+     * Sert uniquement au verrouillage d'itinéraire *optionnel* : par défaut,
+     * `ROUTING_REQUIRE_INTENT` est désactivé, car exiger une intention supprime
+     * tout aperçu d'itinéraire avant décision — le fondateur doit ouvrir ce
+     * verrou en connaissance de cause.
+     *
+     * `expires_at` est le TTL réel porté par le jeton QR (le domaine utilise
+     * `intentExpiryFrom(observedAt)` / 10 minutes). On s'appuie sur lui plutôt
+     * que sur un état « actif » seul : un balayage d'expiration qui n'a pas encore
+     * tourné ne doit pas faire croire à une intention périmée encore valable.
+     */
+    async hasLivePurchaseIntent(input) {
+      const rows = await retryDatabase(() => sql`
+        select 1
+        from v2_purchase_intents pi
+        join v2_accounts a on a.id = pi.buyer_account_id
+        join v2_transaction_snapshots s on s.intent_id = pi.id
+        join v2_qr_tokens q on q.transaction_id = pi.transaction_id
+        where a.auth_user_id = ${input.authUserId}
+          and pi.state = 'active'
+          and q.expires_at > now()
+        limit 1
+      `);
+      return rows.length > 0;
+    },
     async verifyQrToken(input) {
       const rows = await retryDatabase(() => sql`
         with eligible as (
@@ -5642,10 +5724,45 @@ async function handleApi(req, res, pathname, url) {
       json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide from_lat, from_lng, to_lat and to_lng."));
       return true;
     }
+    const gate = routingGate({ provider: activeRoutingProvider() });
+    const authUserId = gate === "none" ? null : await getAuthUserId(req.headers);
+    if (gate !== "none" && !authUserId) {
+      json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to get a road itinerary for this destination."));
+      return true;
+    }
+    if (gate === "intent" && authUserId) {
+      const hasIntent = await (async () => {
+        try {
+          return await createTrunkRepository().hasLivePurchaseIntent({ authUserId });
+        } catch {
+          return true;
+        }
+      })();
+      if (!hasIntent) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: "INTENT_REQUIRED", message: "Choose this offer before loading the itinerary to it." } });
+        return true;
+      }
+    }
+    if (authUserId) {
+      const exceeded = await (async () => {
+        try {
+          return await routeQuotaExceeded({ authUserId });
+        } catch {
+          return null;
+        }
+      })();
+      if (exceeded) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: exceeded, message: "Too many itineraries requested. Try again later." } });
+        return true;
+      }
+    }
     const requestedProfile = url.searchParams.get("profile");
     const profile = requestedProfile === "foot" ? "foot" : "driving";
     try {
       const route = await fetchRoadRoute({ from, to, profile });
+      if (authUserId) {
+        await recordRouteRequest({ authUserId }).catch(() => void 0);
+      }
       json(res, 200, {
         ok: true,
         correlationId,
@@ -7314,6 +7431,7 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.sweepExpiredIntents({ now: (/* @__PURE__ */ new Date()).toISOString(), correlationId });
+      await pruneRouteRequests().catch(() => void 0);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

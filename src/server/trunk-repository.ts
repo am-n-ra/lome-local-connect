@@ -5034,6 +5034,34 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    /**
+     * RT-D1 — un acheteur détient-il une intention vivante ?
+     *
+     * Sert uniquement au verrouillage d'itinéraire *optionnel* : par défaut,
+     * `ROUTING_REQUIRE_INTENT` est désactivé, car exiger une intention supprime
+     * tout aperçu d'itinéraire avant décision — le fondateur doit ouvrir ce
+     * verrou en connaissance de cause.
+     *
+     * `expires_at` est le TTL réel porté par le jeton QR (le domaine utilise
+     * `intentExpiryFrom(observedAt)` / 10 minutes). On s'appuie sur lui plutôt
+     * que sur un état « actif » seul : un balayage d'expiration qui n'a pas encore
+     * tourné ne doit pas faire croire à une intention périmée encore valable.
+     */
+    async hasLivePurchaseIntent(input: { authUserId: string }): Promise<boolean> {
+      const rows = await retryDatabase(() => sql`
+        select 1
+        from v2_purchase_intents pi
+        join v2_accounts a on a.id = pi.buyer_account_id
+        join v2_transaction_snapshots s on s.intent_id = pi.id
+        join v2_qr_tokens q on q.transaction_id = pi.transaction_id
+        where a.auth_user_id = ${input.authUserId}
+          and pi.state = 'active'
+          and q.expires_at > now()
+        limit 1
+      `);
+      return (rows as unknown[]).length > 0;
+    },
+
     async verifyQrToken(input: {
       authUserId: string;
       transactionId: string;

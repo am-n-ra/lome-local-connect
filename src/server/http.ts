@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getAuthUserId } from './auth-context';
+import { routingGate } from './routing-gate';
+import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
@@ -10,6 +12,7 @@ import {
   RoutingConfigurationError,
   RoutingOutOfZoneError,
   RoutingProviderError,
+  activeRoutingProvider,
   fetchRoadRoute,
   formatDistanceLabel,
   formatDurationLabel,
@@ -291,10 +294,53 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide from_lat, from_lng, to_lat and to_lng.'));
       return true;
     }
+    // RT-D1: a billed provider (Mapbox) requires an identity and a budget.
+    // A self-hosted OSRM costs nothing, so anonymous previews stay open.
+    const gate = routingGate({ provider: activeRoutingProvider() });
+    const authUserId = gate === 'none' ? null : await getAuthUserId(req.headers);
+    if (gate !== 'none' && !authUserId) {
+      json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to get a road itinerary for this destination.'));
+      return true;
+    }
+    if (gate === 'intent' && authUserId) {
+      // Best effort: an outage here must not close a working itinerary. Only an
+      // explicit "no live intent" refuses the request.
+      const hasIntent = await (async () => {
+        try {
+          return await createTrunkRepository().hasLivePurchaseIntent({ authUserId });
+        } catch {
+          return true;
+        }
+      })();
+      if (!hasIntent) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'INTENT_REQUIRED', message: 'Choose this offer before loading the itinerary to it.' } });
+        return true;
+      }
+    }
+    if (authUserId) {
+      const exceeded = await (async () => {
+        try {
+          return await routeQuotaExceeded({ authUserId });
+        } catch {
+          // Fail open: the limiter protects the bill, it must not become the
+          // reason a buyer cannot see their itinerary during a database incident.
+          return null;
+        }
+      })();
+      if (exceeded) {
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason: exceeded, message: 'Too many itineraries requested. Try again later.' } });
+        return true;
+      }
+    }
     const requestedProfile = url.searchParams.get('profile');
     const profile = requestedProfile === 'foot' ? 'foot' as const : 'driving' as const;
     try {
       const route = await fetchRoadRoute({ from, to, profile });
+      if (authUserId) {
+        // Recorded only after a route was actually produced: a refused or failed
+        // call must not spend the buyer's budget.
+        await recordRouteRequest({ authUserId }).catch(() => undefined);
+      }
       json(res, 200, {
         ok: true,
         correlationId,
@@ -1980,6 +2026,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       const result = await repository.sweepExpiredIntents({ now: new Date().toISOString(), correlationId });
+      // RT-D1: drop itinerary-usage rows past the longest quota window. Runs on
+      // the existing schedule; a failure here must not fail the intent sweep.
+      await pruneRouteRequests().catch(() => undefined);
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

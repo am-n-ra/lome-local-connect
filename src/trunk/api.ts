@@ -227,11 +227,16 @@ export async function getFacilityDetail(id: string): Promise<ApiResult<FacilityD
 
 /** Ask the server for a real road itinerary. The provider is never called from
  * the browser, so no endpoint or key reaches the bundle. An `available: false`
- * answer is expected while no provider is configured. */
+ * answer is expected while no provider is configured.
+ *
+ * RT-D1: when a billed provider is active the endpoint requires an identity and
+ * enforces a per-buyer budget, so the caller's token is sent when one exists.
+ * A signed-out visitor sends no token and keeps working against a free provider. */
 export async function getRoadRoute(input: {
   from: { latitude: number; longitude: number };
   to: { latitude: number; longitude: number };
   profile?: 'driving' | 'foot';
+  token?: string | null;
 }): Promise<ApiResult<RoutingResult>> {
   const params = new URLSearchParams({
     from_lat: String(input.from.latitude),
@@ -240,7 +245,9 @@ export async function getRoadRoute(input: {
     to_lng: String(input.to.longitude),
   });
   if (input.profile) params.set('profile', input.profile);
-  const response = await fetchWithRecovery(`/api/v2/public/routing?${params.toString()}`, { headers: { Accept: 'application/json' } });
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (input.token) headers.Authorization = `Bearer ${input.token}`;
+  const response = await fetchWithRecovery(`/api/v2/public/routing?${params.toString()}`, { headers });
   return parse<RoutingResult>(response);
 }
 

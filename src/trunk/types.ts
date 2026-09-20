@@ -414,7 +414,16 @@ export interface PublicFacilityImportResult {
 /** Which engine answered. Only the server chooses, so the client only reports it. */
 export type RoutingProvider = 'mapbox' | 'osrm';
 
-export type RoutingUnavailableReason = 'PROVIDER_NOT_CONFIGURED' | 'OUT_OF_ZONE' | 'PROVIDER_ERROR';
+export type RoutingUnavailableReason =
+  | 'PROVIDER_NOT_CONFIGURED'
+  | 'OUT_OF_ZONE'
+  | 'PROVIDER_ERROR'
+  // RT-D1: this buyer has spent their itinerary budget. Kept distinct from
+  // PROVIDER_ERROR so the client can wait instead of showing a fault.
+  | 'QUOTA_HOURLY'
+  | 'QUOTA_DAILY'
+  // RT-D1 (opt-in): the buyer holds no live purchase intent for this session.
+  | 'INTENT_REQUIRED';
 
 export interface RoutingStep {
   instruction: string;

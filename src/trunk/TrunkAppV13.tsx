@@ -165,6 +165,9 @@ export function TrunkAppV13() {
   const [sellerCreateIntent, setSellerCreateIntent] = useState(false);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [routeTarget, setRouteTarget] = useState<import('./types').RouteTarget | null>(null);
+  // RT-D1: the itinerary endpoint needs an identity when the routing provider is
+  // billed (Mapbox). Fetched once per session and refreshed on sign-in below.
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const [resultsFollowId, setResultsFollowId] = useState<string | null>(null);
   const resultsScrollFrame = useRef<number | null>(null);
   const resultsFollowKeyCounter = useRef(0);
@@ -343,6 +346,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         setSessionUser(user);
         const token = await getAuthToken();
         if (token) {
+          // Kept for the itinerary endpoint, which now needs an identity when the
+          // routing provider is billed (RT-D1).
+          setAuthToken(token);
           const caps = await getAccountCapabilities({ token });
           if (caps.ok && caps.data) {
             setAccountRoles(caps.data.roles ?? []);
@@ -1285,6 +1291,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             followTarget={followTarget}
             routeTarget={routeTarget}
             onRouteClose={() => setRouteTarget(null)}
+            authToken={authToken}
             ownedFacilityIds={ownedFacilityIds.length ? ownedFacilityIds : null}
             dimMode={dimMode}
             resultCount={results.length > 0 ? results.length : null}
@@ -2186,6 +2193,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               const session = await authClient.getSession();
               const user = sessionUserFromAuthResult(session);
               if (user) setSessionUser(user);
+              // RT-D1: unlock a gated itinerary right after signing in.
+              setAuthToken(await getAuthToken());
               if (pendingAction) { setSheet('onboard'); } else { setSheet("menu"); }
             } catch {
               setError("Connexion impossible - vérifiez vos identifiants.");

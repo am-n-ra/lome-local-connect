@@ -51,6 +51,9 @@ type Props = {
   contextSurfaceOpen?: boolean;
   routeTarget?: RouteTarget | null;
   onRouteClose?: () => void;
+  // RT-D1: sent with the itinerary request when a billed routing provider gates
+  // the endpoint. Absent for a signed-out visitor.
+  authToken?: string | null;
   // R-03 map-contextual focus: an external surface (admin review, audit hop)
   // asks the map to pan/zoom onto arbitrary coordinates without a pin click.
   focusTarget?: { latitude: number; longitude: number; key: string } | null;
@@ -196,7 +199,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null, resultCount = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null, resultCount = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapEngine | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -266,6 +269,15 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   const [routeStatus, setRouteStatus] = useState<string | null>(null);
   const [roadRoute, setRoadRoute] = useState<RoutingAvailable | null>(null);
   const [roadRouteReason, setRoadRouteReason] = useState<string | null>(null);
+  // RT-D1: codes are stable, so the client owns the wording. Without this the
+  // buyer would see a raw English API message inside a French sentence.
+  const routeReasonLabel = (reason: string | undefined, fallback: string | undefined): string | null => {
+    if (reason === 'QUOTA_HOURLY') return 'vous avez atteint votre nombre d’itinéraires pour cette heure';
+    if (reason === 'QUOTA_DAILY') return 'vous avez atteint votre nombre d’itinéraires pour la journée';
+    if (reason === 'INTENT_REQUIRED') return 'choisissez cette offre pour en afficher l’itinéraire';
+    if (reason === 'PROVIDER_NOT_CONFIGURED') return 'aucun service d’itinéraire n’est configuré';
+    return fallback ?? null;
+  };
 
   const updateScreenUserPosition = useCallback(() => {
     const map = mapRef.current;
@@ -1294,7 +1306,7 @@ const syncCameraPadding = () => {
     if (!origin || !Number.isFinite(origin.latitude) || !Number.isFinite(origin.longitude)) return;
     let cancelled = false;
     void (async () => {
-      const result = await getRoadRoute({ from: origin, to: routeTarget });
+      const result = await getRoadRoute({ from: origin, to: routeTarget, token: authToken });
       if (cancelled) return;
       const data = result.ok ? result.data : undefined;
       if (data?.available) {
@@ -1303,10 +1315,10 @@ const syncCameraPadding = () => {
         return;
       }
       setRoadRoute(null);
-      setRoadRouteReason(result.ok ? data?.message ?? null : null);
+      setRoadRouteReason(result.ok ? routeReasonLabel(data?.reason, data?.message) : null);
     })();
     return () => { cancelled = true; };
-  }, [routeTarget, userPosition]);
+  }, [routeTarget, userPosition, authToken]);
 
   // Evergreen route trace (écran 10): update the GeoJSON source data when the
   // route target or the user position changes; clear it when closed. Camera
