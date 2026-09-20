@@ -174,6 +174,20 @@ Only omni-v2-rebuild is touched. Never merge to main. "Merge" = "push prod branc
 >
 > **Sécurité :** le jeton Vercel transmis a servi à lire la configuration et à déclencher le redéploiement ; **à révoquer/régénérer** (présent dans l'historique de conversation). Le `GITHUB_TOKEN` de l'environnement a servi au push (URL de remote rafraîchie ; elle contenait un secret périmé qui provoquait une invite de mot de passe).
 >
+> **BORNE DE COÛT ACTIVÉE, VERROU D'INTENTION NON ACTIVÉ — ET VOICI POURQUOI (2026-09-20, 13:15Z).** Deux écarts `RT-D1` avaient été signalés ; un seul devait être fermé à l'aveugle.
+>
+> **1. Le quota est désormais RÉEL en production.** `v2_route_requests` **n'existait pas** : les compteurs échouaient en silence et la dépense n'était bornée par rien. La migration `057` est maintenant appliquée sur la **branche applicative** (`br-dawn-hill-am5amy22`), via le runner canonique du dépôt, checksum enregistré. **Le plafond de 60 itinéraires/heure et 500/jour est donc actif pour de vrai** — c'est le verrou qui borne la facture Mapbox, et il ne dépend d'aucun choix produit.
+>
+> **2. Le verrou d'intention (`ROUTING_REQUIRE_INTENT=1`) a été créé… puis RETIRÉ sans être activé.** Le code du dépôt avertit lui-même : *« cela supprime tout aperçu d'itinéraire avant que l'acheteur s'engage, ce qui peut coûter des conversions — le plafond ci-dessus borne déjà la dépense. Activez-le en connaissance de cause. »* Une mesure en base a confirmé le risque : **le gate exige un jeton QR vivant, et ces jetons expirent en 10 minutes** (12 jetons en base, **0 vivant**). Un acheteur qui a **déjà choisi son offre** verrait donc « choisissez cette offre » dès l'expiration — c'est-à-dire presque toujours. **Décision : ne pas activer à l'aveugle ; le fondateur tranche.** Le plafond de coût, lui, est en place, donc rien n'est exposé en attendant.
+>
+> **Deux pièges de plateforme découverts, tous deux piégeux :**
+> **a) La base « production » n'est PAS la base de l'application.** La branche Neon nommée `production` porte **4** facilités et 3 comptes ; l'application en sert **206** et 9 : elle lit la branche `omni-v2-rebuild` (`br-dawn-hill-am5amy22`). L'outil de migration standard vise la branche **par défaut** — il aurait donc appliqué `057` au mauvais endroit, en silence. **Identifier une base par ses données, jamais par son nom.**
+> **b) Un déploiement créé par API ne prend pas l'alias canonique.** `omni.sparkafrika.online` continuait de servir un build **antérieur** à la variable ; la réassignation d'alias par API renvoie `not_found`. **Seul un push de commit fait promouvoir le build** par l'intégration GitHub.
+>
+> **PRE-1 : PREUVE NAVIGATEUR COMPLÈTE — 80/80 PASS AUX 4 LARGEURS** (360, 768, 1280, 1920) sur la production, console propre, `206` pins, recherche réelle, et dégradé honnête quand la géolocalisation est refusée. Artefacts : `docs/nature-way/pre1-proof/`.
+>
+> **Trou de test réel :** la branche `intent` de `http.ts` (le refus `INTENT_REQUIRED`) **n'a aucun test HTTP** ; `INTENT_REQUIRED` n'existe que dans les types et l'UI. Le dépôt n'utilise aucun `vi.mock` et `createTrunkRepository` est un import direct : il n'y a **aucun seam** pour prouver ce refus sans base réelle. À traiter avant d'activer le verrou.
+>
 > **RÉCONCILIATION AU VRAI DÉPÔT ET À LA VRAIE PROD (2026-09-20) — trois écarts entre le board et la réalité, vérifiés sur la prod elle-même.**
 >
 > **1. Les deux bugs « live » étaient déjà corrigés ET déjà en prod.** `5a31ebc` (`fix(scanner,buyer-pro)`) est **ancêtre de HEAD et poussé sur `origin/omni-v2-rebuild`** depuis le 2026-09-19. Vérifié par appel réel : `GET /api/v2/buyer/pro-status` sur la prod canonique renvoie **401 `AUTH_REQUIRED`**, pas 409. Le correctif scanner est présent dans la source (`teardownScanner` garde `stop()` **et** `clear()`, qui lèvent tous deux une *chaîne* de façon synchrone — c'est pour ça que `.then().catch()` seul ne pouvait pas l'intercepter). **Il n'y avait rien à corriger : c'était un écart de déploiement, pas de code.** Ce qui manquait, c'était de **le prouver**.
