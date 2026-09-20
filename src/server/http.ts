@@ -377,7 +377,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
           // Never log the request URL: it carries MAPBOX_ACCESS_TOKEN.
           message: error.message,
         });
-        json(res, 200, { ok: true, correlationId, data: { available: false, reason: 'PROVIDER_ERROR', message: error.message } });
+        // A pair with no road is not a provider fault, and saying so would be a
+        // false claim about the service. The buyer gets it as its own reason.
+        const reason = error.causeKind === 'no_route' ? 'NO_ROUTE' : 'PROVIDER_ERROR';
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason, message: error.message } });
         return true;
       }
       throw error;

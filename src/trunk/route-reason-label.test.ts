@@ -22,6 +22,13 @@ describe('routeReasonLabel', () => {
     expect(routeReasonLabel('OUT_OF_ZONE', undefined)).toMatch(/hors de notre zone/);
   });
 
+  it('does not blame the service when the truth is that no road exists', () => {
+    // Saying "service indisponible" here would be a false claim about the service.
+    const label = routeReasonLabel('NO_ROUTE', undefined);
+    expect(label).toMatch(/aucun itinéraire routier/);
+    expect(label).not.toBe(routeReasonLabel('PROVIDER_ERROR', undefined));
+  });
+
   it('falls back to the server message only for a code it does not know', () => {
     expect(routeReasonLabel('SOMETHING_NEW', 'message du serveur')).toBe('message du serveur');
     expect(routeReasonLabel(undefined, undefined)).toBeNull();

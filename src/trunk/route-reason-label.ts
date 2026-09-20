@@ -36,6 +36,9 @@ export function routeReasonLabel(reason: string | undefined, fallback: string | 
     case 'HTTP_502':
     case 'HTTP_503':
       return 'le service d’itinéraire est momentanément indisponible';
+    // Distinct de PROVIDER_ERROR : le service va très bien, il n'y a pas de route.
+    case 'NO_ROUTE':
+      return 'aucun itinéraire routier n’est disponible pour cette destination';
     default:
       return fallback ?? null;
   }

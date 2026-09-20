@@ -418,6 +418,10 @@ export type RoutingUnavailableReason =
   | 'PROVIDER_NOT_CONFIGURED'
   | 'OUT_OF_ZONE'
   | 'PROVIDER_ERROR'
+  // RT-D1: a pair with genuinely no road is not an outage. Reporting it as one
+  // would be a false statement about the service, the same defect as labelling a
+  // refusal "unavailable".
+  | 'NO_ROUTE'
   // RT-D1: this buyer has spent their itinerary budget. Kept distinct from
   // PROVIDER_ERROR so the client can wait instead of showing a fault.
   | 'QUOTA_HOURLY'
