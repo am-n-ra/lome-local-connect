@@ -1,0 +1,862 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omni — langage visuel &amp; écrans V1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ==========================================================================
+   OMNI — SYSTÈME VISUEL V1
+   Jetons repris VERBATIM de src/trunk/v3.css (source de vérité du produit).
+   La carte reprend la palette canopée réelle de TrunkMap.tsx : eau sombre,
+   terre claire, réseau routier en gris gradués. Rien ici n'est inventé.
+   ========================================================================== */
+:root{
+  /* Identité */
+  --evergreen:#234D40;
+  --evergreen-dark:#08362A;
+  --cream:#F9F7F2;
+  --accent:#F08F5A;
+  --ink:#1A1C1B;
+  /* Surfaces */
+  --appbg:#F9F9F7;
+  --s1:#FFFFFF; --s2:#F4F4F1; --s3:#EEEEEC; --s4:#E8E8E6; --s5:#E2E3E0;
+  --light-green:#E2E3E0;
+  /* Traits */
+  --outline:#717975;
+  --outline-discrete:#C0C8C3;
+  --l1-border:#EAE8E0;
+  /* Élévation */
+  --l1-shadow:0 0 0 1px #EAE8E0, 0 12px 24px rgba(26,28,27,.08);
+  --l2-shadow:0 12px 40px 4px rgba(26,28,27,.12);
+  /* Carte — palette canopée réelle (TrunkMap.applyCanopyPalette) */
+  --map-water:#2d3335;
+  --map-land:#FFFFFF;
+  --map-park:#FAFAFA;
+  --map-park-outline:#D2D2D2;
+  --road-minor:#D4D4D4;
+  --road-secondary:#B5B5B5;
+  --road-trunk:#8D8D8D;
+  --road-motorway:#5F5F5F;
+  --boundary-2:#2B2B2B;
+  --boundary-3:#6D6D6D;
+  /* Marqueurs */
+  --pin-facility:#2e8b6f;
+  --pin-ink:#1F1F1F;
+  /* Typographie */
+  --font-display:"Plus Jakarta Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-body:"Hanken Grotesk",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--appbg); color:var(--ink);
+  font-family:var(--font-body); font-size:15px; line-height:22px;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:var(--font-display); margin:0; letter-spacing:-.01em}
+a{color:inherit}
+
+/* ---------- Ossature documentaire ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px 96px}
+.masthead{padding:56px 0 32px;border-bottom:1px solid var(--l1-border);margin-bottom:48px}
+.masthead .eyebrow{font-family:var(--font-display);font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--evergreen)}
+.masthead h1{font-size:40px;line-height:46px;font-weight:800;margin:10px 0 0;max-width:20ch}
+.masthead p{max-width:62ch;color:rgba(26,28,27,.66);margin:14px 0 0}
+.masthead .provenance{margin-top:22px;display:flex;flex-wrap:wrap;gap:8px}
+.tag{font-family:var(--font-display);font-size:11px;font-weight:700;padding:5px 10px;border-radius:999px;background:var(--light-green);color:var(--evergreen-dark)}
+section{margin:0 0 64px}
+.sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.sec-head h2{font-size:24px;line-height:30px;font-weight:700}
+.sec-head .n{font-family:var(--font-display);font-size:12px;font-weight:800;color:var(--accent)}
+.sec-sub{color:rgba(26,28,27,.6);margin:0 0 26px;max-width:70ch}
+
+/* ---------- Fondations ---------- */
+.grid{display:grid;gap:16px}
+.g-colors{grid-template-columns:repeat(auto-fill,minmax(158px,1fr))}
+.swatch{border-radius:14px;overflow:hidden;border:1px solid var(--l1-border);background:var(--s1)}
+.swatch .chipv{height:74px}
+.swatch .meta{padding:10px 12px}
+.swatch .nm{font-family:var(--font-display);font-size:12px;font-weight:700}
+.swatch .hx{font-size:11px;color:rgba(26,28,27,.55);font-variant-numeric:tabular-nums}
+.g-type{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.tcard{border:1px solid var(--l1-border);border-radius:16px;padding:20px;background:var(--s1)}
+.type-demo{font-family:var(--font-display);font-weight:800;font-size:34px;line-height:38px;letter-spacing:-.02em}
+.type-meta{font-size:11px;color:rgba(26,28,27,.55);margin-top:8px;font-variant-numeric:tabular-nums}
+.g-elev{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.elev{background:var(--s1);border-radius:16px;padding:20px}
+.elev.l1{box-shadow:var(--l1-shadow)} .elev.l2{box-shadow:var(--l2-shadow)}
+
+/* ---------- Écrans ---------- */
+.stage{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.tab{
+  font-family:var(--font-display);font-size:12px;font-weight:700;
+  padding:9px 14px;border-radius:999px;border:1px solid var(--outline-discrete);
+  background:var(--s1);color:var(--ink);cursor:pointer;
+}
+.tab[aria-selected="true"]{background:var(--evergreen);border-color:var(--evergreen);color:#fff}
+.tab:focus-visible{outline:2px solid var(--evergreen);outline-offset:2px}
+
+/* Cadre téléphone */
+.phone{
+  position:relative;width:390px;height:800px;flex:none;
+  border-radius:44px;border:9px solid #0F1412;background:var(--cream);
+  box-shadow:var(--l2-shadow);overflow:hidden;
+}
+.phone .notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:112px;height:24px;background:#0F1412;border-radius:999px;z-index:40}
+.screen{position:absolute;inset:0;display:none}
+.screen[data-on]{display:block}
+.caption{flex:1;min-width:280px;max-width:400px}
+.caption h3{font-size:18px;line-height:24px;margin-bottom:8px}
+.caption p{color:rgba(26,28,27,.66);margin:0 0 14px}
+.caption ul{margin:0;padding-left:18px;color:rgba(26,28,27,.72)}
+.caption li{margin-bottom:7px}
+.note{
+  border-left:3px solid var(--accent);padding:10px 0 10px 14px;
+  background:linear-gradient(90deg,rgba(240,143,90,.07),transparent);
+  border-radius:0 10px 10px 0;font-size:13.5px;color:rgba(26,28,27,.78);margin:14px 0 0;
+}
+
+/* ---------- CARTE (recréation SVG du style Positron canopé) ---------- */
+.map{position:absolute;inset:0;background:var(--map-land)}
+.map svg{display:block;width:100%;height:100%}
+.rd{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.r-moto{stroke:var(--road-motorway);stroke-width:4.2}
+.r-trunk{stroke:var(--road-trunk);stroke-width:3}
+.r-sec{stroke:var(--road-secondary);stroke-width:1.7}
+.r-min{stroke:var(--road-minor);stroke-width:1.1}
+.water{fill:var(--map-water)}
+.park{fill:var(--map-park);stroke:var(--map-park-outline);stroke-width:.6}
+.bnd{fill:none;stroke:var(--boundary-3);stroke-width:.8;stroke-dasharray:5 3}
+.wlabel{font-family:var(--font-display);font-size:8px;font-weight:700;fill:rgba(26,28,27,.42);letter-spacing:.04em}
+.wlabel-sm{font-size:6.6px;font-weight:600;fill:rgba(26,28,27,.32)}
+
+/* Marqueurs (hors SVG pour porter l'ombre et l'emphase) */
+.pin{position:absolute;transform:translate(-50%,-100%);z-index:12}
+.pin .dot{
+  width:26px;height:26px;border-radius:50%;
+  background:var(--pin-facility);border:2.5px solid #fff;
+  box-shadow:0 3px 8px rgba(26,28,27,.3);
+  display:grid;place-items:center;color:#fff;
+  font-family:var(--font-display);font-size:10px;font-weight:800;
+}
+.pin.cluster .dot{background:var(--pin-ink);width:34px;height:34px;font-size:12px}
+.pin.sel .dot{transform:scale(1.3);box-shadow:0 4px 14px rgba(26,28,27,.4)}
+.pin .lab{
+  position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);
+  background:rgba(255,255,255,.94);border:1px solid var(--l1-border);border-radius:6px;
+  padding:2px 6px;font-family:var(--font-display);font-size:8.5px;font-weight:700;
+  white-space:nowrap;box-shadow:0 1px 4px rgba(26,28,27,.12);
+}
+.me{position:absolute;transform:translate(-50%,-50%);z-index:11;width:20px;height:20px;border-radius:50%;background:rgba(35,77,64,.22);display:grid;place-items:center}
+.me::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--evergreen);border:2px solid #fff;box-shadow:0 1px 4px rgba(26,28,27,.3)}
+.countmark{
+  position:absolute;z-index:14;background:var(--evergreen);color:#fff;
+  font-family:var(--font-display);font-size:11px;font-weight:800;
+  padding:5px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(8,54,42,.32);
+}
+.attr{position:absolute;right:8px;bottom:6px;z-index:13;font-size:8.5px;color:rgba(26,28,27,.5);background:rgba(255,255,255,.8);padding:1px 5px;border-radius:4px}
+.mapstatus{position:absolute;left:8px;bottom:6px;z-index:13;font-size:8.5px;color:rgba(26,28,27,.5)}
+
+/* ---------- FEUILLE (bottom sheet) ---------- */
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;z-index:30;
+  background:var(--cream);border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 34px rgba(26,28,27,.16);
+  border-top:1px solid var(--l1-border);
+  display:flex;flex-direction:column;
+}
+.sheet.h-low{max-height:44%;padding:8px 18px 18px}
+.sheet.h-mid{max-height:64%;padding:8px 18px 18px}
+.sheet.h-full{max-height:86%;padding:8px 18px 18px}
+.handle{width:38px;height:4px;border-radius:999px;background:var(--outline-discrete);margin:2px auto 12px;flex:none}
+.sheet .body{overflow-y:auto;min-height:0}
+.eyebrow{font-family:var(--font-display);font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--evergreen)}
+
+/* ---------- Composants produit ---------- */
+.field{
+  display:flex;align-items:center;gap:10px;background:var(--s1);
+  border:1px solid var(--outline-discrete);border-radius:14px;padding:12px 14px;
+}
+.field input{border:0;outline:0;background:transparent;font-family:var(--font-body);font-size:14.5px;color:var(--ink);width:100%}
+.field input::placeholder{color:rgba(26,28,27,.42)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  font-family:var(--font-display);font-size:11px;font-weight:700;padding:6px 11px;
+  border-radius:999px;background:var(--s2);border:1px solid var(--l1-border);color:var(--ink);
+}
+.chip.active{background:var(--evergreen);border-color:var(--evergreen);color:#fff}
+.chip.soon{opacity:.5}
+.chip.soon::after{content:" · bientôt";font-weight:600}
+
+.hcard{
+  display:flex;gap:12px;align-items:flex-start;background:var(--s1);
+  border:1px solid var(--l1-border);border-radius:16px;padding:12px;
+  box-shadow:var(--l1-shadow);
+}
+.hcard.sel{border-color:var(--evergreen);box-shadow:0 0 0 2px rgba(35,77,64,.16),var(--l1-shadow)}
+.hcard .thumb{
+  width:60px;height:60px;border-radius:12px;flex:none;
+  background:linear-gradient(145deg,var(--light-green),var(--s5));
+  display:grid;place-items:center;font-family:var(--font-display);font-weight:800;
+  font-size:17px;color:var(--evergreen);
+}
+.hcard .thumb.unclaimed{background:repeating-linear-gradient(45deg,var(--s3),var(--s3) 5px,var(--s4) 5px,var(--s4) 10px)}
+.hcard .bd{min-width:0;flex:1}
+.hcard .nm{font-family:var(--font-display);font-size:14px;font-weight:700;line-height:19px}
+.meta{font-size:12px;color:rgba(26,28,27,.58);margin-top:3px}
+.trust{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:10.5px;font-weight:700;font-family:var(--font-display);padding:3px 8px;border-radius:999px}
+.trust.confirmed{background:var(--evergreen);color:#fff}
+.trust.pending{background:var(--light-green);color:var(--evergreen-dark)}
+.trust.unclaimed{background:var(--s3);color:var(--outline)}
+.price{font-family:var(--font-display);font-weight:800;font-size:14px;white-space:nowrap}
+
+.btn{
+  font-family:var(--font-display);font-size:13.5px;font-weight:700;
+  border:0;border-radius:13px;padding:12px 16px;cursor:pointer;width:100%;
+  background:var(--evergreen);color:#fff;
+}
+.btn.ghost{background:var(--s1);color:var(--evergreen);border:1px solid var(--outline-discrete)}
+.btn.ok{background:var(--accent);color:#3A1B08}
+.btn.sm{padding:9px 12px;font-size:12.5px;width:auto}
+
+.routechip{
+  position:absolute;z-index:32;bottom:22px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;width:max-content;max-width:88%;
+  padding:8px 8px 8px 13px;border:1px solid var(--outline-discrete);border-radius:999px;
+  background:var(--cream);box-shadow:var(--l1-shadow);
+  font-size:11.5px;font-weight:600;line-height:16px;
+}
+.routechip span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.routechip.unavailable{border-color:var(--outline)}
+.routechip .x{
+  display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:999px;
+  border:0;background:var(--light-green);color:var(--evergreen);font-size:12px;cursor:pointer;
+}
+.routechip.unavailable .x{background:var(--s3);color:var(--ink)}
+
+.cardbox{background:var(--s1);border:1px solid var(--l1-border);border-radius:16px;padding:14px;box-shadow:var(--l1-shadow)}
+.kpi{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kpi .k{background:var(--s2);border-radius:12px;padding:11px}
+.kpi .k .v{font-family:var(--font-display);font-size:19px;font-weight:800}
+.kpi .k .l{font-size:10.5px;color:rgba(26,28,27,.6);margin-top:2px}
+
+.tabbar{
+  position:absolute;left:14px;right:14px;bottom:12px;z-index:34;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  background:rgba(249,247,242,.94);border:1px solid var(--l1-border);
+  border-radius:999px;padding:6px;box-shadow:var(--l1-shadow);
+}
+.tabbar b{font-family:var(--font-display);font-size:10px;font-weight:700;text-align:center;padding:7px 2px;border-radius:999px;color:rgba(26,28,27,.6)}
+.tabbar b.on{background:var(--evergreen);color:#fff}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- Bureau (vue large) ---------- */
+.desktop{
+  position:relative;width:100%;max-width:940px;height:560px;border-radius:20px;
+  overflow:hidden;border:1px solid var(--l1-border);box-shadow:var(--l2-shadow);background:var(--cream);
+}
+.dpanel{
+  position:absolute;left:0;top:0;bottom:0;width:412px;z-index:30;
+  background:var(--cream);border-right:1px solid var(--l1-border);
+  padding:22px;display:flex;flex-direction:column;gap:14px;
+}
+.dpanel .bd{overflow-y:auto;min-height:0;flex:1;display:flex;flex-direction:column;gap:14px}
+@media (max-width:900px){.desktop{height:520px}.dpanel{width:64%}}
+
+footer{border-top:1px solid var(--l1-border);padding-top:24px;color:rgba(26,28,27,.6);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Nature Way · Omni · V1</div>
+    <h1>Le langage visuel et les écrans d'Omni.</h1>
+    <p>Un fichier autonome pour retravailler Omni dans un artifact Claude : aucun réseau requis,
+       aucune tuile, aucun MapLibre. La carte est redessinée en SVG avec la palette canopée réelle,
+       donc l'identité « carte d'abord » survit hors ligne.</p>
+    <div class="provenance">
+      <span class="tag">Jetons : src/trunk/v3.css</span>
+      <span class="tag">Carte : TrunkMap.applyCanopyPalette</span>
+      <span class="tag">Écrans : maquette V1.3</span>
+      <span class="tag">Polices : Plus Jakarta Sans + Hanken Grotesk</span>
+    </div>
+  </header>
+
+  <!-- ============ 1. FONDATIONS ============ -->
+  <section>
+    <div class="sec-head"><span class="n">01</span><h2>Fondations</h2></div>
+    <p class="sec-sub">Les jetons ci-dessous sont repris à l'identique du produit. Modifier ici, c'est
+      modifier partout : c'est le point d'entrée unique d'un redesign.</p>
+
+    <h3 style="font-size:14px;margin-bottom:12px">Identité &amp; surfaces</h3>
+    <div class="grid g-colors" style="margin-bottom:30px">
+      <div class="swatch"><div class="chipv" style="background:#234D40"></div><div class="meta"><div class="nm">evergreen</div><div class="hx">#234D40</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#08362A"></div><div class="meta"><div class="nm">evergreen-dark</div><div class="hx">#08362A</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#F08F5A"></div><div class="meta"><div class="nm">accent</div><div class="hx">#F08F5A</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#F9F7F2"></div><div class="meta"><div class="nm">cream</div><div class="hx">#F9F7F2</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#1A1C1B"></div><div class="meta"><div class="nm">ink</div><div class="hx">#1A1C1B</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#F9F9F7"></div><div class="meta"><div class="nm">appbg</div><div class="hx">#F9F9F7</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#FFFFFF"></div><div class="meta"><div class="nm">surface-1</div><div class="hx">#FFFFFF</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#E2E3E0"></div><div class="meta"><div class="nm">light-green</div><div class="hx">#E2E3E0</div></div></div>
+    </div>
+
+    <h3 style="font-size:14px;margin-bottom:12px">Palette cartographique (canopée)</h3>
+    <div class="grid g-colors" style="margin-bottom:30px">
+      <div class="swatch"><div class="chipv" style="background:#2d3335"></div><div class="meta"><div class="nm">eau</div><div class="hx">#2D3335</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#FFFFFF;border-bottom:1px solid #EAE8E0"></div><div class="meta"><div class="nm">terre</div><div class="hx">#FFFFFF</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#5F5F5F"></div><div class="meta"><div class="nm">motorway</div><div class="hx">#5F5F5F</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#8D8D8D"></div><div class="meta"><div class="nm">trunk</div><div class="hx">#8D8D8D</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#B5B5B5"></div><div class="meta"><div class="nm">secondary</div><div class="hx">#B5B5B5</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#D4D4D4"></div><div class="meta"><div class="nm">minor</div><div class="hx">#D4D4D4</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#2e8b6f"></div><div class="meta"><div class="nm">pin facilité</div><div class="hx">#2E8B6F</div></div></div>
+      <div class="swatch"><div class="chipv" style="background:#1F1F1F"></div><div class="meta"><div class="nm">pin cluster</div><div class="hx">#1F1F1F</div></div></div>
+    </div>
+
+    <h3 style="font-size:14px;margin-bottom:12px">Typographie</h3>
+    <div class="grid g-type" style="margin-bottom:30px">
+      <div class="tcard">
+        <div class="type-demo">Trouver l'offre<br>qui existe vraiment.</div>
+        <div class="type-meta">Plus Jakarta Sans · 800 · display<br>Titres, marqueurs, chiffres clés</div>
+      </div>
+      <div class="tcard">
+        <div style="font-family:var(--font-body);font-size:16px;line-height:26px">
+          L'acheteur filtre selon ses contraintes — proximité, stock, disponibilité, prix — et
+          choisit réellement la meilleure option disponible.
+        </div>
+        <div class="type-meta">Hanken Grotesk · 400 · body<br>Lecture, descriptions, formulaires</div>
+      </div>
+    </div>
+
+    <h3 style="font-size:14px;margin-bottom:12px">Élévation</h3>
+    <div class="grid g-elev">
+      <div class="elev l1"><strong style="font-family:var(--font-display)">Niveau 1</strong><div class="meta">Cartes, feuilles, chips — filet + ombre douce</div></div>
+      <div class="elev l2"><strong style="font-family:var(--font-display)">Niveau 2</strong><div class="meta">Cadres flottants, modales, appareil</div></div>
+    </div>
+  </section>
+
+  <!-- ============ 2. ÉCRANS ============ -->
+  <section>
+    <div class="sec-head"><span class="n">02</span><h2>Les écrans</h2></div>
+    <p class="sec-sub">La boucle V1 réelle : chercher → vérifier la disponibilité → décider → transaction.
+       Chaque écran est composé, pas esquissé — on peut donc juger l'équilibre réel.</p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-go="s-search">Recherche</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="s-results">Résultats</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="s-fiche">Fiche facilité</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="s-route">Itinéraire</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="s-demande">Panier de demande</button>
+      <button class="tab" role="tab" aria-selected="false" data-go="s-seller">Espace vendeur</button>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <div class="notch"></div>
+
+        <!-- ---------- 1. RECHERCHE ---------- -->
+        <div class="screen" data-on data-id="s-search">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice" aria-label="Carte de Lomé, vue de quartier">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="water" d="M292 560 C318 552, 336 566, 340 586 C344 606, 328 618, 306 612 C286 606, 276 580, 292 560 Z" opacity=".92"/>
+              <path class="park" d="M64 300 h96 v78 h-96 Z"/>
+              <path class="park" d="M226 196 h74 v56 h-74 Z"/>
+              <path class="bnd" d="M118 0 V800" opacity=".35"/>
+              <path class="bnd" d="M0 470 H390" opacity=".22"/>
+              <!-- réseau : littoral (motorway) -->
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-moto" d="M96 0 V604" opacity=".85"/>
+              <!-- trunk -->
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-trunk" d="M196 0 C204 120, 190 300, 200 604"/>
+              <path class="rd r-trunk" d="M0 430 C120 420, 260 444, 390 428"/>
+              <!-- secondary -->
+              <path class="rd r-sec" d="M0 150 C110 146, 240 158, 390 148"/>
+              <path class="rd r-sec" d="M0 340 C130 332, 250 350, 390 338"/>
+              <path class="rd r-sec" d="M0 520 C110 512, 250 530, 390 516"/>
+              <path class="rd r-sec" d="M48 0 C54 200, 44 420, 52 612"/>
+              <path class="rd r-sec" d="M140 0 C146 220, 136 430, 144 612"/>
+              <path class="rd r-sec" d="M262 0 C268 200, 258 420, 266 604"/>
+              <path class="rd r-sec" d="M330 0 C336 190, 326 400, 334 598"/>
+              <!-- minor -->
+              <g class="rd r-min" opacity=".9">
+                <path d="M0 92 H390"/><path d="M0 196 H390"/><path d="M0 296 H390"/>
+                <path d="M0 386 H390"/><path d="M0 478 H390"/><path d="M0 566 H390"/>
+                <path d="M96 92 V612"/><path d="M174 0 V604"/><path d="M228 0 V604"/>
+                <path d="M298 0 V600"/><path d="M362 0 V598"/>
+              </g>
+              <!-- étiquettes de quartier -->
+              <text class="wlabel" x="16" y="130">TOKOIN</text>
+              <text class="wlabel" x="252" y="176">BÈ</text>
+              <text class="wlabel" x="16" y="322">ADAWLATO</text>
+              <text class="wlabel" x="286" y="352">PORT</text>
+              <text class="wlabel" x="16" y="500">GBOSSIMÉ</text>
+              <text class="wlabel" x="300" y="522">KODJOVIAKOPÉ</text>
+              <text class="wlabel-sm" x="16" y="668">GOLFE DE GUINÉE</text>
+              <text class="wlabel-sm" x="104" y="240">Boulevard du 13 Janvier</text>
+            </svg>
+
+            <div class="countmark" style="left:20px;top:96px">206</div>
+            <div class="me" style="left:172px;top:392px" role="img" aria-label="Votre position approximative"></div>
+            <div class="pin" style="left:78px;top:300px"><div class="dot">B</div><div class="lab">Boulangerie d'Adawlato</div></div>
+            <div class="pin" style="left:284px;top:250px"><div class="dot">M</div><div class="lab">Grand Marché</div></div>
+            <div class="pin cluster" style="left:214px;top:470px"><div class="dot">12</div></div>
+            <div class="attr">© OpenStreetMap contributors</div>
+            <div class="mapstatus">Carte active</div>
+          </div>
+
+          <div class="sheet h-low">
+            <div class="handle"></div>
+            <div class="eyebrow">Recherche</div>
+            <h3 style="font-size:21px;line-height:27px;margin:6px 0 14px">Que cherchez-vous ?</h3>
+            <div class="field"><span aria-hidden="true">⌕</span><input placeholder="Produit, service, propriété…" aria-label="Produit, service, propriété"></div>
+            <div class="chips" style="margin-top:12px">
+              <span class="chip active">≤ 10 km</span><span class="chip">Ouvert</span>
+              <span class="chip soon">Livraison</span><span class="chip soon">Transactable</span>
+            </div>
+          </div>
+
+          <div class="tabbar"><b class="on">Buyer</b><b>Recherche</b><b>QR</b><b>Menu</b></div>
+        </div>
+
+        <!-- ---------- 2. RÉSULTATS ---------- -->
+        <div class="screen" data-id="s-results">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="park" d="M64 300 h96 v78 h-96 Z"/>
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-trunk" d="M196 0 C204 120, 190 300, 200 604"/>
+              <path class="rd r-trunk" d="M0 430 C120 420, 260 444, 390 428"/>
+              <g class="rd r-sec" opacity=".9">
+                <path d="M0 150 C110 146, 240 158, 390 148"/><path d="M0 340 C130 332, 250 350, 390 338"/>
+                <path d="M48 0 C54 200, 44 420, 52 612"/><path d="M140 0 C146 220, 136 430, 144 612"/>
+                <path d="M262 0 C268 200, 258 420, 266 604"/>
+              </g>
+              <text class="wlabel" x="16" y="130">TOKOIN</text>
+              <text class="wlabel" x="16" y="322">ADAWLATO</text>
+            </svg>
+            <div class="countmark" style="left:20px;top:96px">14</div>
+            <div class="me" style="left:172px;top:392px"></div>
+            <div class="pin sel" style="left:78px;top:300px"><div class="dot">B</div><div class="lab">Boulangerie d'Adawlato</div></div>
+            <div class="pin" style="left:150px;top:250px"><div class="dot">M</div></div>
+            <div class="pin" style="left:284px;top:308px"><div class="dot">P</div><div class="lab">Pharmacie du Port</div></div>
+            <div class="pin cluster" style="left:214px;top:470px"><div class="dot">9</div></div>
+            <div class="attr">© OpenStreetMap contributors</div>
+          </div>
+
+          <div class="sheet h-mid">
+            <div class="handle"></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+              <div><div class="eyebrow">14 résultats</div>
+                <h3 style="font-size:18px;line-height:23px;margin-top:4px">Facilités proches</h3></div>
+              <span class="meta">≤ 10 km</span>
+            </div>
+            <div class="body" style="display:flex;flex-direction:column;gap:10px">
+              <div class="hcard sel">
+                <div class="thumb">B</div>
+                <div class="bd">
+                  <div class="nm">Boulangerie du Marché d'Adawlato</div>
+                  <div class="meta">Adawlato · 963 m · Ouvert</div>
+                  <span class="trust confirmed">Confirmée</span>
+                </div>
+                <div class="price">350 F</div>
+              </div>
+              <div class="hcard">
+                <div class="thumb">M</div>
+                <div class="bd">
+                  <div class="nm">Grand Marché</div>
+                  <div class="meta">Adawlato · 1,1 km · Ouvert</div>
+                  <span class="trust pending">À confirmer</span>
+                </div>
+              </div>
+              <div class="hcard">
+                <div class="thumb unclaimed">P</div>
+                <div class="bd">
+                  <div class="nm">Pharmacie du Port</div>
+                  <div class="meta">Kodjoviakopé · 2,4 km</div>
+                  <span class="trust unclaimed">Non revendiquée</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar"><b class="on">Buyer</b><b>Recherche</b><b>QR</b><b>Menu</b></div>
+        </div>
+
+        <!-- ---------- 3. FICHE ---------- -->
+        <div class="screen" data-id="s-fiche">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-trunk" d="M196 0 C204 120, 190 300, 200 604"/>
+              <path class="rd r-sec" d="M0 340 C130 332, 250 350, 390 338"/>
+              <path class="rd r-sec" d="M48 0 C54 200, 44 420, 52 612"/>
+              <path class="rd r-min" d="M0 196 H390"/><path class="rd r-min" d="M0 296 H390"/>
+            </svg>
+            <div class="pin sel" style="left:150px;top:250px"><div class="dot">M</div></div>
+            <div class="attr">© OpenStreetMap contributors</div>
+          </div>
+
+          <div class="sheet h-full">
+            <div class="handle"></div>
+            <div class="body">
+              <div class="eyebrow">Facilité publique</div>
+              <h3 style="font-size:22px;line-height:28px;margin:6px 0 8px">Grand Marché</h3>
+              <div class="meta">Adawlato, Lomé · 1,1 km de vous</div>
+              <span class="trust pending" style="margin-top:10px">À confirmer</span>
+
+              <div class="chips" style="margin:18px 0 6px">
+                <span class="chip">Ouvert</span><span class="chip">Sur place</span><span class="chip">12 offres</span>
+              </div>
+
+              <button class="btn" style="margin-top:14px">Itinéraire vers ce vendeur</button>
+              <p class="note">Contact &amp; chat restent débloqués après intention.</p>
+
+              <h4 style="font-size:14px;margin:20px 0 10px">Offres disponibles</h4>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="hcard"><div class="thumb">T</div>
+                  <div class="bd"><div class="nm">Tomates fraîches</div>
+                    <div class="meta">Panier de 5 kg · dispo aujourd'hui</div></div>
+                  <div class="price">2 500 F</div></div>
+                <div class="hcard"><div class="thumb">P</div>
+                  <div class="bd"><div class="nm">Piment local</div>
+                    <div class="meta">Sac de 1 kg</div></div>
+                  <div class="price">1 200 F</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- 4. ITINÉRAIRE ---------- -->
+        <div class="screen" data-id="s-route">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="park" d="M64 300 h96 v78 h-96 Z"/>
+              <!-- tracé ROUTIER réel : suit le réseau, tourne. Contraste avec le direct. -->
+              <path d="M172 392 C176 350, 168 320, 150 296 C136 278, 140 262, 152 252"
+                    fill="none" stroke="#2e8b6f" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round" opacity=".95"/>
+              <path d="M172 392 C176 350, 168 320, 150 296 C136 278, 140 262, 152 252"
+                    fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-dasharray="1 9" opacity=".85"/>
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-trunk" d="M196 0 C204 120, 190 300, 200 604"/>
+              <path class="rd r-sec" d="M0 340 C130 332, 250 350, 390 338"/>
+              <path class="rd r-sec" d="M140 0 C146 220, 136 430, 144 612"/>
+              <path class="rd r-min" d="M0 296 H390"/><path class="rd r-min" d="M52 0 V612"/>
+              <text class="wlabel-sm" x="180" y="360">Rue de L'Avenir</text>
+              <text class="wlabel" x="16" y="322">ADAWLATO</text>
+            </svg>
+            <div class="me" style="left:172px;top:392px" role="img" aria-label="Votre position"></div>
+            <div class="pin sel" style="left:152px;top:252px"><div class="dot">M</div><div class="lab">Grand Marché</div></div>
+            <div class="attr">© OpenStreetMap contributors</div>
+            <div class="mapstatus">Carte active</div>
+          </div>
+          <div class="routechip" role="status">
+            <span>Itinéraire vers Grand Marché · 1,4 km · 6 min</span>
+            <button class="x" aria-label="Fermer l'itinéraire">✕</button>
+          </div>
+        </div>
+
+        <!-- ---------- 5. PANIER DE DEMANDE ---------- -->
+        <div class="screen" data-id="s-demande">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-sec" d="M0 340 C130 332, 250 350, 390 338"/>
+              <path class="rd r-sec" d="M48 0 C54 200, 44 420, 52 612"/>
+            </svg>
+            <div class="countmark" style="left:20px;top:96px">3</div>
+          </div>
+
+          <div class="sheet h-full">
+            <div class="handle"></div>
+            <div class="body">
+              <div class="eyebrow">Vérification</div>
+              <h3 style="font-size:21px;line-height:27px;margin:6px 0 4px">Votre panier de demande</h3>
+              <p class="meta">On vérifie la disponibilité réelle auprès de chaque vendeur, puis on vous rend la meilleure option.</p>
+
+              <div class="chips" style="margin:16px 0">
+                <span class="chip active">Quantité 10</span><span class="chip">≤ 15 000 FCFA</span>
+                <span class="chip active">≤ 10 km</span><span class="chip">Ouvert</span>
+              </div>
+
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="hcard"><div class="thumb">B</div>
+                  <div class="bd"><div class="nm">Boulangerie du Marché</div>
+                    <div class="meta">963 m · répond en général vite</div></div>
+                  <div class="price">350 F</div></div>
+                <div class="hcard"><div class="thumb">M</div>
+                  <div class="bd"><div class="nm">Grand Marché</div>
+                    <div class="meta">1,1 km</div></div></div>
+                <div class="hcard"><div class="thumb">G</div>
+                  <div class="bd"><div class="nm">Épicerie Chez Afi</div>
+                    <div class="meta">Tokoin Hôpital · 3,2 km</div></div>
+                  <div class="price">400 F</div></div>
+              </div>
+
+              <div class="cardbox" style="margin-top:16px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                  <span style="font-family:var(--font-display);font-weight:700;font-size:13px">Crédits bulk</span>
+                  <span class="meta">3 / 3 restants · plan Free</span>
+                </div>
+                <div class="meta" style="margin-top:6px">Vérification manuelle d'une facilité : gratuite.</div>
+              </div>
+
+              <button class="btn" style="margin-top:16px">Interroger 3 facilités — 1 crédit</button>
+              <button class="btn ghost" style="margin-top:8px">Vérification manuelle gratuite</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- 6. VENDEUR ---------- -->
+        <div class="screen" data-id="s-seller">
+          <div class="map">
+            <svg viewBox="0 0 390 800" preserveAspectRatio="xMidYMid slice">
+              <rect width="390" height="800" fill="var(--map-land)"/>
+              <path class="water" d="M0 640 C70 626, 150 648, 232 632 C300 618, 352 636, 390 626 L390 800 L0 800 Z"/>
+              <path class="rd r-moto" d="M0 612 C80 596, 168 622, 250 604 C312 590, 356 604, 390 598"/>
+              <path class="rd r-trunk" d="M0 250 C90 244, 180 262, 390 246"/>
+              <path class="rd r-sec" d="M0 340 C130 332, 250 350, 390 338"/>
+              <path class="rd r-min" d="M0 430 H390"/><path class="rd r-min" d="M262 0 V604"/>
+            </svg>
+            <div class="pin sel" style="left:214px;top:330px"><div class="dot">M</div><div class="lab">Ma facilité</div></div>
+          </div>
+
+          <div class="sheet h-full">
+            <div class="handle"></div>
+            <div class="body">
+              <div class="eyebrow">Espace vendeur</div>
+              <h3 style="font-size:20px;line-height:26px;margin:6px 0 4px">Omni Demo Seller Hub</h3>
+              <span class="trust confirmed" style="margin-bottom:14px">Pro actif · renouvellement auto ON</span>
+
+              <div class="cardbox">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px">
+                  <strong style="font-family:var(--font-display);font-size:13px">Performance</strong>
+                  <span class="meta">30 jours</span>
+                </div>
+                <div class="kpi">
+                  <div class="k"><div class="v">48</div><div class="l">Demandes reçues</div></div>
+                  <div class="k"><div class="v">31</div><div class="l">Disponibles</div></div>
+                  <div class="k"><div class="v">12</div><div class="l">Transactions</div></div>
+                  <div class="k"><div class="v">9</div><div class="l">QR vérifiés</div></div>
+                </div>
+              </div>
+
+              <div class="cardbox" style="margin-top:14px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline">
+                  <strong style="font-family:var(--font-display);font-size:13px">Bonus confiance</strong>
+                  <span class="price" style="color:var(--evergreen)">2 / 3</span>
+                </div>
+                <div class="meta" style="margin-top:6px">Acheteurs distincts · 20 USD débloqués à la 3ᵉ vente.</div>
+                <div style="height:6px;border-radius:999px;background:var(--s3);margin-top:10px;overflow:hidden">
+                  <div style="width:66%;height:100%;background:var(--evergreen)"></div>
+                </div>
+              </div>
+
+              <h4 style="font-size:14px;margin:18px 0 10px">Catalogue</h4>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div class="hcard"><div class="thumb">T</div>
+                  <div class="bd"><div class="nm">Tomates fraîches</div><div class="meta">Stock : 40 paniers</div></div>
+                  <div class="price">2 500 F</div></div>
+                <div class="hcard"><div class="thumb">P</div>
+                  <div class="bd"><div class="nm">Piment local</div><div class="meta">Stock : 25 sacs</div></div>
+                  <div class="price">1 200 F</div></div>
+              </div>
+
+              <button class="btn ghost" style="margin-top:16px">Campagnes sponsorisées</button>
+            </div>
+          </div>
+          <div class="tabbar"><b class="on">Seller</b><b>Catalogue</b><b>QR</b><b>Menu</b></div>
+        </div>
+      </div>
+
+      <!-- Légende contextuelle par écran -->
+      <div class="caption">
+        <div id="cap-search">
+          <h3>Recherche — la carte est l'accueil</h3>
+          <p>L'acheteur arrive sur le globe puis la carte, avant toute connexion. La feuille basse ne
+             mange jamais la carte : on voit toujours où l'on parle.</p>
+          <ul>
+            <li><strong>Countmark</strong> (pastille evergreen) : le nombre de facilités visibles, pas de bruit.</li>
+            <li><strong>Contraintes</strong> en chips, pas en filtres cachés.</li>
+            <li>« Bientôt » est affiché et <em>désactivé</em> : une promesse non tenue ne se clique pas.</li>
+          </ul>
+        </div>
+        <div id="cap-results" hidden>
+          <h3>Résultats — contrainte d'abord, liste ensuite</h3>
+          <p>Le pin sélectionné et sa hcard s'allument ensemble. Une seule vérité entre la carte et la liste.</p>
+          <ul>
+            <li><strong>Triptyque de confiance</strong> toujours rendu : Confirmée / À confirmer / Non revendiquée.
+                Jamais masqué.</li>
+            <li>Le prix n'apparaît que s'il est réel. Pas de « — » ambigu.</li>
+          </ul>
+        </div>
+        <div id="cap-fiche" hidden>
+          <h3>Fiche — l'itinéraire est ouvert, le contact ne l'est pas</h3>
+          <p>Décision fondateur du 14/09 : l'itinéraire est disponible <em>avant</em> toute intention
+             d'achat. Le contact, lui, reste gaté jusqu'à l'intention.</p>
+          <div class="note">La maquette V1.3 disait l'inverse (route verrouillée). Le code suit
+            le fondateur. <strong>Cette contradiction n'a jamais été réconciliée</strong> — c'est une
+            décision ouverte, pas un détail.</div>
+        </div>
+        <div id="cap-route" hidden>
+          <h3>Itinéraire — la géométrie réelle est le sujet</h3>
+          <p>Ici le tracé suit le réseau et tourne : c'est la cible. Aujourd'hui la production
+             affiche encore parfois une ligne droite honnêtement étiquetée.</p>
+          <div class="note">Contraste mesuré sur Lomé : <strong>4,91 km</strong> en ligne droite contre
+            <strong>6,19 km</strong> de route réelle — soit <strong>+26 % sous-estimé</strong> pour l'acheteur.</div>
+          <ul>
+            <li>Le chip ne ment jamais : soit la route, soit « tracé direct » avec sa raison.</li>
+            <li>Un refus dit <em>quoi faire</em> (« connectez-vous »), pas seulement ce qui manque.</li>
+          </ul>
+        </div>
+        <div id="cap-demande" hidden>
+          <h3>Panier de demande — vérifier, pas deviner</h3>
+          <p>Le cœur du produit : on ne liste pas du stock supposé, on interroge les vendeurs et on
+             rend la meilleure option réellement disponible.</p>
+          <ul>
+            <li>Le coût est annoncé <strong>avant</strong> l'envoi, en clair.</li>
+            <li>La vérification manuelle d'une facilité reste gratuite — la gratuité est un principe, pas un quota.</li>
+          </ul>
+        </div>
+        <div id="cap-seller" hidden>
+          <h3>Vendeur — n'importe quelle forme d'offre</h3>
+          <p>Un vendeur peut être une boutique, un étal, un individu, un professionnel mobile ou une
+             activité digitale, sans tenir un inventaire complet.</p>
+          <ul>
+            <li>La performance est en <strong>preuves</strong> (QR vérifiés, transactions), pas en vanité.</li>
+            <li>Le bonus de confiance est une <strong>progression</strong>, pas un badge décoratif.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. VUE BUREAU ============ -->
+  <section>
+    <div class="sec-head"><span class="n">03</span><h2>Vue large</h2></div>
+    <p class="sec-sub">Même produit au-delà de 1040 px : la feuille devient un panneau latéral et la carte
+       prend la place qui lui revient. Le changement est une question de composition, pas de composants.</p>
+    <div class="desktop">
+      <div class="map">
+        <svg viewBox="0 0 940 560" preserveAspectRatio="xMidYMid slice">
+          <rect width="940" height="560" fill="var(--map-land)"/>
+          <path class="water" d="M0 430 C160 416, 380 442, 600 424 C760 410, 880 428, 940 420 L940 560 L0 560 Z"/>
+          <path class="water" d="M700 360 C740 350, 770 368, 776 396 C782 424, 754 440, 720 432 C690 424, 678 384, 700 360 Z"/>
+          <path class="park" d="M180 180 h150 v110 h-150 Z"/>
+          <path class="park" d="M540 120 h110 v80 h-110 Z"/>
+          <path class="bnd" d="M420 0 V560" opacity=".3"/>
+          <path class="rd r-moto" d="M0 408 C200 388, 420 420, 620 398 C780 382, 890 400, 940 394"/>
+          <path class="rd r-moto" d="M250 0 V398"/>
+          <path class="rd r-trunk" d="M0 170 C240 164, 480 182, 940 166"/>
+          <path class="rd r-trunk" d="M470 0 C480 130, 462 280, 474 400"/>
+          <path class="rd r-trunk" d="M0 288 C300 278, 640 300, 940 284"/>
+          <g class="rd r-sec">
+            <path d="M0 100 H940"/><path d="M0 232 H940"/><path d="M0 348 H940"/>
+            <path d="M120 0 V400"/><path d="M360 0 V402"/><path d="M600 0 V398"/><path d="M780 0 V396"/>
+          </g>
+          <g class="rd r-min" opacity=".9">
+            <path d="M0 62 H940"/><path d="M0 314 H940"/><path d="M0 376 H940"/>
+            <path d="M60 0 V400"/><path d="M190 0 V400"/><path d="M300 0 V400"/>
+            <path d="M540 0 V398"/><path d="M680 0 V398"/><path d="M870 0 V396"/>
+          </g>
+          <text class="wlabel" x="24" y="88">TOKOIN</text>
+          <text class="wlabel" x="500" y="150">BÈ</text>
+          <text class="wlabel" x="24" y="222">ADAWLATO</text>
+          <text class="wlabel" x="640" y="246">PORT</text>
+          <text class="wlabel" x="24" y="336">GBOSSIMÉ</text>
+          <text class="wlabel-sm" x="24" y="470">GOLFE DE GUINÉE</text>
+        </svg>
+        <div class="countmark" style="left:452px;top:112px">206</div>
+        <div class="me" style="left:400px;top:300px"></div>
+        <div class="pin sel" style="left:300px;top:232px"><div class="dot">B</div><div class="lab">Boulangerie d'Adawlato</div></div>
+        <div class="pin" style="left:600px;top:180px"><div class="dot">M</div><div class="lab">Grand Marché</div></div>
+        <div class="pin" style="left:720px;top:300px"><div class="dot">P</div><div class="lab">Pharmacie du Port</div></div>
+        <div class="pin cluster" style="left:520px;top:360px"><div class="dot">24</div></div>
+        <div class="attr">© OpenStreetMap contributors</div>
+        <div class="mapstatus">Carte active</div>
+      </div>
+
+      <div class="dpanel">
+        <div class="eyebrow">14 résultats · ≤ 10 km</div>
+        <div class="field"><span aria-hidden="true">⌕</span><input value="boulangerie" aria-label="Recherche"></div>
+        <div class="chips">
+          <span class="chip active">≤ 10 km</span><span class="chip">Ouvert</span>
+          <span class="chip soon">Livraison</span><span class="chip soon">Transactable</span>
+        </div>
+        <div class="bd">
+          <div class="hcard sel">
+            <div class="thumb">B</div>
+            <div class="bd"><div class="nm">Boulangerie du Marché d'Adawlato</div>
+              <div class="meta">Adawlato · 963 m · Ouvert</div>
+              <span class="trust confirmed">Confirmée</span></div>
+            <div class="price">350 F</div>
+          </div>
+          <div class="hcard">
+            <div class="thumb">M</div>
+            <div class="bd"><div class="nm">Grand Marché</div>
+              <div class="meta">Adawlato · 1,1 km · Ouvert</div>
+              <span class="trust pending">À confirmer</span></div>
+          </div>
+          <div class="hcard">
+            <div class="thumb">G</div>
+            <div class="bd"><div class="nm">Épicerie Chez Afi</div>
+              <div class="meta">Tokoin Hôpital · 3,2 km</div>
+              <span class="trust confirmed">Confirmée</span></div>
+            <div class="price">400 F</div>
+          </div>
+          <button class="btn">Itinéraire vers ce vendeur</button>
+          <button class="btn ghost">Interroger la disponibilité</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <strong style="font-family:var(--font-display);color:var(--ink)">Comment réutiliser ce fichier.</strong>
+    Ouvre-le dans un artifact Claude et demande ce que tu veux : « rends l'accueil plus calme »,
+    « propose trois traitements de la fiche », « durcis la hiérarchie des pins ».
+    Les jetons du bloc <code>:root</code> pilotent tout le document — change une valeur, tout suit.
+    Rien n'est chargé hors des deux polices : la carte, les pins et les écrans sont entièrement locaux.
+  </footer>
+</div>
+
+<script>
+  // Onglets d'écrans
+  const tabs = [...document.querySelectorAll('.tab')];
+  const screens = [...document.querySelectorAll('.screen')];
+  const caps = {
+    's-search':'cap-search','s-results':'cap-results','s-fiche':'cap-fiche',
+    's-route':'cap-route','s-demande':'cap-demande','s-seller':'cap-seller'
+  };
+  tabs.forEach(tab=>tab.addEventListener('click',()=>{
+    const id = tab.dataset.go;
+    tabs.forEach(t=>t.setAttribute('aria-selected',String(t===tab)));
+    screens.forEach(s=>{
+      if(s.dataset.id===id){ s.setAttribute('data-on',''); } else { s.removeAttribute('data-on'); }
+    });
+    Object.entries(caps).forEach(([sid,cid])=>{
+      const el = document.getElementById(cid);
+      if(el) el.hidden = sid!==id;
+    });
+  }));
+</script>
+</body>
+</html>
