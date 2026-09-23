@@ -51,7 +51,7 @@
     box-shadow:var(--sh-md);white-space:nowrap}
   .rolepill span{font-size:9.5px;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-soft)}
   .rolepill span.on{background:var(--ink);color:#fff}
-  .navpill{position:absolute;z-index:30;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;
+  .navpill{position:absolute;z-index:60;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;
     gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg)}
   .navpill button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78);border:0;background:none}
   .navpill button.active{color:#fff;background:rgba(255,255,255,.18)}
@@ -69,7 +69,7 @@
   .fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .fchip.soon{color:var(--ink-faint)}
   .sheet{position:absolute;left:0;right:0;bottom:0;z-index:40;background:#fff;border-radius:24px 24px 0 0;
-    border-top:1px solid var(--line);box-shadow:0 -14px 44px rgba(15,15,15,.14);padding:9px 14px 78px}
+    border-top:1px solid var(--line);box-shadow:0 -14px 44px rgba(15,15,15,.14);padding:9px 14px 92px}
   .handle{width:38px;height:4px;border-radius:4px;background:var(--ink-faint);margin:0 auto 9px}
   .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
   .eyebrow{font-size:8px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
@@ -330,10 +330,9 @@
           <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
           <div class="qrcode"></div>
           <div style="text-align:center"><span class="timer">⏱ expire dans 09:42</span></div>
-          <p class="lead">Le QR circule par plusieurs canaux — le vendeur verrouille <b>au choix</b> :</p>
-          <div class="chips"><span class="chip on">Caméra vendeur</span><span class="chip">Partager hors Omni</span><span class="chip">Dashboard vendeur</span></div>
-          <div class="btnrow"><button class="btn ghost sm">Ré-émettre</button><button class="btn ghost sm">Révoquer</button></div>
-          <p class="lead" style="margin-top:8px">« Partager » = WhatsApp/SMS. Le dashboard vendeur vaut <b>même verrou</b> que le scan.</p>
+          <p class="lead">Transmettez ce code au vendeur — <b>au choix</b> :</p>
+          <div class="chips"><span class="chip on">Lui montrer</span><span class="chip">Partager (WhatsApp/SMS)</span></div>
+          <p class="lead" style="margin-top:8px">Le vendeur le reçoit <b>chez lui</b> (côté vendeur) et le valide. <b>Rien de tout ça n'est visible ici autrement.</b></p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -420,36 +419,61 @@
     </div>
   </div>
 
-  <h2>Vue offreur · Publier (commerce OU particulier — même gabarit)</h2>
-  <p class="hint">Les différences sont des <b>caractéristiques</b>, pas des types. Quantité 1 suffit. Badge de confiance gagné par palier (téléphone-first, coût ~0). Plafond 20 offres en gratuit, illimité en Pro.</p>
+  <h2>Vue offreur · Entité d'abord, puis offre</h2>
+  <p class="hint">Ordre : <b>(1) créer ou revendiquer une entité</b> → <b>(2) publier des offres</b> qui lui appartiennent. On peut publier <b>dès le palier « Joignable »</b> (badge « Non vérifié ») : la vérification <b>n'est pas un préalable</b>, elle se gagne ensuite (S-17).</p>
   <div class="stage-row">
     <div class="stagecell">
       <div class="phone"><div class="cap">● ● ●</div><div class="screen">
         <div class="mapbase"><div class="grid"></div><div class="usermarker" style="left:46%;top:44%"></div></div>
         <div class="rolepill"><span>Acheteur</span><span class="on">Vendeur</span><span>Admin</span></div>
-        <div class="sheet" style="height:470px">
+        <div class="sheet" style="height:430px">
           <div class="handle"></div>
-          <div class="eyebrow">Publier une offre · Awa T. · particulier</div>
-          <h1 style="margin-top:3px">Ordinateur Dell</h1>
+          <div class="eyebrow">Étape 1 · votre entité</div>
+          <h1 style="margin-top:3px">Vous vendez en tant que…</h1>
+          <div class="chips"><span class="chip on">Commerce</span><span class="chip">Particulier</span><span class="chip">Organisation</span></div>
           <div class="cardbox">
-            <div class="kv"><span>Visuel de l'offre</span><b>1 image requise <span class="status ok">✓ ajoutée</span></b></div>
-            <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital aussi</span></b></div>
-            <div class="kv"><span>État</span><b>Occasion</b></div>
-            <div class="kv"><span>Quantité</span><b>1 (objet unique)</b></div>
-            <div class="kv"><span>Prix</span><b>45 000 F (négociable)</b></div>
-            <div class="kv"><span>Avantage Omni (requis)</span><b style="color:var(--accent)">−10 %</b></div>
-            <div class="kv"><span>Retrait / livraison</span><b>Retrait sur place</b></div>
-            <div class="kv"><span>Visible sur la carte</span><b>Oui · rayon 3 km</b></div>
+            <div class="kv"><span>Nom de l'entité</span><b>Boutique Kodjo</b></div>
+            <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+            <div class="kv"><span>Lieu</span><b>Lomé · Adawlato</b></div>
+            <div class="kv"><span>N° joignable</span><b>90 12 34 56 <span class="status ok">confirmé</span></b></div>
           </div>
-          <button class="btn">Publier mon offre</button>
-          <p class="lead"><b>Visuel</b> et <b>avantage promotionnel</b> sont <b>obligatoires</b> pour publier. Badge « Non vérifié » au départ → « Vérifié » après confirmation WhatsApp.</p>
+          <button class="btn">Créer mon entité</button>
+          <p class="lead">Ou <b>revendiquer</b> un lieu déjà sur la carte (preuve de contrôle requise, S-18).</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
           <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         </div>
-      </div><h5>Offreur · publier (même gabarit pour tous)</h5></div>
+      </div><h5>Étape 1 · créer ou revendiquer l'entité</h5></div>
+    </div>
+
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div><div class="usermarker" style="left:46%;top:44%"></div></div>
+        <div class="rolepill"><span>Acheteur</span><span class="on">Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:470px">
+          <div class="handle"></div>
+          <div class="eyebrow">Étape 2 · publier une offre · Boutique Kodjo</div>
+          <h1 style="margin-top:3px">Spaghetti 500 g</h1>
+          <div class="cardbox">
+            <div class="kv"><span>Visuel de l'offre</span><b>1 image requise <span class="status ok">✓ ajoutée</span></b></div>
+            <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital aussi</span></b></div>
+            <div class="kv"><span>État</span><b>Neuf</b></div>
+            <div class="kv"><span>Quantité</span><b>24</b></div>
+            <div class="kv"><span>Prix</span><b>1 000 F</b></div>
+            <div class="kv"><span>Avantage Omni (requis)</span><b style="color:var(--accent)">−15 %</b></div>
+            <div class="kv"><span>Visible sur la carte</span><b>Oui · rayon 3 km</b></div>
+          </div>
+          <button class="btn">Publier mon offre</button>
+          <p class="lead">Publication possible <b>dès maintenant</b> (badge « Non vérifié ») → « Vérifié » après contrôle opérateur.</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>Étape 2 · publier (même gabarit, tous types)</h5></div>
     </div>
   </div>
 
