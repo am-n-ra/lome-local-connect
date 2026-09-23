@@ -126,3 +126,38 @@ Only Gate 4 (Trunk) and its ready work may be active, executed in the locked ord
 > **What is not active:** PR 2-6 of `OMNI-V3-MASTER-PLAN.md`, OSM import expansion, AI agents, in-app payments, global cart; Venture Lifecycle = `watch` (Gate 7); Fundraising, Opportunity Intelligence, Founder Learning, Sidereal = `paused`/`user invocation required` (YC Winter 2027 + HERLOG track restent `watch`).
 > **What proves the next move:** **61 files/518 tests** + tsc/boundary clean + build `index-Bjl18UB3.js` + prod sert ce hash (T-07d ✅) + migrations `054`→`056` appliquées canonical + **PRE-1 80/80 aux 4 largeurs** (`scripts/prove-v1-cycle-browser.mjs`, preuve A/B glyphes `scripts/proof-map-glyphs.mjs`) + preuves E2E rejouables (`npm run proof:transaction-lifecycle`). Pour Gate 7 : preuve de demande Lomé (reçus 65 000 F vérifiés, CAC segmenté terrain **mesuré**).
 > **What happens if it fails / next if accepted:** Pas d'échec ouvert — cycle V1 bouclé, plan ordonné §4 `done`. Prochaine porte à confirmer par le fondateur : **(a) V-9** (nettoyage : routes TanStack mortes + 6 tests factices — décision fondateur requise) OU **(b) cycle authentifié en session fondateur** (intention → QR → paiement → verrouillage → avis : seul segment BLOCKED) OU **(c) Gate 7 Venture Lifecycle** (dispatch `/nature-way-venture-lifecycle` : stage scorecard + expérience CAC split) — recommandé car premier revenue déclaré + pilote sponsorisé redimensionné (HERLOG $10K) en préparation dans `capital-track-pre-yc-herlog-handoff.md`.
+
+---
+
+## HQ RECONCILIATION — 2026-09-23 (dispatch vers /nature-way)
+
+> **As of:** 2026-09-23 (UTC) · **Plan local :** `NW-PROD-OMNI-SEED2-01`
+
+**Declencheur fondateur :** « on a assez tourne en rond… je pense qu'on a rate tout le process depuis Species » + « des elements visuels et comportements que la version actuelle d'Omni a et qu'on risque de perdre ».
+
+**Dispatch :** `/nature-way` — product authority. Founder HQ ne fait pas le travail du specialiste.
+
+| Champ | Valeur |
+|---|---|
+| Milestone actif | Direction unique Omni (Seed + Species reconcilies) |
+| Porte actuelle | **Seed reconciliation + Species reconciliation** (reouverte) |
+| Preuve | SDM `SDM-OMNI-2026-09-23` (E-01..E-12) ; registre coherence/dette (9 dettes) ; plan `NW-PROD-OMNI-SEED2-01` |
+| Gap residuel | **E-01 entite (missing)**, **E-05 reputation d'offre (missing)**, E-02/03/04/08/09 (partials) |
+| Bloqueur | 2 decisions fondateur : **T-01** fusion maquette+app ou remplacement ; **T-02** modele entite |
+| Prochaine action | Decision fondateur T-01 puis T-02 |
+| Trigger de revue | refus de la fusion · modele entite different · contradiction maquette/S-xx |
+| Travail deliberement **non actif** | Room acheteur (E-08), operateur terrain (E-09), reputation d'offre (E-05) — **dependants de E-01** ; Gate 7 Venture Lifecycle |
+
+**Decouverte bloquante haute severite :** `docs/design.md` (reference design autoritative du code) designe encore l'**ancienne** maquette ; la maquette V2 ne contient **aucun** `prefers-reduced-motion`, `safe-area`, `100svh`, `aria-*`. **Poursuivre « juste avec la maquette » perdrait 10 comportements prouves en prod** — liste d'heritage obligatoire au registre de coherence.
+
+**Resource Receipt (Founder HQ) :**
+| Statut | Chemin |
+|---|---|
+| Loaded | `.agents/skills/nature-way-founder-hq/references/ecosystem-orchestration-protocol.md` |
+| Loaded | `.agents/skills/nature-way-founder-hq/references/ecosystem-activation-manifest.md` |
+| Loaded | `.agents/skills/nature-way-founder-hq/references/founder-hq-board.md` |
+| Loaded | `.agents/skills/nature-way-founder-hq/templates/skill-handoff-receipt.md` |
+| Loaded | `.agents/skills/nature-way-founder-hq/references/intra-skill-execution-controller.md` |
+| Not loaded / reason | `templates/founder-hq-master-plan.md` (plan existant — append) · `portability-protocol.md` / `portable-starter` (pas de migration) |
+
+**Activation Receipt :** `/nature-way` a fourni 3 artefacts + Resource Receipt. Statut retour : Seed/Species **reouverts**, gate tenue par 2 decisions fondateur. Gate 6 (`Go with limits`) reste fermee ; Gate 7 = `watch`.
