@@ -501,6 +501,55 @@
     </div>
   </div>
 
+  <h2>Vue vendeur · Dashboard (transactions + scanner acheteur — symétrie S-24)</h2>
+  <p class="hint">La transaction est <b>retrouvable par défaut</b> dans le dashboard vendeur. Le bouton central du dock vendeur = <b>scanner le code de l'acheteur</b> (les clients en physique), pendant que l'acheteur a le sien pour scanner le QR de l'entité.</p>
+  <div class="stage-row">
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div><div class="vdot ink" style="left:48%;top:40%"></div></div>
+        <div class="rolepill"><span>Acheteur</span><span class="on">Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:440px">
+          <div class="handle"></div>
+          <div class="sheet-head"><div><div class="eyebrow">Espace vendeur · Boutique Kodjo</div><h1>Transactions</h1></div><span class="status ok">2 actives</span></div>
+          <div class="cardbox">
+            <div class="kv"><span>Awa T. · Spaghetti × 2</span><b style="color:var(--accent)">QR vérifié</b></div>
+            <div class="kv"><span>Kossi · Ordinateur</span><b>En attente de scan</b></div>
+          </div>
+          <div class="cardbox">
+            <div class="kv"><span>Demande de dispo entrante</span><b>2 paquets · 20 min</b></div>
+          </div>
+          <button class="btn">Scanner le code d'un acheteur</button>
+          <p class="lead">Le scan (caméra) <b>ou</b> la validation ici = <b>même verrou</b>.</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>Vendeur · transactions + scanner acheteur</h5></div>
+    </div>
+
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div></div>
+        <div class="rolepill"><span>Acheteur</span><span class="on">Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:420px">
+          <div class="handle"></div>
+          <div class="eyebrow">Vendeur · Scanner</div>
+          <h1 style="margin-top:3px">Scanner le code de l'acheteur</h1>
+          <div style="height:150px;border:1px dashed var(--ink-soft);border-radius:14px;margin-top:10px;display:grid;place-items:center;color:var(--ink-soft);font-size:10.5px">Caméra · « Autoriser et démarrer » explicite</div>
+          <button class="btn">Saisir le code</button>
+          <p class="lead">Code de l'acheteur lié à <b>l'offre + la remise + la transaction</b> (S-23).</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>Vendeur · scanner acheteur (symétrie)</h5></div>
+    </div>
+  </div>
+
   <h2>Échelle d'existence 0 → 4</h2>
   <p class="hint">Chaque niveau ouvre plus de capacités. <b>Discoverable ≠ Queryable ≠ Available ≠ Transactable.</b> Le niveau 0 est la tactique anti-carte-vide ; le reste est le cœur.</p>
   <div class="scale">

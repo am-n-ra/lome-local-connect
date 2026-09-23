@@ -78,6 +78,8 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 | **S-20** | **Toute offre porte des visuels** (au moins une image) — sans visuel, une offre n'est pas publiable. Un index d'offres **visuel** est une qualité produit, pas une décoration. | confirmé |
 | **S-21** | **Scan in-store = moteur d'acquisition.** Un client **déjà en boutique** scanne le **QR public de l'entité** → la transaction passe par Omni → **remise appliquée**. Le monde physique devient un point d'entrée Omni. | confirmé |
 | **S-22** | **Le QR circule par plusieurs canaux**, pas seulement la caméra acheteur : (a) écran acheteur, (b) **partage hors Omni** (WhatsApp/SMS…), (c) **reçu/validé par le vendeur dans une partie dédiée de son dashboard**. **Valider dans le dashboard = même verrou que scanner** (sinon un vendeur sans caméra ne peut jamais verrouiller). | confirmé (a) |
+| **S-23** | **Le QR transactionnel est lié à l'offre + à l'utilisateur + à la transaction** — donc l'**avantage (coupon/remise) est appliqué par l'offre**, et le QR en hérite. Confirmé code : `v2_qr_tokens.transaction_id` → transaction → offre (`discount_kind`/`discount_value_minor` → `prixReduit`) + acheteur. **La transaction est retrouvable par défaut dans le dashboard vendeur** (scope membre). | confirmé (fait vérifié) |
+| **S-24** | **Symétrie des deux scanners.** L'acheteur a une **icône scan** (dock) pour scanner le **QR public d'un lieu/offre en physique** et profiter de l'avantage ; le vendeur a **l'équivalent** pour scanner le **code de l'acheteur** (ceux en physique). Le bouton central du dock est contextuel au rôle. | confirmé |
 
 ## Caractéristiques de l'offre (modèle jour 1 / comportement pilote)
 
