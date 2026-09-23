@@ -191,7 +191,14 @@ function toast(msg) {
   t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2600);
 }
-function setRole(r) { S.role = r; S.prev = []; S.sheet = r === 'buyer' ? 'search' : r === 'seller' ? (S.hasEntity ? 'seller-dash' : 'seller-entry') : 'admin-console'; render(); }
+function setRole(r) {
+  S.role = r; S.prev = [];
+  S.sheet = r === 'buyer' ? 'search'
+    : r === 'seller' ? (S.hasEntity ? 'seller-dash' : 'seller-entry')
+    : r === 'operator' ? 'op-queue'
+    : 'admin-console';
+  render();
+}
 function zoom(d) { S.zoom = Math.max(0.6, Math.min(2.4, S.zoom + d * 0.2)); document.getElementById('mapbase'); render(); }
 function centerMe() { toast('Recentré sur votre position'); }
 
@@ -215,6 +222,11 @@ function dockFor() {
     { ic: ICON.qr, sheet: 'seller-scan', label: 'Scanner le code d’un acheteur', center: true },
     { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
   ];
+  if (S.role === 'operator') return [
+    { ic: ICON.pin, sheet: 'op-queue', label: 'Dossier terrain' },
+    { ic: ICON.console, sheet: 'op-side', label: 'Aperçu côté entité', center: true },
+    { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
+  ];
   return [
     { ic: ICON.console, sheet: 'admin-console', label: 'Console' },
     { ic: ICON.pin, sheet: 'admin-review', label: 'Revue des pins', center: true },
@@ -223,7 +235,7 @@ function dockFor() {
 }
 
 function renderRolePill() {
-  const roles = [['buyer', 'Acheteur'], ['seller', 'Vendeur'], ['admin', 'Admin']];
+  const roles = [['buyer', 'Acheteur'], ['seller', 'Vendeur'], ['operator', 'Opérateur'], ['admin', 'Admin']];
   document.getElementById('rolepill').innerHTML = roles.map(([id, lb]) =>
     `<button class="${S.role === id ? 'on' : ''}" onclick="setRole('${id}')">${lb}</button>`).join('');
 }
@@ -232,7 +244,7 @@ function renderDock(el, vertical) {
     `<button class="${S.sheet === it.sheet ? 'active' : ''} ${it.center && !vertical ? 'center' : ''} ${it.center && vertical ? 'center' : ''}" title="${it.label}" onclick="go('${it.sheet}')">${it.ic}</button>`).join('');
 }
 function renderPins() {
-  if (S.role === 'admin') {
+  if (S.role === 'admin' || S.role === 'operator') {
     document.getElementById('pins').innerHTML =
       '<span class="vdot unclaimed" style="left:34%;top:38%" onclick="go(\'admin-review\')"></span>' +
       '<span class="vdot unclaimed" style="left:60%;top:44%" onclick="go(\'admin-review\')"></span>';
@@ -330,7 +342,10 @@ SHEETS.offer = () => `
     <div class="kv"><span>Retrait / livraison</span><b>Retrait sur place</b></div>
   </div>
   <button class="btn" onclick="go('avail')">Demander la disponibilité</button>
+  <button class="btn ghost sm" onclick="go('produit-multi')">Ajouter d’autres produits</button>
+  <button class="btn ghost sm" onclick="go('entite-publique')">Voir la page de l’entité</button>
   <button class="btn ghost sm" onclick="toast('Itinéraire vers ' + '${S.product.seller}')">Itinéraire vers le vendeur</button>
+  <button class="btn ghost sm" onclick="go('signal')">Signaler cette offre</button>
   <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d’achat — jamais avant.</p>`;
 
 SHEETS.avail = () => `
@@ -410,7 +425,8 @@ SHEETS['txn-track'] = () => {
   </div>
   <p class="lead">Transaction <b>verrouillée</b> : elle ne s’annule pas, elle se reprend. Le temps relance, il n’annule jamais.</p>
   ${cur === 0 ? '<button class="btn" onclick="go(\'pay\')">Le vendeur a validé mon code</button>' : ''}
-  ${cur >= 2 ? '<button class="btn" onclick="go(\'rate\')">Confirmer la réception</button>' : ''}`;
+  ${cur >= 2 ? '<button class="btn" onclick="go(\'remise\')">Confirmer la réception</button>' : ''}
+  <button class="btn ghost sm" onclick="go(\'seller-chat\')">Voir le chat de transaction</button>`;
 };
 
 SHEETS['seller-scan'] = () => `
@@ -474,8 +490,10 @@ SHEETS.menu = () => {
   const items = S.role === 'buyer'
     ? [['Mes demandes', 'demandes'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved'], ['Notifications', 'notifications'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
     : S.role === 'seller'
-      ? [['Mon espace', S.hasEntity ? 'seller-dash' : 'seller-entry'], ['Mes offres', 'seller-offers'], ['Pro · renouvellement', 'seller-pro'], ['Favoris', 'favorites'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
-      : [['Console', 'admin-console'], ['File de revue', 'admin-review'], ['Rôles & équipe', 'admin-roles'], ['Journal d’audit', 'admin-audit'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']];
+      ? [['Mon espace', S.hasEntity ? 'seller-dash' : 'seller-entry'], ['Mes offres', 'seller-offers'], ['Fraîcheur de la dispo', 'fraicheur'], ['Pro · renouvellement', 'seller-pro'], ['Favoris', 'favorites'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+      : S.role === 'operator'
+        ? [['Ma tournée', 'op-queue'], ['Aperçu côté entité', 'op-side'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+        : [['Console', 'admin-console'], ['File de revue', 'admin-review'], ['Rôles & équipe', 'admin-roles'], ['Journal d’audit', 'admin-audit'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']];
   return `
   <div class="handle"></div><div class="eyebrow">Menu · ${S.role === 'buyer' ? 'Acheteur' : S.role === 'seller' ? 'Vendeur' : 'Admin'}</div>
   <h1 style="margin-top:3px">Tout Omni, depuis ici</h1>
@@ -736,6 +754,101 @@ SHEETS['seller-pro'] = () => `
   <button class="btn ghost" onclick="go('wallet')">Recharger le portefeuille</button>
   <p class="lead">Le renouvellement passe par le <b>wallet</b> ; rappel avant expiration.</p>`;
 
+SHEETS['seller-chat'] = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Transaction · Awa T.</div><h1>${S.product.name} × 2</h1></div><span class="status ok">Verrouillée</span></div>
+  <div class="stepline" style="margin-top:8px"><i class="on"></i><i class="trust"></i><i></i><i></i><i></i></div>
+  <div class="steplabels"><span>QR</span><span>Scan</span><span>Paiement</span><span>Remise</span><span>Avis</span></div>
+
+  <div class="cardbox">
+    <div class="kv"><span>Contact acheteur</span><b>📱 97 55 21 08</b></div>
+    <div class="kv"><span>Mode</span><b>Retrait sur place</b></div>
+    <div class="kv"><span>Note acheteur</span><b>« je passe dans 20 min »</b></div>
+  </div>
+
+  <div style="margin-top:10px">
+    <div class="chatrow">Bonjour, je suis en route.</div>
+    <div class="chatrow me">Parfait, je prépare vos 2 paquets.</div>
+    <div class="chatrow">Je suis devant la boutique.</div>
+    <div class="chatrow me">Paiement bien reçu, merci !</div>
+  </div>
+  <div class="fld" style="margin-top:9px"><span class="ph">Écrire…</span></div>
+  <button class="btn sm" onclick="toast('Message envoyé')">Envoyer</button>
+
+  <div class="eyebrow" style="margin-top:12px">Actions de cette transaction</div>
+  <div class="btnrow">
+    <button class="btn ghost sm" onclick="toast('Paiement mobile money confirmé')">Confirmer le paiement</button>
+    <button class="btn ghost sm" onclick="toast('Remise marquée effectuée')">Marquer remis</button>
+  </div>
+  <button class="btn ghost sm" onclick="toast('Appel vers l’acheteur…')">Appeler l’acheteur</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers le point de retrait')">Itinéraire</button>
+
+  <div class="cardbox">
+    <div class="kv"><span>Rendez-vous / temps estimé</span><b>Retrait · ≤ 20 min</b></div>
+    <div class="kv"><span>Historique des états</span><b>4 événements</b></div>
+  </div>
+  <p class="lead">Chat <b>scopé à la transaction</b>, ouvert <b>au verrou</b> (jamais avant). Il porte les actions réelles (paiement, remise) et l’<b>historique</b>, pas seulement du texte.</p>`;
+
+SHEETS['remise'] = () => `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+  <div class="steplabels"><span>QR</span><span>Scan</span><span>Paiement</span><span>Remise</span><span>Avis</span></div>
+  <div class="eyebrow" style="margin-top:12px">Remise / livraison</div>
+  <h1 style="margin-top:3px">Comment vous recevez ?</h1>
+  <div class="chips"><span class="chip on">Retrait sur place</span><span class="chip" onclick="toast('Livraison — périmètre pilote limité')">Livraison</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Qui remet</span><b>Le vendeur</b></div>
+    <div class="kv"><span>Qui reçoit</span><b>L’acheteur (en personne)</b></div>
+    <div class="kv"><span>Preuve de remise</span><b>L’acheteur confirme la réception</b></div>
+  </div>
+  <button class="btn ok" onclick="go('rate',{toast:'Réception confirmée'})">L’acheteur confirme la réception</button>
+  <p class="lead">C’est la réception confirmée qui <b>clôture</b> et fiabilise le stock.</p>`;
+
+SHEETS['fraicheur'] = () => `
+  <div class="handle"></div><div class="eyebrow">Entité · fraîcheur de la dispo</div>
+  <h1 style="margin-top:3px">Votre disponibilité est ancienne</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Dernière confirmation</span><b>il y a 9 h</b></div>
+    <div class="kv"><span>Seuil frais / expiré</span><b>4 h frais · 24 h expiré</b></div>
+    <div class="kv"><span>Badge affiché</span><b class="status warn">À confirmer</b></div>
+  </div>
+  <button class="btn" onclick="go('seller-dash',{toast:'Disponibilité reconfirmée — repassée “En stock”'})">Reconfirmer maintenant</button>
+  <p class="lead">Le badge de disponibilité <b>vieillit</b> : il est mis à jour par le vendeur (ou automatiquement, entité Pro).</p>`;
+
+SHEETS['entite-publique'] = () => `
+  <div class="handle"></div><div class="eyebrow">Entité · page publique</div>
+  <h1 style="margin-top:3px">Boutique Kodjo</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Badge</span><b class="status ok">Vérifiée · 12 ventes</b></div>
+    <div class="kv"><span>Adresse</span><b>Lomé · Adawlato · Rue Kamé</b></div>
+    <div class="kv"><span>Horaires</span><b>Lun–Sam 8h–19h</b></div>
+    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+  </div>
+  <button class="btn" onclick="go('results')">Voir ses 3 offres</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo')">Itinéraire</button>
+  <button class="btn ghost sm" onclick="toast('Favori ajouté')">Suivre cette entité</button>
+  <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres — c’est le point d’entrée physique (QR en boutique).</p>`;
+
+SHEETS['produit-multi'] = () => `
+  <div class="handle"></div><div class="eyebrow">Sélection · plusieurs produits</div>
+  <h1 style="margin-top:3px">Votre panier chez Boutique Kodjo</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Spaghetti 500 g</span><b>× 2 · 850 F</b></div>
+    <div class="kv"><span>Huile 1 L</span><b>× 1 · 1 400 F</b></div>
+    <div class="kv"><span>Riz 5 kg</span><b>× 1 · 4 200 F</b></div>
+  </div>
+  <p class="lead">Un <b>panier par entité</b> : plusieurs produits, une seule demande de disponibilité.</p>
+  <button class="btn" onclick="go('avail',{toast:'Demande groupée pour 3 produits'})">Demander la disponibilité (3 produits)</button>
+  <button class="btn ghost sm" onclick="toast('Panier vidé')">Vider</button>`;
+
+SHEETS['signal'] = () => `
+  <div class="handle"></div><div class="eyebrow">Signalement d’offre</div>
+  <h1 style="margin-top:3px">Signaler « Huile 1 L »</h1>
+  <div class="chips"><span class="chip on">Prix trompeur</span><span class="chip">Visuel ne correspond pas</span><span class="chip">Indisponible en réalité</span></div>
+  <div class="fld" style="margin-top:9px"><span class="ph">Précisez (optionnel)…</span></div>
+  <button class="btn" onclick="go('txn-track',{toast:'Signalement envoyé à l’opérateur'})">Envoyer le signalement</button>
+  <p class="lead">Alimente la <b>réputation de l’offre</b> (S-32) et la file de contrôle terrain.</p>`;
+
 /* ---------- SHEETS : admin ---------- */
 SHEETS['admin-console'] = () => `
   <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Console · équipe Omni</div><h1>Bonjour, Kheir</h1></div><span class="status gray">Admin</span></div>
@@ -814,6 +927,57 @@ SHEETS['admin-audit'] = () => `
     <div class="kv"><span>claim_submitted · Épicerie du Port</span><b>il y a 1 h</b></div>
   </div>
   <button class="btn ghost" onclick="toast('Carte centrée sur l’objet')">Voir sur la carte</button>`;
+
+/* ---------- SHEETS : opérateur (terrain) ---------- */
+SHEETS['op-queue'] = () => `
+  <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Terrain · zone Adawlato</div><h1>Ma tournée du jour</h1></div><span class="status warn">4 dossiers</span></div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('op-visit')">
+    <div class="kv"><span>Chez Fatou · vérification</span><b class="status warn">À visiter</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('op-visit')">
+    <div class="kv"><span>Épicerie du Port · revendication</span><b class="status warn">Preuve à constater</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="toast('Disponibilité incohérente signalée')">
+    <div class="kv"><span>Signalement · « Huile 1 L »</span><b class="status dash">À contrôler</b></div>
+  </div>
+  <p class="lead">L’opérateur agit <b>sur le terrain</b> : il constate, il documente, il ne décide pas du badge final.</p>`;
+
+SHEETS['op-visit'] = () => `
+  <div class="handle"></div><div class="eyebrow">Visite · Chez Fatou</div>
+  <h1 style="margin-top:3px">Constater sur place</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Lieu</span><b>Lomé · Bè</b></div>
+    <div class="kv"><span>Contact</span><b>91 22 33 44</b></div>
+    <div class="kv"><span>Déclaré par le vendeur</span><b>Commerce · fixe</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:11px">Preuves de terrain (obligatoires)</div>
+  <div class="chips"><span class="chip on" onclick="toast('Photo ajoutée')">📷 Photo du lieu</span><span class="chip" onclick="toast('Position relevée')">📍 Position</span></div>
+  <button class="btn" onclick="go('op-report')">Rédiger le compte rendu</button>
+  <p class="lead">L’opérateur ne porte pas le badge ; il <b>transmet la preuve</b> à l’admin qui décide.</p>`;
+
+SHEETS['op-report'] = () => `
+  <div class="handle"></div><div class="eyebrow">Compte rendu · Chez Fatou</div>
+  <h1 style="margin-top:3px">Ce que j’ai constaté</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Lieu existe et correspond</span><b>Oui</b></div>
+    <div class="kv"><span>Activité visible</span><b>Oui · enseigne présente</b></div>
+    <div class="kv"><span>Contact joignable</span><b>Oui · a répondu</b></div>
+    <div class="kv"><span>Réserve</span><b>Aucune</b></div>
+  </div>
+  <button class="btn ok" onclick="go('op-queue',{toast:'Dossier transmis à l’admin'})">Transmettre à l’admin</button>
+  <button class="btn ghost sm" onclick="go('op-queue',{toast:'Visite à reprogrammer'})">Reprogrammer</button>
+  <p class="lead">Trace <b>horodatée et signée</b> — l’admin verra qui a constaté quoi, quand.</p>`;
+
+SHEETS['op-side'] = () => `
+  <div class="handle"></div><div class="eyebrow">Aperçu</div>
+  <h1 style="margin-top:3px">Ce que voit l’entité (lecture seule)</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Chez Fatou</span><b>Non vérifiée · 0 vente</b></div>
+    <div class="kv"><span>Offres publiées</span><b>2</b></div>
+    <div class="kv"><span>Sa file de messages</span><b>1 en attente</b></div>
+  </div>
+  <p class="lead">L’opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier — sans jamais modifier à sa place.</p>
+  <button class="btn ghost" onclick="go('op-side',{toast:'Message de suivi envoyé à l’entité'})">Envoyer un message de suivi</button>`;
 
 /* ---------- render ---------- */
 function render() {
