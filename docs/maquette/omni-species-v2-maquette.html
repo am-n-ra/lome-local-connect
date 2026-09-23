@@ -102,13 +102,17 @@
   .fld .ph{color:var(--ink-soft);flex:1;font-size:11px}
   .hgrid{display:flex;gap:9px;overflow:hidden;margin-top:10px}
   .hcard{flex:0 0 146px;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:var(--sh-sm)}
-  .hcard .thumb{height:64px;background:linear-gradient(135deg,#eaeaea,#d7d7d7);position:relative}
+  .hcard .thumb{height:64px;background:linear-gradient(135deg,#eaeaea,#d7d7d7);position:relative;display:grid;place-items:center;font-size:24px}
   .hcard .thumb.unclaimed{background:repeating-linear-gradient(45deg,#f0f0f0 0 6px,#e2e2e2 6px 12px)}
+  .hcard .thumb.person{background:linear-gradient(135deg,#e9eef0,#d3dade)}
   .hcard .thumb .vmark{position:absolute;top:7px;right:7px;width:13px;height:13px;border-radius:50%;
     background:var(--accent);box-shadow:0 0 0 2px #fff}
+  .hcard .thumb .promo{position:absolute;top:7px;left:7px;background:var(--accent);color:#fff;font-size:7.5px;
+    font-weight:800;padding:2px 6px;border-radius:999px;letter-spacing:.2px}
   .hcard .body{padding:8px}.hcard .body b{font-size:9px;display:block}
   .hcard .body small{font-size:7.5px;color:var(--ink-soft);display:block;margin-top:2px}
   .hcard .body .pr{font-size:10px;font-weight:800;margin-top:4px;display:block}
+  .old{font-size:7.5px;color:var(--ink-soft);text-decoration:line-through;margin-left:4px;font-weight:600}
   .stepline{display:flex;gap:4px;margin-top:10px}
   .stepline i{flex:1;height:4px;border-radius:3px;background:var(--line)}
   .stepline i.on{background:var(--ink)}
@@ -180,10 +184,11 @@
           <div class="handle"></div>
           <div class="sheet-head"><div><div class="eyebrow">Résultats · correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
           <div class="hgrid">
-            <div class="hcard"><div class="thumb"><span class="vmark"></span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F</span><span class="status ok" style="margin-top:5px">En stock</span></div></div>
-            <div class="hcard"><div class="thumb"></div><div class="body"><b>Spaghetti (paquet)</b><small>Awa T. · particulier · 380 m</small><span class="pr">1 000 F</span><span class="status dash" style="margin-top:5px">À confirmer</span></div></div>
+            <div class="hcard"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span></div></div>
+            <div class="hcard"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">À confirmer</span></div></div>
             <div class="hcard"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Non revendiquée</span></div></div>
           </div>
+          <p class="lead" style="margin-top:8px">Chaque offre porte un <b>visuel</b> et un <b>avantage promotionnel</b> (remise Omni) — obligation pour publier.</p>
           <div class="btnrow"><button class="btn ghost sm">Comparer</button><button class="btn sm">Dispo groupée</button></div>
         </div>
         <div class="navpill">
@@ -204,7 +209,10 @@
             <div><div class="eyebrow">Offre · Awa T. · particulier · 380 m</div><h1>Ordinateur Dell (occasion)</h1></div>
             <span class="status dash">À confirmer</span>
           </div>
-          <div style="margin-top:6px"><span class="big">45 000 F</span></div>
+          <div style="margin-top:6px;display:flex;gap:12px;align-items:center">
+            <div style="width:74px;height:74px;border-radius:14px;background:linear-gradient(135deg,#e9eef0,#d3dade);display:grid;place-items:center;font-size:30px">💻</div>
+            <div><span class="big">45 000 F</span><div><span class="old" style="font-size:11px">50 000 F</span><span class="status ok" style="margin-left:6px">−10 % Omni</span></div></div>
+          </div>
           <div class="cardbox">
             <div class="kv"><span>État</span><b>Occasion · objet unique</b></div>
             <div class="kv"><span>Quantité</span><b>1</b></div>
@@ -322,7 +330,10 @@
           <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
           <div class="qrcode"></div>
           <div style="text-align:center"><span class="timer">⏱ expire dans 09:42</span></div>
+          <p class="lead">Le QR circule par plusieurs canaux — le vendeur verrouille <b>au choix</b> :</p>
+          <div class="chips"><span class="chip on">Caméra vendeur</span><span class="chip">Partager hors Omni</span><span class="chip">Dashboard vendeur</span></div>
           <div class="btnrow"><button class="btn ghost sm">Ré-émettre</button><button class="btn ghost sm">Révoquer</button></div>
+          <p class="lead" style="margin-top:8px">« Partager » = WhatsApp/SMS. Le dashboard vendeur vaut <b>même verrou</b> que le scan.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -421,15 +432,17 @@
           <div class="eyebrow">Publier une offre · Awa T. · particulier</div>
           <h1 style="margin-top:3px">Ordinateur Dell</h1>
           <div class="cardbox">
+            <div class="kv"><span>Visuel de l'offre</span><b>1 image requise <span class="status ok">✓ ajoutée</span></b></div>
             <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital aussi</span></b></div>
             <div class="kv"><span>État</span><b>Occasion</b></div>
             <div class="kv"><span>Quantité</span><b>1 (objet unique)</b></div>
             <div class="kv"><span>Prix</span><b>45 000 F (négociable)</b></div>
+            <div class="kv"><span>Avantage Omni (requis)</span><b style="color:var(--accent)">−10 %</b></div>
             <div class="kv"><span>Retrait / livraison</span><b>Retrait sur place</b></div>
             <div class="kv"><span>Visible sur la carte</span><b>Oui · rayon 3 km</b></div>
           </div>
           <button class="btn">Publier mon offre</button>
-          <p class="lead">Badge « Non vérifié » au départ → « Vérifié » après confirmation WhatsApp.</p>
+          <p class="lead"><b>Visuel</b> et <b>avantage promotionnel</b> sont <b>obligatoires</b> pour publier. Badge « Non vérifié » au départ → « Vérifié » après confirmation WhatsApp.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -437,6 +450,54 @@
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         </div>
       </div><h5>Offreur · publier (même gabarit pour tous)</h5></div>
+    </div>
+  </div>
+
+  <h2>Acquisition · Scan in-store (le monde physique entre dans Omni)</h2>
+  <p class="hint">Un client <b>déjà en boutique</b> — qui n'a donc pas eu besoin de chercher — scanne le <b>QR public de l'entité</b> : la transaction passe par Omni et il obtient la <b>remise</b>. C'est le moteur d'acquisition : la boutique devient un point d'entrée Omni.</p>
+  <div class="stage-row">
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div><div class="vdot ink" style="left:50%;top:28%"></div></div>
+        <div class="rolepill"><span>Acheteur</span><span>Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:420px">
+          <div class="handle"></div>
+          <div class="eyebrow">Outil · Scanner</div>
+          <h1 style="margin-top:3px">Scanner le QR du commerce</h1>
+          <div style="height:150px;border:1px dashed var(--ink-soft);border-radius:14px;margin-top:10px;display:grid;place-items:center;color:var(--ink-soft);font-size:10.5px">Caméra · « Autoriser et démarrer » explicite</div>
+          <button class="btn">Saisir le code</button>
+          <p class="lead">Le QR affiché en boutique ouvre la fiche de l'entité et applique la <b>remise Omni</b>.</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>Scan in-store · le QR public de l'entité</h5></div>
+    </div>
+
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div></div>
+        <div class="rolepill"><span class="on">Acheteur</span><span>Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:430px">
+          <div class="handle"></div>
+          <div class="eyebrow">Entité · Boutique Kodjo · commerce · 140 m</div>
+          <h1 style="margin-top:3px">Bienvenue — vous êtes dans ce commerce</h1>
+          <div class="cardbox">
+            <div class="kv"><span>Cette entité</span><b>Vérifiée · 12 ventes</b></div>
+            <div class="kv"><span>Vos avantages Omni ici</span><b style="color:var(--accent)">−15 % sur ses offres</b></div>
+            <div class="kv"><span>Disponibilité</span><b>Ouvert maintenant</b></div>
+          </div>
+          <button class="btn">Voir ses offres (−15 % Omni)</button>
+          <p class="lead">Payer via Omni applique la remise et trace la transaction. Résultat : l'entité <b>gagne une vente traçable</b>, le client <b>paie moins</b>.</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>Fiche entité via QR → remise Omni</h5></div>
     </div>
   </div>
 
