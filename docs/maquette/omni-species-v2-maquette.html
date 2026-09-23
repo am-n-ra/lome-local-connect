@@ -292,10 +292,10 @@
             <div class="kv"><span>Offre</span><b>Spaghetti 500 g × 2</b></div>
             <div class="kv"><span>Vendeur</span><b>Boutique Kodjo</b></div>
             <div class="kv"><span>Total</span><b>1 700 F</b></div>
-            <div class="kv"><span>Paiement</span><b>Externe (cash / mobile money)</b></div>
+            <div class="kv"><span>Paiement</span><b>Externe au vendeur</b></div>
           </div>
-          <button class="btn">Créer l'intention — QR de transaction</button>
-          <p class="lead">Le contact du vendeur est désormais visible.</p>
+          <button class="btn">Créer l'intention → QR immédiat</button>
+          <p class="lead">Le QR est émis <b>dans le même geste</b> que l'intention (annexe B canonique). Le contact du vendeur devient visible ici.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
@@ -306,8 +306,8 @@
     </div>
   </div>
 
-  <h2>Étapes 7–9 · QR → Paiement externe → Avis & événement de stock</h2>
-  <p class="hint">La transaction est verrouillée (jamais « annulée » après le scan). Le paiement des biens reste externe. La clôture écrit l'événement de stock qui fiabilise la disponibilité.</p>
+  <h2>Étapes 7–9 · QR (émis à l'intention) → Scan vendeur (verrou) → Paiement enregistré → Avis & stock</h2>
+  <p class="hint">Le <b>QR est émis dans le même geste que l'intention</b> (annexe B). Le <b>scan vendeur verrouille</b> la transaction (jamais « annulée » après). Omni <b>n'encaisse pas</b> : il demande et <b>enregistre</b> le moyen (mobile money / espèces / carte) — <b>aucun retrait</b> à gérer côté entité. La clôture écrit l'événement de stock.</p>
   <div class="stage-row">
 
     <div class="stagecell">
@@ -317,7 +317,7 @@
         <div class="sheet" style="height:450px">
           <div class="handle"></div>
           <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
-          <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Paiement</span><span>Avis</span></div>
+          <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
           <div class="eyebrow" style="margin-top:12px">Transaction · QR</div>
           <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
           <div class="qrcode"></div>
@@ -335,20 +335,45 @@
     <div class="stagecell">
       <div class="phone"><div class="cap">● ● ●</div><div class="screen">
         <div class="mapbase"><div class="grid"></div></div>
+        <div class="rolepill"><span>Acheteur</span><span class="on">Vendeur</span><span>Admin</span></div>
+        <div class="sheet" style="height:440px">
+          <div class="handle"></div>
+          <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+          <div class="eyebrow" style="margin-top:12px">Vendeur · scanner</div>
+          <h1 style="margin-top:3px">Scannez le QR de l'acheteur</h1>
+          <p class="lead">Le scan <b>verrouille</b> la transaction : elle devient non annulable (D-TXN « pas d'annulation après verrou »).</p>
+          <div style="height:150px;border:1px dashed var(--ink-soft);border-radius:14px;margin-top:10px;display:grid;place-items:center;color:var(--ink-soft);font-size:10.5px">Caméra · « Autoriser et démarrer » explicite</div>
+          <button class="btn">Saisir le code</button>
+          <p class="lead">Fallback code toujours disponible (annexe C).</p>
+        </div>
+        <div class="navpill">
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+          <button class="center active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg></button>
+          <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+        </div>
+      </div><h5>7b · Vendeur scanne → verrou</h5></div>
+    </div>
+
+    <div class="stagecell">
+      <div class="phone"><div class="cap">● ● ●</div><div class="screen">
+        <div class="mapbase"><div class="grid"></div></div>
         <div class="rolepill"><span class="on">Acheteur</span><span>Vendeur</span><span>Admin</span></div>
         <div class="sheet" style="height:440px">
           <div class="handle"></div>
           <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="trust"></i><i></i></div>
           <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Paiement</span><span>Avis</span></div>
-          <div class="eyebrow" style="margin-top:12px">Paiement externe</div>
-          <h1 style="margin-top:3px">Déclarer le paiement</h1>
+          <div class="eyebrow" style="margin-top:12px">Paiement au vendeur (externe)</div>
+          <h1 style="margin-top:3px">Comment payez-vous ?</h1>
+          <p class="lead">Omni n'encaisse pas les biens — il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
           <div class="cardbox">
             <div class="kv"><span>Montant</span><b>1 700 F</b></div>
-            <div class="kv"><span>Moyen</span><b>Mobile money</b></div>
-            <div class="kv"><span>Statut</span><b style="color:var(--accent)">Confirmé par le vendeur</b></div>
+            <div class="kv"><span>À payer à</span><b>Boutique Kodjo · 📱 90 12 34 56</b></div>
           </div>
-          <button class="btn">Confirmer l'exécution (reçu)</button>
-          <p class="lead">Paiement des biens <b>hors Omni</b> — Omni trace, il ne détient pas l'argent.</p>
+          <div class="eyebrow" style="margin-top:11px">Moyen utilisé (donnée Omni)</div>
+          <div class="chips"><span class="chip on">Mobile money</span><span class="chip">Espèces</span><span class="chip">Carte</span></div>
+          <button class="btn">Le vendeur a confirmé le paiement</button>
+          <p class="lead">Statut : <b style="color:var(--accent)">confirmé par le vendeur</b> → on passe à l'exécution.</p>
         </div>
         <div class="navpill">
           <button><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
