@@ -193,6 +193,30 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 
 ---
 
+## Points ouverts (2026-09-23)
+
+### S-32 — Intégrité et réputation de l'OFFRE (proposition, en attente de décision)
+
+Question fondateur : « est-ce vraiment correct de ne pas vérifier l'offre ? »
+
+**Constat honnête :** non, pas si on ne met *rien* sur l'offre. Une entité vérifiée peut publier une annonce trompeuse. Proposition en trois couches :
+
+| Couche | Coût | Rôle |
+|---|---|---|
+| Vérification de l'**ENTITÉ** (opérateur) | humain, 0 logiciel | *qui* vend est fiable |
+| **Intégrité de l'offre — automatique** | 0 | visuel présent, prix cohérent, description non vide, pas de doublon |
+| **Réputation de l'offre — gagnée** | 0 | avis attachés à cette offre précise (possible via `S-26` qui trace l'offre dans la transaction) |
+
+**Décision attendue : (a)** ajouter l'état d'intégrité automatique + la réputation par offre, ou **(b)** garder la confiance uniquement sur l'entité.
+
+### Manques de la maquette (inventaire honnête 2026-09-23)
+
+Présents : acheteur (recherche→QR→avis), transaction vendeur, entité→offre, dashboard vendeur, scan in-store, contexte par rôle (rolepill/dock/sheet), échelle 0→4.
+
+Absents (à produire) : **Admin/opérateur complet** (console, file de vérification, correction, rôles/équipes) · **Auth** (inscription/connexion/OTP) · **Menu, Compte, Wallet, Pro/Plans** · **Favoris, recherches sauvegardées, notifications** · **Bulk, Comparateur** · **chat de transaction** (esquissé seulement) · **revendication** avec preuve de contrôle · **panneau QR public de l'entité** (le support physique en boutique) · **états vides / erreur / chargement** · **desktop** (rail latéral) · **interactivité** (parcours cliquable).
+
+---
+
 ## Founder confirmation
 
 **Confirmé par le fondateur (2026-09-23), en ses mots :**
