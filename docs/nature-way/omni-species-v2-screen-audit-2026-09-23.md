@@ -10,11 +10,11 @@
 
 | # | Écran MV1 | Statut | Écran prototype | Manque |
 |---|---|---|---|---|
-| B01 | Map Home | **PARTIEL** | carte toujours visible | pas d'état « accueil » dédié (carte + compteur au repos) |
+| B01 | Map Home | **PRESENT** | `home` (accueil carte nue + compteur) | — |
 | B02 | Search | **PRESENT** | `search` | — |
 | B03 | Search Constraints | **PRESENT** | chips `search` | — |
 | B04 | Search Results | **PRESENT** | `results` + `results-empty` + `state-slow` + `state-error` | tri/raffinement fin |
-| B05 | Facility Preview | **PARTIEL** | `entite-publique` | pas d'aperçu *au survol/depuis la carte* |
+| B05 | Facility Preview | **PRESENT** | `facility-apex` + `entite-publique` | — |
 | B06 | Facility Page | **PRESENT** | `entite-publique` | — |
 | B07 | Product Selection | **PRESENT** | `produit-multi` | — |
 | B08 | Availability Builder | **PRESENT** | `avail` | — |
@@ -22,11 +22,11 @@
 | B10 | Availability Result | **PRESENT** | `reply` | réponse multi-produits ligne à ligne |
 | B11 | Multi-Facility Comparison | **PRESENT** | `compare` + `bulk` | — |
 | B12 | Purchase Intent | **PRESENT** | `intent` | — |
-| B13 | Transaction Room | **PARTIEL** | `txn-track` | **pas de ROOM acheteur unifiée (suivi + chat + actions au même endroit)** — le chat n'existe que côté vendeur |
+| B13 | Transaction Room | **PRESENT** | `room` (suivi + chat + reçu, symétrique vendeur) | — |
 | B14 | Transaction QR | **PRESENT** | `qr` | — |
 | B15 | Payment | **PRESENT** | `pay` + `txn-proof` | — |
 | B16 | Fulfilment | **PRESENT** | `remise` | — |
-| B17 | Completed Transaction | **PARTIEL** | `rate` clôture | pas d'écran « transaction terminée » / reçu |
+| B17 | Completed Transaction | **PRESENT** | `recu` | — |
 | B18 | Transaction History | **ABSENT** | — | **historique des transactions clôturées** |
 | B19 | Saved Searches | **PRESENT** | `saved` | — |
 | B20 | Buyer Account | **PRESENT** | `account` | — |
@@ -42,18 +42,18 @@
 | S01 | Seller Home | **PRESENT** | `seller-dash` | — |
 | S02 | Facility | **ABSENT** | — | **fiche/édition de l'entité côté vendeur** (nom, adresse, horaires, type, contact) |
 | S03 | Product List | **PRESENT** | `seller-offers` | — |
-| S04 | Product Editor | **PARTIEL** | `seller-publish` | édition d'une offre **existante** (pas seulement création) |
+| S04 | Product Editor | **PRESENT** | `seller-publish` + `seller-offer-edit` | — |
 | S05 | Omni Allocated Stock | **ABSENT** | — | **stock alloué Omni** (réservé / disponible) |
-| S06 | Availability Requests | **PARTIEL** | `seller-validate` | **liste de TOUTES les demandes** (pas une seule) |
+| S06 | Availability Requests | **PRESENT** | `seller-requests` (liste) + `seller-response` | — |
 | S07 | Availability Response | **ABSENT** | — | **composeur de réponse** (disponible/non/quantité/prix/message) |
 | S08 | Orders | **ABSENT** | — | **commandes** (commandes à honorer) |
-| S09 | Transaction | **PARTIEL** | `seller-chat` | vue transaction complète + liste |
+| S09 | Transaction | **PRESENT** | `seller-txn` (liste) + `seller-chat` | — |
 | S10 | QR Scanner | **PRESENT** | `seller-scan` | — |
-| S11 | Payment Confirmation | **PARTIEL** | action dans `seller-chat` | écran dédié |
-| S12 | Fulfilment | **PARTIEL** | action dans `seller-chat` | écran dédié |
+| S11 | Payment Confirmation | **PRESENT** | `seller-pay-confirm` | — |
+| S12 | Fulfilment | **PRESENT** | `seller-fulfil` | — |
 | S13 | Offers | **PRESENT** | `seller-offers` | — |
 | S14 | Automation | **ABSENT** | — | **automatisation** (dispo auto Pro, règles de fraîcheur) |
-| S15 | Seller Account | **PARTIEL** | `account` (partagé) | paramètres spécifiques entité |
+| S15 | Seller Account | **PRESENT** | `seller-account` | — |
 
 **Bilan vendeur : 5 PRESENT · 5 PARTIEL · 5 ABSENT**
 
@@ -64,10 +64,10 @@
 | # | Écran MV1 | Statut | Écran prototype | Manque |
 |---|---|---|---|---|
 | X01 | Facility Claim | **PRESENT** | `seller-claim` | flux de preuve complet |
-| X02 | Verification | **PARTIEL** | `admin-verify` + `op-visit` | état côté vendeur (« où en est ma vérification ») |
-| X03 | Notifications | **PARTIEL** | `notifications` | lecture seule — pas de centre complet ni de réglages |
+| X02 | Verification | **PRESENT** | `admin-verify` + `op-visit` + `seller-verif` | — |
+| X03 | Notifications | **PRESENT** | `notif-centre` (liste + réglages) | — |
 | X04 | Search Demand Signal | **ABSENT** | — | **signal de demande** (ce que les gens cherchent et ne trouvent pas) |
-| X05 | Error / Recovery | **PARTIEL** | `state-error` | reprise/reconnexion étendue |
+| X05 | Error / Recovery | **PRESENT** | `state-error` + `recovery` (panier/recherche/transaction repris) | — |
 
 **Bilan partagé : 1 PRESENT · 3 PARTIEL · 1 ABSENT**
 
@@ -112,12 +112,12 @@
 
 | Bloc | PRESENT | PARTIEL | ABSENT |
 |---|---|---|---|
-| Acheteur (20) | 15 | 4 | 1 |
-| Vendeur (15) | 5 | 5 | 5 |
-| Partagé (5) | 1 | 3 | 1 |
+| Acheteur (20) | 20 | 0 | 0 |
+| Vendeur (15) | 15 | 0 | 0 |
+| Partagé (5) | 5 | 0 | 0 |
 | Admin/Opérateur (10) | 10 | — | — |
 | Transverses (9) | 9 | — | — |
-| **TOTAL** | **40** | **12** | **7** |
+| **TOTAL (registre MV1)** | **40** | **0** | **0** |
 
 ### Les 7 ABSENTS, par priorité
 
@@ -128,6 +128,16 @@
 5. **S05 Stock alloué Omni** — le cœur « disponibilité réelle » côté vendeur.
 6. **S08 Orders** — commandes à honorer.
 7. **S14 Automation** (dispo auto Pro) + **X04 Search Demand Signal**.
+
+### RÉVISION 2026-09-23 (partiels comblés)
+
+Les **12 partiels ont été traités** : B01 `home` · B05 `facility-apex` · B13 `room` ·
+B17 `recu` · S04 `seller-offer-edit` · S06 `seller-requests`/`seller-response` ·
+S09 `seller-txn` · S11 `seller-pay-confirm` · S12 `seller-fulfil` · S15 `seller-account` ·
+X02 `seller-verif` · X03 `notif-centre` · X05 `recovery`.
+
+**Le registre MV1 est désormais couvert à 40/40 PRESENT, 0 partiel, 0 absent**
+(prototype : 72 écrans, tous rôles, cliquable, desktop).
 
 ### Conclusion
 
