@@ -128,4 +128,12 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 
 ## Founder confirmation
 
-`<À remplir en session de confirmation finale : ce que je confirme, ce que je veux changer, et que le Seed est clos.>`
+**Confirmé par le fondateur (2026-09-23), en ses mots :**
+
+> « c'est ça » — le cœur d'Omni est bien *un index complet et vivant de l'offre, interrogeable par les contraintes du chercheur, pour supprimer la recherche, le contact et la comparaison à la main.*
+>
+> « que quelqu'un cherchant juste une entité ou un autre cherchant un produit seulement chez l'entité le trouveront, et que notre logique ne casse pas » — d'où **S-11** (double niveau entité / offre) et son **test de non-régression obligatoire au Root**.
+>
+> Le fondateur a par ailleurs jugé que le process avait dérivé depuis Species et a demandé de **reprendre depuis le Seed** : « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse. » Routes externes (YC Winter 2027, HERLOG) **en pause**.
+>
+> Décision finale : **Seed CLOS** ; prochain = réconciliation des masters → SDM V2 → **Species V2 (maquette montrée au fondateur dans le navigateur)**, dans l'ordre : acheteur → offreur → échelle d'existence.
