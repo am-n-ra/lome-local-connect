@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Omni — Species V2 (prototype interactif)</title>
+<style>
+  :root{
+    --ink:#0f0f0f; --ink-soft:#6b6b6b; --ink-faint:#d8d8d8; --line:#e6e6e6;
+    --panel:#f7f7f7; --white:#fff; --accent:#2e8b6f; --accent-soft:#eef4f1;
+    --pill:#111; --warn:#8a6d1f; --warn-soft:#f6f0df;
+    --sh-sm:0 1px 2px rgba(15,15,15,.04),0 1px 1px rgba(15,15,15,.03);
+    --sh-md:0 6px 18px rgba(15,15,15,.08);
+    --sh-lg:0 20px 48px rgba(15,15,15,.16);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f2f0;color:var(--ink);
+    font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+  .stage{position:relative;width:100%;height:100%;overflow:hidden;background:#fff}
+  .mapbase{position:absolute;inset:0;background:radial-gradient(circle at 32% 28%, #fdfdfc 0%, #f4f4f2 55%, #ececea 100%)}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(15,15,15,.035) 1px,transparent 1px),
+     linear-gradient(90deg,rgba(15,15,15,.035) 1px,transparent 1px);background-size:32px 32px}
+  .land{position:absolute;background:#e7e6e2;opacity:.85}
+  .land.a{width:280px;height:190px;left:-40px;top:120px;border-radius:44% 56% 38% 62%/50% 40% 60% 50%;transform:rotate(-14deg)}
+  .land.b{width:150px;height:110px;right:-20px;bottom:160px;border-radius:50% 50% 45% 55%;transform:rotate(20deg)}
+  .countmark{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;
+     background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px;box-shadow:var(--sh-sm);z-index:4}
+  .countmark small{display:block;font-size:7px;font-weight:600;letter-spacing:.4px;opacity:.75;margin-top:1px;text-align:center}
+  .vdot{position:absolute;z-index:4;width:12px;height:12px;border-radius:50%;background:var(--accent);
+    border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.18);cursor:pointer}
+  .vdot.ink{background:var(--ink)}
+  .vdot.unclaimed{background:#fff;border:2px dashed var(--ink-soft)}
+  .vdot.mobile{background:var(--warn);box-shadow:0 0 0 5px var(--warn-soft)}
+  .usermarker{position:absolute;width:15px;height:15px;border-radius:50%;background:#1a73e8;border:2.5px solid #fff;
+     box-shadow:0 0 0 1px rgba(0,0,0,.1),var(--sh-sm);z-index:5}
+  .rolepill{position:absolute;z-index:20;top:12px;left:50%;transform:translateX(-50%);display:flex;padding:3px;
+    border-radius:999px;background:rgba(255,255,255,.92);border:1px solid var(--line);backdrop-filter:blur(10px);
+    box-shadow:var(--sh-md);white-space:nowrap}
+  .rolepill button{font-size:9.5px;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-soft)}
+  .rolepill button.on{background:var(--ink);color:#fff}
+  .navpill{position:absolute;z-index:60;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;
+    gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg)}
+  .navpill button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78)}
+  .navpill button.active{color:#fff;background:rgba(255,255,255,.18)}
+  .navpill .center{width:46px;height:46px;margin:0 2px;border-radius:50%;border:1px solid rgba(255,255,255,.22);
+    display:grid;place-items:center;color:#fff}
+  .navpill .center.active{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4)}
+  .navpill svg{width:18px;height:18px}
+  .navpill .center svg{width:20px;height:20px}
+  .mapctrl{position:absolute;right:12px;top:52px;display:flex;flex-direction:column;gap:6px;z-index:6}
+  .mapctrl button{width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid var(--line);
+    box-shadow:var(--sh-sm);font-weight:800;font-size:14px;color:var(--ink)}
+  .filterrail{position:absolute;left:12px;top:50px;display:flex;gap:6px;z-index:6;flex-wrap:wrap;max-width:220px}
+  .fchip{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;
+    padding:5px 10px;font-size:9.5px;font-weight:700;box-shadow:var(--sh-sm);color:var(--ink)}
+  .fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .fchip.soon{color:var(--ink-faint)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:40;background:#fff;border-radius:24px 24px 0 0;
+    border-top:1px solid var(--line);box-shadow:0 -14px 44px rgba(15,15,15,.14);padding:9px 14px 92px;
+    max-height:78%;overflow:auto;animation:sheetIn .3s cubic-bezier(.23,1,.32,1)}
+  @keyframes sheetIn{0%{transform:translateY(18px);opacity:0}100%{transform:none;opacity:1}}
+  .sheet::-webkit-scrollbar{display:none}
+  .handle{width:38px;height:4px;border-radius:4px;background:var(--ink-faint);margin:0 auto 9px}
+  .sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+  .eyebrow{font-size:8px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--ink-soft)}
+  .sheet h1{font-size:16px;letter-spacing:-.4px;margin:3px 0 0}
+  .sheet .lead{font-size:10.5px;color:var(--ink-soft);margin:8px 0 0;line-height:1.5}
+  .cardbox{padding:11px;border:1px solid var(--line);border-radius:16px;background:#fff;margin-top:9px;box-shadow:var(--sh-sm)}
+  .kv{display:flex;justify-content:space-between;gap:10px;font-size:11px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .kv:first-child{border-top:0}.kv:last-child{border-bottom:0}
+  .kv span:first-child{color:var(--ink-soft)}
+  .kv b{font-weight:800;text-align:right}
+  .btn{display:block;width:100%;height:42px;border-radius:999px;border:1px solid var(--ink);background:var(--ink);
+    color:#fff;font-size:13px;font-weight:800;margin-top:9px}
+  .btn.sm{height:36px;font-size:12px}
+  .btn.ghost{background:#fff;color:var(--ink)}
+  .btn.ok{background:var(--accent);border-color:var(--accent)}
+  .btnrow{display:flex;gap:8px}.btnrow .btn{margin-top:9px}
+  .status{font-size:9px;font-weight:800;padding:3px 8px;border-radius:999px;letter-spacing:.3px;white-space:nowrap}
+  .status.ok{background:var(--accent-soft);color:var(--accent)}
+  .status.gray{background:var(--panel);color:var(--ink-soft)}
+  .status.dash{background:#fff;border:1px dashed var(--ink-soft);color:var(--ink-soft)}
+  .status.warn{background:var(--warn-soft);color:var(--warn)}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{font-size:9.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:5px 9px;background:#fff;color:var(--ink)}
+  .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .chip.soon{color:var(--ink-faint);border-style:dashed}
+  .fld{display:flex;align-items:center;gap:7px;height:38px;border-radius:999px;background:#fff;
+    border:1px solid var(--line);padding:0 12px;box-shadow:var(--sh-sm)}
+  .fld input{flex:1;border:0;outline:0;background:none;font-size:11px;color:var(--ink)}
+  .fld .ph{color:var(--ink-soft);flex:1;font-size:11px}
+  .hgrid{display:flex;gap:9px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+  .hgrid::-webkit-scrollbar{display:none}
+  .hcard{flex:0 0 148px;border:1px solid var(--line);border-radius:16px;background:#fff;overflow:hidden;box-shadow:var(--sh-sm)}
+  .hcard .thumb{height:64px;background:linear-gradient(135deg,#eaeaea,#d7d7d7);position:relative;display:grid;place-items:center;font-size:24px}
+  .hcard .thumb.unclaimed{background:repeating-linear-gradient(45deg,#f0f0f0 0 6px,#e2e2e2 6px 12px)}
+  .hcard .thumb.person{background:linear-gradient(135deg,#e9eef0,#d3dade)}
+  .hcard .thumb .vmark{position:absolute;top:7px;right:7px;width:13px;height:13px;border-radius:50%;
+    background:var(--accent);box-shadow:0 0 0 2px #fff}
+  .hcard .thumb .promo{position:absolute;top:7px;left:7px;background:var(--accent);color:#fff;font-size:7.5px;
+    font-weight:800;padding:2px 6px;border-radius:999px}
+  .hcard .body{padding:8px}.hcard .body b{font-size:9px;display:block}
+  .hcard .body small{font-size:7.5px;color:var(--ink-soft);display:block;margin-top:2px}
+  .hcard .body .pr{font-size:10px;font-weight:800;margin-top:4px;display:block}
+  .old{font-size:7.5px;color:var(--ink-soft);text-decoration:line-through;margin-left:4px;font-weight:600}
+  .stepline{display:flex;gap:4px;margin-top:10px}
+  .stepline i{flex:1;height:4px;border-radius:3px;background:var(--line)}
+  .stepline i.on{background:var(--ink)}.stepline i.trust{background:var(--accent)}
+  .steplabels{display:flex;justify-content:space-between;font-size:7.5px;font-weight:700;color:var(--ink-soft);
+    letter-spacing:.2px;margin-top:5px;text-transform:uppercase}
+  .big{font-size:26px;font-weight:800;letter-spacing:-.6px}
+  .timer{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;color:var(--warn);
+    background:var(--warn-soft);border-radius:999px;padding:4px 9px;margin-top:7px}
+  .qrcode{width:132px;height:132px;margin:12px auto 0;background:
+     repeating-conic-gradient(var(--ink) 0 25%, #fff 0 50%) 0 0/16px 16px;border:7px solid #fff;outline:1px solid var(--line);border-radius:10px}
+  .cam{border:1px dashed var(--ink-soft);border-radius:14px;margin-top:10px;height:120px;display:grid;place-items:center;
+    color:var(--ink-soft);font-size:10.5px}
+  .toast{position:absolute;z-index:80;top:52px;left:14px;right:14px;background:var(--ink);color:#fff;border-radius:13px;
+    padding:10px 12px;font-size:10px;font-weight:700;box-shadow:var(--sh-md);transition:transform .3s,opacity .3s}
+  .toast.hidden{transform:translateY(-14px);opacity:0;pointer-events:none}
+  .chatrow{font-size:10.5px;padding:7px 9px;border-radius:12px;background:var(--panel);margin-top:6px}
+  .chatrow.me{background:var(--accent-soft);color:var(--accent);text-align:right}
+  .rail{display:none}
+  .deskpanel{display:none}
+  .empty{text-align:center;padding:18px 8px;color:var(--ink-soft);font-size:11px}
+  .empty .ic{font-size:26px;display:block;margin-bottom:7px}
+
+  /* ---------- DESKTOP (>=1040px) : rail gauche, panneau de contenu, sheets = tiroirs droits ---------- */
+  @media (min-width:1040px){
+    body{background:#dadad7}
+    .stage{max-width:1180px;height:100%;margin:0 auto;background:#fff;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+    .rail{display:flex;position:absolute;z-index:60;left:14px;top:64px;bottom:14px;width:52px;flex-direction:column;
+      align-items:center;gap:6px;padding:8px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg)}
+    .rail button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78)}
+    .rail button.active{color:#fff;background:rgba(255,255,255,.18)}
+    .rail svg{width:18px;height:18px}
+    .rail .center{width:44px;height:44px;border:1px solid rgba(255,255,255,.22);color:#fff;display:grid;place-items:center;border-radius:50%}
+    .navpill{display:none}
+    .rolepill{top:10px}
+    .mapbase{left:82px}
+    .countmark{left:calc(82px + 50%)}
+    .filterrail{left:calc(82px + 12px)}
+    .sheet{left:auto;right:0;top:0;bottom:0;width:420px;max-height:none;border-radius:0;border-top:0;
+      border-left:1px solid var(--line);padding:22px 18px 22px;box-shadow:-14px 0 44px rgba(15,15,15,.10);
+      animation:drawerIn .3s cubic-bezier(.23,1,.32,1)}
+    @keyframes drawerIn{0%{transform:translateX(18px);opacity:0}100%{transform:none;opacity:1}}
+    .handle{display:none}
+    .sheet h1{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="mapbase"><div class="land a"></div><div class="land b"></div><div class="grid"></div><div id="pins"></div>
+    <div class="countmark" id="countmark">206<small>OFFRES</small></div>
+    <div class="mapctrl"><button onclick="zoom(1)">+</button><button onclick="zoom(-1)">−</button><button onclick="centerMe()">◎</button></div>
+    <div class="filterrail" id="filterrail"></div>
+    <div class="usermarker" style="left:48%;top:62%"></div>
+  </div>
+  <div class="rolepill" id="rolepill"></div>
+  <div class="rail" id="rail"></div>
+  <div class="navpill" id="navpill"></div>
+  <div id="sheetmount"></div>
+  <div class="toast hidden" id="toast"></div>
+</div>
+<script>
+/* ===== Omni Species V2 — prototype interactif ===== */
+const S = {
+  role: 'buyer',
+  sheet: 'search',
+  prev: [],
+  constraints: { rayon: '1 km', ouvert: true, budget: true },
+  product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m' },
+  entity: null,
+  hasEntity: false,
+  txn: null,
+  step: 0,
+  zoom: 1,
+};
+
+function go(sheet, opts = {}) {
+  if (S.sheet !== sheet) S.prev.push(S.sheet);
+  S.sheet = sheet;
+  if (opts.toast) toast(opts.toast);
+  render();
+}
+function back() { S.sheet = S.prev.pop() || (S.role === 'buyer' ? 'search' : S.role === 'seller' ? 'seller-dash' : 'admin-console'); render(); }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.remove('hidden');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 2600);
+}
+function setRole(r) { S.role = r; S.prev = []; S.sheet = r === 'buyer' ? 'search' : r === 'seller' ? (S.hasEntity ? 'seller-dash' : 'seller-entry') : 'admin-console'; render(); }
+function zoom(d) { S.zoom = Math.max(0.6, Math.min(2.4, S.zoom + d * 0.2)); document.getElementById('mapbase'); render(); }
+function centerMe() { toast('Recentré sur votre position'); }
+
+const ICON = {
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  qr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6"/><rect x="14" y="4" width="6" height="6"/><rect x="4" y="14" width="6" height="6"/><path d="M14 14h3v3h-3zM20 20h.01"/></svg>',
+  menu: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>',
+  shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16"/></svg>',
+  console: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>',
+};
+
+function dockFor() {
+  if (S.role === 'buyer') return [
+    { ic: ICON.search, sheet: 'search', label: 'Recherche' },
+    { ic: ICON.qr, sheet: 'scan-entity', label: 'Scanner le QR d’une entité', center: true },
+    { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
+  ];
+  if (S.role === 'seller') return [
+    { ic: ICON.shop, sheet: S.hasEntity ? 'seller-dash' : 'seller-entry', label: 'Mon espace' },
+    { ic: ICON.qr, sheet: 'seller-scan', label: 'Scanner le code d’un acheteur', center: true },
+    { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
+  ];
+  return [
+    { ic: ICON.console, sheet: 'admin-console', label: 'Console' },
+    { ic: ICON.pin, sheet: 'admin-review', label: 'Revue des pins', center: true },
+    { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
+  ];
+}
+
+function renderRolePill() {
+  const roles = [['buyer', 'Acheteur'], ['seller', 'Vendeur'], ['admin', 'Admin']];
+  document.getElementById('rolepill').innerHTML = roles.map(([id, lb]) =>
+    `<button class="${S.role === id ? 'on' : ''}" onclick="setRole('${id}')">${lb}</button>`).join('');
+}
+function renderDock(el, vertical) {
+  document.getElementById(el).innerHTML = dockFor().map(it =>
+    `<button class="${S.sheet === it.sheet ? 'active' : ''} ${it.center && !vertical ? 'center' : ''} ${it.center && vertical ? 'center' : ''}" title="${it.label}" onclick="go('${it.sheet}')">${it.ic}</button>`).join('');
+}
+function renderPins() {
+  if (S.role === 'admin') {
+    document.getElementById('pins').innerHTML =
+      '<span class="vdot unclaimed" style="left:34%;top:38%" onclick="go(\'admin-review\')"></span>' +
+      '<span class="vdot unclaimed" style="left:60%;top:44%" onclick="go(\'admin-review\')"></span>';
+    return;
+  }
+  const pins = S.sheet === 'search' || S.sheet === 'scan-entity'
+    ? '<span class="vdot" style="left:34%;top:40%;transform:scale(' + S.zoom + ')" onclick="openOffer(\'commerce\')"></span>' +
+      '<span class="vdot ink" style="left:62%;top:36%;transform:scale(' + S.zoom + ')" onclick="openOffer(\'person\')"></span>' +
+      '<span class="vdot unclaimed" style="left:24%;top:56%;transform:scale(' + S.zoom + ')" onclick="toast(\'Lieu connu — non revendiqué\')"></span>'
+    : '<span class="vdot ink" style="left:48%;top:42%" onclick="openOffer(\'commerce\')"></span>';
+  document.getElementById('pins').innerHTML = pins;
+  document.getElementById('countmark').style.display = (S.sheet === 'search') ? '' : 'none';
+}
+function renderFilters() {
+  const show = S.role === 'buyer' && (S.sheet === 'search' || S.sheet === 'scan-entity' || S.sheet === 'results');
+  const f = document.getElementById('filterrail');
+  if (!show) { f.innerHTML = ''; return; }
+  f.innerHTML = ['Tout', 'Commerces', 'Particuliers', 'Transport'].map((x, i) =>
+    `<span class="fchip ${i === 0 ? 'on' : (x === 'Transport' ? 'soon' : '')}" onclick="toast('${x === 'Transport' ? 'Transport — bientôt (V1+)' : 'Filtre ' + x}')">${x}</span>`).join('');
+}
+
+function openOffer(kind) {
+  S.product = kind === 'person'
+    ? { name: 'Ordinateur Dell (occasion)', price: '45 000 F', old: '50 000 F', promo: '−10 % Omni', seller: 'Awa T.', kind: 'particulier', dist: '380 m' }
+    : { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m' };
+  go('offer');
+}
+
+/* ---------- SHEETS : acheteur ---------- */
+const SHEETS = {};
+
+SHEETS.search = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div></div>
+  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="Produit, service, propriété…" onkeydown="if(event.key==='Enter')doSearch()" id="q"></div></div>
+  <div class="eyebrow" style="margin-top:11px">Contraintes (requête, pas engagement vendeur)</div>
+  <div class="chips">
+    <span class="chip on">≤ 1 km</span><span class="chip on">Ouvert maintenant</span><span class="chip on">≤ 2 000 F</span>
+    <span class="chip soon" onclick="toast('Créneau — bientôt (V1+)')">Créneau</span>
+    <span class="chip soon" onclick="toast('Livraison — bientôt (V1+)')">Livraison</span>
+  </div>
+  <button class="btn" onclick="doSearch()">Rechercher</button>
+  <div class="cardbox"><div class="kv"><span>Démonstration</span><b>Aucun résultat · Réseau lent · Panne</b></div></div>
+  <div class="chips">
+    <span class="chip" onclick="go('results-empty')">Aucun résultat</span>
+    <span class="chip" onclick="go('state-slow')">Réseau lent</span>
+    <span class="chip" onclick="go('state-error')">Panne réseau</span>
+  </div>`;
+
+SHEETS.results = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Résultats · correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
+  <div class="hgrid">
+    <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span></div></div>
+    <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">À confirmer</span></div></div>
+    <div class="hcard" onclick="toast('Lieu connu mais non revendiqué — non interrogeable')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Non revendiquée</span></div></div>
+  </div>
+  <p class="lead">Chaque offre porte un <b>visuel</b>, un <b>avantage Omni</b> et une <b>réputation propre</b> (S-32).</p>
+  <div class="btnrow"><button class="btn ghost sm" onclick="go('compare')">Comparer</button><button class="btn sm" onclick="go('bulk')">Dispo groupée</button></div>`;
+
+SHEETS['results-empty'] = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Résultats</div><h1>Aucune offre</h1></div><span class="status gray">0</span></div>
+  <div class="empty"><span class="ic">🔍</span>Aucune offre ne correspond à ces contraintes ici.<br>Essayez d’élargir la distance ou le budget.</div>
+  <button class="btn ghost" onclick="go('search')">Élargir les contraintes</button>
+  <button class="btn" onclick="go('bulk')">Demander en groupé</button>`;
+
+SHEETS['state-slow'] = () => `
+  <div class="handle"></div><div class="eyebrow">Réseau lent</div><h1 style="margin-top:3px">Recherche en cours…</h1>
+  <p class="lead">Nous cherchons encore. Vous pouvez continuer à regarder la carte.</p>
+  <div class="cardbox"><div class="kv"><span>Progression</span><b>3 lieux sur 5 interrogés</b></div></div>
+  <button class="btn ghost" onclick="go('results')">Voir les résultats partiels</button>`;
+
+SHEETS['state-error'] = () => `
+  <div class="handle"></div><div class="eyebrow">Panne réseau</div><h1 style="margin-top:3px">Service momentanément indisponible</h1>
+  <div class="empty"><span class="ic">⚠️</span>La carte et les offres n’ont pas pu être chargées.</div>
+  <button class="btn" onclick="toast('Nouvelle tentative…');">Réessayer</button>
+  <button class="btn ghost" onclick="toast('Recherche enregistrée — nous vous préviendrons');go('notifications')">M’alerter quand ça revient</button>`;
+
+SHEETS.offer = () => `
+  <div class="handle"></div>
+  <div class="sheet-head">
+    <div><div class="eyebrow">Offre · ${S.product.seller} · ${S.product.kind} · ${S.product.dist}</div><h1>${S.product.name}</h1></div>
+    <span class="status dash">À confirmer</span>
+  </div>
+  <div style="margin-top:6px;display:flex;gap:12px;align-items:center">
+    <div style="width:74px;height:74px;border-radius:14px;background:linear-gradient(135deg,#e9eef0,#d3dade);display:grid;place-items:center;font-size:30px">${S.product.kind === 'particulier' ? '💻' : '🍝'}</div>
+    <div><span class="big">${S.product.price}</span><div><span class="old" style="font-size:11px">${S.product.old}</span><span class="status ok" style="margin-left:6px">${S.product.promo}</span></div></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Intégrité de l’offre</span><b style="color:var(--accent)">Visuel ✓ · prix cohérent ✓</b></div>
+    <div class="kv"><span>Réputation de l’offre</span><b>Achetée 12× · 4,6 ★</b></div>
+    <div class="kv"><span>Entité</span><b>${S.product.seller} · ${S.product.kind === 'particulier' ? 'non vérifiée' : 'vérifiée'}</b></div>
+    <div class="kv"><span>Quantité</span><b>${S.product.kind === 'particulier' ? '1 (objet unique)' : '24'}</b></div>
+    <div class="kv"><span>Retrait / livraison</span><b>Retrait sur place</b></div>
+  </div>
+  <button class="btn" onclick="go('avail')">Demander la disponibilité</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers ' + '${S.product.seller}')">Itinéraire vers le vendeur</button>
+  <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d’achat — jamais avant.</p>`;
+
+SHEETS.avail = () => `
+  <div class="handle"></div>
+  <div class="eyebrow">Vérification de disponibilité</div>
+  <h1 style="margin-top:3px">${S.product.name} · 2</h1>
+  <p class="lead">« Est-ce disponible maintenant ? » — ce n’est pas encore un engagement d’achat.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Quantité souhaitée</span><b>2</b></div>
+    <div class="kv"><span>Budget max</span><b>2 000 F</b></div>
+    <div class="kv"><span>Retrait / livraison</span><b>Retrait</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:11px">Note au vendeur (optionnel)</div>
+  <div class="fld" style="margin-top:6px"><span class="ph">Ex. je passe dans 20 min…</span></div>
+  <button class="btn" onclick="go('pending')">Envoyer la demande de disponibilité</button>`;
+
+SHEETS.pending = () => `
+  <div class="handle"></div><div class="eyebrow">En attente du vendeur</div>
+  <h1 style="margin-top:3px">Demande envoyée</h1>
+  <p class="lead">Nous vous préviendrons dès la réponse. Le vendeur agit : personne d’autre ne peut répondre à sa place.</p>
+  <div class="cardbox"><div class="kv"><span>${S.product.seller}</span><b class="status gray">En attente</b></div></div>
+  <button class="btn" onclick="go('reply')">Simuler la réponse du vendeur</button>
+  <button class="btn ghost sm" onclick="go('menu')">Continuer à explorer</button>`;
+
+SHEETS.reply = () => `
+  <div class="handle"></div><div class="eyebrow">Réponse · ${S.product.seller}</div>
+  <h1 style="margin-top:3px">Disponible</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Statut</span><b style="color:var(--accent)">Disponible · 2</b></div>
+    <div class="kv"><span>Prix</span><b>${S.product.price} / unité</b></div>
+    <div class="kv"><span>Message</span><b>Oui, en stock, venez</b></div>
+  </div>
+  <button class="btn" onclick="go('intent')">Je veux acheter — intention</button>
+  <button class="btn ghost sm" onclick="go('results')">Voir d’autres offres autour</button>`;
+
+SHEETS.intent = () => `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+  <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+  <div class="eyebrow" style="margin-top:12px">Intention d’achat</div>
+  <h1 style="margin-top:3px">Confirmer la demande</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Offre</span><b>${S.product.name} × 2</b></div>
+    <div class="kv"><span>Vendeur</span><b>${S.product.seller}</b></div>
+    <div class="kv"><span>Total</span><b>1 700 F</b></div>
+    <div class="kv"><span>Paiement</span><b>Externe au vendeur</b></div>
+  </div>
+  <button class="btn" onclick="doIntent()">Créer l’intention → QR immédiat</button>
+  <p class="lead">Le QR est émis <b>dans le même geste</b> que l’intention. Le contact du vendeur devient visible ici.</p>`;
+
+SHEETS.qr = () => `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+  <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+  <div class="eyebrow" style="margin-top:12px">Transaction · QR</div>
+  <h1 style="margin-top:3px">Présentez ce code au vendeur</h1>
+  <div class="qrcode"></div>
+  <div style="text-align:center"><span class="timer">⏱ expire dans 09:42</span></div>
+  <p class="lead">Transmettez ce code au vendeur — <b>au choix</b> :</p>
+  <div class="chips"><span class="chip on">Lui montrer</span><span class="chip" onclick="toast('Partagé vers WhatsApp…')">Partager (WhatsApp/SMS)</span></div>
+  <p class="lead">Le vendeur le reçoit <b>chez lui</b> (côté vendeur) et le valide. <b>Rien de tout ça n’est visible ici autrement.</b></p>
+  <div class="btnrow"><button class="btn ghost sm" onclick="toast('Nouveau QR émis')">Ré-émettre</button><button class="btn ghost sm" onclick="toast('QR révoqué')">Révoquer</button></div>
+  <button class="btn ghost sm" onclick="go('txn-track')">Voir le suivi de transaction</button>`;
+
+SHEETS['txn-track'] = () => {
+  const states = ['qr_ready', 'qr_verified', 'payment_declared', 'payment_confirmed', 'fulfilled', 'received', 'rated', 'closed'];
+  const labels = { qr_ready: 'QR émis', qr_verified: 'Code validé par le vendeur', payment_declared: 'Paiement déclaré', payment_confirmed: 'Paiement confirmé', fulfilled: 'Remise effectuée', received: 'Réception confirmée', rated: 'Avis déposé', closed: 'Transaction clôturée' };
+  const cur = S.txn ? states.indexOf(S.txn) : 0;
+  return `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="${cur >= 1 ? 'trust' : ''}"></i><i></i></div>
+  <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+  <div class="eyebrow" style="margin-top:12px">Suivi · transaction verrouillée</div>
+  <h1 style="margin-top:3px">${S.txn ? labels[S.txn] : 'QR présenté au vendeur'}</h1>
+  <div class="cardbox">
+    ${states.slice(0, Math.max(cur + 1, 1)).map((s, i) => `<div class="kv"><span>${labels[s]}</span><b>${i === cur ? '<span class="status ok">à l’instant</span>' : '✓'}</b></div>`).join('')}
+  </div>
+  <p class="lead">Transaction <b>verrouillée</b> : elle ne s’annule pas, elle se reprend. Le temps relance, il n’annule jamais.</p>
+  ${cur === 0 ? '<button class="btn" onclick="go(\'pay\')">Le vendeur a validé mon code</button>' : ''}
+  ${cur >= 2 ? '<button class="btn" onclick="go(\'rate\')">Confirmer la réception</button>' : ''}`;
+};
+
+SHEETS['seller-scan'] = () => `
+  <div class="handle"></div><div class="eyebrow">Vendeur · Scanner</div>
+  <h1 style="margin-top:3px">Scanner le code de l’acheteur</h1>
+  <div class="cam">Caméra · « Autoriser et démarrer » explicite</div>
+  <button class="btn" onclick="sellerValidate()">Saisir le code</button>
+  <p class="lead">Code de l’acheteur lié à <b>l’offre + la remise + la transaction</b> (S-23).</p>
+  <p class="lead">Vous pouvez aussi valider depuis <b>vos demandes entrantes</b> : même verrou.</p>`;
+
+SHEETS.pay = () => `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="trust"></i><i></i></div>
+  <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+  <div class="eyebrow" style="margin-top:12px">Paiement au vendeur (externe)</div>
+  <h1 style="margin-top:3px">Comment payez-vous ?</h1>
+  <p class="lead">Omni n’encaisse pas les biens — il <b>enregistre</b> le moyen utilisé. Aucun retrait à gérer côté entité.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Montant</span><b>1 700 F</b></div>
+    <div class="kv"><span>À payer à</span><b>${S.product.seller} · 📱 90 12 34 56</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:11px">Moyen utilisé (donnée Omni)</div>
+  <div class="chips"><span class="chip on">Mobile money</span><span class="chip">Espèces</span><span class="chip">Carte</span></div>
+  <button class="btn" onclick="go('txn-proof')">Le vendeur a confirmé le paiement</button>
+  <p class="lead">Statut : <b style="color:var(--accent)">confirmé par le vendeur</b> → on passe à l’exécution.</p>`;
+
+SHEETS['txn-proof'] = () => `
+  <div class="handle"></div>
+  <div class="eyebrow">Preuve de transaction</div>
+  <h1 style="margin-top:3px">Fiche traçable</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Qui</span><b>Vous · ${S.product.seller}</b></div>
+    <div class="kv"><span>Quoi</span><b>${S.product.name} × 2</b></div>
+    <div class="kv"><span>Combien</span><b>1 700 F (remise appliquée)</b></div>
+    <div class="kv"><span>Où</span><b>Lomé · Adawlato</b></div>
+    <div class="kv"><span>Quand</span><b>Aujourd’hui</b></div>
+    <div class="kv"><span>Moyen</span><b>Mobile money</b></div>
+  </div>
+  <p class="lead">Le QR de transaction permet de retrouver <b>qui a acheté quoi, à combien, quand, où</b> (S-26).</p>
+  <button class="btn" onclick="go('rate')">Confirmer la réception</button>`;
+
+SHEETS.rate = () => `
+  <div class="handle"></div>
+  <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="trust"></i></div>
+  <div class="steplabels"><span>Dispo</span><span>Réponse</span><span>Intention</span><span>Scan</span><span>Avis</span></div>
+  <div class="cardbox" style="margin-top:12px">
+    <div class="kv"><span>Transaction</span><b>Clôturée ✓</b></div>
+    <div class="kv"><span>Événement de stock</span><b>Stock fiabilisé (−2)</b></div>
+    <div class="kv"><span>Réputation de l’offre</span><b>+1 avis</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:12px">Votre avis</div>
+  <div class="chips" id="stars">
+    <span class="chip on" onclick="star(1)">★</span><span class="chip on" onclick="star(2)">★</span>
+    <span class="chip on" onclick="star(3)">★</span><span class="chip on" onclick="star(4)">★</span>
+    <span class="chip" onclick="star(5)">★</span>
+  </div>
+  <button class="btn ok" onclick="go('menu',{toast:'Merci — transaction clôturée'})">Envoyer l’avis — clôturer</button>
+  <p class="lead">La clôture rend la disponibilité plus fiable pour tous.</p>`;
+
+SHEETS.menu = () => {
+  const items = S.role === 'buyer'
+    ? [['Mes demandes', 'demandes'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved'], ['Notifications', 'notifications'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+    : S.role === 'seller'
+      ? [['Mon espace', S.hasEntity ? 'seller-dash' : 'seller-entry'], ['Mes offres', 'seller-offers'], ['Pro · renouvellement', 'seller-pro'], ['Favoris', 'favorites'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+      : [['Console', 'admin-console'], ['File de revue', 'admin-review'], ['Rôles & équipe', 'admin-roles'], ['Journal d’audit', 'admin-audit'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']];
+  return `
+  <div class="handle"></div><div class="eyebrow">Menu · ${S.role === 'buyer' ? 'Acheteur' : S.role === 'seller' ? 'Vendeur' : 'Admin'}</div>
+  <h1 style="margin-top:3px">Tout Omni, depuis ici</h1>
+  <div class="cardbox">
+    ${items.map(([lb, sh]) => `<div class="kv" style="cursor:pointer" onclick="go('${sh}')"><span>${lb}</span><b>›</b></div>`).join('')}
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Changer de rôle</span><b>via la pastille en haut</b></div>
+    <div class="kv"><span>Se déconnecter</span><b style="cursor:pointer" onclick="go('auth')">›</b></div>
+  </div>`;
+};
+
+SHEETS.demandes = () => `
+  <div class="handle"></div><div class="eyebrow">Acheteur · Mes demandes</div>
+  <h1 style="margin-top:3px">Votre demande avance</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Spaghetti × 2 · ${S.product.seller}</span><b style="color:var(--accent)">${S.txn ? 'Code validé ✓' : 'À confirmer'}</b></div>
+    <div class="kv"><span>Ordinateur · Awa T.</span><b>À confirmer</b></div>
+  </div>
+  <button class="btn" onclick="go('txn-track')">Ouvrir la transaction</button>
+  <p class="lead">Section <b>dédiée</b> côté acheteur. Aucun dashboard vendeur ici.</p>`;
+
+SHEETS.favorites = () => `
+  <div class="handle"></div><div class="eyebrow">Acheteur · Favoris</div>
+  <h1 style="margin-top:3px">Vos favoris</h1>
+  <div class="hgrid">
+    <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · 140 m</small><span class="pr">850 F</span></div></div>
+    <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · 380 m</small><span class="pr">45 000 F</span></div></div>
+  </div>
+  <p class="lead">Gratuit : favoris limités. <b>Buyer Pro</b> : illimités + alertes.</p>
+  <button class="btn ghost" onclick="go('wallet')">Voir Buyer Pro</button>`;
+
+SHEETS.saved = () => `
+  <div class="handle"></div><div class="eyebrow">Acheteur · Recherches sauvegardées</div>
+  <h1 style="margin-top:3px">Vos recherches</h1>
+  <div class="cardbox">
+    <div class="kv" style="cursor:pointer" onclick="go('results')"><span>« pâtes » · ≤ 1 km · ouvert</span><b>›</b></div>
+    <div class="kv" style="cursor:pointer" onclick="go('results')"><span>« ordinateur » · ≤ 5 km</span><b>›</b></div>
+  </div>
+  <p class="lead">Alerte dès qu’une offre correspond apparaît.</p>`;
+
+SHEETS.notifications = () => `
+  <div class="handle"></div><div class="eyebrow">Notifications</div>
+  <h1 style="margin-top:3px">Ce qui a bougé</h1>
+  <div class="cardbox">
+    <div class="kv"><span>${S.product.seller} a répondu à votre demande</span><b>à l’instant</b></div>
+    <div class="kv"><span>Votre code a été validé</span><b>—</b></div>
+    <div class="kv"><span>Nouvelle offre près de vous</span><b>il y a 2 h</b></div>
+  </div>`;
+
+SHEETS.wallet = () => {
+  const pro = S.role === 'seller'
+    ? { title: 'Entité Pro — 10 $/mois ≈ 5 000 F', lines: ['Offres illimitées (gratuit : 20)', 'Disponibilité automatique', 'Analytics & campagnes sponsorisées', 'Slots d’entités supplémentaires'] }
+    : { title: 'Buyer Pro — 5 $/mois ≈ 2 500 F', lines: ['Bulk 100/mois (gratuit : 3)', 'Favoris illimités + alertes', 'Comparateur jusqu’à 10'] };
+  return `
+  <div class="handle"></div><div class="eyebrow">Portefeuille & Plans</div>
+  <h1 style="margin-top:3px">Solde : 2 500 F</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Recharge</span><b>FedaPay (XOF) · pas de retrait</b></div>
+    <div class="kv"><span>Packs crédits bulk</span><b>500 F = 10 · 1 200 F = 30 · 3 500 F = 100</b></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>${pro.title}</span><b>›</b></div>
+    ${pro.lines.map(l => `<div class="kv"><span>${l}</span><b>✓</b></div>`).join('')}
+  </div>
+  <button class="btn" onclick="toast('Redirection FedaPay…')">Recharger via FedaPay</button>
+  <button class="btn ghost" onclick="toast('Paiement wallet — activation Pro')">Activer Pro</button>
+  <p class="lead">Le portefeuille ne sert qu’aux <b>services Omni</b> — jamais au paiement des biens.</p>`;
+};
+
+SHEETS.account = () => `
+  <div class="handle"></div><div class="eyebrow">Mon compte</div>
+  <h1 style="margin-top:3px">Identité & confiance</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Contact</span><b>90 12 34 56 · confirmé</b></div>
+    <div class="kv"><span>E-mail</span><b>OTP vérifié (Neon Auth)</b></div>
+    <div class="kv"><span>Tier de confiance</span><b class="status ok">Vérifié · 12 ventes</b></div>
+    <div class="kv"><span>Badge porté par</span><b>l’ENTITÉ (jamais l’offre)</b></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Invitations d’équipe</span><b style="cursor:pointer" onclick="toast('Invitation acceptée')">Accepter ›</b></div>
+  </div>
+  <button class="btn ghost" onclick="go('auth')">Se déconnecter</button>`;
+
+SHEETS.auth = () => `
+  <div class="handle"></div><div class="eyebrow">Connexion</div>
+  <h1 style="margin-top:3px">Entrer dans Omni</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Téléphone-first</span><b>Togo : le numéro avant l’e-mail</b></div>
+  </div>
+  <div class="fld" style="margin-top:9px"><span class="ph">90 12 34 56 ou e-mail</span></div>
+  <div class="fld" style="margin-top:7px"><span class="ph">Code à 6 chiffres</span></div>
+  <button class="btn" onclick="go(S.role === 'buyer' ? 'search' : S.role === 'seller' ? 'seller-entry' : 'admin-console',{toast:'Connecté'})">Recevoir le code</button>
+  <p class="lead">E-mail = <b>OTP Neon Auth</b> (gratuit). Numéro = <b>confirmation WhatsApp</b> (coût ~0). SMS payant exclu.</p>`;
+
+SHEETS.bulk = () => `
+  <div class="handle"></div><div class="eyebrow">Disponibilité groupée · multi-entités</div>
+  <h1 style="margin-top:3px">Demander à plusieurs</h1>
+  <p class="lead">1 besoin = 1 bulk. Multi-produits de la même entité = vérifications manuelles gratuites.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Rayon</span><b>5 / 10 / 25 / 50 km</b></div>
+    <div class="kv"><span>Entités ciblées</span><b>3</b></div>
+    <div class="kv"><span>Coût</span><b>1 crédit (1–100 entités)</b></div>
+    <div class="kv"><span>Solde</span><b>2 crédits restants</b></div>
+  </div>
+  <div class="chips"><span class="chip on">Tout cocher</span><span class="chip">Aucune</span></div>
+  <button class="btn" onclick="go('results',{toast:'Demande groupée envoyée (3 entités)'})">Envoyer la demande bulk (3 = 1 crédit)</button>`;
+
+SHEETS.compare = () => `
+  <div class="handle"></div><div class="eyebrow">Comparateur</div>
+  <h1 style="margin-top:3px">3 offres côte à côte</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Prix</span><b>850 F · 1 000 F · 45 000 F</b></div>
+    <div class="kv"><span>Distance</span><b>140 m · 380 m · 1,2 km</b></div>
+    <div class="kv"><span>Dispo</span><b>En stock · À confirmer · En stock</b></div>
+    <div class="kv"><span>Réputation</span><b>4,6 ★ · 4,2 ★ · 4,8 ★</b></div>
+  </div>
+  <p class="lead">Gratuit : jusqu’à 3. <b>Buyer Pro</b> : jusqu’à 10.</p>`;
+
+SHEETS['scan-entity'] = () => `
+  <div class="handle"></div><div class="eyebrow">Acheteur · Scanner</div>
+  <h1 style="margin-top:3px">Scanner le QR d’une entité</h1>
+  <div class="cam">Caméra · « Autoriser et démarrer » explicite</div>
+  <button class="btn" onclick="go('entity-from-qr',{toast:'Commerce reconnu'})">Saisir le code</button>
+  <p class="lead">Le QR affiché en boutique ouvre la fiche de l’entité et applique la <b>remise Omni</b>.</p>`;
+
+SHEETS['entity-from-qr'] = () => `
+  <div class="handle"></div>
+  <div class="eyebrow">Entité · ${S.product.seller} · commerce · 140 m</div>
+  <h1 style="margin-top:3px">Bienvenue — vous êtes dans ce commerce</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Cette entité</span><b>Vérifiée · 12 ventes</b></div>
+    <div class="kv"><span>Vos avantages Omni ici</span><b style="color:var(--accent)">−15 % sur ses offres</b></div>
+    <div class="kv"><span>Disponibilité</span><b>Ouvert maintenant</b></div>
+  </div>
+  <button class="btn" onclick="go('results')">Voir ses offres (−15 % Omni)</button>
+  <p class="lead">Payer via Omni applique la remise et trace la transaction : l’entité <b>gagne une vente traçable</b>, vous <b>payez moins</b>.</p>`;
+
+/* ---------- actions ---------- */
+function doSearch() { go('results', { toast: '3 offres trouvées' }); }
+function doIntent() { S.txn = 'qr_ready'; go('qr', { toast: 'Intention créée — QR émis' }); }
+function star(n) {
+  const s = document.querySelectorAll('#stars .chip');
+  s.forEach((c, i) => c.className = 'chip' + (i < n ? ' on' : ''));
+}
+function sellerValidate() { S.txn = 'qr_verified'; go('txn-track', { toast: 'Code validé — transaction verrouillée' }); }
+function sellerValidateFromDash() { S.hasEntity = true; S.txn = 'qr_verified'; go('seller-chat', { toast: 'Validé — chat transaction ouvert' }); }
+function createEntity() { S.hasEntity = true; S.entity = 'Boutique Kodjo'; go('seller-dash', { toast: 'Entité créée — vous pouvez publier' }); }
+function publishOffer() { go('seller-dash', { toast: 'Offre publiée (visuel + avantage requis)' }); }
+
+/* ---------- SHEETS : vendeur ---------- */
+SHEETS['seller-entry'] = () => `
+  <div class="handle"></div><div class="eyebrow">Espace vendeur</div>
+  <h1 style="margin-top:3px">Vous n’avez pas encore d’entité</h1>
+  <p class="lead">Sans entité, il n’y a <b>rien à gérer</b> : l’espace se limite à cette entrée. Les outils (offres, transactions, dashboard) s’ouvrent <b>avec l’entité</b>.</p>
+  <button class="btn" onclick="go('seller-entity')">Créer mon entité</button>
+  <button class="btn ghost sm" onclick="go('seller-claim')">Revendiquer un lieu existant</button>
+  <p class="lead">Le badge de confiance est <b>propre à l’entité</b> — jamais à l’offre.</p>`;
+
+SHEETS['seller-entity'] = () => `
+  <div class="handle"></div><div class="eyebrow">Étape 1 · votre entité</div>
+  <h1 style="margin-top:3px">Vous vendez en tant que…</h1>
+  <div class="chips"><span class="chip on">Commerce</span><span class="chip">Particulier</span><span class="chip">Organisation</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Nom de l’entité</span><b>Boutique Kodjo</b></div>
+    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+    <div class="kv"><span>Lieu</span><b>Lomé · Adawlato</b></div>
+    <div class="kv"><span>N° joignable</span><b>90 12 34 56 <span class="status ok">confirmé</span></b></div>
+  </div>
+  <button class="btn" onclick="createEntity()">Créer mon entité</button>
+  <p class="lead">Même un particulier crée une entité (S-28). Publier ne requiert <b>pas</b> la vérification (S-31).</p>`;
+
+SHEETS['seller-claim'] = () => `
+  <div class="handle"></div><div class="eyebrow">Revendication · preuve de contrôle</div>
+  <h1 style="margin-top:3px">Revendiquer « Épicerie du Port »</h1>
+  <p class="lead">Revendiquer un lieu <b>déjà sur la carte</b> ≠ créer. Il faut une <b>preuve de contrôle</b> et un <b>arbitrage opérateur</b> : le demandeur ne contrôle rien avant.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Preuves attendues</span><b>Lieu · contact · document</b></div>
+    <div class="kv"><span>Statut</span><b class="status warn">En revue opérateur</b></div>
+  </div>
+  <button class="btn" onclick="go('seller-entry',{toast:'Demande de revendication envoyée'})">Envoyer la preuve</button>
+  <p class="lead">Empêche l’usurpation d’un commerce réel (S-18).</p>`;
+
+SHEETS['seller-dash'] = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Espace vendeur · ${S.entity || 'Boutique Kodjo'}</div><h1>Transactions</h1></div><span class="status ok">2 actives</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Awa T. · Spaghetti × 2</span><b style="color:var(--accent)">QR vérifié</b></div>
+    <div class="kv"><span>Kossi · Ordinateur</span><b>En attente de scan</b></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Demande de dispo entrante</span><b>2 paquets · 20 min</b></div>
+  </div>
+  <button class="btn" onclick="go('seller-validate')">Ouvrir mes demandes entrantes</button>
+  <button class="btn ghost" onclick="go('seller-publish')">Publier une offre</button>
+  <button class="btn ghost" onclick="go('seller-offers')">Mes offres (3 / 20 en gratuit)</button>
+  <button class="btn ghost" onclick="go('seller-scan')">Scanner le code d’un acheteur</button>
+  <p class="lead">Réservé au vendeur : scan caméra <b>ou</b> validation ici = <b>même verrou</b>.</p>`;
+
+SHEETS['seller-validate'] = () => `
+  <div class="handle"></div><div class="eyebrow">Vendeur · Demande entrante</div>
+  <h1 style="margin-top:3px">Cette dispo est devenue une intention d’achat</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Demandeur</span><b>Awa T.</b></div>
+    <div class="kv"><span>Offre</span><b>${S.product.name} × 2</b></div>
+    <div class="kv"><span>Avantage appliqué</span><b style="color:var(--accent)">−15 % Omni</b></div>
+    <div class="kv"><span>Note</span><b>« je passe dans 20 min »</b></div>
+  </div>
+  <button class="btn" onclick="sellerValidateFromDash()">Valider — ouvre le chat de transaction</button>
+  <p class="lead">Le clic <b>valide en auto</b> (même verrou) et ouvre le <b>chat de cette demande</b>. L’acheteur voit alors « Code validé ».</p>`;
+
+SHEETS['seller-chat'] = () => `
+  <div class="handle"></div><div class="eyebrow">Chat de transaction · Awa T.</div>
+  <h1 style="margin-top:3px">${S.product.name} × 2</h1>
+  <div class="chatrow">Bonjour, je suis en route.</div>
+  <div class="chatrow me">Parfait, je prépare vos 2 paquets.</div>
+  <div class="chatrow me">Paiement bien reçu, merci !</div>
+  <div class="fld" style="margin-top:9px"><span class="ph">Écrire…</span></div>
+  <button class="btn" onclick="go('seller-dash',{toast:'Message envoyé'})">Envoyer</button>
+  <p class="lead">Chat <b>scopé à la transaction</b> — il s’ouvre au verrou, pas avant.</p>`;
+
+SHEETS['seller-publish'] = () => `
+  <div class="handle"></div><div class="eyebrow">Étape 2 · publier une offre</div>
+  <h1 style="margin-top:3px">Spaghetti 500 g</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Visuel de l’offre</span><b>1 image requise <span class="status ok">✓ ajoutée</span></b></div>
+    <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital aussi</span></b></div>
+    <div class="kv"><span>État</span><b>Neuf</b></div>
+    <div class="kv"><span>Quantité</span><b>24</b></div>
+    <div class="kv"><span>Prix</span><b>1 000 F</b></div>
+    <div class="kv"><span>Avantage Omni (requis)</span><b style="color:var(--accent)">−15 %</b></div>
+    <div class="kv"><span>Visible sur la carte</span><b>Oui · rayon 3 km</b></div>
+  </div>
+  <button class="btn" onclick="publishOffer()">Publier mon offre</button>
+  <p class="lead">Publication possible <b>dès maintenant</b> (badge « Non vérifié ») → « Vérifié » après contrôle opérateur. Intégrité automatique + réputation par offre (S-32).</p>`;
+
+SHEETS['seller-offers'] = () => `
+  <div class="handle"></div><div class="eyebrow">Mes offres · 3 / 20 (gratuit)</div>
+  <h1 style="margin-top:3px">Catalogue</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Spaghetti 500 g</span><b>En stock · 4,6 ★</b></div>
+    <div class="kv"><span>Riz 5 kg</span><b>À confirmer · 4,4 ★</b></div>
+    <div class="kv"><span>Huile 1 L</span><b>Rupture</b></div>
+  </div>
+  <button class="btn" onclick="go('seller-publish')">Ajouter une offre</button>
+  <p class="lead">17 offres restantes avant le plafond gratuit. <b>Pro</b> = illimité + dispo automatique.</p>
+  <button class="btn ghost" onclick="go('seller-pro')">Passer Pro</button>`;
+
+SHEETS['seller-pro'] = () => `
+  <div class="handle"></div><div class="eyebrow">Pro · renouvellement</div>
+  <h1 style="margin-top:3px">Plan : Gratuit</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Renouvellement auto</span><b>OFF</b></div>
+    <div class="kv"><span>Prix Pro</span><b>10 $/mois ≈ 5 000 F</b></div>
+    <div class="kv"><span>Solde wallet</span><b>2 500 F (insuffisant)</b></div>
+  </div>
+  <button class="btn" onclick="toast('Renouvellement auto activé')">Activer le renouvellement auto</button>
+  <button class="btn ghost" onclick="go('wallet')">Recharger le portefeuille</button>
+  <p class="lead">Le renouvellement passe par le <b>wallet</b> ; rappel avant expiration.</p>`;
+
+/* ---------- SHEETS : admin ---------- */
+SHEETS['admin-console'] = () => `
+  <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Console · équipe Omni</div><h1>Bonjour, Kheir</h1></div><span class="status gray">Admin</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Entités en attente de vérification</span><b>2</b></div>
+    <div class="kv"><span>Revendications à examiner</span><b>1</b></div>
+    <div class="kv"><span>Signalements d’offre</span><b>0</b></div>
+    <div class="kv"><span>Disponibilités incohérentes</span><b>1</b></div>
+  </div>
+  <button class="btn" onclick="go('admin-review')">Ouvrir la file de revue</button>
+  <button class="btn ghost" onclick="go('admin-roles')">Rôles & équipe</button>
+  <button class="btn ghost" onclick="go('admin-audit')">Journal d’audit</button>`;
+
+SHEETS['admin-review'] = () => `
+  <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">File de revue</div><h1>2 objets</h1></div><span class="status gray">2</span></div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('admin-verify')">
+    <div class="kv"><span>Nouvelle entité · « Chez Fatou »</span><b class="status warn">À vérifier</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('admin-claim')">
+    <div class="kv"><span>Revendication · « Épicerie du Port »</span><b class="status dash">Preuve à examiner</b></div>
+  </div>
+  <p class="lead">Clic sur un pin admin → <b>fiche de revue</b>, jamais une fiche acheteur.</p>`;
+
+SHEETS['admin-verify'] = () => `
+  <div class="handle"></div><div class="eyebrow">Revue · entité</div>
+  <h1 style="margin-top:3px">Chez Fatou</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+    <div class="kv"><span>Lieu</span><b>Lomé · Bè</b></div>
+    <div class="kv"><span>Contact</span><b>91 22 33 44 · confirmé</b></div>
+    <div class="kv"><span>Badge actuel</span><b class="status dash">Non vérifié</b></div>
+  </div>
+  <div class="btnrow">
+    <button class="btn ok" onclick="go('admin-review',{toast:'Entité vérifiée'})">Vérifier</button>
+    <button class="btn ghost" onclick="go('admin-review',{toast:'Preuves supplémentaires demandées'})">Demander plus</button>
+  </div>
+  <button class="btn ghost sm" onclick="go('admin-review',{toast:'Entité rejetée'})">Rejeter</button>
+  <p class="lead">La confiance vit sur l’entité ; la vérification est un <b>temps humain, 0 logiciel</b>.</p>`;
+
+SHEETS['admin-claim'] = () => `
+  <div class="handle"></div><div class="eyebrow">Revue · revendication</div>
+  <h1 style="margin-top:3px">Épicerie du Port</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Demandeur</span><b>M. Kossi</b></div>
+    <div class="kv"><span>Preuves</span><b>Photo devanture + facture</b></div>
+    <div class="kv"><span>Risque</span><b class="status warn">Usurpation possible</b></div>
+  </div>
+  <div class="btnrow">
+    <button class="btn ok" onclick="go('admin-review',{toast:'Contrôle transféré au demandeur'})">Transférer le contrôle</button>
+    <button class="btn ghost" onclick="go('admin-review',{toast:'Preuves insuffisantes'})">Refuser</button>
+  </div>
+  <p class="lead">Le demandeur ne contrôle <b>rien</b> tant que la preuve n’est pas passée (S-18).</p>`;
+
+SHEETS['admin-roles'] = () => `
+  <div class="handle"></div><div class="eyebrow">Rôles & équipe</div>
+  <h1 style="margin-top:3px">Comptes & capacités</h1>
+  <div class="cardbox">
+    <div class="kv"><span>kheirlissi@icloud.com</span><b>Admin · Reviewer</b></div>
+    <div class="kv"><span>demo@seller.omni</span><b>Vendeur</b></div>
+    <div class="kv"><span>juniorkheir@gmail.com</span><b>Opérateur</b></div>
+  </div>
+  <button class="btn ghost sm" onclick="toast('Opérateur accordé (motif audité)')">Accorder Opérateur</button>
+  <button class="btn ghost sm" onclick="toast('Réviseur accordé (motif audité)')">Accorder Réviseur</button>
+  <div class="cardbox">
+    <div class="kv"><span>Équipe · Zone Adawlato</span><b>3 membres</b></div>
+    <div class="kv"><span>Invitation en attente</span><b>1</b></div>
+  </div>
+  <button class="btn" onclick="toast('Invitation envoyée')">Inviter un compte</button>`;
+
+SHEETS['admin-audit'] = () => `
+  <div class="handle"></div><div class="eyebrow">Journal d’audit</div>
+  <h1 style="margin-top:3px">Traces</h1>
+  <div class="cardbox">
+    <div class="kv"><span>entity_verified · Chez Fatou</span><b>il y a 3 min</b></div>
+    <div class="kv"><span>role_granted · operator</span><b>il y a 20 min</b></div>
+    <div class="kv"><span>claim_submitted · Épicerie du Port</span><b>il y a 1 h</b></div>
+  </div>
+  <button class="btn ghost" onclick="toast('Carte centrée sur l’objet')">Voir sur la carte</button>`;
+
+/* ---------- render ---------- */
+function render() {
+  renderRolePill();
+  renderDock('navpill', false);
+  renderDock('rail', true);
+  renderPins();
+  renderFilters();
+  const fn = SHEETS[S.sheet] || SHEETS.search;
+  document.getElementById('sheetmount').innerHTML = `<div class="sheet" data-sheet="${S.sheet}">${fn()}</div>`;
+}
+window.addEventListener('resize', () => render());
+render();
+</script>
+</body>
+</html>

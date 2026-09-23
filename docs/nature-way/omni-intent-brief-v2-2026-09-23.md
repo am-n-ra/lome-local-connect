@@ -195,11 +195,9 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 
 ## Points ouverts (2026-09-23)
 
-### S-32 — Intégrité et réputation de l'OFFRE (proposition, en attente de décision)
+### S-32 — Intégrité et réputation de l'OFFRE — **CONFIRMÉ (a)**
 
-Question fondateur : « est-ce vraiment correct de ne pas vérifier l'offre ? »
-
-**Constat honnête :** non, pas si on ne met *rien* sur l'offre. Une entité vérifiée peut publier une annonce trompeuse. Proposition en trois couches :
+Question fondateur : « est-ce vraiment correct de ne pas vérifier l'offre ? » — **Non.** Une entité vérifiée peut publier une annonce trompeuse. Décision **(a)** retenue : trois couches.
 
 | Couche | Coût | Rôle |
 |---|---|---|
@@ -207,7 +205,7 @@ Question fondateur : « est-ce vraiment correct de ne pas vérifier l'offre ? »
 | **Intégrité de l'offre — automatique** | 0 | visuel présent, prix cohérent, description non vide, pas de doublon |
 | **Réputation de l'offre — gagnée** | 0 | avis attachés à cette offre précise (possible via `S-26` qui trace l'offre dans la transaction) |
 
-**Décision attendue : (a)** ajouter l'état d'intégrité automatique + la réputation par offre, ou **(b)** garder la confiance uniquement sur l'entité.
+**Décision : (a)** — l'état d'intégrité automatique **et** la réputation par offre sont retenus. Le badge d'entité reste inchangé ; on **ajoute** au niveau de l'offre : (1) un état d'intégrité automatique calculé (visuel/prix/description/doublon) et (2) une réputation propre à l'offre, alimentée par les transactions tracées (`S-26`).
 
 ### Manques de la maquette (inventaire honnête 2026-09-23)
 
