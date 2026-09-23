@@ -1,6 +1,6 @@
 # Intent Brief V2 — Omni
 
-> **Status:** draft (Seed rouvert 2026-09-23) — **à corriger/confirmer par le fondateur**
+> **Status:** **Seed clos — `founder-confirmed` (2026-09-23)** · À RE-VALIDER par le fondateur sur la page finale (confirmation écrite)
 > **As of:** 2026-09-23
 > **Owner:** Founder (intent) / Nature Way (drafting)
 > **Supersedes (une fois confirmé):** `docs/nature-way/omni-intent-brief-2026-09-02.md`
@@ -31,10 +31,10 @@
 | **Smallest critical journey** | Acheteur ouvre Omni → cherche selon ses contraintes (distance, heure, budget, quantité…) **ou** flâne sur la carte filtrée → voit l'offre (et les offres alentour, pas seulement celle qu'il connaît) → sait si elle est **disponible maintenant** (réponse vendeur, ou auto depuis le stock alloué) → décide (« je veux acheter » / réserver) → transaction tracée par QR → paiement externe déclaré+confirmé → exécution confirmée des deux côtés → avis → **événement de stock** qui rend la disponibilité plus fiable. |
 | **Success signal** | Un **vendeur réel** (hors équipe) et un **acheteur réel** (hors équipe) bouclent le trajet complet, avec une transaction tracée QR et un événement de stock résultant ; le stock alloué du vendeur et son compteur « ventes vérifiées » bougent. Secondaire : demandes de disponibilité répondues dans la fenêtre de fraîcheur. |
 | **Constraints & resources** | Fondateur solo + IA ; PWA mobile-first, natif plus tard ; **UI française** (vouvoiement) ; **MapLibre uniquement** (pas de Google Maps) ; Neon Postgres + Vercel ; FedaPay pour les recharges wallet **uniquement** ; pas de paiement des biens dans l'app ; préserver les enregistrements existants. Capacité limitée = **pourquoi** le stock alloué + les demandes de disponibilité existent au lieu d'un inventaire complet. |
-| **Non-goals (V1)** | Devenir un processeur de paiement ; devenir un acteur de livraison ; devenir un annuaire statique ; être un produit « AI-first » ; gérer un inventaire complet ; promettre du temps réel de mobilité (zem en mouvement, suivi live) ; import OSM massif au-delà de l'amorçage de la carte ; multi-facilités global / panier global ; réseau social. |
+| **Non-goals (V1)** | Devenir un processeur de paiement ; devenir un acteur de livraison ; devenir un annuaire statique ; être un produit « AI-first » ; gérer un inventaire complet ; promettre du temps réel de mobilité (zem en mouvement, suivi live) ; import OSM massif au-delà de l'amorçage de la carte ; multi-facilités global / panier global ; réseau social. **Précisés (boucle D) :** pas de matching/assignation transport · pas d'exécution de livraison · pas de paiement de biens in-app · pas de KYC payant · pas de temps réel de mobilité. |
 | **Assumptions / unknowns** | A-1 Les vendeurs acceptent la contrainte Omni (ex. remise obligatoire) parce qu'elle finance la boucle traçable — confiance moyenne, revoir après 5 vendeurs réels. A-2 Les acheteurs enverront une demande de disponibilité plutôt que d'appeler — non testé. A-3 La disponibilité automatique depuis le stock alloué est assez fiable dans une fenêtre de fraîcheur — non testé. A-4 Lomé = première géographie (pilote). A-5 Le socle transport/mobilité = **TV1+** (modèle oui, comportement plus tard). |
 | **Risk classification** | **Elevated** — identité, coordonnées vendeur (texte affiché après intention), wallet avec argent réel (recharges FedaPay), données de localisation, base de production avec enregistrements existants. Revue qualifiée requise avant toute migration touchant trust_state, wallet/ledger, ou la sémantique de paiement. |
-| **Next proof and gate** | **Seed non encore clos.** Reste : boucles C (résultat voulu, précis), D (frontière/non-goals, contraintes), E (première preuve). Ensuite → Reconciliation des masters concurrents → System Dependency Map V2 → Species V2 (maquette exposée au fondateur via navigateur). |
+| **Next proof and gate** | **Seed CLOS (2026-09-23)** — boucles A→E closes, `S-01…S-18` + recommandations retenues. Prochain : **Reconciliation des masters concurrents** → **System Dependency Map V2** → **Species V2** (maquette exposée au fondateur via navigateur). |
 
 ---
 
@@ -87,15 +87,45 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 | 6 | État neuf / occasion | oui | oui |
 | 7 | Prix fixe / à négocier | oui | oui |
 
-## Questions ouvertes (à trancher au Root, une fois le Seed clos)
+## Première preuve (boucle E — confirmée 2026-09-23)
 
-| ID | Question | Indice fondateur |
+> **Périmètre :** carte **mondiale** avec les éléments existants (niveau 0 `unclaimed` partout, la carte n'est jamais vide) ; **l'acquisition terrain commence à Lomé** (pilote), naturellement.
+>
+> **Trajet de première preuve (cas 1+3+4 — le cœur validé pleinement) :** un **commerce réel** à Lomé (offres + disponibilité tenue fraîche) **et** un **particulier réel** (offre unique, son propre objet) → un **acheteur réel hors équipe** cherche par contraintes (distance + produit) → trouve **plusieurs** offres (pas seulement son commerce connu) → voit le « maintenant » → transige en **QR tracé** → l'**événement de stock** bouge.
+>
+> **Hypothèses testées (encore non prouvées) :**
+> - **H1 — Vivant** : un vendeur réel tient-il sa disponibilité fraîche (ou l'auto la maintient-elle) ? *Si non : le « maintenant » meurt, Omni = Google Maps.*
+> - **H2 — Contact absorbé** : l'acheteur cherche-t-il au lieu d'appeler/WhatsApp ? *Si non : la valeur du cœur disparaît.*
+>
+> **Périmètre géographique de la preuve :** un quartier de Lomé (plus petit = plus prouvable).
+
+## Validation du cœur contre les cas fondateur (2026-09-23)
+
+| Cas | Complet | Vivant « maintenant » | Verdict |
+|---|---|---|---|
+| 1 · Pâtes 2h du matin | ✅ | ✅ ouvert + en stock | ✅ **plein** |
+| 3 · Bananes (ne pas appeler 30) | ✅ | ✅ stock | ✅ **plein** |
+| 4 · Ordi d'occasion (particulier) | ✅ | ✅ « toujours à vendre » | ✅ **plein** |
+| 8 · Digital | ✅ (origine géo conservée) | ✅ « existe / accès » | ✅ **plein** |
+| 2 · Brochettes (ambulant) | ✅ | ⚠️ position mouvante | ⚠️ partiel (`V1+`) |
+| 5 · Coupe (service) | ✅ | ⚠️ « maintenant » = créneau | ⚠️ partiel (`V1+`) |
+| 6 · Zem / taxi | ✅ | ⚠️ position live + libre | ⚠️ partiel (`V1+`, S-12) |
+| 7 · Appartement (2 démarcheurs) | ⚠️ objet, plusieurs entités | ⚠️ durée = `V1+` | ⚠️ partiel + S-1 |
+
+**Conclusion :** le cœur est **validé pleinement par les 4 cas à offre fixe et « maintenant » simple** (la majorité du quotidien : pâtes, bananes, occasion, digital). Les 4 autres sont **délimités, pas invalidés** : le motif est toujours *le temps* (position qui bouge, créneau, durée) — le modèle les porte (caractéristiques 3 & 4), le comportement est `V1+` (S-02). **Aucune dette de base.**
+
+## Recommandations de fermeture des points ouverts (fondateur : « fermons en même temps »)
+
+| Point | Recommandation (retenue) | Raison |
 |---|---|---|
-| **OUVERTE-S1** | La même chose réelle via plusieurs entités (appartement listé par 2 démarcheurs) : montrer **toutes** les offres séparément, ou **regrouper** en « un objet, plusieurs offres » ? | « une offre existe via une entité » penche vers *séparées* |
-| **OUVERTE-S2** | Un niveau-0 `unclaimed` apparaît en recherche : quel niveau exact de visibilité, et jusqu'où ? | (a) retenu : « Lieu connu — pas encore géré », aucune promesse de stock |
+| **S-02** | **Confirmé définitivement** — modèle universel jour 1, comportements séquencés. | Règle anti-dette ; tout en découle. |
+| **S-1** (même objet, plusieurs entités) | **Toutes les offres séparées d'abord** (chaque entité = une offre réelle) ; un **signal « même lieu probable »** est un raffinement `V1+`, **jamais un regroupement forcé** qui masquerait une offre. | Respecte « toute offre a le droit d'être vue ». |
+| **S-2** (niveau 0 en recherche) | **Validé** : « Lieu connu — pas encore géré », aucune promesse de stock, bouton *Revendiquer*. | Honnête + argument d'adoption. |
+| **S-15-exception** (coût routage) | **Par défaut : OSRM auto-hébergé/compatible (coût 0)** ; Mapbox = option bornée activable plus tard, jamais un défaut silencieux. | Contrainte coût-zéro (S-15). |
+| **Non-goals précisés** | Pas de matching/assignation transport · pas d'exécution de livraison · pas de paiement de biens in-app · pas de KYC payant · pas de temps réel de mobilité. | Frontières de la boucle D. |
 
 ---
 
 ## Founder confirmation
 
-`<À remplir : ce que je confirme, ce que je veux changer, et ce qui reste ouvert avant Species ou Root.>`
+`<À remplir en session de confirmation finale : ce que je confirme, ce que je veux changer, et que le Seed est clos.>`
