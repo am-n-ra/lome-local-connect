@@ -426,7 +426,8 @@ SHEETS['txn-track'] = () => {
   <p class="lead">Transaction <b>verrouillée</b> : elle ne s’annule pas, elle se reprend. Le temps relance, il n’annule jamais.</p>
   ${cur === 0 ? '<button class="btn" onclick="go(\'pay\')">Le vendeur a validé mon code</button>' : ''}
   ${cur >= 2 ? '<button class="btn" onclick="go(\'remise\')">Confirmer la réception</button>' : ''}
-  <button class="btn ghost sm" onclick="go(\'seller-chat\')">Voir le chat de transaction</button>`;
+  <button class="btn ghost sm" onclick="go(\'room\')">Ouvrir la Room de transaction</button>
+  <button class="btn ghost sm" onclick="go(\'historique\')">Historique de mes transactions</button>`;
 };
 
 SHEETS['seller-scan'] = () => `
@@ -488,12 +489,12 @@ SHEETS.rate = () => `
 
 SHEETS.menu = () => {
   const items = S.role === 'buyer'
-    ? [['Mes demandes', 'demandes'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved'], ['Notifications', 'notifications'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+    ? [['Mes demandes', 'demandes'], ['Historique des transactions', 'historique'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved'], ['Notifications', 'notifications'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
     : S.role === 'seller'
-      ? [['Mon espace', S.hasEntity ? 'seller-dash' : 'seller-entry'], ['Mes offres', 'seller-offers'], ['Fraîcheur de la dispo', 'fraicheur'], ['Pro · renouvellement', 'seller-pro'], ['Favoris', 'favorites'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
+      ? [['Mon espace', S.hasEntity ? 'seller-dash' : 'seller-entry'], ['Mes offres', 'seller-offers'], ['Demandes entrantes', 'seller-requests'], ['Commandes', 'seller-orders'], ['Stock alloué', 'seller-stock'], ['Fiche de l’entité', 'seller-entity-fiche'], ['Automatisation', 'seller-automation'], ['Fraîcheur de la dispo', 'fraicheur'], ['Pro · renouvellement', 'seller-pro'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
       : S.role === 'operator'
         ? [['Ma tournée', 'op-queue'], ['Aperçu côté entité', 'op-side'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']]
-        : [['Console', 'admin-console'], ['File de revue', 'admin-review'], ['Rôles & équipe', 'admin-roles'], ['Journal d’audit', 'admin-audit'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']];
+        : [['Console', 'admin-console'], ['File de revue', 'admin-review'], ['Signal de demande', 'admin-signal'], ['Rôles & équipe', 'admin-roles'], ['Journal d’audit', 'admin-audit'], ['Portefeuille & Plans', 'wallet'], ['Mon compte', 'account']];
   return `
   <div class="handle"></div><div class="eyebrow">Menu · ${S.role === 'buyer' ? 'Acheteur' : S.role === 'seller' ? 'Vendeur' : 'Admin'}</div>
   <h1 style="margin-top:3px">Tout Omni, depuis ici</h1>
@@ -687,9 +688,12 @@ SHEETS['seller-dash'] = () => `
   <div class="cardbox">
     <div class="kv"><span>Demande de dispo entrante</span><b>2 paquets · 20 min</b></div>
   </div>
-  <button class="btn" onclick="go('seller-validate')">Ouvrir mes demandes entrantes</button>
+  <button class="btn" onclick="go('seller-requests')">Ouvrir mes demandes entrantes (3)</button>
+  <button class="btn ghost" onclick="go('seller-orders')">Commandes à honorer (2)</button>
   <button class="btn ghost" onclick="go('seller-publish')">Publier une offre</button>
   <button class="btn ghost" onclick="go('seller-offers')">Mes offres (3 / 20 en gratuit)</button>
+  <button class="btn ghost" onclick="go('seller-stock')">Stock alloué Omni</button>
+  <button class="btn ghost" onclick="go('seller-entity-fiche')">Fiche de l’entité</button>
   <button class="btn ghost" onclick="go('seller-scan')">Scanner le code d’un acheteur</button>
   <p class="lead">Réservé au vendeur : scan caméra <b>ou</b> validation ici = <b>même verrou</b>.</p>`;
 
@@ -782,6 +786,7 @@ SHEETS['seller-chat'] = () => `
   </div>
   <button class="btn ghost sm" onclick="toast('Appel vers l’acheteur…')">Appeler l’acheteur</button>
   <button class="btn ghost sm" onclick="toast('Itinéraire vers le point de retrait')">Itinéraire</button>
+  <button class="btn ghost sm" onclick="go('seller-orders')">Voir les commandes</button>
 
   <div class="cardbox">
     <div class="kv"><span>Rendez-vous / temps estimé</span><b>Retrait · ≤ 20 min</b></div>
@@ -978,6 +983,138 @@ SHEETS['op-side'] = () => `
   </div>
   <p class="lead">L’opérateur peut <b>voir</b> ce que voit une entité pour comprendre un dossier — sans jamais modifier à sa place.</p>
   <button class="btn ghost" onclick="go('op-side',{toast:'Message de suivi envoyé à l’entité'})">Envoyer un message de suivi</button>`;
+
+/* ---------- ABSENTS comblés 2026-09-23 (audit écrans) ---------- */
+SHEETS.historique = () => `
+  <div class="handle"></div><div class="eyebrow">Acheteur · Historique</div>
+  <h1 style="margin-top:3px">Mes transactions</h1>
+  <div class="cardbox" style="cursor:pointer" onclick="go('room')">
+    <div class="kv"><span>Boutique Kodjo · Spaghetti × 2</span><b class="status ok">Clôturée</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('room')">
+    <div class="kv"><span>Awa T. · Ordinateur Dell</span><b class="status gray">Clôturée</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('txn-track')">
+    <div class="kv"><span>Kossi · Riz 5 kg</span><b class="status warn">En cours</b></div>
+  </div>
+  <p class="lead">Chaque ligne est <b>traçable</b> : qui, quoi, combien, quand, où (S-26).</p>
+  <button class="btn ghost" onclick="go('rate')">Laisser un avis en attente (1)</button>`;
+
+SHEETS.room = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Transaction · Boutique Kodjo</div><h1>${S.product.name} × 2</h1></div><span class="status ok">Clôturée</span></div>
+  <div class="stepline" style="margin-top:8px"><i class="trust"></i><i class="trust"></i><i class="trust"></i><i class="trust"></i><i class="trust"></i></div>
+  <div class="steplabels"><span>QR</span><span>Scan</span><span>Paiement</span><span>Remise</span><span>Avis</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Total payé</span><b>1 700 F <span class="status ok">−15 % Omni</span></b></div>
+    <div class="kv"><span>Moyen</span><b>Mobile money · confirmé</b></div>
+    <div class="kv"><span>Vendeur</span><b>Boutique Kodjo · 📱 90 12 34 56</b></div>
+    <div class="kv"><span>Où / quand</span><b>Lomé · Adawlato · aujourd’hui</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:12px">Conversation de cette transaction</div>
+  <div class="chatrow me">Bonjour, je suis en route.</div>
+  <div class="chatrow">Parfait, je prépare vos 2 paquets.</div>
+  <div class="chatrow me">Je suis devant la boutique.</div>
+  <div class="fld" style="margin-top:9px"><span class="ph">Écrire…</span></div>
+  <button class="btn sm" onclick="toast('Message envoyé')">Envoyer</button>
+  <div class="btnrow">
+    <button class="btn ghost sm" onclick="toast('Reçu enregistré')">Télécharger le reçu</button>
+    <button class="btn ghost sm" onclick="go('signal')">Signaler un problème</button>
+  </div>
+  <p class="lead">La <b>Room acheteur</b> réunit suivi + chat + reçu au même endroit — symétrique du vendeur (B13).</p>`;
+
+SHEETS['seller-entity-fiche'] = () => `
+  <div class="handle"></div><div class="eyebrow">Entité · fiche</div>
+  <h1 style="margin-top:3px">Boutique Kodjo</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Nom</span><b>Boutique Kodjo</b></div>
+    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+    <div class="kv"><span>Adresse</span><b>Lomé · Adawlato · Rue Kamé</b></div>
+    <div class="kv"><span>Horaires</span><b>Lun–Sam 8h–19h</b></div>
+    <div class="kv"><span>Contact</span><b>90 12 34 56 · WhatsApp 90 12 34 56</b></div>
+    <div class="kv"><span>Badge</span><b class="status dash">Non vérifié</b></div>
+  </div>
+  <button class="btn" onclick="toast('Fiche enregistrée')">Enregistrer les modifications</button>
+  <button class="btn ghost sm" onclick="go('fraicheur')">Fraîcheur de la disponibilité</button>
+  <button class="btn ghost sm" onclick="go('seller-pro')">Plan & facturation</button>`;
+
+SHEETS['seller-stock'] = () => `
+  <div class="handle"></div><div class="eyebrow">Stock alloué Omni</div>
+  <h1 style="margin-top:3px">Disponibilité réelle</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Spaghetti 500 g</span><b>24 alloués · 2 réservés · 22 dispo</b></div>
+    <div class="kv"><span>Riz 5 kg</span><b>10 alloués · 0 réservé · 10 dispo</b></div>
+    <div class="kv"><span>Huile 1 L</span><b>0 alloué · rupture</b></div>
+  </div>
+  <p class="lead">Alloué − réservé = <b>réellement disponible</b>. Une réservation se libère si la transaction expire (FF-8).</p>
+  <button class="btn" onclick="toast('Stock mis à jour')">Ajuster le stock alloué</button>
+  <button class="btn ghost sm" onclick="go('fraicheur')">Confirmer la fraîcheur</button>`;
+
+SHEETS['seller-requests'] = () => `
+  <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Demandes entrantes</div><h1>3 demandes</h1></div><span class="status warn">3</span></div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('seller-response')">
+    <div class="kv"><span>Awa T. · Spaghetti × 2</span><b class="status warn">Nouvelle</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('seller-response')">
+    <div class="kv"><span>Kossi · Riz × 1</span><b class="status warn">Nouvelle</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('seller-validate')">
+    <div class="kv"><span>Fatou · Huile × 3</span><b class="status ok">Devenue intention</b></div>
+  </div>
+  <p class="lead">Une demande <b>devient une intention</b> dès que vous répondez disponible et que l’acheteur confirme.</p>`;
+
+SHEETS['seller-response'] = () => `
+  <div class="handle"></div><div class="eyebrow">Répondre · Awa T.</div>
+  <h1 style="margin-top:3px">${S.product.name} × 2</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Acheteur</span><b>Awa T.</b></div>
+    <div class="kv"><span>Note</span><b>« je passe dans 20 min »</b></div>
+    <div class="kv"><span>Mode</span><b>Retrait</b></div>
+  </div>
+  <div class="eyebrow" style="margin-top:11px">Votre réponse</div>
+  <div class="chips"><span class="chip on">Disponible</span><span class="chip" onclick="toast('Réponse : quantité partielle')">Partiel</span><span class="chip" onclick="toast('Réponse : indisponible')">Indisponible</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Quantité</span><b>2</b></div>
+    <div class="kv"><span>Prix unitaire</span><b>1 000 F <span class="status ok">−15 % appliqué</span></b></div>
+  </div>
+  <div class="fld" style="margin-top:9px"><span class="ph">Message à l’acheteur…</span></div>
+  <button class="btn" onclick="go('seller-requests',{toast:'Réponse envoyée'})">Envoyer la réponse</button>`;
+
+SHEETS['seller-orders'] = () => `
+  <div class="handle"></div><div class="sheet-head"><div><div class="eyebrow">Commandes</div><h1>À honorer</h1></div><span class="status warn">2</span></div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('seller-chat')">
+    <div class="kv"><span>#A12 · Awa T. · Spaghetti × 2</span><b class="status ok">Payée · à remettre</b></div>
+  </div>
+  <div class="cardbox" style="cursor:pointer" onclick="go('seller-chat')">
+    <div class="kv"><span>#A13 · Kossi · Riz × 1</span><b class="status warn">En attente de scan</b></div>
+  </div>
+  <p class="lead">Une commande = une <b>transaction verrouillée</b>. Elle ne s’annule pas ; elle se reprend.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Clôturées aujourd’hui</span><b>4 · 12 400 F</b></div>
+  </div>
+  <button class="btn ghost" onclick="go('historique')">Voir l’historique</button>`;
+
+SHEETS['seller-automation'] = () => `
+  <div class="handle"></div><div class="eyebrow">Automatisation (Pro)</div>
+  <h1 style="margin-top:3px">Réduire le travail manuel</h1>
+  <div class="cardbox">
+    <div class="kv"><span>Disponibilité automatique</span><b>OFF · Pro</b></div>
+    <div class="kv"><span>Décompte sur vente</span><b>OFF · Pro</b></div>
+    <div class="kv"><span>Confirmation de fraîcheur auto</span><b>OFF · Pro</b></div>
+  </div>
+  <button class="btn" onclick="toast('Disponibilité automatique activée (Pro)')">Activer la dispo automatique</button>
+  <p class="lead">La disponibilité automatique répond au nom de l’entité — jamais l’acheteur à sa place.</p>`;
+
+SHEETS['admin-signal'] = () => `
+  <div class="handle"></div><div class="eyebrow">Signal de demande</div>
+  <h1 style="margin-top:3px">Ce que les gens cherchent sans trouver</h1>
+  <div class="cardbox">
+    <div class="kv"><span>« gaz butane 6 kg » · Adawlato</span><b>38 recherches · 0 résultat</b></div>
+    <div class="kv"><span>« cours de maths » · Bè</span><b>21 recherches · 1 résultat</b></div>
+    <div class="kv"><span>« pièces moto Yamaha »</span><b>17 recherches · 0 résultat</b></div>
+  </div>
+  <p class="lead">Sert à <b>recruter l’offre manquante</b> et à guider les entités — jamais une vente de données.</p>
+  <button class="btn ghost" onclick="toast('Objectif d’acquisition créé')">En faire un objectif d’acquisition</button>`;
 
 /* ---------- render ---------- */
 function render() {
