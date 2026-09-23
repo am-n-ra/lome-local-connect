@@ -126,6 +126,60 @@ Tous les cas fondateur (spaghetti 2h, brochettes, bananes, ordinateur d'occasion
 
 ---
 
+## Modèle économique (boucle F — 2026-09-23)
+
+**Principe directeur :** *le cœur est gratuit ; on paie pour être **choisi**, pour **l'échelle** et pour la **confiance avancée** — jamais pour exister ou être vu.*
+
+**Distinction qui lève la tension avec « toute offre a le droit d'être vue » :** ce principe protège la **complétude de l'index** (aucune offre masquée **par type**). Il n'interdit **pas** un plafond de **nombre** d'offres par entité : un plafond ne cache aucune offre, il limite seulement ce qu'**une** entité obtient gratuitement. Un particulier à offre unique n'atteint jamais le plafond (`S-13` intact) ; le plafond ne contraint que celui qui **exploite**.
+
+### Côté entité (commerce **ou** particulier — même grille)
+
+| | Gratuit | Entité Pro — $10 ≈ 5 000 F/mois |
+|---|---|---|
+| Entités | 1 | plusieurs (slots payants) |
+| **Offres publiées** | **plafond 20** (configurable) | **illimité** |
+| Disponibilité | manuelle | **auto** (déterministe, dans la fenêtre de fraîcheur) |
+| Une transaction tracée QR | oui | oui |
+| Badge de confiance | gagné par l'usage (`S-14`) | gagné par l'usage |
+| Analytics (vues, conversion, provenance) | — | oui |
+| Campagnes sponsorisées (étiquetées « Sponsorisé ») | — | oui |
+| File de réponse prioritaire | — | oui |
+
+**Déclencheur Pro naturel :** maintenir la disponibilité **à la main** devient impossible dès qu'on a beaucoup d'offres → le plafond *dit* la limite, la corvée *pousse* vers Pro.
+
+### Côté acheteur
+
+| | Gratuit | Buyer Pro — $5 ≈ 2 500 F/mois |
+|---|---|---|
+| Recherche + contraintes | illimité | illimité |
+| Vérifs de dispo (1 entité) | illimité | illimité |
+| Demandes **bulk** | 3 / mois | 100 / mois |
+| Favoris / recherche sauvegardée / alertes | limité | illimité + alertes |
+| Comparateur | jusqu'à 3 | jusqu'à 10 |
+
+### Règles
+
+- **Aucune commission sur la vente** — le paiement des biens reste **hors app** (frontière boucle D).
+- **Wallet = recharges XOF (FedaPay)** ; pas de retrait (inchangé).
+- **Packs bulk** : hypothèse à verrouiller (500F/10, 1 200F/30, 3 500F/100) — mécanisme découplé du barème.
+- **Bonus confiance 20 USD** : refondu en crédit vers Pro débloqué par ventes vérifiées, seuil **adapté au volume** (1 vente particulier / 3 commerce, `S-14`).
+- **Sponsorisé étiqueté** : le payant **amplifie**, ne **remplace** pas le classement organique.
+
+### Corrections vs modèle économique du code actuel
+
+| Contradiction | Correction retenue |
+|---|---|
+| « Seller Pro par *facilité* » alors qu'un particulier n'a pas de facilité | Pro = **par entité**, optionnel ; le particulier reste gratuit |
+| « 5 offres » sur le gratuit | **Plafond 20** (généreux), configurable |
+| Bonus lié à 3 ventes, inapplicable au particulier | Seuil **adapté au volume** (`S-14`) |
+
+### Hypothèses révisables
+
+- **A-F1** : plafond 20 — assez pour une boutique de quartier, atteint par un vrai catalogue. **À réviser avec de vrais vendeurs.**
+- **A-F2** : Buyer Pro conservé au pilote (monétisation secondaire) — réviser si l'acheteur entièrement gratuit accélère l'adoption.
+
+---
+
 ## Founder confirmation
 
 **Confirmé par le fondateur (2026-09-23), en ses mots :**
