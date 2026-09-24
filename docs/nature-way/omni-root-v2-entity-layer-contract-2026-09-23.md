@@ -123,7 +123,35 @@ depuis la canonique `br-dawn-hill-am5amy22`, puis branche **supprimée**. **La c
 même instruction — le premier comptage affichait `products_with_entity = 0` alors que les 13 mises à jour avaient eu lieu.
 Comptage refait par requête séparée : `13`. C'est de la **sémantique Postgres**, pas un bug.
 
-## 9. Resource Receipt
+## 10. Découverte mesurée (2026-09-23) — R-1 est **sûr mais inerte** sans R-2
+
+En vérifiant si M1 pouvait casser la prod (rendre `facility_id` nullable), j'ai trouvé un fait décisif :
+**le tronc ne tolère aucune offre sans lieu.**
+
+| Mesure | Valeur |
+|---|---|
+| Jointures **internes** `v2_products → v2_facilities` | **5** |
+| Jointures **gauches** (tolérantes) | **0** |
+
+Les 5 lectures concernées (`src/server/trunk-repository.ts`) :
+
+| Ligne | Lecture | Effet d'une offre sans lieu |
+|---|---|---|
+| 1917 | `getFacilityDetail` | invisible |
+| 2072 | `listSellerCatalogue` | **absente du catalogue du vendeur lui-même** |
+| 2186 | `transitionSellerProduct` | publication impossible |
+| 2210 | `setProductAvailability` | disponibilité impossible |
+| 2246 | `listProductStockEvents` | historique invisible |
+
+**Conséquence, en trois points :**
+
+1. **Appliquer M1 est sûr** : les 16 offres existantes ont toutes un `facility_id`. Aucune lecture ne casse aujourd'hui. Zéro perte prouvée.
+2. **Mais M1 seul ne tient pas la promesse du Seed.** Une offre portée par une entité **sans lieu** (particulier immatériel, S-25/S-28) serait acceptée en base puis **silencieusement masquée** par le tronc. Le schéma dirait vrai, le produit mentirait.
+3. **Donc R-2 n'est pas « poser les contraintes »** — c'est **rendre les chemins de lecture/écriture conscients de l'entité**. Tant que ce n'est pas fait, la couche entité est une fondation **invisible**.
+
+**Recommandation de séquence corrigée :** R-1 (appliquée) → **R-2 = chemins entité-aware** → R-3 (confiance) → **R-4 (Pro par entité, plafond 20, bulk, seuil)**. Faire R-4 avant R-2 reviendrait à tarifer des *lieux* au lieu d'*entités* — la contradiction se reproduirait.
+
+## 11. Resource Receipt
 
 | Statut | Ressource |
 |---|---|
