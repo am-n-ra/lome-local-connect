@@ -17,7 +17,7 @@ la maquette → rien à dessiner).
 
 | ID | Décision | Surface maquette | Statut | Écart / ce qui manque |
 |---|---|---|---|---|
-| **S-01** | Tout est offre ; différences = caractéristiques | `offer` (panneau **Caractéristiques de l'offre**, 7 champs + 2 profils), `search`, `results`, `entite-publique` | **OK (SP-1)** | — les 7 caractéristiques du jour 1 sont **montrées**, dont **négociable** ; commerce renouvelable vs piece unique |
+| **S-01** | Tout est offre ; différences = caractéristiques | `offer` (panneau **Caractéristiques de l'offre**, 7 champs + 2 profils), `search`, `results`, `entite-publique` | **OK (SP-1, vérifié par rendu T-12)** | les 7 caractéristiques du jour 1 sont **rendues** (dont **Retrait/livraison** et **négociable**) ; Quantité/déplétion = **une** ligne |
 | **S-02** | Modèle universel jour 1 ; comportements séquencés | — (règle d'ingénierie) | **CODE** | rien à dessiner ; contrainte de modèle |
 | **S-03** | L'entité mère liste son offre | `seller-publish`, `seller-offers`, `entite-publique` | **OK** | — |
 | **S-04** | Toute offre existe via une entité | `seller-publish`, `seller-entry` | **OK** | — |
@@ -293,6 +293,28 @@ Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run c
 | S-29 | (conforme) | déjà là |
 **Cause racine : le registre mesurait des CHAÎNES LITTÉRALES** (`20 offres`, `origine`) et **ratait les libellés réels**. C'est **exactement** la classe T-12 qui avait déjà frappé S-07/S-32/S-06 (cf. §7). **Règle : mesurer le FOND (ce que l'écran dit), jamais le mot qu'on a choisi d'y chercher.**
 **Garde (`check-maquette-v2.mjs` §5quater) :** les **cinq** affirmations sont désormais épinglées — y compris les **deux qui existaient déjà**, pour que la vérité ne dérive **ni dans un sens ni dans l'autre**. **Falsifié (5 modes) :** WhatsApp/SMS retiré → FAIL ; `3 / 20` retiré → FAIL ; ownership retiré → FAIL ; bonus retiré → FAIL ; seuil S-14 retiré → FAIL.
+
+## 8septies. T-12 **REFait** — audit de conformité par RENDU (2026-09-23)
+
+**Décision fondateur : « l'audit est à refaire ».** Refait et livré.
+
+**Faille de méthode de cet audit-ci (ci-dessus) :** il mesurait le **source** (grep), donc des chaînes
+qui peuvent ne jamais s'afficher. Il déclarait `S-01` / caractéristique 5 « Retrait / livraison »
+**`OK`** en citant `remise:` — une chaîne **jamais rendue à l'écran**. Le panneau affichait pourtant
+« **sept** caractéristiques » en n'en montrant que **six**.
+
+**Méthode refaite :** rendu navigateur réel de chacun des 73 écrans, prédicat sur le **texte visible**,
+falsifié. Harnais `npm run check:species-t12` (`scripts/t12-audit.mjs`).
+**Rapport :** `docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md`.
+
+**Résultat : 16/16 conforme.** Un écart réel trouvé **et corrigé** (`S-01`) : sept lignes = sept
+caractéristiques, Retrait/livraison désormais rendu.
+
+**Leçon définitive (après trois occurrences de la même classe) :** *auditer un écran se fait en le
+**rendant**, jamais en cherchant des chaînes dans sa source.* Mesurer le fond, jamais le mot qu'on a
+choisi d'y chercher.
+
+---
 
 ## 9. Resource Receipt
 

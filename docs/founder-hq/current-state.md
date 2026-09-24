@@ -36,13 +36,16 @@
 
 **Règle ajoutée :** *livrer une tranche ne clôt pas une porte ; une porte se clôt par une décision fondateur enregistrée. Ne jamais ouvrir une porte aval « pour préparer ».*
 
-### Contradiction de statut à trancher (ne pas la résoudre en silence)
+### `T-12` — contradiction **résolue par le fondateur** (2026-09-23)
 
-`T-12` porte **deux statuts contradictoires** dans les artefacts :
-- `intra-skill-plan-NW-PROD-OMNI-SEED2-01.md` : ligne **barrée** « LIVRÉ 2026-09-23 » **mais** colonne Statut = `planned` ;
-- `founder-hq-board.md` : « **audit de conformité requis (T-12)** ».
+Le fondateur a tranché : **« l'audit est à refaire »**. Le refait est **livré**.
 
-Les deux ne peuvent pas être vrais. **Autorité : le fondateur.** Tant que ce n'est pas tranché, `T-12` reste `planned` (le statut le plus prudent) et Species reste **RÉOUVERTE**.
+- **Cause du refait :** l'audit mesurait le **source HTML** (grep), pas l'**écran rendu**. Preuve immédiate : il déclarait la caractéristique « Retrait / livraison » **conforme** en citant une chaîne de données (`remise:`) qui **n'apparaissait jamais à l'écran**.
+- **Méthode refaite :** rendu navigateur réel (Playwright) ; prédicat sur le **texte visible** ; falsifié.
+- **Résultat : 16/16 conforme.** **1 écart réel trouvé et corrigé** — la fiche offre affirmait « **sept** caractéristiques » en n'en montrant que **six** (Retrait/livraison absent, Quantité/Déplétion scindée). Corrigé : sept lignes, sept caractéristiques.
+- **Harnais :** `npm run check:species-t12` · **Rapport :** `docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md`.
+
+**`T-12` = `done`.** Ce qui reste n'est **pas** un travail, c'est **une décision :** `SP-VALIDATION`.
 
 ## Founder decisions applied
 
@@ -68,7 +71,7 @@ Les deux ne peuvent pas être vrais. **Autorité : le fondateur.** Tant que ce n
 | `SCOUT-02` | Haute | Impasse d'expiration des intentions (`v2_purchase_intents.state` non lu par l'UI) |
 | `T-07d` | — | Prod `index-BUMFRcnb.js` ≠ local → **OUVERT** (ne pas pousser) |
 | `SP-VALIDATION` | **Haute** | `SP-1…SP-6` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
-| `T12-STATUS` | Moyenne | `T-12` : « LIVRÉ » (plan, titre barré) **contre** `planned` (colonne Statut) + « audit requis » (board) → contradiction, à trancher fondateur |
+| `T12-RESOLVED` | — | `T-12` refait par rendu navigateur (16/16) après décision fondateur « l'audit est à refaire ». **Clos.** |
 
 ## Rule (added 2026-09-23 — do not relearn)
 

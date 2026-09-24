@@ -1,3 +1,9 @@
+> ⛔ **SUPERSEDED (2026-09-23) — NE PAS UTILISER COMME AUDIT DE CONFORMITÉ.**
+> Un audit de conformité **refait par rendu navigateur** remplace celui-ci :
+> `docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md` (16/16, harnais
+> `npm run check:species-t12`). **Raison du refait :** ci-dessous mesure le source, pas l'écran
+> rendu — il déclarait conforme une caractéristique qui n'apparaissait jamais à l'écran.
+
 > ⚠️ **CORRECTION 2026-09-23 (protocole — une seule source de vérité).**
 > Cet audit a été mesuré contre l'**ANCIEN registre MV1** (`docs/omni-v1-screen-and-state-specification.md` §4),
 > alors que le Seed a été **rouvert et re-clos en V2** le **2026-09-23**

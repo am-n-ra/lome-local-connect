@@ -12,3 +12,6 @@ dist/
 
 # Agent scratch space (plans, temp observations) — never product code
 .agents_tmp/
+
+# Agent scratch output (render dumps, temp JSON)
+.agent_tmp/

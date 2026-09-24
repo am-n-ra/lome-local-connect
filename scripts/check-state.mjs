@@ -48,7 +48,8 @@ const mustPointToV2 = [
 const incident = [
   ['docs/founder-hq/current-state.md', 'SP-VALIDATION', 'SP validation defect must stay open'],
   ['docs/founder-hq/founder-hq-board.md', 'SP-VALIDATION', 'board must point at the pending validation'],
-  ['docs/founder-hq/founder-hq-board.md', 'T12-STATUS', 'the T-12 status contradiction must stay visible'],
+  ['docs/founder-hq/founder-hq-board.md', 'T-12` **refait et clos**', 'the T-12 redo must stay recorded'],
+  ['docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md', '16/16 conforme', 'the rendered conformance audit must stay'],
   ['docs/nature-way/omni-root-gate-v2-assessment-2026-09-23.md', 'PRÉMATURÉ', 'the Root audit must stay parked'],
 ];
 
