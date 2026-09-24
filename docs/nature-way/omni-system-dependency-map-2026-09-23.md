@@ -90,3 +90,19 @@
 Un enfant ne passe en implémentation que lorsque ses parents sont `verified`, ou explicitement `bounded` avec propriétaire, déclencheur de revue, comportement d'échec sûr et plan de preuve.
 
 **Conséquence immédiate :** tant que **E-01 (entité)** est `missing`, **E-05 (réputation d'offre)**, **E-08 (Room)** et **E-09 (opérateur terrain)** restent `planned`. On ne code pas un écran dont la racine n'existe pas — c'est exactement l'*orphaned leaf* que le fondateur reproche.
+
+---
+
+## Mise a jour scout 2026-09-23 - couverture de lieux (code-verifie)
+
+- **Lecture** : `TrunkAppV13` -> `GET /api/v2/public/facilities?bbox` ->
+  `listPublicFacilities(bounds ?? [-180,-90,180,90])` -> **couvre deja le monde**.
+- **Ecriture/couverture** : `omni.functions.ts` -> `osm-coverage.server.ts`
+  (`ensureCoverage`, market `TG-LOME` vs `GLOBAL`) -> **jamais atteint** :
+  seuls `src/components/omni/*` (arbre mort) l'importent. `public-discovery.ts`
+  (Overpass) idem. `scripts/import-osm.ts` non branche.
+- **Consequence** : aucune couverture de base mondiale de lieux ; 206 facilites =
+  seed explicite. L'intention PRD (`omni-platform-product-ux-prd.md:83`) est
+  ecrite mais non branchee.
+
+Detail complet + backlog R1..R7 : `docs/nature-way/omni-scout-incoherences-2026-09-23.md`.
