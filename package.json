@@ -19,7 +19,8 @@
     "seed:demo:emit": "node scripts/seed-demo-lome.mjs --emit-json",
     "server": "tsx server/index.ts",
     "build:server": "tsc --noEmit",
-    "dev:full": "npm run build && npm run server"
+    "dev:full": "npm run build && npm run server",
+    "check:state": "node scripts/check-state.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

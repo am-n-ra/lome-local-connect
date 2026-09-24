@@ -8,13 +8,31 @@ Omni: a map-first, constraint-based search engine for local supply (Lomé field 
 ## Active operating plan
 - **Founder HQ Master Plan:** `docs/founder-hq/founder-hq-master-plan.md` (`HQ-OMNI-2026-09-02`).
 - **Board:** `docs/founder-hq/founder-hq-board.md`.
-- **Specialist plan:** `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-01.md`.
-- **Intent Brief (founder-confirmed):** `docs/nature-way/omni-intent-brief-2026-09-02.md`.
-- **System Dependency Map:** `docs/nature-way/omni-system-dependency-map-2026-09-02.md`.
+- **Specialist plan (CURRENT):** `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-SEED2-01.md`.
+- **Intent Brief V2 (founder-confirmed, CURRENT):** `docs/nature-way/omni-intent-brief-v2-2026-09-23.md`.
+- **System Dependency Map (CURRENT):** `docs/nature-way/omni-system-dependency-map-2026-09-23.md`.
+- **Species maquette (CURRENT):** `docs/maquette/omni-species-v2-interactive.html`.
+- **Coherence/debt register (CURRENT):** `docs/nature-way/omni-v2-coherence-and-debt-2026-09-23.md`.
 - Method skills live in `.agents/skills/` (nature-way ecosystem). Always start via Nature Way Founder HQ; route product work to `/nature-way`.
 
-## Current gate (as of 2026-09-02)
-Gate 2 — **Species**. Order of acceptance: **Admin/operator → Seller → Buyer** (founder decision #7).
+## ⚠️ CURRENT GATE — read this first (as of 2026-09-23)
+**Seed reconciliation + Species reconciliation — RÉOUVERTE 2026-09-23** (par le fondateur).
+> Source de vérité : `docs/founder-hq/current-state.md`.
+Founder: « on a assez tourne en rond… je pense qu'on a rate tout le process depuis Species » and
+« j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse » → asked to **restart from Seed**.
+
+- **Seed V2: CLOS `founder-confirmed` 2026-09-23** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md`,
+  **34 décisions `S-01…S-34`**, founder: « c'est ça ». Supersedes the 2026-09-02 Intent Brief.
+- **Species V2: RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (72 écrans).
+  The 2026-09-23 screen audit was measured against the **OLD MV1 registry**, not the V2 Seed
+  (`COH-V2-18`) → it does **not** prove V2 conformance. Missing surfaces: **S-06** (échelle 0→4),
+  **S-11** (double niveau entité/offre), **S-13** (filtres carte), **S-32** (intégrité/réputation d'offre).
+- **Next:** `T-11` re-baseline plan on `S-01…S-34` → `T-12` Species V2 conformance audit → maquette to founder.
+- **Décisions fondateur appliquées:** `D-1a` fusion maquette+app ; `D-2a` l'offre appartient à l'ENTITÉ.
+- **Do NOT** restart Root/Trunk/Branches/Canopy, and **do NOT push to prod**, while this gate is open.
+- Historical V1 gates (G-02a–d, Gate 6「 Go with limits 」) are **superseded, not current**.
+
+### Historical gate detail (V1, 2026-09-02 — superseded)
 - G-02a (audit existing maquettes): **done** → `docs/nature-way/omni-species-audit-G02a-2026-09-02.md`.
 - G-02b (Admin/operator maquette set): **ACCEPTED (founder 2026-09-02)** → `docs/maquette/omni-species-maquette.html` + spec `docs/nature-way/omni-admin-operator-maquette-set-G02b-2026-09-02.md`. **Renamed 2026-09-02 to unified master file.**
 - G-02c (Seller maquette): **ACCEPTED (founder 2026-09-02)** — same sheet/grid inheritance, no divergence → in same unified `omni-species-maquette.html` + spec `docs/nature-way/omni-seller-maquette-set-G02c-2026-09-02.md`. Next: G-02d Buyer.
