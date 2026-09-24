@@ -91,6 +91,12 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Bug 2 corrigé — incohérence révélée :** le statut d'en-tête de la fiche était **hardcodé « À confirmer »** → la même offre était « En stock » dans les résultats et « À confirmer » sur sa fiche. Fix : statut **dérivé du niveau**. **Ajouter une dimension révèle les contradictions qu'un champ hardcodé masquait.**
 - **Ordre :** `SP-1` ✅ · `SP-2` ✅ · **`SP-3` à faire** (double niveau entité/offre) → `SP-4`–`SP-6`.
 
+## SP-3 (2026-09-23) — double niveau entité / offre (maquette, 0 code produit)
+- **S-11 clos.** Sélecteur **« Chercher une entité / une offre »** : placeholder, phrase et bouton changent ; en mode **entité** les contraintes d'offre (distance/budget/quantité) sont **masquées** (vérifié par style calculé `OBLOCK_DISPLAY=none,none` — l'extraction texte inclut le caché, ne pas s'y fier). **Deux états vides** : `results-empty` (offre) et **`entity-empty`** (entité, avec revendication d'un lieu reconnu). **Page entité** enrichie : *Nature*, *Niveau de l'entité*, *Ses offres* avec niveaux, + la règle **confiance = entité / réputation = offre**.
+- **Test de non-régression S-11 livré : `scripts/check-maquette-v2.mjs`** (`npm run check:maquette`), **zéro dépendance** (pas de `node_modules`). Garde : inventaire `SHEET` sans doublon / non réduit · `LEVELS[lv]` jamais `LEVELS[lv-1]` (échelle **exactement 5**) · parité `carac` ≡ `level` sur tous les producteurs. **Falsifié** : réintroduire `LEVELS[lv-1]` → exit 1 ; retirer `entity-empty` → FAIL (2). **73 écrans**, 0 doublon.
+- **Preuve navigateur :** `entity-search` · `entity-empty` · `entite-publique`. **Zéro code produit.**
+- **Fond terminé : `SP-1` ✅ · `SP-2` ✅ · `SP-3` ✅.** Restent `SP-4` (intégrité/réputation **au choix**, S-32) · `SP-5` (S-07/S-10) · `SP-6` (S-22/S-25).
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 

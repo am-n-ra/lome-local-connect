@@ -27,7 +27,7 @@ la maquette → rien à dessiner).
 | **S-08** | Itinéraire = soutien ; transport = une offre | `offer` (itinéraire), `transport` : 4 occ. | **PARTIEL** | itinéraire OK ; **offre de transport** non modélisée visuellement |
 | **S-09** | Le prix compte, visible/comparable | `results`, `compare`, `offer` | **OK** | — |
 | **S-10** | Offre non limitée au physique (digital, service, transport, immobilier) ; origine géo | `digital` 1, `service` 6, `transport` 4, `immobilier` **0** | **PARTIEL** | **immobilier absent** ; **origine géographique d'une offre digitale non montrée** (`origine` : 0) |
-| **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (une seule entrée `Produit, service, propriété, compétence…`) | **ABSENT** | **aucune UI ne distingue** « je cherche une entité » vs « je cherche une offre » (`Queryable` : 0) |
+| **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (sélecteur « Chercher une entité / une offre »), `entity-empty`, `entite-publique`, `scripts/check-maquette-v2.mjs` | **OK (SP-3)** | sélecteur de niveau + 2 états vides + page publique entité + **garde automatisé sans dépendance** |
 | **S-12** | Transport : fondation jour 1, affichage V1, requête A→B = `V1+` | `transport` : 4 | **PARTIEL** | pas d'écran d'offre mobile/transport (normal : `V1+`), mais la **fondation** doit se voir |
 | **S-13** | « Entité » = tout offreur (commerce, organisation, personne seule) même objet | `seller-entry`, `seller-entity` | **OK** | — |
 | **S-25** | **L'offre appartient à l'ENTITÉ** ; le lieu = *où*, pas *à qui* | `entite-publique`, `offer`, `seller-offers` | **PARTIEL** | `entite-publique` existe ✓ mais l'ownership entité n'est pas **explicite** dans la fiche offre |
@@ -194,6 +194,30 @@ ses producteurs, pas seulement à l'initialiseur.**
 2. **Incohérence préexistante révélée** — le statut d'en-tête de la fiche était **hardcodé « À confirmer »**, donc la même offre était « **En stock** » dans les résultats et « **À confirmer** » sur sa fiche. Corrigé : le statut est **dérivé du niveau** (`level >= 3` → En stock). **Ajouter une dimension (le niveau) révèle les contradictions qu'un champ hardcodé masquait.**
 
 **Preuve technique :** JS `node --check` **OK**, **72 écrans** intacts, 0 doublon défini ; rendu vérifié en navigateur sur les **3 surfaces × 2 profils**.
+
+## 8quinquies. SP-3 — LIVRÉ (2026-09-23), preuve navigateur + garde auto
+
+**Tranche `SP-3` : double niveau entité / offre (S-11).**
+
+- **Sélecteur de niveau** sur la recherche : `Chercher une entité` / `Chercher une offre`. Le **placeholder**, la **phrase** et le **bouton principal** changent ; en mode entité les **contraintes d'offre** (distance, budget, quantité, …) sont **masquées** (prouvé par style calculé : `OBLOCK_DISPLAY=none,none`).
+- **Deux états vides distincts** : `results-empty` (offre) et **`entity-empty`** (entité) — ce dernier propose si le lieu est **reconnu** de le **revendiquer**.
+- **Page publique de l'entité** (`entite-publique`) enrichie : **Nature** (« commerce · même objet qu'une personne seule », S-13/S-17), **Niveau de l'entité** (S-14), et **Ses offres** avec leur niveau. La phrase assume la règle : **la confiance porte sur l'entité ; la réputation, sur chaque offre** (S-12).
+- **Bandeau de rattachement** sur les résultats : « vous êtes au niveau **offre** — les entités derrière ces offres sont accessibles en un tap ».
+
+**Test de non-régression (exigé par S-11) — `scripts/check-maquette-v2.mjs`**
+Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run check:maquette`. Il garde les **deux défauts réels** rencontrés en livrant les tranches :
+
+| Garde | Défaut qu'il empêche |
+|---|---|
+| inventaire des `SHEET` **sans doublon** et **non réduit** | perte silencieuse d'un écran (`entity-empty` était bien **absent** d'un premier jet) |
+| `LEVELS[lv]` **et jamais** `LEVELS[lv - 1]` | le **décalage base 0 / base 1** qui a produit « Niveau 5 » hors échelle |
+| échelle = **exactement 5 niveaux** | échelle tronquée |
+| parité **`carac` équivaut `level`** sur tous les producteurs | le crash `undefined` de SP-1 (champ ajouté à un producteur, pas aux autres) |
+
+**Preuve falsifiable :** en réintroduisant `LEVELS[lv - 1]` → **FAIL exit 1** ; en retirant `entity-empty` → **FAIL (2)** « inventaire réduit » + « état vide entité absent ». **Un test qui ne peut pas échouer ne prouve rien** — les deux modes d'échec ont été **vérifiés**.
+
+**Preuve navigateur :** `entity-search` (état entité actif, contraintes masquées) · `entity-empty` (état vide + revendication) · `entite-publique` (nature + niveau + ses offres).
+**Preuve technique :** JS `node --check` **OK**, **73 écrans**, **0 doublon**, `check:maquette` vert.
 
 ## 9. Resource Receipt
 

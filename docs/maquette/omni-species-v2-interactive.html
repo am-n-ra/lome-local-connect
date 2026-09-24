@@ -217,6 +217,7 @@ const S = {
   sheet: 'search',
   prev: [],
   constraints: { rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false }, sort: 'best', fresh: 'fresh',
+  searchLevel: 'offer',
   product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
     // S-01 : tout est offre, les différences sont des CARACTÉRISTIQUES (modèle jour 1)
     level: 4, levelProof: 'confirmée il y a 2 h',
@@ -385,17 +386,23 @@ SHEETS.search = () => {
     <div><div class="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div>
     <button class="linkbtn" onclick="go('saved')">Recherches sauvegardées</button>
   </div>
-  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="Produit, service, propriété, compétence…" onkeydown="if(event.key==='Enter')doSearch()" id="q"></div></div>
-  <p class="lead">Tout ce qui existe autour de vous : commerces, particuliers, transport, services. Aucune offre écartée par type.</p>
+  <div class="chiprow" style="margin-top:9px">
+    <span class="chip${S.searchLevel === 'entity' ? ' on' : ''}" onclick="setSearchLevel('entity')">Chercher une entité</span>
+    <span class="chip${S.searchLevel === 'offer' ? ' on' : ''}" onclick="setSearchLevel('offer')">Chercher une offre</span>
+  </div>
+  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="${S.searchLevel === 'entity' ? 'Nom d’un commerce, d’une organisation ou d’une personne…' : 'Produit, service, propriété, compétence…'}" onkeydown="if(event.key==='Enter')${S.searchLevel === 'entity' ? 'doSearchEntity()' : 'doSearch()'}" id="q"></div></div>
+  <p class="lead">${S.searchLevel === 'entity'
+    ? 'Un <b>offreur par son identité</b> — commerce, organisation ou personne seule, même objet. On aboutit à sa page publique.'
+    : 'Tout ce qui existe autour de vous : commerces, particuliers, transport, services. Aucune offre écartée par type.'}</p>
 
-  <div class="oblock">
+  <div class="oblock"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
     <div class="eyebrow">Distance <em>d’abord</em></div>
     <div class="chiprow">
       ${zones.map((z, k) => chip(z, k === zoneOn, false, `setRayon(${k})`)).join('')}
     </div>
   </div>
 
-  <div class="oblock">
+  <div class="oblock"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
     <div class="eyebrow">Ensuite</div>
     <div class="chiprow">
       ${chip('Ouvert maintenant', c.ouvert, false, "toggleC('ouvert')")}
@@ -408,12 +415,16 @@ SHEETS.search = () => {
     </div>
   </div>
 
-  <button class="btn" style="margin-top:11px" onclick="doSearch()">Rechercher autour de moi</button>
-  <p class="lead">Vos contraintes sont une <b>requête</b>, pas un engagement vendeur : personne n’est dérangé avant votre intention.</p>
+  ${S.searchLevel === 'entity'
+    ? `<button class="btn" style="margin-top:11px" onclick="doSearchEntity()">Chercher cette entité</button>
+       <p class="lead">Le niveau <b>entité</b> cherche un <b>offreur</b> par son identité. Les contraintes d’offre (distance, budget, quantité) ne s’appliquent qu’au niveau <b>offre</b>.</p>`
+    : `<button class="btn" style="margin-top:11px" onclick="doSearch()">Rechercher autour de moi</button>
+       <p class="lead">Vos contraintes sont une <b>requête</b>, pas un engagement vendeur : personne n’est dérangé avant votre intention.</p>`}
 
   <div class="cardbox"><div class="kv"><span>Démonstration</span><b>compteurs & formules toujours vérifiés</b></div></div>
   <div class="chips">
-    <span class="chip" onclick="go('results-empty')">Aucun résultat</span>
+    <span class="chip" onclick="go('results-empty')">Aucun résultat (offre)</span>
+    <span class="chip" onclick="setSearchLevel('entity');go('entity-empty')">Aucune entité</span>
     <span class="chip" onclick="go('state-slow')">Réseau lent</span>
     <span class="chip" onclick="go('state-error')">Panne réseau</span>
   </div>`;
@@ -421,7 +432,8 @@ SHEETS.search = () => {
 
 SHEETS.results = () => `
   <div class="handle"></div>
-  <div class="sheet-head"><div><div class="eyebrow">Résultats · correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
+  <div class="sheet-head"><div><div class="eyebrow">Occurrences · offres correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
+  <p class="lead" style="margin-top:4px">Vous êtes au niveau <b>offre</b> — les entités <b>derrière</b> ces offres sont accessibles en un tap (page publique). <span style="cursor:pointer;text-decoration:underline" onclick="setSearchLevel('entity');go('search')">Chercher une entité</span></p>
   <div class="hgrid">
     <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Produit recherché</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span></div></div>
     <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">Niv. 2 · À confirmer</span></div></div>
@@ -791,7 +803,18 @@ function setRayon(k) { S.constraints.rayon = RAYON_STEPS[k]; render(); }
 function setSort(k) { S.sort = k; render(); }
 function setFresh(k) { S.fresh = k; render(); }
 function toggleC(key) { S.constraints[key] = !S.constraints[key]; render(); }
-function doSearch() { go('results', { toast: '3 offres trouvées · ' + S.constraints.rayon }); }
+function setSearchLevel(lv) { S.searchLevel = lv; render(); }
+function doSearch() {
+  // S-11 : niveau OFFRE — on cherche un produit/service, pas une entité
+  if (S.searchLevel !== 'offer') return setSearchLevel('offer');
+  go('results', { toast: '3 offres trouvées · ' + S.constraints.rayon });
+}
+function doSearchEntity() {
+  // S-11 : niveau ENTITÉ — on cherche un offreur par son identité
+  if (S.searchLevel === 'offer' && (document.getElementById('q') || {}).value) return setSearchLevel('entity');
+  S.entity = 'Boutique Kodjo';
+  go('entite-publique', { toast: '1 entité trouvée · identité, horaires, ses offres' });
+}
 function doIntent() { S.txn = 'qr_ready'; go('qr', { toast: 'Intention créée — QR émis' }); }
 function star(n) {
   const s = document.querySelectorAll('#stars .chip');
@@ -977,14 +1000,38 @@ SHEETS['entite-publique'] = () => `
   <h1 style="margin-top:3px">Boutique Kodjo</h1>
   <div class="cardbox">
     <div class="kv"><span>Badge</span><b class="status ok">Vérifiée · 12 ventes</b></div>
+    <div class="kv"><span>Nature</span><b>Commerce · même objet qu’une personne seule</b></div>
     <div class="kv"><span>Adresse</span><b>Lomé · Adawlato · Rue Kamé</b></div>
     <div class="kv"><span>Horaires</span><b>Lun–Sam 8h–19h</b></div>
-    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
+    <div class="kv"><span>Catégorie de lieu</span><b>Commerce · fixe</b></div>
+  </div>
+  <div class="section-kicker">Niveau de l’entité</div>
+  <div class="cardbox">
+    <div class="stepline"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+    <div class="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
+    <p class="lead" style="margin-top:6px"><b>Offres vivantes</b> — 3 offres, dont 2 en disponibilité vivante. La confiance porte sur l’<b>entité</b> ; la réputation, sur chaque <b>offre</b>.</p>
+  </div>
+  <div class="section-kicker">Ses offres</div>
+  <div class="cardbox">
+    <div class="kv"><span>Spaghetti 500 g</span><b>Niv. 4 · 850 F</b></div>
+    <div class="kv"><span>Huile 1 L</span><b>Niv. 4 · 1 400 F</b></div>
+    <div class="kv"><span>Riz 5 kg</span><b>Niv. 2 · 4 200 F</b></div>
   </div>
   <button class="btn" onclick="go('results')">Voir ses 3 offres</button>
   <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo (tracé direct)')">Itinéraire (tracé direct)</button>
   <button class="btn ghost sm" onclick="toast('Favori ajouté')">Suivre cette entité</button>
   <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres — c’est le point d’entrée physique (QR en boutique).</p>`;
+
+SHEETS['entity-empty'] = () => `
+  <div class="handle"></div>
+  <div class="sheet-head"><div><div class="eyebrow">Recherche · entité</div><h1>Aucune entité</h1></div><span class="status gray">0</span></div>
+  <div class="cardbox">
+    <div class="kv"><span>Vous cherchiez</span><b>« boulangerie Saint-Michel »</b></div>
+    <div class="kv"><span>Niveaux disponibles</span><b>Offre · Entité</b></div>
+  </div>
+  <p class="lead">Une entité peut exister <b>sans être revendiquée</b>. Si vous reconnaissez ce lieu, vous pouvez le <b>revendiquer</b> (preuve de contrôle + arbitrage opérateur).</p>
+  <button class="btn" onclick="setSearchLevel('offer');go('search')">Chercher une offre à la place</button>
+  <button class="btn ghost sm" onclick="go('seller-claim')">Revendiquer un lieu connu</button>`;
 
 SHEETS['produit-multi'] = () => `
   <div class="handle"></div><div class="eyebrow">Sélection · plusieurs produits</div>
