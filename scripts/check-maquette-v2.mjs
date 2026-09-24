@@ -55,6 +55,24 @@ check(producers === levels, 'every offer producer carries both carac and level',
   `${producers} carac vs ${levels} level`);
 check(producers >= 3, 'all three offer producers covered', `${producers} producers`);
 
+// --- 5bis. S-32: integrity + reputation must be VISIBLE AT CHOICE TIME ---
+// The gap was that a buyer only saw trust AFTER opening an offer. So the results
+// cards must carry the mark, the offer sheet must READ it from the offer (not
+// hardcode it), and every offer producer must carry both fields - the same parity
+// rule that caught the SP-1 crash.
+// scope to the RESULTS sheet and to <small> marks: the stepper uses a .trust class
+// too, so a whole-file count both over-counted and let a card lose its mark.
+const resultsBlock = (js.match(/SHEETS\.results = \(\) => `([\s\S]*?)`;/m) || [])[1] || '';
+const trustMarks = (resultsBlock.match(/<small class="trust/g) || []).length;
+check(trustMarks >= 3, 'results cards carry the trust mark (S-32)', `${trustMarks} marks`);
+check(/S\.product\.integ/.test(js) && /S\.product\.rep/.test(js),
+  'offer sheet reads integrity/reputation from the offer');
+const integFields = (js.match(/\binteg:/g) || []).length;
+const repFields = (js.match(/\brep:/g) || []).length;
+check(integFields >= 3 && integFields === repFields,
+  'every offer producer carries integrity and reputation',
+  `${integFields} integ vs ${repFields} rep`);
+
 // --- 6. Registry truth: the Species registry must state the REAL screen count ---
 // T-12 found the registry claiming "72 écrans" while the maquette had 73, and a
 // row still asserting the level scale was absent after it shipped. The registry
@@ -75,7 +93,7 @@ if (registry) {
   check(claimed === unique.size, 'registry header screen count equals the maquette',
     `registry header says ${claimed}, maquette has ${unique.size}`);
   // a delivered decision must not still be described as missing
-  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3']];
+  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3'], ['S-32', 'SP-4']];
   for (const [id, slice] of delivered) {
     const row = registry.split('\n').find((l) => l.includes(`**${id}**`));
     if (row) check(/OK/.test(row), `registry row ${id} marked OK after ${slice}`,

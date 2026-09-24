@@ -67,7 +67,7 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 | **S-20** | **Toute offre porte des visuels** (≥ 1 image) | `Visuel` 6, `image` 3, `photo` 2 | **OK** | — |
 | **S-30** | La confiance porte sur l'**entité**, jamais sur l'offre | `seller-verif`, `entite-publique` | **OK** | — |
 | **S-31** | Publier **ne requiert pas** la vérification | `seller-publish` | **OK** | — |
-| **S-32** | **Intégrité automatique + réputation par OFFRE** | `offer` (`Intégrité de l'offre` ×1, `Réputation de l'offre` ×2) | **PARTIEL (corrigé)** | ⚠️ **Correction de mesure :** ma mesure initiale « ABSENT » était **fausse** — elle cherchait `badge`/`intégrité` et **ratait** les libellés réels `Intégrité de l'offre` / `Réputation de l'offre`, présents sur la **fiche offre**. En outre `results` **énonce** « chaque offre porte un visuel, un avantage Omni et une réputation propre (S-32) ». Reste partiel : pas de **badge par carte** sur `results` → l'acheteur ne voit pas la réputation **au moment de choisir** |
+| **S-32** | **Intégrité automatique + réputation par OFFRE** | `results` (« 4,6 ★ · Achetée 12× · intégrité ✓ » par carte), `offer` (lu depuis l'offre), `compare` (ligne Intégrité) | **OK (SP-4)** | — la marque est **visible AU MOMENT DU CHOIX** (carte de résultat + comparateur), pas seulement après ouverture ; la fiche **lit** la donnée de l'offre au lieu de la coder en dur ; l'entité non revendiquée affiche honnêtement « Pas d'offre · rien à évaluer » |
 
 ## 4. QR, transaction, canaux
 
@@ -108,13 +108,13 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 | ~~P0~~ | ~~**S-01 + caractéristiques**~~ | **LIVRÉ (SP-1)** | — |
 | ~~P0~~ | ~~**S-06 échelle 0→4**~~ | **LIVRÉ (SP-2)** | — |
 | ~~P0~~ | ~~**S-11 double niveau**~~ | **LIVRÉ (SP-3)** | garde `check:maquette` en place |
-| **P1** | **S-32** | à faire (SP-4) | intégrité + réputation **visibles au choix** (aujourd'hui seulement sur la fiche) |
+| ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | **OK (corrigé)** — filtres carte présents | — |
 | **P1** | **S-10** | à faire (SP-5) | **immobilier** absent ; **origine géo** du digital non montrée |
 | **P2** | **S-22** | à faire (SP-6) | partage hors Omni (WhatsApp/SMS) |
 | **P2** | **S-25** | à faire (SP-6) | ownership entité explicite dans la fiche offre |
 | **P2** | Économie | à faire (SP-6) | plafond 20 affiché, seuil bonus par volume |
-| **P1** | **S-32** | intégrité + réputation **visibles au choix** (déjà sur la fiche) | sinon l'acheteur ne les voit qu'**après** avoir ouvert l'offre |
+| ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | filtres de carte (type/transport) | sinon la carte sature |
 | **P1** | **S-10** | immobilier + **origine géo du digital** | promesse « d'où ça vient » |
 | **P2** | **S-22** | partage hors Omni (WhatsApp/SMS) | canal d'acquisition |
@@ -254,6 +254,17 @@ Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run c
 **Preuve falsifiable (3 modes d'échec vérifiés) :** annoncer 99 écrans → **FAIL exit 1** ; remettre `S-06` en « PARTIEL » + rétablir « aucune surface ne montre le NIVEAU » → **FAIL (2)** ; remettre `S-01` en « PARTIEL » → **FAIL exit 1**. Restauré → exit 0.
 
 **Conséquence :** la carte **redevient vraie**, et **si elle re-mente, un test casse**. C'est la seule façon sûre d'arrêter le rond-point : pas plus d'attention, un **garde qui échoue**.
+
+## 8septies. SP-4 — LIVRÉ (2026-09-23) : la confiance au moment du choix (S-32)
+**Le gap :** l'intégrité et la réputation **existaient déjà** — mais seulement **après** avoir ouvert l'offre. L'acheteur qui **choisit** ne les voyait pas.
+**Livré (maquette, zéro code produit) :**
+- **carte de résultat** → une marque « **4,6 ★ · Achetée 12× · intégrité ✓** » sous chaque offre, **distincte par offre** (commerce 4,6/12× vs particulier 4,2/5×) ;
+- **comparateur** → ligne **Intégrité** à côté de la Réputation, + l'énoncé de la règle : l'intégrité est automatique, **la réputation appartient à chaque offre, jamais à l'entité seule** ;
+- **fiche offre** → lit désormais `S.product.integ` / `S.product.rep` (**donnée de l'offre**) au lieu d'un texte codé en dur ;
+- **entité non revendiquée** → « **Pas d'offre · rien à évaluer** » — rien à évaluer, donc rien d'inventé.
+**Style :** monochrome ; l'accent `#2E8B6F` reste réservé à `.vmark` / `.status.ok` (design.md #3).
+**Garde (`check-maquette-v2.mjs` §5bis) :** la marque doit être **présente sur les cartes de résultat** et **parité `integ` ≡ `rep`** sur tous les producteurs. **Falsifié (3 modes) :** retirer une marque d'une carte → FAIL ; coder la fiche en dur → FAIL ; retirer l'intégrité d'un producteur → FAIL.
+**Deux faux gardes attrapés en falsifiant** — à ne pas refaire : (1) compter `class="trust"` **globalement** passe même si 5 marques disparaissent ; (2) le compteur incluait les `.stepline` (même nom de classe) → il faut **scoper au bloc `results`** et aux balises `<small>`.
 
 ## 9. Resource Receipt
 

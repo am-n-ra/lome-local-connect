@@ -102,6 +102,12 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Correctif durable :** `scripts/check-maquette-v2.mjs` §6 « registry truth » — le garde vérifie désormais que le registre **annonce le vrai nombre d'écrans**, que `S-01/S-06/S-11` sont **OK** après SP-1/2/3, et qu'aucun écart ne nie une surface livrée. **Falsifié (3 modes) :** 99 écrans → FAIL exit 1 ; `S-06` re-PARTIEL + écart rétabli → FAIL (2) ; `S-01` re-PARTIEL → FAIL exit 1.
 - **État :** `SP-1` ✅ `SP-2` ✅ `SP-3` ✅ · `T-12` ✅ · restent `SP-4` (S-32) `SP-5` (S-10 immobilier + origine géo) `SP-6` (S-22/S-25/économie). **Zéro code produit.**
 
+## SP-4 (2026-09-23) — confiance au moment du choix (S-32)
+- **Gap :** intégrité + réputation existaient **uniquement sur la fiche** → l'acheteur ne les voyait qu'**après** avoir ouvert l'offre.
+- **Livré :** marque **par carte de résultat** (« 4,6 ★ · Achetée 12× · intégrité ✓ », distincte par offre), ligne **Intégrité** dans le **comparateur**, fiche qui **lit** `S.product.integ`/`rep` (plus de texte en dur), et « Pas d'offre · rien à évaluer » sur l'entité non revendiquée. Monochrome (accent réservé `.vmark`/`.status.ok`).
+- **Garde §5bis + registre :** marque présente sur les cartes + parité `integ` ≡ `rep` + ligne registre `S-32` OK. **Falsifié (3 modes).** **Leçon :** un garde qui compte une classe **globalement** ne prouve rien (il passe avec 5 marques retirées) ; `.trust` est aussi une classe de `.stepline` → **scoper au bloc `results`**.
+- **État :** `SP-1..SP-4` ✅ · restent `SP-5` (S-10 immobilier + origine géo) `SP-6` (S-22/S-25/économie). **Zéro code produit.**
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 
