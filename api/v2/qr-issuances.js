@@ -4714,28 +4714,41 @@ function createTrunkRepository(sql = database()) {
       };
     },
     /**
-     * RT-D1 — un acheteur détient-il une intention vivante ?
+     * RT-D2 — un acheteur détient-il une intention d'achat vivante ?
      *
-     * Sert uniquement au verrouillage d'itinéraire *optionnel* : par défaut,
-     * `ROUTING_REQUIRE_INTENT` est désactivé, car exiger une intention supprime
-     * tout aperçu d'itinéraire avant décision — le fondateur doit ouvrir ce
-     * verrou en connaissance de cause.
+     * Sert au verrouillage d'itinéraire : le fondateur a décidé (2026-09-24) que
+     * l'itinéraire réel et son guidage sont accessibles **uniquement après une
+     * intention réelle d'achat**.
      *
-     * `expires_at` est le TTL réel porté par le jeton QR (le domaine utilise
-     * `intentExpiryFrom(observedAt)` / 10 minutes). On s'appuie sur lui plutôt
-     * que sur un état « actif » seul : un balayage d'expiration qui n'a pas encore
-     * tourné ne doit pas faire croire à une intention périmée encore valable.
+     * Le critère est `pi.state = 'active'`, et rien d'autre. C'est exactement la
+     * durée de vie de l'intention : `createPurchaseIntent` la pose à `active`, le
+     * balayage d'expiration la passe à `expired` après inactivité (60 min), et la
+     * clôture la passe à `completed`. Une intention dont le QR a été vérifié
+     * n'expire JAMAIS : elle reste `active` jusqu'à la clôture — donc l'itinéraire
+     * reste ouvert pendant toute la remise, ce qui est le seul moment où on en a
+     * besoin.
+     *
+     * CE QUI ÉTAIT FAUX AVANT : on exigeait en plus un jeton QR **vivant**
+     * (`q.expires_at > now()`), dont le TTL est de 10 minutes. Un acheteur qui
+     * avait choisi, payé et scanné se voyait donc refuser l'itinéraire dès que le
+     * QR avait dix minutes — c'est-à-dire presque toujours, puisque l'itinéraire
+     * sert justement à se rendre sur place APRÈS le scan. Mesure en base au moment
+     * du diagnostic : 12 jetons QR, 0 vivant.
+     *
+     * L'intention est une **décision d'achat** ; le QR est un **geste de
+     * vérification**. Les confondre fermait la fonction au moment où elle devient
+     * utile. On penche volontairement du côté de l'acheteur : mieux vaut servir un
+     * itinéraire à une intention légèrement périmée que d'en refuser un à un
+     * acheteur engagé (même philosophie que « une panne de base ne doit pas fermer
+     * un itinéraire »).
      */
     async hasLivePurchaseIntent(input) {
       const rows = await retryDatabase(() => sql`
         select 1
         from v2_purchase_intents pi
         join v2_accounts a on a.id = pi.buyer_account_id
-        join v2_transaction_snapshots s on s.intent_id = pi.id
-        join v2_qr_tokens q on q.transaction_id = pi.transaction_id
         where a.auth_user_id = ${input.authUserId}
           and pi.state = 'active'
-          and q.expires_at > now()
         limit 1
       `);
       return rows.length > 0;

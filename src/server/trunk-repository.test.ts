@@ -867,6 +867,31 @@ describe('external payment persistence Root seam', () => {
   });
 });
 
+describe('RT-D2 live purchase intent (itinerary gate)', () => {
+  it('opens on an active intent alone — never on a live QR token', async () => {
+    const call = stubSql([{ '?column?': 1 }]);
+    const repository = createTrunkRepository(call.sql);
+
+    expect(await repository.hasLivePurchaseIntent({ authUserId: 'auth-1' })).toBe(true);
+
+    const query = call.queries[0];
+    expect(query).toContain('v2_purchase_intents');
+    expect(query).toContain("pi.state = 'active'");
+    // The regression: a QR token lives 10 minutes, an intent survives 60 min of
+    // inactivity and never expires once verified. Requiring a live QR refused
+    // buyers who had already paid and scanned — the only moment it is useful.
+    expect(query).not.toContain('v2_qr_tokens');
+    expect(query).not.toContain('q.expires_at');
+    expect(query).not.toContain('v2_transaction_snapshots');
+  });
+
+  it('refuses when no active intent exists', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    expect(await repository.hasLivePurchaseIntent({ authUserId: 'auth-1' })).toBe(false);
+  });
+});
+
 describe('transaction persistence Root seam', () => {
   it('locks an authenticated member transaction and appends an allowed state event', async () => {
     const call = stubSql([{

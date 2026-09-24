@@ -53,29 +53,50 @@ atteindre le navigateur (vérifié : 0 occurrence dans le bundle client).
 - **Note de conduite :** on ne peut pas demander à quelqu'un de lire l'écran en conduisant. Si la voix
   manque, l'itinéraire reste **consultable avant de partir**, jamais un guidage en mouvement.
 
-## 4. ⚠️ LE PIÈGE QUI FERMERAIT LA PORTE AUX ACHETEURS DÉJÀ ENGAGÉS
+## 4. ✅ `RT-1` CORRIGÉ (2026-09-24) — le verrou fermait la porte à tout le monde
 
-**C'est le point le plus important de ce document. Il doit être corrigé AVANT d'activer le verrou.**
+**Le critère était faux, et il fermait la fonction au moment utile.**
 
-`hasLivePurchaseIntent` (vérifié, `trunk-repository.ts:5066`) exige aujourd'hui :
+`hasLivePurchaseIntent` exigeait un **jeton QR vivant** :
 
 ```sql
-pi.state = 'active' AND q.expires_at > now()   -- jeton QR VIVANT
+pi.state = 'active' AND q.expires_at > now()   -- TTL du QR : 10 MINUTES
 ```
 
-Or le TTL du jeton QR est de **10 minutes**. Un acheteur qui a déclaré son intention, qui a payé, qui a
-scanné — **mais dont le QR a plus de 10 minutes** — serait **refusé** au moment précis où il a besoin
-de se rendre sur place. C'est-à-dire : **presque toujours**.
+Or le TTL du jeton QR est de **10 minutes**. Un acheteur qui a choisi, payé, scanné — mais dont le
+QR a plus de 10 minutes — était **refusé au moment précis où il a besoin de se rendre sur place**.
+C'est-à-dire : **presque toujours**. État mesuré en base : **12 jetons QR, 0 vivant**.
 
-**État mesuré en base : 12 jetons QR, 0 vivant.** Le verrou, activé tel quel, dirait « non » à
-**tout le monde**.
+### Le modèle réel (vérifié dans le code, et il corrige une erreur de ce document)
 
-**Correction nécessaire :** le verrou doit se déclencher sur **« intention active »** (l'état du
-domaine, porté par `intentExpiryFrom` / ~24 h), **pas** sur « jeton QR vivant ». Le QR sert au
-**verrou de transaction**, pas à la preuve d'intention.
+| Élément | Durée de vie réelle |
+|---|---|
+| **Intention d'achat** (`v2_purchase_intents.state='active'`) | **60 min d'inactivité** (balayage `sweepExpiredIntents`), puis `expired` |
+| Intention **vérifiée par QR** | **n'expire JAMAIS** — reste `active` jusqu'à la clôture (`completed`) |
+| **Jeton QR** (`v2_qr_tokens.expires_at`) | **10 minutes** |
 
-**Règle :** l'intention est une **décision d'achat** ; le QR est un **geste de vérification**. Les
-confondre ferme la fonctionnalité au moment où elle devient utile.
+⚠️ **Correction de ce document :** la version précédente disait *« l'intention (~24 h) »*. **C'est faux.**
+Il n'y a **pas** d'`expires_at` sur `v2_purchase_intents` : sa durée de vie **est** son `state`
+(60 min d'inactivité → `expired` ; `active` jusqu'à la clôture une fois vérifiée).
+
+### La correction livrée
+
+Le critère est désormais **`pi.state = 'active'`**, et rien d'autre. On penche volontairement du côté
+de l'acheteur : mieux vaut servir un itinéraire à une intention légèrement périmée que d'en refuser un
+à un acheteur engagé — même philosophie que « une panne de base ne doit pas fermer un itinéraire ».
+
+**Règle : l'intention est une décision d'achat ; le QR est un geste de vérification. Les confondre
+ferme la fonction au moment où elle devient utile.**
+
+### Preuve (et elle échoue sur l'ancien code — sinon elle ne prouverait rien)
+
+| État | Résultat |
+|---|---|
+| Test sur l'**ancien** code (avec le join QR) | ❌ **1 échec** — `expect(query).not.toContain('v2_qr_tokens')` |
+| Test sur le code **corrigé** | ✅ **146/146** |
+| Suite complète | ✅ **588/588** |
+| Bundle serverless régénéré | ✅ `hasLivePurchaseIntent` ne joint plus `v2_qr_tokens` (vérifié dans `api/v2/availability.js`) |
+| `tsc` · `check:boundary` | ✅ propres |
 
 ## 5. Le coût — garde `S-15`
 
