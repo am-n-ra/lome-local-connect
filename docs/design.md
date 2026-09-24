@@ -1,6 +1,15 @@
-# Omni Design System — authoritative tokens & components (from accepted maquette)
+# Omni Design System — authoritative tokens & components
 
-**Source of truth:** `docs/maquette/omni-species-maquette.html` (Species gate, accepted 2026-09-02). All product surfaces must match this file. Neutral design system for mobile-first map UI.
+**Source of truth — deux références, un seul ADN (décision fondateur D-1 « fusion », 2026-09-23) :**
+
+| Rôle | Référence | Ce qu'elle gouverne |
+|---|---|---|
+| **Visuel + décisions produit** | `docs/maquette/omni-species-v2-interactive.html` (Species V2, 2026-09-23) | écrans, contenu, parcours, entité, avantage, intégrité |
+| **Comportement** | l'app réelle (`src/trunk/*`) | accessibilité, cinématique, fraîcheur, minuteurs, repli carte, panier |
+
+Les **jetons et l'ADN visuel sont identiques** entre les deux (vérifié jeton par jeton le 2026-09-23 : `--ink` `#0f0f0f`, `--panel` `#f7f7f7`, `--accent` `#2e8b6f`, `--accent-soft` `#eef4f1`, `--ink-soft` `#6b6b6b`, police Inter). La V2 hérite donc de ce fichier ; elle **n'ajoute aucun jeton**. L'ancienne référence `omni-species-maquette.html` (V1.1/V1.3) reste l'historique, elle n'est plus la cible.
+
+**Héritage comportemental obligatoire** (à ne jamais perdre) : `prefers-reduced-motion`, `100svh` + `safe-area`, `aria-modal` + capture de focus, chorégraphie de recherche (vagues/pop-in), carte de repli, fraîcheur 4 h/24 h, minuteurs de transaction, panier par entité, clusters MapLibre en chiffres formés.
 
 ---
 
@@ -60,7 +69,7 @@
 | `.hgrid`, `.hcard`, `.thumb`, `.vmark`, `.body` | Results horizontal facility cards |
 | `.searchdock`, `.fld`, `.chips`, `.chip` | Search sheet input + filters |
 | `.stat`, `.tile`, `.stat-grid` | 2-tile summary tiles (Seller/Admin home) |
-| `.icon`, `.mi`, `.menuitem` | Icon row buttons in MENU sheet |
+| `.icon`, `.mi`, `.menuitem` | Icon row buttons in MENU sheet — **pattern fondateur approuvé (2026-09-23)** : `menuitem` = bouton ligne pleine largeur, `.mi` = pastille 26×26 contenant une **icône SVG tracé** (15 px), puis `b` (titre) + `small` (sous-titre). Ex. app : `<button class="menuitem"><span class="mi"><Home size={15}/></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>` |
 
 ---
 
