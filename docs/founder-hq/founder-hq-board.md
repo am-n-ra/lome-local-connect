@@ -1,6 +1,27 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-23 (UTC)** — **PORTE COURANTE = Seed reconciliation + Species reconciliation (RÉOUVERTE par le fondateur 2026-09-23).** Voir la section « RÉOUVERTURE 2026-09-23 » en tête des lignes d'état et `founder-hq-master-plan.md` §« HQ RECONCILIATION — 2026-09-23 ». Les lignes ci-dessous datées 2026-09-17 décrivent l'état **V1 antérieur** (`omni-v2-rebuild` @ `c4c8bef`+) ; elles restent vraies historiquement mais **ne sont plus l'état de porte**.
+**As of:** **2026-09-23 (UTC)** — **PORTE COURANTE = Species (RÉOUVERTE)** — réconciliation **Seed ↔ maquette ↔ code**.
+
+## ⛔ DÉCISION BLOQUANTE — cohérence Seed ↔ socle (2026-09-23)
+
+Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est pas là et même il y a beaucoup d'incohérence »*.
+
+**Mesuré** (`docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`) : **7 incohérences, une seule racine**.
+
+- **Racine :** `db/migrations/001_v2_roots.sql:82` — `v2_products.facility_id uuid not null references v2_facilities(id)`
+  contredit **S-25** (« il n'y a pas de produit appartenant à une facilité ») et **S-01/S-02** (modèle universel).
+- **Autres :** Pro par **facilité** (code) vs par **entité** (Seed) · plafond **5** (code) vs **20** (Seed) ·
+  bulk `ceil(N/100)` (code) vs « 1 besoin = 1 bulk » (Seed) · seuil de confiance **3 uniforme** vs **adapté au volume**.
+- **Verdict :** la **maquette suit le Seed ; le socle ne suit pas.**
+
+**Décision requise — fondateur seul :** **D-C1** reconstruire le socle au modèle Seed *(recommandé)* ·
+**D-C2** adapter le Seed au code *(déconseillé)* · **D-C3** position d'abord *(réduit sans guérir)*.
+
+**Rien d'aval (Root, Trunk, Venture Lifecycle) ne s'ouvre avant cette décision.**
+
+---
+
+**As of (V1 historique):** 2026-09-23 (UTC) — **PORTE COURANTE = Seed reconciliation + Species reconciliation (RÉOUVERTE par le fondateur 2026-09-23).** Voir la section « RÉOUVERTURE 2026-09-23 » en tête des lignes d'état et `founder-hq-master-plan.md` §« HQ RECONCILIATION — 2026-09-23 ». Les lignes ci-dessous datées 2026-09-17 décrivent l'état **V1 antérieur** (`omni-v2-rebuild` @ `c4c8bef`+) ; elles restent vraies historiquement mais **ne sont plus l'état de porte**.
 
 **As of (historique V1):** 2026-09-17 (UTC) — reconciled to repo truth : correctifs livrés par `5a31ebc`, prod `index-DUw7RWKU.js` === build local (sha256 `f3727dce…`, T-07d ✅) ; documents de dispatch ajoutés ensuite (`HO-OMNI-18`), bundle servi inchangé  
 **Plan:** `HQ-OMNI-2026-09-02` (`docs/founder-hq/founder-hq-master-plan.md`)  

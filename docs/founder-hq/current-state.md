@@ -47,6 +47,23 @@ Le fondateur a tranché : **« l'audit est à refaire »**. Le refait est **livr
 
 **`T-12` = `done`.** Ce qui reste n'est **pas** un travail, c'est **une décision :** `SP-VALIDATION`.
 
+### `T-14` — diagnostic de cohérence Seed V2 ↔ code (2026-09-23)
+
+Le fondateur a signalé **« beaucoup d'incohérence dans ce qu'on veut faire et proposer »**. Diagnostic livré
+(`docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`) : **7 incohérences mesurées** derrière
+**une seule racine**.
+
+- **Racine :** `v2_products.facility_id not null references v2_facilities` (`db/migrations/001_v2_roots.sql:82`)
+  contredit **S-25** (« il n'y a pas de produit appartenant à une facilité ») et **S-01/S-02** (modèle universel).
+  C'est *exactement* la racine que le Seed nomme.
+- **Autres :** Pro par **facilité** (code) vs Pro par **entité** (Seed) · plafond **5** (code) vs **20** (Seed) ·
+  bulk `ceil(N/100)` (code) vs « 1 besoin = 1 bulk » (Seed) · seuil de confiance **3 uniforme** vs **adapté au volume**.
+- **Verdict :** la **maquette suit le Seed ; le socle ne suit pas.** Construire une UI conforme au-dessus d'un
+  schéma non conforme **produit de la dette à chaque tranche** — c'est le rond-point perçu.
+
+**Décision requise (fondateur seul) :** **D-C1** reconstruire le socle au modèle Seed (recommandé) ·
+**D-C2** adapter le Seed au code (déconseillé) · **D-C3** position d'abord (réduit sans guérir).
+
 ## Founder decisions applied
 
 | ID | Decision | Status |

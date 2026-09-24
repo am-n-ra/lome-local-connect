@@ -49,6 +49,9 @@ const incident = [
   ['docs/founder-hq/current-state.md', 'SP-VALIDATION', 'SP validation defect must stay open'],
   ['docs/founder-hq/founder-hq-board.md', 'SP-VALIDATION', 'board must point at the pending validation'],
   ['docs/founder-hq/founder-hq-board.md', 'T-12` **refait et clos**', 'the T-12 redo must stay recorded'],
+  ['docs/founder-hq/founder-hq-board.md', 'DÉCISION BLOQUANTE — cohérence Seed ↔ socle', 'the Seed/socle coherence decision must stay visible'],
+  ['docs/founder-hq/current-state.md', 'T-14', 'the coherence diagnostic must stay recorded'],
+  ['docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md', 'v2_products.facility_id', 'the measured root cause must stay cited'],
   ['docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md', '16/16 conforme', 'the rendered conformance audit must stay'],
   ['docs/nature-way/omni-root-gate-v2-assessment-2026-09-23.md', 'PRÉMATURÉ', 'the Root audit must stay parked'],
 ];
