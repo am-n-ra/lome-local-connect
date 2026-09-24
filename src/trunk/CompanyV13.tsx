@@ -17,9 +17,10 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
 
   const byFacility = new Map<string, SellerCatalogueProduct[]>();
   for (const product of catalogue.products) {
-    const list = byFacility.get(product.facilityId) ?? [];
+    const key = product.entityId ?? product.facilityId ?? 'sans-lieu';
+    const list = byFacility.get(key) ?? [];
     list.push(product);
-    byFacility.set(product.facilityId, list);
+    byFacility.set(key, list);
   }
 
   const availabilityCount = (products: SellerCatalogueProduct[]): { enStock: number; aValider: number } =>
@@ -45,17 +46,19 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
           <span className={`status ${catalogue.catalogReady ? 'ok' : 'dash'}`}>{catalogue.catalogReady ? 'Catalogue prêt' : 'Catalogue incomplet'}</span>
         </div>
       </div>
-      {catalogue.facilities.map((facility) => {
-        const products = byFacility.get(facility.id) ?? [];
+      {[...byFacility.entries()].map(([entityId, products]) => {
         const counts = availabilityCount(products);
+        const entityName = products[0]?.entityName ?? 'Entité';
+        const placeNames = [...new Set(products.map((p) => p.facilityName).filter((n): n is string => Boolean(n)))];
+        const placeSummary = placeNames.length > 0 ? placeNames.join(', ') : 'sans lieu (offre mobile / immatérielle)';
         return (
-          <div className="cardbox" key={facility.id}>
+          <div className="cardbox" key={entityId}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.slotState === 'active' ? 'Slot actif' : 'Slot manquant'}</span></div>
-              <span className="status gray">{products.length} produit{products.length > 1 ? 's' : ''}</span>
+              <div><b>{entityName}</b><br /><span className="tiny muted">{placeSummary}</span></div>
+              <span className="status gray">{products.length} offre{products.length > 1 ? 's' : ''}</span>
             </div>
             <div className="kv" style={{ marginTop: 6 }}><span>Stock Omni</span><b>{totalStock(products)} unités</b></div>
-            <div className="kv" style={{ marginTop: 2 }}><span>Disponibilité</span><b>{counts.enStock >  ​0 ? `${counts.enStock} En stock` : '0 En stock'}{counts.aValider >  ​0 ? ` · ${counts.aValider} à valider` : ''}</b></div>
+            <div className="kv" style={{ marginTop: 2 }}><span>Disponibilité</span><b>{counts.enStock > 0 ? `${counts.enStock} En stock` : '0 En stock'}{counts.aValider > 0 ? ` · ${counts.aValider} à valider` : ''}</b></div>
             <div className="btnrow" style={{ marginTop: 8 }}>
               <button className="btn ghost sm" type="button" onClick={onProducts}><Package size={13} /> Offres & produits</button>
               <button className="btn ghost sm" type="button" onClick={onOffers}><Boxes size={13} /> Dispo auto</button>
@@ -63,7 +66,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
           </div>
         );
       })}
-      {catalogue.facilities.length === 0 && <p className="sub">Aucune compagnie enregistrée.</p>}
+      {byFacility.size === 0 && <p className="sub">Aucune compagnie enregistrée.</p>}
     </section>
   );
 }

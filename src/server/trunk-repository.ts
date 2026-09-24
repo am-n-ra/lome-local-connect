@@ -2043,6 +2043,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         select
           p.id,
+          e.id as entity_id,
+          e.display_name as entity_name,
           p.facility_id,
           f.name as facility_name,
           p.name,
@@ -2064,22 +2066,26 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           p.publication_state,
           p.availability_state,
           p.availability_expires_at,
-          (f.commercial_plan = 'pro_active' or exists (
-            select 1 from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+          (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+            select 1 from v2_facility_entitlements fe
+            where f.id is not null
+              and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
           )) as availability_pro_eligible
         from v2_products p
-        join v2_facilities f on f.id = p.facility_id
-        join v2_accounts a on a.id = f.account_id
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
           and a.onboarding_state = 'seller_ready'
-        order by f.name asc, p.updated_at desc, p.id desc
+        order by coalesce(e.display_name, p.name) asc, p.updated_at desc, p.id desc
       `);
       const products = (rows as Record<string, unknown>[]).map((row) => ({
         id: String(row.id),
-        facilityId: String(row.facility_id),
-        facilityName: String(row.facility_name),
+        entityId: String(row.entity_id),
+        entityName: String(row.entity_name),
+        facilityId: row.facility_id === null || row.facility_id === undefined ? null : String(row.facility_id),
+        facilityName: row.facility_name === null || row.facility_name === undefined ? null : String(row.facility_name),
         name: String(row.name),
         description: row.description === null ? null : String(row.description),
         unit: String(row.unit),
@@ -2120,9 +2126,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and a.suspended_at is null
             and a.onboarding_state = 'seller_ready'
         ), owned_facility as (
-          select f.id, f.commercial_plan
+          select f.id, f.commercial_plan, e.id as entity_id
           from v2_facilities f
           join seller s on s.id = f.account_id
+          left join v2_entities e on e.id = f.entity_id or (e.account_id = f.account_id and e.display_name = f.name)
           where f.id = ${input.facilityId}::uuid
         ), slot_check as (
           select 1
@@ -2132,8 +2139,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and fs.status = 'assigned'
         ), inserted as (
           insert into v2_products
-            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
-          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
+            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
+          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
           from owned_facility of
           where exists (select 1 from slot_check)
           on conflict (facility_id, idempotency_key) do nothing
@@ -2182,11 +2189,18 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     async transitionSellerProduct(input: { authUserId: string; productId: string; to: 'published' | 'archived' }): Promise<{ productId: string; publicationState: 'published' | 'archived' }> {
       const rows = await retryDatabase(() => sql`
         with owned as (
-          select p.id, p.facility_id, p.publication_state, f.commercial_plan
-          from v2_products p join v2_facilities f on f.id = p.facility_id join v2_accounts a on a.id = f.account_id
+          select p.id, p.facility_id, p.publication_state, e.commercial_plan
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
         ), published_count as (
-          select count(*)::int as count from v2_products p where p.facility_id = (select facility_id from owned) and p.publication_state = 'published'
+          select count(*)::int as count
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          where coalesce(p.entity_id, f.entity_id) = (select coalesce(p2.entity_id, f2.entity_id) from v2_products p2 left join v2_facilities f2 on f2.id = p2.facility_id where p2.id = (select id from owned))
+            and p.publication_state = 'published'
         ), changed as (
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
@@ -2207,16 +2221,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         with owned as (
           select p.id, p.availability_state as from_state, a.id as account_id
           from v2_products p
-          join v2_facilities f on f.id = p.facility_id
-          join v2_accounts a on a.id = f.account_id
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
             and a.onboarding_state in ('seller_ready', 'complete')
             and p.publication_state in ('draft', 'published')
-            and (f.commercial_plan = 'pro_active' or exists (
-              select 1 from v2_facility_entitlements e
-              where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+            and (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+              select 1 from v2_facility_entitlements fe
+              where f.id is not null and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
             ))
         ), changed as (
           update v2_products p
@@ -2240,15 +2255,16 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
 
     async listProductStockEvents(input: { authUserId: string; productId: string }): Promise<{ authorized: boolean; events: Array<{ id: string; fromState: string | null; toState: string; source: 'auto' | 'manual'; reason: string | null; createdAt: string }> }> {
       const rows = await retryDatabase(() => sql`
-        select e.id, e.from_state, e.to_state, e.source, e.reason, e.created_at
-        from v2_product_stock_events e
-        join v2_products p on p.id = e.product_id
-        join v2_facilities f on f.id = p.facility_id
-        join v2_accounts a on a.id = f.account_id
-        where e.product_id = ${input.productId}::uuid
+        select e2.id, e2.from_state, e2.to_state, e2.source, e2.reason, e2.created_at
+        from v2_product_stock_events e2
+        join v2_products p on p.id = e2.product_id
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities en on en.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = en.account_id
+        where e2.product_id = ${input.productId}::uuid
           and a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-        order by e.created_at desc, e.id desc
+        order by e2.created_at desc, e2.id desc
         limit 50
       `);
       return {

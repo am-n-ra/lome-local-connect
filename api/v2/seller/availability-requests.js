@@ -1937,6 +1937,8 @@ function createTrunkRepository(sql = database()) {
       const rows = await retryDatabase(() => sql`
         select
           p.id,
+          e.id as entity_id,
+          e.display_name as entity_name,
           p.facility_id,
           f.name as facility_name,
           p.name,
@@ -1958,22 +1960,26 @@ function createTrunkRepository(sql = database()) {
           p.publication_state,
           p.availability_state,
           p.availability_expires_at,
-          (f.commercial_plan = 'pro_active' or exists (
-            select 1 from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+          (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+            select 1 from v2_facility_entitlements fe
+            where f.id is not null
+              and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
           )) as availability_pro_eligible
         from v2_products p
-        join v2_facilities f on f.id = p.facility_id
-        join v2_accounts a on a.id = f.account_id
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
           and a.onboarding_state = 'seller_ready'
-        order by f.name asc, p.updated_at desc, p.id desc
+        order by coalesce(e.display_name, p.name) asc, p.updated_at desc, p.id desc
       `);
       const products = rows.map((row) => ({
         id: String(row.id),
-        facilityId: String(row.facility_id),
-        facilityName: String(row.facility_name),
+        entityId: String(row.entity_id),
+        entityName: String(row.entity_name),
+        facilityId: row.facility_id === null || row.facility_id === void 0 ? null : String(row.facility_id),
+        facilityName: row.facility_name === null || row.facility_name === void 0 ? null : String(row.facility_name),
         name: String(row.name),
         description: row.description === null ? null : String(row.description),
         unit: String(row.unit),
@@ -2003,9 +2009,10 @@ function createTrunkRepository(sql = database()) {
             and a.suspended_at is null
             and a.onboarding_state = 'seller_ready'
         ), owned_facility as (
-          select f.id, f.commercial_plan
+          select f.id, f.commercial_plan, e.id as entity_id
           from v2_facilities f
           join seller s on s.id = f.account_id
+          left join v2_entities e on e.id = f.entity_id or (e.account_id = f.account_id and e.display_name = f.name)
           where f.id = ${input.facilityId}::uuid
         ), slot_check as (
           select 1
@@ -2015,8 +2022,8 @@ function createTrunkRepository(sql = database()) {
             and fs.status = 'assigned'
         ), inserted as (
           insert into v2_products
-            (facility_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
-          select of.id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
+            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
+          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
           from owned_facility of
           where exists (select 1 from slot_check)
           on conflict (facility_id, idempotency_key) do nothing
@@ -2053,11 +2060,18 @@ function createTrunkRepository(sql = database()) {
     async transitionSellerProduct(input) {
       const rows = await retryDatabase(() => sql`
         with owned as (
-          select p.id, p.facility_id, p.publication_state, f.commercial_plan
-          from v2_products p join v2_facilities f on f.id = p.facility_id join v2_accounts a on a.id = f.account_id
+          select p.id, p.facility_id, p.publication_state, e.commercial_plan
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
         ), published_count as (
-          select count(*)::int as count from v2_products p where p.facility_id = (select facility_id from owned) and p.publication_state = 'published'
+          select count(*)::int as count
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          where coalesce(p.entity_id, f.entity_id) = (select coalesce(p2.entity_id, f2.entity_id) from v2_products p2 left join v2_facilities f2 on f2.id = p2.facility_id where p2.id = (select id from owned))
+            and p.publication_state = 'published'
         ), changed as (
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
@@ -2077,16 +2091,17 @@ function createTrunkRepository(sql = database()) {
         with owned as (
           select p.id, p.availability_state as from_state, a.id as account_id
           from v2_products p
-          join v2_facilities f on f.id = p.facility_id
-          join v2_accounts a on a.id = f.account_id
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
             and a.onboarding_state in ('seller_ready', 'complete')
             and p.publication_state in ('draft', 'published')
-            and (f.commercial_plan = 'pro_active' or exists (
-              select 1 from v2_facility_entitlements e
-              where e.facility_id = f.id and e.entitlement_kind = 'facility_pro' and e.state = 'active'
+            and (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+              select 1 from v2_facility_entitlements fe
+              where f.id is not null and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
             ))
         ), changed as (
           update v2_products p
@@ -2109,15 +2124,16 @@ function createTrunkRepository(sql = database()) {
     },
     async listProductStockEvents(input) {
       const rows = await retryDatabase(() => sql`
-        select e.id, e.from_state, e.to_state, e.source, e.reason, e.created_at
-        from v2_product_stock_events e
-        join v2_products p on p.id = e.product_id
-        join v2_facilities f on f.id = p.facility_id
-        join v2_accounts a on a.id = f.account_id
-        where e.product_id = ${input.productId}::uuid
+        select e2.id, e2.from_state, e2.to_state, e2.source, e2.reason, e2.created_at
+        from v2_product_stock_events e2
+        join v2_products p on p.id = e2.product_id
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities en on en.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = en.account_id
+        where e2.product_id = ${input.productId}::uuid
           and a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-        order by e.created_at desc, e.id desc
+        order by e2.created_at desc, e2.id desc
         limit 50
       `);
       return {
@@ -5380,9 +5396,16 @@ var RoutingConfigurationError = class extends Error {
   }
 };
 var RoutingProviderError = class extends Error {
-  constructor(message) {
+  /** Why the provider failed, kept so the caller can tell an operator problem
+   * (bad token) from a transient one (outage) instead of flattening both into
+   * one message the buyer cannot act on. */
+  causeKind;
+  providerStatus;
+  constructor(message, causeKind = "server", providerStatus = null) {
     super(message);
     this.name = "RoutingProviderError";
+    this.causeKind = causeKind;
+    this.providerStatus = providerStatus;
   }
 };
 function isInsidePilotZone(point) {
@@ -5392,6 +5415,11 @@ function activeRoutingProvider() {
   if (process.env.MAPBOX_ACCESS_TOKEN?.trim()) return "mapbox";
   if (process.env.OSRM_BASE_URL?.trim()) return "osrm";
   return null;
+}
+function classifyProviderStatus(status) {
+  if (status === 401 || status === 403) return "auth";
+  if (status === 429) return "rate_limit";
+  return "server";
 }
 var CACHE_TTL_MS = 5 * 60 * 1e3;
 var CACHE_MAX_ENTRIES = 200;
@@ -5423,17 +5451,23 @@ async function fetchJson(url, providerLabel) {
   try {
     response = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
   } catch (error) {
+    const timedOut = error instanceof Error && error.name === "AbortError";
     throw new RoutingProviderError(
-      error instanceof Error && error.name === "AbortError" ? `The ${providerLabel} routing provider did not respond in time.` : `The ${providerLabel} routing provider could not be reached.`
+      timedOut ? `The ${providerLabel} routing provider did not respond in time.` : `The ${providerLabel} routing provider could not be reached.`,
+      timedOut ? "timeout" : "unreachable"
     );
   } finally {
     clearTimeout(timer);
   }
-  if (!response.ok) throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.`);
+  if (!response.ok) {
+    const kind = classifyProviderStatus(response.status);
+    const hint = kind === "auth" ? " (check MAPBOX_ACCESS_TOKEN: it must have no URL restriction, since these calls send no browser Referer)" : "";
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned ${response.status}.${hint}`, kind, response.status);
+  }
   try {
     return await response.json();
   } catch {
-    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`);
+    throw new RoutingProviderError(`The ${providerLabel} routing provider returned a malformed response.`, "malformed");
   }
 }
 async function fetchFromMapbox(from, to, profile) {
@@ -5452,13 +5486,14 @@ async function fetchFromMapbox(from, to, profile) {
   const payload = await fetchJson(url, "Mapbox");
   if (payload.code && payload.code !== "Ok") {
     throw new RoutingProviderError(
-      payload.code === "NoRoute" || payload.code === "NoSegment" ? "No road itinerary could be found between these two points." : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`
+      payload.code === "NoRoute" || payload.code === "NoSegment" ? "No road itinerary could be found between these two points." : payload.message?.trim() || `Mapbox refused the request (${payload.code}).`,
+      payload.code === "NoRoute" || payload.code === "NoSegment" ? "no_route" : "server"
     );
   }
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
-    throw new RoutingProviderError("The Mapbox routing provider returned no usable itinerary.");
+    throw new RoutingProviderError("The Mapbox routing provider returned no usable itinerary.", "no_route");
   }
   return {
     provider: "mapbox",
@@ -5482,7 +5517,7 @@ async function fetchFromOsrm(from, to, profile) {
   const route = payload.routes?.[0];
   const coordinates = route?.geometry?.coordinates ?? [];
   if (!route || coordinates.length < 2 || typeof route.distance !== "number" || typeof route.duration !== "number") {
-    throw new RoutingProviderError("The OSRM routing provider returned no usable itinerary.");
+    throw new RoutingProviderError("The OSRM routing provider returned no usable itinerary.", "no_route");
   }
   return {
     provider: "osrm",
@@ -5788,7 +5823,14 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       if (error instanceof RoutingProviderError) {
-        json(res, 200, { ok: true, correlationId, data: { available: false, reason: "PROVIDER_ERROR", message: error.message } });
+        console.error("routing_provider_error", {
+          causeKind: error.causeKind,
+          providerStatus: error.providerStatus,
+          // Never log the request URL: it carries MAPBOX_ACCESS_TOKEN.
+          message: error.message
+        });
+        const reason = error.causeKind === "no_route" ? "NO_ROUTE" : "PROVIDER_ERROR";
+        json(res, 200, { ok: true, correlationId, data: { available: false, reason, message: error.message } });
         return true;
       }
       throw error;

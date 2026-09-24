@@ -151,7 +151,58 @@ Les 5 lectures concernées (`src/server/trunk-repository.ts`) :
 
 **Recommandation de séquence corrigée :** R-1 (appliquée) → **R-2 = chemins entité-aware** → R-3 (confiance) → **R-4 (Pro par entité, plafond 20, bulk, seuil)**. Faire R-4 avant R-2 reviendrait à tarifer des *lieux* au lieu d'*entités* — la contradiction se reproduirait.
 
-## 11. Resource Receipt
+## 12. R-2 LIVRÉ (2026-09-24) — le tronc est entité-aware, preuve A/B réelle
+
+**M1 appliquée à la canonique `br-dawn-hill-am5amy22`** — zéro perte mesurée avant/après :
+`accounts 9 · facilities 206 · products 16 · published 16 · snapshots 12 · tx_events 93 · ledger 5` **identiques**.
+3 entités créées, 13 offres reliées, `facility_id` nullable, `entity_id` présent. Registre `058` + `059`.
+
+**M2a `059_v2_facility_entity_link.sql`** : lien explicite **facilité → entité** (additif, nullable),
+sans lequel la propriété d'une offre ne peut passer que par une correspondance par **nom** — fragile.
+Backfill mesuré : **3/3** facilités réelles liées.
+
+### 12.1 Périmètre effectivement converti
+
+| Point | Avant | Après |
+|---|---|---|
+| Écriture — `createSellerProductDraft` | pose `facility_id` seul | pose `entity_id` **aussi** (résolu par lien, sinon nom) |
+| Lecture — `listSellerCatalogue` | jointure **interne** facilité→compte | entité d'abord, **repli** `coalesce(p.entity_id, f.entity_id)` |
+| Lecture — `transitionSellerProduct` | comptage par `facility_id` | comptage **par entité** |
+| Lecture — `setProductAvailability` | Pro par facilité | Pro par **entité OU** facilité (repli) |
+| Lecture — `listProductStockEvents` | jointure interne | entité d'abord, repli |
+| UI — `CompanyV13` | groupait par `facilityId` | groupe par **entité**, affiche « sans lieu » honnêtement |
+| Type — `SellerCatalogueProduct` | `facilityId: string` | `facilityId: string \| null` + `entityId`/`entityName` |
+
+`getFacilityDetail` **reste** scopé au lieu : une offre sans lieu n'appartient pas à la fiche d'un lieu.
+Ce n'est **pas** un masquage, c'est correct — la découverte entité est R-5.
+
+### 12.2 Preuve A/B décisive (branche jetable supprimée après)
+
+Offre sans lieu réelle créée : `facility_id = null`, `position_kind = mobile`, `piece_unique`, `occasion`.
+
+| Requête | Résultat |
+|---|---|
+| **Ancienne** (jointure interne) | **0 ligne** — l'offre était **invisible** |
+| **Nouvelle** (via entité) | **1 ligne** — l'offre est **visible** |
+
+Même offre, même vendeur, même base. **La falsification est réelle** : l'ancienne requête échoue.
+
+Autres lectures vérifiées sur l'offre sans lieu : `transition_owned = 1`, `availability_owned = 1`,
+`stockevents_authorized = 1` (après insertion d'un événement, lu par requête séparée).
+
+### 12.3 Le piège Postgres m'a piégé **deux fois** dans la même session
+
+Un CTE qui écrit n'est pas visible du reste de la même instruction. Rencontré **à nouveau** :
+`events_inserted = 1` mais la lecture dans la même instruction renvoyait `0`. Re-lu séparément : `1`.
+**C'est de la sémantique, pas un bug — et c'est la deuxième fois aujourd'hui.** Toujours compter par requête séparée.
+
+### 12.4 État
+
+- `tsc` clean · **586/586 tests** (67 fichiers) · `check:boundary` clean · build OK.
+- Reste R-3 (confiance sur l'entité), **R-4** (Pro par entité, plafond 20, bulk, seuil), R-5 (découverte 2 niveaux).
+- Le seuil `< 5` de publication reste : c'est **C-4, hors périmètre R-2** (R-4 le corrige).
+
+## 13. Resource Receipt
 
 | Statut | Ressource |
 |---|---|

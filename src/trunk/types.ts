@@ -352,8 +352,11 @@ export interface SavedSearchListResult {
 
 export interface SellerCatalogueProduct {
   id: string;
-  facilityId: string;
-  facilityName: string;
+  /** S-25: the OFFER belongs to the entity. The place is optional (mobile/digital/individual). */
+  entityId: string;
+  entityName: string;
+  facilityId: string | null;
+  facilityName: string | null;
   name: string;
   description: string | null;
   unit: string;
