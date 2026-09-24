@@ -340,17 +340,29 @@ function renderDock(el, vertical) {
   }).join('');
 }
 function renderPins() {
+  // Décision A (2026-09-24) : la carte fournit les lieux. Un lieu niveau 0 se
+  // dessine en pointillé et s'ouvre sur sa fiche (« connu, pas géré ») — plus
+  // jamais un `toast` mort : un lieu n'est pas une impasse, c'est une invitation
+  // à revendiquer. Densité réelle : le monde est peuplé, pas un échantillon.
   if (S.role === 'admin' || S.role === 'operator') {
     document.getElementById('pins').innerHTML =
       '<span class="vdot unclaimed" style="left:34%;top:38%" onclick="go(\'admin-review\')"></span>' +
       '<span class="vdot unclaimed" style="left:60%;top:44%" onclick="go(\'admin-review\')"></span>';
     return;
   }
+  const z = s => 'transform:scale(' + S.zoom + ')' + s;
+  const u = (l, t, n) =>
+    '<span class="vdot unclaimed" style="left:' + l + '%;top:' + t + '%;' + z('') +
+    '" onclick="go(\'lieu-connaitre\')" title="' + n + ' · lieu connu, non revendiqué"></span>';
   const pins = S.sheet === 'search' || S.sheet === 'scan-entity'
-    ? '<span class="vdot" style="left:34%;top:40%;transform:scale(' + S.zoom + ')" onclick="openOffer(\'commerce\')"></span>' +
-      '<span class="vdot ink" style="left:62%;top:36%;transform:scale(' + S.zoom + ')" onclick="openOffer(\'person\')"></span>' +
-      '<span class="vdot unclaimed" style="left:24%;top:56%;transform:scale(' + S.zoom + ')" onclick="toast(\'Lieu connu — non revendiqué\')"></span>'
-    : '<span class="vdot ink" style="left:48%;top:42%" onclick="openOffer(\'commerce\')"></span>';
+    ? '<span class="vdot" style="left:34%;top:40%;' + z('') + '" onclick="openOffer(\'commerce\')"></span>' +
+      '<span class="vdot ink" style="left:62%;top:36%;' + z('') + '" onclick="openOffer(\'person\')"></span>' +
+      u(24, 56, 'Épicerie du Port') + u(41, 30, 'Couture Ama') + u(57, 55, 'Garage Kodjo') +
+      u(70, 29, 'Pharmacie Bè') + u(33, 63, 'Boulangerie Adawlato') + u(77, 48, 'Crèche Les Anges') +
+      u(19, 44, 'Atelier Menuiserie') + u(64, 66, 'Salon Grâce') + u(46, 24, 'Cabinet Dentaire') +
+      u(28, 35, 'Cyber Café') + u(72, 60, 'Épicerie Kossi') + u(38, 49, 'Bureau Traductions')
+    : '<span class="vdot ink" style="left:48%;top:42%" onclick="openOffer(\'commerce\')"></span>' +
+      u(30, 52, 'Lieu connu') + u(63, 33, 'Lieu connu') + u(44, 61, 'Lieu connu');
   document.getElementById('pins').innerHTML = pins;
   document.getElementById('countmark').style.display = (S.sheet === 'search') ? '' : 'none';
 }
@@ -468,7 +480,7 @@ SHEETS.results = () => `
     <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">Niv. 2 · À confirmer</span><small class="trust">4,2 ★ · Achetée 5× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="openOffer('immo')"><div class="thumb immo">🏠</div><div class="body"><b>Studio meublé — Adawlato</b><small>Agence Dovi · immobilier · 900 m</small><span class="pr">85 000 F<span class="old">95 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,8 ★ · Louée 3× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="openOffer('digital')"><div class="thumb digital">⚡</div><div class="body"><b>Cours de maths (en ligne)</b><small>M. Kodjo · digital · <b>origine : Lomé</b></small><span class="pr">5 000 F</span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 3 · Disponible</span><small class="trust">4,9 ★ · Vendue 30× · intégrité ✓</small></div></div>
-    <div class="hcard" onclick="toast('Lieu connu mais non revendiqué — non interrogeable')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span><small class="trust muted">Pas d’offre · rien à évaluer</small></div></div>
+    <div class="hcard" onclick="go('lieu-connaitre')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span><small class="trust muted">Pas d’offre · rien à évaluer</small></div></div>
   </div>
   <div class="sortbar">
     ${[['best', 'Meilleur match'], ['near', 'Plus proche'], ['price', 'Prix le plus bas'], ['disc', 'Remise Omni']].map(([k, l]) =>
@@ -882,6 +894,27 @@ SHEETS['seller-entity'] = () => `
   </div>
   <button class="btn" onclick="createEntity()">Créer mon entité</button>
   <p class="lead">Même un particulier crée une entité (S-28). Publier ne requiert <b>pas</b> la vérification (S-31).</p>`;
+
+SHEETS['lieu-connaitre'] = () => `
+  <div class="handle"></div><div class="eyebrow">Lieu connu · sur la carte</div>
+  <h1 style="margin-top:3px">Épicerie du Port</h1>
+  <p class="lead">Ce lieu est <b>sur la carte</b>, mais <b>personne ne l’a encore revendiqué</b>. Omni ne peut donc rien promettre à son sujet.</p>
+  <div class="cardbox">
+    <div class="kv"><span>Statut</span><b class="status dash">Niv. 0 · Non revendiquée</b></div>
+    <div class="kv"><span>Position</span><b>Adawlato · point de la carte</b></div>
+    <div class="kv"><span>Géré par</span><b>Aucune entité</b></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Ce qu’Omni ne peut PAS dire</span><b class="status warn">Dispo · prix · horaires</b></div>
+    <p class="lead" style="margin:8px 0 0">Tant qu’aucune entité ne le gère, il n’y a <b>rien à interroger</b> — et Omni ne l’inventera pas.</p>
+  </div>
+  <button class="btn" onclick="go('seller-claim')">C’est mon lieu — le revendiquer</button>
+  <button class="btn ghost" onclick="go('seller-entity',{toast:'Créer une entité — immédiat'})">Créer une entité (pas ce lieu)</button>
+  <div class="cardbox" style="margin-top:10px">
+    <div class="kv"><span>Revendiquer</span><b>Preuve + arbitrage opérateur</b></div>
+    <div class="kv"><span>Créer</span><b>Immédiat · badge « Non vérifié »</b></div>
+  </div>
+  <p class="lead">Revendiquer un lieu <b>réel</b> ≠ créer : la preuve de contrôle empêche l’usurpation (S-18).</p>`;
 
 SHEETS['seller-claim'] = () => `
   <div class="handle"></div><div class="eyebrow">Revendication · preuve de contrôle</div>

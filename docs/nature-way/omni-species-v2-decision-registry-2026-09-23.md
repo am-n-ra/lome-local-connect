@@ -3,7 +3,7 @@
 > **Tâche :** `T-11` (plan `NW-PROD-OMNI-SEED2-01`) · **Phase :** Species (réouverte)
 > **As of :** 2026-09-23 · **Auteur :** Nature Way · **Owner décisions :** fondateur
 > **Référence unique :** `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions,
-> `founder-confirmed`) · **Maquette :** `docs/maquette/omni-species-v2-interactive.html` (73 écrans)
+> `founder-confirmed`) · **Maquette :** `docs/maquette/omni-species-v2-interactive.html` (74 écrans)
 > **Source d'état :** `docs/founder-hq/current-state.md`
 > **Méthode :** mesure **code-vérifiée** de la maquette (grep + inventaire `SHEETS`), pas d'opinion.
 
@@ -225,7 +225,7 @@ Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run c
 **Preuve falsifiable :** en réintroduisant `LEVELS[lv - 1]` → **FAIL exit 1** ; en retirant `entity-empty` → **FAIL (2)** « inventaire réduit » + « état vide entité absent ». **Un test qui ne peut pas échouer ne prouve rien** — les deux modes d'échec ont été **vérifiés**.
 
 **Preuve navigateur :** `entity-search` (état entité actif, contraintes masquées) · `entity-empty` (état vide + revendication) · `entite-publique` (nature + niveau + ses offres).
-**Preuve technique :** JS `node --check` **OK**, **73 écrans**, **0 doublon**, `check:maquette` vert.
+**Preuve technique :** JS `node --check` **OK**, **74 écrans**, **0 doublon**, `check:maquette` vert.
 
 ## 8sexies. T-12 — AUDIT DE CONFORMITÉ LIVRÉ (2026-09-23)
 
