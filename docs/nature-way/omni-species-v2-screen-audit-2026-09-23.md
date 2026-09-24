@@ -1,3 +1,15 @@
+> ⚠️ **CORRECTION 2026-09-23 (protocole — une seule source de vérité).**
+> Cet audit a été mesuré contre l'**ANCIEN registre MV1** (`docs/omni-v1-screen-and-state-specification.md` §4),
+> alors que le Seed a été **rouvert et re-clos en V2** le **2026-09-23**
+> (`docs/nature-way/omni-intent-brief-v2-2026-09-23.md`, 34 décisions **S-01…S-34**, `founder-confirmed`).
+> Il mesure donc la **complétude d'écrans**, **pas la conformité aux décisions produit V2**.
+> Il ne cite **aucune** décision `S-xx` (vérifié : 0 occurrence).
+> **Verdict : l'audit Species V2 n'est PAS clos.** Cet écart est enregistré (COH-V2-18).
+> Le présent document reste valable comme **inventaire d'écrans** ; il ne peut pas servir de
+> preuve de clôture Species.
+
+---
+
 # Audit d'écrans — Species V2 (prototype interactif) vs registre MV1
 
 **Date :** 2026-09-23 · **Artefact :** `docs/maquette/omni-species-v2-interactive.html` (52 écrans)

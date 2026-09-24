@@ -68,3 +68,37 @@ anti-orphelin (`grep` importeurs) **avant** de conclure qu'une capacité n'exist
 | Loaded | `.agents/skills/nature-way/` inventory (12 references, 5 templates) |
 | Not loaded / reason | `founder-intent-discovery.md`, `technical-lead-production-review.md`, `autonomous-delivery-gates.md`, `visual-and-logic-coherence-review.md`, `proof-and-decision-ledger.md`, `risk-and-escalation-matrix.md` — **non déclenchés** avant la décision T-01/T-02 qui ouvre leur phase |
 | Not loaded / reason | `execution-plan-and-task-tree.md`, `production-evidence-register.md`, `launch-envelope.md` — phases Trunk/Canopy non actives |
+
+## Correction d'état 2026-09-23 (protocole — lecture de l'état réel)
+
+**Erreur corrigée :** j'ai affirmé à deux reprises que « Seed/Species sont clôturés » puis
+« nous sommes au Root System ». **Faux.** L'état réel est écrit dans
+`docs/founder-hq/founder-hq-master-plan.md` §« HQ RECONCILIATION — 2026-09-23 » :
+
+- **Declencheur fondateur :** « on a assez tourne en rond… je pense qu'on a rate tout le
+  process depuis Species » + « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse. »
+- **Porte actuelle :** **Seed reconciliation + Species reconciliation (reouverte)** — pas Root.
+- **`docs/nature-way/omni-intent-brief-v2-2026-09-23.md`** : **Seed CLOS,
+  `founder-confirmed` 2026-09-23**, 34 décisions **S-01…S-34**, « c'est ça » (fondateur).
+- **Prochain explicitement écrit :** réconciliation masters → SDM V2 →
+  **Species V2** (maquette montrée au fondateur dans le navigateur), ordre
+  **acheteur → offreur → échelle d'existence**.
+- La ligne G-01/G-02 `done` du Master Plan est l'état **V1 du 2026-09-02**, **superseded**
+  par la réouverture du 2026-09-23 — pas l'état courant.
+
+**Conséquence sur le plan :** le tableau T-01…T-10 ci-dessus décrit un état où
+T-01/T-02 étaient « en review ». → **T-01 et T-02 sont `done`** (D-1a fusion, D-2a entité).
+Les décisions **S-xx V2** n'étaient pas dans ce tableau : **le plan doit être réétalonné
+sur les S-xx** (tâche T-11 ci-dessous).
+
+| ID | Parent | Chemin structurel | Phase | Objectif | Dépendance | Owner | Statut | Critère d'acceptation | Preuve attendue | Risque/dette | Re-plan |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **T-11** | T-01 | product > species | **Species** | **Réétalonner le plan V2 sur les 34 décisions S-01…S-34** : cartographier chaque S-xx → surface maquette (présente/partielle/absente) → tranche | T-01, Intent Brief V2 | Nature Way | `ready` | table S-xx → surface → tranche, zéro décision orpheline | table dans un registre Species V2 | COH-V2-18 (audit mesuré contre MV1) | audit clos à tort |
+| **T-12** | T-11 | product > species | **Species** | **Audit de conformité Species V2** (au-delà de l'inventaire d'écrans) : vérifier que chaque surface **respecte** les S-xx (S-05 unclaimed, S-06 échelle 0→4, S-11 double niveau, S-13 filtres carte, S-18 revendication, S-32 intégrité/réputation d'offre…) | T-11 | Nature Way | `planned` | verdict par décision : conforme / partielle / absente | registre Species V2 | audit MV1 trompeur | — |
+
+**Clarification :** la maquette V2 contient **déjà** des surfaces des décisions S-xx
+(`Lieu connu`/`Non revendiquée`/`Revendiquer` pour S-05/S-18 ; `WhatsApp`/`numéro` pour S-16 ;
+`transport` pour S-10). Mais plusieurs **décisions structurantes n'ont aucune surface** :
+**S-06 échelle 0→4** (`Discoverable/Queryable/Available/Transactable` : 0 occurrence),
+**S-11 double niveau** (`Queryable` : 0), **S-13 filtres carte** (`ambulant` : 0),
+**S-32 intégrité/réputation d'offre** (badge absent). → **T-11/T-12 sont le vrai travail Species.**
