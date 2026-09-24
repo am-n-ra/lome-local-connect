@@ -873,6 +873,44 @@ function sellerValidate() { S.txn = 'qr_verified'; go('txn-track', { toast: 'Cod
 function sellerValidateFromDash() { S.hasEntity = true; S.txn = 'qr_verified'; go('seller-chat', { toast: 'Validé — chat transaction ouvert' }); }
 function createEntity() { S.hasEntity = true; S.entity = 'Boutique Kodjo'; go('seller-dash', { toast: 'Entité créée — vous pouvez publier' }); }
 function setEntityKind(k) { S.entityKind = k; render(); }
+// Repères proches : ces noms viennent des TUILES réelles de Lomé (place + poi),
+// pas d'une liste inventée. Chercher un repère sert à se situer vite avant de
+// poser son point — on n'exige pas de l'utilisateur qu'il connaisse ses coordonnées.
+const NEARBY = [
+  { n: 'Cathédrale du Sacré Cœur', d: '180 m', k: 'repère' },
+  { n: 'Grand Marché d’Adawlato', d: '320 m', k: 'marché' },
+  { n: 'Église Saint-Antoine de Padoue', d: '410 m', k: 'repère' },
+  { n: 'Collège Notre-Dame des Apôtres', d: '520 m', k: 'école' },
+  { n: 'Tokoin-Hôpital', d: '640 m', k: 'quartier' },
+  { n: 'Amoutivé', d: '780 m', k: 'quartier' },
+  { n: 'Tokoin-Forever', d: '910 m', k: 'quartier' }
+];
+function searchPlace(q) {
+  // On normalise les accents : un utilisateur tape « marche » ou « eglise » sans
+  // accent bien plus souvent qu'avec. Comparer sans diacritique est la seule façon
+  // de ne pas lui rendre une recherche vide alors que le lieu existe.
+  const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const t = norm(q).trim();
+  S.placeResults = t ? NEARBY.filter(p => norm(p.n).includes(t) || norm(p.k).includes(t)) : [];
+  const box = document.getElementById('placeResults');
+  if (box) box.innerHTML = (S.placeResults || []).map((p, i) =>
+    `<div class="pitem" onclick="pickPlace(${i})"><b>${p.n}</b><small>${p.d} · ${p.k}</small></div>`).join('');
+}
+// Choisir un repère rapproche le pin (le repère devient le point de départ), puis
+// l'utilisateur affine au doigt. Le repère ne remplace pas la position : il l'aide.
+function pickPlace(i) {
+  const p = (S.placeResults || [])[i];
+  if (!p) return;
+  const pin = document.getElementById('entitypin');
+  if (pin) { pin.style.left = '52%'; pin.style.top = '48%'; }
+  const lab = document.getElementById('posLabel');
+  if (lab) lab.textContent = p.n + ' · à affiner';
+  S.placeResults = [];
+  const box = document.getElementById('placeResults');
+  if (box) box.innerHTML = '';
+  const inp = document.getElementById('placeSearch');
+  if (inp) inp.value = '';
+}
 // Le pin de création part de la position de l'utilisateur et se déplace librement.
 // Un seul code sert les trois formes : un lieu fixe se corrige, un mobile se
 // déplace, un digital dit d'où l'on parle. Le geste est identique — le sens change.
@@ -932,11 +970,16 @@ SHEETS['seller-entity'] = () => `
   </div>
   <div class="cardbox">
     <div class="kv"><span>${S.entityKind === 'digital' ? 'D’où vous parlez <i>(origine)</i>' : 'Où vous êtes'}</span><b id="posLabel">${S.entityKind === 'digital' ? 'Lomé · Adawlato' : 'Ma position · déplaçable'}</b></div>
+    <div class="fld" style="margin-top:8px">
+      <input id="placeSearch" placeholder="Chercher un lieu proche (marché, église, école…)" oninput="searchPlace(this.value)" autocomplete="off">
+    </div>
+    <div id="placeResults">${(S.placeResults || []).map((p, i) =>
+      `<div class="pitem" onclick="pickPlace(${i})"><b>${p.n}</b><small>${p.d} · ${p.k}</small></div>`).join('')}</div>
     <div id="entitymap" style="position:relative;height:132px;border-radius:14px;overflow:hidden;margin-top:8px;background:radial-gradient(circle at 40% 35%, #fdfdfc 0%, #f1f1ef 60%, #e8e8e6 100%);border:1px solid var(--line,#e8e8e6)">
       <span class="usermarker" style="left:38%;top:52%"></span>
       <span class="vdot ink" id="entitypin" style="left:60%;top:34%;width:16px;height:16px;cursor:grab;touch-action:none"></span>
     </div>
-    <p class="lead" style="margin:8px 0 0">Le pin part de <b>votre position</b> et se <b>déplace librement</b>. ${S.entityKind === 'digital' ? 'Pour une offre <b>immatérielle</b>, la position dit <i>d’où vous parlez</i> — jamais un déplacement à faire.' : 'Vous pouvez le corriger : vous seul savez où se trouve votre lieu.'}</p>
+    <p class="lead" style="margin:8px 0 0">Le pin part de <b>votre position</b> et se <b>déplace librement</b>. ${S.entityKind === 'digital' ? 'Pour une offre <b>immatérielle</b>, la position dit <i>d’où vous parlez</i> — jamais un déplacement à faire.' : 'Vous pouvez le corriger : vous seul savez où se trouve votre lieu. Cherchez un <b>repère proche</b> pour vous situer, puis posez votre point.'}</p>
   </div>
   <button class="btn" onclick="createEntity()">Créer mon entité</button>
   <p class="lead">Même un particulier crée une entité (S-28). Publier ne requiert <b>pas</b> la vérification (S-31).</p>`;
