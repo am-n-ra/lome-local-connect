@@ -203,7 +203,17 @@ const S = {
   sheet: 'search',
   prev: [],
   constraints: { rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false }, sort: 'best', fresh: 'fresh',
-  product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m' },
+  product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
+    // S-01 : tout est offre, les différences sont des CARACTÉRISTIQUES (modèle jour 1)
+    carac: {
+      qte: '24 disponibles', depletion: 'Décompte à chaque vente',
+      unique: null,
+      position: 'Fixe · sur place',
+      temporalite: 'Ouvert · mar–dim 8h–20h',
+      remise: 'Retrait sur place',
+      etat: 'Neuf',
+      prix: 'Fixe · négociable ? non',
+    } },
   entity: null,
   hasEntity: false,
   txn: null,
@@ -330,9 +340,16 @@ function renderFilters() {
 }
 
 function openOffer(kind) {
+  // S-01 : chaque offre expose ses CARACTÉRISTIQUES (modèle jour 1) — commerce renouvelable vs pièce unique
   S.product = kind === 'person'
-    ? { name: 'Ordinateur Dell (occasion)', price: '45 000 F', old: '50 000 F', promo: '−10 % Omni', seller: 'Awa T.', kind: 'particulier', dist: '380 m' }
-    : { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m' };
+    ? { name: 'Ordinateur Dell (occasion)', price: '45 000 F', old: '50 000 F', promo: '−10 % Omni', seller: 'Awa T.', kind: 'particulier', dist: '380 m',
+        carac: { qte: '1 exemplaire', depletion: 'Disparaît après la vente', unique: true,
+                 position: 'Fixe · domicile', temporalite: 'Toujours à vendre (pas de créneau)',
+                 remise: 'Retrait chez le vendeur', etat: 'Occasion · très bon état', prix: 'Fixe · négociable ? oui' } }
+    : { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
+        carac: { qte: '24 disponibles', depletion: 'Décompte à chaque vente', unique: null,
+                 position: 'Fixe · sur place', temporalite: 'Ouvert · mar–dim 8h–20h',
+                 remise: 'Retrait sur place', etat: 'Neuf', prix: 'Fixe · négociable ? non' } };
   go('offer');
 }
 
@@ -437,8 +454,17 @@ SHEETS.offer = () => `
     <div class="kv"><span>Intégrité de l’offre</span><b style="color:var(--accent)">Visuel ✓ · prix cohérent ✓</b></div>
     <div class="kv"><span>Réputation de l’offre</span><b>Achetée 12× · 4,6 ★</b></div>
     <div class="kv"><span>Entité</span><b>${S.product.seller} · ${S.product.kind === 'particulier' ? 'non vérifiée' : 'vérifiée'}</b></div>
-    <div class="kv"><span>Quantité</span><b>${S.product.kind === 'particulier' ? '1 (objet unique)' : '24'}</b></div>
-    <div class="kv"><span>Retrait / livraison</span><b>Retrait sur place</b></div>
+  </div>
+  <div class="section-kicker">Caractéristiques de l’offre</div>
+  <div class="cardbox">
+    <div class="kv"><span>Quantité</span><b>${S.product.carac.qte}</b></div>
+    <div class="kv"><span>Déplétion</span><b>${S.product.carac.depletion}</b></div>
+    <div class="kv"><span>Unicité</span><b>${S.product.carac.unique ? 'Pièce unique — disparaît après vente' : 'Offre renouvelable'}</b></div>
+    <div class="kv"><span>Position</span><b>${S.product.carac.position}</b></div>
+    <div class="kv"><span>Temporalité</span><b>${S.product.carac.temporalite}</b></div>
+    <div class="kv"><span>État</span><b>${S.product.carac.etat}</b></div>
+    <div class="kv"><span>Prix</span><b>${S.product.carac.prix}</b></div>
+    <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques — aucun « type » séparé. Le digital, le service et le transport se décrivent avec ces mêmes champs.</p>
   </div>
   <div class="cardbox">
     <div class="kv"><span>Dans votre panier</span><b>1 produit · <span onclick="toast('Panier vidé')" style="text-decoration:underline;cursor:pointer">vider</span></b></div>

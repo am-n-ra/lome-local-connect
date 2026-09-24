@@ -22,12 +22,12 @@ la maquette → rien à dessiner).
 | **S-03** | L'entité mère liste son offre | `seller-publish`, `seller-offers`, `entite-publique` | **OK** | — |
 | **S-04** | Toute offre existe via une entité | `seller-publish`, `seller-entry` | **OK** | — |
 | **S-05** | Amorçage à froid : `unclaimed` niveau 0, « Lieu connu — pas encore géré », *Revendiquer* | `results`, `facility-apex`, `seller-claim` | **OK** | libellé « Lieu connu » : 2 occurrences ✓ |
-| **S-06** | **Échelle d'existence 0→4** (Présente→Revendiquée→Offre→Dispo→Transactable) | — | **ABSENT** | **`Discoverable`/`Queryable`/`Transactable` : 0 occurrence.** Aucune surface ne montre le **niveau** d'un lieu. C'est le concept structurant le plus visible qui manque |
-| **S-07** | Carte + recherche = 2 vues d'un corpus ; **carte filtrable** | `home`, `search` | **PARTIEL** | carte présente ; **filtres de carte par type/transport : absents** (`ambulant` : 0) |
+| **S-06** | **Échelle d'existence 0→4** (Présente→Revendiquée→Offre→Dispo→Transactable) | `search` chip `Transactable` | **PARTIEL** | ⚠️ **Correction :** `Transactable` **existe** comme **chip de filtre** (`Discoverable`/`Queryable` : 0). Mais **aucune surface ne montre le NIVEAU d'un lieu** — le chip filtre, il n'enseigne pas l'échelle |
+| **S-07** | Carte + recherche = 2 vues d'un corpus ; **carte filtrable** | `search` (`Tout` / `Commerces` / `Particuliers` / `Transport`) | **OK (corrigé)** | ⚠️ **Correction :** les filtres de carte **existent** (`Tout / Commerces / Particuliers / Transport`). Ma mesure « absents » était fausse — je cherchais `ambulant`, jamais le libellé réel |
 | **S-08** | Itinéraire = soutien ; transport = une offre | `offer` (itinéraire), `transport` : 4 occ. | **PARTIEL** | itinéraire OK ; **offre de transport** non modélisée visuellement |
 | **S-09** | Le prix compte, visible/comparable | `results`, `compare`, `offer` | **OK** | — |
 | **S-10** | Offre non limitée au physique (digital, service, transport, immobilier) ; origine géo | `digital` 1, `service` 6, `transport` 4, `immobilier` **0** | **PARTIEL** | **immobilier absent** ; **origine géographique d'une offre digitale non montrée** (`origine` : 0) |
-| **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (une seule entrée) | **ABSENT** | **aucune UI ne distingue** « je cherche une entité » vs « je cherche une offre » (`Queryable` : 0) |
+| **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (une seule entrée `Produit, service, propriété, compétence…`) | **ABSENT** | **aucune UI ne distingue** « je cherche une entité » vs « je cherche une offre » (`Queryable` : 0) |
 | **S-12** | Transport : fondation jour 1, affichage V1, requête A→B = `V1+` | `transport` : 4 | **PARTIEL** | pas d'écran d'offre mobile/transport (normal : `V1+`), mais la **fondation** doit se voir |
 | **S-13** | « Entité » = tout offreur (commerce, organisation, personne seule) même objet | `seller-entry`, `seller-entity` | **OK** | — |
 | **S-25** | **L'offre appartient à l'ENTITÉ** ; le lieu = *où*, pas *à qui* | `entite-publique`, `offer`, `seller-offers` | **PARTIEL** | `entite-publique` existe ✓ mais l'ownership entité n'est pas **explicite** dans la fiche offre |
@@ -67,7 +67,7 @@ démontre pas `S-01` — et c'est exactement le grief fondateur « le fond qui f
 | **S-20** | **Toute offre porte des visuels** (≥ 1 image) | `Visuel` 6, `image` 3, `photo` 2 | **OK** | — |
 | **S-30** | La confiance porte sur l'**entité**, jamais sur l'offre | `seller-verif`, `entite-publique` | **OK** | — |
 | **S-31** | Publier **ne requiert pas** la vérification | `seller-publish` | **OK** | — |
-| **S-32** | **Intégrité automatique + réputation par OFFRE** | — | **ABSENT** | aucun badge d'intégrité, aucune réputation liée à l'offre sur `offer`/`results` |
+| **S-32** | **Intégrité automatique + réputation par OFFRE** | `offer` (`Intégrité de l'offre` ×1, `Réputation de l'offre` ×2) | **PARTIEL (corrigé)** | ⚠️ **Correction de mesure :** ma mesure initiale « ABSENT » était **fausse** — elle cherchait `badge`/`intégrité` et **ratait** les libellés réels `Intégrité de l'offre` / `Réputation de l'offre`, présents sur la **fiche offre**. En outre `results` **énonce** « chaque offre porte un visuel, un avantage Omni et une réputation propre (S-32) ». Reste partiel : pas de **badge par carte** sur `results` → l'acheteur ne voit pas la réputation **au moment de choisir** |
 
 ## 4. QR, transaction, canaux
 
@@ -106,7 +106,7 @@ démontre pas `S-01` — et c'est exactement le grief fondateur « le fond qui f
 | **P0** | **S-01 + caractéristiques** | surface des 7 caractéristiques (dont **négociable** : 0, **durée** : 0, **unicité**, **déplétion**) | **c'est le modèle** — sans lui, « tout est offre » n'est pas démontré |
 | **P0** | **S-06** | échelle 0→4 (0 occurrence) | concept de niveau d'existence = cœur de la lecture d'un lieu |
 | **P0** | **S-11** | double niveau entité / offre | décision explicite du fondateur + test de non-régression au Root |
-| **P1** | **S-32** | intégrité + réputation **par offre** | sinon on retombe sur « entité vérifiée = offre sûre » |
+| **P1** | **S-32** | intégrité + réputation **visibles au choix** (déjà sur la fiche) | sinon l'acheteur ne les voit qu'**après** avoir ouvert l'offre |
 | **P1** | **S-07** | filtres de carte (type/transport) | sinon la carte sature |
 | **P1** | **S-10** | immobilier + **origine géo du digital** | promesse « d'où ça vient » |
 | **P2** | **S-22** | partage hors Omni (WhatsApp/SMS) | canal d'acquisition |
@@ -126,6 +126,45 @@ démontre pas `S-01` — et c'est exactement le grief fondateur « le fond qui f
 
 **Ordre :** SP-1 → SP-2 → SP-3 (le fond) → SP-4/SP-5 → SP-6.
 Chaque tranche = mini-species (surface), puis T-12 vérifiera la cohérence.
+
+## 8bis. Corrections de mesure (T-11b — vérification navigateur)
+
+> **Leçon :** mesurer par `grep` **seul** produit des faux négatifs. Le premier registre sous-estimait
+> **S-07**, **S-32** et **S-06** parce qu'il cherchait mes **termes**, pas les **libellés réels** de la
+> maquette. La vérification dans le navigateur a démenti trois lignes. Corrigé ; **la méthode est
+> désormais : grep → ouvrir l'écran → lire le libellé**.
+
+| Ligne | Mesure initiale | Réalité vérifiée | Leçon |
+|---|---|---|---|
+| **S-07** | « filtres carte absents » | filtres `Tout / Commerces / Particuliers / Transport` **présents** | je cherchais `ambulant`, pas le libellé |
+| **S-32** | « ABSENT » | `Intégrité de l'offre` + `Réputation de l'offre` **sur la fiche**, + énoncé sur `results` | je cherchais `badge`/`intégrité` sans accent/pluriel |
+| **S-06** | « ABSENT » | chip `Transactable` **présent** (filtre) | le mot existait, en filtre |
+
+## 8ter. SP-1 — LIVRÉ (2026-09-23), preuve navigateur
+
+**Tranche `SP-1` : panneau « Caractéristiques de l'offre »** sur la fiche offre — les 7 caractéristiques du modèle jour 1.
+
+| Caractéristique | Commerce (Kodjo) | Particulier (Awa T.) |
+|---|---|---|
+| Quantité | 24 disponibles | 1 exemplaire |
+| Déplétion | Décompte à chaque vente | Disparaît après la vente |
+| **Unicité** | Offre renouvelable | **Pièce unique** |
+| Position | Fixe · sur place | Fixe · domicile |
+| Temporalité | Ouvert · mar–dim 8h–20h | Toujours à vendre (pas de créneau) |
+| État | Neuf | Occasion · très bon état |
+| **Prix / négociable** | Fixe · négociable ? **non** | Fixe · négociable ? **oui** |
+
+**Preuve :** maquette rechargée → fiche offre ouverte → panneau rendu avec les 7 champs, **les deux
+profils** (commerce renouvelable vs pièce unique) ; JS `node --check` **OK**, **72 écrans** intacts, 0 doublon.
+
+**Bug réel trouvé et corrigé en livrant SP-1 :** `openOffer()` réaffectait `S.product` **sans** le champ
+`carac` → la fiche offre aurait **planté** (`Cannot read properties of undefined`). La version commerce
+passait par chance (objet initial complet) ; la version **particulier** aurait cassé. Corrigé : les deux
+profils portent leurs caractéristiques. **Un champ ajouté à un objet partagé doit être ajouté à TOUS
+ses producteurs, pas seulement à l'initialiseur.**
+
+**Reste :** `S-01` passe de **PARTIEL** à **OK** sur la fiche ; la démonstration **au niveau `results`**
+(badge par carte) reste `SP-4`.
 
 ## 9. Resource Receipt
 
