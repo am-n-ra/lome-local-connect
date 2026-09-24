@@ -13,21 +13,49 @@
 
 | ID | Parent | Chemin structurel | Phase | Objectif | Dépendance | Owner | Statut | Critère d'acceptation | Preuve attendue | Risque/dette | Ressource | Re-plan |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| T-01 | — | product > direction | Seed | Rouvrir le Seed et rétablir une intention unique | — | Fondateur | `review` | dirigeant confirme la fusion maquette+app | décision écrite | COH-V2-01/02 | `founder-intent-discovery.md` | refus |
-| T-02 | T-01 | product > direction | Seed | Trancher le **modèle entité** (E-01) : offre → entité, pas facility | — | Fondateur | `review` | décision Root « entité » écrite | SDM E-01 mis à jour | COH-V2-03 (haute) | `prerequisite-architecture.md` | modèle alternatif |
+| T-01 | — | product > direction | Seed | Rouvrir le Seed et rétablir une intention unique | — | Fondateur | `done` | dirigeant confirme la fusion maquette+app | **D-1a (fusion) — 2026-09-23** | COH-V2-01/02 | `founder-intent-discovery.md` | refus |
+| T-02 | T-01 | product > direction | Seed | Trancher le **modèle entité** (E-01) : offre → entité, pas facility | T-01 | Fondateur | `done` | décision Root « entité » écrite | **D-2a (offre appartient à l'ENTITÉ) — 2026-09-23** | COH-V2-03 (haute) | `prerequisite-architecture.md` | modèle alternatif |
+| **T-09** | T-01 | product > couverture | **Root** | **Trancher la couverture de base mondiale des lieux** (SCOUT-01) : OSM back-fill borné, dedup `unclaimed`, market `GLOBAL` — ou non | T-01 | **Fondateur** | `review` | **D-COV-1/D-COV-2 écrites** | décision écrite + SDM couverture | SCOUT-01 (haute) | `prerequisite-architecture.md` | refus (c) |
+| **T-10** | T-01 | product > transaction | **Root** | **Trancher le cycle d'expiration honnête** (SCOUT-02/03) : « En cours » actionnable, section Expirées + Relancer, notif, délais par étape | T-01 | **Fondateur** | `review` | **D-EXP-1…4 écrites** | décision écrite | SCOUT-02 (haute) | `risk-and-escalation-matrix.md` | — |
 | T-03 | T-02 | product > contrat | Root | Contrat : visuel obligatoire (E-03) + avantage >0 (E-04) | T-02 | Nature Way | `planned` | refus serveur écrit + migration additive | migration + test | COH-V2-04/05 | `technical-lead-production-review.md` | — |
 | T-04 | T-02 | product > confiance | Root | Trancher **opérateur terrain** distinct (E-09) | T-02 | Fondateur | `planned` | décision rôle écrite | SDM E-09 | COH-V2-07 | `risk-and-escalation-matrix.md` | — |
 | T-05 | T-03 | product > confiance | Root | **Réputation + intégrité par offre** (E-05) | T-03 | Nature Way | `planned` | table + recalcul + affichage | preuve bornée | COH-V2-06 | `proof-and-decision-ledger.md` | — |
 | T-06 | T-03 | product > transaction | Trunk | **Room acheteur** (E-08) symétrique vendeur | T-03 | Nature Way | `planned` | suivi+chat+reçu, serveur | test + navigateur | COH-V2-08 | `autonomous-delivery-gates.md` | — |
-| T-07 | T-01 | product > design | Species | **Hériter** les comportements app dans la maquette V2 | T-01 | Nature Way | `planned` | reduced-motion/safe-area/focus/100svh déclarés ou intégrés | diff maquette | COH-V2-02 (haute) | `visual-and-logic-coherence-review.md` | — |
-| T-08 | T-01 | product > design | Species | Réconcilier `docs/design.md` vers V2 | T-07 | Nature Way | `planned` | design.md pointe la bonne vérité | head design.md | COH-V2-01 | — | — |
+| T-07 | T-01 | product > design | Species | **Hériter** les comportements app dans la maquette V2 | T-01 | Nature Way | `done` | reduced-motion/safe-area/focus/100svh déclarés ou intégrés | **audit 10 écrans, 13 comportements récupérés, commits `0e8c78e`→`4247bf4`** | COH-V2-02/10…17 | `visual-and-logic-coherence-review.md` | — |
+| T-08 | T-01 | product > design | Species | Réconcilier `docs/design.md` vers V2 | T-07 | Nature Way | `done` | design.md pointe la bonne vérité | **`design.md` réconcilié, push `220c949`** | COH-V2-01 | — | — |
 
 ## Séquence
 
-1. **T-01 + T-02** (décisions fondateur — Seed) — **bloquant**, en `review`.
-2. Puis **T-07/T-08** (Species réconcilié, héritage comportemental).
-3. Puis **T-03** (Root contrat) → **T-04**, **T-05**, **T-06** (dépendants).
-4. Aucun code produit avant **T-01 et T-02**.
+1. ~~**T-01 + T-02** (décisions fondateur — Seed)~~ — **tranchés** : D-1a (fusion) + D-2a (entité).
+2. ~~**T-07/T-08** (Species réconcilié, héritage comportemental)~~ — **faits** (audit 10 écrans).
+3. **T-09 + T-10 (décisions Root fondateur) — BLOQUANT, en `review`.** Le scout a révélé
+   deux incohérences de **racine** que l'audit visuel ne pouvait pas voir : la couverture
+   mondiale de lieux orpheline (SCOUT-01) et l'impasse d'expiration (SCOUT-02).
+4. Puis **T-03** (Root contrat) → **T-04**, **T-05**, **T-06** (dépendants).
+5. Aucun code produit avant **T-09 et T-10**.
+
+## Mise à jour 2026-09-23 (passe scout) — Resource Receipt
+
+| Statut | Chemin exact |
+|---|---|
+| Loaded | `.agents/skills/nature-way/SKILL.md` (invocation complète) |
+| Loaded | `.agents/skills/nature-way/references/intra-skill-execution-controller.md` |
+| Loaded | `.agents/skills/nature-way/references/prerequisite-architecture.md` |
+| Loaded | `.agents/skills/nature-way/templates/system-dependency-map.md` |
+| Loaded | `.agents/skills/nature-way/templates/intra-skill-plan.md` |
+| Not loaded / reason | `founder-intent-discovery.md` — Seed T-01/T-02 déjà tranchés, trigger absent |
+| Not loaded / reason | `technical-lead-production-review.md`, `risk-and-escalation-matrix.md`, `autonomous-delivery-gates.md`, `proof-and-decision-ledger.md`, `visual-and-logic-coherence-review.md` — **se déclencheront** sur T-03/T-05/T-06/T-09/T-10 (Root/Trunk), pas encore actifs |
+| Not loaded / reason | `execution-plan-and-task-tree.md`, `production-evidence-register.md`, `launch-envelope.md` — phases Trunk/Canopy non actives |
+
+## Découverte de méthode (passe scout, à ne pas réapprendre)
+
+**L'audit visuel ne peut pas voir les incohérences de racine.** L'audit (A) a refermé la
+cohérence *maquette ↔ app*. Le scout a révélé une **classe de défaut différente** :
+la reconstruction (`TrunkAppV13`) a recréé l'UI **sans rebrancher la couche de données**.
+Deux occurrences : OSRM (itinéraire), puis la couverture OSM des lieux.
+
+→ **Règle ajoutée au protocole local :** après tout refactor de coquille, lancer le contrôle
+anti-orphelin (`grep` importeurs) **avant** de conclure qu'une capacité n'existe pas.
 
 ## Resource Receipt
 
