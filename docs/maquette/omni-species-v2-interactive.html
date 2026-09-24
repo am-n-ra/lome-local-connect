@@ -11,7 +11,7 @@
     --pill:#111; --warn:#8a6d1f; --warn-soft:#f6f0df;
     --sh-sm:0 1px 2px rgba(15,15,15,.04),0 1px 1px rgba(15,15,15,.03);
     --sh-md:0 6px 18px rgba(15,15,15,.08);
-    --sh-lg:0 20px 48px rgba(15,15,15,.16);
+    --sh-lg:0 20px 48px rgba(15,15,15,.16); --safe-bottom:14px; --ease:cubic-bezier(.2,.8,.2,1);
   }
   *{box-sizing:border-box}
   html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f2f0;color:var(--ink);
@@ -39,7 +39,7 @@
     box-shadow:var(--sh-md);white-space:nowrap}
   .rolepill button{font-size:9.5px;font-weight:700;padding:5px 11px;border-radius:999px;color:var(--ink-soft)}
   .rolepill button.on{background:var(--ink);color:#fff}
-  .navpill{position:absolute;z-index:60;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;
+  .navpill{position:absolute;z-index:60;bottom:var(--safe-bottom,14px);left:50%;translate:-50% 0;display:flex;align-items:center;gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-md);transition:width .32s var(--ease, cubic-bezier(.2,.8,.2,1))}
     gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg)}
   .navpill button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78)}
   .navpill button.active{color:#fff;background:rgba(255,255,255,.18)}
@@ -48,6 +48,12 @@
   .navpill .center.active{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.4)}
   .navpill svg{width:18px;height:18px}
   .navpill .center svg{width:20px;height:20px}
+  .navpill button:active{transform:scale(.94)}
+  .navpill button.is-disabled{opacity:.32;cursor:not-allowed}
+  .navpill .icon-in{display:grid;place-items:center;transition:transform .3s cubic-bezier(.2,.8,.2,1), opacity .2s}
+  .navpill button.active .icon-in{transform:scale(1.06)}
+  .navpill .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .dockmask{position:absolute;z-index:10;left:0;right:0;bottom:0;height:96px;pointer-events:none;background:linear-gradient(to top, rgba(255,255,255,.92), rgba(255,255,255,0))}
   .mapctrl{position:absolute;right:12px;top:52px;display:flex;flex-direction:column;gap:6px;z-index:6}
   .mapctrl button{width:30px;height:30px;border-radius:9px;background:#fff;border:1px solid var(--line);
     box-shadow:var(--sh-sm);font-weight:800;font-size:14px;color:var(--ink)}
@@ -89,6 +95,14 @@
   .status.gray{background:var(--panel);color:var(--ink-soft)}
   .status.dash{background:#fff;border:1px dashed var(--ink-soft);color:var(--ink-soft)}
   .status.warn{background:var(--warn-soft);color:var(--warn)}
+  .shead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:4px}
+  .shead h1{margin:0}
+  .linkbtn{font-size:9.5px;font-weight:800;color:var(--ink-soft);background:none;border:0;padding:0}
+  .shead .linkbtn{flex:0 0 auto}
+  .oblock{margin-top:11px}
+  .oblock .eyebrow{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .oblock .eyebrow em{font-style:normal;font-weight:800;color:var(--ink)}
+  .chiprow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   .chip{font-size:9.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:5px 9px;background:#fff;color:var(--ink)}
   .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -167,7 +181,8 @@
   </div>
   <div class="rolepill" id="rolepill"></div>
   <div class="rail" id="rail"></div>
-  <div class="navpill" id="navpill"></div>
+  <div class="dockmask"></div>
+<div class="navpill" id="navpill"></div>
   <div id="sheetmount"></div>
   <div class="toast hidden" id="toast"></div>
 </div>
@@ -177,7 +192,7 @@ const S = {
   role: 'buyer',
   sheet: 'search',
   prev: [],
-  constraints: { rayon: '1 km', ouvert: true, budget: true },
+  constraints: { rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false },
   product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m' },
   entity: null,
   hasEntity: false,
@@ -216,6 +231,7 @@ const ICON = {
   shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16"/></svg>',
   console: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>',
   pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 10h8M8 14h5"/></svg>',
+  back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5 8 12l7 7"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>',
   clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   compass: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg>',
@@ -233,23 +249,35 @@ const ICON = {
   file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/></svg>',
 };
 
+/* Retour du dock (parité app) : désactivé UNIQUEMENT dans le flux verrouillé (après scan).
+   Dans le flux verrouillé on ne revient pas — et on n'annule jamais (D-TXN). */
+function lockedFlow() { return S.txn === 'qr_verified' || S.txn === 'paid'; }
+function backItem() {
+  const home = S.role === 'buyer' ? 'home' : S.role === 'seller' ? (S.hasEntity ? 'seller-dash' : 'seller-entry') : S.role === 'operator' ? 'op-queue' : 'admin-console';
+  if (S.sheet === home || S.sheet === 'scan-entity') return null;
+  return { ic: ICON.back, action: 'back', label: 'Retour', disabled: lockedFlow() };
+}
 function dockFor() {
   if (S.role === 'buyer') return [
+    ...(backItem() ? [backItem()] : []),
     { ic: ICON.search, sheet: 'search', label: 'Recherche' },
     { ic: ICON.qr, sheet: 'scan-entity', label: 'Scanner le QR d’une entité', center: true },
     { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
   ];
   if (S.role === 'seller') return [
+    ...(backItem() ? [backItem()] : []),
     { ic: ICON.shop, sheet: S.hasEntity ? 'seller-dash' : 'seller-entry', label: 'Mon espace' },
     { ic: ICON.qr, sheet: 'seller-scan', label: 'Scanner le code d’un acheteur', center: true },
     { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
   ];
   if (S.role === 'operator') return [
+    ...(backItem() ? [backItem()] : []),
     { ic: ICON.pin, sheet: 'op-queue', label: 'Dossier terrain' },
     { ic: ICON.console, sheet: 'op-side', label: 'Aperçu côté entité', center: true },
     { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
   ];
   return [
+    ...(backItem() ? [backItem()] : []),
     { ic: ICON.console, sheet: 'admin-console', label: 'Console' },
     { ic: ICON.pin, sheet: 'admin-review', label: 'Revue des pins', center: true },
     { ic: ICON.menu, sheet: 'menu', label: 'Menu' },
@@ -262,8 +290,11 @@ function renderRolePill() {
     `<button class="${S.role === id ? 'on' : ''}" onclick="setRole('${id}')">${lb}</button>`).join('');
 }
 function renderDock(el, vertical) {
-  document.getElementById(el).innerHTML = dockFor().map(it =>
-    `<button class="${S.sheet === it.sheet ? 'active' : ''} ${it.center && !vertical ? 'center' : ''} ${it.center && vertical ? 'center' : ''}" title="${it.label}" onclick="go('${it.sheet}')">${it.ic}</button>`).join('');
+  document.getElementById(el).innerHTML = dockFor().map(it => {
+    const active = it.action ? false : S.sheet === it.sheet;
+    const onclick = it.disabled ? '' : (it.action ? `${it.action}()` : `go('${it.sheet}')`);
+    return `<button class="${active ? 'active' : ''}${it.center ? ' center' : ''}${it.disabled ? ' is-disabled' : ''}" title="${it.label}" ${it.disabled ? 'aria-disabled="true"' : ''} onclick="${onclick}"><span class="icon-in">${it.ic}</span><span class="sr-only">${it.label}</span></button>`;
+  }).join('');
 }
 function renderPins() {
   if (S.role === 'admin' || S.role === 'operator') {
@@ -298,23 +329,51 @@ function openOffer(kind) {
 /* ---------- SHEETS : acheteur ---------- */
 const SHEETS = {};
 
-SHEETS.search = () => `
+SHEETS.search = () => {
+  const c = S.constraints;
+  const chip = (label, on, soon, fn) =>
+    `<span class="chip${on ? ' on' : ''}${soon ? ' soon' : ''}" onclick="${soon ? `toast('${label} — bientôt (V1+)')` : fn}">${label}</span>`;
+  const zones = ['Quartier · 1 km', 'Ville · 5/10/25 km', 'Région · 100 km', 'Monde'];
+  const zoneOn = zones.findIndex((z) => z === c.rayon);
+  return `
   <div class="handle"></div>
-  <div class="sheet-head"><div><div class="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div></div>
-  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="Produit, service, propriété…" onkeydown="if(event.key==='Enter')doSearch()" id="q"></div></div>
-  <div class="eyebrow" style="margin-top:11px">Contraintes (requête, pas engagement vendeur)</div>
-  <div class="chips">
-    <span class="chip on">≤ 1 km</span><span class="chip on">Ouvert maintenant</span><span class="chip on">≤ 2 000 F</span>
-    <span class="chip soon" onclick="toast('Créneau — bientôt (V1+)')">Créneau</span>
-    <span class="chip soon" onclick="toast('Livraison — bientôt (V1+)')">Livraison</span>
+  <div class="shead">
+    <div><div class="eyebrow">Recherche</div><h1>Que cherchez-vous ?</h1></div>
+    <button class="linkbtn" onclick="go('saved')">Recherches sauvegardées</button>
   </div>
-  <button class="btn" onclick="doSearch()">Rechercher</button>
-  <div class="cardbox"><div class="kv"><span>Démonstration</span><b>Aucun résultat · Réseau lent · Panne</b></div></div>
+  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="Produit, service, propriété, compétence…" onkeydown="if(event.key==='Enter')doSearch()" id="q"></div></div>
+  <p class="lead">Tout ce qui existe autour de vous : commerces, particuliers, transport, services. Aucune offre écartée par type.</p>
+
+  <div class="oblock">
+    <div class="eyebrow">Distance <em>d’abord</em></div>
+    <div class="chiprow">
+      ${zones.map((z, k) => chip(z, k === zoneOn, false, `setRayon(${k})`)).join('')}
+    </div>
+  </div>
+
+  <div class="oblock">
+    <div class="eyebrow">Ensuite</div>
+    <div class="chiprow">
+      ${chip('Ouvert maintenant', c.ouvert, false, "toggleC('ouvert')")}
+      ${chip('Créneau', false, true)}
+      ${chip('Budget ≤ 2 000 F', c.budget, false, "toggleC('budget')")}
+      ${chip('Quantité ≥ 10', c.qte, false, "toggleC('qte')")}
+      ${chip('État / condition', false, true)}
+      ${chip('Livraison', false, true)}
+      ${chip('Transactable', false, true)}
+    </div>
+  </div>
+
+  <button class="btn" style="margin-top:11px" onclick="doSearch()">Rechercher autour de moi</button>
+  <p class="lead">Vos contraintes sont une <b>requête</b>, pas un engagement vendeur : personne n’est dérangé avant votre intention.</p>
+
+  <div class="cardbox"><div class="kv"><span>Démonstration</span><b>compteurs & formules toujours vérifiés</b></div></div>
   <div class="chips">
     <span class="chip" onclick="go('results-empty')">Aucun résultat</span>
     <span class="chip" onclick="go('state-slow')">Réseau lent</span>
     <span class="chip" onclick="go('state-error')">Panne réseau</span>
   </div>`;
+};
 
 SHEETS.results = () => `
   <div class="handle"></div>
@@ -658,7 +717,10 @@ SHEETS['entity-from-qr'] = () => `
   <p class="lead">Payer via Omni applique la remise et trace la transaction : l’entité <b>gagne une vente traçable</b>, vous <b>payez moins</b>.</p>`;
 
 /* ---------- actions ---------- */
-function doSearch() { go('results', { toast: '3 offres trouvées' }); }
+const RAYON_STEPS = ['Quartier · 1 km', 'Ville · 5/10/25 km', 'Région · 100 km', 'Monde'];
+function setRayon(k) { S.constraints.rayon = RAYON_STEPS[k]; render(); }
+function toggleC(key) { S.constraints[key] = !S.constraints[key]; render(); }
+function doSearch() { go('results', { toast: '3 offres trouvées · ' + S.constraints.rayon }); }
 function doIntent() { S.txn = 'qr_ready'; go('qr', { toast: 'Intention créée — QR émis' }); }
 function star(n) {
   const s = document.querySelectorAll('#stars .chip');
