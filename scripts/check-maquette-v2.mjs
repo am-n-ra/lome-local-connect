@@ -73,6 +73,31 @@ check(integFields >= 3 && integFields === repFields,
   'every offer producer carries integrity and reputation',
   `${integFields} integ vs ${repFields} rep`);
 
+// --- 5ter. S-10: the model is NOT limited to the physical ---
+// Real estate had zero surface, and the geographic ORIGIN of an intangible offer was
+// never shown. Both now live inside the SAME seven characteristics - origin is a
+// POSITION, not a new field. Guard the claim: a place exists on the map for immo,
+// origin is carried in position for the digital, and each offer producer has all 7.
+check(/openOffer\('immo'\)/.test(js), 'real estate offer is reachable (S-10)');
+// An intangible offer must not offer a route: "Itinéraire vers ce vendeur" on an
+// online course is a lie the buyer would act on. Found by reading the rendered
+// sheet, not the code - the hero emoji was also the shop's for both new shapes.
+const offerSheet = (js.match(/SHEETS\.offer = \(\) => `[\s\S]*?`;/) || [])[0] || '';
+check(/sans déplacement[\s\S]{0,200}Où ça se passe/.test(offerSheet),
+  'intangible offer offers no route (S-10)');
+// window from the producer function up to the next section: `\n}` stops inside the
+// immo/digital branch, which would hide the later shapes from the count.
+const caracBlock = js.slice(js.indexOf('function openOffer'), js.indexOf('/* ---------- SHEETS')) || '';
+check(/origine\s*:/.test(caracBlock), 'intangible offer states its geographic origin (S-10)');
+const shapes = (caracBlock.match(/\bcarac:\s*\{/g) || []).length;
+check(shapes >= 4, 'immobilier and digital join the two physical shapes', `${shapes} shapes`);
+for (const f of ['qte', 'depletion', 'unique', 'position', 'temporalite', 'remise', 'etat', 'prix']) {
+  const n = (caracBlock.match(new RegExp(`\\b${f}\\s*:`, 'g')) || []).length;
+  // PARITY, not a floor: a floor of 5 passed with 4 shapes and let one shape lose a
+  // field. Every shape must carry every field - that is the model's whole claim.
+  check(n === shapes, `every offer shape carries "${f}"`, `${n} for ${shapes} shapes`);
+}
+
 // --- 6. Registry truth: the Species registry must state the REAL screen count ---
 // T-12 found the registry claiming "72 écrans" while the maquette had 73, and a
 // row still asserting the level scale was absent after it shipped. The registry
@@ -93,7 +118,7 @@ if (registry) {
   check(claimed === unique.size, 'registry header screen count equals the maquette',
     `registry header says ${claimed}, maquette has ${unique.size}`);
   // a delivered decision must not still be described as missing
-  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3'], ['S-32', 'SP-4']];
+  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3'], ['S-32', 'SP-4'], ['S-10', 'SP-5']];
   for (const [id, slice] of delivered) {
     const row = registry.split('\n').find((l) => l.includes(`**${id}**`));
     if (row) check(/OK/.test(row), `registry row ${id} marked OK after ${slice}`,

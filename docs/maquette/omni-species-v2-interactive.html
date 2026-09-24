@@ -127,6 +127,8 @@
   .hcard .thumb{height:64px;background:linear-gradient(135deg,#eaeaea,#d7d7d7);position:relative;display:grid;place-items:center;font-size:24px}
   .hcard .thumb.unclaimed{background:repeating-linear-gradient(45deg,#f0f0f0 0 6px,#e2e2e2 6px 12px)}
   .hcard .thumb.person{background:linear-gradient(135deg,#e9eef0,#d3dade)}
+  .hcard .thumb.immo{background:linear-gradient(135deg,#eef0e9,#dadeD3)}
+  .hcard .thumb.digital{background:linear-gradient(135deg,#ece9f0,#d9d3de)}
   .hcard .thumb .vmark{position:absolute;top:7px;right:7px;width:13px;height:13px;border-radius:50%;
     background:var(--accent);box-shadow:0 0 0 2px #fff}
   .hcard .thumb .promo{position:absolute;top:7px;left:7px;background:var(--accent);color:#fff;font-size:7.5px;
@@ -362,6 +364,26 @@ function renderFilters() {
 
 function openOffer(kind) {
   // S-01 : chaque offre expose ses CARACTÉRISTIQUES (modèle jour 1) — commerce renouvelable vs pièce unique
+  // S-10 : l'immobilier et le digital se décrivent avec CES MÊMES 7 champs.
+  // L'origine géographique d'une offre immatérielle vit dans POSITION — pas de 8e champ.
+  if (kind === 'immo' || kind === 'digital') {
+    const immo = kind === 'immo';
+    S.product = immo
+      ? { name: 'Studio meublé — Adawlato', price: '85 000 F', old: '95 000 F', promo: '−10 % Omni', seller: 'Agence Dovi', kind: 'immobilier', dist: '900 m',
+          level: 4, levelProof: 'confirmée il y a 1 h',
+          integ: 'Visuel ✓ · prix cohérent ✓', rep: 'Louée 3× · 4,8 ★',
+          carac: { qte: '1 logement disponible', depletion: 'Retiré dès qu’il est loué', unique: true,
+                   position: 'Fixe · Adawlato (point sur la carte)', temporalite: 'Disponible · visite mar–sam 9h–17h',
+                   remise: 'Visite sur place', etat: 'Bon état · meublé', prix: 'Fixe · négociable ? non' } }
+      : { name: 'Cours de maths (en ligne)', price: '5 000 F', old: '', promo: '', seller: 'M. Kodjo', kind: 'digital', dist: 'sans déplacement',
+          level: 3, levelProof: 'déclarée, non confirmée',
+          integ: 'Visuel ✓ · prix cohérent ✓', rep: 'Vendue 30× · 4,9 ★',
+          carac: { qte: 'Place disponible · 4 h', depletion: 'Décompte à chaque séance', unique: null,
+                   position: 'Immatérielle — <b>origine : Lomé, Adawlato</b>', temporalite: 'Créneau · sam 10h–12h',
+                   remise: 'En ligne (visio)', etat: 'Neuf', prix: 'Fixe · négociable ? non' } };
+    go('offer');
+    return;
+  }
   S.product = kind === 'person'
     ? { name: 'Ordinateur Dell (occasion)', price: '45 000 F', old: '50 000 F', promo: '−10 % Omni', seller: 'Awa T.', kind: 'particulier', dist: '380 m',
         level: 2, levelProof: 'déclarée, pas encore confirmée',
@@ -397,10 +419,10 @@ SHEETS.search = () => {
     <span class="chip${S.searchLevel === 'entity' ? ' on' : ''}" onclick="setSearchLevel('entity')">Chercher une entité</span>
     <span class="chip${S.searchLevel === 'offer' ? ' on' : ''}" onclick="setSearchLevel('offer')">Chercher une offre</span>
   </div>
-  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="${S.searchLevel === 'entity' ? 'Nom d’un commerce, d’une organisation ou d’une personne…' : 'Produit, service, propriété, compétence…'}" onkeydown="if(event.key==='Enter')${S.searchLevel === 'entity' ? 'doSearchEntity()' : 'doSearch()'}" id="q"></div></div>
+  <div style="margin-top:9px"><div class="fld">${ICON.search}<input placeholder="${S.searchLevel === 'entity' ? 'Nom d’un commerce, d’une organisation ou d’une personne…' : 'Produit, service, propriété immobilière, compétence…'}" onkeydown="if(event.key==='Enter')${S.searchLevel === 'entity' ? 'doSearchEntity()' : 'doSearch()'}" id="q"></div></div>
   <p class="lead">${S.searchLevel === 'entity'
     ? 'Un <b>offreur par son identité</b> — commerce, organisation ou personne seule, même objet. On aboutit à sa page publique.'
-    : 'Tout ce qui existe autour de vous : commerces, particuliers, transport, services. Aucune offre écartée par type.'}</p>
+    : 'Tout ce qui existe autour de vous : commerces, particuliers, transport, services, <b>immobilier</b>. Aucune offre écartée par type.'}</p>
 
   <div class="oblock"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
     <div class="eyebrow">Distance <em>d’abord</em></div>
@@ -439,11 +461,13 @@ SHEETS.search = () => {
 
 SHEETS.results = () => `
   <div class="handle"></div>
-  <div class="sheet-head"><div><div class="eyebrow">Occurrences · offres correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
+  <div class="sheet-head"><div><div class="eyebrow">Occurrences · offres correspondant à vos contraintes</div><h1>5 offres</h1></div><span class="status gray">5</span></div>
   <p class="lead" style="margin-top:4px">Vous êtes au niveau <b>offre</b> — les entités <b>derrière</b> ces offres sont accessibles en un tap (page publique). <span style="cursor:pointer;text-decoration:underline" onclick="setSearchLevel('entity');go('search')">Chercher une entité</span></p>
   <div class="hgrid">
     <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Produit recherché</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,6 ★ · Achetée 12× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">Niv. 2 · À confirmer</span><small class="trust">4,2 ★ · Achetée 5× · intégrité ✓</small></div></div>
+    <div class="hcard" onclick="openOffer('immo')"><div class="thumb immo">🏠</div><div class="body"><b>Studio meublé — Adawlato</b><small>Agence Dovi · immobilier · 900 m</small><span class="pr">85 000 F<span class="old">95 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span><small class="trust">4,8 ★ · Louée 3× · intégrité ✓</small></div></div>
+    <div class="hcard" onclick="openOffer('digital')"><div class="thumb digital">⚡</div><div class="body"><b>Cours de maths (en ligne)</b><small>M. Kodjo · digital · <b>origine : Lomé</b></small><span class="pr">5 000 F</span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 3 · Disponible</span><small class="trust">4,9 ★ · Vendue 30× · intégrité ✓</small></div></div>
     <div class="hcard" onclick="toast('Lieu connu mais non revendiqué — non interrogeable')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span><small class="trust muted">Pas d’offre · rien à évaluer</small></div></div>
   </div>
   <div class="sortbar">
@@ -483,7 +507,7 @@ SHEETS.offer = () => `
     <span class="status ${S.product.level >= 3 ? 'ok' : 'dash'}">${S.product.level >= 3 ? 'En stock' : 'À confirmer'}</span>
   </div>
   <div style="margin-top:6px;display:flex;gap:12px;align-items:center">
-    <div style="width:74px;height:74px;border-radius:14px;background:linear-gradient(135deg,#e9eef0,#d3dade);display:grid;place-items:center;font-size:30px">${S.product.kind === 'particulier' ? '💻' : '🍝'}</div>
+    <div style="width:74px;height:74px;border-radius:14px;background:linear-gradient(135deg,#e9eef0,#d3dade);display:grid;place-items:center;font-size:30px">${({ commerce: '🍝', particulier: '💻', immobilier: '🏠', digital: '⚡' })[S.product.kind] || '📦'}</div>
     <div><span class="big">${S.product.price}</span><div><span class="old" style="font-size:11px">${S.product.old}</span><span class="status ok" style="margin-left:6px">${S.product.promo}</span></div></div>
   </div>
   <div class="cardbox">
@@ -500,7 +524,7 @@ SHEETS.offer = () => `
     <div class="kv"><span>Temporalité</span><b>${S.product.carac.temporalite}</b></div>
     <div class="kv"><span>État</span><b>${S.product.carac.etat}</b></div>
     <div class="kv"><span>Prix</span><b>${S.product.carac.prix}</b></div>
-    <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques — aucun « type » séparé. Le digital, le service et le transport se décrivent avec ces mêmes champs.</p>
+    <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques — aucun « type » séparé. Le <b>digital</b>, le <b>service</b>, le <b>transport</b> et l'<b>immobilier</b> se décrivent avec ces mêmes champs. Pour une offre <b>immatérielle</b>, l'<b>origine</b> vit dans la <b>position</b> — on sait toujours <i>d'où</i> ça vient.</p>
   </div>
   <div class="section-kicker">Niveau d’existence</div>
   <div class="cardbox">
@@ -514,8 +538,10 @@ SHEETS.offer = () => `
   <button class="btn ghost sm" onclick="toast('Ajouté au panier de cette entité')">Ajouter au panier</button>
   <button class="btn ghost sm" onclick="go('produit-multi')">Ajouter d’autres produits</button>
   <button class="btn ghost sm" onclick="go('entite-publique')">Voir la page de l’entité</button>
-  <button class="btn ghost sm" onclick="go('facility-apex')">Aperçu express du lieu</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers ' + '${S.product.seller}' + ' (tracé direct)')">Itinéraire vers ce vendeur</button>
+  ${S.product.dist === 'sans déplacement'
+    ? `<div class="kv"><span>Où ça se passe</span><b>Tout se passe en ligne — aucun déplacement</b></div>`
+    : `<button class="btn ghost sm" onclick="go('facility-apex')">Aperçu express du lieu</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers ' + '${S.product.seller}' + ' (tracé direct)')">Itinéraire vers ce vendeur</button>`}
   <button class="btn ghost sm" onclick="go('signal')">Signaler cette offre</button>
   <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d’achat — jamais avant.</p>`;
 
@@ -905,7 +931,7 @@ SHEETS['seller-publish'] = () => `
   <h1 style="margin-top:3px">Spaghetti 500 g</h1>
   <div class="cardbox">
     <div class="kv"><span>Visuel de l’offre</span><b>1 image requise <span class="status ok">✓ ajoutée</span></b></div>
-    <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital aussi</span></b></div>
+    <div class="kv"><span>Catégorie</span><b>Produit <span class="status gray">service / digital / immobilier aussi</span></b></div>
     <div class="kv"><span>État</span><b>Neuf</b></div>
     <div class="kv"><span>Quantité</span><b>24</b></div>
     <div class="kv"><span>Prix</span><b>1 000 F</b></div>

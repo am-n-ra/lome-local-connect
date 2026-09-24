@@ -108,6 +108,13 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Garde §5bis + registre :** marque présente sur les cartes + parité `integ` ≡ `rep` + ligne registre `S-32` OK. **Falsifié (3 modes).** **Leçon :** un garde qui compte une classe **globalement** ne prouve rien (il passe avec 5 marques retirées) ; `.trust` est aussi une classe de `.stepline` → **scoper au bloc `results`**.
 - **État :** `SP-1..SP-4` ✅ · restent `SP-5` (S-10 immobilier + origine géo) `SP-6` (S-22/S-25/économie). **Zéro code produit.**
 
+## SP-5 (2026-09-23) — le modèle n'est pas limité au physique (S-10)
+- **Gap :** **immobilier** = 0 surface ; **origine géo** du digital jamais montrée.
+- **Livré :** carte + fiche **immobilier** complètes ; **origine** portée par la **Position** (« Immatérielle — origine : Lomé », pas de 8e champ) ; résultats 3→5 ; catégories nomment l'immobilier. **Zéro code produit.**
+- **⚠️ 2 défauts réels trouvés en LISANT l'écran rendu :** (1) emoji de fiche **binaire** → immo/digital affichaient 🍝 ; (2) **« Itinéraire » proposé sur une offre en ligne** = mensonge sur lequel l'acheteur agit. Corrigés.
+- **Garde §5ter :** parité **stricte** des 7 champs sur les 4 formes + pas d'itinéraire pour l'immatériel. **Falsifié (4 modes).** **Leçon :** un **plancher** `>= 5` laisse une forme perdre un champ — exiger la **parité**.
+- **État :** `SP-1..SP-5` ✅ · reste `SP-6` (S-22/S-25/économie).
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 

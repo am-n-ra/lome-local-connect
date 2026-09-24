@@ -26,7 +26,7 @@ la maquette → rien à dessiner).
 | **S-07** | Carte + recherche = 2 vues d'un corpus ; **carte filtrable** | `search` (`Tout` / `Commerces` / `Particuliers` / `Transport`) | **OK (corrigé)** | ⚠️ **Correction :** les filtres de carte **existent** (`Tout / Commerces / Particuliers / Transport`). Ma mesure « absents » était fausse — je cherchais `ambulant`, jamais le libellé réel |
 | **S-08** | Itinéraire = soutien ; transport = une offre | `offer` (itinéraire), `transport` : 4 occ. | **PARTIEL** | itinéraire OK ; **offre de transport** non modélisée visuellement |
 | **S-09** | Le prix compte, visible/comparable | `results`, `compare`, `offer` | **OK** | — |
-| **S-10** | Offre non limitée au physique (digital, service, transport, immobilier) ; origine géo | `digital` 1, `service` 6, `transport` 4, `immobilier` **0** | **PARTIEL** | **immobilier absent** ; **origine géographique d'une offre digitale non montrée** (`origine` : 0) |
+| **S-10** | Offre non limitée au physique (digital, service, transport, immobilier) ; origine géo | `results` (carte immobilier `Studio meublé` + carte digital `origine : Lomé`) ; `offer` (**7 champs identiques** sur 4 formes : commerce / particulier / **immobilier** / **digital**) | **OK (SP-5)** | — l'**immobilier** a une surface ; l'**origine** du digital vit dans la **position** (pas de 8e champ) ; une offre **immatérielle ne propose pas d'itinéraire** (elle dit « tout se passe en ligne ») |
 | **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (sélecteur « Chercher une entité / une offre »), `entity-empty`, `entite-publique`, `scripts/check-maquette-v2.mjs` | **OK (SP-3)** | sélecteur de niveau + 2 états vides + page publique entité + **garde automatisé sans dépendance** |
 | **S-12** | Transport : fondation jour 1, affichage V1, requête A→B = `V1+` | `transport` : 4 | **PARTIEL** | pas d'écran d'offre mobile/transport (normal : `V1+`), mais la **fondation** doit se voir |
 | **S-13** | « Entité » = tout offreur (commerce, organisation, personne seule) même objet | `seller-entry`, `seller-entity` | **OK** | — |
@@ -110,13 +110,13 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 | ~~P0~~ | ~~**S-11 double niveau**~~ | **LIVRÉ (SP-3)** | garde `check:maquette` en place |
 | ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | **OK (corrigé)** — filtres carte présents | — |
-| **P1** | **S-10** | à faire (SP-5) | **immobilier** absent ; **origine géo** du digital non montrée |
+| ~~P1~~ | ~~**S-10**~~ | **LIVRÉ (SP-5)** | — |
 | **P2** | **S-22** | à faire (SP-6) | partage hors Omni (WhatsApp/SMS) |
 | **P2** | **S-25** | à faire (SP-6) | ownership entité explicite dans la fiche offre |
 | **P2** | Économie | à faire (SP-6) | plafond 20 affiché, seuil bonus par volume |
 | ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | filtres de carte (type/transport) | sinon la carte sature |
-| **P1** | **S-10** | immobilier + **origine géo du digital** | promesse « d'où ça vient » |
+| ~~P1~~ | ~~**S-10**~~ | **LIVRÉ (SP-5)** | — |
 | **P2** | **S-22** | partage hors Omni (WhatsApp/SMS) | canal d'acquisition |
 | **P2** | **S-25** | ownership entité explicite dans la fiche offre | sinon on retombe sur la facility |
 | **P2** | Économie | plafond 20 affiché, seuil bonus par volume | honnêteté du plan |
@@ -265,6 +265,19 @@ Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run c
 **Style :** monochrome ; l'accent `#2E8B6F` reste réservé à `.vmark` / `.status.ok` (design.md #3).
 **Garde (`check-maquette-v2.mjs` §5bis) :** la marque doit être **présente sur les cartes de résultat** et **parité `integ` ≡ `rep`** sur tous les producteurs. **Falsifié (3 modes) :** retirer une marque d'une carte → FAIL ; coder la fiche en dur → FAIL ; retirer l'intégrité d'un producteur → FAIL.
 **Deux faux gardes attrapés en falsifiant** — à ne pas refaire : (1) compter `class="trust"` **globalement** passe même si 5 marques disparaissent ; (2) le compteur incluait les `.stepline` (même nom de classe) → il faut **scoper au bloc `results`** et aux balises `<small>`.
+
+## 8octies. SP-5 — LIVRÉ (2026-09-23) : le modèle n'est pas limité au physique (S-10)
+**Le gap :** l'**immobilier** n'avait **aucune** surface, et l'**origine géographique** d'une offre digitale n'était **jamais montrée**.
+**Livré (maquette, zéro code produit) :**
+- **immobilier** → carte de résultat réelle (`Studio meublé — Adawlato`, Agence Dovi, **point sur la carte**, Niv. 4) + **fiche complète** avec les **mêmes 7 champs** (Quantité 1 logement, Déplétion « retiré dès qu'il est loué », Position fixe, Remise « visite sur place ») ;
+- **origine géo** → la fiche digital porte **Position = « Immatérielle — origine : Lomé, Adawlato »** et la **carte affiche `origine : Lomé`** — on sait **d'où ça vient** sans 8e champ ;
+- **résultats : 3 → 5 offres** (immobilier + digital ajoutés), avec **réputation distincte** par offre (4,8★ louée 3× / 4,9★ vendue 30×) ;
+- **catégories nommées** : recherche, lead et publication disent désormais « produit / service / digital / **immobilier** ».
+**⚠️ DEUX DÉFAUTS RÉELS trouvés en LISANT l'écran rendu (à ne pas réapprendre) :**
+1. l'emoji de la fiche était un **choix binaire** (`particulier` ? 💻 : 🍝`) → l'immobilier **et** le digital affichaient l'emoji du **commerce** (🍝). Corrigé par **table par type** (+ repli 📦) ;
+2. la fiche digital proposait **« Itinéraire vers ce vendeur »** et « Aperçu express du lieu » — pour une offre **sans déplacement**. C'était **un mensonge sur lequel l'acheteur aurait agi**. Corrigé : une offre immatérielle **ne propose pas d'itinéraire**, elle dit « tout se passe en ligne ».
+**Garde (`check-maquette-v2.mjs` §5ter) :** immobilier atteignable, origine dans la position, **parité stricte des 7 champs sur les 4 formes**, pas d'itinéraire pour l'immatériel. **Falsifié (4 modes) :** immo irraçable → FAIL ; origine retirée → FAIL ; champ retiré d'**une** forme → FAIL ; itinéraire rendu à l'immatériel → FAIL.
+**Leçon de garde :** un **plancher** (`>= 5`) passait avec 4 formes et laissait une forme perdre un champ — il faut une **parité** (`=== shapes`). Un garde doit porter sur **ce que la forme prétend être**, pas sur un ordre de grandeur.
 
 ## 9. Resource Receipt
 
