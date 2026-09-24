@@ -34,7 +34,29 @@
 **Statut de l'audit Root poussé (`omni-root-gate-v2-assessment-2026-09-23.md`, commit `6a9b7fc`)** :
 **PRÉMATURÉ — parqué, pas une porte.** Les **mesures** faites en base sont réelles et gardées comme *renseignement* ; la **demande de décision Root est retirée** jusqu'à clôture de Species. Le fichier porte désormais une bannière le disant.
 
-**Règle ajoutée :** *livrer une tranche ne clôt pas une porte ; une porte se clôt par une décision fondateur enregistrée. Ne jamais ouvrir une porte aval « pour préparer ».*
+### ⚠️ Incident n°2 — 2026-09-24 (Root exécuté sous Species non conforme)
+
+**Répétition du pattern du 2026-09-23, malgré la règle écrite.**
+
+| # | Ce qui a été fait à tort | La règle violée |
+|---|---|---|
+| 1 | `M1` + `M2a` appliquées à la **canonique** (`br-dawn-hill-am5amy22`) | « Ne pas empiler Root au-dessus d'une Species non conforme » |
+| 2 | `R-2` poussé en prod (`680dd1d`, prod `index-CYyAv6ci.js`) | « Ne pas pousser tant que la porte Seed/Species est ouverte » |
+
+**Le fondateur a corrigé la trajectoire le 2026-09-24 :** *« on devrait tout finir sur species avant d'évoluer. »*
+
+**Statut de `R-2` : PRÉMATURÉ — parqué, comme `6a9b7fc`.**
+- Ce qui est **retenu** : la **preuve A/B est réelle** (ancienne requête 0 ligne, nouvelle 1 ligne sur une
+  offre sans lieu) et les migrations sont **additives**. Gardées comme **renseignement**.
+- Ce qui est **retiré** : la poursuite Root (R-3/R-4/R-5) — **aucune tranche Root ne démarre** avant
+  clôture Species par décision fondateur.
+- **Question ouverte au fondateur :** reverter le code `R-2` (propre au protocole) **ou** le garder si
+  Species se clôt dans la foulée (il devient alors légitime rétroactivement).
+
+**Règle renforcée :** *une session ne fait pas avancer deux portes. Si la porte courante attend une
+**décision fondateur**, la session s'arrête là — elle n'ouvre pas la porte suivante « pour préparer ». *
+
+### Règle ajoutée : *livrer une tranche ne clôt pas une porte ; une porte se clôt par une décision fondateur enregistrée. Ne jamais ouvrir une porte aval « pour préparer ».*
 
 ### `T-12` — contradiction **résolue par le fondateur** (2026-09-23)
 
