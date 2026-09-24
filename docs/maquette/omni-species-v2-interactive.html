@@ -819,15 +819,6 @@ SHEETS['seller-validate'] = () => `
   <button class="btn" onclick="sellerValidateFromDash()">Valider — ouvre le chat de transaction</button>
   <p class="lead">Le clic <b>valide en auto</b> (même verrou) et ouvre le <b>chat de cette demande</b>. L’acheteur voit alors « Code validé ».</p>`;
 
-SHEETS['seller-chat'] = () => `
-  <div class="handle"></div><div class="eyebrow">Chat de transaction · Awa T.</div>
-  <h1 style="margin-top:3px">${S.product.name} × 2</h1>
-  <div class="chatrow">Bonjour, je suis en route.</div>
-  <div class="chatrow me">Parfait, je prépare vos 2 paquets.</div>
-  <div class="chatrow me">Paiement bien reçu, merci !</div>
-  <div class="fld" style="margin-top:9px"><span class="ph">Écrire…</span></div>
-  <button class="btn" onclick="go('seller-dash',{toast:'Message envoyé'})">Envoyer</button>
-  <p class="lead">Chat <b>scopé à la transaction</b> — il s’ouvre au verrou, pas avant.</p>`;
 
 SHEETS['seller-publish'] = () => `
   <div class="handle"></div><div class="eyebrow">Étape 2 · publier une offre</div>
@@ -899,9 +890,12 @@ SHEETS['seller-chat'] = () => `
   <button class="btn ghost sm" onclick="go('seller-orders')">Voir les commandes</button>
 
   <div class="cardbox">
+    <div class="kv"><span>Étape</span><b>Paiement déclaré · à vous d’agir</b></div>
+    <div class="kv"><span>Échéance</span><b>1 h 20 restant</b></div>
     <div class="kv"><span>Rendez-vous / temps estimé</span><b>Retrait · ≤ 20 min</b></div>
     <div class="kv"><span>Historique des états</span><b>4 événements</b></div>
   </div>
+  <div class="timer">⏱ le temps relance puis expire — il n’annule jamais</div>
   <p class="lead">Chat <b>scopé à la transaction</b>, ouvert <b>au verrou</b> (jamais avant). Il porte les actions réelles (paiement, remise) et l’<b>historique</b>, pas seulement du texte.</p>`;
 
 SHEETS['remise'] = () => `
@@ -940,7 +934,7 @@ SHEETS['entite-publique'] = () => `
     <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
   </div>
   <button class="btn" onclick="go('results')">Voir ses 3 offres</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo')">Itinéraire</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo (tracé direct)')">Itinéraire (tracé direct)</button>
   <button class="btn ghost sm" onclick="toast('Favori ajouté')">Suivre cette entité</button>
   <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres — c’est le point d’entrée physique (QR en boutique).</p>`;
 
@@ -1122,6 +1116,11 @@ SHEETS.room = () => `
     <div class="kv"><span>Vendeur</span><b>Boutique Kodjo · 📱 90 12 34 56</b></div>
     <div class="kv"><span>Où / quand</span><b>Lomé · Adawlato · aujourd’hui</b></div>
   </div>
+  <div class="cardbox">
+    <div class="kv"><span>Étape</span><b>Clôturée · système</b></div>
+    <div class="kv"><span>Échéance</span><b>— (terminée)</b></div>
+  </div>
+  <div class="timer">⏱ le temps relance puis expire — il n’annule jamais</div>
   <div class="eyebrow" style="margin-top:12px">Conversation de cette transaction</div>
   <div class="chatrow me">Bonjour, je suis en route.</div>
   <div class="chatrow">Parfait, je prépare vos 2 paquets.</div>
@@ -1253,7 +1252,7 @@ SHEETS['facility-apex'] = () => `
     <div class="kv"><span>Offres</span><b>3 · dès 850 F <span class="status ok">−15 %</span></b></div>
   </div>
   <button class="btn" onclick="go('entite-publique')">Ouvrir la page de l’entité</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo')">Itinéraire</button>
+  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo (tracé direct)')">Itinéraire (tracé direct)</button>
   <p class="lead">Cliquer un pin ouvre cet <b>aperçu</b> ; la page complète est à un tap.</p>`;
 
 SHEETS.recu = () => `
