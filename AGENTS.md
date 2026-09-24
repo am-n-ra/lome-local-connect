@@ -97,6 +97,11 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Preuve navigateur :** `entity-search` · `entity-empty` · `entite-publique`. **Zéro code produit.**
 - **Fond terminé : `SP-1` ✅ · `SP-2` ✅ · `SP-3` ✅.** Restent `SP-4` (intégrité/réputation **au choix**, S-32) · `SP-5` (S-07/S-10) · `SP-6` (S-22/S-25).
 
+## T-12 (2026-09-23) — audit de conformité Species V2 : le registre redevient vrai
+- **Défaut trouvé :** le registre `omni-species-v2-decision-registry-2026-09-23.md` **contredisait nos propres livraisons** — en-tête « 72 écrans » (réel **73**), `S-01` encore **PARTIEL** (livré par SP-1), §2 « négociable : 0/ABSENT » (les 7 caractéristiques sont montrées), écart `S-06` « aucune surface ne montre le NIVEAU » (SP-2 le montre), §7 listant les 3 **P0** comme manquants. **Cause : modifier la maquette sans mettre à jour la carte.**
+- **Correctif durable :** `scripts/check-maquette-v2.mjs` §6 « registry truth » — le garde vérifie désormais que le registre **annonce le vrai nombre d'écrans**, que `S-01/S-06/S-11` sont **OK** après SP-1/2/3, et qu'aucun écart ne nie une surface livrée. **Falsifié (3 modes) :** 99 écrans → FAIL exit 1 ; `S-06` re-PARTIEL + écart rétabli → FAIL (2) ; `S-01` re-PARTIEL → FAIL exit 1.
+- **État :** `SP-1` ✅ `SP-2` ✅ `SP-3` ✅ · `T-12` ✅ · restent `SP-4` (S-32) `SP-5` (S-10 immobilier + origine géo) `SP-6` (S-22/S-25/économie). **Zéro code produit.**
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 

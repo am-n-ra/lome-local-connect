@@ -55,9 +55,42 @@ check(producers === levels, 'every offer producer carries both carac and level',
   `${producers} carac vs ${levels} level`);
 check(producers >= 3, 'all three offer producers covered', `${producers} producers`);
 
+// --- 6. Registry truth: the Species registry must state the REAL screen count ---
+// T-12 found the registry claiming "72 écrans" while the maquette had 73, and a
+// row still asserting the level scale was absent after it shipped. The registry
+// is the map the founder reads; a map that lags the territory is a false witness.
+const registryPath = resolve(here, '..', 'docs/nature-way/omni-species-v2-decision-registry-2026-09-23.md');
+let registry = '';
+try {
+  registry = readFileSync(registryPath, 'utf8');
+} catch {
+  // absent registry is a hard failure: the map is part of the deliverable.
+}
+check(!!registry, 'species registry present');
+if (registry) {
+  // target the HEADER line specifically: historical sections legitimately quote
+  // the count that was true when they were written (72 before SP-3 added a screen).
+  const headerLine = registry.split('\n').find((l) => /Maquette\s*:/.test(l)) || '';
+  const claimed = Number((headerLine.match(/\((\d+)\s+écrans\)/) || [])[1]);
+  check(claimed === unique.size, 'registry header screen count equals the maquette',
+    `registry header says ${claimed}, maquette has ${unique.size}`);
+  // a delivered decision must not still be described as missing
+  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3']];
+  for (const [id, slice] of delivered) {
+    const row = registry.split('\n').find((l) => l.includes(`**${id}**`));
+    if (row) check(/OK/.test(row), `registry row ${id} marked OK after ${slice}`,
+      `row still reads: ${row.slice(0, 70)}…`);
+  }
+  // scope to the S-06 ROW: the section that documents T-12 legitimately quotes the
+  // stale wording, so a whole-file phrase match would fail on our own history.
+  const s06Row = registry.split('\n').find((l) => l.includes('**S-06**')) || '';
+  check(!/aucune surface ne montre le NIVEAU/.test(s06Row),
+    'registry S-06 row no longer claims the level scale is absent');
+}
+
 if (failures.length) {
   console.error(`\nMAQUETTE V2 CHECK FAILED (${failures.length}):`);
   for (const f of failures) console.error(`  FAIL ${f}`);
   process.exit(1);
 }
-console.log(`\nMAQUETTE V2 OK: ${unique.size} screens, ${levelCount} levels, no duplicates.`);
+console.log(`\nMAQUETTE V2 OK: ${unique.size} screens, ${levelCount} levels, registry truthful, no duplicates.`);
