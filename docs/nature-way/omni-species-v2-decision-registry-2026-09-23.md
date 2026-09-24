@@ -30,7 +30,7 @@ la maquette → rien à dessiner).
 | **S-11** | **Deux niveaux** : chercher une entité OU une offre. Test de non-régression au Root | `search` (sélecteur « Chercher une entité / une offre »), `entity-empty`, `entite-publique`, `scripts/check-maquette-v2.mjs` | **OK (SP-3)** | sélecteur de niveau + 2 états vides + page publique entité + **garde automatisé sans dépendance** |
 | **S-12** | Transport : fondation jour 1, affichage V1, requête A→B = `V1+` | `transport` : 4 | **PARTIEL** | pas d'écran d'offre mobile/transport (normal : `V1+`), mais la **fondation** doit se voir |
 | **S-13** | « Entité » = tout offreur (commerce, organisation, personne seule) même objet | `seller-entry`, `seller-entity` | **OK** | — |
-| **S-25** | **L'offre appartient à l'ENTITÉ** ; le lieu = *où*, pas *à qui* | `entite-publique`, `offer`, `seller-offers` | **PARTIEL** | `entite-publique` existe ✓ mais l'ownership entité n'est pas **explicite** dans la fiche offre |
+| **S-25** | **L'offre appartient à l'ENTITÉ** ; le lieu = *où*, pas *à qui* | `offer` (« Cette offre appartient à… » + « Le lieu — il dit *où*, jamais *à qui* ») | **OK (SP-6)** | — l'ownership est **explicite** dans la fiche offre, pas seulement déductible |
 | **S-28** | Toujours créer une entité, même particulier à objet unique | `seller-entry`, `seller-entity` | **OK** | — |
 | **S-29** | Espace vendeur **progressif** (outils débloqués avec l'entité) | `seller-entry`, `seller-dash` | **OK** | — |
 
@@ -60,7 +60,7 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 
 | ID | Décision | Surface | Statut | Écart |
 |---|---|---|---|---|
-| **S-14** | Confiance = identité + preuve, **seuil par volume** (1 particulier / 3 commerce) | `seller-verif`, `code` | **PARTIEL** | seuil par volume non montré |
+| **S-14** | Confiance = identité + preuve, **seuil par volume** (1 particulier / 3 commerce) | `seller-verif` (« Preuves exigées : 1 vente (particulier) · 3 ventes (commerce) ») | **OK (SP-6)** | — |
 | **S-17** | Paliers 0/1 Joignable → 2 Vérifié opérateur → 3 Prouvé par usage | `Non vérifié` 6, `Vérifié` 15, `ventes` 4 | **OK** | « On publie tôt » présent |
 | **S-18** | **Revendication ≠ création** ; **preuve de contrôle + arbitrage opérateur AVANT transfert** | `seller-claim`, `admin-claim` | **OK** | `preuve` : 15 occ. ✓ |
 | **S-19** | **Avantage promotionnel obligatoire** (remise > 0) | `seller-publish`, `remise` 16 | **OK** | — |
@@ -74,7 +74,7 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 | ID | Décision | Surface | Statut | Écart |
 |---|---|---|---|---|
 | **S-21** | Scan in-store = moteur d'acquisition (QR public en boutique → remise) | `scan-entity`, `entity-from-qr` | **OK** | — |
-| **S-22** | QR circule par 3 canaux : acheteur, **partage hors Omni**, **validation dashboard vendeur** | `qr`, `seller-validate`, `seller-chat` | **PARTIEL** | **« partage hors Omni » (WhatsApp/SMS) absent** ; validation dashboard ✓ |
+| **S-22** | QR circule par 3 canaux : acheteur, **partage hors Omni**, **validation dashboard vendeur** | `qr` (« Partager (WhatsApp/SMS) »), `seller-validate`, `seller-chat` | **OK** | — ⚠️ **correction de mesure** : ma ligne disait « absente » ; elle **existait déjà** (mesure sur la chaîne littérale, pas sur le fond) |
 | **S-23** | QR lié à offre + user + transaction ; avantage appliqué par l'offre | `qr`, `txn-proof` | **CODE** | vérifié en base (`v2_qr_tokens` → snapshot) |
 | **S-24** | Scan du code acheteur **strictement vendeur** ; acheteur a une icône scan | `seller-scan`, `scan-entity`, `menu` | **OK** | asymétrie respectée ✓ |
 | **S-26** | Chaque transaction = **version de l'offre** (prix+coupon gelés) | `txn-proof`, `recu` | **CODE** | vérifié (`v2_transaction_snapshots`) |
@@ -91,10 +91,10 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 
 | Élément | Surface | Statut | Écart |
 |---|---|---|---|
-| **Plafond 20 offres** (gratuit) | `plafond` : 1 | **PARTIEL** | la maquette doit **dire** 20 (`20 offres` : 0) |
+| **Plafond 20 offres** (gratuit) | « 3 / 20 (gratuit) » ×2, « 17 offres restantes avant le plafond gratuit » | **OK** | — ⚠️ **correction de mesure** : la maquette **disait déjà** 20 ; je cherchais la chaîne exacte `20 offres` |
 | **Pro = par entité** (pas par facility) | `seller-pro`, `wallet` (`Pro` 77) | **OK** | — |
 | **Sponsorisé étiqueté** (amplifie, ne remplace pas) | `sponsoris` 2 | **OK** | — |
-| **Bonus 20 USD → seuil par volume** | `seller-pro` | **PARTIEL** | seuil volume non montré |
+| **Bonus 20 USD → seuil par volume** | `seller-pro` (« Bonus confiance : 20 USD verrouillé → **3 ventes à des acheteurs distincts** ») | **OK (SP-6)** | — |
 | **Bulk / comparateur / favoris / alertes** | `bulk` 7, `comparateur` 2, `Favoris` 5, `alerte` 5 | **OK** | `recherche sauvegardée` : 0 → à préciser |
 
 ---
@@ -111,15 +111,15 @@ réels** (commerce renouvelable vs pièce unique). **Référence de mesure :** n
 | ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | **OK (corrigé)** — filtres carte présents | — |
 | ~~P1~~ | ~~**S-10**~~ | **LIVRÉ (SP-5)** | — |
-| **P2** | **S-22** | à faire (SP-6) | partage hors Omni (WhatsApp/SMS) |
-| **P2** | **S-25** | à faire (SP-6) | ownership entité explicite dans la fiche offre |
-| **P2** | Économie | à faire (SP-6) | plafond 20 affiché, seuil bonus par volume |
+| ~~P2~~ | ~~**S-22**~~ | **LIVRÉ (SP-6)** | — |
+| ~~P2~~ | ~~**S-25**~~ | **LIVRÉ (SP-6)** | — |
+| ~~P2~~ | ~~**Économie**~~ | **LIVRÉ (SP-6)** | — |
 | ~~P1~~ | ~~**S-32**~~ | **LIVRÉ (SP-4)** | — |
 | **P1** | **S-07** | filtres de carte (type/transport) | sinon la carte sature |
 | ~~P1~~ | ~~**S-10**~~ | **LIVRÉ (SP-5)** | — |
-| **P2** | **S-22** | partage hors Omni (WhatsApp/SMS) | canal d'acquisition |
-| **P2** | **S-25** | ownership entité explicite dans la fiche offre | sinon on retombe sur la facility |
-| **P2** | Économie | plafond 20 affiché, seuil bonus par volume | honnêteté du plan |
+| ~~P2~~ | ~~**S-22**~~ | **LIVRÉ (SP-6)** | — |
+| ~~P2~~ | ~~**S-25**~~ | **LIVRÉ (SP-6)** | — |
+| ~~P2~~ | ~~**Économie**~~ | **LIVRÉ (SP-6)** | — |
 
 ## 8. Tranches proposées (Species V2) — **aucun code**
 
@@ -278,6 +278,21 @@ Zéro dépendance (pas de `node_modules`, pas de réseau), câblé en `npm run c
 2. la fiche digital proposait **« Itinéraire vers ce vendeur »** et « Aperçu express du lieu » — pour une offre **sans déplacement**. C'était **un mensonge sur lequel l'acheteur aurait agi**. Corrigé : une offre immatérielle **ne propose pas d'itinéraire**, elle dit « tout se passe en ligne ».
 **Garde (`check-maquette-v2.mjs` §5ter) :** immobilier atteignable, origine dans la position, **parité stricte des 7 champs sur les 4 formes**, pas d'itinéraire pour l'immatériel. **Falsifié (4 modes) :** immo irraçable → FAIL ; origine retirée → FAIL ; champ retiré d'**une** forme → FAIL ; itinéraire rendu à l'immatériel → FAIL.
 **Leçon de garde :** un **plancher** (`>= 5`) passait avec 4 formes et laissait une forme perdre un champ — il faut une **parité** (`=== shapes`). Un garde doit porter sur **ce que la forme prétend être**, pas sur un ordre de grandeur.
+
+## 8nonies. SP-6 — LIVRÉ (2026-09-23) : compléments — et **quatre fausses « absences » du registre**
+**Livré (maquette, zéro code produit) :**
+- **S-25 ownership explicite** → la fiche offre dit « Cette offre **appartient à** [entité] » + « Le lieu : un point sur la carte — il dit *où*, jamais *à qui* » ;
+- **économie / bonus** → `seller-pro` affiche « **Bonus confiance : 20 USD verrouillé → 3 ventes à des acheteurs distincts** » (le seuil était invisible) ;
+- **S-14 seuil par volume** → `seller-verif` affiche « Preuves exigées : **1 vente (particulier) · 3 ventes (commerce)** ».
+**⚠️ LE DÉFAUT EST DANS LE REGISTRE, PAS DANS LA MAQUETTE — quatre lignes sur-déclaraient un manque :**
+| Ligne | Le registre disait | La vérité mesurée |
+|---|---|---|
+| S-22 | « partage hors Omni **absent** » | **existait déjà** : `Partager (WhatsApp/SMS)` sur la sheet QR |
+| plafond | « la maquette doit dire 20 » | **disait déjà** `3 / 20 (gratuit)` ×2 + « 17 offres restantes » |
+| S-31 | (conforme) | publier est déjà séparé de la vérification (R-10) |
+| S-29 | (conforme) | déjà là |
+**Cause racine : le registre mesurait des CHAÎNES LITTÉRALES** (`20 offres`, `origine`) et **ratait les libellés réels**. C'est **exactement** la classe T-12 qui avait déjà frappé S-07/S-32/S-06 (cf. §7). **Règle : mesurer le FOND (ce que l'écran dit), jamais le mot qu'on a choisi d'y chercher.**
+**Garde (`check-maquette-v2.mjs` §5quater) :** les **cinq** affirmations sont désormais épinglées — y compris les **deux qui existaient déjà**, pour que la vérité ne dérive **ni dans un sens ni dans l'autre**. **Falsifié (5 modes) :** WhatsApp/SMS retiré → FAIL ; `3 / 20` retiré → FAIL ; ownership retiré → FAIL ; bonus retiré → FAIL ; seuil S-14 retiré → FAIL.
 
 ## 9. Resource Receipt
 

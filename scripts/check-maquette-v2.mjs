@@ -98,6 +98,21 @@ for (const f of ['qte', 'depletion', 'unique', 'position', 'temporalite', 'remis
   check(n === shapes, `every offer shape carries "${f}"`, `${n} for ${shapes} shapes`);
 }
 
+// --- 5quater. SP-6 complements (S-22 / S-25 / S-14 / economy) ---
+// The registry declared four gaps. Measuring the FOND (not the literal strings the
+// registry searched for) showed two were FALSE: "Partager (WhatsApp/SMS)" and
+// "3 / 20 (gratuit)" already existed. That is the T-12 class of defect - a map that
+// lags the territory. Guards below pin the two that were really missing, plus the
+// two genuinely present, so the claim cannot drift either way.
+check(/Partager \(WhatsApp\/SMS\)/.test(js), 'QR circulates off-Omni (WhatsApp/SMS) (S-22)');
+check(/3 \/ 20 \(gratuit\)/.test(js), 'free offer ceiling is stated as 3 / 20 (economy)');
+check(/Cette offre appartient \u00e0/.test(js) && /dit <i>o\u00f9<\/i>, jamais <i>\u00e0 qui<\/i>/.test(js),
+  'owning ENTITY is explicit; place says where, never whose (S-25)');
+check(/Bonus confiance<\/span><b>20 USD verrouill\u00e9 \u2192 3 ventes \u00e0 des acheteurs distincts/.test(js),
+  'trust bonus is locked to 3 DISTINCT buyers (economy)');
+check(/Preuves exig\u00e9es<\/span><b>1 vente \(particulier\) \u00b7 3 ventes \(commerce\)/.test(js),
+  'verification threshold scales by volume (S-14)');
+
 // --- 6. Registry truth: the Species registry must state the REAL screen count ---
 // T-12 found the registry claiming "72 écrans" while the maquette had 73, and a
 // row still asserting the level scale was absent after it shipped. The registry
@@ -118,7 +133,7 @@ if (registry) {
   check(claimed === unique.size, 'registry header screen count equals the maquette',
     `registry header says ${claimed}, maquette has ${unique.size}`);
   // a delivered decision must not still be described as missing
-  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3'], ['S-32', 'SP-4'], ['S-10', 'SP-5']];
+  const delivered = [['S-01', 'SP-1'], ['S-06', 'SP-2'], ['S-11', 'SP-3'], ['S-32', 'SP-4'], ['S-10', 'SP-5'], ['S-25', 'SP-6'], ['S-14', 'SP-6']];
   for (const [id, slice] of delivered) {
     const row = registry.split('\n').find((l) => l.includes(`**${id}**`));
     if (row) check(/OK/.test(row), `registry row ${id} marked OK after ${slice}`,

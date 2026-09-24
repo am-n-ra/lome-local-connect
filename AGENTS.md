@@ -115,6 +115,12 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Garde §5ter :** parité **stricte** des 7 champs sur les 4 formes + pas d'itinéraire pour l'immatériel. **Falsifié (4 modes).** **Leçon :** un **plancher** `>= 5` laisse une forme perdre un champ — exiger la **parité**.
 - **État :** `SP-1..SP-5` ✅ · reste `SP-6` (S-22/S-25/économie).
 
+## SP-6 (2026-09-23) — compléments + **correction de 4 fausses « absences » du registre**
+- **Livré :** S-25 ownership **explicite** (« Cette offre appartient à… » + « Le lieu — il dit *où*, jamais *à qui* ») ; **bonus 20 USD → 3 ventes à des acheteurs distincts** (seller-pro) ; **S-14 seuil par volume** « 1 vente (particulier) · 3 ventes (commerce) » (seller-verif).
+- **⚠️ 2 des 4 « gaps » déclarés étaient FAUX :** `Partager (WhatsApp/SMS)` (S-22) et `3 / 20 (gratuit)` (plafond) **existaient déjà**. **Cause :** le registre mesurait des **chaînes littérales** (`20 offres`, `origine`) au lieu du **fond**. C'est la **classe T-12** (déjà frappé S-07/S-32/S-06). **Règle : mesurer ce que l'écran DIT, jamais le mot qu'on a choisi d'y chercher.**
+- **Garde §5quater :** les **5** affirmations épinglées (épreuves **et** déjà-présentes, pour que ça ne dérive ni dans un sens ni dans l'autre). **Falsifié (5 modes).**
+- **État :** `SP-1..SP-6` ✅ → **Species V2 close**. **Zéro code produit.**
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 

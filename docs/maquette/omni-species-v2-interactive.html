@@ -513,7 +513,8 @@ SHEETS.offer = () => `
   <div class="cardbox">
     <div class="kv"><span>Intégrité de l’offre</span><b style="color:var(--accent)">${S.product.integ}</b></div>
     <div class="kv"><span>Réputation de l’offre</span><b>${S.product.rep}</b></div>
-    <div class="kv"><span>Entité</span><b>${S.product.seller} · ${S.product.kind === 'particulier' ? 'non vérifiée' : 'vérifiée'}</b></div>
+    <div class="kv"><span>Cette offre appartient à</span><b>${S.product.seller} · ${S.product.kind === 'particulier' ? 'non vérifiée' : 'vérifiée'}</b></div>
+    <div class="kv"><span>Le lieu</span><b>un point sur la carte — il dit <i>où</i>, jamais <i>à qui</i></b></div>
   </div>
   <div class="section-kicker">Caractéristiques de l’offre</div>
   <div class="cardbox">
@@ -960,6 +961,7 @@ SHEETS['seller-pro'] = () => `
     <div class="kv"><span>Renouvellement auto</span><b>OFF</b></div>
     <div class="kv"><span>Prix Pro</span><b>10 $/mois ≈ 5 000 F</b></div>
     <div class="kv"><span>Solde wallet</span><b>2 500 F (insuffisant)</b></div>
+    <div class="kv"><span>Bonus confiance</span><b>20 USD verrouillé → 3 ventes à des acheteurs distincts</b></div>
   </div>
   <button class="btn" onclick="toast('Renouvellement auto activé')">Activer le renouvellement auto</button>
   <button class="btn ghost" onclick="go('wallet')">Recharger le portefeuille</button>
@@ -1474,6 +1476,7 @@ SHEETS['seller-verif'] = () => `
     <div class="kv"><span>Badge actuel</span><b class="status dash">Non vérifié</b></div>
     <div class="kv"><span>Étape</span><b class="status warn">Visite terrain programmée</b></div>
     <div class="kv"><span>Opérateur assigné</span><b>Zone Adawlato · aujourd’hui</b></div>
+    <div class="kv"><span>Preuves exigées</span><b>1 vente (particulier) · 3 ventes (commerce)</b></div>
   </div>
   <p class="lead">Vous <b>publiez déjà</b> (S-31) ; la vérification est une couche gagnée. Vous voyez ici <b>où elle en est</b>.</p>
   <button class="btn ghost" onclick="toast('Créneau de visite proposé à l’opérateur')">Proposer un créneau</button>`;
