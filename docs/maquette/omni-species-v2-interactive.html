@@ -219,6 +219,7 @@ function levelLine(lv, label) {
     <p class="lead" style="margin-top:6px"><b>Niveau ${lv} · ${LEVELS[lv][0]}</b> — ${LEVELS[lv][1]}${label ? ' · ' + label : ''}</p>`;
 }
 const S = {
+  entityKind: 'fixe',
   role: 'buyer',
   sheet: 'search',
   prev: [],
@@ -871,6 +872,36 @@ function star(n) {
 function sellerValidate() { S.txn = 'qr_verified'; go('txn-track', { toast: 'Code validé — transaction verrouillée' }); }
 function sellerValidateFromDash() { S.hasEntity = true; S.txn = 'qr_verified'; go('seller-chat', { toast: 'Validé — chat transaction ouvert' }); }
 function createEntity() { S.hasEntity = true; S.entity = 'Boutique Kodjo'; go('seller-dash', { toast: 'Entité créée — vous pouvez publier' }); }
+function setEntityKind(k) { S.entityKind = k; render(); }
+// Le pin de création part de la position de l'utilisateur et se déplace librement.
+// Un seul code sert les trois formes : un lieu fixe se corrige, un mobile se
+// déplace, un digital dit d'où l'on parle. Le geste est identique — le sens change.
+function wireEntityPin() {
+  const pin = document.getElementById('entitypin');
+  const box = document.getElementById('entitymap');
+  if (!pin || !box) return;
+  let drag = false;
+  const move = e => {
+    if (!drag) return;
+    const r = box.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    const l = Math.min(94, Math.max(6, ((p.clientX - r.left) / r.width) * 100));
+    const t = Math.min(90, Math.max(10, ((p.clientY - r.top) / r.height) * 100));
+    pin.style.left = l + '%'; pin.style.top = t + '%';
+  };
+  const stop = () => {
+    if (!drag) return;
+    drag = false; pin.style.cursor = 'grab';
+    const lab = document.getElementById('posLabel');
+    if (lab) lab.textContent = S.entityKind === 'digital' ? 'Lomé · Adawlato' : 'Position ajustée · sur la carte';
+  };
+  pin.addEventListener('mousedown', e => { drag = true; pin.style.cursor = 'grabbing'; e.preventDefault(); });
+  pin.addEventListener('touchstart', () => { drag = true; }, { passive: true });
+  document.addEventListener('mousemove', move);
+  document.addEventListener('touchmove', move, { passive: true });
+  document.addEventListener('mouseup', stop);
+  document.addEventListener('touchend', stop);
+}
 function publishOffer() { go('seller-dash', { toast: 'Offre publiée (visuel + avantage requis)' }); }
 
 /* ---------- SHEETS : vendeur ---------- */
@@ -888,9 +919,24 @@ SHEETS['seller-entity'] = () => `
   <div class="chips"><span class="chip on">Commerce</span><span class="chip">Particulier</span><span class="chip">Organisation</span></div>
   <div class="cardbox">
     <div class="kv"><span>Nom de l’entité</span><b>Boutique Kodjo</b></div>
-    <div class="kv"><span>Type</span><b>Commerce · fixe</b></div>
-    <div class="kv"><span>Lieu</span><b>Lomé · Adawlato</b></div>
+    <div class="kv"><span>Type</span><b>Commerce</b></div>
     <div class="kv"><span>N° joignable</span><b>90 12 34 56 <span class="status ok">confirmé</span></b></div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>Forme du lieu</span><b>${S.entityKind === 'digital' ? 'Immatérielle · origine' : S.entityKind === 'mobile' ? 'Mobile · se déplace' : 'Fixe · sur place'}</b></div>
+    <div class="chips" style="margin-top:6px">
+      <span class="chip${S.entityKind !== 'mobile' && S.entityKind !== 'digital' ? ' on' : ''}" onclick="setEntityKind('fixe')">Fixe</span>
+      <span class="chip${S.entityKind === 'mobile' ? ' on' : ''}" onclick="setEntityKind('mobile')">Mobile</span>
+      <span class="chip${S.entityKind === 'digital' ? ' on' : ''}" onclick="setEntityKind('digital')">Digital · service</span>
+    </div>
+  </div>
+  <div class="cardbox">
+    <div class="kv"><span>${S.entityKind === 'digital' ? 'D’où vous parlez <i>(origine)</i>' : 'Où vous êtes'}</span><b id="posLabel">${S.entityKind === 'digital' ? 'Lomé · Adawlato' : 'Ma position · déplaçable'}</b></div>
+    <div id="entitymap" style="position:relative;height:132px;border-radius:14px;overflow:hidden;margin-top:8px;background:radial-gradient(circle at 40% 35%, #fdfdfc 0%, #f1f1ef 60%, #e8e8e6 100%);border:1px solid var(--line,#e8e8e6)">
+      <span class="usermarker" style="left:38%;top:52%"></span>
+      <span class="vdot ink" id="entitypin" style="left:60%;top:34%;width:16px;height:16px;cursor:grab;touch-action:none"></span>
+    </div>
+    <p class="lead" style="margin:8px 0 0">Le pin part de <b>votre position</b> et se <b>déplace librement</b>. ${S.entityKind === 'digital' ? 'Pour une offre <b>immatérielle</b>, la position dit <i>d’où vous parlez</i> — jamais un déplacement à faire.' : 'Vous pouvez le corriger : vous seul savez où se trouve votre lieu.'}</p>
   </div>
   <button class="btn" onclick="createEntity()">Créer mon entité</button>
   <p class="lead">Même un particulier crée une entité (S-28). Publier ne requiert <b>pas</b> la vérification (S-31).</p>`;
@@ -1552,6 +1598,7 @@ function render() {
   renderFilters();
   const fn = SHEETS[S.sheet] || SHEETS.search;
   document.getElementById('sheetmount').innerHTML = `<div class="sheet" data-sheet="${S.sheet}">${fn()}</div>`;
+  wireEntityPin();
 }
 window.addEventListener('resize', () => render());
 render();
