@@ -40,6 +40,23 @@ Ces éléments sont **prouvés en prod** et **absents de la maquette**. Ils sont
 | Clusters MapLibre en chiffres formés | `131d23a` | `verified` | **héritage obligatoire** |
 | Coquille desktop / comparateur | `layout-contract.ts`, `v13-compare.ts` | `verified` | **héritage obligatoire** |
 
+## 3bis. DÉCOUVERTE 2026-09-23 — la maquette V2 hérite **déjà** du langage visuel
+
+Vérifié par comparaison de jetons (pas par impression) :
+
+| Jeton | App (`src/trunk/ui-v13.css`) | Maquette V2 | Verdict |
+|---|---|---|---|
+| `--ink` | `#0f0f0f` | `#0f0f0f` | **identique** |
+| `--panel` | `#f7f7f7` | `#f7f7f7` | **identique** |
+| `--accent` | `#2e8b6f` | `#2e8b6f` | **identique** |
+| `--accent-soft` | `#eef4f1` | `#eef4f1` | **identique** |
+| `--ink-soft` | `#6b6b6b` | `#6b6b6b` | **identique** |
+| Police | `Inter, ui-sans-serif…` | `Inter, ui-sans-serif…` | **identique** |
+
+**Conséquence :** la maquette V2 **n'est pas une divergence visuelle**. Elle partage déjà l'ADN de l'app. Ce qui manque n'est **pas** le visuel — ce sont les **comportements** (§3) et les **décisions produit** (§2). **La fusion est donc quasi gratuite visuellement** : elle ne coûte que le portage des comportements et la réconciliation de `docs/design.md`.
+
+**COH-V2-02 s'allège :** sévérité Haute → **Moyenne** (le portage comportemental est borné, pas une réécriture visuelle).
+
 ## 4. Décision demandée au fondateur
 
 **Une seule décision, réversible, qui débloque tout :** *la maquette V2 est-elle la référence visuelle qui **hérite** des comportements de l'app (fusion), ou remplace-t-elle l'app (perte assumée) ?*
