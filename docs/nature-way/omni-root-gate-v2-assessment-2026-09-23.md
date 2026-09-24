@@ -1,5 +1,19 @@
 # Gate Root V2 — évaluation avant implémentation (Omni, 2026-09-23)
 
+> ## ⛔ PRÉMATURÉ — PARQUÉ (pas une porte, 2026-09-23)
+>
+> **Ce document a été produit alors que la porte Species était encore ouverte.** La règle de
+> contrôle est explicite : *« Un seul gate actif. Ne pas empiler Root/Trunk/Canopy au-dessus
+> d'une Species non conforme. »* `SP-1…SP-6` ne sont **pas validés par le fondateur** → Species
+> n'est pas conforme → **cette analyse n'avait pas à être ouverte comme porte.**
+>
+> **Ce qui est retenu :** les **mesures** ci-dessous sont réelles (lues sur la canonique) et
+> gardées comme **renseignement** pour informer la future porte Root.
+> **Ce qui est retiré :** la **demande de décision `R-1`/`R-2`/`R-3`** — elle n'est **pas
+> ouverte**. Ne pas y répondre maintenant.
+>
+> **Condition de réouverture :** clôture de Species V2 par décision fondateur.
+
 > **Statut : EN ATTENTE DE DÉCISION FONDATEUR.** Aucun code produit n'a été modifié.
 > Le document de réconciliation exige la preuve Root **avant** d'ouvrir l'implémentation.
 > Ceci est cette preuve — et elle **échoue**.
@@ -85,7 +99,10 @@ E-02/E-03 (entité unifiée, y compris personne)
 
 **Pourquoi d'abord :** tant que R-1 n'est pas fermé, toute surface hérite du moule « commerce + stock » et **casse sur le service, le créneau, le digital et l'immobilier** — les quatre cas que la maquette promet de porter.
 
-## 5. Décisions demandées (fondateur)
+## 5. Décisions demandées (fondateur) — ⛔ RETIRÉES POUR L'INSTANT (voir bannière)
+
+> Ces trois arbitrages sont **exacts** et seront nécessaires **le jour où Root s'ouvre**.
+> Ils **ne sont pas ouverts aujourd'hui** : Species n'est pas close. Conservés pour mémoire.
 
 | # | Décision | Options |
 |---|---|---|

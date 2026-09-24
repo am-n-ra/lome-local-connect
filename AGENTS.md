@@ -119,7 +119,14 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Livré :** S-25 ownership **explicite** (« Cette offre appartient à… » + « Le lieu — il dit *où*, jamais *à qui* ») ; **bonus 20 USD → 3 ventes à des acheteurs distincts** (seller-pro) ; **S-14 seuil par volume** « 1 vente (particulier) · 3 ventes (commerce) » (seller-verif).
 - **⚠️ 2 des 4 « gaps » déclarés étaient FAUX :** `Partager (WhatsApp/SMS)` (S-22) et `3 / 20 (gratuit)` (plafond) **existaient déjà**. **Cause :** le registre mesurait des **chaînes littérales** (`20 offres`, `origine`) au lieu du **fond**. C'est la **classe T-12** (déjà frappé S-07/S-32/S-06). **Règle : mesurer ce que l'écran DIT, jamais le mot qu'on a choisi d'y chercher.**
 - **Garde §5quater :** les **5** affirmations épinglées (épreuves **et** déjà-présentes, pour que ça ne dérive ni dans un sens ni dans l'autre). **Falsifié (5 modes).**
-- **État :** `SP-1..SP-6` ✅ → **Species V2 close**. **Zéro code produit.**
+- **État (CORRIGÉ 2026-09-23) :** `SP-1..SP-6` **livrés** — **PAS validés, PAS clos**. La clôture de Species V2 est une **décision fondateur** (`SP-VALIDATION`).
+
+## ⛔ INCIDENT 2026-09-23 — deux étapes sautées (règle ajoutée)
+Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne sautes pas des étapes ? » — **il avait raison, deux étapes ont été sautées dans la même session :**
+1. **« Species V2 est close » a été affirmé après la livraison de SP-1…SP-6** — or le plan (`T-13`) dit : *bloqués sur validation fondateur*. **Livrer ≠ faire accepter.**
+2. **Un audit de porte Root a été produit et poussé** (`omni-root-gate-v2-assessment-2026-09-23.md`, `6a9b7fc`) — or la board dit : *« Un seul gate actif. Ne pas empiler Root/Trunk/Canopy au-dessus d'une Species non conforme. »* → **PRÉMATURÉ, parqué** ; mesures gardées comme renseignement, demande `R-1/R-2/R-3` **retirée**.
+- **Règle : livrer une tranche ne clôt pas une porte ; une porte se clôt par une décision fondateur enregistrée. Ne jamais ouvrir une porte aval « pour préparer ».**
+- **Action courante = validation fondateur de `SP-1…SP-6`.** Contradiction `T-12` (`LIVRÉ` barré vs `planned` vs board « requis ») = `T12-STATUS`, à trancher fondateur (défaut gardé, `planned` par précaution).
 
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).

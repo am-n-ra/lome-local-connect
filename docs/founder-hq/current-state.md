@@ -19,8 +19,30 @@
 | **Decided by** | Fondateur |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions `S-01…S-34`) |
 | **Species** | **RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (72 écrans) |
-| **Next** | `T-11` réétalonner le plan sur `S-01…S-34` → `T-12` audit de **conformité** Species V2 |
+| **Next** | **validation fondateur de `SP-1…SP-6`** (les surfaces existent, leur ensemble n'est pas accepté) → puis clôture Species V2 → ensuite seulement Root |
 | **Downstream gates** | **Aucune active** — Root/Trunk/Branches/Canopy interdits pendant cette porte |
+
+### ⚠️ Correction d'exécution — 2026-09-23 (incident, à ne pas réapprendre)
+
+**Deux étapes ont été sautées dans la même session, et le fondateur l'a relevé.**
+
+| # | Ce qui a été fait à tort | La règle violée |
+|---|---|---|
+| 1 | « **Species V2 est close** » a été affirmé après la livraison de `SP-1…SP-6` | Le plan (`T-13`) dit : **`SP-1…SP-6` bloqués sur validation fondateur**. Livrer ≠ faire accepter. La clôture est une **décision fondateur**, pas une conséquence de la livraison. |
+| 2 | Un **audit de porte Root** (`R-1`/`R-2`/`R-3`) a été produit et poussé | La board dit : **« Un seul gate actif. Ne pas empiler Root/Trunk/Canopy au-dessus d'une Species non conforme. »** Species n'est pas conforme tant que `SP-1…SP-6` ne sont pas validés. |
+
+**Statut de l'audit Root poussé (`omni-root-gate-v2-assessment-2026-09-23.md`, commit `6a9b7fc`)** :
+**PRÉMATURÉ — parqué, pas une porte.** Les **mesures** faites en base sont réelles et gardées comme *renseignement* ; la **demande de décision Root est retirée** jusqu'à clôture de Species. Le fichier porte désormais une bannière le disant.
+
+**Règle ajoutée :** *livrer une tranche ne clôt pas une porte ; une porte se clôt par une décision fondateur enregistrée. Ne jamais ouvrir une porte aval « pour préparer ».*
+
+### Contradiction de statut à trancher (ne pas la résoudre en silence)
+
+`T-12` porte **deux statuts contradictoires** dans les artefacts :
+- `intra-skill-plan-NW-PROD-OMNI-SEED2-01.md` : ligne **barrée** « LIVRÉ 2026-09-23 » **mais** colonne Statut = `planned` ;
+- `founder-hq-board.md` : « **audit de conformité requis (T-12)** ».
+
+Les deux ne peuvent pas être vrais. **Autorité : le fondateur.** Tant que ce n'est pas tranché, `T-12` reste `planned` (le statut le plus prudent) et Species reste **RÉOUVERTE**.
 
 ## Founder decisions applied
 
@@ -45,6 +67,8 @@
 | `SCOUT-01` | Haute | Couverture mondiale de lieux orpheline (`public-discovery`, `osm-coverage`) |
 | `SCOUT-02` | Haute | Impasse d'expiration des intentions (`v2_purchase_intents.state` non lu par l'UI) |
 | `T-07d` | — | Prod `index-BUMFRcnb.js` ≠ local → **OUVERT** (ne pas pousser) |
+| `SP-VALIDATION` | **Haute** | `SP-1…SP-6` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
+| `T12-STATUS` | Moyenne | `T-12` : « LIVRÉ » (plan, titre barré) **contre** `planned` (colonne Statut) + « audit requis » (board) → contradiction, à trancher fondateur |
 
 ## Rule (added 2026-09-23 — do not relearn)
 

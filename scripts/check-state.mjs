@@ -41,6 +41,23 @@ const mustPointToV2 = [
   ['AGENTS.md', 'omni-intent-brief-v2-2026-09-23.md'],
 ];
 
+// 2026-09-23 incident: Species was declared closed right after SP-1..SP-6 shipped, and a
+// downstream Root gate was opened "to prepare", while the plan said deliverables are
+// BLOCKED ON FOUNDER VALIDATION and the board said one gate at a time. Shipping is not
+// acceptance. These guards make both mistakes fail loudly.
+const incident = [
+  ['docs/founder-hq/current-state.md', 'SP-VALIDATION', 'SP validation defect must stay open'],
+  ['docs/founder-hq/founder-hq-board.md', 'SP-VALIDATION', 'board must point at the pending validation'],
+  ['docs/founder-hq/founder-hq-board.md', 'T12-STATUS', 'the T-12 status contradiction must stay visible'],
+  ['docs/nature-way/omni-root-gate-v2-assessment-2026-09-23.md', 'PRÉMATURÉ', 'the Root audit must stay parked'],
+];
+
+// A deliverable that is merely shipped is never a closed gate.
+const forbiddenClaims = [
+  ['AGENTS.md', 'Species V2 close', 'must not claim Species is closed'],
+  ['docs/founder-hq/founder-hq-board.md', 'Species V2 — close', 'must not claim Species is closed'],
+];
+
 const forbidden = [
   // The stale claim that must never reappear as a CURRENT state.
   ['docs/founder-hq/founder-hq-board.md', 'Gates 1-6 `closed`', 'must be marked SUPERSEDED, not asserted'],
@@ -64,10 +81,29 @@ const check = (file, needle, label) => {
   }
 };
 
+const forbid = (file, needle, label) => {
+  let text;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch {
+    console.error(`FAIL  ${file}: missing`);
+    failed++;
+    return;
+  }
+  if (text.includes(needle)) {
+    console.error(`FAIL  ${file}: ${label} ("${needle}")`);
+    failed++;
+  } else {
+    console.log(`ok    ${file}: ${label}`);
+  }
+};
+
 console.log(`\nstate of record gate = ${gate}\n`);
 for (const [f, n] of mustAgree) check(f, n, 'reopen marker');
 for (const [f, n] of mustPointToV2) check(f, n, 'points to Intent Brief V2');
 for (const [f, n, l] of forbidden) check(f, n, l);
+for (const [f, n, l] of incident) check(f, n, l);
+for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
 
 if (failed > 0) {
   console.error(`\nSTATE DIVERGENCE: ${failed} problem(s). Reconcile before claiming a gate.\n`);

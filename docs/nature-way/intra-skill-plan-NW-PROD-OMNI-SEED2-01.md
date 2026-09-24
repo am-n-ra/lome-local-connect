@@ -94,7 +94,7 @@ sur les S-xx** (tâche T-11 ci-dessous).
 | ID | Parent | Chemin structurel | Phase | Objectif | Dépendance | Owner | Statut | Critère d'acceptation | Preuve attendue | Risque/dette | Re-plan |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | **T-11** | T-01 | product > species | **Species** | **Réétalonner le plan V2 sur les 34 décisions S-01…S-34** : cartographier chaque S-xx → surface maquette (présente/partielle/absente) → tranche | T-01, Intent Brief V2 | Nature Way | `done` | table S-xx → surface → tranche, zéro décision orpheline | table dans un registre Species V2 | COH-V2-18 (audit mesuré contre MV1) | audit clos à tort |
-| **T-12** | T-11 | product > species | **Species** | ~~**Audit de conformité Species V2**~~ — **LIVRÉ 2026-09-23** (registre réconcilié + garde « registry truth », 3 modes d'échec falsifiés) (au-delà de l'inventaire d'écrans) : vérifier que chaque surface **respecte** les S-xx (S-05 unclaimed, S-06 échelle 0→4, S-11 double niveau, S-13 filtres carte, S-18 revendication, S-32 intégrité/réputation d'offre…) | T-11 | Nature Way | `planned` | verdict par décision : conforme / partielle / absente | registre Species V2 | audit MV1 trompeur | — |
+| **T-12** | T-11 | product > species | **Species** | **Audit de conformité Species V2** : vérifier que chaque surface **respecte** les S-xx (S-05 unclaimed, S-06 échelle 0→4, S-11 double niveau, S-13 filtres carte, S-18 revendication, S-32 intégrité/réputation d'offre…). **⚠️ Statut contradictoire à trancher (2026-09-23) :** le titre portait « LIVRÉ » barré tandis que la colonne Statut disait `planned` et que la board disait « audit requis ». La contradiction n'est **pas résolue en silence** : autorité = fondateur. **En attendant : `planned`** (statut le plus prudent). | T-11 | Nature Way | `planned` (⚠️ contradiction `T12-STATUS`) | verdict par décision : conforme / partielle / absente | registre Species V2 | audit MV1 trompeur ; statut contradictoire non tranché | fondateur statue sur `T12-STATUS` |
 
 | **T-13** | T-11 | product > species | **Species** | **Produire les tranches SP-1…SP-6** (`SP-1` + `SP-2` + `SP-3` **livrés** 2026-09-23) (SP-1 caractéristiques d'offre → SP-2 échelle 0→4 → SP-3 double niveau → SP-4 intégrité/réputation d'offre → SP-5 filtres carte → SP-6 compléments) | T-11, **validation fondateur** | Nature Way | `in_progress` | surfaces dessinées dans la maquette V2, cohérentes avec `design.md` | diff maquette + capture | S-01/S-06/S-11/S-32 non démontrés | `visual-and-logic-coherence-review.md` | fondateur refuse SP |
 
@@ -103,6 +103,11 @@ sur les S-xx** (tâche T-11 ci-dessous).
 pas **S-01** (caractéristiques d'offre : 0 surface), **S-06** (échelle 0→4 : 0 occurrence),
 **S-11** (double niveau : 0), **S-32** (intégrité/réputation d'offre : absent).
 **T-13 = le vrai travail Species restant ; bloqué sur validation fondateur de SP-1…SP-6.**
+**État 2026-09-23 (fin de session) :** `SP-1…SP-6` sont **livrés** (chacun prouvé à l'écran + garde
+falsifié, 5 modes pour SP-6). **Ils ne sont pas validés.** La clôture de Species V2 est une
+**décision fondateur**, pas une conséquence de la livraison — *incident du 2026-09-23 : Species a
+été close à tort après la livraison, et une porte Root a été ouverte à tort « pour préparer ».
+Voir `docs/founder-hq/current-state.md` §Correction d'exécution.*
 
 **Clarification :** la maquette V2 contient **déjà** des surfaces des décisions S-xx
 (`Lieu connu`/`Non revendiquée`/`Revendiquer` pour S-05/S-18 ; `WhatsApp`/`numéro` pour S-16 ;
