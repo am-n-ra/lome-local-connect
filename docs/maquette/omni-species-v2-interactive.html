@@ -198,6 +198,20 @@
 </div>
 <script>
 /* ===== Omni Species V2 — prototype interactif ===== */
+/* S-06 : échelle d'existence 0→4 — Discoverable ≠ Queryable ≠ Available ≠ Transactable */
+const LEVELS = [
+  ['Présente', 'sur la carte, pas encore gérée'],
+  ['Revendiquée', 'une entité en a pris la responsabilité'],
+  ['Offre publiée', 'stock déclaré, non confirmé'],
+  ['Disponibilité vivante', 'confirmée récemment'],
+  ['Transactable', 'transaction Omni possible maintenant'],
+];
+function levelLine(lv, label) {
+  const seg = LEVELS.map((_, i) => `<i class="${i <= lv ? 'on' : ''}"></i>`).join('');
+  return `<div class="stepline">${seg}</div>
+    <div class="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
+    <p class="lead" style="margin-top:6px"><b>Niveau ${lv} · ${LEVELS[lv][0]}</b> — ${LEVELS[lv][1]}${label ? ' · ' + label : ''}</p>`;
+}
 const S = {
   role: 'buyer',
   sheet: 'search',
@@ -205,6 +219,7 @@ const S = {
   constraints: { rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false }, sort: 'best', fresh: 'fresh',
   product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
     // S-01 : tout est offre, les différences sont des CARACTÉRISTIQUES (modèle jour 1)
+    level: 4, levelProof: 'confirmée il y a 2 h',
     carac: {
       qte: '24 disponibles', depletion: 'Décompte à chaque vente',
       unique: null,
@@ -343,10 +358,12 @@ function openOffer(kind) {
   // S-01 : chaque offre expose ses CARACTÉRISTIQUES (modèle jour 1) — commerce renouvelable vs pièce unique
   S.product = kind === 'person'
     ? { name: 'Ordinateur Dell (occasion)', price: '45 000 F', old: '50 000 F', promo: '−10 % Omni', seller: 'Awa T.', kind: 'particulier', dist: '380 m',
+        level: 2, levelProof: 'déclarée, pas encore confirmée',
         carac: { qte: '1 exemplaire', depletion: 'Disparaît après la vente', unique: true,
                  position: 'Fixe · domicile', temporalite: 'Toujours à vendre (pas de créneau)',
                  remise: 'Retrait chez le vendeur', etat: 'Occasion · très bon état', prix: 'Fixe · négociable ? oui' } }
     : { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
+        level: 4, levelProof: 'confirmée il y a 2 h',
         carac: { qte: '24 disponibles', depletion: 'Décompte à chaque vente', unique: null,
                  position: 'Fixe · sur place', temporalite: 'Ouvert · mar–dim 8h–20h',
                  remise: 'Retrait sur place', etat: 'Neuf', prix: 'Fixe · négociable ? non' } };
@@ -406,9 +423,9 @@ SHEETS.results = () => `
   <div class="handle"></div>
   <div class="sheet-head"><div><div class="eyebrow">Résultats · correspondant à vos contraintes</div><h1>3 offres</h1></div><span class="status gray">3</span></div>
   <div class="hgrid">
-    <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Produit recherché</span></div></div>
-    <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">À confirmer</span></div></div>
-    <div class="hcard" onclick="toast('Lieu connu mais non revendiqué — non interrogeable')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Non revendiquée</span></div></div>
+    <div class="hcard" onclick="openOffer('commerce')"><div class="thumb">🍝<span class="vmark"></span><span class="promo">−15 % Omni</span></div><div class="body"><b>Spaghetti 500 g</b><small>Boutique Kodjo · commerce · 140 m</small><span class="pr">850 F<span class="old">1 000 F</span></span><span class="status ok" style="margin-top:5px">En stock</span> <span class="status ink" style="margin-top:5px;font-size:8px">Produit recherché</span> <span class="status ink" style="margin-top:5px;font-size:8px">Niv. 4 · Transactable</span></div></div>
+    <div class="hcard" onclick="openOffer('person')"><div class="thumb person">💻</div><div class="body"><b>Ordinateur Dell</b><small>Awa T. · particulier · 380 m</small><span class="pr">45 000 F<span class="old">50 000 F</span></span><span class="status dash" style="margin-top:5px">Niv. 2 · À confirmer</span></div></div>
+    <div class="hcard" onclick="toast('Lieu connu mais non revendiqué — non interrogeable')"><div class="thumb unclaimed"></div><div class="body"><b>Épicerie du Port</b><small>Lieu connu · non gérée</small><span class="pr">—</span><span class="status dash" style="margin-top:5px">Niv. 0 · Non revendiquée</span></div></div>
   </div>
   <div class="sortbar">
     ${[['best', 'Meilleur match'], ['near', 'Plus proche'], ['price', 'Prix le plus bas'], ['disc', 'Remise Omni']].map(([k, l]) =>
@@ -444,7 +461,7 @@ SHEETS.offer = () => `
   <div class="handle"></div>
   <div class="sheet-head">
     <div><div class="eyebrow">Offre · ${S.product.seller} · ${S.product.kind} · ${S.product.dist}</div><h1>${S.product.name}</h1></div>
-    <span class="status dash">À confirmer</span>
+    <span class="status ${S.product.level >= 3 ? 'ok' : 'dash'}">${S.product.level >= 3 ? 'En stock' : 'À confirmer'}</span>
   </div>
   <div style="margin-top:6px;display:flex;gap:12px;align-items:center">
     <div style="width:74px;height:74px;border-radius:14px;background:linear-gradient(135deg,#e9eef0,#d3dade);display:grid;place-items:center;font-size:30px">${S.product.kind === 'particulier' ? '💻' : '🍝'}</div>
@@ -465,6 +482,11 @@ SHEETS.offer = () => `
     <div class="kv"><span>État</span><b>${S.product.carac.etat}</b></div>
     <div class="kv"><span>Prix</span><b>${S.product.carac.prix}</b></div>
     <p class="lead" style="margin-top:6px">Une seule offre, sept caractéristiques — aucun « type » séparé. Le digital, le service et le transport se décrivent avec ces mêmes champs.</p>
+  </div>
+  <div class="section-kicker">Niveau d’existence</div>
+  <div class="cardbox">
+    ${levelLine(S.product.level, S.product.levelProof)}
+    <p class="lead" style="margin-top:4px">Être sur la carte (niveau 0) ne veut pas dire interrogeable. Chaque niveau se gagne : la revendication, puis l’offre, puis la disponibilité vivante, puis la transaction.</p>
   </div>
   <div class="cardbox">
     <div class="kv"><span>Dans votre panier</span><b>1 produit · <span onclick="toast('Panier vidé')" style="text-decoration:underline;cursor:pointer">vider</span></b></div>

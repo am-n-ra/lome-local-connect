@@ -22,7 +22,7 @@ la maquette → rien à dessiner).
 | **S-03** | L'entité mère liste son offre | `seller-publish`, `seller-offers`, `entite-publique` | **OK** | — |
 | **S-04** | Toute offre existe via une entité | `seller-publish`, `seller-entry` | **OK** | — |
 | **S-05** | Amorçage à froid : `unclaimed` niveau 0, « Lieu connu — pas encore géré », *Revendiquer* | `results`, `facility-apex`, `seller-claim` | **OK** | libellé « Lieu connu » : 2 occurrences ✓ |
-| **S-06** | **Échelle d'existence 0→4** (Présente→Revendiquée→Offre→Dispo→Transactable) | `search` chip `Transactable` | **PARTIEL** | ⚠️ **Correction :** `Transactable` **existe** comme **chip de filtre** (`Discoverable`/`Queryable` : 0). Mais **aucune surface ne montre le NIVEAU d'un lieu** — le chip filtre, il n'enseigne pas l'échelle |
+| **S-06** | **Échelle d'existence 0→4** (Présente→Revendiquée→Offre→Dispo→Transactable) | `offer` (`levelLine` + niveau), `results` (badge `Niv. n`), `search` chip | **OK (SP-2)** | ⚠️ **Correction :** `Transactable` **existe** comme **chip de filtre** (`Discoverable`/`Queryable` : 0). Mais **aucune surface ne montre le NIVEAU d'un lieu** — le chip filtre, il n'enseigne pas l'échelle |
 | **S-07** | Carte + recherche = 2 vues d'un corpus ; **carte filtrable** | `search` (`Tout` / `Commerces` / `Particuliers` / `Transport`) | **OK (corrigé)** | ⚠️ **Correction :** les filtres de carte **existent** (`Tout / Commerces / Particuliers / Transport`). Ma mesure « absents » était fausse — je cherchais `ambulant`, jamais le libellé réel |
 | **S-08** | Itinéraire = soutien ; transport = une offre | `offer` (itinéraire), `transport` : 4 occ. | **PARTIEL** | itinéraire OK ; **offre de transport** non modélisée visuellement |
 | **S-09** | Le prix compte, visible/comparable | `results`, `compare`, `offer` | **OK** | — |
@@ -165,6 +165,35 @@ ses producteurs, pas seulement à l'initialiseur.**
 
 **Reste :** `S-01` passe de **PARTIEL** à **OK** sur la fiche ; la démonstration **au niveau `results`**
 (badge par carte) reste `SP-4`.
+
+## 8quater. SP-2 — LIVRÉ (2026-09-23), preuve navigateur
+
+**Tranche `SP-2` : échelle d'existence 0→4**, enseignée et affichée.
+
+| Niveau | Libellé | Signification |
+|---|---|---|
+| 0 | **Présente** | sur la carte, pas encore gérée |
+| 1 | **Revendiquée** | une entité en a pris la responsabilité |
+| 2 | **Offre publiée** | stock déclaré, non confirmé |
+| 3 | **Disponibilité vivante** | confirmée récemment |
+| 4 | **Transactable** | transaction Omni possible maintenant |
+
+**Surfaces :** (a) **fiche offre** — bloc « Niveau d'existence » avec les 5 segments (`levelLine`), le **numéro**, le **libellé** et la **preuve** qui date le niveau ; (b) **cartes de résultat** — badge `Niv. n · libellé` sur chaque offre.
+
+**Preuve mesurée (navigateur) :**
+
+| Offre | Carte résultat | Fiche (niveau + preuve) |
+|---|---|---|
+| Spaghetti (Kodjo) | `En stock` · `Niv. 4 · Transactable` | **Niveau 4 · Transactable** — confirmée il y a 2 h |
+| Ordinateur (Awa T.) | `Niv. 2 · À confirmer` | **Niveau 2 · Offre publiée** — déclarée, pas encore confirmée |
+| Épicerie du Port | `Niv. 0 · Non revendiquée` | (écran non-gérée) |
+
+**Deux bugs réels trouvés et corrigés en livrant SP-2 :**
+
+1. **Décalage de numérotation** — `LEVELS` était indexé en **base 1** alors que `level` est un **numéro en base 0** : la fiche affichait « **Niveau 5** » (hors échelle 0→4) puis « Niveau 2 · **Revendiquée** » au lieu d'« Offre publiée ». **Le modèle d'indexation est le même que celui où j'avais déjà glissé.** Corrigé : `level` = numéro, barres allumées = `level + 1`, libellé = `LEVELS[level]`.
+2. **Incohérence préexistante révélée** — le statut d'en-tête de la fiche était **hardcodé « À confirmer »**, donc la même offre était « **En stock** » dans les résultats et « **À confirmer** » sur sa fiche. Corrigé : le statut est **dérivé du niveau** (`level >= 3` → En stock). **Ajouter une dimension (le niveau) révèle les contradictions qu'un champ hardcodé masquait.**
+
+**Preuve technique :** JS `node --check` **OK**, **72 écrans** intacts, 0 doublon défini ; rendu vérifié en navigateur sur les **3 surfaces × 2 profils**.
 
 ## 9. Resource Receipt
 

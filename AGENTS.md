@@ -84,6 +84,13 @@ D-01 keep 9 internal trust states + derive public label + separate operational s
 - **Méthode de mesure (leçon) :** **grep seul produit des faux négatifs.** Le premier registre a déclaré **S-07/S-32/S-06** « absents » à tort — la vérification navigateur a démenti 3 lignes (filtres carte `Tout/Commerces/Particuliers/Transport` **présents** ; `Intégrité/Réputation de l'offre` **présents** sur la fiche ; chip `Transactable` **présent**). **Méthode désormais : grep → ouvrir l'écran → lire le libellé réel.** Corrections consignées §8bis.
 - **Preuve :** maquette rechargée en navigateur, panneau rendu ; JS `node --check` **OK**, **72 écrans** intacts, 0 doublon défini ; `check:state` vert. **Zéro code produit modifié.**
 
+## SP-2 (2026-09-23) — échelle d'existence 0→4 (maquette, 0 code produit)
+- **Le chip `Transactable` filtrait mais n'enseignait rien.** SP-2 livre l'échelle : **0 Présente · 1 Revendiquée · 2 Offre publiée · 3 Disponibilité vivante · 4 Transactable** (S-06). Surfaces : **fiche offre** (`levelLine` : 5 segments + numéro + libellé + **preuve datée**) et **cartes de résultat** (badge `Niv. n · libellé`). `S-06` **PARTIEL → OK**.
+- **Preuve navigateur :** Spaghetti `Niv. 4 · Transactable` · Ordinateur `Niv. 2 · Offre publiée` · Épicerie `Niv. 0 · Non revendiquée` — les 3 surfaces × 2 profils. JS `node --check` OK, 72 écrans, 0 doublon.
+- **Bug 1 corrigé — base 0 vs base 1 :** `LEVELS` était indexé en base 1 alors que `level` est un numéro base 0 → « Niveau 5 » hors échelle, puis « Niveau 2 · Revendiquée » au lieu d'« Offre publiée ». Fix : libellé = `LEVELS[level]`, barres = `level + 1`. **Même classe d'erreur d'indexation que précédemment.**
+- **Bug 2 corrigé — incohérence révélée :** le statut d'en-tête de la fiche était **hardcodé « À confirmer »** → la même offre était « En stock » dans les résultats et « À confirmer » sur sa fiche. Fix : statut **dérivé du niveau**. **Ajouter une dimension révèle les contradictions qu'un champ hardcodé masquait.**
+- **Ordre :** `SP-1` ✅ · `SP-2` ✅ · **`SP-3` à faire** (double niveau entité/offre) → `SP-4`–`SP-6`.
+
 ## Commands
 - `npm install`, `npm test` (29 files / 184 tests as of last run), `npm run lint` (tsc). Build: Vite. Deploy: Vercel (prod frozen for product changes).
 
