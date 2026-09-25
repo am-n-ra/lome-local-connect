@@ -602,3 +602,17 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   - **Sémantique de snapshot Postgres : ne pas relire dans la même instruction ce qu'on vient d'écrire.** Re-manifestée en vérifiant : un CTE qui écrit `commercial_plan` est **invisible** du `select` de la même instruction. Toujours relire **dans une instruction séparée** pour prouver un miroir d'écriture.
   - **Toujours appliquer la migration additive AVANT de pousser le code qui l'utilise** — sinon l'insertion `entity_id` casse l'activation Pro en prod à la seconde du déploiement.
 
+## Session 2026-09-25 (suite 2) — **les icônes du dock ne s'affichaient pas : un vrai défaut CSS, pas un goût**
+
+- **Signal fondateur :** « les icônes sont mal rendues, par exemple celui de recherche ou dans le dock ». **C'était réel** — et mesurable.
+- **Symptôme mesuré** (Playwright, viewport 390) : les boutons du dock tombaient aux **styles par défaut du navigateur** (`30×20 px`, fond transparent, couleur **héritée `#0f0f0f`**) → des icônes **encre sur pastille `#111` = invisibles**. Seul le bouton **actif** (Recherche) restait blanc, parce que `.navpill button.active` était **une autre règle**.
+- **Cause racine :** `omni-species-v2-interactive.html` L43 — un **reliquat de déclarations sans sélecteur ni accolade ouvrante** :
+  `gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg)}`
+  posé entre `.navpill{…}` (L42) et `.navpill button{…}` (L44). Le parseur CSS, en **récupération d'erreur**, consomme ce texte comme un **sélecteur** jusqu'à la première `{` (celle de `.navpill button`), obtient un sélecteur invalide, et **jette la règle entière**. D'où : `.navpill button` perd `width/height/color`. **Une seule ligne cassait le dock, et uniquement lui.**
+- **Correctif :** suppression de la ligne orpheline. **Preuve A/B mesurée** — avant : `30×20`, `rgb(15,15,15)` ; après : `40×40`, `rgba(255,255,255,.78)`. Idem au **rail desktop** (`1280px`) : `18 px`, blanc sur `#111`.
+- **Cette classe de défaut est INVISIBLE à un contrôle d'équilibre d'accolades** : la ligne parasite se terminait par `}`, donc le compte restait **pair**. Il faut tester « une ligne hors bloc qui porte des déclarations et n'ouvre aucun bloc ».
+- **Garde durable ajouté** à `scripts/check-maquette-v2.mjs` §3bis (zéro dépendance) : **accolades équilibrées** + **aucune déclaration orpheline hors règle**. **Falsifié** : en réintroduisant la ligne → **FAIL (2) exit 1** ; restauré → **exit 0**. *Un garde qui ne peut pas échouer ne prouve rien.*
+- **Portée vérifiée :** le CSS de l'app (`src/trunk/ui-v13.css` L173) a **la même règle mais bien formée** (`width/height/color` présents, pas de ligne orpheline) — **le défaut n'existait que dans la maquette**. L'app n'était pas touchée.
+- **Leçon à ne pas réapprendre :** quand un rendu est « mal rendu », **mesurer le style calculé** (`getComputedStyle`, géométrie du `svg`) au lieu de juger à l'œil, et **chercher l'erreur de parse CSS**, pas le contenu de l'icône. Les icônes étaient **correctes** ; c'est la **règle qui les habillait** qui était jetée.
+- **État :** `check:maquette` (74 écrans, CSS sain), `check:state`, `tsc`, **600/600**, boundary — tous verts.
+

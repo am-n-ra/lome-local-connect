@@ -38,6 +38,33 @@ check(unique.has('offer'), 'offer sheet exists');
 check(/const LEVELS = \[/.test(js), 'LEVELS table declared');
 check(/LEVELS\[lv\]/.test(js), 'level label read with LEVELS[lv] (0-based)');
 check(!/LEVELS\[lv\s*-\s*1\]/.test(js), 'no 1-based LEVELS[lv - 1] look-up');
+
+// --- 3bis. CSS integrity: no orphan declaration outside a rule block ---
+// Real defect (2026-09-25): a stray declaration tail with no selector sat between
+// `.navpill{…}` and `.navpill button{…}`. A CSS parser then consumes it as a
+// (invalid) selector up to the next `{`, and the error-recovery rule DISCARDS the
+// whole rule — so `.navpill button` lost its width/height/color and the dock icons
+// rendered ink-on-black (invisible). Balance alone would not catch it: the stray
+// line ended with `}`, keeping the count even.
+const css = (html.match(/<style>([\s\S]*?)<\/style>/g) || [])
+  .map((b) => b.replace(/<\/?style>/g, ''))
+  .join('\n');
+const cssNoComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
+let depth = 0;
+const strayLines = [];
+cssNoComments.split('\n').forEach((ln, i) => {
+  const before = depth;
+  depth += (ln.match(/\{/g) || []).length;
+  depth -= (ln.match(/\}/g) || []).length;
+  // outside any block, a non-empty line that carries declarations but opens no block
+  if (before <= 0 && /\S/.test(ln) && ln.includes(':') && !ln.includes('{')) {
+    strayLines.push(i + 1);
+  }
+});
+check(cssNoComments.split('{').length === cssNoComments.split('}').length,
+  'CSS braces balanced');
+check(strayLines.length === 0, 'no orphan CSS declaration outside a rule',
+  `stray at line(s) ${strayLines.join(', ')}`);
 const labels = ['Presente', 'Revendiquee', 'Offre publiee', 'Disponibilite vivante', 'Transactable'];
 const levelBlock = js.match(/const LEVELS = \[([\s\S]*?)\];/);
 const levelCount = levelBlock ? (levelBlock[1].match(/\n\s*\[/g) || []).length : 0;
