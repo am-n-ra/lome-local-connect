@@ -616,3 +616,16 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Leçon à ne pas réapprendre :** quand un rendu est « mal rendu », **mesurer le style calculé** (`getComputedStyle`, géométrie du `svg`) au lieu de juger à l'œil, et **chercher l'erreur de parse CSS**, pas le contenu de l'icône. Les icônes étaient **correctes** ; c'est la **règle qui les habillait** qui était jetée.
 - **État :** `check:maquette` (74 écrans, CSS sain), `check:state`, `tsc`, **600/600**, boundary — tous verts.
 
+## Session 2026-09-25 (suite 3) — **l'icône de recherche débordait sous le texte : icônes sans taille intrinsèque**
+
+- **Signal fondateur :** « l'icône loop de recherche est toujours mal positionnée et rentre sous du texte ». **Réel, et d'une autre nature que la suite 2** (là c'était la *règle* jetée ; ici c'est la *taille de l'icône*).
+- **Mesuré** (Playwright, 390 px) : le `svg` dans `.fld` rendait **`180×180 px`** dans un champ de **38 px** → **débordement de 142 px** vers le bas, sous le placeholder.
+- **Cause racine :** les `<svg>` de la table `ICON` n'avaient **ni `width` ni `height`**, seulement un `viewBox`. Un svg ainsi défini n'a **pas de taille intrinsèque** : il prend celle de son conteneur, ou à défaut **300×150 → mise à l'échelle par le ratio du viewBox = 180×180**. Or `.fld` **n'avait aucune règle `svg`** (contrairement à `.navpill svg`, `.menuitem .mi svg`, `.rail svg` qui, elles, existaient) — donc **le seul conteneur sans règle rendait l'icône à la taille par défaut du navigateur**.
+- **Pourquoi la suite 2 ne l'a pas attrapé :** le premier défaut concernait `.navpill button` (règle jetée → boutons 30×20) ; **celui-ci concernait un conteneur que je n'avais pas mesuré**. Mesurer un composant ne prouve rien sur les autres.
+- **Correctif, à la source :** (a) les **22 icônes** de la table `ICON` portent désormais `width="16" height="16"` — **une icône est dimensionnée là où elle est définie**, donc **tout** conteneur est sûr ; (b) `.fld svg{flex:none;width:16px;height:16px}` ajouté pour l'alignement du champ (l'app utilise **16 px** — `TrunkAppV13.tsx` : `<svg width="16" height="16">`).
+- **Preuve A/B mesurée :** avant `180×180`, débordement **+142 px**, chevauchement texte **positif** ; après `16×16`, `iconInsideField: true`, **gap 7 px**, chevauchement **−7** (aucune collision).
+- **Balayage complet (tous les sheets ouverts, pas seulement le dock) :** **6 rendus d'icônes distincts, 0 surdimensionné** (`fld 16`, `mi 15`, `button 18`, `active 19,1`, `center 20`, `active center 21,2`).
+- **Garde durable ajouté** (`check-maquette-v2.mjs` §3ter) : **chaque `<svg>` de la table `ICON` doit déclarer `width` et `height`**. **Falsifié** : en retirant les attributs → **FAIL (1) exit 1, « 22 unsized »** ; restauré → **exit 0**.
+- **Leçon à ne pas réapprendre :** un `<svg>` avec **seulement un `viewBox` n'a aucune taille intrinsèque** — il hérite du conteneur ou retombe sur le défaut navigateur (180×180 pour un viewBox 24×24). **Dimensionner l'icône à sa définition**, pas seulement dans chaque conteneur : un conteneur oublié suffit à casser le rendu. Et **mesurer TOUS les conteneurs**, pas celui du dernier rapport.
+- **État :** `check:maquette` (74 écrans, 0 icône non dimensionnée), `check:state`, `tsc`, **600/600**, boundary — tous verts.
+

@@ -65,6 +65,19 @@ check(cssNoComments.split('{').length === cssNoComments.split('}').length,
   'CSS braces balanced');
 check(strayLines.length === 0, 'no orphan CSS declaration outside a rule',
   `stray at line(s) ${strayLines.join(', ')}`);
+
+// --- 3ter. Icons must carry an intrinsic size ---
+// Real defect (2026-09-25): the ICON map's <svg> elements had no width/height, so
+// any container WITHOUT an `svg` size rule rendered them at the browser default
+// (180x180 for a viewBox-only svg). The search field `.fld` had no size rule, so its
+// icon overflowed a 38px field by 142px and ran under the placeholder text.
+// Every icon is now sized at the source; the containers keep their own overrides.
+const iconBlock = js.slice(js.indexOf('const ICON = {'), js.indexOf('};', js.indexOf('const ICON = {')));
+const iconTags = [...iconBlock.matchAll(/<svg\b[^>]*>/g)].map((m) => m[0]);
+const unsized = iconTags.filter((t) => !/\bwidth=/.test(t) || !/\bheight=/.test(t));
+check(iconTags.length >= 20, 'ICON map is non-trivial', `${iconTags.length} icons`);
+check(unsized.length === 0, 'every ICON svg declares an intrinsic width/height',
+  `${unsized.length} unsized: ${unsized.slice(0, 2).join(' ')}`);
 const labels = ['Presente', 'Revendiquee', 'Offre publiee', 'Disponibilite vivante', 'Transactable'];
 const levelBlock = js.match(/const LEVELS = \[([\s\S]*?)\];/);
 const levelCount = levelBlock ? (levelBlock[1].match(/\n\s*\[/g) || []).length : 0;
