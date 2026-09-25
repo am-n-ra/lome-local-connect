@@ -863,8 +863,10 @@ function createTrunkRepository(sql = database()) {
           (select count(*)::int from v2_verification_requests where state in ('submitted', 'admin_review')) as pending_claims,
           (select count(distinct candidate.id)::int
              from v2_accounts candidate
-             join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
-             where candidate.onboarding_state <> 'seller_ready' and candidate.suspended_at is null) as pending_activations,
+             join v2_facilities f on f.account_id = candidate.id
+             left join v2_entities e on e.id = f.entity_id
+             where coalesce(e.trust_state, f.trust_state) in ('unconfirmed', 'confirmed', 'certified')
+               and candidate.onboarding_state <> 'seller_ready' and candidate.suspended_at is null) as pending_activations,
           (select count(*)::int from v2_discovery_runs where created_at >= now() - interval '7 days') as operator_runs,
           (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today
       `);
@@ -1472,6 +1474,9 @@ function createTrunkRepository(sql = database()) {
       if (!authorizationRows[0]) return { authorized: false, requests: [] };
       const reviewerAccountId = String(authorizationRows[0].id);
       const rows = await retryDatabase(() => sql`
+        -- R-3a (delibere) : lecture FACILITE pour la file de revue. Les demandes de revendication
+        -- portent sur des imports sans entite (5/5 en base, entity_id NULL) : aucun miroir
+        -- d'ecriture n'existe pour elles. Lire l'entite d'abord servirait un etat perime.
         select vr.id as request_id, vr.facility_id, f.name as facility_name, f.trust_state, f.latitude, f.longitude, f.zone, vr.state, vr.version, vr.created_at, vr.submitted_at,
           count(ve.id)::int as evidence_count, coalesce(array_agg(distinct ve.evidence_kind) filter (where ve.id is not null), '{}'::text[]) as evidence_kinds
         from v2_verification_requests vr
@@ -1586,8 +1591,10 @@ function createTrunkRepository(sql = database()) {
           count(distinct f.id)::int as facility_count, candidate.created_at, candidate.suspended_at
         from reviewer
         join v2_accounts candidate on true
-        join v2_facilities f on f.account_id = candidate.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified')
-        where (
+        join v2_facilities f on f.account_id = candidate.id
+        left join v2_entities e on e.id = f.entity_id
+        where coalesce(e.trust_state, f.trust_state) in ('unconfirmed', 'confirmed', 'certified')
+          and (
           not exists (
             select 1 from v2_team_members tmz
             join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
@@ -1624,7 +1631,12 @@ function createTrunkRepository(sql = database()) {
           where a.id = ${input.accountId}::uuid
             and a.suspended_at is null
             and a.onboarding_state <> 'seller_ready'
-            and exists (select 1 from v2_facilities f where f.account_id = a.id and f.trust_state in ('unconfirmed', 'confirmed', 'certified'))
+            and exists (
+              select 1 from v2_facilities f
+              left join v2_entities e on e.id = f.entity_id
+              where f.account_id = a.id
+                and coalesce(e.trust_state, f.trust_state) in ('unconfirmed', 'confirmed', 'certified')
+            )
         ), updated as (
           update v2_accounts a
           set onboarding_state = 'seller_ready', updated_at = now()
@@ -1843,13 +1855,14 @@ function createTrunkRepository(sql = database()) {
       const facilities = await retryDatabase(() => sql`
         select
           f.id, f.name, f.category, f.address, f.latitude, f.longitude,
-          f.trust_state, f.commercial_plan,
+          coalesce(e.trust_state, f.trust_state) as trust_state, f.commercial_plan,
           count(p.id)::int as product_count
         from v2_facilities f
+        left join v2_entities e on e.id = f.entity_id
         left join v2_products p
           on p.facility_id = f.id and p.publication_state = 'published'
         where f.id = ${id}::uuid
-        group by f.id
+        group by f.id, e.trust_state
         limit 1
       `);
       const row = facilities[0];
@@ -1955,18 +1968,19 @@ function createTrunkRepository(sql = database()) {
           f.operational_state,
           f.facility_type,
           f.rayon_km,
-          f.trust_state,
+          coalesce(e.trust_state, f.trust_state) as trust_state,
           f.contact_phone,
           f.contact_whatsapp,
           'XOF' as currency,
           count(p.id)::int as product_count
         from v2_facilities f
+        left join v2_entities e on e.id = f.entity_id
         join v2_accounts a on a.id = f.account_id
         join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
         left join v2_products p on p.facility_id = f.id and p.publication_state <> 'archived'
         where a.auth_user_id = ${input.authUserId}
           and a.suspended_at is null
-        group by f.id
+        group by f.id, e.trust_state
         order by f.name asc, f.id asc
       `);
       const facilities = facilityRows.map((row) => ({
@@ -2278,7 +2292,7 @@ function createTrunkRepository(sql = database()) {
           f.id as facility_id,
           f.name as facility_name,
           f.category as facility_category,
-          f.trust_state as facility_trust,
+          coalesce(e.trust_state, f.trust_state) as facility_trust,
           f.commercial_plan as facility_plan,
           p.id as product_id,
           p.name as product_name,
@@ -2300,6 +2314,7 @@ function createTrunkRepository(sql = database()) {
           end as freshness
         from v2_availability_requests r
         join v2_facilities f on f.id = any(r.facility_scope) and f.account_id = ${sellerAccountId}::uuid
+        left join v2_entities e on e.id = f.entity_id
         join v2_products p on p.id = r.product_id and p.facility_id = f.id and p.publication_state = 'published'
         left join v2_availability_responses ar
           on ar.request_id = r.id
@@ -2786,8 +2801,8 @@ function createTrunkRepository(sql = database()) {
           returning id, facility_id
         ),
         unlock_object as (
-          insert into v2_seller_unlocks (facility_id, unlock_type, distinct_buyer_count, status, updated_at)
-          select ut.facility_id, 'pro_test_credit_20_usd', ut.distinct_buyers,
+          insert into v2_seller_unlocks (facility_id, unlock_type, distinct_buyer_count, required_count, status, updated_at)
+          select ut.facility_id, 'pro_test_credit_20_usd', ut.distinct_buyers, ut.threshold,
                  case when exists (select 1 from bonus_grant bg where bg.facility_id = ut.facility_id) then 'granted'
                       when ut.distinct_buyers >= ut.threshold then 'eligible'
                       else 'locked' end,
@@ -2795,6 +2810,7 @@ function createTrunkRepository(sql = database()) {
           from unlock_thresholds ut
           on conflict (facility_id, unlock_type) do update
             set distinct_buyer_count = excluded.distinct_buyer_count,
+                required_count = excluded.required_count,
                 status = case when v2_seller_unlocks.status = 'granted' then 'granted'
                               when excluded.distinct_buyer_count >= (
                                 select case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
@@ -3066,8 +3082,8 @@ function createTrunkRepository(sql = database()) {
           where f.id = ${input.facilityId}::uuid
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
-            and f.trust_state = 'confirmed'
-            and f.qualifying_sales >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
+            and coalesce(e.trust_state, f.trust_state) = 'confirmed'
+            and coalesce(e.qualifying_sales, f.qualifying_sales) >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
           for update of f
         ),
         wallet as (
@@ -3130,20 +3146,21 @@ function createTrunkRepository(sql = database()) {
     async getFacilityBonusStatus(input) {
       const rows = await retryDatabase(() => sql`
         select
-          u.facility_id,
+          f.id as facility_id,
           u.unlock_type,
           u.distinct_buyer_count,
           u.required_count,
           u.status,
           u.amount_minor,
-          f.trust_state,
-          f.qualifying_sales,
-          f.bonus_unlocked_at
-        from v2_seller_unlocks u
-        join v2_facilities f on f.id = u.facility_id
+          coalesce(e.trust_state, f.trust_state) as trust_state,
+          coalesce(e.qualifying_sales, f.qualifying_sales) as qualifying_sales,
+          f.bonus_unlocked_at,
+          case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end as kind_required_count
+        from v2_facilities f
+        left join v2_entities e on e.id = f.entity_id
         join v2_accounts a on a.id = f.account_id
-        where u.facility_id = ${input.facilityId}::uuid
-          and u.unlock_type = 'pro_test_credit_20_usd'
+        left join v2_seller_unlocks u on u.facility_id = f.id and u.unlock_type = 'pro_test_credit_20_usd'
+        where f.id = ${input.facilityId}::uuid
           and a.auth_user_id = ${input.authUserId}
         limit 1
       `);
@@ -3161,11 +3178,26 @@ function createTrunkRepository(sql = database()) {
           bonusUnlockedAt: null
         };
       }
+      if (row.unlock_type === null || row.unlock_type === void 0) {
+        return {
+          facilityId: String(row.facility_id),
+          unlockType: "pro_test_credit_20_usd",
+          distinctBuyerCount: 0,
+          requiredCount: Number(row.kind_required_count),
+          status: "locked",
+          amountMinor: 1e4,
+          trustState: String(row.trust_state),
+          qualifyingSales: Number(row.qualifying_sales ?? 0),
+          bonusUnlockedAt: null
+        };
+      }
       return {
         facilityId: String(row.facility_id),
         unlockType: String(row.unlock_type),
         distinctBuyerCount: Number(row.distinct_buyer_count),
-        requiredCount: Number(row.required_count),
+        // R-4c : la ligne stockee peut avoir ete ecrite avant le correctif (required_count = DEFAULT 3).
+        // Le seuil affiche suit donc le VOLUME calcule, pas la valeur stockee.
+        requiredCount: Number(row.kind_required_count),
         status: String(row.status),
         amountMinor: Number(row.amount_minor),
         trustState: String(row.trust_state),

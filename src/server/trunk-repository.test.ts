@@ -1001,7 +1001,9 @@ describe('wallet persistence Root seam', () => {
       status: 'confirmed',
       facilityId: 'facility-1',
     });
-    expect(call.queries[0]).toContain("f.trust_state = 'confirmed'");
+    // R-3a : la confiance et le compteur se lisent sur l'ENTITE d'abord, repli sur le lieu.
+    expect(call.queries[0]).toContain("coalesce(e.trust_state, f.trust_state) = 'confirmed'");
+    expect(call.queries[0]).toContain('coalesce(e.qualifying_sales, f.qualifying_sales) >=');
     // C-6/S-14 : le seuil suit le volume (individu 1 / organisation 3), plus de 3 en dur.
     expect(call.queries[0]).toContain("e.kind = 'individu'");
     expect(call.queries[0]).toContain('f.bonus_unlocked_at is null');
@@ -1050,6 +1052,7 @@ describe('wallet persistence Root seam', () => {
       unlock_type: 'pro_test_credit_20_usd',
       distinct_buyer_count: 2,
       required_count: 3,
+      kind_required_count: 3,
       status: 'locked',
       amount_minor: 10000,
       trust_state: 'unconfirmed',
@@ -1074,6 +1077,51 @@ describe('wallet persistence Root seam', () => {
     expect(call.queries[0]).toContain('v2_seller_unlocks');
     expect(call.queries[0]).toContain("unlock_type = 'pro_test_credit_20_usd'");
     expect(call.queries[0]).toContain('a.auth_user_id =');
+  });
+
+  it('affiche le seuil de volume (individu 1) et non la valeur stockee 3, meme si la ligne est ancienne', async () => {
+    // La ligne a ete ecrite avant le correctif R-4c : required_count = DEFAULT 3.
+    // Le seuil affiche doit suivre le VOLUME calcule (kind_required_count), sinon un
+    // particulier eligible lit '1/3' alors que la porte en exige 1.
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      unlock_type: 'pro_test_credit_20_usd',
+      distinct_buyer_count: 1,
+      required_count: 3,
+      kind_required_count: 1,
+      status: 'eligible',
+      amount_minor: 10000,
+      trust_state: 'confirmed',
+      qualifying_sales: 1,
+      bonus_unlocked_at: null,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+
+    const result = await repository.getFacilityBonusStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+
+    expect(result.requiredCount).toBe(1);
+    expect(result.requiredCount).not.toBe(3);
+    expect(call.queries[0]).toContain('coalesce(e.trust_state, f.trust_state)');
+    expect(call.queries[0]).toContain('kind_required_count');
+    expect(call.queries[0]).toContain('left join v2_seller_unlocks');
+  });
+
+  it('ecrit le seuil de volume dans la ligne de deverrouillage (plus de 3 en dur)', async () => {
+    const call = stubSql([{
+      facility_id: 'facility-1',
+      unlock_type: 'pro_test_credit_20_usd',
+      distinct_buyer_count: 1,
+      required_count: 1,
+      kind_required_count: 1,
+      status: 'eligible',
+      amount_minor: 10000,
+      trust_state: 'confirmed',
+      qualifying_sales: 1,
+      bonus_unlocked_at: null,
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.getFacilityBonusStatus({ authUserId: 'auth-user-1', facilityId: 'facility-1' });
+    expect(call.queries[0]).toContain('kind_required_count');
   });
 
   it('returns a locked zero-state when the seller unlock row does not exist yet', async () => {
