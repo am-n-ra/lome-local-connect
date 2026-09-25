@@ -1608,17 +1608,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   </button>
                   <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Requis : votre intention d’achat — comme le contact vendeur, l’itinéraire se débloque après avoir choisi cette offre.</p>
                   {selectedFacility.products.length > 0 && (
-                    <button
-                      className="btn ghost sm"
-                      style={{ marginTop: 6, width: '100%' }}
-                      type="button"
-                      onClick={() => {
-                        const first = rankedFacilityProducts[0] ?? selectedFacility.products[0];
-                        if (first) startFlow({ id: selectedFacility.id, name: selectedFacility.name }, { id: first.id, name: first.name });
-                      }}
-                    >
-                      Choisir cette offre — débloquer l’itinéraire
-                    </button>
+                    <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Sélectionnez un produit ci-dessous, puis « Demander la disponibilité ». L’itinéraire se débloque après votre intention d’achat — pas simplement en cochant un produit.</p>
                   )}
                 </div>
               )}

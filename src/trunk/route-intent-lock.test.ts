@@ -37,10 +37,19 @@ describe('RT-D2 — l’itinéraire de la fiche facilité est verrouillé avant 
     expect(facilityLocationBlock()).not.toContain('setRouteTarget');
   });
 
-  it('dit à l’acheteur pourquoi, et l’emmène vers l’intention', () => {
+  it('dit à l’acheteur pourquoi, et l’envoie vers la sélection réelle', () => {
     const block = facilityLocationBlock();
     expect(block).toContain('Requis : votre intention d’achat');
-    expect(block).toContain('débloquer l’itinéraire');
+    expect(block).toContain('Demander la disponibilité');
+  });
+
+  it('ne choisit JAMAIS un produit à la place de l’acheteur', () => {
+    // Défaut réel corrigé le 2026-09-24 : le bouton prenait
+    // `rankedFacilityProducts[0]` et ouvrait le flux d'achat sans sélection.
+    // Le bloc ne doit donc appeler aucune entrée de flux.
+    const block = facilityLocationBlock();
+    expect(block).not.toContain('startFlow');
+    expect(block).not.toContain('rankedFacilityProducts[0]');
   });
 });
 
