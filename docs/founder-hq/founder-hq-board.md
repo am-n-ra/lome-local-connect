@@ -26,8 +26,15 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
   stock-events), UI `CompanyV13` groupe par **entité**. **Preuve A/B** : une offre sans lieu est **invisible** par
   l'ancienne requête, **visible** par la nouvelle.
 
-**Ce qui reste :** **R-3** (confiance sur l'entité) → **R-4** (Pro par entité, plafond **20**, bulk **1 besoin**, seuil par
-volume = **C-3/C-4/C-5/C-6**) → **R-5** (découverte 2 niveaux, S-11). Contrat : `omni-root-v2-entity-layer-contract-2026-09-23.md` §6/§12.
+**Ce qui reste :** **R-3c** (gel des colonnes de confiance du lieu) → **R-4b** (Pro par entité = **C-3**, bloqué nommé) → **R-5** (découverte 2 niveaux, S-11). Contrat : `omni-root-v2-entity-layer-contract-2026-09-23.md` §6/§12.
+
+**R-3 EXÉCUTÉ (R-3a + R-3b, 2026-09-25, commits `4495edc` + `9c3f5d8` + `3222c03`) :**
+- **Découverte qui a changé le plan :** **aucune** écriture n'allait vers `v2_entities` — les **8 sites** d'écriture écrivaient tous sur `v2_facilities`, les colonnes d'entité ne venaient que du **backfill R-1**. Passer les lectures à l'entité d'abord **aurait servi une confiance périmée** : prouvé en base, entité `confirmed` + lieu `rejected` → **8 produits affichés pour une facilité rejetée** (l'ancienne porte : 0). **Régression de sécurité, pas détail de style.** L'ordre du plan a donc été **inversé** : miroir d'écriture **d'abord**.
+- **R-3b (miroir)** : `submitTransactionRating`, `reviewVerificationRequest`, `correctFacilitySalesCounter` alimentent l'entité **en plus** du lieu. Claim (3 écritures = imports `entity_id` NULL) et Pro (2 écritures = R-4b) **non mirés volontairement**.
+- **R-3a (lecture)** : entité d'abord, repli lieu, sur les 5 portes décisionnelles (découverte carte, détail facilité, dispo simple, dispo bulk).
+- **Migration `060_v2_entity_trust_backfill.sql`** : filet de sécurité, **appliquée + enregistrée sur la canonique** (`e7c41b90a2f8`).
+- **Deux pièges évités avant la prod** : `commercial_plan` **ne doit pas** être lu depuis l'entité (colonne `free` par défaut, aucune écriture → entitlements cassés) ; et les `api/v2/**.js` **sont des artefacts committés** — le 1er push les avait **oubliés**, la prod aurait servi l'ancien comportement (détecté, corrigé par `9c3f5d8`).
+- **Preuves** : miroir → entité 1/lieu 1/`still_stale=false` ; découverte **202→202 lignes** (aucun fan-out) ; `060` répare puis 0 ligne au rejeu ; **596/596**, tsc/boundary clean ; **prod sert la porte entité** (5 occurrences dans le bundle déployé), client `index-DeBqIxQ1.js` === local.
 
 **Rien d'aval (Trunk, Venture Lifecycle) ne s'ouvre avant la couche entité.**
 
