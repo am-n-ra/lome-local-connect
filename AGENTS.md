@@ -690,3 +690,33 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   2. **`S-28`** : le CSS passe les eyebrows en **MAJUSCULES** ; `innerText` rend « **ÉTAPE 1** », pas « Étape 1 ». Mon prédicat sensible à la casse échouait sur un écran correct. **Mesurer le texte *rendu*, casse comprise** — pas le source.
 - **Les 3 formes du même défaut, cette session** : (1) mesurer la **donnée** au lieu du **pixel** (T-12 v1) ; (2) mesurer un **sous-ensemble** en le présentant comme le **tout** (T-12 v2, `COH-V2-18`) ; (3) mesurer **au mauvais endroit** et déclarer absent un écran réel (cette suite). **Un harnais de preuve doit être falsifié dans les DEUX sens** — sinon il ne prouve que sa propre cohérence.
 - **Reste ouvert, inchangé** : **`SP-VALIDATION`** (décision fondateur), **`D-C1`/`D-C2`/`D-C3`** (socle), `T-07d`, `SCOUT-01/02`, dette devise. **Aucune de ces trois formes de défaut ne se corrige sans une décision humaine.**
+
+## Session 2026-09-25 (suite 9) — **LA découverte : `D-C1` était DÉJÀ exécuté. Le rond-point était NOTRE MÉMOIRE, pas le produit.**
+
+### Ce que j ai affirmé ce matin, et qui était faux
+
+- J ai écrit que `v2_products.facility_id not null` **contredisait** `S-25`, en citant `001_v2_roots.sql:71`.
+- **Cette citation était fausse** : la ligne 71 de `001` est `v2_facility_entitlements.facility_id`, **pas** `v2_products`. **J ai cité un numéro de ligne sans relire la ligne.** C est la **4e forme** du même défaut, le même jour : *mesurer la donnée au lieu du pixel* · *un sous-ensemble pour le tout* · *mesurer au mauvais endroit* · **citer une preuve sans la lire**.
+
+### La vérité (code + base canonique `br-dawn-hill-am5amy22`, lectures seules)
+
+- **`058_v2_entity_layer_r1.sql` est titrée « décision fondateur D-C1, 2026-09-23 »** et fait `alter table v2_products alter column facility_id **drop not null**` (`058:33`).
+- `v2_entities` créée (**3** lignes) ; `entity_id` sur **offres / lieux / entitlements** (`058:32`, `059`, `061`) ; **caractéristiques d offre** `position_kind`/`uniqueness_kind`/`handover_kind`/`price_kind`/`condition_kind` ajoutées.
+- **Live** : `products.facility_id` → `is_nullable = YES` ; **13/16** offres liées ; **3/206** lieux liés ; `position_kind` rempli **13/16**.
+- Le code lit `coalesce(p.entity_id, f.entity_id)` — **9 sites**.
+
+### Conséquence : plus une décision, un résidu
+
+- **`D-C1` tranché ET exécuté.** `C-1`/`C-2`/`C-7` **CLOS** ; `C-4`/`C-5`/`C-6` **corrigés** (`R-4`) ; **`C-3` (Pro) PARTIEL** (cible `061` + backfill existent, écritures encore sur `facility_id`).
+- **Résidu d exécution** : `R-A` basculer l écriture Pro sur `entity_id` · `R-B` remplir les caractéristiques d offre (**0/16** sur `uniqueness_kind`/`handover_kind`/`price_kind`/`condition_kind`) · `R-C` lier les **3** offres sans entité · `R-D` prouver le chemin `individu` (**0** entité `individu`).
+- **NE PAS re-proposer `D-C1`/`D-C2`/`D-C3`** : redemander une décision déjà rendue **est** le rond-point.
+
+### La vraie cause du rond-point (réponse au fondateur)
+
+- **Ce n est pas le produit qui tournait en rond — c est notre mémoire du produit.** Le socle a été reconstruit (`058`→`061`) ; **les documents d état ne l ont pas suivi** : le registre annonçait une racine « ouverte » que `058` avait fermée, la board citait `16/16`, `current-state` portait une porte sur **6** tranches quand **10** étaient livrées.
+- Chaque reprise repartait donc d une **carte périmée** → nouveau diagnostic, nouveau sous-ensemble mesuré, nouvelle tranche → **impression de boucle**. **Le remède n est pas un nouveau plan : c est que l état de référence soit lu ET mis à jour à chaque commit.**
+- **Chiffres trompeurs corrigés** : les « 203 lieux non liés » ont **tous `account_id = null`** = lieux `public_import` (fond de carte), **pas des vendeurs** — **0 vendeur réel n est sans entité**. Et « `facility_type` 100 % NULL » est vrai pour le **lieu**, mais la caractéristique d **offre** demandée par le Seed (`position_kind`) est remplie à **13/16**.
+
+### Règle
+
+- **Un document de diagnostic n est pas une preuve : il est périmé dès qu un commit passe.** Citer un fichier **et** un numéro de ligne exige d avoir **relu la ligne**. Vérifier contre le **code** *et*, quand il s agit de schéma, contre la **base** — pas contre un registre.
