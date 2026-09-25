@@ -18,7 +18,7 @@
 | **As of** | 2026-09-23 |
 | **Decided by** | Fondateur |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions `S-01…S-34`) |
-| **Species** | **RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (72 écrans) |
+| **Species** | **RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans) |
 | **Next** | **validation fondateur de `SP-1…SP-6`** (les surfaces existent, leur ensemble n'est pas accepté) → puis clôture Species V2 → ensuite seulement Root |
 | **Downstream gates** | **Aucune active** — Root/Trunk/Branches/Canopy interdits pendant cette porte |
 
