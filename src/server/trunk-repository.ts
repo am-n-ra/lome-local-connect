@@ -3243,14 +3243,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const reference = `facility-bonus:${input.facilityId}`;
       const rows = await retryDatabase(() => sql`
         with facility as (
+          -- C-6/S-14 : le seuil suit le volume. Un particulier (individu) prouve par 1 vente,
+          -- un commerce par 3. Un seuil de 3 en dur bloquait le particulier pourtant eligible.
           select f.id as facility_id, f.account_id
           from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
           join v2_accounts a on a.id = f.account_id
           where f.id = ${input.facilityId}::uuid
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
             and f.trust_state = 'confirmed'
-            and f.qualifying_sales >= 3
+            and f.qualifying_sales >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
           for update of f
         ),
         wallet as (

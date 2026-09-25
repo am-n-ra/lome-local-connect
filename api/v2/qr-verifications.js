@@ -113,6 +113,11 @@ function bulkPackById(id) {
   return BULK_PACKS.find((p) => p.id === id);
 }
 
+// src/domain/invariants.ts
+var FREE_OFFER_LIMIT = 20;
+var CONFIRMED_SALES_THRESHOLD = 3;
+var INDIVIDUAL_CONFIRMED_SALES_THRESHOLD = 1;
+
 // src/server/evidence-contract.ts
 import { head } from "@vercel/blob";
 var CLAIM_EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;
@@ -1056,7 +1061,32 @@ function createTrunkRepository(sql = database()) {
           select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, ${input.contactPhone?.trim() || null}, ${input.contactWhatsapp?.trim() || null}, 'unconfirmed'
           from available_slot
           where not exists (select 1 from existing)
-          returning id as facility_id
+          returning id as facility_id, account_id, name
+        ), entity_new as (
+          -- R-2/S-25 : toute offre appartient à une ENTITÉ, et la publication exige ce lien.
+          -- Un vendeur qui crée une facilité reçoit donc son entité dans la même instruction —
+          -- sinon il ne pourrait jamais publier. S-13 : l'identité qui offre EST l'entité.
+          insert into v2_entities (account_id, kind, display_name, trust_state, qualifying_sales, commercial_plan)
+          select s.account_id, 'organisation', ${input.name.trim()}, 'unconfirmed', 0, 'free'
+          from available_slot s
+          where not exists (
+            select 1 from v2_entities e where e.account_id = s.account_id
+          )
+          returning id, account_id
+        ), entity_pick as (
+          -- L'entité vient d'un CTE (valeur), jamais d'une relecture de table : une CTE qui écrit
+          -- n'est pas visible par les autres CTE de la même instruction. Un compte déjà doté
+          -- d'une entité la réutilise — S-13, une identité par compte.
+          select e.id from v2_entities e join available_slot s on s.account_id = e.account_id
+          union all
+          select id from entity_new
+        ), inserted as (
+          insert into v2_facilities
+            (account_id, entity_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, contact_phone, contact_whatsapp, trust_state)
+          select available_slot.account_id, (select id from entity_pick limit 1), 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, ${input.contactPhone?.trim() || null}, ${input.contactWhatsapp?.trim() || null}, 'unconfirmed'
+          from available_slot
+          where not exists (select 1 from existing)
+          returning id as facility_id, account_id, name
         ), assigned as (
           update v2_facility_slots fs
           set status = 'assigned', facility_id = inserted.facility_id, assigned_at = now()
@@ -2067,15 +2097,25 @@ function createTrunkRepository(sql = database()) {
           join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
         ), published_count as (
+          -- Le décompte se fait par entite (S-25). Si le produit n'a PAS d'entite — cas d'une
+          -- facilite creee apres R-1, jamais liee — null = null vaut NULL en SQL, donc le
+          -- decompte valait 0 et le plafond etait contourne. Repli explicite sur le lieu :
+          -- sans entite, le lieu EST le perimetre (comportement historique, sur).
           select count(*)::int as count
           from v2_products p
           left join v2_facilities f on f.id = p.facility_id
-          where coalesce(p.entity_id, f.entity_id) = (select coalesce(p2.entity_id, f2.entity_id) from v2_products p2 left join v2_facilities f2 on f2.id = p2.facility_id where p2.id = (select id from owned))
+          where (
+              coalesce(p.entity_id, f.entity_id) = (select coalesce(p2.entity_id, f2.entity_id) from v2_products p2 left join v2_facilities f2 on f2.id = p2.facility_id where p2.id = (select id from owned))
+            or (
+              (select coalesce(p2.entity_id, f2.entity_id) from v2_products p2 left join v2_facilities f2 on f2.id = p2.facility_id where p2.id = (select id from owned)) is null
+              and p.facility_id = (select facility_id from owned)
+            )
+          )
             and p.publication_state = 'published'
         ), changed as (
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
-            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and (((select commercial_plan from owned) = 'pro_active') or (select count from published_count) < 5))
+            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and (((select commercial_plan from owned) = 'pro_active') or (select count from published_count) < ${FREE_OFFER_LIMIT}))
               or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
           returning p.id, p.publication_state
         ) select * from changed
@@ -2683,21 +2723,31 @@ function createTrunkRepository(sql = database()) {
           where p.facility_id in (select facility_id from unlock_progress)
           group by p.facility_id
         ),
+        -- D-C6 / S-14 : le seuil vient du VOLUME de l'offreur. Un particulier (entité 'individu')
+        -- est confirmé par 1 acheteur distinct ; un commerce en demande 3. Seuil inconnu => 3.
+        unlock_thresholds as (
+          select uc.facility_id, uc.distinct_buyers,
+                 case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end as threshold
+          from unlock_counts uc
+          join v2_facilities f on f.id = uc.facility_id
+          left join v2_entities e on e.id = f.entity_id
+        ),
         qualified_facility as (
           update v2_facilities f
-          set qualifying_sales = least(3, uc.distinct_buyers),
-              trust_state = case when uc.distinct_buyers >= 3 then 'confirmed' else f.trust_state end,
-              bonus_unlocked_at = case when uc.distinct_buyers >= 3 then ${input.now}::timestamptz else f.bonus_unlocked_at end,
+          set qualifying_sales = least(ut.threshold, ut.distinct_buyers),
+              trust_state = case when ut.distinct_buyers >= ut.threshold then 'confirmed' else f.trust_state end,
+              bonus_unlocked_at = case when ut.distinct_buyers >= ut.threshold then ${input.now}::timestamptz else f.bonus_unlocked_at end,
               updated_at = ${input.now}::timestamptz
-          from unlock_counts uc
-          where f.id = uc.facility_id
+          from unlock_thresholds ut
+          where f.id = ut.facility_id
           returning f.id as facility_id, f.account_id, f.qualifying_sales
         ),
         bonus_wallet as (
           select q.facility_id, q.account_id, w.id as wallet_id
           from qualified_facility q
+          join unlock_thresholds ut on ut.facility_id = q.facility_id
           join v2_wallets w on w.account_id = q.account_id
-          where q.qualifying_sales >= 3
+          where ut.distinct_buyers >= ut.threshold
         ),
         bonus_grant as (
           insert into v2_wallet_ledger_entries
@@ -2709,16 +2759,21 @@ function createTrunkRepository(sql = database()) {
         ),
         unlock_object as (
           insert into v2_seller_unlocks (facility_id, unlock_type, distinct_buyer_count, status, updated_at)
-          select uc.facility_id, 'pro_test_credit_20_usd', uc.distinct_buyers,
-                 case when exists (select 1 from bonus_grant bg where bg.facility_id = uc.facility_id) then 'granted'
-                      when uc.distinct_buyers >= 3 then 'eligible'
+          select ut.facility_id, 'pro_test_credit_20_usd', ut.distinct_buyers,
+                 case when exists (select 1 from bonus_grant bg where bg.facility_id = ut.facility_id) then 'granted'
+                      when ut.distinct_buyers >= ut.threshold then 'eligible'
                       else 'locked' end,
                  ${input.now}::timestamptz
-          from unlock_counts uc
+          from unlock_thresholds ut
           on conflict (facility_id, unlock_type) do update
             set distinct_buyer_count = excluded.distinct_buyer_count,
                 status = case when v2_seller_unlocks.status = 'granted' then 'granted'
-                              when excluded.distinct_buyer_count >= 3 then 'eligible'
+                              when excluded.distinct_buyer_count >= (
+                                select case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
+                                from v2_facilities f
+                                left join v2_entities e on e.id = f.entity_id
+                                where f.id = excluded.facility_id
+                              ) then 'eligible'
                               else 'locked' end,
                 granted_at = case when v2_seller_unlocks.status <> 'granted'
                                    and exists (select 1 from bonus_grant bg where bg.facility_id = excluded.facility_id)
@@ -5206,13 +5261,13 @@ function createTrunkRepository(sql = database()) {
       }
       const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
       const standing = await this.getOrCreateCreditStanding({ authUserId: input.authUserId });
-      const creditCost = Math.ceil(input.facilityIds.length / 100);
+      const creditCost = 1;
       const uniqueIdList = Array.from(new Set(input.facilityIds.map((id) => id.trim())));
       if (uniqueIdList.length !== input.facilityIds.length) {
         throw new AvailabilityPolicyError("Duplicate facilityIds are not allowed in a bulk request.");
       }
       if (standing && standing.creditsRemaining < creditCost) {
-        throw new InsufficientCreditsError(`This bulk addresses ${input.facilityIds.length} facility(ies) = ${creditCost} bulk credit(s). You have ${standing.creditsRemaining}. Missing ${creditCost - standing.creditsRemaining}. Recharge with packs to send.`);
+        throw new InsufficientCreditsError(`This bulk need costs 1 bulk credit (it does not grow with the number of suppliers). You have ${standing.creditsRemaining}. Missing ${creditCost - standing.creditsRemaining}. Recharge with packs to send.`);
       }
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
@@ -5257,7 +5312,7 @@ function createTrunkRepository(sql = database()) {
         ),
         credit_ledger_insert as (
           insert into v2_availability_credit_ledger (buyer_account_id, kind, amount, reason, request_id)
-          select a.id, 'bulk_debit', - ${creditCost}, 'bulk-availability over ' || (select cardinality(facility_scope) from request_insert) || ' facilities', r.id
+          select a.id, 'bulk_debit', - ${creditCost}, 'bulk need over ' || (select cardinality(facility_scope) from request_insert) || ' facilities (1 credit per need)', r.id
           from request_insert r
           cross join account a
           returning id
@@ -5289,7 +5344,7 @@ function createTrunkRepository(sql = database()) {
       }
       if (Number(row.is_new) === 1 && Number(row.debited) === 0) {
         const availableAfterRace = Number(row.monthly_quota) + Number(row.extra_credits) - Number(row.credits_used_result);
-        throw new InsufficientCreditsError(`This bulk addresses ${input.facilityIds.length} facility(ies) = ${creditCost} bulk credit(s). You have ${availableAfterRace}. Missing ${Math.max(0, creditCost - availableAfterRace)}. Recharge with packs to send.`);
+        throw new InsufficientCreditsError(`This bulk need costs 1 bulk credit (it does not grow with the number of suppliers). You have ${availableAfterRace}. Missing ${Math.max(0, creditCost - availableAfterRace)}. Recharge with packs to send.`);
       }
       const scopes = row.facility_scope.map((v) => String(v));
       if (String(row.product_id) !== input.productId || scopes.length !== input.facilityIds.length || input.facilityIds.some((id) => !scopes.includes(id)) || Number(row.requested_quantity) !== input.quantity || String(row.budget_mode) !== input.budgetMode || (row.budget_minor === null ? null : Number(row.budget_minor)) !== input.budgetMinor || String(row.delivery_mode) !== input.deliveryMode || (row.request_note === null ? null : String(row.request_note)) !== input.note) {

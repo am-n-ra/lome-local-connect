@@ -1001,7 +1001,8 @@ describe('wallet persistence Root seam', () => {
       facilityId: 'facility-1',
     });
     expect(call.queries[0]).toContain("f.trust_state = 'confirmed'");
-    expect(call.queries[0]).toContain('f.qualifying_sales >= 3');
+    // C-6/S-14 : le seuil suit le volume (individu 1 / organisation 3), plus de 3 en dur.
+    expect(call.queries[0]).toContain("e.kind = 'individu'");
     expect(call.queries[0]).toContain('f.bonus_unlocked_at is null');
     expect(call.queries[0]).toContain('for update of f');
     expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
