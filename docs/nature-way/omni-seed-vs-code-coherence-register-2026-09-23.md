@@ -42,15 +42,21 @@ Or **S-25** dit l'inverse : *« Il n'y a pas de "produit appartenant à une faci
 
 ## 3. Incohérences mesurées (Seed = autorité)
 
-| # | Sujet | Seed V2 dit | Code / schéma fait | Preuve | Classe |
-|---|---|---|---|---|---|
-| **C-1** | **Modèle universel (S-01/S-02)** | tout est offre ; type = caractéristique ; comportements séquencés | `v2_products` **exige** `facility_id` + `quantity_allocated_omni` → seul le « produit fongible » entre | `001_v2_roots.sql:82` | **Racine — logique** |
-| **C-2** | **Propriété de l'offre (S-25)** | l'offre appartient à l'**ENTITÉ** ; le lieu = *où* | offre liée **à la facilité**, cascade avec elle | `001_v2_roots.sql:82` | **Racine — logique** |
-| **C-3** | **Pro = par entité** (Seed §Modèle économique) | « Seller Pro par *facilité* » est une **contradiction à corriger** : Pro = par **entité** | entitlements `facility_pro` (11 requêtes), `activateFacilityPro(facilityId)` | `invariants.ts:13`, `trunk-repository.ts` | **Métier** |
-| **C-4** | **Plafond gratuit** | **20** (configurable) — « le plafond dit la limite » | **5** | `invariants.ts:13` vs « 3 / 20 (gratuit) » maquette | **Métier** |
-| **C-5** | **Coût bulk** | « 1 besoin = 1 bulk » (Seed §Modèle éco) | `creditCost = ceil(N/100)` — débit **par tranche de 100 facilités** | `trunk-repository.ts:5570` | **Métier** |
-| **C-6** | **Seuil de confiance** | **adapté au volume** : 1 vente particulier / 3 commerce | seuil **uniforme 3** | `CONFIRMED_SALES_THRESHOLD = 3` | **Métier** |
-| **C-7** | **Type de lieu** | la **position** est une *caractéristique* d'offre (fixe/mobile/immatérielle) | `facility_type` (3 types) + `rayon_km` | champs produit | **Structure — racine de C-1** |
+> **⚠️ Amendement 2026-09-25 — ce tableau a été RÉ-VÉRIFIÉ contre le code à `HEAD`. Trois lignes
+> étaient périmées.** Le registre du 2026-09-23 déclarait **7 incohérences** ; **3 sont corrigées**
+> (`C-4`, `C-5`, `C-6`, livrées en `R-4`) et **4 restent ouvertes**. Un registre qui compte des
+> incohérences déjà réparées **produit à son tour de l'incohérence** : il fait croire à un chantier
+> plus grand qu'il n'est. Statut réel par ligne, ci-dessous.
+
+| # | Sujet | Seed V2 dit | Code / schéma fait | Preuve | Classe | **Statut 2026-09-25** |
+|---|---|---|---|---|---|---|
+| **C-1** | **Modèle universel (S-01/S-02)** | tout est offre ; type = caractéristique ; comportements séquencés | `v2_products` **exige** `facility_id` + `quantity_allocated_omni` → seul le « produit fongible » entre | `001_v2_roots.sql:71` | **Racine — logique** | **OUVERT** (vérifié `HEAD`) |
+| **C-2** | **Propriété de l'offre (S-25)** | l'offre appartient à l'**ENTITÉ** ; le lieu = *où* | offre liée **à la facilité**, cascade avec elle | `001_v2_roots.sql:71` | **Racine — logique** | **OUVERT** — *atténué* : `entity_id` existe et est lié à la création (R-4), mais `facility_id` reste `not null` |
+| **C-3** | **Pro = par entité** (Seed §Modèle économique) | « Seller Pro par *facilité* » est une **contradiction à corriger** : Pro = par **entité** | entitlements `facility_pro` (**24** occurrences), `activateFacilityPro(facilityId)` | `invariants.ts`, `trunk-repository.ts:3788` | **Métier** | **OUVERT** (vérifié `HEAD`) |
+| **C-4** | **Plafond gratuit** | **20** (configurable) — « le plafond dit la limite » | ~~**5**~~ → **`FREE_OFFER_LIMIT = 20`**, décompte **par entité** | `invariants.ts:18` | Métier | ✅ **CORRIGÉ (R-4)** — Postgres réel : 20 → 21e refusée |
+| **C-5** | **Coût bulk** | « 1 besoin = 1 bulk » (Seed §Modèle éco) | ~~`ceil(N/100)`~~ → **`creditCost = 1`**, indépendant du nombre de fournisseurs | `trunk-repository.ts:5799` | Métier | ✅ **CORRIGÉ (R-4)** — 150 facilités → 1 crédit |
+| **C-6** | **Seuil de confiance** | **adapté au volume** : 1 vente particulier / 3 commerce | ~~seuil **uniforme 3**~~ → `case when e.kind = 'individu' then 1 else 3 end` | `trunk-repository.ts:3004` | Métier | ✅ **CORRIGÉ (R-4)** — individu éligible à 1, organisation à 3 |
+| **C-7** | **Type de lieu** | la **position** est une *caractéristique* d'offre (fixe/mobile/immatérielle) | `facility_type` (3 types) + `rayon_km` | `trunk-repository.ts:1153` | Structure — racine de C-1 | **OUVERT** — conséquence de C-1, tombe avec lui |
 
 **Ce qui est déjà cohérent** (à ne pas « corriger ») : entité avant offre (S-03/S-04), échelle 0→4 (S-06), `trust_state` sur l'entité seule (S-30), publication sans vérification (S-31), QR lié à l'offre+utilisateur+transaction (S-23/S-26), scan strictement vendeur (S-24/S-27), avantage obligatoire (S-19), visuels (S-20), quota bulk 3/100 (quota **aligné**, seule la **formule de coût** diverge → C-5).
 
@@ -99,7 +105,7 @@ Ce n'est **pas une tâche**, c'est un **choix d'architecture avec un coût réel
 |---|---|
 | HQ plan | `HQ-OMNI-2026-09-02` · porte : **Species réouverte** · **Root parqué** |
 | Plan local | `NW-PROD-OMNI-SEED2-01` · **nouvelle tâche `T-14` (diagnostic de cohérence Seed↔code)** livrée |
-| Verdict | **7 incohérences mesurées, une seule racine (C-1/C-2).** La maquette suit le Seed ; **le socle non.** |
+| Verdict | **4 incohérences restent ouvertes (C-1, C-2, C-3, C-7) — 3 sont corrigées (C-4, C-5, C-6, livrées en `R-4`).** Ré-établi 2026-09-25 par vérification contre `HEAD`, pas par mémoire. **Une seule racine subsiste : C-1/C-2.** La maquette suit le Seed ; **le socle non.** |
 | Gap résiduel | Le fond n'est pas dans le code : l'index du Seed (entité-porteuse d'offres, position-caractéristique) **n'existe pas** en base |
 | Décision | **D-C1 / D-C2 / D-C3** — **fondateur seul** |
 | Prochaine plus petite action | Le fondateur choisit l'option ; **ensuite** Root V2 (reprise du schéma) |
