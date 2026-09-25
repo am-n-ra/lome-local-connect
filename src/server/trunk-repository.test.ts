@@ -2185,7 +2185,31 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     })).rejects.toBeInstanceOf(SellerCataloguePolicyError);
   });
 
-  it('lists StockEvent history newest first, bounded to 50', async () => {
+  it('D-04 : la porte de disponibilite exige un entitlement VIVANT (state active ET ends_at futur)', async () => {
+    // La colonne commercial_plan n'est jamais remise a 'free' : si la porte se contentait de
+    // state='active' (un entitlement n'est jamais bascule a 'expired'), un Pro echou resterait
+    // eligible a vie. La porte doit donc exiger ends_at > maintenant.
+    const call = stubSql([{ id: 'product-1', from_state: 'a_valider' }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.setProductAvailability({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'en_stock', expiresInHours: 4 });
+    expect(call.queries[0]).toContain("fe.state = 'active'");
+    expect(call.queries[0]).toContain('fe.ends_at > now()');
+    // et NE DOIT PLUS juger la capacite sur la colonne collante
+    expect(call.queries[0]).not.toContain("e.commercial_plan = 'pro_active' or f.commercial_plan");
+  });
+
+  it('D-04 : la porte de PUBLICATION juge l entitlement vivant, pas la colonne collante', async () => {
+    // Bug de revenu corrige : avant, la porte lisait e.commercial_plan SEUL, colonne que rien
+    // n'alimentait (toujours 'free') -> un vendeur Pro PAYANT ne pouvait pas depasser le plafond.
+    const call = stubSql([{ id: 'product-1', publication_state: 'published' }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' });
+    expect(call.queries[0]).toContain("fe.entitlement_kind = 'facility_pro'");
+    expect(call.queries[0]).toContain('fe.ends_at > now()');
+    expect(call.queries[0]).toContain('is_pro');
+  });
+
+  it('liste StockEvent history newest first, bounded to 50', async () => {
     const call = stubSql([{ id: 'event-1', from_state: 'a_valider', to_state: 'en_stock', source: 'manual', reason: null, created_at: '2026-09-02T12:00:00.000Z' }]);
     const repository = createTrunkRepository(call.sql);
     const result = await repository.listProductStockEvents({ authUserId: 'auth-seller-1', productId: 'product-1' });

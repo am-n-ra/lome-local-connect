@@ -1801,9 +1801,20 @@ function createTrunkRepository(sql = database()) {
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
             coalesce(e.trust_state, f.trust_state) as trust_state,
-            -- commercial_plan reste sur le LIEU : sa colonne d'entite n'est pas encore ecrite
-            -- (Pro par entite = R-4b). La lire ici servirait un 'free' perime et casserait les entitlements.
-            f.commercial_plan,
+            -- R-4b : Pro vit sur l'ENTITE. La colonne commercial_plan n'est jamais remise a 'free'
+            -- (aucun balayage d'expiration) : elle ne sert donc que d'indice. On affiche Pro seulement
+            -- si la colonne le dit ET qu'un entitlement vivant le confirme — sinon un Pro echou
+            -- s'afficherait 'pro_active' a vie.
+            case
+              when (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active')
+                   and exists (
+                     select 1 from v2_facility_entitlements fe
+                     where fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro'
+                       and fe.state = 'active' and fe.ends_at > now()
+                   ) then 'pro_active'
+              when coalesce(e.commercial_plan, 'free') <> 'free' or coalesce(f.commercial_plan, 'free') <> 'free' then 'pro_expired'
+              else 'free'
+            end as commercial_plan,
             count(p.id)::int as product_count,
             (count(camp.id) > 0) as sponsored
           from v2_facilities f
@@ -2024,10 +2035,14 @@ function createTrunkRepository(sql = database()) {
           p.publication_state,
           p.availability_state,
           p.availability_expires_at,
-          (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+          (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
-              and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
+              and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
+              -- Un entitlement n'est jamais bascule a 'expired' en base : sans ce test de date,
+              -- un Pro echou resterait eligible a vie (contournement D-04).
+              and fe.ends_at > now()
+              and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
           )) as availability_pro_eligible
         from v2_products p
         left join v2_facilities f on f.id = p.facility_id
@@ -2124,7 +2139,17 @@ function createTrunkRepository(sql = database()) {
     async transitionSellerProduct(input) {
       const rows = await retryDatabase(() => sql`
         with owned as (
-          select p.id, p.facility_id, p.publication_state, e.commercial_plan
+          select p.id, p.facility_id, p.publication_state,
+            -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
+            -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
+            -- Avant, cette porte lisait e.commercial_plan SEUL, colonne que rien n'alimentait :
+            -- un vendeur Pro PAYANT ne pouvait jamais depasser le plafond gratuit (bug de revenu).
+            exists (
+              select 1 from v2_facility_entitlements fe
+              where fe.entitlement_kind = 'facility_pro' and fe.state = 'active' and fe.ends_at > now()
+                and (fe.facility_id = p.facility_id
+                     or (fe.entity_id is not null and fe.entity_id = coalesce(p.entity_id, f.entity_id)))
+            ) as is_pro
           from v2_products p
           left join v2_facilities f on f.id = p.facility_id
           join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
@@ -2149,7 +2174,7 @@ function createTrunkRepository(sql = database()) {
         ), changed as (
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
-            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and (((select commercial_plan from owned) = 'pro_active') or (select count from published_count) < ${FREE_OFFER_LIMIT}))
+            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and ((select is_pro from owned) or (select count from published_count) < ${FREE_OFFER_LIMIT}))
               or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
           returning p.id, p.publication_state
         ) select * from changed
@@ -2173,10 +2198,15 @@ function createTrunkRepository(sql = database()) {
             and a.suspended_at is null
             and a.onboarding_state in ('seller_ready', 'complete')
             and p.publication_state in ('draft', 'published')
-            and (e.commercial_plan = 'pro_active' or f.commercial_plan = 'pro_active' or exists (
+            -- D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT, pas sur la colonne
+            -- commercial_plan (qui n'est jamais remise a 'free' et n'a aucun balayage d'expiration).
+            -- Lire la colonne ici accorderait un Pro a vie.
+            and exists (
               select 1 from v2_facility_entitlements fe
-              where f.id is not null and fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro' and fe.state = 'active'
-            ))
+              where f.id is not null and fe.entitlement_kind = 'facility_pro'
+                and fe.state = 'active' and fe.ends_at > now()
+                and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+            )
         ), changed as (
           update v2_products p
           set availability_state = ${input.to},
@@ -2293,7 +2323,17 @@ function createTrunkRepository(sql = database()) {
           f.name as facility_name,
           f.category as facility_category,
           coalesce(e.trust_state, f.trust_state) as facility_trust,
-          f.commercial_plan as facility_plan,
+          -- R-4b : colonne = indice, entitlement vivant = verite (la colonne ne se remet jamais a 'free').
+          case
+            when (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active')
+                 and exists (
+                   select 1 from v2_facility_entitlements fe
+                   where fe.facility_id = f.id and fe.entitlement_kind = 'facility_pro'
+                     and fe.state = 'active' and fe.ends_at > now()
+                 ) then 'pro_active'
+            when coalesce(e.commercial_plan, 'free') <> 'free' or coalesce(f.commercial_plan, 'free') <> 'free' then 'pro_expired'
+            else 'free'
+          end as facility_plan,
           p.id as product_id,
           p.name as product_name,
           r.requested_quantity,
@@ -3007,7 +3047,9 @@ function createTrunkRepository(sql = database()) {
           limit 20
         `),
         retryDatabase(() => sql`
-          select f.id as facility_id, f.name as facility_name, f.commercial_plan,
+          select f.id as facility_id, f.name as facility_name,
+                 -- R-4b : repli sans entitlement — lire l'ENTITE d'abord, sinon le lieu.
+                 coalesce(e.commercial_plan, f.commercial_plan) as commercial_plan,
                  coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as pro_price_minor,
                  coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
                  last_entitlement.id as entitlement_id,
@@ -3018,13 +3060,14 @@ function createTrunkRepository(sql = database()) {
                  ${OMNI_PLAN_PRICES_USD_MINOR.sellerPro}::int as base_pro_price_usd_minor,
                  ${OMNI_BASE_CURRENCY} as base_billing_currency
           from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
           join v2_accounts a on a.id = f.account_id
           join v2_facility_slots fs on fs.facility_id = f.id and fs.account_id = a.id and fs.status = 'assigned'
           left join lateral (
-            select e.price_minor, e.billing_currency, e.renewal_opt_in, e.starts_at, e.ends_at, e.state, e.id
-            from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
-            order by e.created_at desc, e.id desc
+            select ent.price_minor, ent.billing_currency, ent.renewal_opt_in, ent.starts_at, ent.ends_at, ent.state, ent.id
+            from v2_facility_entitlements ent
+            where ent.facility_id = f.id and ent.entitlement_kind = 'facility_pro'
+            order by ent.created_at desc, ent.id desc
             limit 1
           ) last_entitlement on true
           where a.auth_user_id = ${input.authUserId}
@@ -3488,7 +3531,7 @@ function createTrunkRepository(sql = database()) {
             and a.suspended_at is null
             and a.onboarding_state in ('seller_ready', 'complete')
         ), facility as (
-          select f.id as facility_id, f.account_id,
+          select f.id as facility_id, f.account_id, f.entity_id,
                  coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as price_minor,
                  coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency
           from v2_facilities f
@@ -3497,8 +3540,10 @@ function createTrunkRepository(sql = database()) {
           left join lateral (
             select e.price_minor, e.billing_currency
             from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
-            order by e.created_at desc
+            -- R-4b : entitlement de l'ENTITE d'abord (facility_id = lieu d'application).
+            where e.entitlement_kind = 'facility_pro'
+              and (e.facility_id = f.id or (e.entity_id is not null and e.entity_id = f.entity_id))
+            order by e.created_at desc, e.id desc
             limit 1
           ) last_entitlement on true
           where f.id = ${input.facilityId}::uuid
@@ -3534,8 +3579,8 @@ function createTrunkRepository(sql = database()) {
           select id, wallet_id, amount_minor, facility_id from existing_spend
           limit 1
         ), entitlement as (
-          insert into v2_facility_entitlements (facility_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
-          select f.facility_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, false
+          insert into v2_facility_entitlements (facility_id, entity_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select f.facility_id, f.entity_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, false
           from facility f join effective_spend s on s.facility_id = f.facility_id
           where not exists (select 1 from active_entitlement)
           returning id, facility_id, ends_at
@@ -3545,6 +3590,15 @@ function createTrunkRepository(sql = database()) {
           from entitlement e
           where f.id = e.facility_id
           returning f.id
+        ), updated_entity as (
+          -- R-4b : Pro vit sur l'ENTITE (Seed §eco). Sans ce miroir, la porte de publication
+          -- (qui lit e.commercial_plan) resterait 'free' pour un vendeur qui a paye.
+          update v2_entities e
+          set commercial_plan = 'pro_active', updated_at = ${input.now}::timestamptz
+          from updated u
+          join v2_facilities f on f.id = u.id
+          where e.id = f.entity_id
+          returning e.id
         )
         select e.id as entitlement_id, e.facility_id, e.ends_at, s.id as spend_ledger_entry_id
         from entitlement e join effective_spend s on s.facility_id = e.facility_id
@@ -3573,7 +3627,9 @@ function createTrunkRepository(sql = database()) {
           left join lateral (
             select e.id, e.state, e.starts_at, e.ends_at, e.price_minor, e.billing_currency, e.renewal_opt_in
             from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            -- R-4b : entitlement de l'ENTITE d'abord (facility_id = lieu d'application).
+            where e.entitlement_kind = 'facility_pro'
+              and (e.facility_id = f.id or (e.entity_id is not null and e.entity_id = f.entity_id))
             order by e.created_at desc, e.id desc
             limit 1
           ) last_entitlement on true
@@ -3699,8 +3755,17 @@ function createTrunkRepository(sql = database()) {
       const rows = await retryDatabase(() => sql`
         with facility as (
           select f.id as facility_id, f.name as facility_name, f.account_id,
-                 f.commercial_plan, f.trust_state, f.operational_state
+                 -- R-4b / D-04 : capacite Pro = ENTITLEMENT VIVANT, jamais la colonne commercial_plan
+                 -- (jamais remise a 'free') — sinon un Pro echou resterait 'pro' a vie ici.
+                 exists (
+                   select 1 from v2_facility_entitlements fe
+                   where fe.entitlement_kind = 'facility_pro'
+                     and fe.state = 'active' and fe.ends_at > now()
+                     and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+                 ) as is_pro,
+                 f.trust_state, f.operational_state
           from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
           join v2_accounts a on a.id = f.account_id
           where f.id = ${input.facilityId}::uuid
             and a.auth_user_id = ${input.authUserId}
@@ -3710,7 +3775,7 @@ function createTrunkRepository(sql = database()) {
         plan_check as (
           select case
             when not exists (select 1 from facility) then null
-            when exists (select 1 from facility where commercial_plan <> 'pro_active') then 'pro_only'
+            when exists (select 1 from facility where is_pro = false) then 'pro_only'
             else null end as failure
         ),
         wallet as (
@@ -3880,7 +3945,7 @@ function createTrunkRepository(sql = database()) {
       const reference = `facility-pro-renew:${input.facilityId}:${periodKey}`;
       const rows = await retryDatabase(() => sql`
         with facility as (
-          select f.id as facility_id, f.name as facility_name, f.account_id,
+          select f.id as facility_id, f.name as facility_name, f.account_id, f.entity_id,
                  coalesce(last_entitlement.price_minor, ${convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR.sellerPro, OMNI_DEFAULT_LOCAL_CURRENCY)})::int as price_minor,
                  coalesce(last_entitlement.billing_currency, ${OMNI_DEFAULT_LOCAL_CURRENCY}) as billing_currency,
                  last_entitlement.id as entitlement_id,
@@ -3892,7 +3957,9 @@ function createTrunkRepository(sql = database()) {
           left join lateral (
             select e.id, e.ends_at, e.price_minor, e.billing_currency, e.renewal_opt_in
             from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            -- R-4b : entitlement de l'ENTITE d'abord (facility_id = lieu d'application).
+            where e.entitlement_kind = 'facility_pro'
+              and (e.facility_id = f.id or (e.entity_id is not null and e.entity_id = f.entity_id))
             order by e.created_at desc, e.id desc
             limit 1
           ) last_entitlement on true
@@ -3939,8 +4006,8 @@ function createTrunkRepository(sql = database()) {
           select id, wallet_id, amount_minor, facility_id from existing_spend
           limit 1
         ), new_entitlement as (
-          insert into v2_facility_entitlements (facility_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
-          select f.facility_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, true
+          insert into v2_facility_entitlements (facility_id, entity_id, entitlement_kind, state, starts_at, ends_at, source, price_minor, billing_currency, renewal_opt_in)
+          select f.facility_id, f.entity_id, 'facility_pro', 'active', ${input.now}::timestamptz, ${input.now}::timestamptz + interval '30 days', 'wallet', f.price_minor, f.billing_currency, true
           from facility f join effective_spend s on s.facility_id = f.facility_id
           where not exists (select 1 from active_entitlement)
           returning id, facility_id, ends_at
@@ -3950,6 +4017,14 @@ function createTrunkRepository(sql = database()) {
           from new_entitlement e
           where f.id = e.facility_id
           returning f.id
+        ), updated_entity as (
+          -- R-4b : meme miroir que l'activation — le renouvellement maintient l'entite Pro.
+          update v2_entities e
+          set commercial_plan = 'pro_active', updated_at = ${input.now}::timestamptz
+          from updated u
+          join v2_facilities f on f.id = u.id
+          where e.id = f.entity_id
+          returning e.id
         ), renewal_run as (
           insert into v2_facility_renewal_runs (facility_id, prior_entitlement_id, new_entitlement_id, spend_ledger_entry_id, run_at, status, note)
           select f.facility_id, f.entitlement_id, ne.id, s.id, ${input.now}::timestamptz, 'succeeded', 'auto-renew 30d via wallet (opt-in)'
@@ -3981,7 +4056,9 @@ function createTrunkRepository(sql = database()) {
           left join lateral (
             select e.id, e.renewal_opt_in
             from v2_facility_entitlements e
-            where e.facility_id = f.id and e.entitlement_kind = 'facility_pro'
+            -- R-4b : entitlement de l'ENTITE d'abord (facility_id = lieu d'application).
+            where e.entitlement_kind = 'facility_pro'
+              and (e.facility_id = f.id or (e.entity_id is not null and e.entity_id = f.entity_id))
             order by e.created_at desc, e.id desc
             limit 1
           ) last_entitlement on true
