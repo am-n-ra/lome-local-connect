@@ -14,10 +14,22 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
   bulk `ceil(N/100)` (code) vs « 1 besoin = 1 bulk » (Seed) · seuil de confiance **3 uniforme** vs **adapté au volume**.
 - **Verdict :** la **maquette suit le Seed ; le socle ne suit pas.**
 
-**Décision requise — fondateur seul :** **D-C1** reconstruire le socle au modèle Seed *(recommandé)* ·
-**D-C2** adapter le Seed au code *(déconseillé)* · **D-C3** position d'abord *(réduit sans guérir)*.
+**Décision — fondateur seul :** **D-C1 RETENUE (fondateur, 2026-09-24)** — reconstruire le socle au modèle Seed.
+**D-C2 / D-C3 : écartées.** (D-C2 contredisait S-01/S-02/S-25 que le fondateur a écrits ; D-C3 réduisait sans guérir.)
 
-**Rien d'aval (Root, Trunk, Venture Lifecycle) ne s'ouvre avant cette décision.**
+**D-C1 EST DÉJÀ PARTIELLEMENT EXÉCUTÉE — vérifié en base le 2026-09-24 :**
+- **R-1 (`058_v2_entity_layer_r1`)** : `v2_entities` créée · `v2_products.entity_id` (13/16 offres liées) ·
+  `facility_id` **nullable** (`is_nullable=YES`) · 5 caractéristiques d'offre (`position_kind`, `uniqueness_kind`,
+  `handover_kind`, `price_kind`, `condition_kind`) — **C-1/C-2 (racine) traités au niveau schéma.**
+- **R-2a (`059_v2_facility_entity_link`)** : lien explicite facilité → entité · **3/3** facilités réelles liées.
+- **R-2 (code entité-aware)** : écriture (`createSellerProductDraft`), lectures (catalogue, transition, disponibilité,
+  stock-events), UI `CompanyV13` groupe par **entité**. **Preuve A/B** : une offre sans lieu est **invisible** par
+  l'ancienne requête, **visible** par la nouvelle.
+
+**Ce qui reste :** **R-3** (confiance sur l'entité) → **R-4** (Pro par entité, plafond **20**, bulk **1 besoin**, seuil par
+volume = **C-3/C-4/C-5/C-6**) → **R-5** (découverte 2 niveaux, S-11). Contrat : `omni-root-v2-entity-layer-contract-2026-09-23.md` §6/§12.
+
+**Rien d'aval (Trunk, Venture Lifecycle) ne s'ouvre avant la couche entité.**
 
 ---
 

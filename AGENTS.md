@@ -548,3 +548,24 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Ne pas refaire cet audit.** Le livrable manquant est **une décision fondateur** : **D-C1** (reconstruire le socle au modèle Seed, recommandé) / **D-C2** (adapter le Seed au code, déconseillé) / **D-C3** (position d'abord, réduit sans guérir). **Construire une UI conforme au-dessus d'un socle non conforme produit de la dette à chaque tranche** — c'est le rond-point perçu.
 - **GATE :** `RT-4` (voix), `SP-9`, transport, nettoyage de données — **parqués derrière D-C1** volontairement : ce sont des tranches **aval**. Les lancer d'abord empile sur la racine. **Le nettoyage des 17 fantômes peut attendre la décision** (il *masquerait* un symptôme de C-1 en donnant l'impression que le socle va bien).
 
+## Session 2026-09-24 (suite 5) — **D-C1 RETENUE** et **DÉJÀ À MOITIÉ EXÉCUTÉE**
+
+- **Décision fondateur : `D-C1`** — reconstruire le socle au modèle Seed. D-C2/D-C3 écartées. **Enregistrée** dans `docs/founder-hq/founder-hq-board.md` (la ligne disait encore « décision requise »).
+- **DÉCOUVERTE QUI CHANGE LE COÛT : R-1 et R-2 sont DÉJÀ LIVRÉS (2026-09-23/24 par une autre session), et appliqués à la canonique.** Le board disait « rien d'aval ne s'ouvre » — **il était périmé**. Vérifié **en base, moi-même**, pas sur la foi du document :
+
+| Vérification (canonique `br-dawn-hill-am5amy22`, 2026-09-24) | Résultat |
+|---|---|
+| `v2_entities` | **3** |
+| `v2_products.entity_id` renseigné | **13 / 16** |
+| `v2_products.facility_id` nullable | **`is_nullable = YES`** ← la racine C-1/C-2 est **tombée** |
+| Caractéristiques d'offre (S-01) | **5 / 5** colonnes présentes |
+| `v2_facilities.entity_id` lié | **3 / 3** |
+
+- **R-2 (code entité-aware) est réel** : écriture (`createSellerProductDraft` pose `entity_id`), lectures (catalogue/transition/disponibilité/stock-events via `coalesce(p.entity_id, f.entity_id)`), UI `CompanyV13` groupe par **entité**. **Preuve A/B du contrat** : offre sans lieu **invisible** par l'ancienne jointure interne, **visible** par la nouvelle. **Falsification authentique.**
+- **CE QUI RESTE RÉELLEMENT (les 4 contradictions métier, C-3…C-6) :**
+  - **R-3** — confiance portée par l'**entité** (M3).
+  - **R-4** — **Pro par entité** (C-3) + **plafond 20** (C-4, code = 5) + **bulk « 1 besoin »** (C-5, code = `ceil(N/100)`) + **seuil par volume** (C-6, code = 3 uniforme).
+  - **R-5** — découverte 2 niveaux (S-11), branchée entité + offre.
+- **`free_offer_limit = 5` est TOUJOURS en code** (`invariants.ts`) — c'est **C-4**, à corriger en **R-4**. Le socle est entité-aware, **mais les règles métier comptent encore des lieux**.
+- **Contrat de référence :** `docs/nature-way/omni-root-v2-entity-layer-contract-2026-09-23.md` §6 (séquencement) / §12 (R-2 livré). **Ne pas réécrire ce contrat** — il est courant et exact. Le plan d'exécution du reste est à créer (R-3/R-4/R-5).
+
