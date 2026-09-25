@@ -26,7 +26,16 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
   stock-events), UI `CompanyV13` groupe par **entité**. **Preuve A/B** : une offre sans lieu est **invisible** par
   l'ancienne requête, **visible** par la nouvelle.
 
-**Ce qui reste :** **R-3c** (gel des colonnes de confiance du lieu) → **R-4b** (Pro par entité = **C-3**, bloqué nommé) → **R-5** (découverte 2 niveaux, S-11). Contrat : `omni-root-v2-entity-layer-contract-2026-09-23.md` §6/§12.
+**Ce qui reste :** **R-3c** (gel des colonnes de confiance du lieu) → ~~R-4b~~ (**fait 2026-09-25**, voir ci-dessous) → **R-5** (découverte 2 niveaux, S-11). Contrat : `omni-root-v2-entity-layer-contract-2026-09-23.md` §6/§12.
+
+**R-4a EXÉCUTÉ (`019d97f`)** : C-4 (`FREE_OFFER_LIMIT = 20`), C-5 (1 crédit par besoin bulk, plus de `ceil(N/100)`), C-6 (seuil individu 1 / organisation 3). **Le registre C-1…C-7 est donc périmé sur C-4/C-5/C-6** — vérifié dans `src/domain/invariants.ts` et `trunk-repository.ts`.
+
+**R-4b EXÉCUTÉ (2026-09-25, commit `6b88907`)** — **C-3 fermé** : le Pro vit sur l'**entité**.
+- **Migration `061_v2_entitlement_entity.sql`** (additive+idempotente) : `v2_facility_entitlements.entity_id` + FK cascade + backfill + index partiel. **Prouvée sur branche jetable puis APPLIQUÉE canonical `br-dawn-hill-am5amy22`** + registre (`53e3347b…`).
+- **Code** : activation/renouvellement écrivent `entity_id` ; toutes les lectures d'entitlement couvrent **lieu OU entité**.
+- **Preuve A/B** : un 2e lieu d'une même entité, **sans** entitlement propre → ancienne porte **refusait** (`0`), nouvelle **accorde** (`1`).
+- **3 bugs réels trouvés EN LE FAISANT** (chacun prouvé A/B sur Postgres) : (1) la porte de publication lisait `v2_entities.commercial_plan`, **colonne jamais écrite** → un vendeur Pro **payant** ne pouvait pas dépasser le plafond gratuit ; (2) deux gates testaient `state='active'` **sans** `ends_at > now()` et **aucun balayage d'expiration n'existe** → un Pro expiré depuis 60 j passait encore ; (3) l'affichage de découverte montrait la colonne brute, **jamais remise à `free`** → un Pro échu s'affichait `pro_active` pour toujours.
+- **596 → 600/600 tests**, tsc/boundary clean, build + 12 bundles serverless régénérés.
 
 **R-3 EXÉCUTÉ (R-3a + R-3b, 2026-09-25, commits `4495edc` + `9c3f5d8` + `3222c03`) :**
 - **Découverte qui a changé le plan :** **aucune** écriture n'allait vers `v2_entities` — les **8 sites** d'écriture écrivaient tous sur `v2_facilities`, les colonnes d'entité ne venaient que du **backfill R-1**. Passer les lectures à l'entité d'abord **aurait servi une confiance périmée** : prouvé en base, entité `confirmed` + lieu `rejected` → **8 produits affichés pour une facilité rejetée** (l'ancienne porte : 0). **Régression de sécurité, pas détail de style.** L'ordre du plan a donc été **inversé** : miroir d'écriture **d'abord**.
