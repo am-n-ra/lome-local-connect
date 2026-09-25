@@ -629,3 +629,16 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Leçon à ne pas réapprendre :** un `<svg>` avec **seulement un `viewBox` n'a aucune taille intrinsèque** — il hérite du conteneur ou retombe sur le défaut navigateur (180×180 pour un viewBox 24×24). **Dimensionner l'icône à sa définition**, pas seulement dans chaque conteneur : un conteneur oublié suffit à casser le rendu. Et **mesurer TOUS les conteneurs**, pas celui du dernier rapport.
 - **État :** `check:maquette` (74 écrans, 0 icône non dimensionnée), `check:state`, `tsc`, **600/600**, boundary — tous verts.
 
+## Session 2026-09-25 (suite 4) — **dock PC : labels peints DANS les boutons + icônes 2 px trop haut (règle partagée scopée sur un seul dock)**
+
+- **Signal fondateur :** « même chose pour le dock ». **Réel, et encore de la même famille** que la suite 3 : **une règle partagée écrite pour UN SEUL conteneur**.
+- **Le mécanisme :** `renderDock()` émet **le même markup** pour les deux docks (`.navpill` mobile, `#rail` desktop) — `<button><span class="icon-in">svg</span><span class="sr-only">label</span></button>`. Mais les atomes étaient écrits **`.navpill .icon-in` / `.navpill .sr-only`**. Le rail étant un **élément différent** (id `rail`, pas classe `navpill`), il **n'héritait d'aucune des deux règles**.
+- **Deux défauts réels, mesurés :**
+  1. **`.sr-only` non appliqué → le label humain était PEINT dans le bouton.** `position:static`, `clip:auto`, `visibility:visible`, largeur réelle **53–84 px** (« Recherche » = **84 px**) dans un bouton rond de **40 px** → **débordement de 44 px**. C'est le « même chose » visuel : des mots dans les pastilles du dock PC.
+  2. **`.icon-in` non appliqué → pas de `place-items:center`.** Le `<svg>` inline retombait sur la **baseline** du texte, ajoutant **4 px de jambage** → **chaque icône du rail décalée de 2 px vers le haut** (`dy = −2`).
+- **Mesure avant/après (rail, 1280 px) :** avant `dx = 7,97…28,02 px`, `dy = −10…−11 px` (l'écart `dx` venait du texte qui poussait le contenu) ; après **`dx = 0, dy = 0`** sur les **deux** docks (390 et 1280).
+- **Correctif :** `.icon-in` et `.sr-only` passés **en globaux** — exactement ce que fait **déjà** l'app (`src/trunk/ui-v13.css:206` déclare `.sr-only` global). L'app n'était donc **pas** touchée ; le défaut était **maquette-only**, comme les deux précédents.
+- **Garde durable** (`check-maquette-v2.mjs` §3quater) : les atomes de dock **ne doivent pas** être scopés `.navpill` **et** doivent exister globalement. **Falsifié** : rescopé → **FAIL (2) exit 1** ; restauré → **exit 0**.
+- **Leçon à ne pas réapprendre :** quand **une fonction rend deux conteneurs** (`renderDock('navpill')` / `renderDock('rail')`), **tout atome CSS partagé doit être global ou nommé sur les deux**. Une règle écrite sur l'un des deux **passe tous les tests du premier** et casse silencieusement le second. Corollaire de la suite 3 : ce n'est pas « l'icône » ni « le style », c'est **la portée du sélecteur**. Et un `.sr-only` mal scopé ne se voit pas comme un bug d'a11y : il se voit comme **du texte dans les boutons**.
+- **État :** `check:maquette` (74 écrans, atomes globaux), `check:state`, `tsc`, **600/600**, boundary — tous verts.
+
