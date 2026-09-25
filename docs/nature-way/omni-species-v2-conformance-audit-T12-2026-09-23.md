@@ -105,7 +105,59 @@ qu'il lisait la donnée, jamais le pixel.
 |---|---|
 | HQ plan | `HQ-OMNI-2026-09-02` · porte courante : **Seed/Species réouverte** |
 | Plan local | `NW-PROD-OMNI-SEED2-01` · **T-12 refait et livré** |
-| Verdict | **16/16 conforme** par rendu navigateur ; **1 écart réel trouvé et corrigé** (S-01) |
+| Verdict | **16/16 conforme** par rendu navigateur ; **1 écart réel trouvé et corrigé** (S-01) — ⚠️ **dénominateur corrigé le 2026-09-25 (voir §7) : 22/22, 21 décisions rendues, `NON MESURÉ = 0`** |
 | Preuve | `npm run check:species-t12` + `docs/nature-way/t12-proof/` |
-| Gap résiduel | **Aucun écart de conformité connu.** Les décisions hors périmètre maquette restent `V1+` par Seed (`S-02`, `S-12`) |
+| Gap résiduel | **Aucun écart de conformité connu.** Les décisions hors périmètre maquette restent `V1+` par Seed (`S-02`, `S-12`) — ⚠️ **5 décisions restent `règle écrite` (non auditées) : S-09, S-13, S-16, S-17, S-28 (§7)** |
 | Prochaine action | **Le fondateur valide `SP-1…SP-6`** (`SP-VALIDATION`) → clôture Species. **Rien d'aval ne s'ouvre avant.** |
+
+---
+
+## 7. Amendement 2026-09-25 — le dénominateur était faux (`COH-V2-18`)
+
+Cet audit disait **« 16/16 conforme »**. C'était **vrai** — et **trompeur**, exactement de la même manière que le premier audit qu'il remplaçait.
+
+### Le défaut, nommé
+
+Le harnais appliquait **ses propres** phrases de Seed — **15 décisions** sur les **34** du Seed V2 — puis imprimait `16/16 conforme`. Le **dénominateur était choisi par l'audit lui-même** : toute décision qu'il ne regardait pas devenait **conforme par omission**.
+
+Mesuré : **20 décisions du Seed n'étaient prouvées par AUCUNE mesure** (S-03, S-04, S-08, S-12, S-21, S-24, S-30, S-31…).
+
+> **C'est la même faute que §1, une couche plus haut.** L'ancien audit lisait la **donnée** au lieu du **pixel** ; celui-ci regardait un **sous-ensemble** en le présentant comme le **tout**. Dans les deux cas : *mesurer mal → conclure trop fort.*
+
+### Le correctif — le Seed est le dénominateur
+
+Le harnais **lit désormais le Seed** et **classe CHAQUE décision `S-xx`** :
+
+| Classe | Sens | Compte |
+|---|---|---|
+| `rendu à l'écran` | la phrase est **lue au rendu** (preuve navigateur) | **21** |
+| `contrainte code` | règle de modèle prouvée en base/code, aucun écran à rendre | 4 |
+| `règle écrite` | règle énoncée, surface non auditée | 5 |
+| `hors V1 (Seed)` | **exclu par le Seed lui-même** (`V1+`) | 2 (S-08, S-12) |
+| **`NON MESURÉ`** | **aucune preuve** | **0** |
+
+Et le harnais imprime le verdict **borné** (« ne porte QUE sur les 21 rendues ») et sort en **code ≠ 0** s'il reste un `NON MESURÉ` **ou** un non-conforme. **Avant, un non-conforme imprimait une ligne et sortait en `0`** — il ne pouvait pas faire échouer un CI.
+
+### 6 décisions sorties de l'aveuglement → **1 écart réel corrigé**
+
+| Décision | Verdict | Preuve (rendue) |
+|---|---|---|
+| **S-04** | **CORRIGÉ** | L'écran de publication **ne nommait pas l'entité propriétaire** → violation de « pas d'offre orpheline ». Ligne ajoutée : « Cette offre appartient à Boutique Kodjo · l'entité ». |
+| `S-03` | OK | `entite-publique` liste « **Ses offres** » |
+| `S-21` | OK | `scan-entity` (QR public → remise Omni) + `entity-from-qr` (avantages Omni −15 %) |
+| `S-24` | OK | asymétrie tenue : acheteur scanne les entités, vendeur scanne les acheteurs ; aucune fuite côté acheteur |
+| `S-30` | OK | « la confiance porte sur l'entité » rendu ; la fiche offre **ne revendique pas** de confiance propre |
+| `S-31` | OK | `seller-verif` rend « Vous publiez déjà » + « Non vérifié » |
+
+### Preuves
+
+- `npm run check:species-t12` → **22/22 conforme**, **21 rendues**, **`NON MESURÉ = 0`**, exit `0`.
+- **Garde falsifié** : retirer la ligne d'ownership → **S-04 `ABSENT`**, **exit `1`** (avant : **exit `0`**).
+- `check:maquette`, `check:state`, `tsc`, **600/600 tests** — verts.
+
+### Ce qui reste, honnêtement
+
+- `S-09`, `S-13`, `S-16`, `S-17`, `S-28` = **`règle écrite`** : surfaces probables, **non auditées ici**. Les déclarer conformes serait retomber dans le défaut.
+- `S-08` / `S-12` = **hors V1 par décision du Seed** — une **exclusion assumée**, pas une conformité.
+- **`COH-V2-18` → CORRIGÉ.** Ce qui reste ouvert : **`SP-VALIDATION`** — un audit conforme **ne vaut pas** acceptation fondateur.
+

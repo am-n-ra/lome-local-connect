@@ -132,6 +132,48 @@ const AUDIT = [
       if (!integ || !rep) return ['PARTIELLE', `integrity=${integ} reputation=${rep}`];
       return ['OK', 'integrity and reputation of the offer both rendered'];
     } },
+  { id: 'S-04', sheets: ['seller-publish'],
+    decide: (t) => {
+      // No orphan offers: publishing must name the owning ENTITY right there.
+      const names = /Cette offre appartient à/.test(t['seller-publish']) && /entité/i.test(t['seller-publish']);
+      return names ? ['OK', 'publishing names the owning entity (no orphan offer)'] : ['ABSENT', 'the publish screen never names the owning entity'];
+    } },
+  { id: 'S-03', sheets: ['entite-publique'],
+    decide: (t) => {
+      const owns = /Ses offres/.test(t['entite-publique']);
+      const named = /Spaghetti 500 g/.test(t['entite-publique']) && /Huile 1 L/.test(t['entite-publique']);
+      return owns && named ? ['OK', 'the mother entity lists its own offers'] : ['ABSENT', `owns=${owns} named=${named}`];
+    } },
+  { id: 'S-21', sheets: ['scan-entity', 'entity-from-qr'],
+    decide: (t) => {
+      const qr = /QR/.test(t['scan-entity']) && /remise Omni/i.test(t['scan-entity']);
+      const gain = /avantages Omni/i.test(t['entity-from-qr']) && /−15 %|[0-9]+ %/.test(t['entity-from-qr']);
+      return qr && gain ? ['OK', 'in-store public QR opens the entity with the Omni discount'] : ['ABSENT', `qr=${qr} gain=${gain}`];
+    } },
+  { id: 'S-24', sheets: ['scan-entity', 'seller-scan', 'room'],
+    decide: (t) => {
+      const buyerScans = /Scanner le QR d’une entité/.test(t['scan-entity']);
+      const sellerScans = /Scanner le code de l’acheteur/.test(t['seller-scan']);
+      // Asymmetry: the buyer must NEVER be shown the seller's scanning screen.
+      const leaked = /Scanner le code de l’acheteur|dashboard vendeur/i.test(t['room']);
+      if (leaked) return ['ABSENT-INCOHERENT', 'the buyer surface exposes the seller scan/dashboard'];
+      return buyerScans && sellerScans ? ['OK', 'buyer scans entities; seller scans buyers; asymmetry kept'] : ['ABSENT', `buyer=${buyerScans} seller=${sellerScans}`];
+    } },
+  { id: 'S-30', sheets: ['entite-publique', 'seller-verif'],
+    decide: (t) => {
+      // The Seed's rule: trust belongs to the ENTITY, never the offer. Both surfaces
+      // must say it; and the offer sheet must NOT claim a trust of its own.
+      const stated = /confiance.*entité|propre à l’entité/i.test(t['entite-publique'] + ' ' + t['seller-verif']);
+      const onOffer = /confiance/i.test(t['offer'] || '');
+      if (!stated) return ['ABSENT', 'no rendered entity-trust statement'];
+      if (onOffer) return ['ABSENT-INCOHERENT', 'the offer sheet also claims a trust of its own'];
+      return ['OK', 'trust is stated as the ENTITY’s, never the offer’s'];
+    } },
+  { id: 'S-31', sheets: ['seller-verif'],
+    decide: (t) => {
+      const publishesUnverified = /publiez déjà/.test(t['seller-verif']) && /Non vérifié/.test(t['seller-verif']);
+      return publishesUnverified ? ['OK', 'publishing precedes verification (S-31)'] : ['ABSENT', 'seller-verif does not state publish-before-verify'];
+    } },
   { id: 'economy', sheets: ['seller-offers', 'seller-pro'],
     decide: (t) => {
       // The free ceiling lives on the offers screen, the bonus on the Pro screen. The
@@ -179,4 +221,41 @@ for (const r of results) console.log(line(r));
 
 const bad = results.filter((r) => r.verdict !== 'OK');
 console.log(`\n${results.length - bad.length}/${results.length} conforme · ${bad.length} non conforme`);
-writeFileSync(resolve('.agent_tmp/t12-audit.json'), JSON.stringify({ keys: keys.length, results, rendered }, null, 2));
+// A non-conformant decision must fail the command, not just print a line.
+if (bad.length) process.exitCode = 1;
+
+// --- COH-V2-18 fix: the denominator must be the SEED, not this audit's subset ---
+// The previous run printed "16/16 conforme" while the Seed holds 34 decisions: the
+// subset was choosing its own denominator, so unmeasured decisions looked conformant.
+// Read the Seed and report EVERY decision's class. `rendered` means the specific
+// phrase was actually read on a screen; `code`/`rule` are model constraints that
+// have no screen to render; anything else is honestly UNMEASURED.
+const seed = readFileSync(resolve('docs/nature-way/omni-intent-brief-v2-2026-09-23.md'), 'utf8');
+const seedIds = [...new Set([...seed.matchAll(/S-\d{2}/g)].map((m) => m[0]))].sort();
+const CLASS = {
+  code: ['S-02', 'S-15', 'S-23', 'S-26'],           // model constraint, verified in DB/code
+  rule: ['S-09', 'S-13', 'S-16', 'S-17', 'S-28'],   // stated rule; surface not necessarily audited
+  // Deliberately out of V1 scope by the Seed itself — NOT conformant claims.
+  deferred: ['S-08', 'S-12'],                       // transport offer screen / A→B = `V1+`
+};
+const audited = new Set(results.map((r) => r.id));
+const klassOf = (id) => audited.has(id) ? 'rendered'
+  : CLASS.code.includes(id) ? 'code'
+  : CLASS.rule.includes(id) ? 'rule'
+  : CLASS.deferred.includes(id) ? 'deferred'
+  : 'UNMEASURED';
+const coverage = seedIds.map((id) => ({ id, klass: klassOf(id) }));
+const byClass = coverage.reduce((a, c) => ({ ...a, [c.klass]: (a[c.klass] || 0) + 1 }), {});
+const unmeasured = coverage.filter((c) => c.klass === 'UNMEASURED').map((c) => c.id);
+
+console.log(`\nCOUVERTURE SEED — ${seedIds.length} décisions S-xx dans le Seed V2`);
+console.log(`  rendu à l'écran : ${(byClass.rendered || 0)}`);
+console.log(`  contrainte code : ${(byClass.code || 0)}`);
+console.log(`  règle écrite    : ${(byClass.rule || 0)}`);
+console.log(`  hors V1 (Seed)  : ${(byClass.deferred || 0)}${(byClass.deferred || 0) ? ' → ' + CLASS.deferred.join(' ') : ''}`);
+console.log(`  NON MESURÉ      : ${(byClass.UNMEASURED || 0)}${unmeasured.length ? ' → ' + unmeasured.join(' ') : ''}`);
+console.log(`\n  ⚠️  Un verdict "conforme" ne porte QUE sur les ${byClass.rendered || 0} décisions rendues à l'écran.`);
+if (unmeasured.length) console.log(`  ⚠️  ${unmeasured.length} décision(s) du Seed ne sont PROUVÉES PAR AUCUNE MESURE (COH-V2-18).`);
+// A run that leaves an UNMEASURED decision must not report an unqualified success.
+if (unmeasured.length) process.exitCode = 2;
+writeFileSync(resolve('.agent_tmp/t12-audit.json'), JSON.stringify({ keys: keys.length, results, rendered, seed: seedIds, coverage }, null, 2));

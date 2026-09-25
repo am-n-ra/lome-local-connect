@@ -337,3 +337,30 @@ choisi d'y chercher.
 | Preuve | ce registre (34 décisions cartographiées, 0 orpheline) |
 | Gap résiduel | la maquette **ne démontre pas** S-01/S-06/S-11/S-32 → Species **non close** |
 | Prochaine action | **fondateur valide SP-1…SP-3** → je produis les surfaces → T-12 audit de conformité |
+
+---
+
+## 11. Amendement 2026-09-25 — couverture corrigée (`COH-V2-18`)
+
+Ce registre disait « 34 décisions cartographiées, 0 orpheline ». Le **cartographiage était juste**, mais l'audit qui s'en réclamait (**T-12**) appliquait **ses propres** phrases de Seed : **15 décisions mesurées sur 34**, imprimées comme « **16/16 conforme** » — un **dénominateur choisi par l'audit**. Toute décision non regardée devenait **conforme par omission**.
+
+### Couverture désormais **mesurée et classée** (harnais `check:species-t12`)
+
+| Classe | Sens | Compte |
+|---|---|---|
+| `rendu à l'écran` | phrase **lue au rendu** (navigateur) | **21** |
+| `contrainte code` | règle de modèle prouvée en base/code (`S-02`, `S-15`, `S-23`, `S-26`) | 4 |
+| `règle écrite` | règle énoncée, **surface non auditée** (`S-09`, `S-13`, `S-16`, `S-17`, `S-28`) | 5 |
+| `hors V1 (Seed)` | **exclu par le Seed lui-même** (`S-08`, `S-12`) | 2 |
+| **`NON MESURÉ`** | **aucune preuve** | **0** |
+
+### Écart réel trouvé en mesurant les 6 décisions sorties de l'aveuglement
+
+**`S-04`** (« toute offre existe via une entité — pas d'offre orpheline ») était **violé à l'écran** : la surface de publication `seller-publish` **ne nommait jamais l'entité propriétaire**. Corrigé par une ligne explicite. `S-03`, `S-21`, `S-24`, `S-30`, `S-31` sont **mesurées conformes**.
+
+### Ce que ce registre **ne prétend plus**
+
+- Les 5 décisions `règle écrite` **ne sont pas** conformes démontrées : elles exigent **un audit de plus**.
+- Les 2 décisions `hors V1` sont une **exclusion assumée**, pas une conformité.
+- **`SP-VALIDATION` reste ouverte** : un audit conforme **ne vaut pas** acceptation fondateur.
+

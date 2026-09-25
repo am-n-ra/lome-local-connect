@@ -117,7 +117,7 @@ Le fondateur a signalé **« beaucoup d'incohérence dans ce qu'on veut faire et
 
 | ID | Severity | Defect |
 |---|---|---|
-| `COH-V2-18` | **Haute** | L'audit Species V2 a été mesuré contre l'ancien registre MV1, pas le Seed V2 → il ne prouve pas la conformité V2 |
+| `COH-V2-18` | **Haute** → **CORRIGÉ 2026-09-25** | L'audit Species V2 était **auto-référent** : il rendait les écrans et appliquait ses **propres** phrases de Seed (15 décisions), puis imprimait « **16/16 conforme** » — un dénominateur **choisi par l'audit lui-même**. Les décisions non mesurées apparaissaient donc **conformes par omission**. **Mesure du défaut : 20 décisions du Seed n'étaient prouvées par aucune mesure.** **Correctif :** le harnais **lit le Seed** (`omni-intent-brief-v2-2026-09-23.md`) et **classe CHAQUE décision** (`rendu à l'écran` / `contrainte code` / `règle écrite` / `hors V1 (Seed)` / `NON MESURÉ`), imprime le verdict **borné** (« ne porte QUE sur les N rendues »), et sort en **code ≠ 0** s'il reste un `NON MESURÉ` ou un non-conforme. **5 décisions ajoutées à la mesure** (S-03, S-04, S-21, S-24, S-30, S-31) → **1 écart réel corrigé** : l'écran de publication **ne nommait pas l'entité propriétaire** (violation de **S-04**, « pas d'offre orpheline »). Résultat : **22 audits conformes**, **21 décisions rendues**, **`NON MESURÉ = 0`**, 2 hors V1 par décision du Seed (S-08/S-12). Garde falsifié : retirer la ligne d'ownership → **exit 1**. |
 | `SCOUT-01` | Haute | Couverture mondiale de lieux orpheline (`public-discovery`, `osm-coverage`) |
 | `SCOUT-02` | Haute | Impasse d'expiration des intentions (`v2_purchase_intents.state` non lu par l'UI) |
 | `T-07d` | — | Prod `index-BUMFRcnb.js` ≠ local → **OUVERT** (ne pas pousser) |
