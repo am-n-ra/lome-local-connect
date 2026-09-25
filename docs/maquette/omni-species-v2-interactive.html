@@ -116,6 +116,21 @@
   .chip{font-size:9.5px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:5px 9px;background:#fff;color:var(--ink)}
   .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .chip.soon{color:var(--ink-faint);border-style:dashed}
+  /* D-CON-1/2 : un SEUIL n'est pas un interrupteur. La pastille active la contrainte,
+     la valeur est visible et éditable — jamais figée. */
+  .chip.seuil{display:inline-flex;align-items:center;gap:5px;padding:3px 9px}
+  .chip.seuil .seuil-v{font:inherit;font-weight:800;width:5.4em;min-width:0;border:0;background:transparent;
+    color:inherit;padding:2px 0;text-align:right}
+  .chip.seuil .seuil-v:focus{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
+  .chip.seuil:not(.on){color:var(--ink-soft)}
+  .chip.seuil:not(.on) .seuil-v{color:var(--ink)}
+  .chip.seuil .seuil-u{opacity:.72;font-weight:700}
+  .seuil-row{display:flex;align-items:center;gap:7px;margin-top:7px;flex-wrap:wrap}
+  .seuil-row .eyebrow{margin:0}
+  /* D-CON-5 : trois familles explicites — un seuil ne se lit pas comme un interrupteur */
+  .cgroup{margin-top:9px}
+  .cgroup .eyebrow{margin-bottom:5px}
+  .chiprow.grp{gap:5px}
   .fld{display:flex;align-items:center;gap:7px;height:38px;border-radius:999px;background:#fff;
     border:1px solid var(--line);padding:0 12px;box-shadow:var(--sh-sm)}
   .fld svg{flex:none;width:16px;height:16px}
@@ -223,7 +238,13 @@ const S = {
   role: 'buyer',
   sheet: 'search',
   prev: [],
-  constraints: { rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false }, sort: 'best', fresh: 'fresh',
+  // D-CON-1/2/3 : seuils RÉGLABLES. La valeur est visible et éditable ; la devise
+  // suit la LOCALISATION de l'utilisateur (D-LOC-1) — ici le marché pilote Lomé.
+  constraints: {
+    rayon: 'Quartier · 1 km', ouvert: true, budget: true, qte: false,
+    budgetMax: 2500, budgetCurrency: 'F', budgetSymbol: 'FCFA',
+    qteMin: 1,
+  }, sort: 'best', fresh: 'fresh',
   searchLevel: 'offer',
   product: { name: 'Spaghetti 500 g', price: '850 F', old: '1 000 F', promo: '−15 % Omni', seller: 'Boutique Kodjo', kind: 'commerce', dist: '140 m',
     // S-01 : tout est offre, les différences sont des CARACTÉRISTIQUES (modèle jour 1)
@@ -420,6 +441,9 @@ SHEETS.search = () => {
   const c = S.constraints;
   const chip = (label, on, soon, fn) =>
     `<span class="chip${on ? ' on' : ''}${soon ? ' soon' : ''}" onclick="${soon ? `toast('${label} — bientôt (V1+)')` : fn}">${label}</span>`;
+  // D-CON-1/2 : un SEUIL se règle. La pastille active ; la valeur reste éditable.
+  const seuil = (key, value, unit, fn) =>
+    `<span class="chip seuil${c[key] ? ' on' : ''}" onclick="${fn}" title="${fn === 'toggleC(\'budget\')' ? 'Activer le plafond de budget' : 'Activer la quantité minimale'}">${key === 'budget' ? 'Budget ≤' : 'Au moins'}<input class="seuil-v" type="text" inputmode="numeric" value="${value}" aria-label="${key === 'budget' ? 'Budget maximum' : 'Quantité minimum'}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="setSeuil('${key}',this.value)"><span class="seuil-u">${unit}</span></span>`;
   const zones = ['Quartier · 1 km', 'Ville · 5/10/25 km', 'Région · 100 km', 'Monde'];
   const zoneOn = zones.findIndex((z) => z === c.rayon);
   return `
@@ -444,16 +468,27 @@ SHEETS.search = () => {
     </div>
   </div>
 
-  <div class="oblock"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
-    <div class="eyebrow">Ensuite</div>
-    <div class="chiprow">
+  <div class="cgroup"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
+    <div class="eyebrow">Disponibilité</div>
+    <div class="chiprow grp">
       ${chip('Ouvert maintenant', c.ouvert, false, "toggleC('ouvert')")}
-      ${chip('Créneau', false, true)}
-      ${chip('Budget ≤ 2 000 F', c.budget, false, "toggleC('budget')")}
-      ${chip('Quantité ≥ 10', c.qte, false, "toggleC('qte')")}
+    </div>
+  </div>
+
+  <div class="cgroup"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
+    <div class="eyebrow">Votre besoin <em>— réglable</em></div>
+    <div class="chiprow grp">
+      ${seuil('budget', c.budgetMax, c.budgetCurrency, "toggleC('budget')")}
+      ${seuil('qte', c.qteMin, 'unités', "toggleC('qte')")}
+    </div>
+    <p class="lead" style="margin-top:6px">Un <b>seuil</b> se règle : la pastille l’active, la valeur reste la vôtre. Devise selon <b>votre localisation</b> (${c.budgetSymbol} · pilote Lomé).</p>
+  </div>
+
+  <div class="cgroup"${S.searchLevel === 'entity' ? ' style="display:none"' : ''}>
+    <div class="eyebrow">Attributs d’offre</div>
+    <div class="chiprow grp">
       ${chip('État / condition', false, true)}
-      ${chip('Livraison', false, true)}
-      ${chip('Transactable', false, true)}
+      ${chip('Créneau', false, true)}
     </div>
   </div>
 
@@ -562,11 +597,11 @@ SHEETS.offer = () => `
 SHEETS.avail = () => `
   <div class="handle"></div>
   <div class="eyebrow">Vérification de disponibilité</div>
-  <h1 style="margin-top:3px">${S.product.name} · 2</h1>
+  <h1 style="margin-top:3px">${S.product.name} · ${S.constraints.qte ? S.constraints.qteMin : 2}</h1>
   <p class="lead">« Est-ce disponible maintenant ? » — ce n’est pas encore un engagement d’achat.</p>
   <div class="cardbox">
-    <div class="kv"><span>Quantité souhaitée</span><b>2</b></div>
-    <div class="kv"><span>Budget max</span><b>2 000 F</b></div>
+    <div class="kv"><span>Quantité souhaitée</span><b>${S.constraints.qte ? S.constraints.qteMin : 2}</b></div>
+    <div class="kv"><span>Budget max</span><b>${S.constraints.budget ? S.constraints.budgetMax.toLocaleString('fr-FR') + ' ' + S.constraints.budgetCurrency : '—'}</b></div>
     <div class="kv"><span>Retrait / livraison</span><b>Retrait</b></div>
   </div>
   <div class="eyebrow" style="margin-top:11px">Note au vendeur (optionnel)</div>
@@ -852,6 +887,21 @@ function setRayon(k) { S.constraints.rayon = RAYON_STEPS[k]; render(); }
 function setSort(k) { S.sort = k; render(); }
 function setFresh(k) { S.fresh = k; render(); }
 function toggleC(key) { S.constraints[key] = !S.constraints[key]; render(); }
+// D-CON-1/2 : la valeur d'un seuil reste la propriété de l'acheteur. On la garde
+// en nombre, on refuse le junk, et on n'active JAMAIS la contrainte à sa place.
+function setSeuil(key, raw) {
+  const digits = String(raw).replace(/[^0-9]/g, '');
+  const value = digits === '' ? 0 : Math.min(9999999, parseInt(digits, 10));
+  if (key === 'budget') S.constraints.budgetMax = value; else S.constraints.qteMin = value;
+  render();
+}
+// Libellé du seuil actif, pour que la fiche LISE la contrainte au lieu de la coder en dur.
+function seuilLabel(key) {
+  const c = S.constraints;
+  if (key === 'budget') return c.budget ? ('Budget max ≤ ' + c.budgetMax.toLocaleString('fr-FR') + ' ' + c.budgetCurrency) : 'Budget max — non contraint';
+  if (key === 'qte') return c.qte ? ('Quantité min ≥ ' + c.qteMin + ' unité' + (c.qteMin > 1 ? 's' : '')) : 'Quantité — non contrainte';
+  return '';
+}
 function setSearchLevel(lv) { S.searchLevel = lv; render(); }
 function doSearch() {
   // S-11 : niveau OFFRE — on cherche un produit/service, pas une entité

@@ -1,7 +1,13 @@
 # Contraintes de recherche — Arbitrage D-CON-1…5 (recommandations à valider)
 
-**Date :** 2026-09-25 · **Branche :** `omni-v2-rebuild` · **Statut :** **à trancher par le fondateur**
+**Date :** 2026-09-25 · **Branche :** `omni-v2-rebuild` · **Statut :** **APPROUVÉ fondateur 2026-09-25** (avec amendement devise)
 **Déclencheur :** signal fondateur — « Budget ≤ 2 000 F doit être plus personnalisable non ? »
+
+> ✅ **DÉCISION FONDATEUR (2026-09-25) : « ok »** — D-CON-1…5 **approuvées**.
+> ⚠️ **AMENDEMENT CONCOMITANT :** « sans oublier que la devise dépend de localization de user donc… » →
+> **D-CON-3 est corrigée** : le défaut n'est **pas** une constante « 2 500 F », c'est **un montant
+> local dérivé de la devise de l'utilisateur**. Contrat : `omni-currency-localization-contract-2026-09-25.md`
+> (`D-LOC-1…5`). La valeur pilote Lomé (2 500 F, p90 réel) devient un **paramètre de marché**.
 
 ## 1. La question réelle n'est pas la valeur, c'est la nature
 

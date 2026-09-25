@@ -95,6 +95,29 @@ check(navScoped.length === 0, 'dock atoms (.icon-in/.sr-only) are global, not .n
 // and they must exist at all, so the rail really inherits them
 check(dockAtoms.every((a) => new RegExp(`(^|\\})\\s*${esc(a)}\\s*\\{`, 'm').test(css)),
   'dock atoms are defined globally');
+// --- 3quinquies. Les contraintes ne peuvent pas se contredire (D-CON, 2026-09-25) ---
+// D-CON-1/2 : un seuil est RÉGLABLE, pas figé. La maquette affichait « Budget ≤ 2 000 F »
+// et « Quantité ≥ 10 » alors que la fiche disait « Quantité souhaitée : 2 » — deux sources
+// de vérité pour la même requête. Un seuil doit lire la contrainte active.
+check(!/Budget ≤ 2 000 F/.test(js), 'no hard-coded "Budget ≤ 2 000 F" chip (D-CON-1)');
+check(!/Quantité ≥ 10/.test(js), 'no hard-coded "Quantité ≥ 10" chip (D-CON-2)');
+check(/seuil-v/.test(js) && /setSeuil/.test(js), 'threshold chips are editable (seuil-v + setSeuil)');
+check(/seuilLabel/.test(js), 'a single threshold-label helper exists (D-CON-3)');
+// the availability sheet must read the ACTIVE constraint, never a constant
+const availBlock = js.slice(js.indexOf('SHEETS.avail'), js.indexOf('SHEETS.pending'));
+check(/constraints\.qteMin/.test(availBlock), 'availability sheet reads the active quantity (D-CON-2)');
+check(/constraints\.budgetMax/.test(availBlock), 'availability sheet reads the active budget (D-CON-2)');
+// D-CON-4 : la distance ne doit être comptée qu'UNE fois
+const searchBlock = js.slice(js.indexOf('SHEETS.search'), js.indexOf('SHEETS.results'));
+const kmChips = (searchBlock.match(/≤ \d+ km/g) || []).length;
+check(kmChips === 0, 'no duplicated distance chip in the search sheet (D-CON-4)',
+  `${kmChips} found`);
+// D-CON-5 : trois familles explicites, et pas de « Transactable » dans la recherche
+check(/Disponibilité/.test(searchBlock) && /Votre besoin/.test(searchBlock) && /Attributs d’offre/.test(searchBlock),
+  'search constraints expose the 3 explicit groups (D-CON-5)');
+check(!/Transactable/.test(searchBlock), 'Transactable is not a search constraint (D-CON-5)');
+// D-LOC-1 : la devise est une propriété de la localisation, pas une constante
+check(/budgetCurrency/.test(js) && /budgetSymbol/.test(js), 'currency is carried by state, not hard-coded (D-LOC-1)');
 const labels = ['Presente', 'Revendiquee', 'Offre publiee', 'Disponibilite vivante', 'Transactable'];
 const levelBlock = js.match(/const LEVELS = \[([\s\S]*?)\];/);
 const levelCount = levelBlock ? (levelBlock[1].match(/\n\s*\[/g) || []).length : 0;
