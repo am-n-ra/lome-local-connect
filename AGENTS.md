@@ -744,3 +744,18 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
   - `forbiddenClaims` n interdit plus de dire Species close (c est désormais **exigé**) mais interdit de **réaffirmer la porte fermée** (`SEED_CLOSED_SPECIES_REOPENED`) ou `SP-VALIDATION toujours ouverte`.
   - **Leçon** : un garde de porte doit être **retourné** quand la porte tourne. Le laisser tel quel **aurait interdit la vérité** — un garde périmé fabrique la dérive.
 - **Ce qui reste (Root)** : `R-B` caractéristiques d offre **0/16** remplies · `R-C` **3** offres sans entité · `R-D` chemin `individu` **0** entité · `R-E` R-5 découverte 2 niveaux · **puis alignement de l app sur la maquette** (chips figés, devise en dur) — **désormais débloqué**.
+
+## Session 2026-09-25 (suite 12) — **harmonisation documentaire : le « master » décrivait une Omni qui n'existe plus**
+
+- **Question fondateur** : *« harmoniser nos registres et docs… à quel niveau Omni est bien décrit, le master ? »* — question **structurelle**, traitée par la mesure.
+- **Mesuré** : **237** docs · **135 orphelins** (57 %, cités par aucun doc V2 vivant) · **6 masters concurrents** · **2 SDM** (09-02 et 09-23) · **13** docs référencés par le **code** (à ne pas déplacer sans mettre à jour le script).
+- **Le défaut central** : `docs/README.md` déclarait `OMNI_MASTER_PRODUCT_INTERFACE.md` **« l'unique document normatif d'Omni »**. Ce master date du **2026-08-21** — **antérieur au Seed V2** (09-23). Il **ignore** `S-25` : **0** occurrence de `v2_entities` ; ses 4 « identité » parlent d'**Identité UI**. **Un nouveau contributeur apprenait un modèle abandonné.**
+- **Corrigé (H-1, H-2)** : `docs/README.md` déclare la **CHAÎNE V2** (Seed → SDM → contrat du socle → maquette → état → plan), master V1 = **historique** ; `docs/omni-document-harmonization-map-2026-09-25.md` classe chaque cluster.
+- **Artefacts de gate manquants — produits (H-3)** :
+  - **`omni-proof-register-v2-2026-09-25.md`** : **14 scripts `prove-*`** existaient, **0 registre** — on ne savait pas quelle preuve couvre quelle décision ni sa **classe**. **C'est le rond-point à la racine.**
+  - **`omni-maturity-verdict-2026-09-25.md`** : verdict scopé **`prototype`** — **pas** `pilot-ready` — avec les 4 conditions mesurées non satisfaites (caractéristiques d'offre non écrites, devise en dur, 9 produits en mauvaise devise, filtre budget aveugle).
+  - `decisions/omni-decision-log.md` : **arrêté au 2026-08-16**, portait `DEC-001` « un seul master » → **8 décisions V2 ajoutées** (`DEC-V2-01…08`), `DEC-001`/`DEC-002` **corrigées**.
+- **Distinction de périmètre** : `launch envelope` et `release record` **ne sont PAS dus** — artefacts de **Canopy/Ring**. Les réclamer pendant Root = **zèle hors porte**.
+- **Nouveau garde (H-7)** : `npm run check:docs` — échoue si un document **re-déclare un master périmé** comme autorité, ou si le README perd la chaîne. **2 falsifications** attrapées.
+- **Non proposé** : **supprimer**. H-4 (archiver les 135 orphelins) **attend l'accord explicite** — *« preserve by default »*. **H-3 avant l'archivage** : ranger sans avoir écrit la source de vérité des preuves, c'est ranger le désordre.
+- **Note d'environnement** : `check:species-t12` a échoué en cours de session — **binaire Playwright absent** du sandbox, **pas** une régression de mes edits (je n'ai touché que des docs). Réinstallé (`npx playwright install chromium`) → **27/27**, exit 0. **Leçon** : distinguer une panne d'environnement d'une régression avant de conclure.

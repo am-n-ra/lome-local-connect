@@ -126,6 +126,23 @@ Le fondateur a signalé **« beaucoup d'incohérence dans ce qu'on veut faire et
 | `SP-VALIDATION` | **Haute** | `SP-1…SP-10` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
 | `T12-RESOLVED` | — | `T-12` refait par rendu navigateur après décision fondateur « l'audit est à refaire ». **Clos** — mais voir `COH-V2-18` : le dénominateur était auto-référent, puis complété à **26 décisions rendues / 32, `NON MESURÉ = 0`**. |
 
+### Harmonisation documentaire (2026-09-25)
+
+**Question fondateur** : *« harmoniser nos registres et docs… à quel niveau Omni est bien décrit, le master ? »*
+
+**Mesuré** : **237** docs, **135 orphelins** (57 %), **6 masters concurrents**, **2 SDM**. Le `README`
+déclarait un master du **2026-08-21** — **antérieur au Seed V2** — comme « l'unique document normatif »,
+alors qu'il **ignore** `S-25` (l'offre appartient à l'entité).
+
+**Corrigé** :
+- `docs/README.md` — déclare la **chaîne V2** (Seed → SDM → contrat → maquette → état → plan) ; master V1 = **historique**.
+- `docs/decisions/omni-decision-log.md` — **arrêté au 2026-08-16**, portait `DEC-001` (« un seul master ») : **8 décisions V2 ajoutées** (`DEC-V2-01…08`), `DEC-001`/`DEC-002` corrigées.
+- `docs/omni-document-harmonization-map-2026-09-25.md` — classement mesuré du corpus (aucune suppression).
+- **Artefacts de gate manquants produits** : `omni-proof-register-v2-2026-09-25.md` (**P-1** — 14 scripts `prove-*` n'avaient **aucun** registre) · `omni-maturity-verdict-2026-09-25.md` (**P-3** — verdict scopé `prototype`, **pas** `pilot-ready`).
+- **Nouveau garde** `npm run check:docs` — échoue si un document re-déclare un master périmé comme autorité (2 falsifications attrapées).
+
+**Hors porte (non dus à Root)** : `launch envelope` et `release record` appartiennent à Canopy/Ring.
+
 ### ⚠️ Correction majeure — 2026-09-25 (2e passe) : **la racine `C-1`/`C-2` était DÉJÀ fermée**
 
 **Ce que j'avais écrit plus haut dans la journée était faux, et la faute est instructive.**
