@@ -147,17 +147,21 @@ relire la **ligne**.
 | **13/16** offres liées à une entité · **3/206** lieux liés | live |
 
 **Conséquence : `D-C1` a été tranché ET exécuté. Ce n'est plus une décision ouverte — c'est un
-résidu d'exécution.** `C-1`, `C-2`, `C-7` sont **clos** ; `C-3` (Pro) est **partiel** ; `C-4`/`C-5`/`C-6`
-sont **corrigés** (`R-4`).
+résidu d'exécution.** `C-1`, `C-2`, `C-7` sont **clos** ; **`C-3` est clos par `R-4b`** (`061` + code, preuve
+A/B) ; `C-4`/`C-5`/`C-6` sont **corrigés** (`R-4a`).
 
 **Résidu réel, à finir en Root (après clôture Species) :**
 
 | # | Résidu | Preuve live |
 |---|---|---|
-| `R-A` | Basculer le **chemin d'écriture Pro** sur `entity_id` (cible + backfill existent ; écritures encore sur `facility_id`) | `061` · **0** entité `commercial_plan <> 'free'` |
-| `R-B` | **Remplir les caractéristiques d'offre** (`uniqueness_kind`, `handover_kind`, `price_kind`, `condition_kind`) | **0/16** |
+| `R-A` | ~~Basculer le chemin d'écriture Pro sur `entity_id`~~ → **DÉJÀ FAIT : `R-4b` (`061`, commit `6b88907`)** — activation/renouvellement écrivent `entity_id` ; preuve A/B : 2e lieu d'une même entité sans entitlement propre → ancienne porte **refuse**, nouvelle **accorde**. *Résidu honnête* : **0** entité `commercial_plan <> 'free'` en base → chemin **non exercé en données réelles** | `061` · board R-4b |
+| `R-B` | **Remplir les caractéristiques d'offre** à la création/publication (`uniqueness_kind`, `handover_kind`, `price_kind`, `condition_kind`) — **déclarées, 0/16 remplies** (`position_kind` l'est à 13/16) | live |
 | `R-C` | Lier/classer les **3 offres sans entité** | live |
-| `R-D` | Prouver le **chemin `individu`** (seuil 1) | **0** entité `individu` |
+| `R-D` | Prouver le **chemin `individu`** (seuil 1) : **0** entité `individu` en base | live |
+| `R-E` | **R-5** (découverte 2 niveaux, S-11) — prochaine tranche planifiée du board | board §« Ce qui reste » |
+
+**Nuance importante** : `C-3` (Pro par entité) **n'est pas « partiel » comme je l'ai écrit** — `R-4b` l'a **fermé**,
+code inclus, avec preuve A/B. Ce qui manque est **l'exercice en données réelles** (`0` entité Pro), pas le code.
 
 **Et la cause réelle du « on tourne en rond »** — car le fondateur a raison de la ressentir :
 **ce n'est pas le produit qui tournait en rond, c'est notre mémoire du produit.** Le socle a été

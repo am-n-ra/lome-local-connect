@@ -4,15 +4,24 @@
 
 ## ⛔ DÉCISION BLOQUANTE — cohérence Seed ↔ socle (2026-09-23)
 
+> **⚠️ CE BLOC EST PÉRIMÉ — conservé pour l'historique, corrigé le 2026-09-25.**
+> Il annonçait « **7 incohérences, une seule racine** » et « **la maquette suit le Seed ; le socle ne suit pas** ».
+> **La section R-1→R-4b, plus bas dans ce même fichier, le contredit : le socle A suivi.** La décision
+> `D-C1` a été **tranchée par le fondateur (2026-09-24)** **et exécutée** (`058`→`061`, vérifié live sur
+> `br-dawn-hill-am5amy22` : `v2_products.facility_id` → `is_nullable = YES`, `v2_entities` présente,
+> `entity_id` sur offres/lieux/entitlements, 13/16 offres liées).
+> **Un en-tête qui contredit son propre corps est exactement le défaut qui a produit le rond-point.**
+
 Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est pas là et même il y a beaucoup d'incohérence »*.
 
-**Mesuré** (`docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`) : **7 incohérences, une seule racine**.
+**Mesuré** (`docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`) : ~~**7 incohérences, une seule racine**~~ → **corrigé : 0 incohérence ouverte. `C-1`/`C-2`/`C-3`/`C-7` fermées (`058`→`061`) ; `C-4`/`C-5`/`C-6` corrigées (`R-4a`).**
 
-- **Racine :** `db/migrations/001_v2_roots.sql:82` — `v2_products.facility_id uuid not null references v2_facilities(id)`
-  contredit **S-25** (« il n'y a pas de produit appartenant à une facilité ») et **S-01/S-02** (modèle universel).
-- **Autres :** Pro par **facilité** (code) vs par **entité** (Seed) · plafond **5** (code) vs **20** (Seed) ·
-  bulk `ceil(N/100)` (code) vs « 1 besoin = 1 bulk » (Seed) · seuil de confiance **3 uniforme** vs **adapté au volume**.
-- **Verdict :** la **maquette suit le Seed ; le socle ne suit pas.**
+- ~~**Racine :** `db/migrations/001_v2_roots.sql:82` — `v2_products.facility_id uuid not null`~~ **FAUX** :
+  `001:71` est `v2_facility_entitlements.facility_id` ; et `058:33` a fait `drop not null` sur `v2_products`.
+- **Autres :** ~~Pro par **facilité**~~ (**fermé `R-4b`**) · ~~plafond **5**~~ (**corrigé `R-4a`**) ·
+  ~~bulk `ceil(N/100)`~~ (**corrigé `R-4a`**) · ~~seuil **3 uniforme**~~ (**corrigé `R-4a`**).
+- **Verdict corrigé :** **la maquette ET le socle suivent le Seed.** Ce qui n'avait pas suivi, c'est
+  **ce document** — et c'est ce qui a fait croire à un rond-point.
 
 **Décision — fondateur seul :** **D-C1 RETENUE (fondateur, 2026-09-24)** — reconstruire le socle au modèle Seed.
 **D-C2 / D-C3 : écartées.** (D-C2 contredisait S-01/S-02/S-25 que le fondateur a écrits ; D-C3 réduisait sans guérir.)
