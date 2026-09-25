@@ -224,7 +224,8 @@ describe('availability repository Root seam', () => {
     expect(firstCall.queries[0]).toContain('on conflict (account_id)');
     expect(firstCall.queries[0]).toContain('on conflict (buyer_account_id, idempotency_key)');
     expect(firstCall.queries[0]).toContain("p.publication_state = 'published'");
-    expect(firstCall.queries[0]).toContain("f.trust_state in ('certified', 'unconfirmed', 'confirmed')");
+    // R-3a : la confiance se lit sur l'entité d'abord (S-30), repli sur le lieu.
+    expect(firstCall.queries[0]).toContain("coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')");
     expect(firstCall.queries[0]).not.toContain('credit_spend as');
     expect(firstCall.queries[0]).not.toContain('v2_availability_credit_ledger');
   });
@@ -2024,6 +2025,11 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('v2_seller_unlock_progress');
     expect(call.queries[0]).toContain('qualifying_sales = least(ut.threshold');
     expect(call.queries[0]).toContain("e.kind = 'individu'");
+    // R-3b : la confiance et le compteur montent aussi sur l'ENTITE (S-30). Sans ce
+    // miroir, la colonne d'entite restait celle du backfill -> confiance perimee.
+    expect(call.queries[0]).toContain('entity_qualified as (');
+    expect(call.queries[0]).toContain('update v2_entities e');
+    expect(call.queries[0]).toContain('set qualifying_sales = q.qualifying_sales, trust_state = q.trust_state');
     expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
     expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
     expect(call.queries[0]).toContain("'pro_test_credit_20_usd'");
