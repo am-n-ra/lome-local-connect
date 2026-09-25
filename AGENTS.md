@@ -733,3 +733,14 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Preuve live** : contre la canonique `br-dawn-hill-am5amy22` → `COHERENCE OK: 7 rows, 0 open, 0 contradiction (live schema: live schema)`.
 - **`check-state.mjs` corrigé** : il **exigeait** des chaînes périmées (il *voulait* `16/16 conforme` et le verdict « le socle ne suit pas »). Ajout d un `forbid` sur le verdict périmé — falsifié : verdict périmé restauré → **exit 1** ; corrigé → **exit 0**.
 - **Leçon** : un garde qui **exige** une chaîne périmée **fabrique** la dérive qu il prétend surveiller. Les gardes doivent être **falsifiés dans les deux sens** — sinon ils ne protègent que leur propre cohérence.
+
+## Session 2026-09-25 (suite 11) — **SPECIES V2 CLOSE `founder-confirmed` — Root OUVERT**
+
+- **Décision fondateur** : « Ok **Validé** » → validation de **`SP-1…SP-10`**. Porte : `SEED_CLOSED_SPECIES_REOPENED` → **`SPECIES_CLOSED_ROOT_OPEN`**.
+- **Mesure à la clôture** : `check:species-t12` **27/27 conforme, 26 décisions rendues / 32, `NON MESURÉ = 0`** ; `check:maquette` 74 écrans / 5 niveaux ; **600/600 tests** ; tsc + boundary + state verts.
+- **`check-state.mjs` retourné, pas seulement mis à jour** : les gardes de la porte ouverte sont **inversés** —
+  - marker `RÉOUVERTE 2026-09-23` → **`Species V2 CLOSE`** ;
+  - `incident` n exige plus `SP-VALIDATION` **en attente** mais l **enregistrement de la clôture** (`CLOSE \`founder-confirmed\` 2026-09-25`) ;
+  - `forbiddenClaims` n interdit plus de dire Species close (c est désormais **exigé**) mais interdit de **réaffirmer la porte fermée** (`SEED_CLOSED_SPECIES_REOPENED`) ou `SP-VALIDATION toujours ouverte`.
+  - **Leçon** : un garde de porte doit être **retourné** quand la porte tourne. Le laisser tel quel **aurait interdit la vérité** — un garde périmé fabrique la dérive.
+- **Ce qui reste (Root)** : `R-B` caractéristiques d offre **0/16** remplies · `R-C` **3** offres sans entité · `R-D` chemin `individu` **0** entité · `R-E` R-5 découverte 2 niveaux · **puis alignement de l app sur la maquette** (chips figés, devise en dur) — **désormais débloqué**.

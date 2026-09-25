@@ -14,25 +14,27 @@
 
 | Field | Value |
 |---|---|
-| **Gate** | `SEED_CLOSED_SPECIES_REOPENED` |
-| **As of** | 2026-09-23 |
+| **Gate** | `SPECIES_CLOSED_ROOT_OPEN` |
+| **As of** | 2026-09-25 |
 | **Decided by** | Fondateur |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions `S-01…S-34`) |
-| **Species** | **RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans) |
-| **Next** | **validation fondateur de `SP-1…SP-10`** (les surfaces existent, leur ensemble n'est pas accepté) → puis clôture Species V2 → ensuite seulement Root |
+| **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
+| **Root** | **OUVERT** — finition du socle (`R-B`…`R-E`) puis alignement de l'app sur la maquette |
 
-> **Portée de validation corrigée (2026-09-25).** La porte ne portait que sur `SP-1…SP-6` alors que
-> **`SP-7…SP-10` sont livrés dans la maquette** et absents de cet état de référence. Une porte qui
-> valide 6 tranches sur 10 laisserait **quatre tranches acceptées par omission**. Portée portée à
-> **`SP-1…SP-10`** :
+> **⚠️ La validation fondateur est arrivée le 2026-09-25** (« Ok Validé »). Elle porte sur **`SP-1…SP-10`**.
+> **Un audit conforme ne vaut pas acceptation** — la règle reste ; ici l'acceptation est **explicite et
+> humaine**, donc Species ferme. **La porte aval s'ouvre : Root.**
 >
 > | Tranche | Contenu | Record |
 > |---|---|---|
 > | `SP-1`…`SP-6` | caractéristiques d'offre · échelle 0→4 · double niveau · intégrité/réputation par offre · filtres carte · compléments (S-22/S-25/économie/S-14) | registre `omni-species-v2-decision-registry-2026-09-23.md` |
-> | `SP-7`/`SP-8` | **monde peuplé** (12 lieux niveau 0, plus 3) + **lieu non-piégeant** (`lieu-connaitre` : ce qu'Omni ne peut PAS dire) | `omni-species-sp7-sp8-world-populated-2026-09-24.md` |
+> | `SP-7`/`SP-8` | **monde peuplé** (12 lieux niveau 0, plus 3) + **lieu non-piégeant** (`lieu-connaitre`) | `omni-species-sp7-sp8-world-populated-2026-09-24.md` |
 > | `SP-9` | **routage `S-15`** — recommandation A : ne PAS poser `MAPBOX_ACCESS_TOKEN`, étiqueter « à vol d'oiseau » honnêtement ; OSRM conservé (coût 0) | `omni-sp9-sp10-routing-entity-pin-2026-09-24.md` |
-> | `SP-10` | **pin déplaçable** à la création d'entité (position utilisateur par défaut, déplaçable) — vaut aussi pour les offres digitales | idem |
-| **Downstream gates** | **Aucune active** — Root/Trunk/Branches/Canopy interdits pendant cette porte |
+> | `SP-10` | **pin déplaçable** à la création d'entité — vaut aussi pour les offres digitales | idem |
+>
+> **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
+> **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
+| **Downstream gates** | **Root OUVERT** · Trunk/Branches/Canopy **non ouverts** |
 
 ### ⚠️ Correction d'exécution — 2026-09-23 (incident, à ne pas réapprendre)
 

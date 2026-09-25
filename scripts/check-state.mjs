@@ -20,19 +20,21 @@ if (!gate) {
   console.error(`FAIL  ${SOR}: could not read the Gate value`);
   process.exit(1);
 }
-if (gate !== 'SEED_CLOSED_SPECIES_REOPENED') {
+if (gate !== 'SPECIES_CLOSED_ROOT_OPEN') {
   console.error(`FAIL  ${SOR}: unexpected gate "${gate}"`);
   process.exit(1);
 }
 
-// The marker every operational artifact must carry while this gate is open.
-const MARKER = 'RÉOUVERTE 2026-09-23';
+// The marker every operational artifact must carry now that the founder closed Species
+// (2026-09-25) and Root is the current gate. The previous marker proved the REOPEN; this
+// one proves the CLOSURE. A stale reopen marker after validation would re-assert an open
+// gate — the exact drift this script exists to catch.
+const MARKER = 'Species V2 CLOSE';
 
 const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', MARKER],
   ['docs/founder-hq/founder-hq-master-plan.md', MARKER],
   ['AGENTS.md', MARKER],
-  ['docs/nature-way/intra-skill-plan-NW-PROD-OMNI-SEED2-01.md', 'Correction d\'état 2026-09-23'],
 ];
 
 const mustPointToV2 = [
@@ -41,13 +43,13 @@ const mustPointToV2 = [
   ['AGENTS.md', 'omni-intent-brief-v2-2026-09-23.md'],
 ];
 
-// 2026-09-23 incident: Species was declared closed right after SP-1..SP-6 shipped, and a
-// downstream Root gate was opened "to prepare", while the plan said deliverables are
-// BLOCKED ON FOUNDER VALIDATION and the board said one gate at a time. Shipping is not
-// acceptance. These guards make both mistakes fail loudly.
+// The 2026-09-23 incident guard INVERTED on 2026-09-25: SP-VALIDATION was pending then,
+// the founder has now validated SP-1..SP-10 explicitly, so a document still calling that
+// validation PENDING is stale. What must survive is the *record* that validation was
+// required and given — and the audit trail that made it defensible.
 const incident = [
-  ['docs/founder-hq/current-state.md', 'SP-VALIDATION', 'SP validation defect must stay open'],
-  ['docs/founder-hq/founder-hq-board.md', 'SP-VALIDATION', 'board must point at the pending validation'],
+  ['docs/founder-hq/current-state.md', 'SP-1…SP-10', 'the validated scope must stay named'],
+  ['docs/founder-hq/current-state.md', 'CLOSE `founder-confirmed` 2026-09-25', 'the founder closure must be recorded'],
   ['docs/founder-hq/founder-hq-board.md', 'T-12` **refait et clos**', 'the T-12 redo must stay recorded'],
   ['docs/founder-hq/founder-hq-board.md', 'DÉCISION BLOQUANTE — cohérence Seed ↔ socle', 'the Seed/socle coherence decision must stay visible'],
   ['docs/founder-hq/current-state.md', 'T-14', 'the coherence diagnostic must stay recorded'],
@@ -56,14 +58,14 @@ const incident = [
   ['docs/nature-way/omni-root-gate-v2-assessment-2026-09-23.md', 'PRÉMATURÉ', 'the Root audit must stay parked'],
 ];
 
-// A deliverable that is merely shipped is never a closed gate.
+// INVERTED 2026-09-25: while the gate was open, claiming Species closed was the mistake.
+// The founder has now validated, so claiming it closed is REQUIRED. What stays forbidden
+// is the stale reopen marker and the stale "socle ne suit pas" verdict — a document that
+// still asserts an open gate after validation.
 const forbiddenClaims = [
-  ['AGENTS.md', 'Species V2 close', 'must not claim Species is closed'],
-  ['docs/founder-hq/founder-hq-board.md', 'Species V2 — close', 'must not claim Species is closed'],
-  // 2026-09-25: the register claimed a root incoherence was OPEN while migration 058
-  // (titled "decision fondateur D-C1") had already closed it. Any document asserting
-  // the root as current must carry the correction. `check:coherence` owns the detail.
+  ['docs/founder-hq/current-state.md', '`SEED_CLOSED_SPECIES_REOPENED`', 'must not re-assert the closed reopen gate'],
   ['docs/founder-hq/founder-hq-board.md', 'le socle ne suit pas.', 'must not assert the stale "le socle ne suit pas" verdict as current'],
+  ['docs/founder-hq/founder-hq-board.md', 'Species RÉOUVERTE — `SP-VALIDATION` toujours ouverte', 'must not still call SP-VALIDATION pending after the founder validated'],
 ];
 
 const forbidden = [
