@@ -520,3 +520,31 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Garde renforcé (+1, 594/594)** : « ne choisit JAMAIS un produit à la place de l'acheteur » vérifie l'absence de `startFlow`/`rankedFacilityProducts[0]`. **FALSIFIÉ** : auto-pick réintroduit → **2/6 ÉCHOUENT** ; restauré → **6/6**. Prod `index-DeBqIxQ1.js` === local + **entrée de déploiement `f6f89a6`** ⇒ **T-07d ✅**.
 - **Leçon (classe de défaut) :** un bouton qui « défait une étape » pour l'utilisateur **doit être vérifié par la question « et s'il n'a rien choisi ? »**. Ici la réponse était : il choisit à sa place. **Ne jamais dériver un choix produit depuis `[0]`** — `[0]` est un **ordre d'affichage**, pas une **décision d'acheteur**.
 
+## Session 2026-09-24 (suite 3) — LA QUESTION BULK DU FONDATEUR RÉSOUT C-5 PAR LE CODE
+
+- **Le fondateur demande :** « bulk c'était pour vérifier la dispo du **même produit chez plusieurs fournisseurs**… et plus tard plusieurs produits chez plusieurs fournisseurs, non ? Mais chez **un même fournisseur, même 100 produits avec contraintes, ce n'est pas encore bulk**, non ? »
+- **Vérifié par le code — il a raison.** Le mot « bulk » recouvre **deux choses différentes** :
+  1. **`createBulkAvailabilityRequest` (API, facturé)** : signature `{ productId: string; facilityIds: string[] }` — **UN produit, N facilités**. Refus explicite si `facilityIds.length < 2` (« A bulk request must target at least 2 facilities »). `creditCost = Math.ceil(facilityIds.length / 100)`. → **= sa définition #1.**
+  2. **Le même bouton dans l'UI, sur une fiche** (`TrunkAppV13:1639`) : `picked.length > 1` (plusieurs produits, **une** facilité) → `Promise.all` de `requestAvailability` manuelles, `creditCost: 0`, libellé « bulk » en interne. → **gratuit, pas de crédits, pas l'API bulk.**
+- **Conséquence : le fondateur a le bon modèle ; le nom et le coût ont dérivé.** « Bulk » **devrait** vouloir dire *un besoin × N fournisseurs* (Seed : « 1 besoin = 1 bulk »). Au lieu de ça, la facture compte **des fournisseurs** (`ceil(N/100)`) et le même mot sert à **des produits chez un seul vendeur** (gratuit). **C'est C-5, vu de l'intérieur** — et le fondateur l'a trouvé seul.
+- **Ce qui est PROUVÉ et faux :** cocher 100 produits chez un vendeur = **1 seul « bulk » → 1 crédit** par `ceil(1/100)`. C'est exactement « ce n'est pas encore bulk » — mais la facture dit le contraire.
+- **Ma recommandation (à la fondateur, pas une décision) :** (a) nommer le geste multi-produits-chez-un-vendeur **« demande groupée »** (gratuit), réserver **« bulk »** au besoin × N fournisseurs ; (b) `creditCost` = **1 par besoin** (Seed) **ou** `ceil(sous-ensembles de produits distincts × fournisseurs / 100)` — jamais par fournisseurs seuls. **Ne pas trancher seul** : c'est D-C5, avec D-C1.
+
+## Session 2026-09-24 (suite 4) — AUDIT SEED-COHÉRENCE VÉRIFIÉ INDÉPENDAMMENT (nombres mesurés)
+
+- **Découverte :** l'audit demandé **existe déjà** — `docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md`, livré **la veille** (T-14), avec **7 incohérences (C-1…C-7) derrière UNE racine**. Il porte **mot pour mot** la phrase du fondateur d'aujourd'hui → **aucun nouveau registre n'est justifié** ; ma valeur ajoutée est la **vérification indépendante** et la **réponse bulk**.
+- **Racine unique vérifiée par moi (chemins + lignes) :** `db/migrations/001_v2_roots.sql:82` → `v2_products.facility_id uuid NOT NULL REFERENCES v2_facilities` = l'offre **appartient à une facilité** + `quantity_allocated_omni` = stock comptable. Or **S-25** : « il n'y a pas de produit appartenant à une facilité ». → **contradiction structurelle.**
+- **Autres faits vérifiés de première main :** `invariants.ts` → `FREE_OFFER_LIMIT = 5` (Seed dit **20**), `CONFIRMED_SALES_THRESHOLD = 3` (Seed dit **adapté au volume**) ; `044` a bien ajouté `facility_type`/`rayon_km`.
+- **L'index du Seed n'existe pas — mesuré sur la canonique (2026-09-24) :**
+
+| Mesure | Valeur | Ce que ça dit |
+|---|---|---|
+| `v2_facilities` | **206** | « 200 lieux connus » importés |
+| `v2_entities` | **3** | **l'entité-porteuse n'existe pas** — 3 seulement |
+| `v2_products` | **16** | très peu d'offres réelles |
+| `facility_type` rempli | **0 / 206** | le type de lieu n'a jamais été rempli |
+| adresse renseignée | **6 / 206** (2,9 %) | géocodage insuffisant pour un bon itinéraire |
+
+- **Ne pas refaire cet audit.** Le livrable manquant est **une décision fondateur** : **D-C1** (reconstruire le socle au modèle Seed, recommandé) / **D-C2** (adapter le Seed au code, déconseillé) / **D-C3** (position d'abord, réduit sans guérir). **Construire une UI conforme au-dessus d'un socle non conforme produit de la dette à chaque tranche** — c'est le rond-point perçu.
+- **GATE :** `RT-4` (voix), `SP-9`, transport, nettoyage de données — **parqués derrière D-C1** volontairement : ce sont des tranches **aval**. Les lancer d'abord empile sur la racine. **Le nettoyage des 17 fantômes peut attendre la décision** (il *masquerait* un symptôme de C-1 en donnant l'impression que le socle va bien).
+
