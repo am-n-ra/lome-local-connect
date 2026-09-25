@@ -122,6 +122,52 @@ Le fondateur a signalé **« beaucoup d'incohérence dans ce qu'on veut faire et
 | `SCOUT-02` | Haute | Impasse d'expiration des intentions (`v2_purchase_intents.state` non lu par l'UI) |
 | `T-07d` | — | Prod `index-BUMFRcnb.js` ≠ local → **OUVERT** (ne pas pousser) |
 | `SP-VALIDATION` | **Haute** | `SP-1…SP-10` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
+| `T12-RESOLVED` | — | `T-12` refait par rendu navigateur après décision fondateur « l'audit est à refaire ». **Clos** — mais voir `COH-V2-18` : le dénominateur était auto-référent, puis complété à **26 décisions rendues / 32, `NON MESURÉ = 0`**. |
+
+### ⚠️ Correction majeure — 2026-09-25 (2e passe) : **la racine `C-1`/`C-2` était DÉJÀ fermée**
+
+**Ce que j'avais écrit plus haut dans la journée était faux, et la faute est instructive.**
+
+J'avais affirmé que `v2_products.facility_id not null` **contredisait** `S-25`, en citant
+`001_v2_roots.sql:71`. **Cette citation était fausse** : la ligne 71 de `001` est
+`v2_facility_entitlements.facility_id`, **pas** `v2_products`. J'ai cité un **numéro de ligne** sans
+relire la **ligne**.
+
+**La réalité, vérifiée sur le code ET sur la base canonique `br-dawn-hill-am5amy22` :**
+
+| Fait | Preuve |
+|---|---|
+| `058_v2_entity_layer_r1.sql` est titrée **« décision fondateur D-C1, 2026-09-23 »** | en-tête du fichier |
+| `alter table v2_products alter column facility_id **drop not null**` | `058:33` |
+| `v2_entities` créée (individu/organisation, même objet — S-13) | `058:15` · **3 lignes** live |
+| `entity_id` sur offres / lieux / entitlements | `058:32` · `059` · `061` · **live** |
+| `facility_id` de `v2_products` **nullable** | live : `is_nullable = YES` |
+| Caractéristiques d'offre `position_kind`… ajoutées | `058:36` · **13/16** remplies |
+| Code lit `coalesce(p.entity_id, f.entity_id)` | `trunk-repository.ts` (9 sites) |
+| **13/16** offres liées à une entité · **3/206** lieux liés | live |
+
+**Conséquence : `D-C1` a été tranché ET exécuté. Ce n'est plus une décision ouverte — c'est un
+résidu d'exécution.** `C-1`, `C-2`, `C-7` sont **clos** ; `C-3` (Pro) est **partiel** ; `C-4`/`C-5`/`C-6`
+sont **corrigés** (`R-4`).
+
+**Résidu réel, à finir en Root (après clôture Species) :**
+
+| # | Résidu | Preuve live |
+|---|---|---|
+| `R-A` | Basculer le **chemin d'écriture Pro** sur `entity_id` (cible + backfill existent ; écritures encore sur `facility_id`) | `061` · **0** entité `commercial_plan <> 'free'` |
+| `R-B` | **Remplir les caractéristiques d'offre** (`uniqueness_kind`, `handover_kind`, `price_kind`, `condition_kind`) | **0/16** |
+| `R-C` | Lier/classer les **3 offres sans entité** | live |
+| `R-D` | Prouver le **chemin `individu`** (seuil 1) | **0** entité `individu` |
+
+**Et la cause réelle du « on tourne en rond »** — car le fondateur a raison de la ressentir :
+**ce n'est pas le produit qui tournait en rond, c'est notre mémoire du produit.** Le socle a été
+reconstruit (`058`→`061`) ; **les documents d'état ne l'ont pas suivi** — le registre annonçait une
+racine « ouverte » que `058` avait fermée, la board citait `16/16`, l'état de référence portait une
+porte sur 6 tranches quand 10 étaient livrées. Chaque reprise repartait donc d'une **carte périmée** :
+nouveau diagnostic, nouveau sous-ensemble mesuré, nouvelle tranche — d'où l'impression de boucle.
+
+**Ne pas re-proposer `D-C1`/`D-C2`/`D-C3`** : la décision est rendue. Prochaine action utile =
+**`SP-VALIDATION`** (fondateur) → puis **Root : `R-A`…`R-D`**.
 | `T12-RESOLVED` | — | `T-12` refait par rendu navigateur (16/16) après décision fondateur « l'audit est à refaire ». **Clos.** |
 
 ## Rule (added 2026-09-23 — do not relearn)
