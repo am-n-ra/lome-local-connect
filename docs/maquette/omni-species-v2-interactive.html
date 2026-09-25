@@ -555,9 +555,9 @@ SHEETS.offer = () => `
   ${S.product.dist === 'sans déplacement'
     ? `<div class="kv"><span>Où ça se passe</span><b>Tout se passe en ligne — aucun déplacement</b></div>`
     : `<button class="btn ghost sm" onclick="go('facility-apex')">Aperçu express du lieu</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers ' + '${S.product.seller}' + ' (tracé direct)')">Itinéraire vers ce vendeur</button>`}
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez d’abord cette offre (intention d’achat) pour charger l’itinéraire réel.">Itinéraire vers ce vendeur — après intention</button>`}
   <button class="btn ghost sm" onclick="go('signal')">Signaler cette offre</button>
-  <p class="lead">Le contact du vendeur apparaît <b>après</b> une intention d’achat — jamais avant.</p>`;
+  <p class="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat — jamais avant.</p>`;
 
 SHEETS.avail = () => `
   <div class="handle"></div>
@@ -1177,7 +1177,7 @@ SHEETS['entite-publique'] = () => `
     <div class="kv"><span>Riz 5 kg</span><b>Niv. 2 · 4 200 F</b></div>
   </div>
   <button class="btn" onclick="go('results')">Voir ses 3 offres</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo (tracé direct)')">Itinéraire (tracé direct)</button>
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de cette entité pour charger l’itinéraire réel.">Itinéraire — après intention d’achat</button>
   <button class="btn ghost sm" onclick="toast('Favori ajouté')">Suivre cette entité</button>
   <p class="lead">La <b>page publique de l’entité</b> rassemble son identité, ses horaires et toutes ses offres — c’est le point d’entrée physique (QR en boutique).</p>`;
 
@@ -1506,7 +1506,7 @@ SHEETS['facility-apex'] = () => `
     <div class="kv"><span>Offres</span><b>3 · dès 850 F <span class="status ok">−15 %</span></b></div>
   </div>
   <button class="btn" onclick="go('entite-publique')">Ouvrir la page de l’entité</button>
-  <button class="btn ghost sm" onclick="toast('Itinéraire vers Boutique Kodjo (tracé direct)')">Itinéraire (tracé direct)</button>
+  <button class="btn ghost sm" disabled aria-disabled="true" title="Choisissez une offre de ce lieu pour charger l’itinéraire réel.">Itinéraire — après intention d’achat</button>
   <p class="lead">Cliquer un pin ouvre cet <b>aperçu</b> ; la page complète est à un tap.</p>`;
 
 SHEETS.recu = () => `

@@ -1600,14 +1600,26 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     className="btn"
                     style={{ marginTop: 8, width: '100%' }}
                     type="button"
-                    onClick={() => {
-                      setRouteTarget({ longitude: selectedFacility.longitude, latitude: selectedFacility.latitude, name: selectedFacility.name });
-                      setSheet('none');
-                    }}
+                    disabled
+                    aria-disabled="true"
+                    title="Choisissez d’abord cette offre (intention d’achat) pour charger l’itinéraire."
                   >
                     <Navigation size={15} /> Itinéraire vers ce vendeur
                   </button>
-                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Disponible sans générer d’intention d’achat. Contact & chat restent débloqués après intention.</p>
+                  <p className="tiny muted" style={{ textAlign: 'center', marginTop: 6 }}>Requis : votre intention d’achat — comme le contact vendeur, l’itinéraire se débloque après avoir choisi cette offre.</p>
+                  {selectedFacility.products.length > 0 && (
+                    <button
+                      className="btn ghost sm"
+                      style={{ marginTop: 6, width: '100%' }}
+                      type="button"
+                      onClick={() => {
+                        const first = rankedFacilityProducts[0] ?? selectedFacility.products[0];
+                        if (first) startFlow({ id: selectedFacility.id, name: selectedFacility.name }, { id: first.id, name: first.name });
+                      }}
+                    >
+                      Choisir cette offre — débloquer l’itinéraire
+                    </button>
+                  )}
                 </div>
               )}
               {claimState === 'error' && <p className="sub" role="alert">{claimError}</p>}
