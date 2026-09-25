@@ -78,6 +78,23 @@ const unsized = iconTags.filter((t) => !/\bwidth=/.test(t) || !/\bheight=/.test(
 check(iconTags.length >= 20, 'ICON map is non-trivial', `${iconTags.length} icons`);
 check(unsized.length === 0, 'every ICON svg declares an intrinsic width/height',
   `${unsized.length} unsized: ${unsized.slice(0, 2).join(' ')}`);
+
+// --- 3quater. Shared dock atoms must be scoped to the dock, not to #navpill ---
+// Real defect (2026-09-25): `.icon-in` and `.sr-only` were scoped to `.navpill`.
+// The desktop rail (`#rail`) is a DIFFERENT element, so it inherited neither rule:
+//   - `.sr-only` stayed in flow → the human label ("Recherche", 84px) was PAINTED
+//     inside a 40px round button, overflowing it by 44px;
+//   - `.icon-in` got no `place-items:center` → the inline <svg> sat on the text
+//     baseline, adding a 4px descender gap, so every rail icon was 2px too high.
+// `renderDock()` emits the same markup for both docks, so the atoms must be global.
+const dockAtoms = ['.icon-in', '.sr-only'];
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const navScoped = dockAtoms.filter((a) => new RegExp(`\\.navpill\\s+${esc(a)}\\s*\\{`).test(css));
+check(navScoped.length === 0, 'dock atoms (.icon-in/.sr-only) are global, not .navpill-scoped',
+  `scoped to .navpill: ${navScoped.join(', ')}`);
+// and they must exist at all, so the rail really inherits them
+check(dockAtoms.every((a) => new RegExp(`(^|\\})\\s*${esc(a)}\\s*\\{`, 'm').test(css)),
+  'dock atoms are defined globally');
 const labels = ['Presente', 'Revendiquee', 'Offre publiee', 'Disponibilite vivante', 'Transactable'];
 const levelBlock = js.match(/const LEVELS = \[([\s\S]*?)\];/);
 const levelCount = levelBlock ? (levelBlock[1].match(/\n\s*\[/g) || []).length : 0;
