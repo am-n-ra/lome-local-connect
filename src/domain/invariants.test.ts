@@ -4,6 +4,7 @@ import {
   FREE_OFFER_LIMIT,
   canCreateConfirmedTrust,
   canPublishFacility,
+  confirmedSalesThresholdFor,
   confirmedWalletBalanceMinor,
   discountAmountMinor,
   displayCurrencyForCountry,
@@ -58,10 +59,22 @@ describe('Nature Way Roots invariants', () => {
     expect(nextTrustAfterSale({ ...baseFacility, plan: 'pro_active', qualifyingSales: 3 })).toBe('confirmed');
   });
 
-  it('requires certification before publishing and caps Free offers at five', () => {
+  it('D-C4: caps Free offers at twenty (Seed), not five', () => {
     expect(offerLimitFor('free', 'unclaimed')).toBe(0);
-    expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 4)).toBe(true);
-    expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 5)).toBe(false);
+    expect(FREE_OFFER_LIMIT).toBe(20);
+    expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 19)).toBe(true);
+    expect(canPublishFacility({ ...baseFacility, trust: 'unconfirmed' }, 20)).toBe(false);
+  });
+
+  it('D-C6/S-14: the trust threshold follows the volume — individu 1, organisation 3', () => {
+    expect(confirmedSalesThresholdFor('individu')).toBe(1);
+    expect(confirmedSalesThresholdFor('organisation')).toBe(3);
+    // Type inconnu => repli commerce : on ne confirme jamais trop vite.
+    expect(confirmedSalesThresholdFor(undefined)).toBe(3);
+    // Un particulier est confirmé par une seule vente — c'était impossible avec le seuil uniforme.
+    expect(canCreateConfirmedTrust({ ...baseFacility, ownerKind: 'individu', qualifyingSales: 1 })).toBe(true);
+    expect(canCreateConfirmedTrust({ ...baseFacility, ownerKind: 'organisation', qualifyingSales: 1 })).toBe(false);
+    expect(canCreateConfirmedTrust({ ...baseFacility, ownerKind: 'organisation', qualifyingSales: 3 })).toBe(true);
   });
 
   it('maps supported locations to the user-facing currency without silent conversion', () => {

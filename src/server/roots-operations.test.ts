@@ -84,10 +84,10 @@ describe('Roots server operations', () => {
     expect(verifyQrAttempt(seller, { ...membership, transactionId: 'transaction-other' }, token, base, 'c-qr-7').error?.code).toBe('FORBIDDEN');
   });
 
-  it('enforces facility ownership and Free catalogue capacity', () => {
-    expect(validateOfferPublication(seller, facility, 4, 'c-1').ok).toBe(true);
+  it('enforces facility ownership and Free catalogue capacity (D-C4 : 20)', () => {
+    expect(validateOfferPublication(seller, facility, 19, 'c-1').ok).toBe(true);
     expect(validateOfferPublication({ ...seller, accountId: 'other' }, facility, 0, 'c-2').error?.code).toBe('FORBIDDEN');
-    expect(validateOfferPublication(seller, facility, 5, 'c-3').error?.code).toBe('ENTITLEMENT_REQUIRED');
+    expect(validateOfferPublication(seller, facility, 20, 'c-3').error?.code).toBe('ENTITLEMENT_REQUIRED');
   });
 
   it('prevents purchasing another slot before the free slot is used', () => {

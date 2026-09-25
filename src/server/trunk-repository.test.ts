@@ -247,7 +247,7 @@ describe('availability repository Root seam', () => {
     );
   });
 
-  it('debites ceil(N/100) credits for a bulk request over N facilities and stores every facility in the scope', async () => {
+  it('D-C5: a bulk need costs 1 credit whatever the number of facilities, and stores the whole scope', async () => {
     const bulkResultRow = {
       ...resultRow,
       facility_id: undefined,
@@ -269,7 +269,7 @@ describe('availability repository Root seam', () => {
     expect(call.queries).toHaveLength(2);
     expect(call.queries[1]).toContain('credit_spend as');
     expect(call.queries[1]).toContain('v2_availability_credit_ledger');
-    expect(call.queries[1]).toContain('bulk-availability over');
+    expect(call.queries[1]).toContain('1 credit per need');
     expect(call.queries[1]).toContain('::text[]::uuid[]');
   });
 
@@ -281,13 +281,13 @@ describe('availability repository Root seam', () => {
     expect(call.queries).toHaveLength(1);
   });
 
-  it('caps no bulk: 150 facilities = ceil(150/100) = 2 credits, following the founder formula', async () => {
+  it('D-C5: 150 facilities for ONE need still costs 1 credit — the cost does not grow with suppliers', async () => {
     const ids = Array.from({ length: 150 }, (_, i) => `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`);
     const bulk150Row = {
       ...resultRow,
       facility_id: undefined,
       facility_scope: ids,
-      credits_used_result: 2,
+      credits_used_result: 1,
       is_new: 1,
       debited: 1,
     };
@@ -296,7 +296,7 @@ describe('availability repository Root seam', () => {
 
     const result = await repository.createBulkAvailabilityRequest({ ...availabilityInput, facilityIds: ids, idempotencyKey: 'bulk-150' });
 
-    expect(result.creditCost).toBe(2);
+    expect(result.creditCost).toBe(1);
     expect(result.facilityCount).toBe(150);
     expect(call.queries[1]).toContain('set credits_used = c.credits_used +');
     expect(call.queries[1]).toContain("'bulk_debit', - ");
@@ -2021,7 +2021,8 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('v2_transaction_events');
     expect(call.queries[0]).toContain("'closed'");
     expect(call.queries[0]).toContain('v2_seller_unlock_progress');
-    expect(call.queries[0]).toContain('qualifying_sales = least(3');
+    expect(call.queries[0]).toContain('qualifying_sales = least(ut.threshold');
+    expect(call.queries[0]).toContain("e.kind = 'individu'");
     expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
     expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
     expect(call.queries[0]).toContain("'pro_test_credit_20_usd'");
@@ -2418,6 +2419,37 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     expect(result.trustState).toBe('unconfirmed');
     expect(call.queries[1]).toContain('facility_type');
     expect(call.queries[1]).toContain('rayon_km');
+  });
+
+  it('creates the offering ENTITY with the facility (R-2/S-25) — sinon le vendeur ne peut jamais publier', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ facility_id: 'facility-11', slot_id: 'slot-11', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Atelier Kegue',
+      facilityType: 'fixe',
+      category: null,
+      description: null,
+      address: 'Lomé',
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'r4-entity-key-0000001',
+    });
+    const publishSql = call.queries[1];
+    // Le lieu reçoit son entité dans la MEME instruction : la publication exige ce lien,
+    // donc un vendeur sans entité serait définitivement bloqué.
+    expect(publishSql).toContain('insert into v2_entities');
+    expect(publishSql).toContain("'organisation'");
+    expect(publishSql).toContain('entity_id');
+    // Une CTE qui écrit n'est pas visible par les autres CTE de la meme instruction :
+    // l'entite doit venir d'un RETURNING, jamais d'une relecture de table.
+    expect(publishSql).toContain('returning id, account_id');
   });
 });
 

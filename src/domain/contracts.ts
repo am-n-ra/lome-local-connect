@@ -101,6 +101,9 @@ export interface ActorContext {
   suspended: boolean;
 }
 
+/** S-13 : l'offreur est un individu ou une organisation — même objet, seuils différents (S-14). */
+export type OfferOwnerKind = 'individu' | 'organisation';
+
 export interface Facility {
   id: string;
   accountId: string | null;
@@ -115,6 +118,8 @@ export interface Facility {
   qualifyingSales: number;
   bonusUnlockedAt: string | null;
   offerLimit: number;
+  /** D-C6/S-14 : particulier (1 vente) ou commerce (3). Absent = commerce (repli sûr). */
+  ownerKind?: OfferOwnerKind;
 }
 
 export interface FacilityCompanyContext {

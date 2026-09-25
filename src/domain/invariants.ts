@@ -4,14 +4,22 @@ import type {
   FacilityPlan,
   FacilitySlot,
   FacilityTrust,
+  OfferOwnerKind,
   SupportedCurrency,
   WalletLedgerEntry,
   QualifyingSaleEvaluation,
   QualifyingSaleProof,
 } from './contracts';
 
-export const FREE_OFFER_LIMIT = 5;
+// D-C4 (Seed §Modèle économique) : le plafond gratuit est 20 — « assez pour une boutique
+// de quartier ». Il ne cache aucune offre : il limite seulement ce qu'UNE entité obtient
+// gratuitement, donc S-13 (un particulier à offre unique) est intact.
+export const FREE_OFFER_LIMIT = 20;
+// D-C6 / S-14 : le seuil de confiance est adapté au VOLUME de l'offreur. Un particulier à
+// offre unique prouve sa fiabilité par une seule transaction ; un commerce en demande trois.
+// Le seuil uniforme de 3 rendait la confiance inatteignable pour un particulier honnête.
 export const CONFIRMED_SALES_THRESHOLD = 3;
+export const INDIVIDUAL_CONFIRMED_SALES_THRESHOLD = 1;
 export const SELLER_PRO_PRICE_USD_MINOR = 1_000;
 export const SELLER_PRO_TERM_DAYS = 30;
 export const SELLER_PRO_ANNUAL_PRICE_USD_MINOR = 10_000;
@@ -57,12 +65,26 @@ export function offerLimitFor(plan: FacilityPlan, trust: FacilityTrust): number 
   return 0;
 }
 
+/**
+ * D-C6 / S-14 : le seuil de confiance dépend du volume de l'offreur, jamais d'une valeur
+ * unique. Un particulier à offre unique prouve par 1 transaction ; un commerce en demande 3.
+ * Repli = commerce (3) quand le type est inconnu : on ne confirme jamais trop vite.
+ */
+export function confirmedSalesThresholdFor(ownerKind: OfferOwnerKind | undefined): number {
+  return ownerKind === 'individu'
+    ? INDIVIDUAL_CONFIRMED_SALES_THRESHOLD
+    : CONFIRMED_SALES_THRESHOLD;
+}
+
 export function canPublishFacility(facility: Facility, currentOfferCount: number): boolean {
   return currentOfferCount < offerLimitFor(facility.plan, facility.trust);
 }
 
 export function canCreateConfirmedTrust(facility: Facility): boolean {
-  return facility.trust === 'unconfirmed' && facility.qualifyingSales >= CONFIRMED_SALES_THRESHOLD;
+  return (
+    facility.trust === 'unconfirmed' &&
+    facility.qualifyingSales >= confirmedSalesThresholdFor(facility.ownerKind)
+  );
 }
 
 export function nextTrustAfterSale(facility: Facility): FacilityTrust {
@@ -73,6 +95,7 @@ export function evaluateQualifyingSale(
   facility: Facility,
   proof: QualifyingSaleProof,
 ): QualifyingSaleEvaluation {
+  const threshold = confirmedSalesThresholdFor(facility.ownerKind);
   const unchanged = (reason: QualifyingSaleEvaluation['reason']): QualifyingSaleEvaluation => ({
     eligible: false,
     reason,
@@ -81,7 +104,7 @@ export function evaluateQualifyingSale(
     unlocksBonus: false,
   });
   if (proof.facilityId !== facility.id) return unchanged('wrong_facility');
-  if (facility.qualifyingSales >= CONFIRMED_SALES_THRESHOLD || facility.commercialConfidence === 'confirmed') {
+  if (facility.qualifyingSales >= threshold || facility.commercialConfidence === 'confirmed') {
     return unchanged('already_confirmed');
   }
   if (proof.fixture) return unchanged('fixture');
@@ -91,13 +114,13 @@ export function evaluateQualifyingSale(
   if (!proof.paymentDeclared) return unchanged('missing_payment_declaration');
   if (!proof.sellerFulfilled) return unchanged('missing_fulfilment');
   if (!proof.buyerReceived) return unchanged('missing_buyer_receipt');
-  const nextQualifyingSales = Math.min(CONFIRMED_SALES_THRESHOLD, facility.qualifyingSales + 1);
+  const nextQualifyingSales = Math.min(threshold, facility.qualifyingSales + 1);
   return {
     eligible: true,
     reason: 'eligible',
     nextQualifyingSales,
-    confirmsFacility: nextQualifyingSales >= CONFIRMED_SALES_THRESHOLD,
-    unlocksBonus: nextQualifyingSales >= CONFIRMED_SALES_THRESHOLD,
+    confirmsFacility: nextQualifyingSales >= threshold,
+    unlocksBonus: nextQualifyingSales >= threshold,
   };
 }
 
