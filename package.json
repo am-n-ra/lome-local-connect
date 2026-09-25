@@ -22,7 +22,8 @@
     "dev:full": "npm run build && npm run server",
     "check:state": "node scripts/check-state.mjs",
     "check:maquette": "node scripts/check-maquette-v2.mjs",
-    "check:species-t12": "node scripts/t12-audit.mjs"
+    "check:species-t12": "node scripts/t12-audit.mjs",
+    "check:coherence": "node scripts/check-coherence.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

@@ -720,3 +720,16 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 ### Règle
 
 - **Un document de diagnostic n est pas une preuve : il est périmé dès qu un commit passe.** Citer un fichier **et** un numéro de ligne exige d avoir **relu la ligne**. Vérifier contre le **code** *et*, quand il s agit de schéma, contre la **base** — pas contre un registre.
+
+## Session 2026-09-25 (suite 10) — **garde anti-dérive : `check:coherence`**
+
+- **Demande du fondateur** : « dis-moi si tu veux que je fasse de la synchronisation des documents d état un garde automatique ». Livré.
+- **Ce que le garde fait** (`scripts/check-coherence.mjs` + `scripts/lib/coherence-check.mjs`, `npm run check:coherence`) :
+  1. **Interne** — le **verdict** du registre doit s accorder avec **ses propres lignes** (il annonçait « 7 incohérences » avec des lignes fermées).
+  2. **Externe** — une ligne qui **clôt** une incohérence en citant une migration doit citer une migration **qui existe** *et* qui contient **réellement** le changement revendiqué (`alter table v2_products … drop not null`, `create table v2_entities`).
+  3. **Live (optionnel)** — `COHERENCE_DATABASE_URL` vérifie la revendication contre le **schéma réel**. Absent ⇒ **sauté, pas échoué**.
+  4. **Aucune ligne non classée** : un statut ni terminal (`CLOS`/`CORRIG`/`FERME`) ni ouvert (`OUVERT`/`PARTIEL`) **échoue** — c est ainsi qu un défaut fermé continue d être rapporté ouvert.
+- **Auto-falsification** (`npm run check:coherence -- --selftest`) : **4 falsifications attrapées** — registre annonçant la racine ouverte après `058` ; clôture citant une migration inexistante (`999`) ; clôture sans le `drop not null` revendiqué ; verdict contredisant sa propre table. Puis le registre **réel passe**.
+- **Preuve live** : contre la canonique `br-dawn-hill-am5amy22` → `COHERENCE OK: 7 rows, 0 open, 0 contradiction (live schema: live schema)`.
+- **`check-state.mjs` corrigé** : il **exigeait** des chaînes périmées (il *voulait* `16/16 conforme` et le verdict « le socle ne suit pas »). Ajout d un `forbid` sur le verdict périmé — falsifié : verdict périmé restauré → **exit 1** ; corrigé → **exit 0**.
+- **Leçon** : un garde qui **exige** une chaîne périmée **fabrique** la dérive qu il prétend surveiller. Les gardes doivent être **falsifiés dans les deux sens** — sinon ils ne protègent que leur propre cohérence.

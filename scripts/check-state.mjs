@@ -60,6 +60,10 @@ const incident = [
 const forbiddenClaims = [
   ['AGENTS.md', 'Species V2 close', 'must not claim Species is closed'],
   ['docs/founder-hq/founder-hq-board.md', 'Species V2 — close', 'must not claim Species is closed'],
+  // 2026-09-25: the register claimed a root incoherence was OPEN while migration 058
+  // (titled "decision fondateur D-C1") had already closed it. Any document asserting
+  // the root as current must carry the correction. `check:coherence` owns the detail.
+  ['docs/founder-hq/founder-hq-board.md', 'le socle ne suit pas.', 'must not assert the stale "le socle ne suit pas" verdict as current'],
 ];
 
 const forbidden = [
