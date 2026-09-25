@@ -174,6 +174,53 @@ const AUDIT = [
       const publishesUnverified = /publiez déjà/.test(t['seller-verif']) && /Non vérifié/.test(t['seller-verif']);
       return publishesUnverified ? ['OK', 'publishing precedes verification (S-31)'] : ['ABSENT', 'seller-verif does not state publish-before-verify'];
     } },
+  { id: 'S-09', sheets: ['compare', 'offer', 'results'],
+    decide: (t) => {
+      // "Le prix compte" = the price is VISIBLE and COMPARABLE without touring shops.
+      const comparable = /Prix/.test(t['compare']) && /850 F/.test(t['compare']) && /1 000 F/.test(t['compare']);
+      const visible = /F\b/.test(t['offer']) && /Prix/.test(t['offer']);
+      return comparable && visible ? ['OK', 'prices are visible and comparable side by side'] : ['ABSENT', `comparable=${comparable} visible=${visible}`];
+    } },
+  { id: 'S-13', sheets: ['seller-entity', 'entite-publique'],
+    decide: (t) => {
+      // One object for every offeror: commerce, organisation OR a single person.
+      const choices = ['Commerce', 'Particulier', 'Organisation'].every((k) => t['seller-entity'].includes(k));
+      const sameObject = /même objet/i.test(t['seller-entity'] + ' ' + t['entite-publique']);
+      return choices && sameObject ? ['OK', 'commerce / organisation / particulier share one entity object'] : ['ABSENT', `choices=${choices} sameObject=${sameObject}`];
+    } },
+  { id: 'S-16', sheets: ['auth'],
+    decide: (t) => {
+      const phoneFirst = /Téléphone-first/.test(t['auth']) && /numéro avant l’e-mail/.test(t['auth']);
+      const channels = /OTP Neon Auth/.test(t['auth']) && /WhatsApp/.test(t['auth']) && /SMS payant exclu/.test(t['auth']);
+      return phoneFirst && channels ? ['OK', 'phone-first sign-in; OTP email + WhatsApp; paid SMS excluded'] : ['ABSENT', `phoneFirst=${phoneFirst} channels=${channels}`];
+    } },
+  { id: 'S-17', sheets: ['seller-entity', 'seller-verif', 'entite-publique', 'results'],
+    decide: (t) => {
+      // The three tiers are stated ACROSS surfaces, not on one screen:
+      //   0/1 Joignable / numéro confirmé -> seller-entity (N° joignable · confirmé)
+      //   2   Vérifié par opérateur       -> seller-verif (opérateur assigné, visite terrain)
+      //   3   Prouvé par usage            -> entite-publique (Vérifiée · 12 ventes)
+      // Reading only seller-verif declared a real surface absent — the reverse of the
+      // source-grep mistake. Measure the tier where it is actually rendered.
+      const tier01 = /joignable/i.test(t['seller-entity']) && /confirmé/i.test(t['seller-entity']);
+      const tier2 = /Opérateur assigné/.test(t['seller-verif']) && /Visite terrain/.test(t['seller-verif']);
+      const tier3 = /Vérifiée · 12 ventes/.test(t['entite-publique']);
+      const unverifiedBadge = /Non vérifié/.test(t['seller-verif']);
+      if (!(tier01 && tier2 && tier3 && unverifiedBadge)) {
+        return ['ABSENT', `tier01=${tier01} tier2=${tier2} tier3=${tier3} unverified=${unverifiedBadge}`];
+      }
+      return ['OK', 'tiers 0/1 joignable → 2 operator → 3 proven by usage, all rendered'];
+    } },
+  { id: 'S-28', sheets: ['seller-entity', 'seller-entry'],
+    decide: (t) => {
+      // Always create an entity, even for a single-object individual — one path only.
+      // The eyebrow is uppercased by CSS, so match case-insensitively (innerText is rendered case).
+      const oneStep = /étape 1 · votre entité/i.test(t['seller-entity']);
+      const individual = /particulier crée une entité/i.test(t['seller-entity']);
+      const noSecondPath = !/particulier sans entité|sans créer d’entité/i.test(t['seller-entry']);
+      if (!noSecondPath) return ['ABSENT-INCOHERENT', 'a second path exists for individuals without an entity'];
+      return oneStep && individual ? ['OK', 'always create an entity; the individual IS the entity, one path'] : ['ABSENT', `oneStep=${oneStep} individual=${individual}`];
+    } },
   { id: 'economy', sheets: ['seller-offers', 'seller-pro'],
     decide: (t) => {
       // The free ceiling lives on the offers screen, the bonus on the Pro screen. The
@@ -234,14 +281,12 @@ const seed = readFileSync(resolve('docs/nature-way/omni-intent-brief-v2-2026-09-
 const seedIds = [...new Set([...seed.matchAll(/S-\d{2}/g)].map((m) => m[0]))].sort();
 const CLASS = {
   code: ['S-02', 'S-15', 'S-23', 'S-26'],           // model constraint, verified in DB/code
-  rule: ['S-09', 'S-13', 'S-16', 'S-17', 'S-28'],   // stated rule; surface not necessarily audited
   // Deliberately out of V1 scope by the Seed itself — NOT conformant claims.
   deferred: ['S-08', 'S-12'],                       // transport offer screen / A→B = `V1+`
 };
 const audited = new Set(results.map((r) => r.id));
 const klassOf = (id) => audited.has(id) ? 'rendered'
   : CLASS.code.includes(id) ? 'code'
-  : CLASS.rule.includes(id) ? 'rule'
   : CLASS.deferred.includes(id) ? 'deferred'
   : 'UNMEASURED';
 const coverage = seedIds.map((id) => ({ id, klass: klassOf(id) }));
@@ -251,7 +296,6 @@ const unmeasured = coverage.filter((c) => c.klass === 'UNMEASURED').map((c) => c
 console.log(`\nCOUVERTURE SEED — ${seedIds.length} décisions S-xx dans le Seed V2`);
 console.log(`  rendu à l'écran : ${(byClass.rendered || 0)}`);
 console.log(`  contrainte code : ${(byClass.code || 0)}`);
-console.log(`  règle écrite    : ${(byClass.rule || 0)}`);
 console.log(`  hors V1 (Seed)  : ${(byClass.deferred || 0)}${(byClass.deferred || 0) ? ' → ' + CLASS.deferred.join(' ') : ''}`);
 console.log(`  NON MESURÉ      : ${(byClass.UNMEASURED || 0)}${unmeasured.length ? ' → ' + unmeasured.join(' ') : ''}`);
 console.log(`\n  ⚠️  Un verdict "conforme" ne porte QUE sur les ${byClass.rendered || 0} décisions rendues à l'écran.`);

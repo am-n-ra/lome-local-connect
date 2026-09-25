@@ -155,9 +155,45 @@ Et le harnais imprime le verdict **borné** (« ne porte QUE sur les 21 rendues 
 - **Garde falsifié** : retirer la ligne d'ownership → **S-04 `ABSENT`**, **exit `1`** (avant : **exit `0`**).
 - `check:maquette`, `check:state`, `tsc`, **600/600 tests** — verts.
 
-### Ce qui reste, honnêtement
+### Amendement 2 — 2026-09-25 : couverture **complète** (les 5 `règle écrite` sont mesurées)
 
-- `S-09`, `S-13`, `S-16`, `S-17`, `S-28` = **`règle écrite`** : surfaces probables, **non auditées ici**. Les déclarer conformes serait retomber dans le défaut.
-- `S-08` / `S-12` = **hors V1 par décision du Seed** — une **exclusion assumée**, pas une conformité.
-- **`COH-V2-18` → CORRIGÉ.** Ce qui reste ouvert : **`SP-VALIDATION`** — un audit conforme **ne vaut pas** acceptation fondateur.
+Le §7 laissait **5 décisions en `règle écrite`** (« surfaces probables, non auditées »). C'était
+honnête, et **insuffisant** : une décision non mesurée peut cacher une incohérence. Les 5 sont
+désormais **mesurées au rendu** → **`NON MESURÉ = 0`**, **26 décisions rendues** sur 32.
+
+| Décision | Verdict | Preuve (rendue) |
+|---|---|---|
+| `S-09` | OK | `compare` : « Prix · **850 F · 1 000 F · 45 000 F** » — comparables sans faire le tour des magasins ; prix aussi sur `offer` |
+| `S-13` | OK | `seller-entity` : **Commerce / Particulier / Organisation** + « même objet qu'une personne seule » |
+| `S-16` | OK | `auth` : « **Téléphone-first** · Togo : le numéro avant l'e-mail » + « OTP Neon Auth » + « WhatsApp » + « SMS payant exclu » |
+| `S-17` | OK | les **3 paliers sont rendus sur 3 surfaces** : `seller-entity` (N° joignable · confirmé) → `seller-verif` (opérateur assigné) → `entite-publique` (**Vérifiée · 12 ventes**) |
+| `S-28` | OK | `seller-entity` : « **Même un particulier crée une entité** (S-28) » + étape 1 unique |
+
+**Aucun défaut de maquette trouvé sur ces 5** — mais **2 de mes prédicats étaient faux**, et les deux
+erreurs sont instructives :
+
+1. **`S-17`** : j'ai cherché les 3 paliers sur **une seule** surface (`seller-verif`). Ils vivent sur
+   **trois**. C'est **l'erreur inverse du grep de source** : déclarer **absent** un écran réel parce
+   qu'on regarde au mauvais endroit. **Le palier se mesure là où il est rendu.**
+2. **`S-28`** : le CSS passe les eyebrows en **majuscules** ; `innerText` rend « ÉTAPE 1 », pas
+   « Étape 1 ». Mon prédicat sensible à la casse échouait sur un écran correct. **Mesurer le texte
+   *rendu*, casse comprise** — pas le source.
+
+Garde falsifié : retirer le palier d'usage (`· 12 ventes`) → **`S-17` `ABSENT`**, **exit `1`** ;
+retirer « Même un particulier crée une entité » → **`S-28` `ABSENT`**, **exit `1`**.
+
+### Couverture finale
+
+| Classe | Compte |
+|---|---|
+| `rendu à l'écran` | **26** |
+| `contrainte code` | 4 (`S-02`, `S-15`, `S-23`, `S-26`) |
+| `hors V1 (Seed)` | 2 (`S-08`, `S-12`) |
+| `règle écrite` | **0** |
+| **`NON MESURÉ`** | **0** |
+
+**Ce que cela change pour la décision du fondateur :** la maquette est **mesurée à 26/32 décisions
+rendues**, **0 non conforme, 0 non mesurée**. Il ne reste **aucun angle mort de mesure** — la seule
+chose ouverte est **`SP-VALIDATION`**, une décision humaine.
+
 
