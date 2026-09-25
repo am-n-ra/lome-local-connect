@@ -50,15 +50,28 @@ compatible, l'itinéraire devient réel **sans nouvelle tranche**.
 
 | ID | Parent | Couche | Livrable | Dépend de | Owner | Statut |
 |---|---|---|---|---|---|---|
-| RT-F1 | — | Root/server | Route `GET /api/v2/public/routing` (proxy) | — | Nature Way | `todo` |
-| RT-F2 | RT-F1 | Root/server | `routing-adapter.ts` — fournisseur via `OSRM_BASE_URL` | — | Nature Way | `todo` |
-| RT-F3 | RT-F2 | Root/server | Garde de zone pilote (bbox Lomé) + message | RT-F2 | Nature Way | `todo` |
-| RT-F4 | RT-F1 | Trunk/client | `TrunkMap` consomme le vrai tracé, repli étiqueté | RT-F1 | Nature Way | `todo` |
-| RT-F5 | — | Root/data | Garde de périmètre à l'import public | — | Nature Way | `todo` |
-| RT-F6 | RT-F2 | Heartwood | Timeout + cache + tests négatifs | RT-F2 | Nature Way | `todo` |
-| RT-F7 | RT-F1 | Proof | Tests + `tsc` + build + parité bundle prod | tous | Nature Way | `todo` |
-| RT-D1 | — | Décision | Fournisseur de routage + budget | fondateur | Founder | `blocked` |
+| RT-F1 | — | Root/server | Route `GET /api/v2/public/routing` (proxy) | — | Nature Way | `done` |
+| RT-F2 | RT-F1 | Root/server | `routing-adapter.ts` — Mapbox **et** OSRM, sélection par env | — | Nature Way | `done` |
+| RT-F3 | RT-F2 | Root/server | Garde de zone pilote (bbox Lomé) + message | RT-F2 | Nature Way | `done` |
+| RT-F4 | RT-F1 | Trunk/client | `TrunkMap` consomme le vrai tracé, repli étiqueté | RT-F1 | Nature Way | `done` |
+| RT-F5 | — | Root/data | Garde de périmètre à l'import public | — | Nature Way | `done` |
+| RT-F6 | RT-F2 | Heartwood | Timeout + cache + tests négatifs | RT-F2 | Nature Way | `done` |
+| RT-F7 | RT-F1 | Proof | Tests + `tsc` + build + parité bundle prod | tous | Nature Way | `done` |
+| RT-D1 | — | Décision | Fournisseur de routage + budget | fondateur | Founder | `done` — **Mapbox** (2026-09-17) |
 | RT-D2 | — | Décision | Sort des 17 facilités hors zone (masquer/marquer/supprimer) | fondateur | Founder | `blocked` |
+
+## Suite RT (2026-09-24) — état réel
+
+| ID | Livrable | Statut |
+|---|---|---|
+| RT-1 | Verrou d'itinéraire = `pi.state='active'` seul (plus de jeton QR) | `done` `3cbd9e2` **déployé** |
+| RT-2 | Jeton Mapbox dans Vercel | `done` — routage **armé** (401 anonyme) |
+| RT-3 | `ROUTING_REQUIRE_INTENT=1` | **variable posée par le fondateur — EFFET NON VÉRIFIÉ** (appel anonyme non discriminant) |
+| RT-4 | Guidage vocal (`speechSynthesis`) + essai Android réel | `todo` |
+| RT-5 | Alerte budget Mapbox + `057` | **`057` DÉJÀ appliquée** (vérifié) ; quota prouvé actif ; **alerte budget = action fondateur** |
+| RT-6 | Maquette itinéraire verrouillé + guidage vocal | **maquette alignée** (`tracé direct` supprimé) ; voix = `todo` |
+| RT-D2(b) | Fiche facilité : itinéraire désactivé jusqu'à l'intention | `done` `99da952` **déployé** |
+
 
 ## Condition d'arrêt
 
@@ -71,8 +84,14 @@ navigateur. **Le trajet authentifié (intention → QR → paiement) reste hors 
 - Je ne prétends pas livrer un itinéraire « aussi parfait que Google Maps » : le trafic
   temps réel, le reroutage dynamique et la qualité de géocodage ne sont pas fournis par
   l'open data.
-- Je ne prétends pas que le fournisseur par défaut fonctionne en production : il est
-  **non configuré**, et le repli est **étiqueté comme tel**.
+- ~~Je ne prétends pas que le fournisseur par défaut fonctionne en production : il est
+  **non configuré**~~ **PÉRIMÉ (2026-09-24) : le jeton Mapbox est posé et le routage est
+  ARMÉ — `GET /api/v2/public/routing` anonyme répond `401 AUTH_REQUIRED`, la signature
+  exacte prédite par le test du dépôt quand le fournisseur est configuré.**
 - Je ne prétends pas que les 17 points hors zone soient résolus : je les **refuse au
   routage** et j'ajoute la garde d'import, mais leur sort définitif est une décision
   produit (RT-D2).
+- **Je ne prétends pas que `RT-3` soit effectif** : la variable est **posée** dans Vercel,
+  mais l'appel **anonyme ne discrimine pas** les modes `identity` et `intent` (401 dans
+  les deux). Le vérifier exige un appel **authentifié**. **Ne pas confondre « variable
+  posée » et « variable lue ».**
