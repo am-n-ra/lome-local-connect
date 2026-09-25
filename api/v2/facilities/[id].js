@@ -964,7 +964,14 @@ function createTrunkRepository(sql = database()) {
           set qualifying_sales = ${input.qualifyingSales}, updated_at = now()
           from target
           where f.id = target.id
-          returning f.id, f.qualifying_sales, target.previous_sales, target.admin_id
+          returning f.id, f.qualifying_sales, target.previous_sales, target.admin_id, f.entity_id
+        ), entity_updated as (
+          -- R-3b : la correction exceptionnelle du compteur doit valoir aussi sur l'entite (S-30).
+          update v2_entities e
+          set qualifying_sales = updated.qualifying_sales, updated_at = now()
+          from updated
+          where e.id = updated.entity_id
+          returning e.id
         ), audit as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
           select updated.admin_id, 'facility_sales_counter_corrected', 'facility', updated.id::text, ${input.correlationId}, updated.previous_sales::text || ' -> ' || ${input.qualifyingSales}::text || ' : ' || ${input.reason.trim()}
@@ -1530,7 +1537,15 @@ function createTrunkRepository(sql = database()) {
               updated_at = now()
           from candidate join request_update on request_update.facility_id = candidate.facility_id
           where f.id = candidate.facility_id
-          returning f.id
+          returning f.id, f.entity_id, f.trust_state
+        ), entity_update as (
+          -- R-3b : S-30 veut la confiance sur l'ENTITE. Sans ce miroir, la colonne d'entite
+          -- reste celle du backfill et sert une confiance perimee des la premiere transition.
+          update v2_entities e
+          set trust_state = facility_update.trust_state, updated_at = now()
+          from facility_update
+          where e.id = facility_update.entity_id
+          returning e.id
         ), history_insert as (
           insert into v2_facility_status_history (facility_id, prior_state, next_state, actor_account_id, reason, request_id, correlation_id)
           select candidate.facility_id, candidate.facility_trust, case when ${input.outcome} = 'needs_more_evidence' then 'verification_draft' when ${input.outcome} = 'certified' then 'unconfirmed' else 'rejected' end, reviewer.id, ${input.reason.trim()}, candidate.id, ${input.correlationId}
@@ -1773,10 +1788,14 @@ function createTrunkRepository(sql = database()) {
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
-            f.trust_state, f.commercial_plan,
+            coalesce(e.trust_state, f.trust_state) as trust_state,
+            -- commercial_plan reste sur le LIEU : sa colonne d'entite n'est pas encore ecrite
+            -- (Pro par entite = R-4b). La lire ici servirait un 'free' perime et casserait les entitlements.
+            f.commercial_plan,
             count(p.id)::int as product_count,
             (count(camp.id) > 0) as sponsored
           from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
           left join v2_products p
             on p.facility_id = f.id and p.publication_state = 'published'
           left join v2_ad_campaigns camp
@@ -1813,8 +1832,8 @@ function createTrunkRepository(sql = database()) {
               )
             ) <= ${rayonKm}`}
             ${operationalState === null ? sql`` : sql`and (f.operational_state = ${operationalState} or f.operational_state is null)`}
-          group by f.id
-          order by (count(camp.id) > 0)::int desc, f.trust_state = 'unclaimed', f.name
+          group by f.id, e.trust_state
+          order by (count(camp.id) > 0)::int desc, coalesce(e.trust_state, f.trust_state) = 'unclaimed', f.name
           limit 250
         `;
         return rows.map(toFacility);
@@ -1842,9 +1861,10 @@ function createTrunkRepository(sql = database()) {
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
+        left join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
         where p.facility_id = ${id}::uuid
           and p.publication_state = 'published'
-          and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+          and coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')
         order by p.name
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
@@ -2740,7 +2760,15 @@ function createTrunkRepository(sql = database()) {
               updated_at = ${input.now}::timestamptz
           from unlock_thresholds ut
           where f.id = ut.facility_id
-          returning f.id as facility_id, f.account_id, f.qualifying_sales
+          returning f.id as facility_id, f.account_id, f.qualifying_sales, f.entity_id, f.trust_state
+        ),
+        entity_qualified as (
+          -- R-3b : la confiance et le compteur montent AUSSI sur l'entite (S-30).
+          update v2_entities e
+          set qualifying_sales = q.qualifying_sales, trust_state = q.trust_state, updated_at = ${input.now}::timestamptz
+          from qualified_facility q
+          where e.id = q.entity_id
+          returning e.id
         ),
         bonus_wallet as (
           select q.facility_id, q.account_id, w.id as wallet_id
@@ -3029,14 +3057,17 @@ function createTrunkRepository(sql = database()) {
       const reference = `facility-bonus:${input.facilityId}`;
       const rows = await retryDatabase(() => sql`
         with facility as (
+          -- C-6/S-14 : le seuil suit le volume. Un particulier (individu) prouve par 1 vente,
+          -- un commerce par 3. Un seuil de 3 en dur bloquait le particulier pourtant eligible.
           select f.id as facility_id, f.account_id
           from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
           join v2_accounts a on a.id = f.account_id
           where f.id = ${input.facilityId}::uuid
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
             and f.trust_state = 'confirmed'
-            and f.qualifying_sales >= 3
+            and f.qualifying_sales >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
           for update of f
         ),
         wallet as (
@@ -5194,9 +5225,10 @@ function createTrunkRepository(sql = database()) {
           select p.id as product_id, f.id as facility_id
           from v2_products p
           join v2_facilities f on f.id = ${input.facilityId}::uuid and p.facility_id = f.id
+          left join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
           where p.id = ${input.productId}::uuid
             and p.publication_state = 'published'
-            and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+            and coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')
         ),
         account as (
           insert into v2_accounts (auth_user_id, onboarding_state)
@@ -5275,9 +5307,10 @@ function createTrunkRepository(sql = database()) {
           from v2_products p
           join v2_facilities f on f.id = any((${uniqueIdList})::text[]::uuid[])
             and p.facility_id = f.id
+          left join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
           where p.id = ${input.productId}::uuid
             and p.publication_state = 'published'
-            and f.trust_state in ('certified', 'unconfirmed', 'confirmed')
+            and coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')
         ),
         account as (
           insert into v2_accounts (auth_user_id, onboarding_state)
