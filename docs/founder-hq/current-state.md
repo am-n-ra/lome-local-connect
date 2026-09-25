@@ -19,7 +19,19 @@
 | **Decided by** | Fondateur |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions `S-01…S-34`) |
 | **Species** | **RÉOUVERTE** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans) |
-| **Next** | **validation fondateur de `SP-1…SP-6`** (les surfaces existent, leur ensemble n'est pas accepté) → puis clôture Species V2 → ensuite seulement Root |
+| **Next** | **validation fondateur de `SP-1…SP-10`** (les surfaces existent, leur ensemble n'est pas accepté) → puis clôture Species V2 → ensuite seulement Root |
+
+> **Portée de validation corrigée (2026-09-25).** La porte ne portait que sur `SP-1…SP-6` alors que
+> **`SP-7…SP-10` sont livrés dans la maquette** et absents de cet état de référence. Une porte qui
+> valide 6 tranches sur 10 laisserait **quatre tranches acceptées par omission**. Portée portée à
+> **`SP-1…SP-10`** :
+>
+> | Tranche | Contenu | Record |
+> |---|---|---|
+> | `SP-1`…`SP-6` | caractéristiques d'offre · échelle 0→4 · double niveau · intégrité/réputation par offre · filtres carte · compléments (S-22/S-25/économie/S-14) | registre `omni-species-v2-decision-registry-2026-09-23.md` |
+> | `SP-7`/`SP-8` | **monde peuplé** (12 lieux niveau 0, plus 3) + **lieu non-piégeant** (`lieu-connaitre` : ce qu'Omni ne peut PAS dire) | `omni-species-sp7-sp8-world-populated-2026-09-24.md` |
+> | `SP-9` | **routage `S-15`** — recommandation A : ne PAS poser `MAPBOX_ACCESS_TOKEN`, étiqueter « à vol d'oiseau » honnêtement ; OSRM conservé (coût 0) | `omni-sp9-sp10-routing-entity-pin-2026-09-24.md` |
+> | `SP-10` | **pin déplaçable** à la création d'entité (position utilisateur par défaut, déplaçable) — vaut aussi pour les offres digitales | idem |
 | **Downstream gates** | **Aucune active** — Root/Trunk/Branches/Canopy interdits pendant cette porte |
 
 ### ⚠️ Correction d'exécution — 2026-09-23 (incident, à ne pas réapprendre)
@@ -109,7 +121,7 @@ Le fondateur a signalé **« beaucoup d'incohérence dans ce qu'on veut faire et
 | `SCOUT-01` | Haute | Couverture mondiale de lieux orpheline (`public-discovery`, `osm-coverage`) |
 | `SCOUT-02` | Haute | Impasse d'expiration des intentions (`v2_purchase_intents.state` non lu par l'UI) |
 | `T-07d` | — | Prod `index-BUMFRcnb.js` ≠ local → **OUVERT** (ne pas pousser) |
-| `SP-VALIDATION` | **Haute** | `SP-1…SP-6` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
+| `SP-VALIDATION` | **Haute** | `SP-1…SP-10` livrés mais **non validés par le fondateur** → Species V2 **non close**, et aucune porte aval autorisée |
 | `T12-RESOLVED` | — | `T-12` refait par rendu navigateur (16/16) après décision fondateur « l'audit est à refaire ». **Clos.** |
 
 ## Rule (added 2026-09-23 — do not relearn)
