@@ -278,6 +278,22 @@ describe('seller facility create validator (NW-13c)', () => {
     expect(() => validateSellerFacilityCreate({ name: 'Échoppe', facilityType: 'mobile', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
   });
 
+  // R-D : la nature est déclarée. Un client ANCIEN qui l'omet ne doit PAS devenir
+  // « particulier » par accident — le repli reste « organisation » (défaut du schéma).
+  it('R-D — defaults the owner kind to organisation when the field is absent', () => {
+    const out = validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1');
+    expect(out.ownerKind).toBe('organisation');
+  });
+
+  it('R-D — accepts a declared individu owner kind', () => {
+    const out = validateSellerFacilityCreate({ name: 'Couture', facilityType: 'digital', ownerKind: 'individu', category: null, description: null, address: null, latitude: null, longitude: null, rayonKm: null }, key, 'auth-user-1');
+    expect(out.ownerKind).toBe('individu');
+  });
+
+  it('R-D — rejects an unknown owner kind rather than silently coercing it', () => {
+    expect(() => validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', ownerKind: 'association', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null }, key, 'auth-user-1')).toThrow(ApiInputError);
+  });
+
   it('accepts optional contact fields (RAC-1)', () => {
     const out = validateSellerFacilityCreate({ name: 'Boutique A', facilityType: 'fixe', category: null, description: null, address: null, latitude: 6.13, longitude: 1.22, rayonKm: null, contactPhone: '+22890000000', contactWhatsapp: '' }, key, 'auth-user-1');
     expect(out).toMatchObject({ contactPhone: '+22890000000', contactWhatsapp: null });

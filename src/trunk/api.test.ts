@@ -302,7 +302,7 @@ describe('createSellerFacility contract (NW-13c)', () => {
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'nwc13-client-key-0001' }),
-        body: JSON.stringify({ name: 'Échoppe mobile', facilityType: 'mobile', category: 'Épicerie', description: null, address: 'Lomé', latitude: 6.13, longitude: 1.22, rayonKm: 5, contactPhone: null, contactWhatsapp: null }),
+        body: JSON.stringify({ name: 'Échoppe mobile', facilityType: 'mobile', ownerKind: 'organisation', category: 'Épicerie', description: null, address: 'Lomé', latitude: 6.13, longitude: 1.22, rayonKm: 5, contactPhone: null, contactWhatsapp: null }),
       }),
     );
   });
@@ -314,7 +314,7 @@ describe('createSellerFacility contract (NW-13c)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities',
-      expect.objectContaining({ body: JSON.stringify({ name: 'Boutique en ligne', facilityType: 'digital', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null, contactPhone: null, contactWhatsapp: null }) }),
+      expect.objectContaining({ body: JSON.stringify({ name: 'Boutique en ligne', facilityType: 'digital', ownerKind: 'organisation', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null, contactPhone: null, contactWhatsapp: null }) }),
     );
   });
 });

@@ -6,6 +6,7 @@ import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPo
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import type { TransactionState } from '../domain/contracts';
+import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
 import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
 import {
@@ -84,6 +85,7 @@ export type SellerFacilityCreateInput = {
   authUserId: string;
   name: string;
   facilityType: FacilityType;
+  ownerKind: OfferOwnerKind;
   category: string | null;
   description: string | null;
   address: string | null;
@@ -107,6 +109,16 @@ export function validateSellerFacilityCreate(body: Record<string, unknown>, idem
   const contactPhone = body.contactPhone === null || body.contactPhone === undefined || body.contactPhone === '' ? null : typeof body.contactPhone === 'string' ? body.contactPhone.trim() : null;
   const contactWhatsapp = body.contactWhatsapp === null || body.contactWhatsapp === undefined || body.contactWhatsapp === '' ? null : typeof body.contactWhatsapp === 'string' ? body.contactWhatsapp.trim() : null;
   const validContact = (v: string | null) => v === null || (v.length >= 5 && v.length <= 40);
+  // R-D / S-13 : la NATURE de l'offreur est un fait déclaré par le vendeur, pas une
+  // déduction du système. Le Seed la promet (« un particulier vend sans structure ») et
+  // D-C6 en dépend : un particulier prouve sa confiance par 1 transaction, un commerce par 3.
+  // Repli = 'organisation' : c'est déjà la valeur par défaut du schéma, et un client ancien
+  // ne doit pas transformer un commerce en particulier par simple omission.
+  const ownerKindRaw = typeof body.ownerKind === 'string' ? body.ownerKind.trim() : '';
+  const ownerKind: OfferOwnerKind = ownerKindRaw === 'individu' ? 'individu' : 'organisation';
+  if (ownerKindRaw !== '' && ownerKindRaw !== 'individu' && ownerKindRaw !== 'organisation') {
+    throw new ApiInputError('A valid owner kind (individu, organisation) is required.');
+  }
   if (facilityType !== 'fixe' && facilityType !== 'mobile' && facilityType !== 'digital') {
     throw new ApiInputError('A valid facility type (fixe, mobile, digital) is required.');
   }
@@ -116,7 +128,7 @@ export function validateSellerFacilityCreate(body: Record<string, unknown>, idem
   if (!name.trim() || name.length > 180 || (coordsRequired && (latitude === null || longitude === null)) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || (type === 'mobile' && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500)) || (type !== 'mobile' && rayonKm !== null) || !validContact(contactPhone) || !validContact(contactWhatsapp) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
     throw new ApiInputError('A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.');
   }
-  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
+  return { authUserId, name: name.trim(), facilityType: type, ownerKind, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
 }
 
 export interface AvailabilityRequestCreateInput {

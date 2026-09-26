@@ -43,13 +43,19 @@
 > LIVRÉ** (`27a1661`) ; **alignement app ↔ maquette est LIVRÉ** (`ALIGN-1`, `0423fea` — seuils éditables
 > `D-CON-1…5`, devise par localisation `D-LOC-1…5`, filtre budget devise-aware, affichage 0-décimal,
 > 9 offres mal étiquetées corrigées) et **vérifié en prod** (XOF 2 500 → 5 facilités ; USD 2 500 → 0).
-> Restent : **`R-D`** (chemin `individu`, 0 entité de ce type — **prochaine recommandée**) ;
-> **`R-C`/`SP-V2-01`** (décision fondateur) ; **usage `R-B`** (caractéristiques 0/16 — acte **vendeur réel**,
-> pas une tranche de code). **Ne pas rouvrir Seed/Species ni élargir.**
+> **`R-D` est LIVRÉ** (`2026-09-26`, chemin `individu` — la promesse « un particulier vend sans
+> structure » **existe désormais en code** et a été **prouvée de bout en bout** : 1 vente confirme un
+> particulier, 3 un commerce) ; **`R-C`/`SP-V2-01` est RÉSOLU** (les 3 offres sans propriétaire sont
+> **retirées** : publiées-sans-propriétaire **3 → 0**, publiées **16 → 13**).
+> Restent : **usage `R-B`** (caractéristiques 0/16 — acte **vendeur réel**, pas une tranche de code) ;
+> **push de `R-C`/`R-D`** (prod sert encore le bundle précédent — **`T-07d` non franchi**).
+> **Ne pas rouvrir Seed/Species ni élargir.**
 >
-> ⚠️ **Cette recommandation a été corrigée deux fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
-> d'abord », alors que son code était livré depuis 00:05 le même jour ; le 2026-09-26 (soir) elle listait
-> encore l'alignement comme *à faire*, alors qu'il venait d'être livré et prouvé en prod. **Un inventaire
+> ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
+> d'abord », alors que son code était livré depuis 00:05 le même jour ; le soir elle listait encore
+> l'alignement comme *à faire*, alors qu'il venait d'être livré et prouvé en prod ; puis elle listait
+> `R-D` comme « prochaine recommandée » alors que l'inventaire le décrivait **faussement** comme une
+> simple fixture — la mesure a montré un **chemin absent**, pas une ligne à insérer. **Un inventaire
 > d'une heure peut
 > être faux** — re-mesurer avant d'exécuter (`hq-reconciliation-2026-09-26.md` §5 bis).
 

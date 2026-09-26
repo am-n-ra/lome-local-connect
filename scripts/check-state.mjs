@@ -85,6 +85,12 @@ const deliveredSlices = [
   // list app↔maquette alignment as still-to-do — the same hour-staleness, caught a second time.
   ['docs/founder-hq/founder-hq-board.md', 'Restent : **alignement app ↔ maquette**', 'must not list app alignment as to-do — it shipped 2026-09-26 (ALIGN-1, 0423fea)'],
   ['docs/founder-hq/hq-reconciliation-2026-09-26.md', '**Alignement app ↔ maquette** (seuils réglables + devise par localisation + filtre budget devise-aware) |', 'must not list app alignment as pending — it shipped 2026-09-26 (ALIGN-1, 0423fea)'],
+  // R-D + R-C shipped 2026-09-26. R-D was mis-described by the inventory as a "fixture":
+  // the create path hardcoded `organisation`, so no code path could produce `individu`.
+  // A recommendation must not list either as still-to-do.
+  ['docs/founder-hq/founder-hq-board.md', '**`R-D`** (chemin `individu`, 0 entité de ce type — **prochaine recommandée**)', 'must not recommend R-D — it shipped 2026-09-26'],
+  ['docs/founder-hq/founder-hq-board.md', '**`R-C`/`SP-V2-01`** (décision fondateur)', 'must not list SP-V2-01 as a pending founder decision — answered and executed 2026-09-26'],
+  ['docs/founder-hq/handoff-receipt-HO-OMNI-22.md', '**Founder decision required: remove or attach.**', 'must not list SP-V2-01 as a pending decision — resolved 2026-09-26'],
 ];
 
 let failed = 0;

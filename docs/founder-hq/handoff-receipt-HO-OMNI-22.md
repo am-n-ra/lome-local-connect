@@ -82,13 +82,13 @@ The repository's tests use a **stubbed `sql`**: they **never execute SQL**. A qu
 | # | Finishing | State |
 |---|---|---|
 | 1 | **Alignement app ↔ maquette** | **DONE this session** (`ALIGN-1`) |
-| 2 | **`R-D` — `individu` path** | 0 entities of this type — **never exercised in data** |
-| 3 | **`SP-V2-01` / `R-C` — ownerless offers** | Re-verified: `Atelier Kegue` (2 offers) and `Pharmacie du Port` (1), both `public_import`, **no owner** → a buyer **can ask**, **no seller can answer**, **expires in 15 min, 0 credits**. **Founder decision required: remove or attach.** |
+| 2 | **`R-D` — `individu` path** | **DONE 2026-09-26** — the path did **not** exist (the entity insert hardcoded `organisation`), so a fixture would have proven nothing. Delivered + proven E2E (1 sale confirms an individual, 3 an organisation). |
+| 3 | **`SP-V2-01` / `R-C` — ownerless offers** | **RESOLVED 2026-09-26** — the 3 ownerless published offers are **removed** (ownerless published **3 → 0**, published **16 → 13**). The fixture ledger already declared them fixtures, so removal makes the data match its own non-claim. |
 | 4 | **`R-B` usage — offer characteristics** | Mechanism delivered; **0/16 written**. Filling it is a **real seller act**, not a code slice. |
 
 **Founder decision required:**
-1. **`SP-V2-01`** — remove the 3 ownerless offers, or attach them to a real entity if a real seller claims them? (I will not invent an owner — `S-04` forbids an orphan offer.)
-2. **Order of remaining finishing** — I recommend **`R-D` (the `individu` path)** next: it is a product promise ("a private individual sells without a structure") that has **never been exercised in data**, so its truth is unproven.
+1. **`SP-V2-01` — ANSWERED** (« retirer », 2026-09-26) : the 3 ownerless offers are removed. No owner was invented (`S-04` forbids an orphan offer).
+2. **Order of remaining finishing** — `R-D` is **DONE** (2026-09-26). What remains is the **push** of `R-C`/`R-D` (prod still serves the previous bundle) and the **`R-B` usage** (0/16 characteristics — a real seller act).
 
 **Explicitly NOT recommended:** widening scope, or reopening Seed/Species. The Seed is coherent; the defect was **execution and synchronisation of the base**.
 

@@ -1113,7 +1113,7 @@ function createTrunkRepository(sql = database()) {
           -- Un vendeur qui crée une facilité reçoit donc son entité dans la même instruction —
           -- sinon il ne pourrait jamais publier. S-13 : l'identité qui offre EST l'entité.
           insert into v2_entities (account_id, kind, display_name, trust_state, qualifying_sales, commercial_plan)
-          select s.account_id, 'organisation', ${input.name.trim()}, 'unconfirmed', 0, 'free'
+          select s.account_id, ${input.ownerKind}, ${input.name.trim()}, 'unconfirmed', 0, 'free'
           from available_slot s
           where not exists (
             select 1 from v2_entities e where e.account_id = s.account_id
@@ -2947,19 +2947,29 @@ function createTrunkRepository(sql = database()) {
           join closed_event c on c.transaction_id = s.transaction_id
           join locked e on e.transaction_id = c.transaction_id
           on conflict (facility_id, buyer_account_id) do nothing
-          returning facility_id
+          returning facility_id, buyer_account_id
         ),
+        -- Sémantique de snapshot Postgres : unlock_progress ne voit PAS la ligne qu'il vient
+        -- d'insérer. Compter v2_seller_unlock_progress ici renverrait donc le total d'AVANT
+        -- cette vente — le compteur resterait en retard d'une vente, et un particulier ne serait
+        -- jamais confirmé par sa première vente. On part de la TABLE (les ventes antérieures,
+        -- visibles) et on ajoute la vente courante depuis le RETURNING. Un acheteur déjà présent
+        -- EST visible dans la table, donc le not exists vaut false et n'ajoute rien.
         unlock_counts as (
-          select p.facility_id, count(*)::int as distinct_buyers
-          from v2_seller_unlock_progress p
-          where p.facility_id in (select facility_id from unlock_progress)
-          group by p.facility_id
+          select up.facility_id,
+                 max((select count(*)::int from v2_seller_unlock_progress p where p.facility_id = up.facility_id)
+                   + case when not exists (
+                       select 1 from v2_seller_unlock_progress p2
+                       where p2.facility_id = up.facility_id and p2.buyer_account_id = up.buyer_account_id
+                     ) then 1 else 0 end) as distinct_buyers
+          from unlock_progress up
+          group by up.facility_id
         ),
         -- D-C6 / S-14 : le seuil vient du VOLUME de l'offreur. Un particulier (entité 'individu')
         -- est confirmé par 1 acheteur distinct ; un commerce en demande 3. Seuil inconnu => 3.
         unlock_thresholds as (
           select uc.facility_id, uc.distinct_buyers,
-                 case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end as threshold
+                 case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD}::int else ${CONFIRMED_SALES_THRESHOLD}::int end as threshold
           from unlock_counts uc
           join v2_facilities f on f.id = uc.facility_id
           left join v2_entities e on e.id = f.entity_id
@@ -3010,7 +3020,7 @@ function createTrunkRepository(sql = database()) {
                 required_count = excluded.required_count,
                 status = case when v2_seller_unlocks.status = 'granted' then 'granted'
                               when excluded.distinct_buyer_count >= (
-                                select case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
+                                select case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD}::int else ${CONFIRMED_SALES_THRESHOLD}::int end
                                 from v2_facilities f
                                 left join v2_entities e on e.id = f.entity_id
                                 where f.id = excluded.facility_id
@@ -3283,7 +3293,7 @@ function createTrunkRepository(sql = database()) {
             and a.auth_user_id = ${input.authUserId}
             and a.suspended_at is null
             and coalesce(e.trust_state, f.trust_state) = 'confirmed'
-            and coalesce(e.qualifying_sales, f.qualifying_sales) >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end
+            and coalesce(e.qualifying_sales, f.qualifying_sales) >= case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD}::int else ${CONFIRMED_SALES_THRESHOLD}::int end
           for update of f
         ),
         wallet as (
@@ -3355,7 +3365,7 @@ function createTrunkRepository(sql = database()) {
           coalesce(e.trust_state, f.trust_state) as trust_state,
           coalesce(e.qualifying_sales, f.qualifying_sales) as qualifying_sales,
           f.bonus_unlocked_at,
-          case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD} else ${CONFIRMED_SALES_THRESHOLD} end as kind_required_count
+          case when e.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD}::int else ${CONFIRMED_SALES_THRESHOLD}::int end as kind_required_count
         from v2_facilities f
         left join v2_entities e on e.id = f.entity_id
         join v2_accounts a on a.id = f.account_id
@@ -6003,6 +6013,11 @@ function validateSellerFacilityCreate(body, idempotencyKey, authUserId) {
   const contactPhone = body.contactPhone === null || body.contactPhone === void 0 || body.contactPhone === "" ? null : typeof body.contactPhone === "string" ? body.contactPhone.trim() : null;
   const contactWhatsapp = body.contactWhatsapp === null || body.contactWhatsapp === void 0 || body.contactWhatsapp === "" ? null : typeof body.contactWhatsapp === "string" ? body.contactWhatsapp.trim() : null;
   const validContact = (v) => v === null || v.length >= 5 && v.length <= 40;
+  const ownerKindRaw = typeof body.ownerKind === "string" ? body.ownerKind.trim() : "";
+  const ownerKind = ownerKindRaw === "individu" ? "individu" : "organisation";
+  if (ownerKindRaw !== "" && ownerKindRaw !== "individu" && ownerKindRaw !== "organisation") {
+    throw new ApiInputError("A valid owner kind (individu, organisation) is required.");
+  }
   if (facilityType !== "fixe" && facilityType !== "mobile" && facilityType !== "digital") {
     throw new ApiInputError("A valid facility type (fixe, mobile, digital) is required.");
   }
@@ -6012,7 +6027,7 @@ function validateSellerFacilityCreate(body, idempotencyKey, authUserId) {
   if (!name.trim() || name.length > 180 || coordsRequired && (latitude === null || longitude === null) || !validCoords(latitude, -90, 90) || !validCoords(longitude, -180, 180) || type === "mobile" && (rayonKm === null || !Number.isFinite(rayonKm) || rayonKm <= 0 || rayonKm > 500) || type !== "mobile" && rayonKm !== null || !validContact(contactPhone) || !validContact(contactWhatsapp) || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
     throw new ApiInputError("A valid facility name, type, coordinates (fixe/mobile) or radius (mobile) and idempotency key are required.");
   }
-  return { authUserId, name: name.trim(), facilityType: type, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
+  return { authUserId, name: name.trim(), facilityType: type, ownerKind, category, description, address, latitude, longitude, rayonKm, contactPhone, contactWhatsapp, idempotencyKey };
 }
 function validateAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
   const productId = typeof body.productId === "string" ? body.productId : "";

@@ -2317,17 +2317,20 @@ describe('Product availability Root seam (G-04 trunk)', () => {
   });
 });
 
-function stubSqlSequence(sequence: Record<string, unknown>[][]): { sql: SqlStub; queries: string[] } {
+function stubSqlSequence(sequence: Record<string, unknown>[][]): { sql: SqlStub; queries: string[]; values: unknown[][] } {
   const queries: string[] = [];
+  const values: unknown[][] = [];
   let index = 0;
-  const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+  const sql = ((strings: TemplateStringsArray, ...bound: unknown[]) => {
     queries.push(strings.raw.join('¦'));
-    void values;
+    // Les valeurs liées ne figurent JAMAIS dans le texte SQL : un test qui cherche un
+    // littéral dans `queries` ne peut pas voir un paramètre. On les capture ici.
+    values.push(bound);
     const rows = sequence[Math.min(index, sequence.length - 1)];
     index += 1;
     return Promise.resolve(rows);
   }) as SqlStub;
-  return { sql, queries };
+  return { sql, queries, values };
 }
 
 describe('admin console Root seam (T-07a)', () => {
@@ -2440,6 +2443,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Le Fournil',
       facilityType: 'parking' as never,
+      ownerKind: 'organisation',
       category: null,
       description: null,
       address: null,
@@ -2460,6 +2464,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Le Fournil',
       facilityType: 'fixe',
+      ownerKind: 'organisation',
       category: null,
       description: null,
       address: null,
@@ -2480,6 +2485,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Le Fournil',
       facilityType: 'fixe',
+      ownerKind: 'organisation',
       category: null,
       description: null,
       address: null,
@@ -2503,6 +2509,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Ma petite échoppe mobile',
       facilityType: 'mobile',
+      ownerKind: 'organisation',
       category: 'Épicerie',
       description: null,
       address: 'Lomé',
@@ -2522,6 +2529,62 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     expect(call.queries[1]).toContain('source_name');
   });
 
+  // R-D : la nature de l'offreur est DÉCLARÉE, et le Seed en dépend (D-C6 : un particulier
+  // prouve sa confiance par 1 vente, un commerce par 3). Avant ce correctif, `createSellerFacility`
+  // écrivait `'organisation'` en dur — aucune requête ne pouvait produire `kind = 'individu'`,
+  // donc le chemin `individu` était structurellement inatteignable.
+  it('R-D — persists a declared individu owner kind instead of hardcoding organisation', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ facility_id: 'facility-11', slot_id: 'slot-11', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Couture à domicile',
+      facilityType: 'digital',
+      ownerKind: 'individu',
+      category: 'Textile',
+      description: null,
+      address: null,
+      latitude: null,
+      longitude: null,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'nwrd-individu-key-0000001',
+    });
+    // `ownerKind` est une VALEUR LIÉE : elle n'apparaît pas dans le texte SQL.
+    // L'assertion doit donc porter sur les paramètres, pas sur `queries`.
+    expect(call.values[1]).toContain('individu');
+    expect(call.values[1]).not.toContain('organisation');
+  });
+
+  it('R-D — still persists organisation when the seller declares a business', async () => {
+    const call = stubSqlSequence([
+      [],
+      [{ facility_id: 'facility-12', slot_id: 'slot-12', created: true }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.createSellerFacility({
+      authUserId: 'auth-user-1',
+      name: 'Le Fournil',
+      facilityType: 'fixe',
+      ownerKind: 'organisation',
+      category: null,
+      description: null,
+      address: null,
+      latitude: 6.13,
+      longitude: 1.22,
+      rayonKm: null,
+      contactPhone: null,
+      contactWhatsapp: null,
+      idempotencyKey: 'nwrd-organisation-key-00001',
+    });
+    expect(call.values[1]).toContain('organisation');
+    expect(call.values[1]).not.toContain('individu');
+  });
+
   it('allows a digital facility without coordinates and without a rayon', async () => {
     const call = stubSqlSequence([
       [],
@@ -2532,6 +2595,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Boutique en ligne',
       facilityType: 'digital',
+      ownerKind: 'organisation',
       category: 'Textile',
       description: null,
       address: 'Lomé (en ligne)',
@@ -2558,6 +2622,7 @@ describe('seller facility creation Root seam (NW-13c)', () => {
       authUserId: 'auth-user-1',
       name: 'Atelier Kegue',
       facilityType: 'fixe',
+      ownerKind: 'organisation',
       category: null,
       description: null,
       address: 'Lomé',
@@ -2572,7 +2637,9 @@ describe('seller facility creation Root seam (NW-13c)', () => {
     // Le lieu reçoit son entité dans la MEME instruction : la publication exige ce lien,
     // donc un vendeur sans entité serait définitivement bloqué.
     expect(publishSql).toContain('insert into v2_entities');
-    expect(publishSql).toContain("'organisation'");
+    // R-D : la nature n'est plus un littéral figé dans le SQL — elle est liée. L'assertion
+    // porte donc sur la valeur transmise (avant ce correctif : `'organisation'` en dur).
+    expect(call.values[1]).toContain('organisation');
     expect(publishSql).toContain('entity_id');
     // Une CTE qui écrit n'est pas visible par les autres CTE de la meme instruction :
     // l'entite doit venir d'un RETURNING, jamais d'une relecture de table.
@@ -2743,6 +2810,7 @@ describe('RAC-1 seller contact Root seam', () => {
       authUserId: 'auth-user-1',
       name: 'Boutique Contact',
       facilityType: 'fixe',
+      ownerKind: 'organisation',
       category: 'Marché',
       description: null,
       address: 'Lomé',

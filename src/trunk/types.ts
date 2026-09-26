@@ -418,6 +418,9 @@ export interface SellerCatalogueProduct {
 
 /** S-01 car.3 — position: fixe / mobile / immatérielle (replaces facility_type on the offer). */
 export type OfferPositionKind = 'fixe' | 'mobile' | 'immaterielle';
+/** S-13 / D-C6 — the nature of the offer owner: a private individual or an organisation.
+ * Same object (S-13), but the trust threshold depends on it: 1 sale for an individual, 3 for a business. */
+export type OfferOwnerKind = 'individu' | 'organisation';
 /** S-01 car.2 — uniqueness: a renewable offer, or a single piece that disappears after the sale. */
 export type OfferUniquenessKind = 'renouvelable' | 'piece_unique';
 /** S-01 car.5 — handover: retrait / livraison / immatériel. */

@@ -3,7 +3,7 @@ import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind } from './types';
+import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
@@ -46,6 +46,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [createBusy, setCreateBusy] = useState(false);
   const [createError, setCreateError] = useState('');
   const [facilityType, setFacilityType] = useState<FacilityType>('fixe');
+  const [ownerKind, setOwnerKind] = useState<OfferOwnerKind>('organisation');
   const [facilityName, setFacilityName] = useState('');
   const [facilityCategory, setFacilityCategory] = useState('');
   const [facilityAddress, setFacilityAddress] = useState('');
@@ -122,7 +123,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     setCreateBusy(true);
     try {
       const idempotencyKey = crypto.randomUUID();
-      const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, contactPhone: facilityPhone.trim() || null, contactWhatsapp: facilityWhatsapp.trim() || null, idempotencyKey });
+      const result = await createSellerFacility({ token, name: facilityName.trim(), facilityType, ownerKind, category: facilityCategory.trim() || null, description: null, address: facilityAddress.trim() || null, latitude, longitude, rayonKm, contactPhone: facilityPhone.trim() || null, contactWhatsapp: facilityWhatsapp.trim() || null, idempotencyKey });
       if (result.ok && result.data) {
         setToast('Facilité créée — complétez le parcours de preuve pour être trouvé.');
         setShowCreateForm(false);
@@ -419,7 +420,18 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           {showCreateForm && (
             <div className="cardbox" style={{ marginTop: 9, padding: 11 }}>
               {createError && <p className="sub" role="alert">{createError}</p>}
-              <label className="tiny muted" style={{ display: 'block' }}>Type d'établissement</label>
+              <label className="tiny muted" style={{ display: 'block' }}>Vous vendez en tant que</label>
+              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                {(['individu', 'organisation'] as OfferOwnerKind[]).map((k) => (
+                  <button key={k} type="button" className={ownerKind === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOwnerKind(k)}>{k === 'individu' ? 'Particulier' : 'Commerce / organisation'}</button>
+                ))}
+              </div>
+              <p className="tiny muted" style={{ marginTop: 6 }}>
+                {ownerKind === 'individu'
+                  ? 'Un particulier : une vente confirmée suffit à confirmer votre confiance.'
+                  : 'Un commerce : trois ventes à des acheteurs distincts confirment votre confiance.'}
+              </p>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Type d'établissement</label>
               <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
                 {(['fixe', 'mobile', 'digital'] as FacilityType[]).map((t) => (
                   <button key={t} type="button" className={facilityType === t ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setFacilityType(t)}>{t === 'fixe' ? 'Fixe' : t === 'mobile' ? 'Mobile / ambulant' : 'Digital / en ligne'}</button>
