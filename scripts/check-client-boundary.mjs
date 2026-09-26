@@ -16,7 +16,15 @@ async function walk(dir) {
   }
 }
 
-for (const root of roots) await walk(root);
+// A boundary root that no longer exists is not a violation: after the v1 cleanup `src/core` is
+// gone, and the guard is about what remains inside the client boundary, not about the folders.
+for (const root of roots) {
+  try {
+    await walk(root);
+  } catch (error) {
+    if (error?.code !== 'ENOENT') throw error;
+  }
+}
 if (violations.length) {
   console.error("Client boundary violations:\n" + violations.join("\n"));
   process.exit(1);

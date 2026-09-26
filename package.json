@@ -25,7 +25,8 @@
     "check:species-t12": "node scripts/t12-audit.mjs",
     "check:coherence": "node scripts/check-coherence.mjs",
     "check:docs": "node scripts/check-docs.mjs",
-    "proof:root-read-paths": "tsx scripts/prove-root-read-paths.mjs"
+    "proof:root-read-paths": "tsx scripts/prove-root-read-paths.mjs",
+    "check:live-surface": "node scripts/check-live-surface.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",
