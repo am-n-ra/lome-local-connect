@@ -1872,7 +1872,7 @@ function createTrunkRepository(sql = database()) {
               )
             ) <= ${rayonKm}`}
             ${operationalState === null ? sql`` : sql`and (f.operational_state = ${operationalState} or f.operational_state is null)`}
-          group by f.id, e.trust_state
+          group by f.id, e.id, e.trust_state
           order by (count(camp.id) > 0)::int desc, coalesce(e.trust_state, f.trust_state) = 'unclaimed', f.name
           limit 250
         `;
