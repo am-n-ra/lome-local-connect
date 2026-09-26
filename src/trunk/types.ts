@@ -4,6 +4,14 @@ export interface SearchOptions {
   category: string;
   /** Search constraint: maximum reduced price in minor units (budget_max). */
   budgetMaxMinor?: number | null;
+  /**
+   * ISO code of the currency `budgetMaxMinor` is expressed in (D-LOC-3).
+   * The server MUST NOT compare two `price_minor` of different currencies:
+   * without this, a 2 500 F budget is silently compared to a dollar price.
+   */
+  budgetCurrency?: string | null;
+  /** Local minor units per USD minor, used to normalise a USD-priced offer (D-LOC-3). */
+  budgetRatePerUsdMinor?: number | null;
   /** Search constraint: minimum Omni-rented stock (quantité_min). */
   quantiteMin?: number | null;
   /** Search constraint: search radius in kilometres (rayon_km) from the viewport centre. */

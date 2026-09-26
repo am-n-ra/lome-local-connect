@@ -226,7 +226,13 @@ export async function listPublicFacilities(bounds?: [number, number, number, num
   if (bounds) ['west', 'south', 'east', 'north'].forEach((key, index) => params.set(key, String(bounds[index])));
   if (query?.trim()) params.set('q', query.trim());
   if (options?.category) params.set('category', options.category);
-  if (typeof options?.budgetMaxMinor === 'number') params.set('budget_max', String(options.budgetMaxMinor));
+  if (typeof options?.budgetMaxMinor === 'number') {
+    params.set('budget_max', String(options.budgetMaxMinor));
+    // D-LOC-3 — send the currency the budget is expressed in, so the server
+    // never compares it to a price in another currency.
+    if (options.budgetCurrency) params.set('budget_currency', options.budgetCurrency);
+    if (typeof options.budgetRatePerUsdMinor === 'number') params.set('budget_rate_per_usd_minor', String(options.budgetRatePerUsdMinor));
+  }
   if (typeof options?.quantiteMin === 'number') params.set('quantite_min', String(options.quantiteMin));
   if (typeof options?.rayonKm === 'number') params.set('rayon_km', String(options.rayonKm));
   if (options?.operationalState) params.set('operational_state', options.operationalState);

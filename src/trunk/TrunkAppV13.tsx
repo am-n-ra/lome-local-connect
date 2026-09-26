@@ -36,9 +36,10 @@ import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
-import { chipHintFor, chipStatusFor, chipsToSearchOptions, RAYON_SCOPE_LABELS, summarizeActiveChips } from './search-constraints';
+import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { compareFacilities } from './v13-compare';
-import { OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
+import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
+import { resolveUserCurrency, formatAmount, type ResolvedCurrency } from '../domain/currency';
 import './ui-v13.css';
 
 type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity';
@@ -83,24 +84,32 @@ function money(minor: number, currency: string): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
 }
 
-/** Plan price label: canonical USD base + local equivalent ("5 $/mois ≈ 2 500 F"). */
-function planPriceLabel(kind: 'sellerPro' | 'buyerPro'): string {
+/** Plan price label: canonical USD base + local equivalent ("5 $/mois ≈ 2 500 F").
+ *  D-LOC-2 — the local side uses the **user's** resolved currency, never the
+ *  hardcoded pilot constant. */
+function planPriceLabel(kind: 'sellerPro' | 'buyerPro', resolved: ResolvedCurrency): string {
   const usdMinor = OMNI_PLAN_PRICES_USD_MINOR[kind];
-  const localMinor = convertUsdMinorToLocal(usdMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
+  const localMinor = convertUsdMinorToLocal(usdMinor, resolved.currency);
   const usd = Intl.NumberFormat('fr-FR', { style: 'currency', currency: OMNI_BASE_CURRENCY, maximumFractionDigits: 0 }).format(usdMinor / 100);
-  return `${usd}/mois${localMinor !== usdMinor ? ` ≈ ${money(localMinor, OMNI_DEFAULT_LOCAL_CURRENCY)}` : ''}`;
+  return `${usd}/mois${localMinor !== usdMinor ? ` ≈ ${formatAmount(localMinor, resolved)}` : ''}`;
 }
 
 /** Compact local price for buttons/reminders ("≈ 2 500 F"). */
-function localPlanPriceLabel(kind: 'sellerPro' | 'buyerPro'): string {
-  const localMinor = convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR[kind], OMNI_DEFAULT_LOCAL_CURRENCY);
-  return money(localMinor, OMNI_DEFAULT_LOCAL_CURRENCY);
+function localPlanPriceLabel(kind: 'sellerPro' | 'buyerPro', resolved: ResolvedCurrency): string {
+  const localMinor = convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR[kind], resolved.currency);
+  return formatAmount(localMinor, resolved);
 }
 
 const LOME = [1.22, 6.13] as const;
 
-const SEARCH_CONSTRAINTS: Record<Role, string[]> = {
-  buyer: ['Quantité 10', '≤ 15 000 FCFA', '≤ 10 km', 'Ouvert', 'Livraison', 'Transactable'],
+/**
+ * D-CON-5 — the buyer's constraints are the three explicit families from
+ * `CONSTRAINT_GROUPS` (disponibilité / votre besoin / attributs d'offre).
+ * Budget and quantity are **thresholds**, rendered as inputs, not chips.
+ * The other roles keep their own scoped filters.
+ */
+const ROLE_CONSTRAINTS: Record<Role, string[]> = {
+  buyer: [],
   seller: ['Ma compagnie', 'Vérifiée', 'À valider', 'Stock bas'],
   admin: ['Claims', 'Créations', 'À valider', 'Preuves prêtes'],
   operator: ['Tournée du jour', 'À visiter', 'Vérifiés'],
@@ -147,7 +156,19 @@ export function TrunkAppV13() {
   const [query, setQuery] = useState('');
   const [searchedTerm, setSearchedTerm] = useState('');
   const [constraintsOpen, setConstraintsOpen] = useState(false);
-  const [activeConstraints, setActiveConstraints] = useState<Set<string>>(new Set());
+  // D-CON-1/2 — switches + set thresholds, not a flat chip set.
+  const [searchConstraints, setSearchConstraints] = useState<SearchConstraints>(emptyConstraints);
+  const [budgetDraft, setBudgetDraft] = useState('');
+  const [quantityDraft, setQuantityDraft] = useState('');
+  // D-LOC-1 — currency comes from the user's localisation, never a constant.
+  // The market row (`public.markets`) is **absent from the canonical v2 branch**
+  // (measured 2026-09-26), so the locale is the only real signal available
+  // today; the pilot fallback still applies when it is unknown (D-LOC-5).
+  // When `markets` lands in v2, pass `{ market }` here — call sites unchanged.
+  const userCurrency = useMemo(
+    () => resolveUserCurrency({ locale: typeof navigator === 'undefined' ? null : navigator.language }),
+    [],
+  );
   const [results, setResults] = useState<PublicFacility[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
   // R-E (S-11): two levels of one index. 'offer' (default) or 'entity' (find an offerer by identity).
@@ -1244,24 +1265,49 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const handleSearchInput = (value: string) => {
     setQuery(value);
     setConstraintsOpen(value.trim().length > 0);
-    if (!value.trim()) setActiveConstraints(new Set());
+    if (!value.trim()) setSearchConstraints(emptyConstraints());
   };
 
   const toggleConstraint = useCallback((label: string) => {
     if (chipStatusFor(label) === 'soon') return;
-    setActiveConstraints((current) => {
-      const next = new Set(current);
+    setSearchConstraints((current) => {
+      const next = new Set(current.switches);
       if (next.has(label)) next.delete(label);
       else next.add(label);
-      return next;
+      return { ...current, switches: next };
     });
   }, []);
+
+  /** D-CON-1 — budget is a set threshold in the user's currency, not a frozen chip. */
+  const setBudgetThreshold = useCallback((raw: string) => {
+    const digits = raw.replace(/[^\d]/g, '');
+    setBudgetDraft(digits);
+    setSearchConstraints((current) => ({ ...current, budgetMaxMinor: digits === '' ? null : Number(digits) }));
+  }, []);
+
+  /** D-CON-2 — quantity threshold, default 1. */
+  const setQuantityThreshold = useCallback((raw: string) => {
+    const digits = raw.replace(/[^\d]/g, '');
+    setQuantityDraft(digits);
+    setSearchConstraints((current) => ({ ...current, quantiteMin: digits === '' ? null : Math.max(1, Number(digits)) }));
+  }, []);
+
+  /** Search options from the real constraint object — thresholds travel with their currency. */
+  const currentSearchOptions = useCallback(
+    () => chipsToSearchOptions(searchConstraints.switches, {
+      budgetMaxMinor: searchConstraints.budgetMaxMinor,
+      quantiteMin: searchConstraints.quantiteMin,
+      budgetCurrency: userCurrency.currency,
+      budgetRatePerUsdMinor: userCurrency.ratePerUsdMinor,
+    }),
+    [searchConstraints, userCurrency],
+  );
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
     // R-E (S-11): the level decides what is searched — an offerer's identity, or an offer.
     if (searchLevel === 'entity') { void runEntitySearch(query); return; }
-    void runSearch(query, chipsToSearchOptions(activeConstraints));
+    void runSearch(query, currentSearchOptions());
   };
 
   /** R-E (S-11) — level ENTITY: find an offerer by identity, then open its public page. */
@@ -1387,7 +1433,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           {role === 'buyer' && (
             <div className="chiprow" style={{ marginTop: 9 }}>
-              <span className={`chip${searchLevel === 'entity' ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => { setSearchLevel('entity'); setActiveConstraints(new Set()); }}><span className="dot" />Chercher une entité</span>
+              <span className={`chip${searchLevel === 'entity' ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => { setSearchLevel('entity'); setSearchConstraints(emptyConstraints()); }}><span className="dot" />Chercher une entité</span>
               <span className={`chip${searchLevel === 'offer' ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setSearchLevel('offer')}><span className="dot" />Chercher une offre</span>
             </div>
           )}
@@ -1395,8 +1441,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {role === 'buyer' && searchLevel === 'entity' && (
               <p className="tiny muted" style={{ marginBottom: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b> par son identité. Les contraintes d’offre ne s’appliquent qu’au niveau offre.</p>
             )}
-            {activeConstraints.size > 0 && (
-              <p className="tiny muted" role="status" style={{ marginBottom: 4 }}>{activeConstraints.size} contrainte{activeConstraints.size > 1 ? 's' : ''} active{activeConstraints.size > 1 ? 's' : ''}</p>
+            {activeConstraintCount(searchConstraints) > 0 && (
+              <p className="tiny muted" role="status" style={{ marginBottom: 4 }}>{activeConstraintCount(searchConstraints)} contrainte{activeConstraintCount(searchConstraints) > 1 ? 's' : ''} active{activeConstraintCount(searchConstraints) > 1 ? 's' : ''}</p>
             )}
             <div className={`fld${resultsLoading ? ' busy' : ''}`}>
               <svg width="16" height="16" aria-hidden="true"><use href="#iSearch" /></svg>
@@ -1405,27 +1451,76 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </div>
           {constraintsOpen && !(role === 'buyer' && searchLevel === 'entity') && (
             <div className="constraint-zone">
-              <div className="label">{role === 'buyer' ? 'Contraintes (requête, pas engagement vendeur)' : 'Filtres actifs'}</div>
-              <div className="chips">
-                {(SEARCH_CONSTRAINTS[role] ?? SEARCH_CONSTRAINTS.buyer).map((c: string) => {
-                  const soon = chipStatusFor(c) === 'soon';
-                  return (
-                    <span key={c} className={`chip${activeConstraints.has(c) ? ' active' : ''}${soon ? ' soon' : ''}`} onClick={() => { if (!soon) toggleConstraint(c); }} role="button" tabIndex={soon ? -1 : 0} aria-disabled={soon} title={soon ? (chipHintFor(c) ?? 'Bientôt') : undefined}><span className="dot" />{c}{soon ? <small style={{ marginLeft: 3 }}>bientôt</small> : null}</span>
-                  );
-                })}
-              </div>
-              {role === 'buyer' && (
+              {role === 'buyer' ? (
                 <>
+                  {/* D-CON-5 — three explicit families. A switch is checked; a threshold is set. */}
+                  {CONSTRAINT_GROUPS.map((group) => (
+                    <div key={group.id}>
+                      <div className="label">{group.label}</div>
+                      {group.id === 'besoin' ? (
+                        <div className="chips" style={{ alignItems: 'center' }}>
+                          <label className="chip" style={{ gap: 6, cursor: 'text' }}>
+                            <span className="dot" />
+                            Budget max
+                            <input
+                              value={budgetDraft}
+                              onChange={(event) => setBudgetThreshold(event.target.value)}
+                              inputMode="numeric"
+                              placeholder={String(BUDGET_DEFAULT_LOCAL_MINOR)}
+                              aria-label={`Budget maximum en ${userCurrency.symbol}`}
+                              style={{ width: 72, minHeight: 22, border: 0, background: 'transparent', font: 'inherit', textAlign: 'right' }}
+                            />
+                            <small>{userCurrency.symbol}</small>
+                          </label>
+                          <label className="chip" style={{ gap: 6, cursor: 'text' }}>
+                            <span className="dot" />
+                            Au moins
+                            <input
+                              value={quantityDraft}
+                              onChange={(event) => setQuantityThreshold(event.target.value)}
+                              inputMode="numeric"
+                              placeholder={String(QUANTITY_DEFAULT)}
+                              aria-label="Quantité minimale"
+                              style={{ width: 44, minHeight: 22, border: 0, background: 'transparent', font: 'inherit', textAlign: 'right' }}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="chips">
+                          {group.chips.map((chip) => {
+                            const soon = chip.status === 'soon';
+                            return (
+                              <span key={chip.label} className={`chip${searchConstraints.switches.has(chip.label) ? ' active' : ''}${soon ? ' soon' : ''}`} onClick={() => { if (!soon) toggleConstraint(chip.label); }} role="button" tabIndex={soon ? -1 : 0} aria-disabled={soon} title={soon ? (chip.hint ?? 'Bientôt') : undefined}><span className="dot" />{chip.label}{soon ? <small style={{ marginLeft: 3 }}>bientôt</small> : null}</span>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {group.hint && <p className="tiny muted" style={{ marginTop: 2 }}>{group.hint}</p>}
+                    </div>
+                  ))}
+                  {/* D-CON-4 — a single distance control: the scopes. No duplicate chip. */}
                   <div className="label">Portée de recherche</div>
                   <div className="chips">
                     {RAYON_SCOPE_LABELS.map((scope: string) => (
-                      <span key={scope} className={`chip${activeConstraints.has(scope) ? ' active' : ''}`} onClick={() => toggleConstraint(scope)} role="button" tabIndex={0}><span className="dot" />{scope}</span>
+                      <span key={scope} className={`chip${searchConstraints.switches.has(scope) ? ' active' : ''}`} onClick={() => toggleConstraint(scope)} role="button" tabIndex={0}><span className="dot" />{scope}</span>
                     ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="label">Filtres actifs</div>
+                  <div className="chips">
+                    {(ROLE_CONSTRAINTS[role] ?? []).map((c: string) => {
+                      const soon = chipStatusFor(c) === 'soon';
+                      return (
+                        <span key={c} className={`chip${searchConstraints.switches.has(c) ? ' active' : ''}${soon ? ' soon' : ''}`} onClick={() => { if (!soon) toggleConstraint(c); }} role="button" tabIndex={soon ? -1 : 0} aria-disabled={soon} title={soon ? (chipHintFor(c) ?? 'Bientôt') : undefined}><span className="dot" />{c}{soon ? <small style={{ marginLeft: 3 }}>bientôt</small> : null}</span>
+                      );
+                    })}
                   </div>
                 </>
               )}
               {(() => {
-                const applied = summarizeActiveChips(activeConstraints);
+                const applied = summarizeActiveChips(searchConstraints, (minor) => formatAmount(minor, userCurrency));
                 if (applied.length === 0) return null;
                 return <p className="tiny muted" role="status" style={{ marginTop: 4 }}>Appliqué: {applied.join(' · ')}</p>;
               })()}
@@ -1623,7 +1718,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
-                    {detail?.products?.length ? <span className="status ok">dès {Math.min(...detail.products.map((p) => p.prixReduit)) / 100} F</span> : <span className="status gray">Non transactable</span>}
+                    {detail?.products?.length ? <span className="status ok">dès {formatAmount(Math.min(...detail.products.map((p) => p.prixReduit)), userCurrency)}</span> : <span className="status gray">Non transactable</span>}
                   </div>
                   {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
                 </button>
@@ -1724,7 +1819,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
-                    <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
+                    <span className="pr">{formatAmount(product.prixReduit, userCurrency)}</span>
                   </div>
                 );
               })}
@@ -1781,7 +1876,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <span className="chk" aria-hidden="true" />
                 <span className="pthumb" />
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
-                <span className="pr">{(offer.prixReduit / 100).toFixed(2)} {offer.currency}</span>
+                <span className="pr">{formatAmount(offer.prixReduit, userCurrency)}</span>
               </div>
             );
           })}
@@ -1904,7 +1999,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <p className="tiny muted" style={{ marginTop: 8 }}>Vérification des invitations d’équipe…</p>
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? `${((wallet.balanceMinor ?? 0) / 100).toFixed(2)} ${wallet.currency ?? 'XOF'}` : '—'}</b></div>
+            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? `${formatAmount(wallet.balanceMinor ?? 0, { ...userCurrency, currency: wallet.currency ?? userCurrency.currency })}` : '—'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -2067,7 +2162,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
                     <span><b>Buyer Pro expiré</b></span>
-                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler ({localPlanPriceLabel('buyerPro')})</button>
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler ({localPlanPriceLabel('buyerPro', userCurrency)})</button>
                   </div>
                 )}
                 {!buyerProStatus || buyerProStatus.plan === 'free' ? (
@@ -2077,7 +2172,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   </div>
                 ) : null}
                 {buyerProStatus?.renewalOptIn && buyerProStatus.plan !== 'free' && !buyerProStatus.sufficientFunds && (
-                  <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto ({localPlanPriceLabel('buyerPro')}).</p>
+                  <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le renouvellement auto ({localPlanPriceLabel('buyerPro', userCurrency)}).</p>
                 )}
               </div>
               <div className="cardbox">
@@ -2133,7 +2228,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>Buyer Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
-                  <span className="status ink">{planPriceLabel('buyerPro')}</span>
+                  <span className="status ink">{planPriceLabel('buyerPro', userCurrency)}</span>
                 </div>
                 {buyerProState === 'loading' && <p className="sub" role="status" style={{ marginTop: 8 }}>Vérification de votre plan…</p>}
                 {buyerProState === 'error' && <p className="sub" role="alert" style={{ marginTop: 8 }}>{buyerProError}</p>}
@@ -2145,18 +2240,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       <button type="button" className={`btn ${buyerProStatus.renewalOptIn ? 'ok' : 'ghost'} sm`} style={{ width: 'auto', minHeight: 26 }} onClick={() => void toggleBuyerProRenewal()}>{buyerProStatus.renewalOptIn ? 'Activé' : 'Désactivé'}</button>
                     </div>
                     {buyerProStatus.renewalOptIn && !buyerProStatus.sufficientFunds && (
-                      <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le prochain renouvellement ({localPlanPriceLabel('buyerPro')}).</p>
+                      <p className="sub" role="alert" style={{ color: 'var(--warn)', marginTop: 6 }}>Solde insuffisant pour le prochain renouvellement ({localPlanPriceLabel('buyerPro', userCurrency)}).</p>
                     )}
                   </div>
                 )}
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
                     <p className="sub">Pro expiré.{buyerProStatus.renewalOptIn && buyerProStatus.sufficientFunds ? ' Renouvellement disponible.' : ''}</p>
-                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro ({localPlanPriceLabel('buyerPro')})</button>
+                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro ({localPlanPriceLabel('buyerPro', userCurrency)})</button>
                   </div>
                 )}
                 {(buyerProStatus?.plan === 'free' || !buyerProStatus) && (
-                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : `Passer à Buyer Pro (${planPriceLabel('buyerPro')})`}</button>
+                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : `Passer à Buyer Pro (${planPriceLabel('buyerPro', userCurrency)})`}</button>
                 )}
                 {buyerProError && <p className="sub" role="alert" style={{ marginTop: 6 }}>{buyerProError}</p>}
               </div>
@@ -2172,7 +2267,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
                   <div><b>Pro</b><br /><span className="tiny muted">Stock Omni + dispo auto</span></div>
-                  <span className="status ink">{planPriceLabel('sellerPro')}</span>
+                  <span className="status ink">{planPriceLabel('sellerPro', userCurrency)}</span>
                 </div>
                 <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => void openWallet()}>Passer au niveau supérieur</button>
               </div>

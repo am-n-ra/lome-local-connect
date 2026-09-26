@@ -1829,6 +1829,8 @@ function createTrunkRepository(sql = database()) {
         const queryText = query?.trim() ?? "";
         const categoryText = category?.trim() ?? "";
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
+        const budgetCurrency = (constraints?.budgetCurrency?.trim() || "XOF").toUpperCase();
+        const budgetRatePerUsdMinor = constraints?.budgetRatePerUsdMinor ?? 500;
         const quantiteMin = constraints?.quantiteMin ?? null;
         const rayonKm = constraints?.rayonKm ?? null;
         const operationalState = constraints?.operationalState ?? null;
@@ -1888,7 +1890,15 @@ function createTrunkRepository(sql = database()) {
               select 1 from v2_products bpp
               where bpp.facility_id = f.id
                 and bpp.publication_state = 'published'
-                and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor}
+                and (
+                  -- same currency: direct comparison
+                  (upper(coalesce(bpp.currency, 'XOF')) = ${budgetCurrency}
+                    and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor})
+                  -- USD-priced offer against a local budget: convert through the USD base.
+                  -- A currency we cannot convert is EXCLUDED, never silently compared.
+                  or (upper(coalesce(bpp.currency, 'XOF')) = 'USD' and ${budgetCurrency} = 'XOF'
+                    and round((bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) * ${budgetRatePerUsdMinor}) <= ${budgetMaxMinor})
+                )
             )`}
             ${centerLng === null || centerLat === null || rayonKm === null ? sql`` : sql`and (
               6371 * acos(
@@ -6851,8 +6861,12 @@ async function handleApi(req, res, pathname, url) {
       const hasRayon = url.searchParams.has("rayon_km");
       const hasOperational = url.searchParams.has("operational_state");
       const operationalState = hasOperational && url.searchParams.get("operational_state") === "ouvert" ? "ouvert" : void 0;
+      const budgetCurrency = url.searchParams.get("budget_currency")?.trim().toUpperCase() || void 0;
+      const hasRate = url.searchParams.has("budget_rate_per_usd_minor");
       const constraints = {
         budgetMaxMinor: hasBudget ? numberParam(url, "budget_max", 0) : void 0,
+        budgetCurrency,
+        budgetRatePerUsdMinor: hasRate ? numberParam(url, "budget_rate_per_usd_minor", 500) : void 0,
         quantiteMin: hasQuantity ? numberParam(url, "quantite_min", 0) : void 0,
         rayonKm: hasRayon ? numberParam(url, "rayon_km", 0) : void 0,
         operationalState

@@ -1943,12 +1943,18 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       `);
       return { active: Number((rows as Record<string, unknown>[])[0]?.active ?? 0) };
     },
-    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null; operationalState?: 'ouvert' | null }): Promise<PublicFacility[]> {
+    async listPublicFacilities(bounds?: [number, number, number, number], query?: string, category?: string, constraints?: { budgetMaxMinor?: number | null; budgetCurrency?: string | null; budgetRatePerUsdMinor?: number | null; quantiteMin?: number | null; rayonKm?: number | null; operationalState?: 'ouvert' | null }): Promise<PublicFacility[]> {
       return retryDatabase(async () => {
         const [west, south, east, north] = bounds ?? [-180, -90, 180, 90];
         const queryText = query?.trim() ?? '';
         const categoryText = category?.trim() ?? '';
         const budgetMaxMinor = constraints?.budgetMaxMinor ?? null;
+        // D-LOC-3 — the budget is expressed in the user's currency. Never compare
+        // two price_minor of different currencies: the offer price is normalised
+        // into the budget currency first, and an unknown conversion yields null
+        // (the offer is excluded) rather than a silent wrong answer.
+        const budgetCurrency = (constraints?.budgetCurrency?.trim() || 'XOF').toUpperCase();
+        const budgetRatePerUsdMinor = constraints?.budgetRatePerUsdMinor ?? 500;
         const quantiteMin = constraints?.quantiteMin ?? null;
         const rayonKm = constraints?.rayonKm ?? null;
         const operationalState = constraints?.operationalState ?? null;
@@ -2008,7 +2014,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               select 1 from v2_products bpp
               where bpp.facility_id = f.id
                 and bpp.publication_state = 'published'
-                and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor}
+                and (
+                  -- same currency: direct comparison
+                  (upper(coalesce(bpp.currency, 'XOF')) = ${budgetCurrency}
+                    and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor})
+                  -- USD-priced offer against a local budget: convert through the USD base.
+                  -- A currency we cannot convert is EXCLUDED, never silently compared.
+                  or (upper(coalesce(bpp.currency, 'XOF')) = 'USD' and ${budgetCurrency} = 'XOF'
+                    and round((bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) * ${budgetRatePerUsdMinor}) <= ${budgetMaxMinor})
+                )
             )`}
             ${centerLng === null || centerLat === null || rayonKm === null ? sql`` : sql`and (
               6371 * acos(

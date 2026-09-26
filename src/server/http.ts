@@ -1056,8 +1056,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const hasRayon = url.searchParams.has('rayon_km');
       const hasOperational = url.searchParams.has('operational_state');
       const operationalState = hasOperational && url.searchParams.get('operational_state') === 'ouvert' ? 'ouvert' as const : undefined;
+      // D-LOC-3 — the budget travels with the currency it is expressed in, plus
+      // the rate needed to normalise a USD-priced offer. Defaults keep the Lomé
+      // pilot behaviour when the client omits them.
+      const budgetCurrency = url.searchParams.get('budget_currency')?.trim().toUpperCase() || undefined;
+      const hasRate = url.searchParams.has('budget_rate_per_usd_minor');
       const constraints = {
         budgetMaxMinor: hasBudget ? numberParam(url, 'budget_max', 0) : undefined,
+        budgetCurrency,
+        budgetRatePerUsdMinor: hasRate ? numberParam(url, 'budget_rate_per_usd_minor', 500) : undefined,
         quantiteMin: hasQuantity ? numberParam(url, 'quantite_min', 0) : undefined,
         rayonKm: hasRayon ? numberParam(url, 'rayon_km', 0) : undefined,
         operationalState,
