@@ -79,3 +79,14 @@ Ce ne sont **pas** des capacités utiles qu'on aurait perdues : ce sont les trac
 - Le test `map-menu.unit.test.ts` supprimé couvrait `map-context`/`omni-menu`/`search-dock-contract` — **tous morts et v1**. Si leurs concepts reviennent (dock contextuel, contrat de recherche), ils reviendront **écrits au gate**, pas ressuscités.
 - **Push bloqué** : jeton GitHub **401** (expiré en session). RH-02 est poussé ; ce commit attend un jeton valide.
 - **`D-V9-1/2/3`** : les trois décisions ont été **exécutées** sur ordre fondateur « go ». La **décision de fond** (faut-il jeter v1 ?) était déjà **oui**.
+
+## 8. Prod — et un piège que je me suis infligé
+
+**Prod déployée** (commit `fed06b0`, Vercel auto-deploy) : `index-mza3pQm7.js` + `index-DJ7oR68a.css` — **exactement** les fichiers locaux stabilisés.
+
+**⚠️ Piège attrapé sur moi-même :** lors du premier contrôle prod, le CSS servu différait de 96 octets du CSS local, **pour le même commit**. Ce n'était **pas** un écart de déploiement : mon premier `npm run build` avait produit un CSS **transitoire** (`index-D4hBE0k9.css`, `dc16a39e…`) ; Tailwind a stabilisé au run suivant, et les **3 builds suivants** produisent tous `index-DJ7oR68a.css` (`a201d7d7…`) — **byte-identique à la prod**. La règle que j'avais écrite (« comparer le **contenu**, pas le nom ») **s'appliquait à mon propre contrôle** : j'avais conclu d'un nom de fichier, pas d'un sha.
+
+**JS : byte-identique à la prod** (`e4231c7e…`) avant **et** après le nettoyage — le produit n'a pas bougé, y compris déployé.
+
+**Smoke prod :** page **HTTP 200**, refus serveur `401 AUTH_REQUIRED` (la gate RH-02 tient en prod).
+
