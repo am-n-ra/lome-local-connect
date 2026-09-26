@@ -73,6 +73,16 @@ const forbidden = [
   ['docs/founder-hq/founder-hq-board.md', 'Gates 1-6 `closed`', 'must be marked SUPERSEDED, not asserted'],
 ];
 
+// A recommendation must not present a DELIVERED slice as still-to-do. This is the staleness
+// that bit twice on 2026-09-26: the reconciliation recommended "R-B first" at 01:10 while R-B's
+// code had landed at 00:05 the same day. An inventory can be an hour stale. The guard is narrow
+// on purpose — it checks one named slice against one named commit, so it cannot false-positive
+// on prose that merely mentions R-B historically.
+const deliveredSlices = [
+  ['docs/founder-hq/founder-hq-board.md', 'ordre recommandé : **`R-B` d\'abord**', 'must not recommend R-B "first" — its code shipped 2026-09-26 00:05 (bfc3b7c)'],
+  ['docs/founder-hq/hq-reconciliation-2026-09-26.md', 'finir `R-B` en premier** — c\'est la tranche', 'must not recommend finishing R-B — see §5 bis'],
+];
+
 let failed = 0;
 const check = (file, needle, label) => {
   let text;
@@ -114,6 +124,7 @@ for (const [f, n] of mustPointToV2) check(f, n, 'points to Intent Brief V2');
 for (const [f, n, l] of forbidden) check(f, n, l);
 for (const [f, n, l] of incident) check(f, n, l);
 for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
+for (const [f, n, l] of deliveredSlices) forbid(f, n, l);
 
 if (failed > 0) {
   console.error(`\nSTATE DIVERGENCE: ${failed} problem(s). Reconcile before claiming a gate.\n`);

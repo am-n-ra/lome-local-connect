@@ -95,9 +95,37 @@ L'inventaire des finitions (`omni-root-finishing-inventory-2026-09-25.md`) donne
 | 4 | **`R-C` / `SP-V2-01` — offres sans entité** | Décision fondateur (retirer ou rattacher). Petit, mais bloque la vérité de l'index. |
 | 5 | **`R-E` — découverte 2 niveaux** (S-11) | **Test de non-régression obligatoire** du Seed : entité **et** offre. |
 
-**Ma recommandation, en une ligne** : **finir `R-B` en premier** — c'est la tranche qui transforme « une carte avec des produits » en « un index d'offres décrites ». Puis l'alignement, qui est ce que vous voyez.
+**Ma recommandation, en une ligne** : ~~**finir `R-B` en premier**~~ — **⚠️ PÉRIMÉE, voir §5 bis : le code de `R-B` était déjà livré (`bfc3b7c`, 00:05) quand cette ligne a été écrite (01:10).** Le raisonnement restait juste sur le principe (transformer « une carte avec des produits » en « un index d'offres décrites »), mais la tranche qu'il désignait était **déjà faite** ; ce qui manquait réellement était l'`R-E` (S-11), livré depuis. Puis l'alignement, qui est ce que vous voyez.
 
 **Ce que je ne recommande pas** : élargir (nouveaux acteurs, nouvelles tranches) ou rouvrir Seed/Species. Le Seed est cohérent ; le problème est l'**exécution du socle**, pas la direction.
+
+---
+
+## 5 bis. CORRECTION MESURÉE (2026-09-26, plus tard) — cette recommandation était **périmée en une heure**
+
+En vérifiant la recommandation ci-dessus avant de l'exécuter, la mesure l'a contredite. C'est **le défaut nommé au §4, reproduit en miniature dans ce document même** — et c'est la raison pour laquelle je le consigne au lieu de le corriger en silence.
+
+| Fait mesuré | Valeur |
+|---|---|
+| Commit `bfc3b7c` « R-B (S-01) : écrire les caractéristiques de l'offre » | **2026-09-26 00:05:09Z** |
+| Ce document de réconciliation | **2026-09-26 01:10:41Z** |
+| `git merge-base --is-ancestor bfc3b7c b6643e2` | **YES** — le code de `R-B` **précède** la recommandation d'une heure |
+
+**Donc `R-B` était déjà livré quand ce document a recommandé de le « finir en premier ».** La ligne « `R-B` — caractéristiques d'offre (écriture + lecture + recherche) » du §5 listait comme *à faire* une tranche dont le **code** existait déjà.
+
+**Ce qui reste vrai, et c'est important — il faut séparer trois choses que « `R-B` » confondait :**
+
+| Couche | État mesuré | Où |
+|---|---|---|
+| **Code** — écrire, relire, formulaire vendeur | **LIVRÉ** | `createSellerProductDraft` reçoit les 5 caractéristiques (`SellerV13.tsx:173`) ; `toProduct` les relit (`trunk-repository.ts:505-508`) ; le catalogue vendeur aussi (`:2337-2340`) |
+| **Données** — des offres réellement décrites | **0/16** pour `condition_kind`, `handover_kind`, `price_kind`, `uniqueness_kind` (13/16 ont `position_kind`) | mesuré sur la branche canonique `br-dawn-hill-am5amy22` |
+| **Recherche** — filtrer sur ces caractéristiques | **NON implémenté**, et **endetté par conception** : la maquette acceptée marque les chips `'État / condition'` et `'Créneau'` **désactivés** (`chip('État / condition', false, true)`) | `listPublicFacilities` ne référence aucune des 5 colonnes |
+
+**La formulation honnête est donc** : le **mécanisme** de `R-B` est complet ; son **usage** est vide (**le formulaire n'a jamais servi**) ; son **filtrage** est explicitement différé par la maquette que le fondateur a acceptée. Dire « `R-B` est fait » ou « `R-B` reste à faire » sont **tous deux faux** — d'où la séparation ci-dessus.
+
+**Et l'`R-E` (S-11, découverte à deux niveaux) a été livré à la place** (`27a1661`) : c'est la tranche que le Seed désigne comme **« test de non-régression obligatoire au Root »**, et elle était **totalement absente** (0 occurrence de `searchLevel` dans `src/`). Registre : `omni-root-v2-two-level-search-evidence-2026-09-26.md`.
+
+**Leçon de méthode, à garder** : un inventaire daté **d'une heure** peut déjà être faux. La règle « la mesure prévaut sur la mémoire » doit s'appliquer **au document lui-même**, pas seulement au code qu'il décrit. Avant d'exécuter une recommandation, **la re-mesurer** — coût : quelques minutes ; économie : une tranche entière refaite.
 
 ---
 

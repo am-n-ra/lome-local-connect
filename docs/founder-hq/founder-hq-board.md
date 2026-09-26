@@ -29,14 +29,26 @@
 > (la file vendeur joint `f.account_id`) → **expire en 15 min, 0 crédit payé**. Cause = **dette de
 > données** (fixtures `public_import` du 2026-08-22). **Décision fondateur : retirer ou rattacher.**
 >
-> **Le « fond qui manque » est chiffré :** les **caractéristiques d'offre** (cœur S-01/S-02 — « tout est
-> offre, le type est une caractéristique ») sont **déclarées en schéma, jamais écrites** :
-> `uniqueness_kind`/`handover_kind`/`price_kind`/`condition_kind` = **0/16**. La maquette le montre,
-> l'app ne le peut pas.
+> **Le « fond qui manque » est chiffré — en le séparant correctement.** Les **caractéristiques d'offre**
+> (cœur S-01/S-02 — « tout est offre, le type est une caractéristique ») se lisent sur **trois couches**,
+> qu'un « `R-B` » global confondait :
 >
-> **Prochaine porte (Root)** — ordre recommandé : **`R-B` d'abord** (caractéristiques d'offre : écriture →
-> lecture → recherche), puis **alignement app ↔ maquette** (seuils `seuil` éditable + devise `D-LOC`),
-> `R-D` (chemin `individu`), `R-C`/`SP-V2-01`, `R-E` (S-11). **Ne pas rouvrir Seed/Species ni élargir.**
+> | Couche | État mesuré | Preuve |
+> |---|---|---|
+> | **Code** (écrire / relire / formulaire vendeur) | **LIVRÉ** | `SellerV13.tsx:173`, `trunk-repository.ts:505-508`, `:2337-2340` |
+> | **Données** (offres réellement décrites) | **0/16** (`condition_kind`, `handover_kind`, `price_kind`, `uniqueness_kind`) ; **13/16** `position_kind` | canonique `br-dawn-hill-am5amy22`, 2026-09-26 |
+> | **Recherche** (filtrer dessus) | **NON implémenté, et endetté par conception** — la maquette acceptée désactive `chip('État / condition', false, true)` | `listPublicFacilities` ne référence aucune des 5 colonnes |
+>
+> **Prochaine porte (Root)** — ordre **re-mesuré** : **`R-E` (S-11) est LIVRÉ** (`27a1661` — test de
+> non-régression obligatoire du Seed, totalement absent avant). Restent : **alignement app ↔ maquette**
+> (seuils `seuil` éditable + devise `D-LOC`) — **le plus visible, ce que le fondateur voit** ; **`R-D`**
+> (chemin `individu`, 0 entité de ce type) ; **`R-C`/`SP-V2-01`** (décision fondateur). Les
+> caractéristiques `R-B` sont **écrites mais jamais utilisées** — les remplir est un acte **vendeur réel**,
+> pas une tranche de code. **Ne pas rouvrir Seed/Species ni élargir.**
+>
+> ⚠️ **Cette recommandation a été corrigée une fois déjà** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
+> d'abord », alors que son code était livré depuis 00:05 le même jour. **Un inventaire d'une heure peut
+> être faux** — re-mesurer avant d'exécuter (`hq-reconciliation-2026-09-26.md` §5 bis).
 
 ---
 

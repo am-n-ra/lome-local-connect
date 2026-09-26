@@ -54,7 +54,7 @@ plus la priorité ; `R-E` l'est.**
 | `E-1` | **Deux niveaux, un corpus.** Entité et offre sont **deux objets reliés** d'un seul index — pas deux systèmes, pas deux tables de recherche. | S-11 explicite |
 | `E-2` | **Aucun contact avant intention.** La page publique d'entité ne porte **jamais** `contact_phone`/`contact_whatsapp`. | Seed : « Exposer le contact d'un vendeur avant une intention réelle » = **harm to avoid** |
 | `E-3` | **Aucune promesse de stock.** Le compteur d'offres publiées est un **fait**, pas une disponibilité. La disponibilité reste un acte séparé. | S-05 + « ne jamais mentir sur la disponibilité » |
-| `E-4` | **La confiance publique se lit entité d'abord**, repli lieu. Les états internes ne sont jamais exposés. | R-3a, `PUBLIC_TRUST_STATES` |
+| `E-4` | **La confiance publique se lit entité d'abord**, repli lieu. Les états internes ne sont jamais exposés — `certified` (D-01) se publie comme `unconfirmed`. | R-3a, `PUBLIC_TRUST_STATES` |
 | `E-5` | **Le niveau entité ne filtre pas** par distance/budget/quantité. | maquette + S-11 |
 | `E-6` | **Un lieu `unclaimed` sans entité n'est pas une entité** : il reste un lieu de carte (S-05), cherchable au niveau **offre** seulement. | S-05 |
 
@@ -71,7 +71,7 @@ Public (aucune authentification — consulter sans compte est autorisé, D-05).
 | `id` | uuid | identité de l'entité |
 | `name` | string | `display_name` |
 | `kind` | `individu` \| `organisation` | « même objet » (S-13) |
-| `trust` | `unclaimed` \| `unconfirmed` \| `confirmed` \| `certified` | public uniquement |
+| `trust` | `unclaimed` \| `unconfirmed` \| `confirmed` | **public uniquement.** `certified` est un jalon **interne** (D-01) : il est ramené à `unconfirmed` avant publication, exactement comme `toFacility` le fait déjà. |
 | `category` | string \| null | catégorie du lieu principal |
 | `address` | string \| null | |
 | `latitude` / `longitude` | number \| null | `null` = entité sans lieu (digital) |
