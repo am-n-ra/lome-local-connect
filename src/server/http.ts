@@ -1027,6 +1027,24 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/public/entities') {
+      // R-E (S-11) — level ENTITY: find an offerer by its identity. Public (D-05).
+      const entities = await repository.searchPublicEntities(url.searchParams.get('q') ?? undefined);
+      json(res, 200, { ok: true, correlationId, data: entities });
+      return true;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/public/entities/')) {
+      const id = pathname.slice('/api/v2/public/entities/'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(id)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid entity.'));
+        return true;
+      }
+      const entity = await repository.getPublicEntity(id);
+      if (!entity) json(res, 404, errorBody(correlationId, 'NOT_FOUND', 'Entity was not found.'));
+      else json(res, 200, { ok: true, correlationId, data: entity });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities') {
       const hasBounds = ['west', 'south', 'east', 'north'].every((key) => url.searchParams.has(key));
       const bounds = hasBounds

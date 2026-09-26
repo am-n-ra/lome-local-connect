@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -204,6 +204,20 @@ export async function correctFacilitySalesCounter(input: { token: string; facili
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
     body: JSON.stringify({ qualifyingSales: input.qualifyingSales, reason: input.reason }),
   });
+  return parse(response);
+}
+
+/** R-E (S-11) — level ENTITY: find an offerer by its identity. Public, no account needed. */
+export async function searchPublicEntities(query?: string): Promise<ApiResult<PublicEntity[]>> {
+  const params = new URLSearchParams();
+  if (query?.trim()) params.set('q', query.trim());
+  const response = await fetchWithRecovery(`/api/v2/public/entities?${params.toString()}`, { headers: { Accept: 'application/json' } });
+  return parse(response);
+}
+
+/** R-E (S-11) — the entity's public page (identity + its published offers). Never carries contact. */
+export async function getPublicEntity(id: string): Promise<ApiResult<PublicEntityDetail>> {
+  const response = await fetchWithRecovery(`/api/v2/public/entities/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
   return parse(response);
 }
 

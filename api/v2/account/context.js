@@ -330,6 +330,22 @@ function database() {
   return neon2(url);
 }
 var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
+var toEntity = (row) => ({
+  id: String(row.id),
+  name: String(row.name),
+  kind: String(row.kind) === "individu" ? "individu" : "organisation",
+  // D-01: `certified` is an INTERNAL milestone and must never be a public claim — the
+  // same convention `toFacility` already applies. Anything not publicly claimable reads
+  // as `unconfirmed` (an entity was created by someone, unlike a cold-start place).
+  trust: PUBLIC_TRUST_STATES.has(String(row.trust_state)) ? String(row.trust_state) : "unconfirmed",
+  category: row.category === null || row.category === void 0 ? null : String(row.category),
+  address: row.address === null || row.address === void 0 ? null : String(row.address),
+  latitude: row.latitude === null || row.latitude === void 0 ? null : Number(row.latitude),
+  longitude: row.longitude === null || row.longitude === void 0 ? null : Number(row.longitude),
+  offerCount: Number(row.offer_count ?? 0),
+  minPriceMinor: row.min_price_minor === null || row.min_price_minor === void 0 ? null : Number(row.min_price_minor),
+  currency: row.currency === null || row.currency === void 0 ? null : String(row.currency)
+});
 var toFacility = (row) => ({
   id: String(row.id),
   name: String(row.name),
@@ -341,6 +357,10 @@ var toFacility = (row) => ({
   trust: PUBLIC_TRUST_STATES.has(String(row.trust_state)) ? String(row.trust_state) : "unclaimed",
   plan: String(row.commercial_plan),
   productCount: Number(row.product_count ?? 0),
+  // R-E (S-11): the entity behind the place. A place may exist without one (cold-start, S-05).
+  entityId: row.entity_id === null || row.entity_id === void 0 ? null : String(row.entity_id),
+  entityName: row.entity_name === null || row.entity_name === void 0 ? null : String(row.entity_name),
+  entityKind: row.entity_kind === null || row.entity_kind === void 0 ? null : String(row.entity_kind),
   // NW-13j: an active sponsored campaign exists when the aggregate row says so.
   sponsored: row.sponsored !== void 0 ? Boolean(row.sponsored) : row.sponsored_campaign_id !== void 0 && row.sponsored_campaign_id !== null
 });
@@ -1818,6 +1838,10 @@ function createTrunkRepository(sql = database()) {
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
             coalesce(e.trust_state, f.trust_state) as trust_state,
+            -- R-E (S-11) : l'entite derriere le lieu, pour que l'offre mene a son offreur.
+            f.entity_id,
+            coalesce(e.display_name, f.name) as entity_name,
+            coalesce(e.kind, 'organisation') as entity_kind,
             -- R-4b : Pro vit sur l'ENTITE. La colonne commercial_plan n'est jamais remise a 'free'
             -- (aucun balayage d'expiration) : elle ne sert donc que d'indice. On affiche Pro seulement
             -- si la colonne le dit ET qu'un entitlement vivant le confirme — sinon un Pro echou
@@ -1884,13 +1908,16 @@ function createTrunkRepository(sql = database()) {
         select
           f.id, f.name, f.category, f.address, f.latitude, f.longitude,
           coalesce(e.trust_state, f.trust_state) as trust_state, f.commercial_plan,
+          f.entity_id,
+          coalesce(e.display_name, f.name) as entity_name,
+          coalesce(e.kind, 'organisation') as entity_kind,
           count(p.id)::int as product_count
         from v2_facilities f
         left join v2_entities e on e.id = f.entity_id
         left join v2_products p
           on p.facility_id = f.id and p.publication_state = 'published'
         where f.id = ${id}::uuid
-        group by f.id, e.trust_state
+        group by f.id, e.id, e.trust_state
         limit 1
       `);
       const row = facilities[0];
@@ -1910,6 +1937,92 @@ function createTrunkRepository(sql = database()) {
         order by p.name
       `);
       return { ...toFacility(row), products: products.map(toProduct) };
+    },
+    /**
+     * R-E (S-11) — level ENTITY: find an OFFERER by its identity.
+     * Public read (D-05: browsing needs no account). Never returns contact (E-2),
+     * and never filters on offer constraints (E-5) — those belong to the offer level.
+     */
+    async searchPublicEntities(query) {
+      const queryText = query?.trim() ?? "";
+      const rows = await retryDatabase(() => sql`
+        select
+          e.id,
+          e.display_name as name,
+          e.kind,
+          e.trust_state as trust_state,
+          f.category,
+          f.address,
+          f.latitude,
+          f.longitude,
+          count(p.id)::int as offer_count,
+          min(p.price_minor)::int as min_price_minor,
+          min(p.currency) as currency
+        from v2_entities e
+        -- The entity's principal place is only "where"; a digital entity has none.
+        left join lateral (
+          select pf.id, pf.category, pf.address, pf.latitude, pf.longitude
+          from v2_facilities pf
+          where pf.entity_id = e.id
+          order by pf.created_at asc
+          limit 1
+        ) f on true
+        left join v2_products p
+          on p.entity_id = e.id and p.publication_state = 'published'
+        where e.trust_state in ('unconfirmed', 'confirmed', 'certified')
+          and (${queryText} = '' or e.display_name ilike '%' || ${queryText} || '%')
+        group by e.id, e.display_name, e.kind, e.trust_state, f.category, f.address, f.latitude, f.longitude
+        order by e.trust_state = 'certified' desc, count(p.id) desc, e.display_name
+        limit 100
+      `);
+      return rows.map(toEntity);
+    },
+    /** R-E (S-11) — the entity's public page: identity + its published offers. No contact. */
+    async getPublicEntity(id) {
+      const rows = await retryDatabase(() => sql`
+        select
+          e.id,
+          e.display_name as name,
+          e.kind,
+          e.trust_state as trust_state,
+          f.category,
+          f.address,
+          f.latitude,
+          f.longitude,
+          count(p.id)::int as offer_count,
+          min(p.price_minor)::int as min_price_minor,
+          min(p.currency) as currency
+        from v2_entities e
+        left join lateral (
+          select pf.id, pf.category, pf.address, pf.latitude, pf.longitude
+          from v2_facilities pf
+          where pf.entity_id = e.id
+          order by pf.created_at asc
+          limit 1
+        ) f on true
+        left join v2_products p
+          on p.entity_id = e.id and p.publication_state = 'published'
+        where e.id = ${id}::uuid
+          and e.trust_state in ('unconfirmed', 'confirmed', 'certified')
+        group by e.id, e.display_name, e.kind, e.trust_state, f.category, f.address, f.latitude, f.longitude
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) return null;
+      const offers = await retryDatabase(() => sql`
+        select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
+               p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
+               p.quantity_allocated_omni, p.quantity_reserved_omni,
+               p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+               null::text as coupon_label
+        from v2_products p
+        join v2_entities e on e.id = p.entity_id
+        where p.entity_id = ${id}::uuid
+          and p.publication_state = 'published'
+          and e.trust_state in ('unconfirmed', 'confirmed', 'certified')
+        order by p.name
+      `);
+      return { ...toEntity(row), offers: offers.map(toProduct) };
     },
     async rebindDemoSeller(input) {
       const rows = await retryDatabase(() => sql`
@@ -6710,6 +6823,23 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.markNotificationSeen({ authUserId, notificationId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/public/entities") {
+      const entities = await repository.searchPublicEntities(url.searchParams.get("q") ?? void 0);
+      json(res, 200, { ok: true, correlationId, data: entities });
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/public/entities/")) {
+      const id = pathname.slice("/api/v2/public/entities/".length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(id)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid entity."));
+        return true;
+      }
+      const entity = await repository.getPublicEntity(id);
+      if (!entity) json(res, 404, errorBody(correlationId, "NOT_FOUND", "Entity was not found."));
+      else json(res, 200, { ok: true, correlationId, data: entity });
       return true;
     }
     if (req.method === "GET" && pathname === "/api/v2/public/facilities") {

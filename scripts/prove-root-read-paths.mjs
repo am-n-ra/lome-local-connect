@@ -79,6 +79,16 @@ if (anyFacilityId) {
   await check('getFacilityDetail', () => repository.getFacilityDetail(anyFacilityId));
 }
 
+// R-E (S-11): the two-level search. The entity level must answer on real SQL too.
+await check('searchPublicEntities (discovery)', () => repository.searchPublicEntities());
+await check('searchPublicEntities + query', () => repository.searchPublicEntities('boulangerie'));
+
+const anyEntityId = await sql`select id from v2_entities limit 1`;
+const entityId = anyEntityId[0]?.id ? String(anyEntityId[0].id) : null;
+if (entityId) {
+  await check('getPublicEntity', () => repository.getPublicEntity(entityId));
+}
+
 // Owner-scoped paths must be driven with a facility the identity ACTUALLY owns,
 // otherwise a policy rejection ("not owned") is indistinguishable from a SQL error.
 const owned = await sql`

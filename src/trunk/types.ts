@@ -25,6 +25,31 @@ export interface PublicFacility {
   source?: 'database' | 'osm';
   /** NW-13j: true when the facility has an active sponsored ad campaign (boost in buyer search). */
   sponsored?: boolean;
+  /** R-E (S-11): the entity behind the place — the offer leads to its offerer. Null on cold-start places (S-05). */
+  entityId?: string | null;
+  entityName?: string | null;
+  entityKind?: 'individu' | 'organisation' | null;
+}
+
+/** R-E (S-11) — the OFFERER, as seen publicly. Never carries contact (E-2). */
+export interface PublicEntity {
+  id: string;
+  name: string;
+  kind: 'individu' | 'organisation';
+  trust: PublicTrust;
+  category: string | null;
+  address: string | null;
+  /** null when the entity has no place (digital). */
+  latitude: number | null;
+  longitude: number | null;
+  /** Published offers — a fact, never an availability promise (E-3). */
+  offerCount: number;
+  minPriceMinor: number | null;
+  currency: string | null;
+}
+
+export interface PublicEntityDetail extends PublicEntity {
+  offers: PublicProduct[];
 }
 
 export interface PublicProduct {

@@ -13,12 +13,13 @@ import {
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
   listOpenTransactions, getTransaction,
   listMyTeamInvites, acceptTeamInvite,
+  searchPublicEntities, getPublicEntity,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
-  FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
@@ -40,7 +41,7 @@ import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -119,6 +120,9 @@ const SEARCH_PLACEHOLDER: Record<Role, string> = {
   operator: 'Claim, création, facilité…',
 };
 
+/** R-E (S-11): the two levels of one index. Entity = find an offerer by identity. */
+const ENTITY_SEARCH_PLACEHOLDER = 'Nom d’un commerce, d’une organisation ou d’une personne…';
+
 function bulkKmBetween(a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }): number {
   const R = 6371;
   const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
@@ -146,6 +150,11 @@ export function TrunkAppV13() {
   const [activeConstraints, setActiveConstraints] = useState<Set<string>>(new Set());
   const [results, setResults] = useState<PublicFacility[]>([]);
   const [resultsLoading, setResultsLoading] = useState(false);
+  // R-E (S-11): two levels of one index. 'offer' (default) or 'entity' (find an offerer by identity).
+  const [searchLevel, setSearchLevel] = useState<'offer' | 'entity'>('offer');
+  const [entityResults, setEntityResults] = useState<PublicEntity[]>([]);
+  const [entityLoading, setEntityLoading] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<PublicEntityDetail | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedFacility, setSelectedFacility] = useState<FacilityDetail | null>(null);
   const [carts, setCarts] = useState<FacilityCarts>(() => {
@@ -264,7 +273,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1213,6 +1222,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const handleDock = useCallback((target: Sheet | 'back') => {
     if (target === 'back') {
       if (sheet === 'bulk' || sheet === 'compare') { setSheet('results'); return; }
+      if (sheet === 'entity') { setSheet('results'); return; }
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
@@ -1249,8 +1259,51 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   const handleSubmitSearch = (event: FormEvent) => {
     event.preventDefault();
+    // R-E (S-11): the level decides what is searched — an offerer's identity, or an offer.
+    if (searchLevel === 'entity') { void runEntitySearch(query); return; }
     void runSearch(query, chipsToSearchOptions(activeConstraints));
   };
+
+  /** R-E (S-11) — level ENTITY: find an offerer by identity, then open its public page. */
+  const runEntitySearch = useCallback(async (raw: string) => {
+    setEntityLoading(true);
+    setSheet('results');
+    try {
+      const result = await searchPublicEntities(raw);
+      if (result.ok) {
+        setEntityResults(result.data ?? []);
+        setError('');
+      } else {
+        setEntityResults([]);
+        setError(result.error?.message ?? 'La recherche d’entité a échoué.');
+      }
+    } catch {
+      setEntityResults([]);
+      setError('Réseau indisponible — réessayez.');
+    } finally {
+      setEntityLoading(false);
+    }
+  }, []);
+
+  /** R-E (S-11) — the entity's public page (identity + its published offers). No contact (E-2). */
+  const openEntity = useCallback(async (id: string) => {
+    setEntityLoading(true);
+    try {
+      const result = await getPublicEntity(id);
+      if (result.ok && result.data) { setSelectedEntity(result.data); setSheet('entity'); }
+      else setError(result.error?.message ?? 'La page de cette entité est indisponible.');
+    } catch {
+      setError('Réseau indisponible — réessayez.');
+    } finally {
+      setEntityLoading(false);
+    }
+  }, []);
+
+  /** R-E (S-11): from an offer's place, reach its offerer in one tap. */
+  const openEntityOfFacility = useCallback((facility: PublicFacility) => {
+    if (!facility.entityId) return;
+    void openEntity(facility.entityId);
+  }, [openEntity]);
 
   // Pins contextuels: les pins hors-contexte s'estompent quand un sheet
   // parcours (résultats, sélection, itinéraire) est ouvert — la maquette dim mode.
@@ -1332,16 +1385,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <div className="sheet-head">
             <div><div className="eyebrow">{SEARCH_LABEL[role][0]}</div><h1>{SEARCH_LABEL[role][1]}</h1></div>
           </div>
+          {role === 'buyer' && (
+            <div className="chiprow" style={{ marginTop: 9 }}>
+              <span className={`chip${searchLevel === 'entity' ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => { setSearchLevel('entity'); setActiveConstraints(new Set()); }}><span className="dot" />Chercher une entité</span>
+              <span className={`chip${searchLevel === 'offer' ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setSearchLevel('offer')}><span className="dot" />Chercher une offre</span>
+            </div>
+          )}
           <div className="searchdock">
+            {role === 'buyer' && searchLevel === 'entity' && (
+              <p className="tiny muted" style={{ marginBottom: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b> par son identité. Les contraintes d’offre ne s’appliquent qu’au niveau offre.</p>
+            )}
             {activeConstraints.size > 0 && (
               <p className="tiny muted" role="status" style={{ marginBottom: 4 }}>{activeConstraints.size} contrainte{activeConstraints.size > 1 ? 's' : ''} active{activeConstraints.size > 1 ? 's' : ''}</p>
             )}
             <div className={`fld${resultsLoading ? ' busy' : ''}`}>
               <svg width="16" height="16" aria-hidden="true"><use href="#iSearch" /></svg>
-              <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
+              <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={role === 'buyer' && searchLevel === 'entity' ? ENTITY_SEARCH_PLACEHOLDER : SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
               <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, padding: '0 10px' }} type="submit"><ArrowRight size={15} /></button>
             </div>
-          {constraintsOpen && (
+          {constraintsOpen && !(role === 'buyer' && searchLevel === 'entity') && (
             <div className="constraint-zone">
               <div className="label">{role === 'buyer' ? 'Contraintes (requête, pas engagement vendeur)' : 'Filtres actifs'}</div>
               <div className="chips">
@@ -1381,6 +1443,37 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {(sheet === 'results') && (
         <section className="sheet h-auto" data-sheet="results" role="region" aria-label="Résultats">
           <div className="handle" />
+          {searchLevel === 'entity' && (
+            <>
+              <div className="sheet-head">
+                <div><div className="eyebrow">Entités · offreurs par identité</div><h1>Entités trouvées</h1></div>
+                <span className="status gray">{entityResults.length}</span>
+              </div>
+              <p className="lead" style={{ marginTop: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b> — les contraintes d’offre (distance, budget, quantité) ne s’appliquent pas ici.</p>
+              {entityLoading && <p className="sub" role="status">Recherche d’entités…</p>}
+              {!entityLoading && entityResults.length === 0 && (
+                <div className="cardbox">
+                  <p className="sub">Aucune entité ne correspond à ce nom.</p>
+                  <button className="btn ghost sm" style={{ marginTop: 9 }} type="button" onClick={() => { setSearchLevel('offer'); setSheet('search'); }}>Chercher une offre</button>
+                </div>
+              )}
+              <div className="hgrid">
+                {entityResults.map((entity) => (
+                  <button key={entity.id} type="button" className="hcard" onClick={() => void openEntity(entity.id)}>
+                    <div className={`thumb${entity.trust === 'confirmed' ? '' : ' unclaimed'}`}>
+                      {entity.trust === 'confirmed' && <span className="vmark">✓</span>}
+                    </div>
+                    <div className="body">
+                      <b>{entity.name}</b>
+                      <small>{entity.kind === 'individu' ? 'Personne seule' : 'Commerce / organisation'} · {entity.offerCount} offre{entity.offerCount > 1 ? 's' : ''}</small>
+                      {entity.address && <small>{entity.address}</small>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {searchLevel !== 'entity' && (<>
           <div className="sheet-head">
             <div><div className="eyebrow">Résultats · correspondant à vos contraintes</div><h1>Facilités proches</h1></div>
             <span className="status gray">{results.length}</span>
@@ -1411,6 +1504,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <button className="btn ghost sm" type="button" disabled={results.length < 2} title={results.length < 2 ? 'Sélectionnez au moins 2 résultats' : undefined} onClick={() => void openCompare()}>Comparer</button>
             <button className="btn sm" type="button" disabled={results.length === 0} title={results.length === 0 ? 'Aucun résultat à comparer' : undefined} onClick={() => void openBulk()}>Dispo groupée</button>
           </div>
+          </>)}
         </section>
       )}
       {sheet === 'bulk' && (
@@ -1589,9 +1683,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
               )}
               {selectedFacility.trust !== 'unclaimed' && (
+                <>
+                  {selectedFacility.entityId && (
+                    <button className="btn ghost sm" type="button" style={{ marginTop: 6 }} onClick={() => openEntityOfFacility(selectedFacility)}>Voir la page de l’entité</button>
+                  )}
                 <div className="cardbox" style={{ marginTop: 8 }}>
                   <div className="kv"><span>Adresse</span><b>{selectedFacility.address ?? 'Non renseignée'}</b></div>
                 </div>
+                </>
               )}
               {selectedFacility.latitude != null && selectedFacility.longitude != null && (
                 <div className="cardbox" style={{ marginTop: 8 }}>
@@ -1656,6 +1755,36 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               )}
             </div>
           )}
+        </section>
+      )}
+      {sheet === 'entity' && selectedEntity && (
+        <section className="sheet h-full" data-sheet="entity" role="region" aria-label="Entité">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Entité · page publique</div><h1>{selectedEntity.name}</h1></div>
+            <span className="status gray">{selectedEntity.offerCount}</span>
+          </div>
+          <div className="cardbox">
+            <div className="kv"><span>Badge</span><b className={selectedEntity.trust === 'confirmed' ? 'status ok' : 'status gray'}>{selectedEntity.trust === 'confirmed' ? 'Confirmée' : selectedEntity.trust === 'unconfirmed' ? 'Non confirmée' : 'Non revendiquée'}</b></div>
+            <div className="kv"><span>Nature</span><b>{selectedEntity.kind === 'individu' ? 'Personne seule' : 'Commerce / organisation'} · même objet qu’un lieu</b></div>
+            {selectedEntity.address && <div className="kv"><span>Adresse</span><b>{selectedEntity.address}</b></div>}
+            {selectedEntity.category && <div className="kv"><span>Catégorie</span><b>{selectedEntity.category}</b></div>}
+            <div className="kv"><span>Offres publiées</span><b>{selectedEntity.offerCount}</b></div>
+          </div>
+          <p className="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat — jamais avant.</p>
+          {selectedEntity.offers.length === 0 && <p className="sub">Cette entité n’a pas encore d’offre publiée.</p>}
+          {selectedEntity.offers.length > 0 && <div className="label" style={{ marginTop: 8 }}>Ses offres</div>}
+          {selectedEntity.offers.map((offer) => {
+            const carac = offerCharacteristics(offer);
+            return (
+              <div className="pitem" key={offer.id} role="button" tabIndex={0} style={{ cursor: 'pointer' }} onClick={() => { setSheet('facility'); setSelectedId(offer.facilityId); void handlePinSelect({ id: offer.facilityId, name: selectedEntity.name, category: selectedEntity.category ?? '', address: selectedEntity.address, latitude: selectedEntity.latitude ?? 0, longitude: selectedEntity.longitude ?? 0, trust: selectedEntity.trust, plan: 'free', productCount: selectedEntity.offerCount }); }}>
+                <span className="chk" aria-hidden="true" />
+                <span className="pthumb" />
+                <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
+                <span className="pr">{(offer.prixReduit / 100).toFixed(2)} {offer.currency}</span>
+              </div>
+            );
+          })}
         </section>
       )}
       {sheet === 'seller' && (
