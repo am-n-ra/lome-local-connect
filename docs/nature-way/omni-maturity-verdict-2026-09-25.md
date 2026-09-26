@@ -31,7 +31,7 @@ l'interface a l'air complète »*.
 |---|---|---|
 | **Seed** | ✅ solide | 34 décisions `S-01…S-34`, `founder-confirmed` |
 | **Species (maquette)** | ✅ **`pilot-ready`** | 74 écrans, **27/27 conforme**, 26 rendues, `NON MESURÉ = 0` (`PF-20`, `PF-21`) |
-| **Root (socle)** | ⚠️ **partiel** | modèle entité **exécuté** (`058`→`061`) ; **caractéristiques d'offre non écrites** (`PF-08`), chemins Pro/`individu` **non exercés** (`PF-07`) |
+| **Root (socle)** | ⚠️ **partiel** | modèle entité **exécuté** (`058`→`061`) ; découverte **2 niveaux livrée** (`R-E`/S-11, `27a1661`) ; **caractéristiques d'offre : code livré (`bfc3b7c`), usage non exercé** (`PF-08` — 0/16 en données), chemins Pro/`individu` **non exercés** (`PF-07`) |
 | **Trunk (boucle cœur)** | ✅ **reproduit** | cycle transactionnel complet (`PF-01`), stock (`PF-02`), intégré (`PF-03`) |
 | **Heartwood (durcissement)** | ✅ bon | 600/600 tests, gardes falsifiés, append-only, idempotence |
 | **App alignée sur maquette** | ❌ **non** | seuils figés, devise en dur, `public.markets` absente |

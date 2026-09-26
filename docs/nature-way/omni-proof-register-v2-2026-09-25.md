@@ -33,7 +33,8 @@ d'écran **n'est pas** une preuve d'autorisation serveur.
 |---|---|---|---|
 | `PF-06` | Entité propriétaire de l'offre (`S-25`) : 2ᵉ lieu d'une même entité sans entitlement propre → ancienne porte refuse, nouvelle accorde | **reproduced** (A/B sur Postgres) | prouvée au commit `6b88907` |
 | `PF-07` | Chemins **Pro** et **`individu`** en données réelles | **unproven** | **0** entité `commercial_plan <> 'free'` · **0** entité `individu` → **jamais exercés** |
-| `PF-08` | Caractéristiques d'offre écrites à la création | **unproven** | **0** écriture en code ; les 13/16 viennent d'un backfill |
+| `PF-08` | Caractéristiques d'offre écrites à la création | **partiel** — **code livré**, **usage non exercé** | *Corrigé 2026-09-26 :* le chemin d'écriture **existe** (`createSellerProductDraft` reçoit les 5 caractéristiques, `SellerV13.tsx:173` ; relecture `trunk-repository.ts:505-508`) — livré au commit `bfc3b7c`, **après** la rédaction de cette ligne. Ce qui reste **unproven** est l'**usage** : `condition_kind`/`handover_kind`/`price_kind`/`uniqueness_kind` = **0/16** (13/16 `position_kind` viennent d'un backfill) → **le formulaire n'a jamais servi**. Le filtrage en recherche est **endetté par conception** (maquette : `chip('État / condition', false, true)`). |
+| `PF-09` | **Découverte à deux niveaux** (`S-11`) : entité **et** offre sur un même corpus ; page publique d'entité ; offre ↔ entité en un tap | `entity-search.test.ts` (3 invariants falsifiés) + navigateur prod | **observed** | prod (`27a1661`) | `E-2` contact avant intention · `E-5` filtre au mauvais niveau · `D-01` `certified` interne. Registre : `omni-root-v2-two-level-search-evidence-2026-09-26.md` |
 
 ---
 
