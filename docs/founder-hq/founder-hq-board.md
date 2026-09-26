@@ -1,6 +1,44 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-23 (UTC)** — **PORTE COURANTE = Species (RÉOUVERTE)** — réconciliation **Seed ↔ maquette ↔ code**.
+**As of:** **2026-09-26 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25**.
+
+## HQ RECONCILIATION — « on a raté tout le process depuis Species » (2026-09-26)
+
+> Réponse mesurée au verdict fondateur : `docs/founder-hq/hq-reconciliation-2026-09-26.md`.
+> **Verdict : le fond est juste ; la cause n'est pas le process, c'est sa SYNCHRONISATION.**
+> Seed V2 (`S-01…S-34`) et Species V2 (74 écrans, 27/27, `NON MESURÉ = 0`) sont **réels et validés**.
+> Ce qui a été raté : **Root exécuté sous une Species non conforme** (incidents 2026-09-23 **et** 2026-09-24,
+> tous deux enregistrés), puis une **mémoire produit en retard** sur le socle réel — d'où un rond-point
+> **documentaire**, pas produit.
+>
+> **Trois défauts BLOQUANTS ont été corrigés et vérifiés EN PROD le 2026-09-26 :**
+> - **`RB-PROD-3`** — la carte acheteur renvoyait **HTTP 500 pour tout appel** (`listPublicFacilities`
+>   sélectionnait `e.commercial_plan` sans le grouper) → **500 → 200, 206 facilités**. Prod `85c1669`.
+> - **`RB-PROD-1`/`RB-PROD-2`** — aucun vendeur ne pouvait créer de facilité, aucune offre ne pouvait être
+>   créée → corrigés **et déployés** (vérifiés dans l'artefact servi).
+> - **`T-07d` fermé** — prod `index-D48HqbeO.js` === build local.
+>
+> **Pourquoi 607 tests verts ne l'ont pas vu** : les tests utilisent un **`sql` stubbé** — ils n'exécutent
+> **jamais** SQL, donc une requête que Postgres ne peut pas **compiler** passe tout. **Angle mort de méthode.**
+> Deux gardes ajoutées, **toutes deux falsifiées** : preuve SQL réelle (`27/27`, exit 1 si on remet le bug)
+> + garde statique GROUP BY (une violation exacte sur le code cassé, 0 faux positif). **609 tests.**
+>
+> **Nouvelle découverte `SP-V2-01` (Haute)** — **l'impasse de l'offre sans propriétaire** : 2 lieux
+> **visibles acheteur** sans compte mais **portant une offre publiée** ; l'acheteur **peut demander** la
+> disponibilité (le chemin d'écriture ne teste pas la propriété) et **aucun vendeur ne peut répondre**
+> (la file vendeur joint `f.account_id`) → **expire en 15 min, 0 crédit payé**. Cause = **dette de
+> données** (fixtures `public_import` du 2026-08-22). **Décision fondateur : retirer ou rattacher.**
+>
+> **Le « fond qui manque » est chiffré :** les **caractéristiques d'offre** (cœur S-01/S-02 — « tout est
+> offre, le type est une caractéristique ») sont **déclarées en schéma, jamais écrites** :
+> `uniqueness_kind`/`handover_kind`/`price_kind`/`condition_kind` = **0/16**. La maquette le montre,
+> l'app ne le peut pas.
+>
+> **Prochaine porte (Root)** — ordre recommandé : **`R-B` d'abord** (caractéristiques d'offre : écriture →
+> lecture → recherche), puis **alignement app ↔ maquette** (seuils `seuil` éditable + devise `D-LOC`),
+> `R-D` (chemin `individu`), `R-C`/`SP-V2-01`, `R-E` (S-11). **Ne pas rouvrir Seed/Species ni élargir.**
+
+---
 
 ## ⛔ DÉCISION BLOQUANTE — cohérence Seed ↔ socle (2026-09-23)
 
