@@ -2218,6 +2218,117 @@ describe('Buyer transaction rating persistence Root seam', () => {
   });
 });
 
+describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
+  // The SDM names the gate: "refus serveur d'une offre sans visuel/avantage". The maquette says
+  // `1 image requise` and `Avantage Omni (requis)`. Before this slice NEITHER was enforced.
+  it('refuses to publish an offer with no visual, naming the reason', async () => {
+    const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'MEDIA_REQUIRED' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+      .rejects.toThrow('MEDIA_REQUIRED');
+    expect(call.queries[0]).toContain('publication_block');
+    expect(call.queries[0]).toContain('jsonb_array_length');
+  });
+
+  it('refuses to publish an offer with no advantage, naming the reason', async () => {
+    const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'ADVANTAGE_REQUIRED' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+      .rejects.toThrow('ADVANTAGE_REQUIRED');
+  });
+
+  it('the refusal only fires on draft→published, never on archive (grandfathering D-RH-5)', async () => {
+    // The block CTE must be scoped so an already-published offer is never retro-blocked.
+    const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived' });
+    expect(result).toEqual({ productId: 'product-1', publicationState: 'archived' });
+    expect(call.queries[0]).toContain("when (select publication_state from owned) <> 'draft'");
+    expect(call.queries[0]).toContain('then null');
+  });
+
+  it('publishes and returns the changed row when both facts are present', async () => {
+    const call = stubSql([{ changed_id: 'product-1', changed_state: 'published', block_reason: null }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' });
+    expect(result).toEqual({ productId: 'product-1', publicationState: 'published' });
+  });
+
+  it('the archived branch is parenthesised so it cannot archive every offer (pre-existing bug)', async () => {
+    // AND binds tighter than OR: without the parentheses the `OR (...= 'archived')` escaped the
+    // `p.id = (select id from owned)` filter and an archive would have hit EVERY product.
+    const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'archived' });
+    expect(call.queries[0]).toContain('and (\n');
+    expect(call.queries[0]).toContain("or ((select publication_state from owned) = 'published'");
+  });
+
+  it('attaches offer media owner-bound and normalises the references', async () => {
+    const call = stubSql([{ id: 'product-1', media: [{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }] }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setSellerProductMedia({ authUserId: 'auth-seller-1', productId: 'product-1', media: [{ url: 'https://blob.omni.test/a.jpg' }] });
+    expect(result.media).toEqual([{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }]);
+    expect(call.queries[0]).toContain('a.auth_user_id');
+    expect(call.queries[0]).toContain('media =');
+  });
+
+  it('resolves ownership through the entity, the canonical path — never facility.account_id', async () => {
+    // Live proof on a disposable branch caught this: `facility.account_id` is a SECOND, divergent
+    // notion of owner. Every other seller operation (transition, availability) reads
+    // coalesce(product.entity_id, facility.entity_id) → v2_entities.account_id. A media attach
+    // that read facility.account_id directly refused the real owner.
+    const call = stubSql([{ id: 'product-1', media: [{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }] }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.setSellerProductMedia({ authUserId: 'auth-seller-1', productId: 'product-1', media: [{ url: 'https://blob.omni.test/a.jpg' }] });
+    expect(call.queries[0]).toContain('v2_entities');
+    expect(call.queries[0]).toContain('coalesce(p.entity_id, f.entity_id)');
+    expect(call.queries[0]).not.toContain('a.id = f.account_id');
+  });
+
+  it('authorises an offer-visual upload through the same entity path', async () => {
+    const call = stubSql([{ ok: 1 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.canManageSellerProduct({ authUserId: 'auth-seller-1', productId: '11111111-1111-4111-8111-111111111111' })).resolves.toBe(true);
+    expect(call.queries[0]).toContain('v2_entities');
+    expect(call.queries[0]).toContain('coalesce(p.entity_id, f.entity_id)');
+  });
+
+  it('refuses an offer-visual upload token for a malformed offer id without querying', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.canManageSellerProduct({ authUserId: 'auth-seller-1', productId: 'not-a-uuid' })).resolves.toBe(false);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects an empty or junk media payload before touching the database', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setSellerProductMedia({ authUserId: 'auth-seller-1', productId: 'product-1', media: [] }))
+      .rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    await expect(repository.setSellerProductMedia({ authUserId: 'auth-seller-1', productId: 'product-1', media: [{ url: 'http://not-https.test/a.jpg' }] }))
+      .rejects.toBeInstanceOf(SellerCataloguePolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('refuses to attach media to an offer the caller does not own', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setSellerProductMedia({ authUserId: 'auth-seller-2', productId: 'product-1', media: [{ url: 'https://blob.omni.test/a.jpg' }] }))
+      .rejects.toThrow('FORBIDDEN_OR_NOT_EDITABLE');
+  });
+
+  it('reads media back on the public product (E-03 surface)', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 1, media: [{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }] });
+    expect(product.media).toEqual([{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }]);
+  });
+
+  it('never invents media the row does not carry', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    expect(product.media).toEqual([]);
+  });
+});
+
 describe('Product availability Root seam (G-04 trunk)', () => {
   it('rejects an invalid availability state before touching the database', async () => {
     const call = stubSql([]);
@@ -2285,7 +2396,7 @@ describe('Product availability Root seam (G-04 trunk)', () => {
   it('D-04 : la porte de PUBLICATION juge l entitlement vivant, pas la colonne collante', async () => {
     // Bug de revenu corrige : avant, la porte lisait e.commercial_plan SEUL, colonne que rien
     // n'alimentait (toujours 'free') -> un vendeur Pro PAYANT ne pouvait pas depasser le plafond.
-    const call = stubSql([{ id: 'product-1', publication_state: 'published' }]);
+    const call = stubSql([{ changed_id: 'product-1', changed_state: 'published', block_reason: null }]);
     const repository = createTrunkRepository(call.sql);
     await repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' });
     expect(call.queries[0]).toContain("fe.entitlement_kind = 'facility_pro'");

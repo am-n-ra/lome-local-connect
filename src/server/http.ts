@@ -5,6 +5,7 @@ import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './ro
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
+import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
@@ -44,8 +45,11 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
-  if (error instanceof EvidenceStoragePolicyError) {
+  if (error instanceof EvidenceStoragePolicyError || error instanceof OfferMediaStorageError) {
     return { status: 409, body: errorBody(correlationId, 'EVIDENCE_STORAGE_UNAVAILABLE', error.message) };
+  }
+  if (error instanceof OfferMediaPolicyError) {
+    return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, 'EVIDENCE_NOT_FOUND', error.message) };
@@ -1469,6 +1473,30 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         throw new ApiInputError('A valid availability state and optional expiry (1-720h) are required.');
       }
       const result = await repository.setProductAvailability({ authUserId, productId: sellerAvailabilityMatch[1], to, expiresInHours });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerMediaUploadMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media-upload$/i);
+    if (sellerMediaUploadMatch && req.method === 'POST') {
+      const body = await parseRequestBody(req);
+      const result = await handleOfferMediaUpload({ body, headers: req.headers, url: url.toString(), productId: sellerMediaUploadMatch[1] });
+      // Vercel Blob client protocol requires `clientToken` at the top level — same deliberate
+      // exception to the generic envelope as the claim-evidence upload route.
+      json(res, 200, result);
+      return true;
+    }
+    const sellerMediaMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media$/i);
+    if (sellerMediaMatch && req.method === 'POST') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller before attaching an offer visual.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      // Re-verify against the Blob store: a recorded URL must be a real object under
+      // `offers/{productId}/`. Without this the route would store any client-supplied link.
+      const media = await verifyOfferMediaObjects(sellerMediaMatch[1], input.media);
+      const result = await repository.setSellerProductMedia({ authUserId, productId: sellerMediaMatch[1], media });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

@@ -6,10 +6,10 @@ import { CONFIRMED_SALES_THRESHOLD, FREE_OFFER_LIMIT, INDIVIDUAL_CONFIRMED_SALES
 import type { OfferOwnerKind, QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration, verifyPrivateEvidenceObjects } from './evidence-contract';
 export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-contract';
-import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
+import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, ProductMediaItem, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
-import { computeIntegrity, computeReputation, existenceFor } from '../trunk/offer-existence';
+import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedia } from '../trunk/offer-existence';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -516,6 +516,7 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
     handoverKind: (['retrait', 'livraison', 'immateriel'].includes(String(row.handover_kind)) ? String(row.handover_kind) : null) as PublicProduct['handoverKind'],
     priceKind: (['fixe', 'negociable'].includes(String(row.price_kind)) ? String(row.price_kind) : null) as PublicProduct['priceKind'],
     conditionKind: (['neuf', 'occasion'].includes(String(row.condition_kind)) ? String(row.condition_kind) : null) as PublicProduct['conditionKind'],
+    media: normalizeProductMedia(row.media),
     ...(hasExistenceFacts
       ? {
           existence: existenceFor({
@@ -2398,6 +2399,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           p.handover_kind,
           p.price_kind,
           p.condition_kind,
+          p.media,
           (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
@@ -2439,6 +2441,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         handoverKind: (OFFER_HANDOVER_KINDS as readonly string[]).includes(String(row.handover_kind)) ? String(row.handover_kind) as SellerCatalogueProduct['handoverKind'] : null,
         priceKind: (OFFER_PRICE_KINDS as readonly string[]).includes(String(row.price_kind)) ? String(row.price_kind) as SellerCatalogueProduct['priceKind'] : null,
         conditionKind: (OFFER_CONDITION_KINDS as readonly string[]).includes(String(row.condition_kind)) ? String(row.condition_kind) as SellerCatalogueProduct['conditionKind'] : null,
+        media: normalizeProductMedia(row.media),
       }));
             const catalogReady = products.length > 0 && products.some((p) => (p.stockLoueOmni ?? 0) > 0);
             return { authorized: true, facilities, products, catalogReady };
@@ -2550,6 +2553,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const rows = await retryDatabase(() => sql`
         with owned as (
           select p.id, p.facility_id, p.publication_state,
+            -- E-03 / E-04 : les deux faits qui bloquent une PREMIERE publication. Lus ici
+            -- pour que le refus soit prononce par la meme instruction que la transition.
+            (case when jsonb_typeof(p.media) = 'array' then jsonb_array_length(p.media) else 0 end) as media_count,
+            coalesce(p.discount_value_minor, 0) as discount,
             -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
             -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
             -- Avant, cette porte lisait e.commercial_plan SEUL, colonne que rien n'alimentait :
@@ -2565,6 +2572,17 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
           join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+        ), publication_block as (
+          -- Le refus nomme sa raison (S-32 lecon) : un 'non' sans motif est incroyable.
+          -- Ordre : visuel d'abord (le plus actionnable), avantage ensuite. Ne s'applique
+          -- QU'A la transition draft -> published : une offre deja publiee n'est jamais
+          -- retrogradee en masse (D-RH-5), c'est un acte vendeur qui la remet en conformite.
+          select case
+            when (select publication_state from owned) <> 'draft' or ${input.to} <> 'published' then null
+            when (select media_count from owned) = 0 then 'MEDIA_REQUIRED'
+            when (select discount from owned) <= 0 then 'ADVANTAGE_REQUIRED'
+            else null
+          end as reason
         ), published_count as (
           -- Le décompte se fait par entite (S-25). Si le produit n'a PAS d'entite — cas d'une
           -- facilite creee apres R-1, jamais liee — null = null vaut NULL en SQL, donc le
@@ -2582,16 +2600,79 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           )
             and p.publication_state = 'published'
         ), changed as (
+          -- Parentheses obligatoires : sans elles, le OR de la branche 'archived' s'affranchit
+          -- du filtre p.id = (select id from owned) (AND lie plus fort que OR) et archiver UNE
+          -- offre les archiverait TOUTES. Le bug etait present avant E-03/E-04 ; c'est la classe
+          -- exacte que la suite a sql stubbe ne peut pas voir (aucun SQL n'est compile).
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
-            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and ((select is_pro from owned) or (select count from published_count) < ${FREE_OFFER_LIMIT}))
+            and (select reason from publication_block) is null
+            and (
+              ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and ((select is_pro from owned) or (select count from published_count) < ${FREE_OFFER_LIMIT}))
               or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
+            )
           returning p.id, p.publication_state
-        ) select * from changed
+        ) select
+          (select id from changed) as changed_id,
+          (select publication_state from changed) as changed_state,
+          (select reason from publication_block) as block_reason
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_LIMIT_REACHED');
-      return { productId: String(row.id), publicationState: String(row.publication_state) as 'published' | 'archived' };
+      // Distinguish the honest failures: blocked by E-03/E-04 (actionable, named reason) versus
+      // not owned / free limit reached. A generic "no" told the seller nothing.
+      if (row?.block_reason) throw new SellerCataloguePolicyError(String(row.block_reason));
+      if (!row || row.changed_id === null || row.changed_id === undefined) throw new SellerCataloguePolicyError('FORBIDDEN_OR_LIMIT_REACHED');
+      return { productId: String(row.changed_id), publicationState: String(row.changed_state) as 'published' | 'archived' };
+    },
+
+    /**
+     * S-20 / E-03 — ownership check used to authorize an offer-visual upload token, before the
+     * object exists. Mirrors `canUploadClaimEvidence`: the caller must own the offer.
+     */
+    async canManageSellerProduct(input: { authUserId: string; productId: string }): Promise<boolean> {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.productId)) return false;
+      // Canonical ownership path, same as transitionSellerProduct/setProductAvailability: the
+      // offer's entity (falling back to its facility's entity) owns the account. Reading
+      // facility.account_id directly would be a second, divergent notion of "owner".
+      const rows = await retryDatabase(() => sql`
+        select 1 as ok
+        from v2_products p
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
+        where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+        limit 1
+      `);
+      return (rows as Record<string, unknown>[]).length > 0;
+    },
+
+    /**
+     * S-20 / E-03 — attach the offer's public visual(s). Owner-bound: the same join as every
+     * other seller operation. The caller (route) re-verifies each URL against the Blob store
+     * before this runs, so a client cannot record an arbitrary URL.
+     * Editing a PUBLISHED offer is allowed and leaves it published — E-03 is about the
+     * FIRST publication (D-RH-5 grandfathers what is already live).
+     */
+    async setSellerProductMedia(input: { authUserId: string; productId: string; media: unknown }): Promise<{ productId: string; media: ProductMediaItem[] }> {
+      const media = normalizeProductMedia(input.media);
+      if (media.length < 1 || media.length > 4) throw new SellerCataloguePolicyError('INVALID_INPUT');
+      const rows = await retryDatabase(() => sql`
+        update v2_products p
+        set media = ${JSON.stringify(media)}::jsonb, updated_at = now()
+        where p.id = ${input.productId}::uuid
+          and exists (
+            select 1
+            from v2_entities e
+            left join v2_facilities f on f.id = p.facility_id
+            join v2_accounts a on a.id = e.account_id
+            where e.id = coalesce(p.entity_id, f.entity_id)
+              and a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          )
+        returning p.id, p.media
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_NOT_EDITABLE');
+      return { productId: String(row.id), media: normalizeProductMedia(row.media) };
     },
 
     async setProductAvailability(input: { authUserId: string; productId: string; to: 'en_stock' | 'verifie' | 'a_valider' | 'bientot'; expiresInHours: number | null }): Promise<{ productId: string; availabilityState: string; previousState: string | null }> {

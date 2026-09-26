@@ -87,6 +87,8 @@ export interface PublicProduct {
   handoverKind: OfferHandoverKind | null;
   priceKind: OfferPriceKind | null;
   conditionKind: OfferConditionKind | null;
+  /** S-20 / E-03 — the offer's visual(s). Empty = no visual declared (publication blocked). */
+  media: ProductMediaItem[];
   /** S-06 — derived existence level 0→4 (never stored). Absent when the surface has no facts. */
   existence?: OfferExistence;
   /** S-32 — automatic integrity, with the failed checks named. */
@@ -424,8 +426,12 @@ export interface SellerCatalogueProduct {
   handoverKind: OfferHandoverKind | null;
   priceKind: OfferPriceKind | null;
   conditionKind: OfferConditionKind | null;
+  /** S-20 / E-03 — the offer's visual(s). Empty = no visual declared (publication blocked). */
+  media: ProductMediaItem[];
 }
 
+/** S-20 / E-03 — a public visual attached to an offer. Stored as a Blob reference, never bytes. */
+export type ProductMediaItem = { url: string; kind: 'image' };
 /** S-01 car.3 — position: fixe / mobile / immatérielle (replaces facility_type on the offer). */
 export type OfferPositionKind = 'fixe' | 'mobile' | 'immaterielle';
 /** S-13 / D-C6 — the nature of the offer owner: a private individual or an organisation.

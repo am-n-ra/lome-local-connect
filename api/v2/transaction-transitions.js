@@ -359,6 +359,26 @@ function hasMedia(media) {
   }
   return false;
 }
+function normalizeProductMedia(raw) {
+  let parsed = raw;
+  if (typeof parsed === "string") {
+    const trimmed = parsed.trim();
+    if (trimmed === "" || trimmed === "null") return [];
+    try {
+      parsed = JSON.parse(trimmed);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((item) => {
+    if (!item || typeof item !== "object") return null;
+    const record = item;
+    const url = typeof record.url === "string" ? record.url.trim() : "";
+    if (!url || !/^https:\/\//i.test(url) || url.length > 500) return null;
+    return { url, kind: "image" };
+  }).filter((item) => item !== null).slice(0, 4);
+}
 function computeIntegrity(input) {
   const results = {
     visuel: hasMedia(input.media),
@@ -515,6 +535,7 @@ var toProduct = (row) => {
     handoverKind: ["retrait", "livraison", "immateriel"].includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
     priceKind: ["fixe", "negociable"].includes(String(row.price_kind)) ? String(row.price_kind) : null,
     conditionKind: ["neuf", "occasion"].includes(String(row.condition_kind)) ? String(row.condition_kind) : null,
+    media: normalizeProductMedia(row.media),
     ...hasExistenceFacts ? {
       existence: existenceFor({
         publicationState: row.publication_state === null || row.publication_state === void 0 ? null : String(row.publication_state),
@@ -2315,6 +2336,7 @@ function createTrunkRepository(sql = database()) {
           p.handover_kind,
           p.price_kind,
           p.condition_kind,
+          p.media,
           (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
@@ -2355,7 +2377,8 @@ function createTrunkRepository(sql = database()) {
         uniquenessKind: OFFER_UNIQUENESS_KINDS.includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) : null,
         handoverKind: OFFER_HANDOVER_KINDS.includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
         priceKind: OFFER_PRICE_KINDS.includes(String(row.price_kind)) ? String(row.price_kind) : null,
-        conditionKind: OFFER_CONDITION_KINDS.includes(String(row.condition_kind)) ? String(row.condition_kind) : null
+        conditionKind: OFFER_CONDITION_KINDS.includes(String(row.condition_kind)) ? String(row.condition_kind) : null,
+        media: normalizeProductMedia(row.media)
       }));
       const catalogReady = products.length > 0 && products.some((p) => (p.stockLoueOmni ?? 0) > 0);
       return { authorized: true, facilities, products, catalogReady };
@@ -2431,6 +2454,10 @@ function createTrunkRepository(sql = database()) {
       const rows = await retryDatabase(() => sql`
         with owned as (
           select p.id, p.facility_id, p.publication_state,
+            -- E-03 / E-04 : les deux faits qui bloquent une PREMIERE publication. Lus ici
+            -- pour que le refus soit prononce par la meme instruction que la transition.
+            (case when jsonb_typeof(p.media) = 'array' then jsonb_array_length(p.media) else 0 end) as media_count,
+            coalesce(p.discount_value_minor, 0) as discount,
             -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
             -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
             -- Avant, cette porte lisait e.commercial_plan SEUL, colonne que rien n'alimentait :
@@ -2446,6 +2473,17 @@ function createTrunkRepository(sql = database()) {
           join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
           join v2_accounts a on a.id = e.account_id
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
+        ), publication_block as (
+          -- Le refus nomme sa raison (S-32 lecon) : un 'non' sans motif est incroyable.
+          -- Ordre : visuel d'abord (le plus actionnable), avantage ensuite. Ne s'applique
+          -- QU'A la transition draft -> published : une offre deja publiee n'est jamais
+          -- retrogradee en masse (D-RH-5), c'est un acte vendeur qui la remet en conformite.
+          select case
+            when (select publication_state from owned) <> 'draft' or ${input.to} <> 'published' then null
+            when (select media_count from owned) = 0 then 'MEDIA_REQUIRED'
+            when (select discount from owned) <= 0 then 'ADVANTAGE_REQUIRED'
+            else null
+          end as reason
         ), published_count as (
           -- Le décompte se fait par entite (S-25). Si le produit n'a PAS d'entite — cas d'une
           -- facilite creee apres R-1, jamais liee — null = null vaut NULL en SQL, donc le
@@ -2463,16 +2501,72 @@ function createTrunkRepository(sql = database()) {
           )
             and p.publication_state = 'published'
         ), changed as (
+          -- Parentheses obligatoires : sans elles, le OR de la branche 'archived' s'affranchit
+          -- du filtre p.id = (select id from owned) (AND lie plus fort que OR) et archiver UNE
+          -- offre les archiverait TOUTES. Le bug etait present avant E-03/E-04 ; c'est la classe
+          -- exacte que la suite a sql stubbe ne peut pas voir (aucun SQL n'est compile).
           update v2_products p set publication_state = ${input.to}, updated_at = now()
           where p.id = (select id from owned)
-            and ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and ((select is_pro from owned) or (select count from published_count) < ${FREE_OFFER_LIMIT}))
+            and (select reason from publication_block) is null
+            and (
+              ((select publication_state from owned) = 'draft' and ${input.to} = 'published' and ((select is_pro from owned) or (select count from published_count) < ${FREE_OFFER_LIMIT}))
               or ((select publication_state from owned) = 'published' and ${input.to} = 'archived')
+            )
           returning p.id, p.publication_state
-        ) select * from changed
+        ) select
+          (select id from changed) as changed_id,
+          (select publication_state from changed) as changed_state,
+          (select reason from publication_block) as block_reason
       `);
       const row = rows[0];
-      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_LIMIT_REACHED");
-      return { productId: String(row.id), publicationState: String(row.publication_state) };
+      if (row?.block_reason) throw new SellerCataloguePolicyError(String(row.block_reason));
+      if (!row || row.changed_id === null || row.changed_id === void 0) throw new SellerCataloguePolicyError("FORBIDDEN_OR_LIMIT_REACHED");
+      return { productId: String(row.changed_id), publicationState: String(row.changed_state) };
+    },
+    /**
+     * S-20 / E-03 — ownership check used to authorize an offer-visual upload token, before the
+     * object exists. Mirrors `canUploadClaimEvidence`: the caller must own the offer.
+     */
+    async canManageSellerProduct(input) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.productId)) return false;
+      const rows = await retryDatabase(() => sql`
+        select 1 as ok
+        from v2_products p
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
+        where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+        limit 1
+      `);
+      return rows.length > 0;
+    },
+    /**
+     * S-20 / E-03 — attach the offer's public visual(s). Owner-bound: the same join as every
+     * other seller operation. The caller (route) re-verifies each URL against the Blob store
+     * before this runs, so a client cannot record an arbitrary URL.
+     * Editing a PUBLISHED offer is allowed and leaves it published — E-03 is about the
+     * FIRST publication (D-RH-5 grandfathers what is already live).
+     */
+    async setSellerProductMedia(input) {
+      const media = normalizeProductMedia(input.media);
+      if (media.length < 1 || media.length > 4) throw new SellerCataloguePolicyError("INVALID_INPUT");
+      const rows = await retryDatabase(() => sql`
+        update v2_products p
+        set media = ${JSON.stringify(media)}::jsonb, updated_at = now()
+        where p.id = ${input.productId}::uuid
+          and exists (
+            select 1
+            from v2_entities e
+            left join v2_facilities f on f.id = p.facility_id
+            join v2_accounts a on a.id = e.account_id
+            where e.id = coalesce(p.entity_id, f.entity_id)
+              and a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          )
+        returning p.id, p.media
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_NOT_EDITABLE");
+      return { productId: String(row.id), media: normalizeProductMedia(row.media) };
     },
     async setProductAvailability(input) {
       if (!["en_stock", "verifie", "a_valider", "bientot"].includes(input.to)) throw new SellerCataloguePolicyError("INVALID_INPUT");
@@ -5892,6 +5986,106 @@ async function readPrivateEvidence(objectKey) {
   return { body, contentType: result.blob.contentType ?? "application/octet-stream", size: body.length };
 }
 
+// src/server/offer-media-storage.ts
+import { head as head2 } from "@vercel/blob";
+import { handleUpload as handleUpload2 } from "@vercel/blob/client";
+var PRODUCT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+var OFFER_MEDIA_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"];
+var OFFER_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
+var OFFER_MEDIA_MAX_ITEMS = 4;
+var OfferMediaPolicyError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OfferMediaPolicyError";
+  }
+};
+var OfferMediaStorageError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OfferMediaStorageError";
+  }
+};
+function hasOfferMediaStorage() {
+  return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
+}
+function requiredBlobToken2() {
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (!token) throw new OfferMediaStorageError("Offer visual storage is not configured; no upload token was issued.");
+  return token;
+}
+function offerMediaPrefix(productId) {
+  if (!PRODUCT_ID_PATTERN.test(productId)) throw new OfferMediaPolicyError("The offer is invalid.");
+  return `offers/${productId}/`;
+}
+function requestFromHeaders2(url, headers, body) {
+  const requestHeaders = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (typeof value === "string") requestHeaders.set(key, value);
+    else if (Array.isArray(value)) requestHeaders.set(key, value.join(", "));
+  }
+  return new Request(url, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
+}
+async function handleOfferMediaUpload(input) {
+  if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured; no upload token was issued.");
+  const prefix = offerMediaPrefix(input.productId);
+  const token = requiredBlobToken2();
+  const webRequest = requestFromHeaders2(input.url, input.headers, input.body);
+  return handleUpload2({
+    body: input.body,
+    request: webRequest,
+    token,
+    onBeforeGenerateToken: async (pathname) => {
+      const authUserId = await getAuthUserId(input.headers);
+      if (!authUserId) throw new OfferMediaPolicyError("An authenticated seller session is required to upload an offer visual.");
+      const filePart = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+      if (!filePart || filePart.includes("/") || filePart.includes("..") || filePart.includes("\\") || /\s/.test(filePart)) throw new OfferMediaPolicyError("The upload path is not bound to this offer.");
+      const repository = createTrunkRepository();
+      const authorized = await repository.canManageSellerProduct({ authUserId, productId: input.productId });
+      if (!authorized) throw new OfferMediaPolicyError("Only the owner of the offer may attach a visual.");
+      return {
+        allowedContentTypes: [...OFFER_MEDIA_CONTENT_TYPES],
+        maximumSizeInBytes: OFFER_MEDIA_MAX_BYTES,
+        addRandomSuffix: true,
+        tokenPayload: JSON.stringify({ productId: input.productId })
+      };
+    },
+    onUploadCompleted: async ({ blob, tokenPayload }) => {
+      let payload;
+      try {
+        payload = JSON.parse(tokenPayload ?? "{}");
+      } catch {
+        throw new OfferMediaPolicyError("The upload completion context is invalid.");
+      }
+      if (!payload.productId || !blob.pathname.startsWith(offerMediaPrefix(payload.productId))) throw new OfferMediaPolicyError("The completed object is not bound to this offer.");
+    }
+  });
+}
+async function verifyOfferMediaObjects(productId, raw) {
+  const media = normalizeProductMedia(raw);
+  if (media.length < 1 || media.length > OFFER_MEDIA_MAX_ITEMS) throw new OfferMediaPolicyError("Provide one to four offer visuals.");
+  if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured.");
+  const prefix = offerMediaPrefix(productId);
+  const token = requiredBlobToken2();
+  const verified = [];
+  for (const item of media) {
+    let metadata = null;
+    try {
+      metadata = await head2(item.url, { token });
+    } catch {
+      metadata = null;
+    }
+    if (!metadata || !metadata.pathname.startsWith(prefix) || metadata.pathname.slice(prefix.length).length < 1) {
+      throw new OfferMediaPolicyError("One or more offer visuals do not belong to this offer.");
+    }
+    if (!OFFER_MEDIA_CONTENT_TYPES.includes(metadata.contentType)) {
+      throw new OfferMediaPolicyError("Offer visuals must be a JPEG, PNG or WebP image.");
+    }
+    if (metadata.size < 1 || metadata.size > OFFER_MEDIA_MAX_BYTES) throw new OfferMediaPolicyError("One or more offer visuals exceed the allowed size.");
+    verified.push({ url: metadata.url, kind: "image" });
+  }
+  return verified;
+}
+
 // src/server/routing-adapter.ts
 var PILOT_ZONE_BOUNDS = { west: 1, south: 5.85, east: 2.45, north: 6.5 };
 var RoutingOutOfZoneError = class extends Error {
@@ -6101,8 +6295,11 @@ function toApiErrorResponse(correlationId, error) {
   if (error instanceof ApiInputError) {
     return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
   }
-  if (error instanceof EvidenceStoragePolicyError) {
+  if (error instanceof EvidenceStoragePolicyError || error instanceof OfferMediaStorageError) {
     return { status: 409, body: errorBody(correlationId, "EVIDENCE_STORAGE_UNAVAILABLE", error.message) };
+  }
+  if (error instanceof OfferMediaPolicyError) {
+    return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
   }
   if (error instanceof ClaimEvidenceNotFoundError) {
     return { status: 404, body: errorBody(correlationId, "EVIDENCE_NOT_FOUND", error.message) };
@@ -7408,6 +7605,26 @@ async function handleApi(req, res, pathname, url) {
         throw new ApiInputError("A valid availability state and optional expiry (1-720h) are required.");
       }
       const result = await repository.setProductAvailability({ authUserId, productId: sellerAvailabilityMatch[1], to, expiresInHours });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerMediaUploadMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media-upload$/i);
+    if (sellerMediaUploadMatch && req.method === "POST") {
+      const body = await parseRequestBody(req);
+      const result = await handleOfferMediaUpload({ body, headers: req.headers, url: url.toString(), productId: sellerMediaUploadMatch[1] });
+      json(res, 200, result);
+      return true;
+    }
+    const sellerMediaMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media$/i);
+    if (sellerMediaMatch && req.method === "POST") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller before attaching an offer visual."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const media = await verifyOfferMediaObjects(sellerMediaMatch[1], input.media);
+      const result = await repository.setSellerProductMedia({ authUserId, productId: sellerMediaMatch[1], media });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

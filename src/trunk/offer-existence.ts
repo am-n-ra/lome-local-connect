@@ -10,6 +10,8 @@
  * published but has nothing left to reserve is NOT transactable, and saying so would be a lie.
  */
 
+import type { ProductMediaItem } from './types';
+
 export type ExistenceLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface OfferExistence {
@@ -108,6 +110,31 @@ function hasMedia(media: unknown): boolean {
     return trimmed !== '' && trimmed !== '[]' && trimmed !== 'null';
   }
   return false;
+}
+
+/**
+ * S-20 / E-03 — read the offer's visual references out of the raw `media` jsonb.
+ * Tolerant of the legacy `[]` / `null` shapes so an old row never throws. Returns `[]`
+ * when nothing valid is declared — which is exactly what the publication refusal tests.
+ */
+export function normalizeProductMedia(raw: unknown): ProductMediaItem[] {
+  let parsed: unknown = raw;
+  if (typeof parsed === 'string') {
+    const trimmed = parsed.trim();
+    if (trimmed === '' || trimmed === 'null') return [];
+    try { parsed = JSON.parse(trimmed); } catch { return []; }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const record = item as Record<string, unknown>;
+      const url = typeof record.url === 'string' ? record.url.trim() : '';
+      if (!url || !/^https:\/\//i.test(url) || url.length > 500) return null;
+      return { url, kind: 'image' as const };
+    })
+    .filter((item): item is ProductMediaItem => item !== null)
+    .slice(0, 4);
 }
 
 /**

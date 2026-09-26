@@ -5,6 +5,7 @@ import {
   computeReputation,
   existenceFor,
   facilityExistenceLevel,
+  normalizeProductMedia,
   type ExistenceInput,
 } from './offer-existence';
 
@@ -106,6 +107,40 @@ describe('S-32 offer integrity', () => {
   it('a short description fails; ten characters passes', () => {
     expect(computeIntegrity({ ...complete, description: 'court' }).failed).toContain('description');
     expect(computeIntegrity({ ...complete, description: '0123456789' }).failed).not.toContain('description');
+  });
+});
+
+describe('S-20 / E-03 offer media normalisation', () => {
+  it('keeps valid https image references', () => {
+    expect(normalizeProductMedia([{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }]))
+      .toEqual([{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }]);
+  });
+
+  it('accepts a JSON string (jsonb round-trip) and an already-parsed array', () => {
+    expect(normalizeProductMedia('[{"url":"https://x.test/a.png"}]')).toHaveLength(1);
+    expect(normalizeProductMedia([{ url: 'https://x.test/a.png' }])).toHaveLength(1);
+  });
+
+  it('rejects non-https, empty and over-long urls — a client cannot record junk', () => {
+    expect(normalizeProductMedia([{ url: 'http://x.test/a.png' }])).toEqual([]);
+    expect(normalizeProductMedia([{ url: '' }])).toEqual([]);
+    expect(normalizeProductMedia([{ url: `https://x.test/${'a'.repeat(600)}` }])).toEqual([]);
+  });
+
+  it('legacy empty shapes read as no visual (never throws)', () => {
+    for (const raw of [[], null, undefined, '', '[]', 'null', 'not json', 42, {}]) {
+      expect(normalizeProductMedia(raw)).toEqual([]);
+    }
+  });
+
+  it('caps at four visuals', () => {
+    const five = Array.from({ length: 5 }, (_, i) => ({ url: `https://x.test/${i}.jpg` }));
+    expect(normalizeProductMedia(five)).toHaveLength(4);
+  });
+
+  it('a normalised visual makes the S-32 integrity visuel check pass', () => {
+    const media = normalizeProductMedia([{ url: 'https://x.test/a.jpg' }]);
+    expect(computeIntegrity({ media, priceMinor: 850, description: 'Une description assez longue.', duplicate: false }).failed).not.toContain('visuel');
   });
 });
 

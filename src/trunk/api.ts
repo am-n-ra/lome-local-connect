@@ -510,6 +510,25 @@ export async function transitionSellerProduct(input: { token: string; productId:
   return parse(response);
 }
 
+export async function setSellerProductMedia(input: { token: string; productId: string; media: import('./types').ProductMediaItem[] }): Promise<ApiResult<{ productId: string; media: import('./types').ProductMediaItem[] }>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/media`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ media: input.media }) });
+  return parse(response);
+}
+
+/** S-20 / E-03 — uploads one public offer visual, then records the verified reference. */
+export async function uploadSellerProductMedia(input: { token: string; productId: string; file: File; onProgress?: (percentage: number) => void }): Promise<ApiResult<{ productId: string; media: import('./types').ProductMediaItem[] }>> {
+  const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'visual';
+  const blob = await uploadPrivateBlob(`offers/${input.productId}/${safeName}`, input.file, {
+    access: 'public',
+    contentType: input.file.type,
+    clientPayload: JSON.stringify({ productId: input.productId }),
+    handleUploadUrl: `/api/v2/seller/catalogue/${encodeURIComponent(input.productId)}/media-upload`,
+    headers: { Authorization: `Bearer ${input.token}` },
+    onUploadProgress: (event) => input.onProgress?.(event.percentage),
+  });
+  return setSellerProductMedia({ token: input.token, productId: input.productId, media: [{ url: blob.url, kind: 'image' }] });
+}
+
 export async function setProductAvailability(input: { token: string; productId: string; to: import('./types').ProductAvailabilityState; expiresInHours: number | null }): Promise<ApiResult<{ productId: string; availabilityState: string; previousState: string | null }>> {
   const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/availability`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ to: input.to, expiresInHours: input.expiresInHours }) });
   return parse(response);
