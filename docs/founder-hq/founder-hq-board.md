@@ -47,8 +47,9 @@
 > structure » **existe désormais en code** et a été **prouvée de bout en bout** : 1 vente confirme un
 > particulier, 3 un commerce) ; **`R-C`/`SP-V2-01` est RÉSOLU** (les 3 offres sans propriétaire sont
 > **retirées** : publiées-sans-propriétaire **3 → 0**, publiées **16 → 13**).
-> Restent : **usage `R-B`** (caractéristiques 0/16 — acte **vendeur réel**, pas une tranche de code) ;
-> **push de `R-C`/`R-D`** (prod sert encore le bundle précédent — **`T-07d` non franchi**).
+> Restent : **usage `R-B`** (caractéristiques 0/16 — acte **vendeur réel**, pas une tranche de code).
+> **`R-C`/`R-D` sont POUSSÉS et vérifiés en prod** (`c6e973b` — prod sert `index-Ck-_DzRo.js` ===
+> build local, **`T-07d` ✅** ; les 2 lieux orphelins restent des **lieux de carte** mais avec **0 offre**).
 > **Ne pas rouvrir Seed/Species ni élargir.**
 >
 > ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`

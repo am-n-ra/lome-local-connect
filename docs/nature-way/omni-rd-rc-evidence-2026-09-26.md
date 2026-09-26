@@ -4,7 +4,7 @@
 **Slice:** `R-C` (retirer les offres orphelines) + `R-D` (chemin `individu`)
 **Plan:** `intra-skill-plan-NW-PROD-OMNI-RD-01.md`
 **Founder orders:** « retirer » (`R-C`) · « r-d » (`R-D`)
-**Status:** `delivered — push pending explicit founder order`
+**Status:** `delivered + prod-verified` (commit `c6e973b`; prod bundle `index-Ck-_DzRo.js` === local build)
 
 ---
 
@@ -96,10 +96,20 @@ T3/T4 together are the **discriminating control**: the same single sale confirms
 | `prove-v2-transaction-lifecycle.mjs` | **9/9 PASS** |
 | `prove-v2-stock-reservation.mjs` | **6/6 PASS** |
 
-## 5. Honest residuals
+## 5. Deployment — verified, not assumed
 
-- **The push is not done.** Prod still serves the previous bundle. `T-07d` is therefore **not** crossed — no deploy claim is made.
-- The `individu` **search/threshold** behaviour is proven at the data layer. No browser proof of the new form control was captured (sandbox has no DB/Auth session).
-- `R-B` remains open and untouched by this slice: characteristics are still **0/16 populated** in the data, and `listPublicFacilities` still does not filter on them.
+| Check | Result |
+|---|---|
+| commit | `c6e973b` pushed (`cd63009..c6e973b`) |
+| GitHub deployment | created for `c6e973b99af5…` (not just the previous HEAD — checked, because **a push does not prove a deployment**) |
+| prod client bundle | `index-Ck-_DzRo.js` **=== local build** → **`T-07d` ✅** |
+| prod data | `Atelier Kegue` / `Pharmacie du Port` still returned as **places** but with **0 offers** — the dead end is closed, the background geography stays |
+| prod serverless | `/api/v2/public/facilities` **200**, protected routes **401** — the regenerated function bundle is live and the auth guards hold |
+
+## 6. Honest residuals
+
+- The `individu` path is proven **at the data layer** on a disposable branch. **Canonical still shows 0 `individu` entities** — that is expected and honest: the path now exists, but no real individual seller has declared one in production yet. Seeding one by hand would have re-created the very lie this slice removed.
+- No browser proof of the new form control (sandbox has no DB/Auth session).
+- `R-B` remains open and untouched: characteristics are still **0/16** in data, and `listPublicFacilities` still does not filter on them.
 - `ownerKind` is declared **once**, at facility creation. There is no edit path; a seller who mis-declares must create a new facility. Not a defect, but an unstated limit.
 - Gate 6 stays **CLOSED**. Nothing here asserts a Species or Root closure.
