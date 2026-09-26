@@ -12,13 +12,17 @@ const STATE_LABEL: Record<string, string> = {
 };
 
 /**
- * E-03/E-04 — the refusal the server pronounces, translated for the seller. The server names the
- * reason (MEDIA_REQUIRED / ADVANTAGE_REQUIRED); the UI must not swallow it into a generic error,
- * otherwise the seller has no idea what to fix.
+ * E-03/E-04 + RH-02 — the refusal the server pronounces, translated for the seller. The server
+ * names the reason; the UI must not swallow it into a generic error, otherwise the seller has no
+ * idea what to fix. Each message names the ONE fact to add, not a generic "not allowed".
  */
-function publicationMessage(code: string): string {
+export function publicationMessage(code: string): string {
   if (code === 'MEDIA_REQUIRED') return "Ajoutez d'abord un visuel : la maquette exige 1 image par offre.";
   if (code === 'ADVANTAGE_REQUIRED') return "Ajoutez d'abord un avantage Omni (une remise) : il est requis pour publier.";
+  if (code === 'UNIQUENESS_REQUIRED') return "Dites si l'offre est renouvelable ou une pièce unique : une offre muette ne se publie pas.";
+  if (code === 'HANDOVER_REQUIRED') return 'Précisez le mode de remise (retrait, livraison ou immatériel).';
+  if (code === 'PRICE_KIND_REQUIRED') return 'Précisez si le prix est fixe ou à négocier.';
+  if (code === 'CONDITION_REQUIRED') return "Précisez si l'offre est neuve ou d'occasion.";
   if (code === 'FORBIDDEN_OR_LIMIT_REACHED') return "Publication refusée : plafond d'offres gratuites atteint, ou offre non modifiable.";
   return 'La publication a été refusée.';
 }

@@ -2557,6 +2557,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             -- pour que le refus soit prononce par la meme instruction que la transition.
             (case when jsonb_typeof(p.media) = 'array' then jsonb_array_length(p.media) else 0 end) as media_count,
             coalesce(p.discount_value_minor, 0) as discount,
+            -- RH-02 « on exige » : les quatre caracteristiques qui font d'une offre une offre.
+            -- Lues ici pour que le refus soit prononce par la MEME instruction que la transition
+            -- (une lecture separee pourrait voir un etat different de celui qui publie).
+            p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
             -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
             -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
             -- Avant, cette porte lisait e.commercial_plan SEUL, colonne que rien n'alimentait :
@@ -2574,13 +2578,29 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           where p.id = ${input.productId}::uuid and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
         ), publication_block as (
           -- Le refus nomme sa raison (S-32 lecon) : un 'non' sans motif est incroyable.
-          -- Ordre : visuel d'abord (le plus actionnable), avantage ensuite. Ne s'applique
-          -- QU'A la transition draft -> published : une offre deja publiee n'est jamais
-          -- retrogradee en masse (D-RH-5), c'est un acte vendeur qui la remet en conformite.
+          -- Ordre : visuel d'abord (le plus actionnable), avantage ensuite, puis les quatre
+          -- caracteristiques qui font d'une offre une offre (S-01/S-02 : « tout est offre, le
+          -- type est une caracteristique »). Ne s'applique QU'A la transition draft -> published :
+          -- une offre deja publiee n'est jamais retrogradee en masse (D-RH-5/D-RH-7), c'est un
+          -- acte vendeur qui la remet en conformite.
+          --
+          -- D-RH-8 : position_kind n'est PAS exige. Il est satisfait partout (13/13) et derive
+          -- par le formulaire ; l'exiger n'ajouterait aucune garantie.
           select case
+            -- NULL-check first: when the owned CTE is EMPTY (a non-owner, or an unknown product)
+            -- every scalar subquery returns NULL. The equality checks then evaluate to NULL and
+            -- fall through — but a null-check is TRUE on NULL, so the characteristic branches
+            -- fired and a STRANGER was told which fact is missing on someone else's offer. Found
+            -- by the real-SQL proof (T8), invisible to the stubbed suite. An unauthorized caller
+            -- must learn nothing about the offer, only that it is not theirs.
+            when (select publication_state from owned) is null then null
             when (select publication_state from owned) <> 'draft' or ${input.to} <> 'published' then null
             when (select media_count from owned) = 0 then 'MEDIA_REQUIRED'
             when (select discount from owned) <= 0 then 'ADVANTAGE_REQUIRED'
+            when (select uniqueness_kind from owned) is null then 'UNIQUENESS_REQUIRED'
+            when (select handover_kind from owned) is null then 'HANDOVER_REQUIRED'
+            when (select price_kind from owned) is null then 'PRICE_KIND_REQUIRED'
+            when (select condition_kind from owned) is null then 'CONDITION_REQUIRED'
             else null
           end as reason
         ), published_count as (
