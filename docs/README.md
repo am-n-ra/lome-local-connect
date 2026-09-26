@@ -6,7 +6,7 @@
 
 Il déclarait [`OMNI_MASTER_PRODUCT_INTERFACE.md`](./OMNI_MASTER_PRODUCT_INTERFACE.md) **« l'unique
 document normatif d'Omni »**. **C'est faux, et c'était dangereux** : ce master date du **2026-08-21**,
-donc d'**avant** le Seed V2 (`S-01…S-34`, 2026-09-23). Il **ignore** le modèle qui fait Omni :
+donc d'**avant** le Seed V2 (`S-01…S-32`, 2026-09-23). Il **ignore** le modèle qui fait Omni :
 l'**entité** propriétaire de l'offre (`S-25`), l'offre détachée du lieu, les caractéristiques
 d'offre. Il ne contient **aucune** mention de `v2_entities` ni de `S-25` — vérifié : ses 4
 occurrences de « identité » parlent d'**Identité UI**, pas du modèle d'entité.
@@ -20,7 +20,7 @@ Nature Way : *une seule source de vérité **par sujet**. Ne pas entretenir de m
 
 | Sujet | Autorité | État |
 |---|---|---|
-| **Intention / produit / règles métier** | [`nature-way/omni-intent-brief-v2-2026-09-23.md`](./nature-way/omni-intent-brief-v2-2026-09-23.md) — **Seed V2**, `S-01…S-34` | **CLOS `founder-confirmed`** |
+| **Intention / produit / règles métier** | [`nature-way/omni-intent-brief-v2-2026-09-23.md`](./nature-way/omni-intent-brief-v2-2026-09-23.md) — **Seed V2**, `S-01…S-32` | **CLOS `founder-confirmed`** |
 | **Dépendances / architecture causale** | [`nature-way/omni-system-dependency-map-2026-09-23.md`](./nature-way/omni-system-dependency-map-2026-09-23.md) | **normatif** |
 | **Contrat du socle (entité, offre)** | [`nature-way/omni-root-v2-entity-layer-contract-2026-09-23.md`](./nature-way/omni-root-v2-entity-layer-contract-2026-09-23.md) | **normatif** |
 | **Design visuel accepté** | [`maquette/omni-species-v2-interactive.html`](./maquette/omni-species-v2-interactive.html) — **74 écrans** | **CLOS `founder-confirmed` 2026-09-25** |

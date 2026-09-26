@@ -1,6 +1,6 @@
 # Intent Brief V2 — Omni
 
-> **Status:** **Seed clos — `founder-confirmed` (2026-09-23)** · À RE-VALIDER par le fondateur sur la page finale (confirmation écrite)
+> **Status:** **Seed V2 — cœur confirmé (`founder-confirmed` 2026-09-23)** · ⚠️ **deux dettes mesurées, voir `docs/nature-way/omni-seed-closure-audit-2026-09-26.md`** : la fourchette est **`S-01…S-32`** (et non `S-34` — artefact de comptage corrigé partout le 2026-09-26) ; `S-06` (échelle 0→4) et `S-32` (intégrité/réputation de l'offre) sont **confirmés mais non construits**. Le Seed est **close comme intention** ; ces deux décisions attendent un arbitrage fondateur (tranche Root ou report écrit).
 > **As of:** 2026-09-23
 > **Owner:** Founder (intent) / Nature Way (drafting)
 > **Supersedes (une fois confirmé):** `docs/nature-way/omni-intent-brief-2026-09-02.md`

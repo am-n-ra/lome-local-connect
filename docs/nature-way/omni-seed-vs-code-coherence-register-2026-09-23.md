@@ -140,7 +140,7 @@ synchronisés avec le code** — la seule chose qui a réellement produit le ron
 |---|---|
 | Chargé | `.agents/skills/nature-way-founder-hq/references/intra-skill-execution-controller.md` |
 | Chargé | `.agents/skills/nature-way/references/visual-and-logic-coherence-review.md` |
-| Autorité lue | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (Seed V2, 34 décisions) |
+| Autorité lue | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (Seed V2, 32 décisions) |
 | Preuve lue | `db/migrations/001_v2_roots.sql` · `src/domain/invariants.ts` · `src/server/trunk-repository.ts` |
 | Non chargé / raison | `technical-lead-production-review.md` — **Root pas encore ouvert** (prématuré) |
 

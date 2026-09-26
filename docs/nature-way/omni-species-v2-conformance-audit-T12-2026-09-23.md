@@ -94,7 +94,7 @@ qu'il lisait la donnée, jamais le pixel.
 |---|---|
 | Chargé | `.agents/skills/nature-way/references/visual-and-logic-coherence-review.md` |
 | Chargé | `.agents/skills/nature-way/references/intra-skill-execution-controller.md` |
-| Chargé | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions) |
+| Chargé | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions) |
 | Chargé | `docs/maquette/omni-species-v2-interactive.html` (73 `SHEETS`) |
 | Chargé | `docs/founder-hq/current-state.md` (source d'état) |
 | Non chargé / raison | `technical-lead-production-review.md` — phase Root non active |

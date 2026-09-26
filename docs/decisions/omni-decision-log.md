@@ -13,7 +13,7 @@ socle → maquette) et référencée ici.
 | ID | Date | Décision | Alternatives rejetées | Impact |
 |---|---|---|---|---|
 | DEC-V2-01 | 2026-09-23 | **L'offre appartient à l'ENTITÉ, pas au lieu** (`S-25`) : `v2_products.facility_id` devient **nullable**, `entity_id` ajouté sur offres/lieux/entitlements | Garder `facility_id not null` (contredisait `S-01`/`S-02`/`S-25`) | Migration `058`→`061` · code `coalesce(p.entity_id, f.entity_id)` |
-| DEC-V2-02 | 2026-09-23 | **Le Seed V2 (`S-01…S-34`) supersède** l'Intent Brief du 2026-09-02 | Réconcilier les deux | `omni-intent-brief-v2-2026-09-23.md` = autorité produit |
+| DEC-V2-02 | 2026-09-23 | **Le Seed V2 (`S-01…S-32`) supersède** l'Intent Brief du 2026-09-02 | Réconcilier les deux | `omni-intent-brief-v2-2026-09-23.md` = autorité produit |
 | DEC-V2-03 | 2026-09-23 | **`D-C1` retenue** — reconstruire le socle au modèle Seed ; `D-C2`/`D-C3` écartées | `D-C2` (contredisait `S-01`/`S-02`/`S-25`) · `D-C3` (réduisait sans guérir) | `058`→`061` **exécutés** |
 | DEC-V2-04 | 2026-09-25 | **`D-CON-1…5`** — les seuils de contrainte sont **réglables** (pas des interrupteurs) ; 3 groupes explicites ; distance comptée une fois | Chips figés | Maquette + gardes falsifiés |
 | DEC-V2-05 | 2026-09-25 | **`D-LOC-1…5`** — **la devise suit la localisation de l'utilisateur**, portée par le state | Devise constante `OMNI_DEFAULT_LOCAL_CURRENCY` | Contrat `omni-currency-localization-contract` ; **app non alignée** |

@@ -31,7 +31,7 @@
 | Founder claim | Measured this session | Verdict |
 |---|---|---|
 | « on a tourné en rond » | **True, and the cause is named.** The product never looped — **our memory of the product** looped. The base was rebuilt (`058`→`061`) while the state documents did not follow, so each restart began from a stale map. | **CONFIRMED** |
-| « on a raté tout le process depuis Species » | **Partly false.** Seed V2 (`S-01…S-34`) and Species V2 (74 screens, 27/27, `NON MESURÉ = 0`) are real and validated. What was missed is not the *process* but its **synchronisation**. | **PARTIAL** |
+| « on a raté tout le process depuis Species » | **Partly false.** Seed V2 (`S-01…S-32`) and Species V2 (74 screens, 27/27, `NON MESURÉ = 0`) are real and validated. What was missed is not the *process* but its **synchronisation**. | **PARTIAL** |
 | « la présentation visuelle globale est bonne » | **True** — `check:maquette`: 74 screens, 5 levels, registry truthful, 0 duplicates. | **CONFIRMED** |
 | « le fond et la logique qui font d'Omni Omni ne sont pas là » | **True, and quantified — on one layer only.** Re-measured on `br-dawn-hill-am5amy22`: of 16 published offers, `condition_kind` **0/16**, `handover_kind` **0/16**, `price_kind` **0/16**, `uniqueness_kind` **0/16**, `position_kind` **13/16**. The mechanism is **delivered** (write `SellerV13.tsx:174`, read `trunk-repository.ts:505-508`, catalogue `:2310-2311`); the **usage is empty**; the **filtering is absent by design** — the four columns are *selected* in the read path but appear in **no `WHERE` clause**. | **CONFIRMED** |
 | « beaucoup d'incohérence dans ce qu'on veut faire et proposer » | **True** — and this is the part that was fixable, so it was fixed today (§3). | **CONFIRMED, now reduced** |

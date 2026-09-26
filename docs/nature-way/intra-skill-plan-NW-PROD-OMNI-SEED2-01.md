@@ -79,7 +79,7 @@ anti-orphelin (`grep` importeurs) **avant** de conclure qu'une capacité n'exist
   process depuis Species » + « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse. »
 - **Porte actuelle :** **Seed reconciliation + Species reconciliation (reouverte)** — pas Root.
 - **`docs/nature-way/omni-intent-brief-v2-2026-09-23.md`** : **Seed CLOS,
-  `founder-confirmed` 2026-09-23**, 34 décisions **S-01…S-34**, « c'est ça » (fondateur).
+  `founder-confirmed` 2026-09-23**, 32 décisions **S-01…S-32**, « c'est ça » (fondateur).
 - **Prochain explicitement écrit :** réconciliation masters → SDM V2 →
   **Species V2** (maquette montrée au fondateur dans le navigateur), ordre
   **acheteur → offreur → échelle d'existence**.
@@ -93,14 +93,14 @@ sur les S-xx** (tâche T-11 ci-dessous).
 
 | ID | Parent | Chemin structurel | Phase | Objectif | Dépendance | Owner | Statut | Critère d'acceptation | Preuve attendue | Risque/dette | Re-plan |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **T-11** | T-01 | product > species | **Species** | **Réétalonner le plan V2 sur les 34 décisions S-01…S-34** : cartographier chaque S-xx → surface maquette (présente/partielle/absente) → tranche | T-01, Intent Brief V2 | Nature Way | `done` | table S-xx → surface → tranche, zéro décision orpheline | table dans un registre Species V2 | COH-V2-18 (audit mesuré contre MV1) | audit clos à tort |
+| **T-11** | T-01 | product > species | **Species** | **Réétalonner le plan V2 sur les 32 décisions S-01…S-32** : cartographier chaque S-xx → surface maquette (présente/partielle/absente) → tranche | T-01, Intent Brief V2 | Nature Way | `done` | table S-xx → surface → tranche, zéro décision orpheline | table dans un registre Species V2 | COH-V2-18 (audit mesuré contre MV1) | audit clos à tort |
 | **T-12** | T-11 | product > species | **Species** | **Audit de conformité Species V2** — **LIVRÉ (refait) 2026-09-23** par **rendu navigateur réel** (Playwright), pas par grep. 16/16 conforme ; 1 écart réel trouvé **et corrigé** (S-01 : la fiche affirmait « sept caractéristiques » sans rendre Retrait/livraison). Falsifié (3 modes + 2 faiblesses de l'audit corrigées). Harnais `npm run check:species-t12`. | T-11 | Nature Way | `done` | verdict par décision : conforme / partielle / absente, par texte **rendu** | `docs/nature-way/omni-species-v2-conformance-audit-T12-2026-09-23.md` | audit source-grep trompeur | fondateur rouvre une décision |
 
 | **T-14** | T-12 | product > seed-coherence | **Seed** | **Diagnostic de cohérence Seed V2 ↔ maquette ↔ code** — livré : **7 incohérences mesurées** (C-1…C-7) derrière **une seule racine** — `v2_products.facility_id not null` contredit **S-25** (« il n'y a pas de produit appartenant à une facilité ») et **S-01/S-02** (modèle universel) ; Pro par facilité contredit « Pro = par entité » ; plafond 5 vs **20** ; bulk `ceil(N/100)` vs « 1 besoin = 1 bulk » ; seuil 3 uniforme vs seuil par volume. La maquette **suit** le Seed ; **le socle ne suit pas**. | T-12 | Nature Way | `review` | décision fondateur **D-C1/C2/C3** rendue et écrite | `docs/nature-way/omni-seed-vs-code-coherence-register-2026-09-23.md` | le fond soupçonné ≠ fond prouvé (chemins cités) | contredit S-01/S-02/S-25/S-14/S-19 éco | décision fondateur, ou offre réelle hors moule qui casse le schéma |
 | **T-13** | T-11 | product > species | **Species** | **Produire les tranches SP-1…SP-6** (`SP-1` + `SP-2` + `SP-3` **livrés** 2026-09-23) (SP-1 caractéristiques d'offre → SP-2 échelle 0→4 → SP-3 double niveau → SP-4 intégrité/réputation d'offre → SP-5 filtres carte → SP-6 compléments) | T-11, **validation fondateur** | Nature Way | `in_progress` | surfaces dessinées dans la maquette V2, cohérentes avec `design.md` | diff maquette + capture | S-01/S-06/S-11/S-32 non démontrés | `visual-and-logic-coherence-review.md` | fondateur refuse SP |
 
 **T-11 rendu :** registre `docs/nature-way/omni-species-v2-decision-registry-2026-09-23.md` —
-34 décisions cartographiées, **0 orpheline**. **Species n'est PAS close** : la maquette ne démontre
+32 décisions cartographiées, **0 orpheline**. **Species n'est PAS close** : la maquette ne démontre
 pas **S-01** (caractéristiques d'offre : 0 surface), **S-06** (échelle 0→4 : 0 occurrence),
 **S-11** (double niveau : 0), **S-32** (intégrité/réputation d'offre : absent).
 **T-13 = le vrai travail Species restant ; bloqué sur validation fondateur de SP-1…SP-6.**

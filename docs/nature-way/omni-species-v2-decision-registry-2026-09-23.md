@@ -2,7 +2,7 @@
 
 > **Tâche :** `T-11` (plan `NW-PROD-OMNI-SEED2-01`) · **Phase :** Species (réouverte)
 > **As of :** 2026-09-23 · **Auteur :** Nature Way · **Owner décisions :** fondateur
-> **Référence unique :** `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions,
+> **Référence unique :** `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions,
 > `founder-confirmed`) · **Maquette :** `docs/maquette/omni-species-v2-interactive.html` (74 écrans)
 > **Source d'état :** `docs/founder-hq/current-state.md`
 > **Méthode :** mesure **code-vérifiée** de la maquette (grep + inventaire `SHEETS`), pas d'opinion.
@@ -322,7 +322,7 @@ choisi d'y chercher.
 |---|---|
 | Loaded | `.agents/skills/nature-way/references/visual-and-logic-coherence-review.md` (déclenché par T-11/T-12) |
 | Loaded | `.agents/skills/nature-way/references/intra-skill-execution-controller.md` |
-| Loaded | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (source : 34 décisions) |
+| Loaded | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (source : 32 décisions) |
 | Loaded | `docs/maquette/omni-species-v2-interactive.html` (mesure : 72 `SHEETS`) |
 | Loaded | `docs/founder-hq/current-state.md` (source d'état) |
 | Not loaded / reason | `technical-lead-production-review.md` — phase Root non active |
@@ -334,7 +334,7 @@ choisi d'y chercher.
 | HQ plan | `HQ-OMNI-2026-09-02` · **porte courante : Seed/Species réouverte** |
 | Plan local | `NW-PROD-OMNI-SEED2-01` · **T-11 `done`** |
 | Décision demandée | **valider SP-1…SP-6 et l'ordre** (SP-1 → SP-2 → SP-3 en premier) |
-| Preuve | ce registre (34 décisions cartographiées, 0 orpheline) |
+| Preuve | ce registre (32 décisions cartographiées, 0 orpheline) |
 | Gap résiduel | la maquette **ne démontre pas** S-01/S-06/S-11/S-32 → Species **non close** |
 | Prochaine action | **fondateur valide SP-1…SP-3** → je produis les surfaces → T-12 audit de conformité |
 
@@ -342,7 +342,7 @@ choisi d'y chercher.
 
 ## 11. Amendement 2026-09-25 — couverture corrigée (`COH-V2-18`)
 
-Ce registre disait « 34 décisions cartographiées, 0 orpheline ». Le **cartographiage était juste**, mais l'audit qui s'en réclamait (**T-12**) appliquait **ses propres** phrases de Seed : **15 décisions mesurées sur 34**, imprimées comme « **16/16 conforme** » — un **dénominateur choisi par l'audit**. Toute décision non regardée devenait **conforme par omission**.
+Ce registre disait « 32 décisions cartographiées, 0 orpheline ». Le **cartographiage était juste**, mais l'audit qui s'en réclamait (**T-12**) appliquait **ses propres** phrases de Seed : **15 décisions mesurées sur 34**, imprimées comme « **16/16 conforme** » — un **dénominateur choisi par l'audit**. Toute décision non regardée devenait **conforme par omission**.
 
 ### Couverture désormais **mesurée et classée** (harnais `check:species-t12`)
 

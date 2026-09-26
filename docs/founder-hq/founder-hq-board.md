@@ -6,7 +6,7 @@
 
 > Réponse mesurée au verdict fondateur : `docs/founder-hq/hq-reconciliation-2026-09-26.md`.
 > **Verdict : le fond est juste ; la cause n'est pas le process, c'est sa SYNCHRONISATION.**
-> Seed V2 (`S-01…S-34`) et Species V2 (74 écrans, 27/27, `NON MESURÉ = 0`) sont **réels et validés**.
+> Seed V2 (`S-01…S-32`) et Species V2 (74 écrans, 27/27, `NON MESURÉ = 0`) sont **réels et validés**.
 > Ce qui a été raté : **Root exécuté sous une Species non conforme** (incidents 2026-09-23 **et** 2026-09-24,
 > tous deux enregistrés), puis une **mémoire produit en retard** sur le socle réel — d'où un rond-point
 > **documentaire**, pas produit.
@@ -51,6 +51,18 @@
 > **`R-C`/`R-D` sont POUSSÉS et vérifiés en prod** (`c6e973b` — prod sert `index-Ck-_DzRo.js` ===
 > build local, **`T-07d` ✅** ; les 2 lieux orphelins restent des **lieux de carte** mais avec **0 offre**).
 > **Ne pas rouvrir Seed/Species ni élargir.**
+>
+> **Audit de clôture Seed (2026-09-26, `SEED-CLOSURE-AUDIT-2026-09-26`)** — réponse à « après Seed on
+> devait aller à Root, non ? mais as-tu fini Seed au moins ? » : **la séquence était bien Seed → Species
+> → Root, et les trois ont été faits.** Le Seed est **clos comme intention** (`founder-confirmed`,
+> « c'est ça »), avec **deux dettes mesurées** — pas une réouverture :
+> (1) la fourchette annoncée « `S-01…S-34` » était **fausse** : `S-33`/`S-34` n'existent nulle part, le
+> brief porte **`S-01…S-32`** — l'erreur venait du **nombre de lignes** de la table (34) lu comme
+> **borne d'identifiants** ; corrigé dans **~10 documents** + garde `check:state` **falsifiée** ;
+> (2) **`S-06`** (échelle d'existence 0→4) et **`S-32`** (intégrité/réputation **de l'offre**) sont
+> **confirmés mais non construits** (0 occurrence ; `v2_ratings` est scopé à la **transaction**, pas à
+> l'offre) → **arbitrage fondateur** : tranche Root ou report écrit. Détail :
+> `docs/nature-way/omni-seed-closure-audit-2026-09-26.md`.
 >
 > ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
 > d'abord », alors que son code était livré depuis 00:05 le même jour ; le soir elle listait encore
@@ -135,7 +147,7 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
 | **Active gate (COURANT)** | **Root** — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root OUVERT** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = finir le socle `R-B`…`R-E`**, puis aligner l'app sur la maquette | ⚠️ **L'app N'EST PAS alignée** (chips figés, devise en dur) — **maintenant débloqué** puisque Root est ouvert. **`public.markets` absente** du canonique v2 ; **dette data** (9 produits `USD` tarifés en francs) ; **bug serveur** : filtre budget aveugle à la devise |
-| **Seed V2** | `omni-intent-brief-v2-2026-09-23.md` — 34 décisions **S-01…S-34**, `founder-confirmed`. Mot du fondateur : **« c'est ça »**. Supersede l'Intent Brief du 2026-09-02. | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` | **CLOS** | Fondateur | Sert de référence unique à T-11/T-12 | Toute décision S-xx non couverte par une surface = travail Species |
+| **Seed V2** | `omni-intent-brief-v2-2026-09-23.md` — 32 décisions **S-01…S-32**, `founder-confirmed`. Mot du fondateur : **« c'est ça »**. Supersede l'Intent Brief du 2026-09-02. | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` | **CLOS** | Fondateur | Sert de référence unique à T-11/T-12 | Toute décision S-xx non couverte par une surface = travail Species |
 | **Species V2** | Maquette `docs/maquette/omni-species-v2-interactive.html` — **74 écrans**. `SP-1…SP-10` **livrés ET ACCEPTÉS**. **2026-09-25 : volet CONTRAINTES** — D-CON-1…5 + D-LOC-1…5 (devise par localisation) ; seuils réglables, fiche lisant la contrainte active, distance non dupliquée, 3 groupes explicites ; gardes falsifiés. | maquette V2 + registre + `omni-search-constraints-decisions-D-CON-2026-09-25.md` + `omni-currency-localization-contract-2026-09-25.md` | **CLOSE `founder-confirmed` 2026-09-25** | **Fondateur (donné)** | — (clos) | `T-12` **refait et clos** — audit par **rendu navigateur**. ⚠️ **Dénominateur corrigé 2026-09-25 (`COH-V2-18`)** : l'audit imprimait « 16/16 » avec un dénominateur **choisi par lui-même** (15 décisions sur 34). Désormais il **lit le Seed** et **classe chaque décision** → **27/27 conforme, 26 rendues, `NON MESURÉ = 0`**, exit ≠ 0 si un non-conforme survit. **1 écart réel corrigé** (`S-04`). Les 5 dernières `règle écrite` (`S-09`, `S-13`, `S-16`, `S-17`, `S-28`) sont **désormais mesurées au rendu** — 2 prédicats faux corrigés (`S-17` sur 3 surfaces ; `S-28` casse `innerText`). |
 | **Décisions V2** | `D-1a` fusion maquette+app (**appliqué**) ; `D-2a` **l'offre appartient à l'ENTITÉ** (**appliqué**). | Intent Brief V2 + registre de cohérence | `done` | Fondateur | — | — |
 | **Gate 6 (V1)** | Verdict fondateur「 Go with limits 」 2026-09-11 — **reste fermé pour la V1**, mais **superseded comme porte courante** par la réouverture Seed/Species. | Master Plan | `closed` (V1) · **non courant** | Fondateur | Ne pas confondre avec la porte courante | — |

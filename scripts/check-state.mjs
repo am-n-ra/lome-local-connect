@@ -90,7 +90,18 @@ const deliveredSlices = [
   // A recommendation must not list either as still-to-do.
   ['docs/founder-hq/founder-hq-board.md', '**`R-D`** (chemin `individu`, 0 entité de ce type — **prochaine recommandée**)', 'must not recommend R-D — it shipped 2026-09-26'],
   ['docs/founder-hq/founder-hq-board.md', '**`R-C`/`SP-V2-01`** (décision fondateur)', 'must not list SP-V2-01 as a pending founder decision — answered and executed 2026-09-26'],
-  ['docs/founder-hq/handoff-receipt-HO-OMNI-22.md', '**Founder decision required: remove or attach.**', 'must not list SP-V2-01 as a pending decision — resolved 2026-09-26'],
+  // Seed V2 has S-01…S-32. The range "S-01…S-34" was a counting artefact: the table has 34
+  // rows (S-01…S-31 = 32 rows with S-02 repeated at line 134, plus open points S-1/S-2),
+  // and S-32 is a section heading, not a row. 34 rows != 34 ids. S-33/S-34 exist nowhere.
+  // Count the ids, do not read the row count as the range.
+  ['docs/founder-hq/founder-hq-master-plan.md', '34 décisions `S-01…S-34`', 'must not claim S-01…S-34 — the Seed has S-01…S-32'],
+  ['docs/founder-hq/founder-hq-board.md', 'S-01…S-34', 'must not claim S-01…S-34 — the Seed has S-01…S-32'],
+  ['docs/nature-way/omni-maturity-verdict-2026-09-25.md', '34 décisions `S-01…S-34`', 'must not claim S-01…S-34 — the Seed has S-01…S-32'],
+  ['docs/README.md', 'S-01…S-34', 'must not claim S-01…S-34 — the Seed has S-01…S-32'],
+  // S-02 IS confirmed (brief line 134, "Confirmé définitivement") — do not re-assert it as
+  // open. I made that exact error once already by reading the decision table without reading
+  // the resolution below it. What must NOT be asserted is the counting artefact range.
+  ['docs/nature-way/omni-intent-brief-v2-2026-09-23.md', 'proposé — accord fondateur requis** ; la fourchette', 'must not re-assert S-02 as open — it is confirmed définitivement (brief line 134)'],
 ];
 
 let failed = 0;

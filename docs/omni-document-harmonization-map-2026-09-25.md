@@ -36,7 +36,7 @@ deux, sur un document **périmé mais bien écrit**. **C'est la cause mécanique
 |---|---|
 | `docs/README.md` le déclarait **« l'unique document normatif d'Omni »** | README, avant correction |
 | Il date du **2026-08-21** | en-tête |
-| Il **précède** le Seed V2 (`S-01…S-34`, `2026-09-23`) | dates |
+| Il **précède** le Seed V2 (`S-01…S-32`, `2026-09-23`) | dates |
 | Il **ignore** l'entité propriétaire de l'offre (`S-25`) | **0** occurrence de `v2_entities` ; ses 4 « identité » = **Identité UI** |
 | Le journal de décisions qui l'accompagne **s'arrête au 2026-08-16** | `decisions/omni-decision-log.md` : **0** décision `2026-09` |
 | Sa `DEC-001` **réaffirme** « un seul master » — et c'est ce master-là | `DEC-001` |
@@ -44,7 +44,7 @@ deux, sur un document **périmé mais bien écrit**. **C'est la cause mécanique
 **Verdict : il n'y a plus UN master. Omni se décrit par une CHAÎNE.**
 
 ```
-Seed V2 (intention, S-01…S-34)
+Seed V2 (intention, S-01…S-32)
   └─ SDM (dépendances, architecture causale)
        └─ Contrat du socle (entité, offre)
             └─ Maquette V2 (74 écrans, acceptée)

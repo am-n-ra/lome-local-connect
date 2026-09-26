@@ -17,7 +17,7 @@
 | **Gate** | `SPECIES_CLOSED_ROOT_OPEN` |
 | **As of** | 2026-09-25 |
 | **Decided by** | Fondateur |
-| **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (34 décisions `S-01…S-34`) |
+| **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`) |
 | **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
 | **Root** | **OUVERT** — finition du socle (`R-B`…`R-E`) puis alignement de l'app sur la maquette |
 
