@@ -5,7 +5,7 @@ import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './ro
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
 import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
-import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError } from './offer-media-storage';
+import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
@@ -47,6 +47,14 @@ export function toApiErrorResponse(correlationId: string, error: unknown) {
   }
   if (error instanceof EvidenceStoragePolicyError || error instanceof OfferMediaStorageError) {
     return { status: 409, body: errorBody(correlationId, 'EVIDENCE_STORAGE_UNAVAILABLE', error.message) };
+  }
+  // A missing session is 401, a malformed request is 400, a legitimate refusal is 409. Collapsing
+  // them into one code tells a signed-out seller to fix a request that was already correct.
+  if (error instanceof OfferMediaAuthError) {
+    return { status: 401, body: errorBody(correlationId, 'AUTH_REQUIRED', error.message) };
+  }
+  if (error instanceof OfferMediaRequestError) {
+    return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };
   }
   if (error instanceof OfferMediaPolicyError) {
     return { status: 400, body: errorBody(correlationId, 'INVALID_INPUT', error.message) };

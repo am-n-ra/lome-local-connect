@@ -37,6 +37,27 @@ export class OfferMediaStorageError extends Error {
   }
 }
 
+/**
+ * "You are not signed in" is not "your request is invalid" and not "policy refused you". The
+ * app separates the three (the pro-status lesson): a missing session is 401 AUTH_REQUIRED, a
+ * malformed request is 400, a legitimate refusal is 409. Returning 400 for a missing session
+ * told a signed-out seller to fix a request that was already correct.
+ */
+export class OfferMediaAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OfferMediaAuthError';
+  }
+}
+
+/** A body the Blob protocol cannot parse is a client error, never a server fault (500). */
+export class OfferMediaRequestError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'OfferMediaRequestError';
+  }
+}
+
 export function hasOfferMediaStorage(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
@@ -65,6 +86,14 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError('Offer visual storage is not configured; no upload token was issued.');
   const prefix = offerMediaPrefix(input.productId);
   const token = requiredBlobToken();
+  // The Blob protocol sends a typed envelope. Validating it here turns a provider parse failure
+  // (which would surface as an opaque 500) into an honest 400 naming the real problem.
+  const body = input.body as HandleUploadBody | null;
+  const isGenerate = body?.type === 'blob.generate-client-token';
+  const isCompleted = body?.type === 'blob.upload-completed';
+  if (!body || typeof body !== 'object' || (!isGenerate && !isCompleted)) {
+    throw new OfferMediaRequestError('The upload request is not a valid Blob client-token request.');
+  }
   const webRequest = requestFromHeaders(input.url, input.headers, input.body);
   return handleUpload({
     body: input.body as HandleUploadBody,
@@ -72,7 +101,7 @@ export async function handleOfferMediaUpload(input: { body: unknown; headers: In
     token,
     onBeforeGenerateToken: async (pathname) => {
       const authUserId = await getAuthUserId(input.headers);
-      if (!authUserId) throw new OfferMediaPolicyError('An authenticated seller session is required to upload an offer visual.');
+      if (!authUserId) throw new OfferMediaAuthError('Sign in as an authorized seller before uploading an offer visual.');
       const filePart = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : '';
       if (!filePart || filePart.includes('/') || filePart.includes('..') || filePart.includes('\\') || /\s/.test(filePart)) throw new OfferMediaPolicyError('The upload path is not bound to this offer.');
       // Constructed lazily: the auth/session and path checks must not require a database.

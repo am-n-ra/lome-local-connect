@@ -6005,6 +6005,18 @@ var OfferMediaStorageError = class extends Error {
     this.name = "OfferMediaStorageError";
   }
 };
+var OfferMediaAuthError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OfferMediaAuthError";
+  }
+};
+var OfferMediaRequestError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "OfferMediaRequestError";
+  }
+};
 function hasOfferMediaStorage() {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN?.trim());
 }
@@ -6029,6 +6041,12 @@ async function handleOfferMediaUpload(input) {
   if (!hasOfferMediaStorage()) throw new OfferMediaStorageError("Offer visual storage is not configured; no upload token was issued.");
   const prefix = offerMediaPrefix(input.productId);
   const token = requiredBlobToken2();
+  const body = input.body;
+  const isGenerate = body?.type === "blob.generate-client-token";
+  const isCompleted = body?.type === "blob.upload-completed";
+  if (!body || typeof body !== "object" || !isGenerate && !isCompleted) {
+    throw new OfferMediaRequestError("The upload request is not a valid Blob client-token request.");
+  }
   const webRequest = requestFromHeaders2(input.url, input.headers, input.body);
   return handleUpload2({
     body: input.body,
@@ -6036,7 +6054,7 @@ async function handleOfferMediaUpload(input) {
     token,
     onBeforeGenerateToken: async (pathname) => {
       const authUserId = await getAuthUserId(input.headers);
-      if (!authUserId) throw new OfferMediaPolicyError("An authenticated seller session is required to upload an offer visual.");
+      if (!authUserId) throw new OfferMediaAuthError("Sign in as an authorized seller before uploading an offer visual.");
       const filePart = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
       if (!filePart || filePart.includes("/") || filePart.includes("..") || filePart.includes("\\") || /\s/.test(filePart)) throw new OfferMediaPolicyError("The upload path is not bound to this offer.");
       const repository = createTrunkRepository();
@@ -6297,6 +6315,12 @@ function toApiErrorResponse(correlationId, error) {
   }
   if (error instanceof EvidenceStoragePolicyError || error instanceof OfferMediaStorageError) {
     return { status: 409, body: errorBody(correlationId, "EVIDENCE_STORAGE_UNAVAILABLE", error.message) };
+  }
+  if (error instanceof OfferMediaAuthError) {
+    return { status: 401, body: errorBody(correlationId, "AUTH_REQUIRED", error.message) };
+  }
+  if (error instanceof OfferMediaRequestError) {
+    return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
   }
   if (error instanceof OfferMediaPolicyError) {
     return { status: 400, body: errorBody(correlationId, "INVALID_INPUT", error.message) };
