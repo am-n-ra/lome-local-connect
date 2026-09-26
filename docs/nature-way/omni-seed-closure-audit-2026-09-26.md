@@ -67,15 +67,19 @@ La méthode cite un **founder mission contract** parmi les sorties possibles du 
 
 ## 4. La correction la plus petite
 
-**Ne pas rouvrir le Seed.** Le cœur est confirmé et Species/Root ont avancé dessus. Deux actes bornés suffisent :
+**Ne pas rouvrir le Seed.** Le cœur est confirmé et Species/Root ont avancé dessus. Trois actes bornés suffisaient — **tous faits le 2026-09-26** :
 
 | # | Acte | Owner | Effort |
 |---|---|---|---|
 | 1 | Fourchette corrigée `S-01…S-32` partout — **FAIT 2026-09-26** + garde `check:state` falsifiée | Nature Way | ✅ |
-| 2 | `S-06` et `S-32` : soit **planifiés** comme tranches Root, soit **explicitement différés** avec trigger écrit | **fondateur** | 1 décision |
-| 3 | Founder mission contract : l'écrire **ou** le retirer comme exigence | fondateur + Nature Way | petit |
+| 2 | `S-06` et `S-32` : tranche Root — **DÉCIDÉ ET LIVRÉ 2026-09-26** (`ecdb398`, prod `index-CnHnpl0w.js`) → `omni-root-rf-s06-s32-evidence-2026-09-26.md` | fondateur + Nature Way | ✅ |
+| 3 | Founder mission contract : **ÉCRIT 2026-09-26** → `omni-founder-mission-contract-2026-09-26.md` | fondateur + Nature Way | ✅ |
 
 **Trigger de révision :** dès que la décision 2 est rendue, ce registre est clos et Root continue sans dette de Seed.
+
+**CLOS 2026-09-26.** Les trois actes sont faits. Les deux dettes mesurées (`S-06`, `S-32`) ne sont plus « confirmées mais non construites » : elles sont **dérivées, rendues, testées, et prouvées en prod**. Ce registre ne rouvre pas le Seed — il ferme ses deux dettes.
+
+**Résultat de la mesure qui compte pour la clôture :** `0/16` offres `intégrité ok` (visuel manquant partout), `0` offre aux niveaux 3/4. **La maquette affiche ✓ partout, la réalité non.** C'est l'écart que la tranche rend visible ; son arbitrage (ajuster la maquette ou produire les visuels) revient au fondateur.
 
 ## 5. Note d'honnêteté — j'ai commis l'erreur que je documentais
 

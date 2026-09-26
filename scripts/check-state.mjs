@@ -90,6 +90,11 @@ const deliveredSlices = [
   // A recommendation must not list either as still-to-do.
   ['docs/founder-hq/founder-hq-board.md', '**`R-D`** (chemin `individu`, 0 entité de ce type — **prochaine recommandée**)', 'must not recommend R-D — it shipped 2026-09-26'],
   ['docs/founder-hq/founder-hq-board.md', '**`R-C`/`SP-V2-01`** (décision fondateur)', 'must not list SP-V2-01 as a pending founder decision — answered and executed 2026-09-26'],
+  // R-F (S-06 + S-32) shipped and prod-verified 2026-09-26 (ecdb398). The Seed closure audit
+  // must not keep presenting them as "to plan or defer" — that is the same hour-staleness the
+  // two rules above exist to catch, applied to the Root slice that closed them.
+  ['docs/nature-way/omni-seed-closure-audit-2026-09-26.md', 'soit **planifiés** comme tranches Root, soit **explicitement différés**', 'must not list S-06/S-32 as to-plan — the Root slice shipped 2026-09-26 (ecdb398)'],
+  ['docs/nature-way/omni-seed-closure-audit-2026-09-26.md', "l'écrire **ou** le retirer comme exigence", 'must not list the founder mission contract as unwritten — it was written 2026-09-26'],
   // Seed V2 has S-01…S-32. The range "S-01…S-34" was a counting artefact: the table has 34
   // rows (S-01…S-31 = 32 rows with S-02 repeated at line 134, plus open points S-1/S-2),
   // and S-32 is a section heading, not a row. 34 rows != 34 ids. S-33/S-34 exist nowhere.

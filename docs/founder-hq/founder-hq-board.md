@@ -65,6 +65,15 @@
 > l'offre) → **arbitrage fondateur** : tranche Root ou report écrit. Détail :
 > `docs/nature-way/omni-seed-closure-audit-2026-09-26.md`.
 >
+> ✅ **TRANCHÉ ET LIVRÉ 2026-09-26** (fondateur : « oui on en fait une tranche root et oui on l'écrit ») :
+> tranche Root **`R-F`** livrée — `S-06`/`S-32` **dérivés, rendus, testés, prouvés en prod** (commit
+> `ecdb398`, prod `index-CnHnpl0w.js` === local, **T-07d ✅** ; 664/664 tests ; deux règles porteuses
+> falsifiées). **Founder Mission Contract écrit** (`omni-founder-mission-contract-2026-09-26.md`).
+> **Mesure qui compte :** `0/16` offres `intégrité ok` (visuel manquant partout), `0` offre aux niveaux
+> 3/4 — la maquette affiche ✓ partout, la réalité non ; cet écart est **rendu visible et explicable**,
+> son arbitrage (maquette ou visuels) remonte au fondateur. Détail :
+> `docs/nature-way/omni-root-rf-s06-s32-evidence-2026-09-26.md`.
+>
 > ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
 > d'abord », alors que son code était livré depuis 00:05 le même jour ; le soir elle listait encore
 > l'alignement comme *à faire*, alors qu'il venait d'être livré et prouvé en prod ; puis elle listait

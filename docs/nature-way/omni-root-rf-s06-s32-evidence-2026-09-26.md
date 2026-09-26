@@ -2,8 +2,9 @@
 
 > **ID :** `PER-OMNI-RF-2026-09-26`
 > **Contrat :** `docs/nature-way/omni-root-s06-s32-contract-2026-09-26.md`
-> **Commit :** (à compléter au push)
+> **Commit :** `ecdb398` (poussé `17d719a..ecdb398`)
 > **Branche :** `omni-v2-rebuild` · **Base canonique :** `br-dawn-hill-am5amy22`
+> **Prod :** `omni.sparkafrika.online` sert `index-CnHnpl0w.js` === build local (**T-07d ✅**)
 
 ---
 
@@ -61,7 +62,7 @@ Les **requêtes exactes du dépôt** ont été exécutées contre la base canoni
 
 **Conclusion honnête :** la maquette affiche « intégrité ✓ · 4,6 ★ » sur chaque carte ; la réalité est **0 ✓ / 16**. La tranche rend cet écart **visible et explicable** au lieu de le peindre. C'est le résultat attendu, pas un défaut.
 
-## 5. Preuve de bundle
+## 5. Preuve de bundle et de production
 
 | Vérification | Résultat |
 |---|---|
@@ -71,6 +72,11 @@ Les **requêtes exactes du dépôt** ont été exécutées contre la base canoni
 | CSS livré | `.stepline`, `.exlevel`, `.trust.ok`, `.trust.muted` présents |
 | Bundles serverless régénérés | `existenceFor`/`computeIntegrity`/`reputation_count`/`is_duplicate` dans **7** bundles `api/v2/*.js` |
 | Démarrage navigateur | coquille rendue, dock Buyer/Recherche/QR/Menu, aucune erreur console bloquante |
+| **Prod === local (T-07d)** | `omni.sparkafrika.online` sert `index-CnHnpl0w.js` — **identique** au build local |
+| **Chaînes dans le bundle SERVI** | `Transactable`, `0 Présente`, `intégrité partielle`, `visuel manquant`, `pas encore d’avis`, `stepline`, `Niveau ` = **toutes présentes** dans `/assets/index-CnHnpl0w.js` récupéré depuis la prod |
+| **API prod live** | `GET /api/v2/public/facilities` → **206 lieux** avec `existenceLevel` ; distribution **203 × niveau 0, 3 × niveau 2** — identique à la mesure canonique. Le calcul tourne réellement en prod. |
+
+**Note de méthode :** un helper présent mais jamais appelé ressemble à un correctif déjà en place (leçon du 2026-09-17). C'est pourquoi la preuve vérifie les chaînes dans le **bundle servi** et la **réponse API live**, pas seulement la définition dans le source.
 
 ## 6. Résidus honnêtes
 
