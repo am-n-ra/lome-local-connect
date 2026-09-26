@@ -39,15 +39,18 @@
 > | **Données** (offres réellement décrites) | **0/16** (`condition_kind`, `handover_kind`, `price_kind`, `uniqueness_kind`) ; **13/16** `position_kind` | canonique `br-dawn-hill-am5amy22`, 2026-09-26 |
 > | **Recherche** (filtrer dessus) | **NON implémenté, et endetté par conception** — la maquette acceptée désactive `chip('État / condition', false, true)` | `listPublicFacilities` ne référence aucune des 5 colonnes |
 >
-> **Prochaine porte (Root)** — ordre **re-mesuré** : **`R-E` (S-11) est LIVRÉ** (`27a1661` — test de
-> non-régression obligatoire du Seed, totalement absent avant). Restent : **alignement app ↔ maquette**
-> (seuils `seuil` éditable + devise `D-LOC`) — **le plus visible, ce que le fondateur voit** ; **`R-D`**
-> (chemin `individu`, 0 entité de ce type) ; **`R-C`/`SP-V2-01`** (décision fondateur). Les
-> caractéristiques `R-B` sont **écrites mais jamais utilisées** — les remplir est un acte **vendeur réel**,
-> pas une tranche de code. **Ne pas rouvrir Seed/Species ni élargir.**
+> **Prochaine porte (Root)** — ordre **re-mesuré (2026-09-26, session `ALIGN-1`)** : **`R-E` (S-11) est
+> LIVRÉ** (`27a1661`) ; **alignement app ↔ maquette est LIVRÉ** (`ALIGN-1`, `0423fea` — seuils éditables
+> `D-CON-1…5`, devise par localisation `D-LOC-1…5`, filtre budget devise-aware, affichage 0-décimal,
+> 9 offres mal étiquetées corrigées) et **vérifié en prod** (XOF 2 500 → 5 facilités ; USD 2 500 → 0).
+> Restent : **`R-D`** (chemin `individu`, 0 entité de ce type — **prochaine recommandée**) ;
+> **`R-C`/`SP-V2-01`** (décision fondateur) ; **usage `R-B`** (caractéristiques 0/16 — acte **vendeur réel**,
+> pas une tranche de code). **Ne pas rouvrir Seed/Species ni élargir.**
 >
-> ⚠️ **Cette recommandation a été corrigée une fois déjà** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
-> d'abord », alors que son code était livré depuis 00:05 le même jour. **Un inventaire d'une heure peut
+> ⚠️ **Cette recommandation a été corrigée deux fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
+> d'abord », alors que son code était livré depuis 00:05 le même jour ; le 2026-09-26 (soir) elle listait
+> encore l'alignement comme *à faire*, alors qu'il venait d'être livré et prouvé en prod. **Un inventaire
+> d'une heure peut
 > être faux** — re-mesurer avant d'exécuter (`hq-reconciliation-2026-09-26.md` §5 bis).
 
 ---

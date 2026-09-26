@@ -90,7 +90,7 @@ L'inventaire des finitions (`omni-root-finishing-inventory-2026-09-25.md`) donne
 | # | Finition | Pourquoi c'est le « fond qui manque » |
 |---|---|---|
 | 1 | **`R-B` — caractéristiques d'offre** (écriture + lecture + recherche) | C'est **le cœur S-01/S-02**. Sans ça, « tout est offre » reste un slogan : un particulier, un ambulant, un objet d'occasion, un digital **ne peuvent pas se décrire**. **Le plus structurant.** |
-| 2 | **Alignement app ↔ maquette** (seuils réglables + devise par localisation + filtre budget devise-aware) | C'est ce que le fondateur a **explicitement demandé**, et l'app le **contourne**. Le plus **visible**. |
+| 2 | **Alignement app ↔ maquette** (seuils réglables + devise par localisation + filtre budget devise-aware) — **✅ LIVRÉ 2026-09-26 (`ALIGN-1`, `0423fea`), prouvé en prod** (XOF 2 500 → 5 facilités ; USD 2 500 → 0) | C'était ce que le fondateur avait **explicitement demandé**, et l'app le **contournait**. Le plus **visible** — désormais clos. |
 | 3 | **`R-D` — chemin `individu`** | Promesse produit : « un particulier vend sans structure ». Chemin **jamais exercé en données** (0 entité `individu`). |
 | 4 | **`R-C` / `SP-V2-01` — offres sans entité** | Décision fondateur (retirer ou rattacher). Petit, mais bloque la vérité de l'index. |
 | 5 | **`R-E` — découverte 2 niveaux** (S-11) | **Test de non-régression obligatoire** du Seed : entité **et** offre. |

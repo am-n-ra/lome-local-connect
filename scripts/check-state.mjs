@@ -81,6 +81,10 @@ const forbidden = [
 const deliveredSlices = [
   ['docs/founder-hq/founder-hq-board.md', 'ordre recommandé : **`R-B` d\'abord**', 'must not recommend R-B "first" — its code shipped 2026-09-26 00:05 (bfc3b7c)'],
   ['docs/founder-hq/hq-reconciliation-2026-09-26.md', 'finir `R-B` en premier** — c\'est la tranche', 'must not recommend finishing R-B — see §5 bis'],
+  // ALIGN-1 shipped and was prod-verified 2026-09-26 (0423fea). A recommendation must not
+  // list app↔maquette alignment as still-to-do — the same hour-staleness, caught a second time.
+  ['docs/founder-hq/founder-hq-board.md', 'Restent : **alignement app ↔ maquette**', 'must not list app alignment as to-do — it shipped 2026-09-26 (ALIGN-1, 0423fea)'],
+  ['docs/founder-hq/hq-reconciliation-2026-09-26.md', '**Alignement app ↔ maquette** (seuils réglables + devise par localisation + filtre budget devise-aware) |', 'must not list app alignment as pending — it shipped 2026-09-26 (ALIGN-1, 0423fea)'],
 ];
 
 let failed = 0;
