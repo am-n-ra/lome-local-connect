@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingAction, highlightSearchedProduct, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
+import { describePendingAction, highlightSearchedProduct, offerCharacteristics, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -59,5 +59,22 @@ describe('COR-7b searched-product highlight contract', () => {
   it('returns null when nothing matches or the query is empty', () => {
     expect(highlightSearchedProduct(products, 'ciment')).toBeNull();
     expect(highlightSearchedProduct(products, '')).toBeNull();
+  });
+});
+
+describe('offer characteristics (S-01 / R-B)', () => {
+  it('renders the declared characteristics in the Seed order', () => {
+    expect(offerCharacteristics({ positionKind: 'mobile', uniquenessKind: 'piece_unique', handoverKind: 'livraison', conditionKind: 'occasion', priceKind: 'negociable' })).toEqual([
+      { label: 'Position', value: 'Mobile \u00b7 se d\u00e9place' },
+      { label: 'Unicit\u00e9', value: 'Pi\u00e8ce unique \u2014 dispara\u00eet apr\u00e8s vente' },
+      { label: 'Retrait / livraison', value: 'Livraison' },
+      { label: '\u00c9tat', value: 'Occasion' },
+      { label: 'Prix', value: '\u00c0 n\u00e9gocier' },
+    ]);
+  });
+
+  it('omits an undeclared characteristic instead of inventing one', () => {
+    expect(offerCharacteristics({ positionKind: 'fixe' })).toEqual([{ label: 'Position', value: 'Fixe \u00b7 sur place' }]);
+    expect(offerCharacteristics({})).toEqual([]);
   });
 });

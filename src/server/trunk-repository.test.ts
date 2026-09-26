@@ -155,6 +155,54 @@ describe('public product boundary (v3 model)', () => {
       }),
     ).rejects.toThrow(SellerCataloguePolicyError);
   });
+
+  // S-01 — R-B : les caractéristiques de l'offre sont écrites et relues. Avant R-B,
+  // les cinq colonnes `*_kind` existaient en base mais n'étaient JAMAIS renseignées :
+  // une offre naissait sans aucune caractéristique, ce qui vidait « tout est offre ».
+  it('writes the offer characteristics into the draft insert (R-B / S-01)', async () => {
+    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000001', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value_minor: 10 }]);
+    const repository = createTrunkRepository(call.sql);
+    await repository.createSellerProductDraft({
+      authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-write',
+      positionKind: 'mobile', uniquenessKind: 'piece_unique', handoverKind: 'livraison', priceKind: 'negociable', conditionKind: 'occasion',
+    });
+    expect(call.queries[0]).toContain('position_kind');
+    expect(call.queries[0]).toContain('uniqueness_kind');
+    expect(call.queries[0]).toContain('handover_kind');
+    expect(call.queries[0]).toContain('price_kind');
+    expect(call.queries[0]).toContain('condition_kind');
+  });
+
+  it('rejects an unknown characteristic value instead of writing it (R-B / S-01)', async () => {
+    const repository = createTrunkRepository(stubSql([]).sql);
+    await expect(
+      repository.createSellerProductDraft({
+        authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-invalid',
+        positionKind: 'teleportation',
+      }),
+    ).rejects.toThrow(SellerCataloguePolicyError);
+  });
+
+  it('accepts an offer with no declared characteristic (nullable by design)', async () => {
+    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000002', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value_minor: 10 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createSellerProductDraft({
+      authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-null',
+    })).resolves.toMatchObject({ publicationState: 'draft' });
+  });
+
+  it('reads the offer characteristics back on the public offer (R-B / S-01)', () => {
+    const product = toProduct({
+      id: 'p', facility_id: 'f', name: 'Ordinateur Dell', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 1,
+      position_kind: 'fixe', uniqueness_kind: 'piece_unique', handover_kind: 'retrait', price_kind: 'negociable', condition_kind: 'occasion',
+    });
+    expect(product).toMatchObject({ positionKind: 'fixe', uniquenessKind: 'piece_unique', handoverKind: 'retrait', priceKind: 'negociable', conditionKind: 'occasion' });
+  });
+
+  it('never invents a characteristic the row does not carry (R-B / S-01)', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    expect(product).toMatchObject({ positionKind: null, uniquenessKind: null, handoverKind: null, priceKind: null, conditionKind: null });
+  });
 });
 
 describe('public facility trust boundary', () => {

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
-import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics } from './types';
+import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind } from './types';
 
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
@@ -54,6 +54,20 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [facilityRayon, setFacilityRayon] = useState('5');
   const [facilityPhone, setFacilityPhone] = useState('');
   const [facilityWhatsapp, setFacilityWhatsapp] = useState('');
+  // S-01 — publier une offre : nom, prix, quantité + les 5 caractéristiques déclarables.
+  const [showOfferForm, setShowOfferForm] = useState(false);
+  const [offerBusy, setOfferBusy] = useState(false);
+  const [offerError, setOfferError] = useState('');
+  const [offerName, setOfferName] = useState('');
+  const [offerUnit, setOfferUnit] = useState('unit');
+  const [offerPrice, setOfferPrice] = useState('');
+  const [offerDiscount, setOfferDiscount] = useState('10');
+  const [offerQty, setOfferQty] = useState('1');
+  const [offerPosition, setOfferPosition] = useState<OfferPositionKind>('fixe');
+  const [offerUniqueness, setOfferUniqueness] = useState<OfferUniquenessKind>('renouvelable');
+  const [offerHandover, setOfferHandover] = useState<OfferHandoverKind>('retrait');
+  const [offerPriceKind, setOfferPriceKind] = useState<OfferPriceKind>('fixe');
+  const [offerCondition, setOfferCondition] = useState<OfferConditionKind>('neuf');
 
   const load = useCallback(async () => {
     setError('');
@@ -136,6 +150,41 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     publicFacilities,
     selFacilityId: null,
   });
+
+  // S-01 — « tout est offre » : publier, c'est déclarer les caractéristiques de l'offre.
+  const submitOffer = useCallback(async () => {
+    setOfferError('');
+    const facilityId = ws.selFacilityId;
+    if (!facilityId) { setOfferError('Sélectionnez une facilité.'); return; }
+    const price = Math.round(Number(offerPrice) * 100);
+    const discount = Math.round(Number(offerDiscount));
+    const qty = Math.round(Number(offerQty));
+    if (!offerName.trim()) { setOfferError("Le nom de l'offre est requis."); return; }
+    if (!Number.isInteger(price) || price <= 0) { setOfferError('Prix invalide.'); return; }
+    if (!Number.isInteger(discount) || discount < 1 || discount > 90) { setOfferError("L'avantage Omni doit être entre 1 et 90 %."); return; }
+    if (!Number.isInteger(qty) || qty < 0) { setOfferError('Quantité invalide.'); return; }
+    const token = await getAuthToken();
+    if (!token) { setOfferError('Connectez-vous pour publier une offre.'); return; }
+    setOfferBusy(true);
+    try {
+      const result = await createSellerProductDraft({
+        token, facilityId, name: offerName.trim(), description: null, unit: offerUnit.trim() || 'unit',
+        prixOriginal: price, currency: 'XOF', pourcentageReduction: discount, stockLoueOmni: qty,
+        idempotencyKey: crypto.randomUUID(),
+        positionKind: offerPosition, uniquenessKind: offerUniqueness, handoverKind: offerHandover, priceKind: offerPriceKind, conditionKind: offerCondition,
+      });
+      if (result.ok && result.data) {
+        setToast('Offre créée en brouillon — publiez-la depuis le catalogue.');
+        setShowOfferForm(false);
+        setOfferName('');
+        setOfferPrice('');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setOfferError(result.error?.message ?? 'Offre non enregistrée.');
+      }
+    } catch { setOfferError('Offre non enregistrée.'); }
+    finally { setOfferBusy(false); }
+  }, [ws.selFacilityId, offerName, offerUnit, offerPrice, offerDiscount, offerQty, offerPosition, offerUniqueness, offerHandover, offerPriceKind, offerCondition, onRefresh, load]);
 
   const activeFacility = (propsCatalogue ?? catalogue)?.facilities?.find((f) => f.id === ws.selFacilityId) ?? null;
   const opState: FacilityOperationalState = activeFacility?.operationalState ?? 'ouvert';
@@ -469,6 +518,83 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>WhatsApp</label>
               <input className="input" type="tel" value={contactWhatsappDraft} onChange={(e) => setContactWhatsappDraft(e.target.value)} maxLength={40} placeholder="+228 90 00 00 00" style={{ width: '100%' }} />
               <button className="btn sm" style={{ marginTop: 8 }} type="button" disabled={contactBusy} onClick={() => void saveContact()}>{contactBusy ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
+            </div>
+          )}
+        </div>
+      )}
+      {hasFacility && ws.selFacilityCatalogue?.name && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Mes offres</b>
+              <span className="tiny muted">Cette offre appartient à {ws.selFacilityCatalogue?.name} · l'entité. L'emplacement reste optionnel.</span>
+            </div>
+            {!showOfferForm && (
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 30 }} type="button" onClick={() => setShowOfferForm(true)}>Ajouter une offre</button>
+            )}
+          </div>
+          {showOfferForm && (
+            <div style={{ marginTop: 9 }}>
+              {offerError && <p className="sub" role="alert">{offerError}</p>}
+              <label className="tiny muted" style={{ display: 'block' }}>Nom de l'offre</label>
+              <input className="input" type="text" value={offerName} onChange={(e) => setOfferName(e.target.value)} maxLength={180} placeholder="Ex: Spaghetti 500 g" style={{ width: '100%' }} />
+              <div className="row" style={{ gap: 6, marginTop: 9 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label className="tiny muted" style={{ display: 'block' }}>Prix (F)</label>
+                  <input className="input" type="number" inputMode="numeric" value={offerPrice} onChange={(e) => setOfferPrice(e.target.value)} placeholder="1000" style={{ width: '100%' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label className="tiny muted" style={{ display: 'block' }}>Avantage Omni (%)</label>
+                  <input className="input" type="number" inputMode="numeric" min={1} max={90} value={offerDiscount} onChange={(e) => setOfferDiscount(e.target.value)} style={{ width: '100%' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label className="tiny muted" style={{ display: 'block' }}>Quantité</label>
+                  <input className="input" type="number" inputMode="numeric" min={0} value={offerQty} onChange={(e) => setOfferQty(e.target.value)} style={{ width: '100%' }} />
+                </div>
+              </div>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Unité</label>
+              <input className="input" type="text" value={offerUnit} onChange={(e) => setOfferUnit(e.target.value)} maxLength={40} placeholder="unit · sac · kg · heure" style={{ width: '100%' }} />
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Position</label>
+              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                {(['fixe', 'mobile', 'immaterielle'] as OfferPositionKind[]).map((k) => (
+                  <button key={k} type="button" className={offerPosition === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferPosition(k)}>{k === 'fixe' ? 'Fixe' : k === 'mobile' ? 'Mobile' : 'Immatérielle'}</button>
+                ))}
+              </div>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Unicité</label>
+              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                {(['renouvelable', 'piece_unique'] as OfferUniquenessKind[]).map((k) => (
+                  <button key={k} type="button" className={offerUniqueness === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferUniqueness(k)}>{k === 'renouvelable' ? 'Renouvelable' : 'Pièce unique'}</button>
+                ))}
+              </div>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Remise</label>
+              <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                {(['retrait', 'livraison', 'immateriel'] as OfferHandoverKind[]).map((k) => (
+                  <button key={k} type="button" className={offerHandover === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferHandover(k)}>{k === 'retrait' ? 'Retrait' : k === 'livraison' ? 'Livraison' : 'Immatériel'}</button>
+                ))}
+              </div>
+              <div className="row" style={{ gap: 6, marginTop: 9 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label className="tiny muted" style={{ display: 'block' }}>État</label>
+                  <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                    {(['neuf', 'occasion'] as OfferConditionKind[]).map((k) => (
+                      <button key={k} type="button" className={offerCondition === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferCondition(k)}>{k === 'neuf' ? 'Neuf' : 'Occasion'}</button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <label className="tiny muted" style={{ display: 'block' }}>Prix</label>
+                  <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
+                    {(['fixe', 'negociable'] as OfferPriceKind[]).map((k) => (
+                      <button key={k} type="button" className={offerPriceKind === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferPriceKind(k)}>{k === 'fixe' ? 'Fixe' : 'À négocier'}</button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="btnrow" style={{ marginTop: 11 }}>
+                <button className="btn" type="button" disabled={offerBusy} onClick={() => void submitOffer()}>{offerBusy ? 'Publication…' : 'Publier mon offre'}</button>
+                <button className="btn ghost" type="button" disabled={offerBusy} onClick={() => setShowOfferForm(false)}>Annuler</button>
+              </div>
+              <p className="tiny muted" style={{ marginTop: 6 }}>L'offre est créée en brouillon : publiez-la depuis le catalogue. Le badge de confiance reste propre à l'entité — jamais à l'offre.</p>
             </div>
           )}
         </div>

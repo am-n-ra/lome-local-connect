@@ -429,9 +429,33 @@ var toProduct = (row) => {
     stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === void 0 ? 0 : Math.max(0, Number(row.quantity_allocated_omni) - Number(row.quantity_reserved_omni ?? 0)),
     prixOriginal: priceMinor,
     prixReduit,
-    pourcentageReduction: percentage
+    pourcentageReduction: percentage,
+    positionKind: ["fixe", "mobile", "immaterielle"].includes(String(row.position_kind)) ? String(row.position_kind) : null,
+    uniquenessKind: ["renouvelable", "piece_unique"].includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) : null,
+    handoverKind: ["retrait", "livraison", "immateriel"].includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
+    priceKind: ["fixe", "negociable"].includes(String(row.price_kind)) ? String(row.price_kind) : null,
+    conditionKind: ["neuf", "occasion"].includes(String(row.condition_kind)) ? String(row.condition_kind) : null
   };
 };
+var OFFER_POSITION_KINDS = ["fixe", "mobile", "immaterielle"];
+var OFFER_UNIQUENESS_KINDS = ["renouvelable", "piece_unique"];
+var OFFER_HANDOVER_KINDS = ["retrait", "livraison", "immateriel"];
+var OFFER_PRICE_KINDS = ["fixe", "negociable"];
+var OFFER_CONDITION_KINDS = ["neuf", "occasion"];
+function normalizeOfferCharacteristics(input) {
+  const pick = (value, allowed) => {
+    if (value === null || value === void 0 || value === "") return null;
+    if (!allowed.includes(value)) throw new SellerCataloguePolicyError("INVALID_INPUT");
+    return value;
+  };
+  return {
+    positionKind: pick(input.positionKind, OFFER_POSITION_KINDS),
+    uniquenessKind: pick(input.uniquenessKind, OFFER_UNIQUENESS_KINDS),
+    handoverKind: pick(input.handoverKind, OFFER_HANDOVER_KINDS),
+    priceKind: pick(input.priceKind, OFFER_PRICE_KINDS),
+    conditionKind: pick(input.conditionKind, OFFER_CONDITION_KINDS)
+  };
+}
 function createTrunkRepository(sql = database()) {
   return {
     async getAccountContext(input) {
@@ -1064,13 +1088,6 @@ function createTrunkRepository(sql = database()) {
           where fs.status = 'available'
           order by fs.created_at, fs.id
           limit 1
-        ), inserted as (
-          insert into v2_facilities
-            (account_id, source_kind, source_name, source_ref, name, facility_type, category, description, latitude, longitude, rayon_km, address, contact_phone, contact_whatsapp, trust_state)
-          select available_slot.account_id, 'created', 'seller', ${input.idempotencyKey.trim()}, ${input.name.trim()}, ${input.facilityType}, ${input.category?.trim() || null}, ${input.description?.trim() || null}, ${input.latitude}, ${input.longitude}, ${input.rayonKm}, ${input.address?.trim() || null}, ${input.contactPhone?.trim() || null}, ${input.contactWhatsapp?.trim() || null}, 'unconfirmed'
-          from available_slot
-          where not exists (select 1 from existing)
-          returning id as facility_id, account_id, name
         ), entity_new as (
           -- R-2/S-25 : toute offre appartient à une ENTITÉ, et la publication exige ce lien.
           -- Un vendeur qui crée une facilité reçoit donc son entité dans la même instruction —
@@ -1882,6 +1899,7 @@ function createTrunkRepository(sql = database()) {
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
+               p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
@@ -2035,6 +2053,11 @@ function createTrunkRepository(sql = database()) {
           p.publication_state,
           p.availability_state,
           p.availability_expires_at,
+          p.position_kind,
+          p.uniqueness_kind,
+          p.handover_kind,
+          p.price_kind,
+          p.condition_kind,
           (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
@@ -2070,7 +2093,12 @@ function createTrunkRepository(sql = database()) {
         publicationState: String(row.publication_state),
         availabilityState: ["en_stock", "verifie", "a_valider", "bientot"].includes(String(row.availability_state)) ? String(row.availability_state) : "a_valider",
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === void 0 ? null : new Date(String(row.availability_expires_at)).toISOString(),
-        availabilityProEligible: row.availability_pro_eligible === true
+        availabilityProEligible: row.availability_pro_eligible === true,
+        positionKind: OFFER_POSITION_KINDS.includes(String(row.position_kind)) ? String(row.position_kind) : null,
+        uniquenessKind: OFFER_UNIQUENESS_KINDS.includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) : null,
+        handoverKind: OFFER_HANDOVER_KINDS.includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
+        priceKind: OFFER_PRICE_KINDS.includes(String(row.price_kind)) ? String(row.price_kind) : null,
+        conditionKind: OFFER_CONDITION_KINDS.includes(String(row.condition_kind)) ? String(row.condition_kind) : null
       }));
       const catalogReady = products.length > 0 && products.some((p) => (p.stockLoueOmni ?? 0) > 0);
       return { authorized: true, facilities, products, catalogReady };
@@ -2079,6 +2107,7 @@ function createTrunkRepository(sql = database()) {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) {
         throw new SellerCataloguePolicyError("INVALID_INPUT");
       }
+      const carac = normalizeOfferCharacteristics(input);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         with seller as (
@@ -2101,11 +2130,13 @@ function createTrunkRepository(sql = database()) {
             and fs.status = 'assigned'
         ), inserted as (
           insert into v2_products
-            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state)
-          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft'
+            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state,
+             position_kind, uniqueness_kind, handover_kind, price_kind, condition_kind)
+          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft',
+                 ${carac.positionKind}, ${carac.uniquenessKind}, ${carac.handoverKind}, ${carac.priceKind}, ${carac.conditionKind}
           from owned_facility of
           where exists (select 1 from slot_check)
-          on conflict (facility_id, idempotency_key) do nothing
+          on conflict (facility_id, idempotency_key) where idempotency_key is not null do nothing
           returning id, facility_id, name, publication_state, price_minor, discount_kind, discount_value_minor
         )
         select * from inserted
@@ -2122,10 +2153,13 @@ function createTrunkRepository(sql = database()) {
     },
     async updateSellerProductDraft(input) {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) throw new SellerCataloguePolicyError("INVALID_INPUT");
+      const carac = normalizeOfferCharacteristics(input);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value_minor = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni}, publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value_minor = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni},
+            position_kind = ${carac.positionKind}, uniqueness_kind = ${carac.uniquenessKind}, handover_kind = ${carac.handoverKind}, price_kind = ${carac.priceKind}, condition_kind = ${carac.conditionKind},
+            publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id
           and a.auth_user_id = ${input.authUserId} and a.suspended_at is null and a.onboarding_state = 'seller_ready'
@@ -7175,12 +7209,17 @@ async function handleApi(req, res, pathname, url) {
       const prixOriginal = Number(input.prixOriginal);
       const pourcentageReduction = Number(input.pourcentageReduction);
       const stockLoueOmni = Number(input.stockLoueOmni);
+      const positionKind = input.positionKind === null || input.positionKind === void 0 ? null : String(input.positionKind);
+      const uniquenessKind = input.uniquenessKind === null || input.uniquenessKind === void 0 ? null : String(input.uniquenessKind);
+      const handoverKind = input.handoverKind === null || input.handoverKind === void 0 ? null : String(input.handoverKind);
+      const priceKind = input.priceKind === null || input.priceKind === void 0 ? null : String(input.priceKind);
+      const conditionKind = input.conditionKind === null || input.conditionKind === void 0 ? null : String(input.conditionKind);
       const idempotencyKey = req.headers["idempotency-key"];
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !Number.isInteger(prixOriginal) || prixOriginal <= 0 || !Number.isInteger(pourcentageReduction) || pourcentageReduction < 1 || pourcentageReduction > 90 || !Number.isInteger(stockLoueOmni) || stockLoueOmni < 0 || typeof idempotencyKey !== "string" || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
         throw new ApiInputError("A valid facility, product, price, currency, mandatory reduction and idempotency key are required.");
       }
-      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni, idempotencyKey });
+      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni, idempotencyKey, positionKind, uniquenessKind, handoverKind, priceKind, conditionKind });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

@@ -1526,12 +1526,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const prixOriginal = Number(input.prixOriginal);
       const pourcentageReduction = Number(input.pourcentageReduction);
       const stockLoueOmni = Number(input.stockLoueOmni);
+      // S-01 — characteristics are optional at the edge (an offer may be declared progressively),
+      // but a present value must be valid; the repository re-validates so it cannot be bypassed.
+      const positionKind = input.positionKind === null || input.positionKind === undefined ? null : String(input.positionKind);
+      const uniquenessKind = input.uniquenessKind === null || input.uniquenessKind === undefined ? null : String(input.uniquenessKind);
+      const handoverKind = input.handoverKind === null || input.handoverKind === undefined ? null : String(input.handoverKind);
+      const priceKind = input.priceKind === null || input.priceKind === undefined ? null : String(input.priceKind);
+      const conditionKind = input.conditionKind === null || input.conditionKind === undefined ? null : String(input.conditionKind);
       const idempotencyKey = req.headers['idempotency-key'];
       const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidPattern.test(facilityId) || !name.trim() || name.length > 180 || !currency || !Number.isInteger(prixOriginal) || prixOriginal <= 0 || !Number.isInteger(pourcentageReduction) || pourcentageReduction < 1 || pourcentageReduction > 90 || !Number.isInteger(stockLoueOmni) || stockLoueOmni < 0 || typeof idempotencyKey !== 'string' || idempotencyKey.length < 12 || idempotencyKey.length > 180) {
         throw new ApiInputError('A valid facility, product, price, currency, mandatory reduction and idempotency key are required.');
       }
-      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni, idempotencyKey });
+      const result = await repository.createSellerProductDraft({ authUserId, facilityId, name, description, unit, prixOriginal, currency, pourcentageReduction, stockLoueOmni, idempotencyKey, positionKind, uniquenessKind, handoverKind, priceKind, conditionKind });
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }

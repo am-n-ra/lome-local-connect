@@ -13,7 +13,7 @@ const publicFacilities: PublicFacility[] = [
 ];
 
 const products: SellerCatalogueProduct[] = [
-  { id: 'product-1', entityId: 'entity-1', entityName: 'Boutique A', facilityId: 'facility-1', facilityName: 'Boutique A', name: 'Riz 5kg', description: null, unit: 'sac', currency: 'XOF', stockLoueOmni: 3, prixOriginal: 5000, prixReduit: 4500, pourcentageReduction: 10, publicationState: 'published', availabilityState: 'en_stock', availabilityExpiresAt: null, availabilityProEligible: true },
+  { id: 'product-1', entityId: 'entity-1', entityName: 'Boutique A', facilityId: 'facility-1', facilityName: 'Boutique A', name: 'Riz 5kg', description: null, unit: 'sac', currency: 'XOF', stockLoueOmni: 3, prixOriginal: 5000, prixReduit: 4500, pourcentageReduction: 10, publicationState: 'published', availabilityState: 'en_stock', availabilityExpiresAt: null, availabilityProEligible: true, positionKind: 'fixe', uniquenessKind: 'renouvelable', handoverKind: 'retrait', priceKind: 'fixe', conditionKind: 'neuf' },
 ];
 
 describe('seller workspace map-first (V-7a', () => {

@@ -14,7 +14,7 @@ import {
   listOpenTransactions, getTransaction,
   listMyTeamInvites, acceptTeamInvite,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
@@ -1619,11 +1619,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               {rankedFacilityProducts.map((product) => {
                 const on = facProductSel.includes(product.id);
                 const highlighted = product.id === highlightedProductId;
+                const carac = offerCharacteristics(product);
                 return (
                   <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
-                    <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small></span>
+                    <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
                     <span className="pr">{(product.prixReduit / 100).toFixed(2)} {product.currency}</span>
                   </div>
                 );

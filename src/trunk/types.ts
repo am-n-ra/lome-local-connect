@@ -44,6 +44,12 @@ export interface PublicProduct {
   prixReduit: number;
   /** Mandatory displayed discount percentage (v3 %réduction). */
   pourcentageReduction: number;
+  /** S-01 — characteristics shown on the offer sheet. Null = not declared. */
+  positionKind: OfferPositionKind | null;
+  uniquenessKind: OfferUniquenessKind | null;
+  handoverKind: OfferHandoverKind | null;
+  priceKind: OfferPriceKind | null;
+  conditionKind: OfferConditionKind | null;
 }
 
 export interface FacilityDetail extends PublicFacility {
@@ -369,7 +375,24 @@ export interface SellerCatalogueProduct {
   availabilityState: ProductAvailabilityState;
   availabilityExpiresAt: string | null;
   availabilityProEligible: boolean;
+  /** S-01 — the offer's characteristics. Day-1 model: seven characteristics, no separate "types". */
+  positionKind: OfferPositionKind | null;
+  uniquenessKind: OfferUniquenessKind | null;
+  handoverKind: OfferHandoverKind | null;
+  priceKind: OfferPriceKind | null;
+  conditionKind: OfferConditionKind | null;
 }
+
+/** S-01 car.3 — position: fixe / mobile / immatérielle (replaces facility_type on the offer). */
+export type OfferPositionKind = 'fixe' | 'mobile' | 'immaterielle';
+/** S-01 car.2 — uniqueness: a renewable offer, or a single piece that disappears after the sale. */
+export type OfferUniquenessKind = 'renouvelable' | 'piece_unique';
+/** S-01 car.5 — handover: retrait / livraison / immatériel. */
+export type OfferHandoverKind = 'retrait' | 'livraison' | 'immateriel';
+/** S-01 car.7 — price: fixed or negotiable. */
+export type OfferPriceKind = 'fixe' | 'negociable';
+/** S-01 car.6 — condition: new or second-hand. */
+export type OfferConditionKind = 'neuf' | 'occasion';
 
 export interface ProductStockEvent {
   id: string;
