@@ -56,9 +56,10 @@
 > devait aller à Root, non ? mais as-tu fini Seed au moins ? » : **la séquence était bien Seed → Species
 > → Root, et les trois ont été faits.** Le Seed est **clos comme intention** (`founder-confirmed`,
 > « c'est ça »), avec **deux dettes mesurées** — pas une réouverture :
-> (1) la fourchette annoncée « `S-01…S-34` » était **fausse** : `S-33`/`S-34` n'existent nulle part, le
-> brief porte **`S-01…S-32`** — l'erreur venait du **nombre de lignes** de la table (34) lu comme
-> **borne d'identifiants** ; corrigé dans **~10 documents** + garde `check:state` **falsifiée** ;
+> (1) la fourchette annoncée (une plage allant **jusqu'à `S-34`**) était **fausse** : `S-33`/`S-34`
+> n'existent nulle part, le brief porte **`S-01…S-32`** — l'erreur venait du **nombre de lignes** de la
+> table (34) lu comme **borne d'identifiants** ; corrigé dans **~10 documents** + garde `check:state`
+> **falsifiée** ;
 > (2) **`S-06`** (échelle d'existence 0→4) et **`S-32`** (intégrité/réputation **de l'offre**) sont
 > **confirmés mais non construits** (0 occurrence ; `v2_ratings` est scopé à la **transaction**, pas à
 > l'offre) → **arbitrage fondateur** : tranche Root ou report écrit. Détail :
