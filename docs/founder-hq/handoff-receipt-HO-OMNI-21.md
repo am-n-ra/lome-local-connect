@@ -88,3 +88,48 @@ qu'**on a construit en largeur avant d'avoir fini en profondeur**, puis qu'**on 
 | Loaded (état de référence) | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` · `omni-proof-register-v2-2026-09-25.md` · `omni-maturity-verdict-2026-09-25.md` · `omni-search-constraints-decisions-D-CON-2026-09-25.md` |
 | Loaded (contrat + preuve) | `omni-root-v2-two-level-search-contract-2026-09-26.md` · `omni-root-v2-two-level-search-evidence-2026-09-26.md` |
 | Not loaded / reason | `templates/founder-hq-master-plan.md` — plan existant, append suivi (pas de réécriture) · `templates/skill-handoff-receipt.md` — format suivi de `HO-OMNI-20` · `portability-protocol.md` — aucune migration d'espace de travail |
+
+---
+
+## 7. Addendum `RH-02` — « on exige » (2026-09-23, HEAD `62a9e6b`)
+
+> **Déclencheur :** réponse fondateur **« on exige »** à la question A de
+> `hq-reconciliation-2026-09-23.md`, c'est-à-dire à la ligne 40 ci-dessus (« les caractéristiques
+> d'offre : code livré mais usage vide »).
+
+**Ce qui est livré.** Le §3 ligne 40 constatait que le fond d'une offre n'existait pas. `RH-02`
+ferme la **cause serveur** de ce constat : une offre **muette** ne peut plus être publiée. Les quatre
+caractéristiques (`uniqueness_kind`, `handover_kind`, `price_kind`, `condition_kind`) sont une
+**condition de première publication**, au même titre que le visuel (RH-01/E-03) et l'avantage (E-04),
+chaque refus **nommant** le fait manquant. `position_kind` reste non exigé (13/13, dérivé).
+
+**Défaut réel trouvé par la preuve, pas par lecture.** Un **non-propriétaire** recevait
+`UNIQUENESS_REQUIRED` — le serveur lui **apprenait quel fait manquait sur l'offre de quelqu'un
+d'autre**. Cause : quand le CTE `owned` est vide, toute sous-requête scalaire vaut `NULL` ; les
+tests d'égalité tombent, mais un test de nullité vaut **VRAI** sur `NULL`. Correctif : test de
+nullité en premier. **Invisible à la suite stubbée** (elle ne compile jamais le SQL) — la
+**deuxième** fois cette session qu'une preuve réelle trouve ce que les tests verts ne voient pas.
+
+**Preuve.** `scripts/prove-rh02-described-offer.mjs`, **11/11** sur branche jetable (0 résidu) :
+la porte **s'ouvre** sur une offre décrite (sans ce cas le refus **briquerait le catalogue**), se
+ferme sur chacune des 4 en nommant le fait, refuse sur le **fait** (restaurer publie), ne
+**rétrograde jamais** une offre déjà publiée, refuse un non-propriétaire avec la raison **de
+propriété**. **Falsification** : refus neutralisé → **6 échecs**, restauré → 11/11.
+`691/691` tests, tsc/boundary clean, build ok, prod `index-DcmAYT8f.js` === local, refus prod
+`401 AUTH_REQUIRED`.
+
+**Dette chiffrée et attribuée (non réparée, `D-RH-11`).** Les **13 offres publiées** de la canonique
+restent **muettes** (0/13 sur les 4 caractéristiques, 0/13 sur `media`) : ce sont **3 vraies entités**
+(Demo Hub 8, Boulangerie du Marché d'Adawlato 3, Épicerie Chez Afi 2) — le **catalogue pilote réel**,
+**pas** des fixtures. Le refus ne s'applique qu'à `draft → published` : les rétrograder serait un
+**acte serveur** non demandé ; les remettre en conformité est un **acte vendeur**. Propriétaire = le
+vendeur · trigger = première session vendeur réelle / avant démo pilote · sévérité **moyenne**.
+
+**Résidu honnête.** La **phrase de refus affichée au vendeur** n'est **pas** prouvée en navigateur
+(session vendeur requise). Mapping prouvée unitairement (`publication-refusal.test.ts`), refus prouvé
+contre Postgres réel. Statut : **`verified` serveur · `partial` rendu**.
+
+**Reste de l'incohérence ligne 41 (non traitée ici).** `SEARCH_CONSTRAINTS` porte encore
+`'Quantité 10'`/`'≤ 15 000 FCFA'` **figés** et `OMNI_DEFAULT_LOCAL_CURRENCY` **en dur**, alors que
+**D-CON-1…5** exigent des seuils réglables et **D-LOC** une devise par localisation. L'app contredit
+toujours des décisions approuvées — **prochain item**, distinct de RH-02.
