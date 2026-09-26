@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describePendingAction, highlightSearchedProduct, offerCharacteristics, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
+import { describePendingAction, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, pendingActionResume, sortProductsStockFirst, walletBucketTotals } from './ui-helpers';
 
 describe('PendingAction resume contract', () => {
   it('labels each protected action for the access-portal gate', () => {
@@ -78,3 +78,33 @@ describe('offer characteristics (S-01 / R-B)', () => {
     expect(offerCharacteristics({})).toEqual([]);
   });
 });
+
+describe('S-32 offer trust label', () => {
+  it('shows the reputation score and count when ratings exist', () => {
+    const trust = offerTrustLabel({ integrity: { state: 'ok', failed: [] }, reputation: { count: 12, score: 4.6 } });
+    expect(trust.text).toContain('4,6 ★');
+    expect(trust.text).toContain('12 avis');
+    expect(trust.text).toContain('intégrité ✓');
+    expect(trust.ok).toBe(true);
+  });
+
+  it('never renders "0 ★" — no rating is muted, not a bad score', () => {
+    const trust = offerTrustLabel({ integrity: { state: 'partielle', failed: ['visuel'] }, reputation: { count: 0, score: null } });
+    expect(trust.text).not.toContain('★');
+    expect(trust.muted).toBe(true);
+    expect(trust.text).toContain('intégrité partielle');
+  });
+
+  it('names the missing reason so a ✗ is explicable', () => {
+    const trust = offerTrustLabel({ integrity: { state: 'insuffisante', failed: ['visuel', 'prix'] } });
+    expect(trust.missing).toEqual(['visuel manquant', 'prix à 0']);
+    expect(trust.ok).toBe(false);
+  });
+
+  it('a legacy offer with no derived facts reads as muted', () => {
+    const trust = offerTrustLabel({});
+    expect(trust.text).toBe('pas encore d’avis');
+    expect(trust.muted).toBe(true);
+  });
+});
+

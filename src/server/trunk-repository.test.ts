@@ -147,6 +147,42 @@ describe('public product boundary (v3 model)', () => {
     expect(product.prixReduit).toBe(product.prixOriginal);
   });
 
+  it('S-06/S-32 — derives existence, integrity and reputation when the query supplies the facts', () => {
+    const product = toProduct({
+      id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF',
+      discount_kind: null, discount_value_minor: null,
+      quantity_allocated_omni: 10, quantity_reserved_omni: 0,
+      media: [], description: 'Une description assez longue.',
+      publication_state: 'published', availability_state: 'en_stock', availability_expires_at: null,
+      has_entity: true, reputation_count: 3, reputation_sum: 14, is_duplicate: false,
+    });
+    expect(product.existence).toEqual({ level: 4, label: 'Transactable', hint: 'transaction Omni possible maintenant' });
+    // No visual → never `ok`, and the reason is named.
+    expect(product.integrity?.state).toBe('partielle');
+    expect(product.integrity?.failed).toEqual(['visuel']);
+    expect(product.reputation).toEqual({ count: 3, score: 4.7 });
+  });
+
+  it('S-06 — published with nothing reservable is level 3, never 4 (the oversell lie)', () => {
+    const product = toProduct({
+      id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF',
+      discount_kind: null, discount_value_minor: null,
+      quantity_allocated_omni: 2, quantity_reserved_omni: 2,
+      media: [], description: 'Une description assez longue.',
+      publication_state: 'published', availability_state: 'verifie', availability_expires_at: null,
+      has_entity: true, reputation_count: 0, reputation_sum: null, is_duplicate: false,
+    });
+    expect(product.existence?.level).toBe(3);
+    expect(product.reputation).toEqual({ count: 0, score: null });
+  });
+
+  it('S-06/S-32 — a legacy row without the facts omits the fields instead of inventing them', () => {
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 1 });
+    expect(product).not.toHaveProperty('existence');
+    expect(product).not.toHaveProperty('integrity');
+    expect(product).not.toHaveProperty('reputation');
+  });
+
   it('rejects a seller product draft without a mandatory reduction', async () => {
     const repository = createTrunkRepository(stubSql([]).sql);
     await expect(

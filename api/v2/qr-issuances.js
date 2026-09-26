@@ -323,6 +323,59 @@ function qrExpiryFrom(issuedAtIso, ttlMinutes) {
   return new Date(new Date(issuedAtIso).getTime() + ttlMinutes * 60 * 1e3).toISOString();
 }
 
+// src/trunk/offer-existence.ts
+var LEVELS = [
+  { label: "Pr\xE9sente", hint: "sur la carte, pas encore g\xE9r\xE9e" },
+  { label: "Revendiqu\xE9e", hint: "une entit\xE9 en a pris la responsabilit\xE9" },
+  { label: "Offre publi\xE9e", hint: "stock d\xE9clar\xE9, non confirm\xE9" },
+  { label: "Disponibilit\xE9 vivante", hint: "confirm\xE9e r\xE9cemment" },
+  { label: "Transactable", hint: "transaction Omni possible maintenant" }
+];
+var INTEGRITY_CHECKS = ["visuel", "prix", "description", "doublon"];
+function isExpired(value, now) {
+  if (value === null || value === void 0) return false;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.getTime() <= now.getTime();
+}
+function computeExistenceLevel(input) {
+  const published = input.publicationState === "published";
+  if (!published) return input.hasEntity ? 1 : 0;
+  const liveAvailability = (input.availabilityState === "en_stock" || input.availabilityState === "verifie") && !isExpired(input.availabilityExpiresAt, input.now ?? /* @__PURE__ */ new Date());
+  if (!liveAvailability) return 2;
+  const reservable = Math.max(0, input.quantityAllocated - input.quantityReserved);
+  return reservable > 0 ? 4 : 3;
+}
+function existenceFor(input) {
+  const level = computeExistenceLevel(input);
+  return { level, label: LEVELS[level].label, hint: LEVELS[level].hint };
+}
+function hasMedia(media) {
+  if (media === null || media === void 0) return false;
+  if (Array.isArray(media)) return media.length > 0;
+  if (typeof media === "string") {
+    const trimmed = media.trim();
+    return trimmed !== "" && trimmed !== "[]" && trimmed !== "null";
+  }
+  return false;
+}
+function computeIntegrity(input) {
+  const results = {
+    visuel: hasMedia(input.media),
+    prix: input.priceMinor > 0,
+    description: (input.description ?? "").trim().length >= 10,
+    doublon: !input.duplicate
+  };
+  const failed = INTEGRITY_CHECKS.filter((check) => !results[check]);
+  const passed = INTEGRITY_CHECKS.length - failed.length;
+  const state = failed.length === 0 ? "ok" : passed >= 2 ? "partielle" : "insuffisante";
+  return { state, passed, total: INTEGRITY_CHECKS.length, failed };
+}
+function computeReputation(count, scoreSum) {
+  if (count <= 0 || scoreSum === null) return { count: 0, score: null };
+  return { count, score: Math.round(scoreSum / count * 10) / 10 };
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -362,7 +415,10 @@ var toFacility = (row) => ({
   entityName: row.entity_name === null || row.entity_name === void 0 ? null : String(row.entity_name),
   entityKind: row.entity_kind === null || row.entity_kind === void 0 ? null : String(row.entity_kind),
   // NW-13j: an active sponsored campaign exists when the aggregate row says so.
-  sponsored: row.sponsored !== void 0 ? Boolean(row.sponsored) : row.sponsored_campaign_id !== void 0 && row.sponsored_campaign_id !== null
+  sponsored: row.sponsored !== void 0 ? Boolean(row.sponsored) : row.sponsored_campaign_id !== void 0 && row.sponsored_campaign_id !== null,
+  // S-06: the place's level is the max of its published offers — projected in SQL, absent on
+  // read paths that do not compute it (never invented).
+  existenceLevel: row.existence_level === null || row.existence_level === void 0 ? void 0 : Number(row.existence_level)
 });
 var retryDatabase = async (operation) => {
   let lastError;
@@ -437,6 +493,10 @@ var toProduct = (row) => {
   const percentage = row.discount_kind === "percentage" ? Math.round(discountValueMinor) : 0;
   const discountAmount = percentage > 0 ? Math.floor(priceMinor * percentage / 100) : 0;
   const prixReduit = Math.max(0, priceMinor - discountAmount);
+  const hasExistenceFacts = row.publication_state !== void 0;
+  const hasEntity = row.has_entity === true || row.entity_id !== null && row.entity_id !== void 0;
+  const reputationCount = row.reputation_count === null || row.reputation_count === void 0 ? 0 : Number(row.reputation_count);
+  const reputationSum = row.reputation_sum === null || row.reputation_sum === void 0 ? null : Number(row.reputation_sum);
   return {
     id: String(row.id),
     facilityId: String(row.facility_id),
@@ -454,7 +514,24 @@ var toProduct = (row) => {
     uniquenessKind: ["renouvelable", "piece_unique"].includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) : null,
     handoverKind: ["retrait", "livraison", "immateriel"].includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
     priceKind: ["fixe", "negociable"].includes(String(row.price_kind)) ? String(row.price_kind) : null,
-    conditionKind: ["neuf", "occasion"].includes(String(row.condition_kind)) ? String(row.condition_kind) : null
+    conditionKind: ["neuf", "occasion"].includes(String(row.condition_kind)) ? String(row.condition_kind) : null,
+    ...hasExistenceFacts ? {
+      existence: existenceFor({
+        publicationState: row.publication_state === null || row.publication_state === void 0 ? null : String(row.publication_state),
+        hasEntity,
+        availabilityState: row.availability_state === null || row.availability_state === void 0 ? null : String(row.availability_state),
+        availabilityExpiresAt: row.availability_expires_at ?? null,
+        quantityAllocated: Number(row.quantity_allocated_omni ?? 0),
+        quantityReserved: Number(row.quantity_reserved_omni ?? 0)
+      }),
+      integrity: computeIntegrity({
+        media: row.media,
+        priceMinor,
+        description: row.description ? String(row.description) : null,
+        duplicate: row.is_duplicate === true
+      }),
+      reputation: computeReputation(reputationCount, reputationSum)
+    } : {}
   };
 };
 var OFFER_POSITION_KINDS = ["fixe", "mobile", "immaterielle"];
@@ -1859,7 +1936,20 @@ function createTrunkRepository(sql = database()) {
               else 'free'
             end as commercial_plan,
             count(p.id)::int as product_count,
-            (count(camp.id) > 0) as sponsored
+            (count(camp.id) > 0) as sponsored,
+            -- S-06 projection: the place shows the max existence level of its PUBLISHED offers.
+            -- Derived in SQL from the same rule as the offer level, so the two never disagree.
+            coalesce((
+              select max(case
+                when p2.availability_state in ('en_stock', 'verifie')
+                     and (p2.availability_expires_at is null or p2.availability_expires_at > now())
+                     and greatest(p2.quantity_allocated_omni - p2.quantity_reserved_omni, 0) > 0 then 4
+                when p2.availability_state in ('en_stock', 'verifie')
+                     and (p2.availability_expires_at is null or p2.availability_expires_at > now()) then 3
+                else 2 end)
+              from v2_products p2
+              where p2.facility_id = f.id and p2.publication_state = 'published'
+            ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
           from v2_facilities f
           left join v2_entities e on e.id = f.entity_id
           left join v2_products p
@@ -1921,7 +2011,18 @@ function createTrunkRepository(sql = database()) {
           f.entity_id,
           coalesce(e.display_name, f.name) as entity_name,
           coalesce(e.kind, 'organisation') as entity_kind,
-          count(p.id)::int as product_count
+          count(p.id)::int as product_count,
+          coalesce((
+            select max(case
+              when p2.availability_state in ('en_stock', 'verifie')
+                   and (p2.availability_expires_at is null or p2.availability_expires_at > now())
+                   and greatest(p2.quantity_allocated_omni - p2.quantity_reserved_omni, 0) > 0 then 4
+              when p2.availability_state in ('en_stock', 'verifie')
+                   and (p2.availability_expires_at is null or p2.availability_expires_at > now()) then 3
+              else 2 end)
+            from v2_products p2
+            where p2.facility_id = f.id and p2.publication_state = 'published'
+          ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
         from v2_facilities f
         left join v2_entities e on e.id = f.entity_id
         left join v2_products p
@@ -1937,6 +2038,24 @@ function createTrunkRepository(sql = database()) {
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+               p.media, p.publication_state, p.availability_state, p.availability_expires_at,
+               (coalesce(p.entity_id, f.entity_id) is not null) as has_entity,
+               -- S-32 reputation: ratings reachable through the transactions that traced THIS offer (S-26).
+               (select count(*)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_count,
+               (select sum(r.score)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_sum,
+               -- S-32 doublon: another PUBLISHED offer of the SAME entity with the same normalised name.
+               exists (
+                 select 1 from v2_products d
+                 join v2_facilities df on df.id = d.facility_id
+                 where d.id <> p.id
+                   and d.publication_state = 'published'
+                   and lower(btrim(d.name)) = lower(btrim(p.name))
+                   and coalesce(d.entity_id, df.entity_id) is not distinct from coalesce(p.entity_id, f.entity_id)
+               ) as is_duplicate,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
@@ -2024,6 +2143,21 @@ function createTrunkRepository(sql = database()) {
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+               p.media, p.publication_state, p.availability_state, p.availability_expires_at,
+               true as has_entity,
+               (select count(*)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_count,
+               (select sum(r.score)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_sum,
+               exists (
+                 select 1 from v2_products d
+                 where d.id <> p.id
+                   and d.publication_state = 'published'
+                   and lower(btrim(d.name)) = lower(btrim(p.name))
+                   and d.entity_id is not distinct from p.entity_id
+               ) as is_duplicate,
                null::text as coupon_label
         from v2_products p
         join v2_entities e on e.id = p.entity_id

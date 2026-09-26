@@ -170,3 +170,37 @@ export function trapDrawerFocus(event: { key: string; shiftKey: boolean; prevent
  event.preventDefault(); last.focus(); }
   else if (!event.shiftKey && (document.activeElement === last)) { event.preventDefault(); first.focus(); }
 }
+// S-32 — libellé d'intégrité/réputation de l'OFFRE, aligné sur la maquette.
+// `null` de réputation => « muted » honnête, jamais « 0 ★ » (qui se lirait comme une mauvaise note).
+const INTEGRITY_CHECK_LABELS: Record<string, string> = {
+  visuel: 'visuel manquant',
+  prix: 'prix à 0',
+  description: 'description trop courte',
+  doublon: 'doublon possible',
+};
+
+export function offerTrustLabel(input: {
+  integrity?: { state: string; failed: readonly string[] } | undefined;
+  reputation?: { count: number; score: number | null } | undefined;
+}): { text: string; muted: boolean; ok: boolean; missing: string[] } {
+  const rep = input.reputation;
+  const repText = rep && rep.count > 0 && rep.score !== null ? `${rep.score.toFixed(1).replace('.', ',')} ★ · ${rep.count} avis` : '';
+  const integrity = input.integrity;
+  const integrityText =
+    integrity === undefined
+      ? ''
+      : integrity.state === 'ok'
+        ? 'intégrité ✓'
+        : integrity.state === 'partielle'
+          ? 'intégrité partielle'
+          : 'intégrité insuffisante';
+  const missing = (integrity?.failed ?? []).map((check) => INTEGRITY_CHECK_LABELS[check] ?? check);
+  const text = [repText, integrityText].filter((part) => part !== '').join(' · ');
+  return {
+    text: text === '' ? 'pas encore d’avis' : text,
+    muted: repText === '' && (integrity === undefined || integrity.state !== 'ok'),
+    ok: integrity !== undefined && integrity.state === 'ok',
+    missing,
+  };
+}
+

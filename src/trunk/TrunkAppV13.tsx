@@ -15,7 +15,7 @@ import {
   listMyTeamInvites, acceptTeamInvite,
   searchPublicEntities, getPublicEntity,
 } from './api';
-import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
@@ -101,6 +101,9 @@ function localPlanPriceLabel(kind: 'sellerPro' | 'buyerPro', resolved: ResolvedC
 }
 
 const LOME = [1.22, 6.13] as const;
+
+// S-06 — libellés de l'échelle d'existence (maquette : Discoverable ≠ Queryable ≠ Available ≠ Transactable).
+const EXISTENCE_LABELS = ['Présente', 'Revendiquée', 'Offre publiée', 'Disponibilité vivante', 'Transactable'] as const;
 
 /**
  * D-CON-5 — the buyer's constraints are the three explicit families from
@@ -1810,15 +1813,25 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               {selectedFacility.products.length === 0 && selectedFacility.trust !== 'unclaimed' && <p className="tiny muted" style={{ marginTop: 8 }}>Cette facilité n’a pas encore de produits référencés.</p>}
               {selectedFacility.trust !== 'unclaimed' && selectedFacility.products.length > 0 && <div className="label" style={{ marginTop: 8 }}>Produits — sélectionnez (panier de demande propre à cette facilité)</div>}
               {highlightedProductId && <p className="tiny" style={{ marginTop: 4 }}><span className="status ink">Produit recherché</span> mis en avant pour « {searchedTerm} ».</p>}
+              {typeof selectedFacility.existenceLevel === 'number' && (
+                <div style={{ marginTop: 8 }}>
+                  <span className="exlevel">Niveau {selectedFacility.existenceLevel} · {EXISTENCE_LABELS[selectedFacility.existenceLevel]}</span>
+                  <div className="stepline" aria-hidden="true">{[0, 1, 2, 3, 4].map((i) => <i key={i} className={i <= selectedFacility.existenceLevel! ? 'on' : ''} />)}</div>
+                  <div className="steplabels"><span>0 Présente</span><span>4 Transactable</span></div>
+                </div>
+              )}
               {rankedFacilityProducts.map((product) => {
                 const on = facProductSel.includes(product.id);
                 const highlighted = product.id === highlightedProductId;
                 const carac = offerCharacteristics(product);
+                const trust = offerTrustLabel({ integrity: product.integrity, reputation: product.reputation });
                 return (
                   <div className={`pitem${highlighted ? ' searched' : ''}`} key={product.id} role="button" tabIndex={0} style={{ cursor: 'pointer', ...(highlighted ? { boxShadow: 'inset 0 0 0 1.5px var(--ink-faint)', borderRadius: 12 } : {}) }} onClick={() => setCarts((current) => toggleCartProduct(current, selectedFacility.id, product.id))}>
                     <span className={`chk${on ? ' on' : ''}`} aria-hidden="true">{on ? '✓' : ''}</span>
                     <span className="pthumb" />
-                    <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
+                    <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
+                      <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> — {trust.missing.join(', ')}</span>}</span>
+                    </span>
                     <span className="pr">{formatAmount(product.prixReduit, userCurrency)}</span>
                   </div>
                 );

@@ -9,6 +9,7 @@ export { EvidenceStoragePolicyError, FieldPilotPolicyError } from './evidence-co
 import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponseStatus as BuyerAvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, AccountFavorite, BuyerCreditSummary, BuyerProActivationResult, BuyerProOptInResult, BuyerProRenewalResult, BuyerProStatus, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimEvidenceItem, CreateSellerFacilityResult, FavoritesResult, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, FacilityType, MyTeamInvite, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SellerAdCampaign, SellerCatalogueFacility, SellerCatalogueProduct, Team, TeamInvite, TeamListResult, TeamMember, TeamMemberResult, TeamInviteResult, TeamInviteAcceptResult, CreateTeamResult, FacilityZoneAssignment, TransactionMessage, TransactionSnapshotResult, WalletOverviewResult } from '../trunk/types';
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
+import { computeIntegrity, computeReputation, existenceFor } from '../trunk/offer-existence';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -59,6 +60,9 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   entityKind: row.entity_kind === null || row.entity_kind === undefined ? null : String(row.entity_kind) as PublicFacility['entityKind'],
   // NW-13j: an active sponsored campaign exists when the aggregate row says so.
   sponsored: row.sponsored !== undefined ? Boolean(row.sponsored) : (row.sponsored_campaign_id !== undefined && row.sponsored_campaign_id !== null),
+  // S-06: the place's level is the max of its published offers — projected in SQL, absent on
+  // read paths that do not compute it (never invented).
+  existenceLevel: row.existence_level === null || row.existence_level === undefined ? undefined : Number(row.existence_level) as PublicFacility['existenceLevel'],
 });
 
 const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -488,6 +492,12 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
   const percentage = row.discount_kind === 'percentage' ? Math.round(discountValueMinor) : 0;
   const discountAmount = percentage > 0 ? Math.floor((priceMinor * percentage) / 100) : 0;
   const prixReduit = Math.max(0, priceMinor - discountAmount);
+  // S-06/S-32 are derived from the raw facts the query supplies. A surface that does not
+  // select them (legacy read paths) simply omits the fields rather than inventing a value.
+  const hasExistenceFacts = row.publication_state !== undefined;
+  const hasEntity = row.has_entity === true || row.entity_id !== null && row.entity_id !== undefined;
+  const reputationCount = row.reputation_count === null || row.reputation_count === undefined ? 0 : Number(row.reputation_count);
+  const reputationSum = row.reputation_sum === null || row.reputation_sum === undefined ? null : Number(row.reputation_sum);
   return {
     id: String(row.id),
     facilityId: String(row.facility_id),
@@ -506,6 +516,25 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
     handoverKind: (['retrait', 'livraison', 'immateriel'].includes(String(row.handover_kind)) ? String(row.handover_kind) : null) as PublicProduct['handoverKind'],
     priceKind: (['fixe', 'negociable'].includes(String(row.price_kind)) ? String(row.price_kind) : null) as PublicProduct['priceKind'],
     conditionKind: (['neuf', 'occasion'].includes(String(row.condition_kind)) ? String(row.condition_kind) : null) as PublicProduct['conditionKind'],
+    ...(hasExistenceFacts
+      ? {
+          existence: existenceFor({
+            publicationState: row.publication_state === null || row.publication_state === undefined ? null : String(row.publication_state),
+            hasEntity,
+            availabilityState: row.availability_state === null || row.availability_state === undefined ? null : String(row.availability_state),
+            availabilityExpiresAt: (row.availability_expires_at as string | Date | null) ?? null,
+            quantityAllocated: Number(row.quantity_allocated_omni ?? 0),
+            quantityReserved: Number(row.quantity_reserved_omni ?? 0),
+          }),
+          integrity: computeIntegrity({
+            media: row.media,
+            priceMinor,
+            description: row.description ? String(row.description) : null,
+            duplicate: row.is_duplicate === true,
+          }),
+          reputation: computeReputation(reputationCount, reputationSum),
+        }
+      : {}),
   };
 };
 
@@ -1984,7 +2013,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               else 'free'
             end as commercial_plan,
             count(p.id)::int as product_count,
-            (count(camp.id) > 0) as sponsored
+            (count(camp.id) > 0) as sponsored,
+            -- S-06 projection: the place shows the max existence level of its PUBLISHED offers.
+            -- Derived in SQL from the same rule as the offer level, so the two never disagree.
+            coalesce((
+              select max(case
+                when p2.availability_state in ('en_stock', 'verifie')
+                     and (p2.availability_expires_at is null or p2.availability_expires_at > now())
+                     and greatest(p2.quantity_allocated_omni - p2.quantity_reserved_omni, 0) > 0 then 4
+                when p2.availability_state in ('en_stock', 'verifie')
+                     and (p2.availability_expires_at is null or p2.availability_expires_at > now()) then 3
+                else 2 end)
+              from v2_products p2
+              where p2.facility_id = f.id and p2.publication_state = 'published'
+            ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
           from v2_facilities f
           left join v2_entities e on e.id = f.entity_id
           left join v2_products p
@@ -2047,7 +2089,18 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           f.entity_id,
           coalesce(e.display_name, f.name) as entity_name,
           coalesce(e.kind, 'organisation') as entity_kind,
-          count(p.id)::int as product_count
+          count(p.id)::int as product_count,
+          coalesce((
+            select max(case
+              when p2.availability_state in ('en_stock', 'verifie')
+                   and (p2.availability_expires_at is null or p2.availability_expires_at > now())
+                   and greatest(p2.quantity_allocated_omni - p2.quantity_reserved_omni, 0) > 0 then 4
+              when p2.availability_state in ('en_stock', 'verifie')
+                   and (p2.availability_expires_at is null or p2.availability_expires_at > now()) then 3
+              else 2 end)
+            from v2_products p2
+            where p2.facility_id = f.id and p2.publication_state = 'published'
+          ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
         from v2_facilities f
         left join v2_entities e on e.id = f.entity_id
         left join v2_products p
@@ -2063,6 +2116,24 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+               p.media, p.publication_state, p.availability_state, p.availability_expires_at,
+               (coalesce(p.entity_id, f.entity_id) is not null) as has_entity,
+               -- S-32 reputation: ratings reachable through the transactions that traced THIS offer (S-26).
+               (select count(*)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_count,
+               (select sum(r.score)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_sum,
+               -- S-32 doublon: another PUBLISHED offer of the SAME entity with the same normalised name.
+               exists (
+                 select 1 from v2_products d
+                 join v2_facilities df on df.id = d.facility_id
+                 where d.id <> p.id
+                   and d.publication_state = 'published'
+                   and lower(btrim(d.name)) = lower(btrim(p.name))
+                   and coalesce(d.entity_id, df.entity_id) is not distinct from coalesce(p.entity_id, f.entity_id)
+               ) as is_duplicate,
                null::text as coupon_label
         from v2_products p
         join v2_facilities f on f.id = p.facility_id
@@ -2152,6 +2223,21 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+               p.media, p.publication_state, p.availability_state, p.availability_expires_at,
+               true as has_entity,
+               (select count(*)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_count,
+               (select sum(r.score)::int from v2_ratings r
+                  join v2_transaction_snapshots ts on ts.transaction_id = r.transaction_id
+                 where ts.product_id = p.id) as reputation_sum,
+               exists (
+                 select 1 from v2_products d
+                 where d.id <> p.id
+                   and d.publication_state = 'published'
+                   and lower(btrim(d.name)) = lower(btrim(p.name))
+                   and d.entity_id is not distinct from p.entity_id
+               ) as is_duplicate,
                null::text as coupon_label
         from v2_products p
         join v2_entities e on e.id = p.entity_id

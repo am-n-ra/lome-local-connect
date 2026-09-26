@@ -1,3 +1,5 @@
+import type { ExistenceLevel, OfferExistence, OfferIntegrity, OfferReputation } from './offer-existence';
+
 export type PublicTrust = 'unclaimed' | 'unconfirmed' | 'confirmed';
 
 export interface SearchOptions {
@@ -37,6 +39,8 @@ export interface PublicFacility {
   entityId?: string | null;
   entityName?: string | null;
   entityKind?: 'individu' | 'organisation' | null;
+  /** S-06 — max existence level of this place's published offers (a projection, not a second rule). */
+  existenceLevel?: ExistenceLevel;
 }
 
 /** R-E (S-11) — the OFFERER, as seen publicly. Never carries contact (E-2). */
@@ -83,6 +87,12 @@ export interface PublicProduct {
   handoverKind: OfferHandoverKind | null;
   priceKind: OfferPriceKind | null;
   conditionKind: OfferConditionKind | null;
+  /** S-06 — derived existence level 0→4 (never stored). Absent when the surface has no facts. */
+  existence?: OfferExistence;
+  /** S-32 — automatic integrity, with the failed checks named. */
+  integrity?: OfferIntegrity;
+  /** S-32 — reputation of THIS offer (S-26 traced it). `score` null = no rating yet. */
+  reputation?: OfferReputation;
 }
 
 export interface FacilityDetail extends PublicFacility {
