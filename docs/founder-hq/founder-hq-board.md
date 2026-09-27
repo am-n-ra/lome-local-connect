@@ -1,6 +1,45 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-26 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25**.
+**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25**.
+
+## HQ RECONCILIATION — « même plainte, deuxième fois » (2026-09-27) + UNI-MONEY-1
+
+> **Déclencheur fondateur (verbatim) :** *« dis j'ai essayé de finir omni ces dernières semaines avec open hands mais leur IA ne m'a pas arrangé, on a assez tourné en rond et je pense qu'on a raté tout le process depuis Species ; même si j'aime bien la présentation visuelle globale actuelle mais tout le fond et la logique qui doit faire de omni omni n'est pas là et même il y a beaucoup d'incohérence dans ce qu'on veut réellement faire et proposer. »*
+> **Réponse mesurée : `docs/founder-hq/hq-reconciliation-2026-09-27.md`.**
+>
+> **C'est la MÊME plainte qu'au 2026-09-26, une journée de travail plus tard.** Ce n'est pas un hasard :
+> ce qui l'a produite — une **mémoire produit en retard sur le socle** — a été traité **symptôme par
+> symptôme** (RB-PROD-1/2/3, ALIGN-1, R-B/C/D/E/F), pas à la racine. **Six tranches, aucune ne répondait
+> à « qu'est-ce qu'on veut réellement faire et proposer ? »** — parce que la réponse existe déjà
+> (Seed `S-01…S-32`, mission contract) et n'a jamais été **relue avec le fondateur avant d'étendre**.
+>
+> **Quatre décisions de discipline proposées (H1–H4) — voir `docs/founder-hq/hq-reconciliation-2026-09-27.md`.**
+> **Aucun nouveau code produit / Trunk tant qu'elles ne sont pas arbitrées par le fondateur.**
+
+## UNI-MONEY-1 / D-LOC-9 (2026-09-27) — une seule famille monétaire
+
+> **Mesure exhaustive (16 colonnes, canonique) → QUATRE conventions, pas deux** — et la base était
+> incohérente **DANS LE TEMPS** : des lignes seed d'août **brutes** à côté d'une ligne écrite **le jour
+> même** déjà ×100 (le client acheteur fait `Math.round(budget*100)`, le formulaire vendeur aussi).
+> **Le schéma et le client vivant étaient déjà d'accord sur ×100 — seul le seed était brut.**
+>
+> - **UM-1/UM-7 poussés (`6df05e3`)** : `formatMoney` unique ; 4 copies de `money()` supprimées ; registre
+>   `MONEY_COLUMNS`/`MONEY_SCALE` + test qui **échoue** si une colonne monétaire n'est pas déclarée.
+> - **UM-2/3/4/5 — `058_one_money_family.sql` + code couplé, commit `b5f1804` LOCAL, PAS POUSSÉ.**
+>   Le rescale des **snapshots** a été **refusé par le trigger append-only** — et c'était la trouvaille
+>   la plus importante : les laisser bruts aurait mis une offre à 20 000 F face aux **200 acceptés par
+>   l'acheteur**. Précédent FF-8 : disable→rescale→assert count→re-arm. La migration **renomme**
+>   `discount_value_minor`→`discount_value` (c'est un **pourcentage**, le suffixe mentait) et **déclare**
+>   la convention en commentaire sur 12 colonnes.
+> - **Preuve jetable `br-purple-poetry-amqwztv5`** : snapshots 20000..572000, `net == unit × qté`
+>   **0 violation** ; pourcentages intacts ; trigger ré-armé ; re-run no-op ; commentaires via `pg_description`.
+> - **⚠️ NON POUSSÉ, EXPRÈS** : le code attend des offres ×100 → poussé seul il afficherait les offres
+>   **100× trop petites**. **Code et base voyagent ensemble ou pas du tout** → **ordre fondateur requis**
+>   pour appliquer `058` sur `br-dawn-hill-am5amy22`, puis push, puis hash prod (T-07d).
+> - **UM-6 — le bonus MENT, décision fondateur requise** : `v2_seller_unlocks.amount_minor` porte
+>   **10 000** mais le ledger débité porte **2 000**. `10000/2000 = 5` → la glose lit des **centimes USD**
+>   (÷500 = 20 $), le ledger lit **2 000 F**. **Deux lectures de la même constante.** 20 $ ou 2 000 F ?
+
 
 ## HQ RECONCILIATION — « on a raté tout le process depuis Species » (2026-09-26)
 
