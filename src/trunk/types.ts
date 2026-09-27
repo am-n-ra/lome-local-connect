@@ -343,6 +343,8 @@ export interface SellerAvailabilityRequest {
   requestedQuantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  proposedPriceMinor: number | null;
+  likelierPriceKind: string | null;
   deliveryMode: 'retrait' | 'livraison';
   requestNote: string | null;
   requestStatus: AvailabilityRequestState;

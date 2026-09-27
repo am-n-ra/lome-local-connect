@@ -92,7 +92,11 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
             <div className="row" style={{ gap: 4, marginTop: 4 }}>
               <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
               {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {formatMoney(request.budgetMinor, 'XOF')}</span>}
+              {request.proposedPriceMinor !== null && <span className="chip" style={{ margin: 0 }}>Propose {formatMoney(request.proposedPriceMinor, 'XOF')}</span>}
             </div>
+            {request.proposedPriceMinor !== null && (
+              <p className="tiny muted" style={{ marginTop: 4 }}>L’acheteur propose un prix — c’est une ouverture, pas un engagement. Votre prix cité reste celui qui engage la transaction.</p>
+            )}
             {request.requestNote && <p className="tiny muted" style={{ marginTop: 4 }}>« {request.requestNote} »</p>}
             <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 8 }}>
               {(['available', 'partial', 'unavailable'] as const).map((s) => (

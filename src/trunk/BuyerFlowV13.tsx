@@ -3,12 +3,13 @@ import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCod
 import { getAuthToken } from '../auth';
 import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
+import { canProposePrice, isNegotiable } from './offer-price';
 import { useFreshnessTimer } from './useFreshnessTimer';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
 import { formatMoney } from '../domain/currency';
 
-type FlowProduct = { id: string; name: string };
+type FlowProduct = { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null };
 type FlowFacility = { id: string; name: string; latitude?: number | null; longitude?: number | null };
 type Stage = 'avail' | 'pending' | 'result' | 'intent' | 'txn' | 'qr' | 'pay' | 'rate';
 
@@ -57,6 +58,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
   const [quantity, setQuantity] = useState(1);
   const [budgetMode, setBudgetMode] = useState<'unlimited' | 'maximum'>('unlimited');
   const [budget, setBudget] = useState('');
+  const [proposedPrice, setProposedPrice] = useState('');
+  const negotiable = isNegotiable(product.priceKind);
   const [deliveryMode, setDeliveryMode] = useState<'retrait' | 'livraison'>('retrait');
   const [availNote, setAvailNote] = useState('');
   const [requestId, setRequestId] = useState<string | null>(null);
@@ -152,6 +155,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         quantity,
         budgetMode,
         budgetMinor: budgetMode === 'maximum' ? Math.round(Number(budget) * 100) : null,
+        proposedPriceMinor: negotiable && proposedPrice.trim() !== '' ? Math.round(Number(proposedPrice) * 100) : null,
         deliveryMode,
         note: availNote.trim().length > 0 ? availNote.trim() : null,
         token,
@@ -183,7 +187,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         setToast('');
       }
     } finally { setBusy(false); }
-  }, [busy, needAuth, product.id, facility.id, quantity, budgetMode, budget]);
+    }, [busy, needAuth, product.id, facility.id, quantity, budgetMode, budget, negotiable, proposedPrice]);
 
   useEffect(() => () => { if (pollRef.current !== null) window.clearTimeout(pollRef.current); }, []);
 
@@ -331,6 +335,15 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           </div>
           {budgetMode === 'maximum' && (
             <input className="field" type="number" min="0" step="0.01" placeholder="Budget max (FCFA)" value={budget} onChange={(event) => setBudget(event.target.value)} />
+          )}
+          {canProposePrice(product.priceKind) ? (
+            <div style={{ marginTop: 8 }}>
+              <label className="label" htmlFor="flow-proposed">Prix proposé (négociable)</label>
+              <input id="flow-proposed" className="field" type="number" min="0" step="0.01" placeholder={product.listedPriceMinor ? `Au plus ${formatMoney(product.listedPriceMinor, 'XOF')}` : 'Votre proposition (FCFA)'} value={proposedPrice} onChange={(event) => setProposedPrice(event.target.value)} />
+              <p className="tiny muted" style={{ marginTop: 5 }}>Le vendeur reste libre : il répond avec SON prix. Négocier, c’est chercher moins cher que le prix affiché.</p>
+            </div>
+          ) : (
+            <p className="tiny muted" style={{ marginTop: 8 }}>{product.priceKind === 'fixe' ? 'Offre à prix fixe — le prix affiché est le prix.' : 'Cette offre n’a pas déclaré de prix négociable.'}</p>
           )}
           <div className="label" style={{ marginTop: 8 }}>Contraintes</div>
           <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 4 }}>

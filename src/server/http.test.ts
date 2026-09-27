@@ -83,7 +83,18 @@ describe('Root HTTP error boundary', () => {
       'https://x',
       'auth-user-1',
     );
-    expect(validated).toEqual({ authUserId: 'auth-user-1', productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 2, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, idempotencyKey: 'https://x' });
+    expect(validated).toEqual({ authUserId: 'auth-user-1', productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 2, budgetMode: 'unlimited', budgetMinor: null, proposedPriceMinor: null, deliveryMode: 'retrait', note: null, idempotencyKey: 'https://x' });
+  });
+
+  it('R-H: transports a proposed price, and rejects a negative or non-integer one', () => {
+    const validated = validateAvailabilityRequestCreate(
+      { productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 1, proposedPriceMinor: 8000, idempotencyKey: 'https://x' },
+      'https://x',
+      'auth-user-1',
+    );
+    expect(validated.proposedPriceMinor).toBe(8000);
+    expect(() => validateAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 1, proposedPriceMinor: -5, idempotencyKey: 'https://x' }, 'https://x', 'auth-user-1')).toThrow(ApiInputError);
+    expect(() => validateAvailabilityRequestCreate({ productId: 'f47ac10b-58cc-4372-a567-0e02b2c3d479', facilityId: '1e0b1e44-9f36-4f9c-bf60-1d0a5d2f7a01', quantity: 1, proposedPriceMinor: 1.5, idempotencyKey: 'https://x' }, 'https://x', 'auth-user-1')).toThrow(ApiInputError);
   });
 
   it('rejects an availability-request create with an unknown product or a too-short idempotency key', () => {

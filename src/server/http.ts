@@ -150,6 +150,7 @@ export interface AvailabilityRequestCreateInput {
   quantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  proposedPriceMinor: number | null;
   deliveryMode: 'retrait' | 'livraison';
   note: string | null;
   idempotencyKey: string;
@@ -163,11 +164,15 @@ export function validateAvailabilityRequestCreate(body: Record<string, unknown>,
   const budgetMinor = body.budgetMinor === null || body.budgetMinor === undefined ? null : Number(body.budgetMinor);
   const deliveryMode = body.deliveryMode === 'livraison' ? 'livraison' : 'retrait';
   const note = typeof body.note === 'string' && body.note.trim().length > 0 ? body.note.trim() : null;
+  // R-H : l'acheteur peut PROPOSER un prix sur une offre négociable. Le plafond (`budgetMinor`)
+  // exprime « je ne peux pas dépasser X » ; la proposition exprime « je propose Y ». Les deux
+  // coexistent : le premier borne, le second ouvre la discussion.
+  const proposedPriceMinor = body.proposedPriceMinor === null || body.proposedPriceMinor === undefined ? null : Number(body.proposedPriceMinor);
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidPattern.test(productId) || !uuidPattern.test(facilityId) || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
+  if (!uuidPattern.test(productId) || !uuidPattern.test(facilityId) || !Number.isInteger(quantity) || quantity < 1 || (budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0)) || (proposedPriceMinor !== null && (!Number.isInteger(proposedPriceMinor) || proposedPriceMinor < 0)) || typeof idempotencyKey !== 'string' || idempotencyKey.length < 8) {
     throw new ApiInputError('A valid product, facility, positive quantity and a stable idempotency key are required.');
   }
-  return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
+  return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, proposedPriceMinor, deliveryMode, note, idempotencyKey };
 }
 
 export interface BulkAvailabilityRequestCreateInput {

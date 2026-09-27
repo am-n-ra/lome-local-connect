@@ -11,6 +11,7 @@ import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } f
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedia } from '../trunk/offer-existence';
 import { normalizeStockForUniqueness, uniquenessStockRejection } from '../trunk/offer-uniqueness';
+import { proposedPriceRejection } from '../trunk/offer-price';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -598,6 +599,20 @@ async function readProductUniquenessKind(sql: ReturnType<typeof neon>, authUserI
   const row = (rows as Record<string, unknown>[])[0];
   if (!row) return null;
   return row.uniqueness_kind === null || row.uniqueness_kind === undefined ? null : String(row.uniqueness_kind);
+}
+
+/**
+ * Le prix AFFICHÉ d'une offre — celui que l'acheteur voit, remise Omni appliquée. C'est la
+ * référence de la négociation : « moins cher que ce qui est affiché ». Doit rester aligné sur la
+ * projection publique (`toProduct`) et sur la garde SQL `price_rule` du dépôt.
+ */
+function listedPriceMinor(row: Record<string, unknown>): number {
+  const priceMinor = Number(row.price_minor ?? 0);
+  const kind = row.discount_kind === null || row.discount_kind === undefined ? null : String(row.discount_kind);
+  const value = Number(row.discount_value ?? 0);
+  if (kind === 'percentage') return priceMinor - Math.floor((priceMinor * value) / 100);
+  if (kind === 'fixed') return Math.max(0, priceMinor - value);
+  return priceMinor;
 }
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
@@ -2876,6 +2891,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       requestedQuantity: number;
       budgetMode: 'unlimited' | 'maximum';
       budgetMinor: number | null;
+      proposedPriceMinor: number | null;
+      likelierPriceKind: string | null;
       requestStatus: AvailabilityResponsesResult['requestStatus'];
       createdAt: string;
       expiresAt: string;
@@ -2917,6 +2934,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.proposed_price_minor,
+          p.price_kind as offer_price_kind,
           r.delivery_mode,
           r.request_note,
           r.status as request_status,
@@ -2956,6 +2975,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode as 'unlimited' | 'maximum',
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          proposedPriceMinor: row.proposed_price_minor === null || row.proposed_price_minor === undefined ? null : Number(row.proposed_price_minor),
+          likelierPriceKind: row.offer_price_kind === null || row.offer_price_kind === undefined ? null : String(row.offer_price_kind),
           deliveryMode: row.delivery_mode as 'retrait' | 'livraison',
           requestNote: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status as AvailabilityResponsesResult['requestStatus'],
@@ -6142,11 +6163,33 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       quantity: number;
       budgetMode: 'unlimited' | 'maximum';
       budgetMinor: number | null;
+      proposedPriceMinor: number | null;
       deliveryMode: 'retrait' | 'livraison';
       note: string | null;
       idempotencyKey: string;
     }): Promise<AvailabilityResult> {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      // R-H — la caractéristique DÉCIDE, elle ne décore pas. Une proposition de prix n'est
+      // recevable que sur une offre négociable, et « négocier » veut dire chercher moins cher.
+      // On lit la nature de l'offre AVANT d'écrire pour prononcer un refus lisible ; la même règle
+      // est rejouée dans la requête (garde en profondeur, cf. `price_rule`).
+      if (input.proposedPriceMinor !== null) {
+        const nature = await retryDatabase(() => sql`
+          select p.price_kind, p.discount_kind, p.discount_value
+          from v2_products p
+          where p.id = ${input.productId}::uuid
+          limit 1
+        `);
+        const natureRow = (nature as Record<string, unknown>[])[0];
+        if (!natureRow) throw new AvailabilityPolicyError('The selected product is not published at the requested facility.');
+        const listed = listedPriceMinor(natureRow);
+        const rejection = proposedPriceRejection({
+          priceKind: natureRow.price_kind === null || natureRow.price_kind === undefined ? null : String(natureRow.price_kind),
+          listedMinor: listed,
+          proposedMinor: input.proposedPriceMinor,
+        });
+        if (rejection) throw new AvailabilityPolicyError(rejection);
+      }
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
           select p.id as product_id, f.id as facility_id
@@ -6156,6 +6199,28 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           where p.id = ${input.productId}::uuid
             and p.publication_state = 'published'
             and coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')
+        ),
+        -- Garde en profondeur : la MÊME règle que ci-dessus, en SQL. Un appel direct à la base ou
+        -- un futur chemin de code ne peut pas insérer une proposition incohérente. price_kind non
+        -- déclaré (offre héritée) n'ouvre PAS la négociation : on ne présume pas un droit que le
+        -- vendeur n'a jamais accordé.
+        price_rule as (
+          select 1 as ok
+          from v2_products p
+          where p.id = ${input.productId}::uuid
+            and (
+              ${input.proposedPriceMinor}::int is null
+              or (
+                p.price_kind = 'negociable'
+                and ${input.proposedPriceMinor}::int >= 0
+                and ${input.proposedPriceMinor}::int <=
+                  case
+                    when p.discount_kind = 'percentage' then p.price_minor - floor(p.price_minor * coalesce(p.discount_value, 0) / 100.0)::int
+                    when p.discount_kind = 'fixed' then greatest(p.price_minor - coalesce(p.discount_value, 0), 0)
+                    else p.price_minor
+                  end
+              )
+            )
         ),
         account as (
           insert into v2_accounts (auth_user_id, onboarding_state)
@@ -6172,19 +6237,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ),
         request_insert as (
           insert into v2_availability_requests
-            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
-          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.proposedPriceMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
           from account a
           cross join valid_selection s
+          cross join price_rule pr
           join wallet w on w.account_id = a.id
           on conflict (buyer_account_id, idempotency_key) do nothing
-          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, expires_at
         ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, expires_at
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.proposed_price_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}

@@ -424,6 +424,27 @@ function computeReputation(count, scoreSum) {
   return { count, score: Math.round(scoreSum / count * 10) / 10 };
 }
 
+// src/trunk/offer-price.ts
+function isNegotiable(priceKind) {
+  return priceKind === "negociable";
+}
+function canProposePrice(priceKind) {
+  return isNegotiable(priceKind);
+}
+function proposedPriceRejection(input) {
+  if (input.proposedMinor === null) return null;
+  if (!Number.isInteger(input.proposedMinor) || input.proposedMinor < 0) {
+    return "Le prix propos\xE9 doit \xEAtre un montant positif.";
+  }
+  if (!canProposePrice(input.priceKind)) {
+    return "Cette offre est \xE0 prix fixe : le prix affich\xE9 est le prix.";
+  }
+  if (input.proposedMinor > input.listedMinor) {
+    return "N\xE9gocier, c\u2019est chercher un prix plus bas : votre proposition d\xE9passe le prix affich\xE9.";
+  }
+  return null;
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -615,6 +636,14 @@ async function readProductUniquenessKind(sql, authUserId, productId) {
   const row = rows[0];
   if (!row) return null;
   return row.uniqueness_kind === null || row.uniqueness_kind === void 0 ? null : String(row.uniqueness_kind);
+}
+function listedPriceMinor(row) {
+  const priceMinor = Number(row.price_minor ?? 0);
+  const kind = row.discount_kind === null || row.discount_kind === void 0 ? null : String(row.discount_kind);
+  const value = Number(row.discount_value ?? 0);
+  if (kind === "percentage") return priceMinor - Math.floor(priceMinor * value / 100);
+  if (kind === "fixed") return Math.max(0, priceMinor - value);
+  return priceMinor;
 }
 function createTrunkRepository(sql = database()) {
   return {
@@ -2801,6 +2830,8 @@ function createTrunkRepository(sql = database()) {
           r.requested_quantity,
           r.budget_mode,
           r.budget_minor,
+          r.proposed_price_minor,
+          p.price_kind as offer_price_kind,
           r.delivery_mode,
           r.request_note,
           r.status as request_status,
@@ -2840,6 +2871,8 @@ function createTrunkRepository(sql = database()) {
           requestedQuantity: Number(row.requested_quantity),
           budgetMode: row.budget_mode,
           budgetMinor: row.budget_minor === null ? null : Number(row.budget_minor),
+          proposedPriceMinor: row.proposed_price_minor === null || row.proposed_price_minor === void 0 ? null : Number(row.proposed_price_minor),
+          likelierPriceKind: row.offer_price_kind === null || row.offer_price_kind === void 0 ? null : String(row.offer_price_kind),
           deliveryMode: row.delivery_mode,
           requestNote: row.request_note === null ? null : String(row.request_note),
           requestStatus: row.request_status,
@@ -5804,6 +5837,23 @@ function createTrunkRepository(sql = database()) {
     },
     async createAvailabilityRequest(input) {
       const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
+      if (input.proposedPriceMinor !== null) {
+        const nature = await retryDatabase(() => sql`
+          select p.price_kind, p.discount_kind, p.discount_value
+          from v2_products p
+          where p.id = ${input.productId}::uuid
+          limit 1
+        `);
+        const natureRow = nature[0];
+        if (!natureRow) throw new AvailabilityPolicyError("The selected product is not published at the requested facility.");
+        const listed = listedPriceMinor(natureRow);
+        const rejection = proposedPriceRejection({
+          priceKind: natureRow.price_kind === null || natureRow.price_kind === void 0 ? null : String(natureRow.price_kind),
+          listedMinor: listed,
+          proposedMinor: input.proposedPriceMinor
+        });
+        if (rejection) throw new AvailabilityPolicyError(rejection);
+      }
       const rows = await retryDatabase(() => sql`
         with valid_selection as (
           select p.id as product_id, f.id as facility_id
@@ -5813,6 +5863,28 @@ function createTrunkRepository(sql = database()) {
           where p.id = ${input.productId}::uuid
             and p.publication_state = 'published'
             and coalesce(e.trust_state, f.trust_state) in ('certified', 'unconfirmed', 'confirmed')
+        ),
+        -- Garde en profondeur : la MÊME règle que ci-dessus, en SQL. Un appel direct à la base ou
+        -- un futur chemin de code ne peut pas insérer une proposition incohérente. price_kind non
+        -- déclaré (offre héritée) n'ouvre PAS la négociation : on ne présume pas un droit que le
+        -- vendeur n'a jamais accordé.
+        price_rule as (
+          select 1 as ok
+          from v2_products p
+          where p.id = ${input.productId}::uuid
+            and (
+              ${input.proposedPriceMinor}::int is null
+              or (
+                p.price_kind = 'negociable'
+                and ${input.proposedPriceMinor}::int >= 0
+                and ${input.proposedPriceMinor}::int <=
+                  case
+                    when p.discount_kind = 'percentage' then p.price_minor - floor(p.price_minor * coalesce(p.discount_value, 0) / 100.0)::int
+                    when p.discount_kind = 'fixed' then greatest(p.price_minor - coalesce(p.discount_value, 0), 0)
+                    else p.price_minor
+                  end
+              )
+            )
         ),
         account as (
           insert into v2_accounts (auth_user_id, onboarding_state)
@@ -5829,19 +5901,20 @@ function createTrunkRepository(sql = database()) {
         ),
         request_insert as (
           insert into v2_availability_requests
-            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
-          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
+            (buyer_account_id, product_id, facility_scope, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, idempotency_key, expires_at)
+          select a.id, s.product_id, array[s.facility_id], ${input.quantity}, ${input.budgetMode}, ${input.budgetMinor}, ${input.proposedPriceMinor}, ${input.deliveryMode}, ${input.note}, 'submitted', ${input.idempotencyKey}, ${expiresAt}::timestamptz
           from account a
           cross join valid_selection s
+          cross join price_rule pr
           join wallet w on w.account_id = a.id
           on conflict (buyer_account_id, idempotency_key) do nothing
-          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          returning id, product_id, facility_scope[1] as facility_id, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, expires_at
         ),
         request_result as (
-          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, delivery_mode, request_note, status, expires_at
+          select id, product_id, facility_id, requested_quantity, budget_mode, budget_minor, proposed_price_minor, delivery_mode, request_note, status, expires_at
           from request_insert
           union all
-          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
+          select r.id, r.product_id, r.facility_scope[1] as facility_id, r.requested_quantity, r.budget_mode, r.budget_minor, r.proposed_price_minor, r.delivery_mode, r.request_note, r.status, r.expires_at
           from v2_availability_requests r
           where r.buyer_account_id = (select id from account)
             and r.idempotency_key = ${input.idempotencyKey}
@@ -6472,11 +6545,12 @@ function validateAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
   const budgetMinor = body.budgetMinor === null || body.budgetMinor === void 0 ? null : Number(body.budgetMinor);
   const deliveryMode = body.deliveryMode === "livraison" ? "livraison" : "retrait";
   const note = typeof body.note === "string" && body.note.trim().length > 0 ? body.note.trim() : null;
+  const proposedPriceMinor = body.proposedPriceMinor === null || body.proposedPriceMinor === void 0 ? null : Number(body.proposedPriceMinor);
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidPattern.test(productId) || !uuidPattern.test(facilityId) || !Number.isInteger(quantity) || quantity < 1 || budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0) || typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
+  if (!uuidPattern.test(productId) || !uuidPattern.test(facilityId) || !Number.isInteger(quantity) || quantity < 1 || budgetMinor !== null && (!Number.isInteger(budgetMinor) || budgetMinor < 0) || proposedPriceMinor !== null && (!Number.isInteger(proposedPriceMinor) || proposedPriceMinor < 0) || typeof idempotencyKey !== "string" || idempotencyKey.length < 8) {
     throw new ApiInputError("A valid product, facility, positive quantity and a stable idempotency key are required.");
   }
-  return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, deliveryMode, note, idempotencyKey };
+  return { authUserId, productId, facilityId, quantity, budgetMode, budgetMinor, proposedPriceMinor, deliveryMode, note, idempotencyKey };
 }
 function validateBulkAvailabilityRequestCreate(body, idempotencyKey, authUserId) {
   const productId = typeof body.productId === "string" ? body.productId : "";

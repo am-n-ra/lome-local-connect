@@ -277,6 +277,7 @@ export async function requestAvailability(input: {
   quantity: number;
   budgetMode: 'unlimited' | 'maximum';
   budgetMinor: number | null;
+  proposedPriceMinor?: number | null;
   deliveryMode: 'retrait' | 'livraison';
   note: string | null;
   token: string;
@@ -296,6 +297,7 @@ export async function requestAvailability(input: {
       quantity: input.quantity,
       budgetMode: input.budgetMode,
       budgetMinor: input.budgetMinor,
+      proposedPriceMinor: input.proposedPriceMinor ?? null,
       deliveryMode: input.deliveryMode,
       note: input.note,
     }),

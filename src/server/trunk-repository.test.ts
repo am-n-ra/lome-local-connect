@@ -18,6 +18,7 @@ const availabilityInput = {
   quantity: 2,
   budgetMode: 'maximum' as const,
   budgetMinor: 1000,
+  proposedPriceMinor: null,
   deliveryMode: 'livraison' as const,
   note: 'Livrer avant 17h',
   idempotencyKey: 'availability-key-1',

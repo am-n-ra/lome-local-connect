@@ -184,7 +184,7 @@ export function TrunkAppV13() {
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
   // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
   // formulaire à chaque retour sur l'espace vendeur.
-  const [sellerCreateIntent, setSellerCreateIntent] = useState(false);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string } | null>(null);
+  const [sellerCreateIntent, setSellerCreateIntent] = useState(false);const [flowFacility, setFlowFacility] = useState<{ id: string; name: string; latitude?: number | null; longitude?: number | null } | null>(null);const [flowProduct, setFlowProduct] = useState<{ id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null } | null>(null);
   const [followTarget, setFollowTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   const [routeTarget, setRouteTarget] = useState<import('./types').RouteTarget | null>(null);
   // RT-D1: the itinerary endpoint needs an identity when the routing provider is
@@ -727,7 +727,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   }, [requireAuth]);
 
   // Démarre un flux d'achat NEUF (pas une reprise) : on purge tout id de reprise résiduel.
-  const startFlow = useCallback((facility: { id: string; name: string; latitude?: number | null; longitude?: number | null }, product: { id: string; name: string }) => {
+  const startFlow = useCallback((facility: { id: string; name: string; latitude?: number | null; longitude?: number | null }, product: { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null }) => {
     setPendingResumeTxnId(null);
     setFlowFacility(facility);
     setFlowProduct(product);
@@ -1735,7 +1735,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               // An offer price carries its OWN currency, not the viewer's market (D-LOC-3).
               const cheapest = detail?.products?.length ? detail.products.reduce((a, b) => (b.prixReduit < a.prixReduit ? b : a)) : null;
               return (
-                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
+                <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name, priceKind: product.priceKind ?? null, listedPriceMinor: product.prixReduit ?? null }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
                     {cheapest ? <span className="status ok">dès {formatMoney(cheapest.prixReduit, currencyFor(cheapest.currency).currency)}</span> : <span className="status gray">Non transactable</span>}
@@ -1859,7 +1859,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     const picked = selectedFacility.products.filter((p) => facProductSel.includes(p.id));
                     if (picked.length === 0) return;
                     if (picked.length === 1) {
-                      startFlow({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }, { id: picked[0].id, name: picked[0].name });
+                      startFlow({ id: selectedFacility.id, name: selectedFacility.name, latitude: selectedFacility.latitude, longitude: selectedFacility.longitude }, { id: picked[0].id, name: picked[0].name, priceKind: picked[0].priceKind ?? null, listedPriceMinor: picked[0].prixReduit ?? null });
                     } else {
                       void (async () => {
                         const token = await requireAuth();

@@ -1,6 +1,6 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25** · **`R-G` LIVRÉE** (première caractéristique d'offre **vivante** : la pièce unique est une présence) — commit `3753c95`, 596/596 tests.
+**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25** · **`R-G` LIVRÉE** (première caractéristique d'offre **vivante** : la pièce unique est une présence, `3753c95`) · **`R-H` LIVRÉE** (2ᵉ caractéristique vivante : la négociation — « négocier, c'est chercher moins cher ») — **604/604 tests**.
 
 ## HQ RECONCILIATION — « même plainte, deuxième fois » (2026-09-27) + UNI-MONEY-1
 
@@ -154,11 +154,21 @@
 >   capacité (stepper, timeline) vit dans `BuyerFlowV13.tsx` + `transaction-time.ts`. Dette mineure
 >   nommée : plus de test unitaire propre du mapping état→étapes.
 
-> **Prochaine tranche `R-H` — la caractéristique suivante, et non un élargissement :** rendre
-> **`price_kind = 'negociable'`** vivant (la négociation). C'est la candidate la plus porteuse : elle
-> touche la machine transactionnelle à 10 états, déjà robuste et prouvée, donc elle s'ajoute **sans
-> fragiliser**. **Décision fondateur requise** sur l'ordre : négociation d'abord, ou `condition_kind`
-> / `handover_kind` d'abord ? **Ne pas rouvrir Seed/Species, ne pas élargir.**
+> ✅ **TRANCHE `R-H` LIVRÉE** (fondateur « /nature-way go ») — **la négociation devient une règle.**
+> `price_kind` ne décidait rien : l'acheteur n'avait qu'un **plafond** (`budget_max`), jamais un **prix
+> proposé**, et « À négocier » était purement décoratif. Désormais : **négocier, c'est chercher un prix
+> plus bas** (une proposition au-dessus du prix affiché est refusée) ; **prix fixe ⇒ aucune
+> proposition** ; **caractéristique non déclarée ⇒ aucun droit présumé**. Module pur partagé
+> `offer-price.ts` (serveur **et** UI), garde en profondeur SQL, refus lisible 409. Migration
+> **`064`** appliquée au canonique (CHECK `>= 0`, **0 ligne réécrite**) + registre `1bd7c051…`.
+> **604/604 tests** (+8), falsification → **4 tests tombent** sans la règle. Commit à pousser.
+> Détail : `docs/nature-way/omni-rh-price-negotiation-evidence-2026-09-27.md`.
+>
+> **Prochaine tranche `R-I` — la caractéristique suivante :** `condition_kind` (neuf/occasion) ou
+> `handover_kind` (retrait/livraison). **Décision fondateur requise** sur l'ordre. Résidu honnête :
+> **aucune offre ne déclare `price_kind` en base** — la règle est vivante mais non exercée par des
+> données (acte vendeur, pas migration) ; `062` (`UNI-MONEY-1`) reste à appliquer.
+> **Ne pas rouvrir Seed/Species, ne pas élargir.**
 
 >
 > ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
