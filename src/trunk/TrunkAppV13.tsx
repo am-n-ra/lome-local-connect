@@ -37,6 +37,7 @@ import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
+import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
@@ -134,6 +135,14 @@ export function TrunkAppV13() {
   const stageRef = useRef<HTMLDivElement | null>(null);
   useViewportInsets(stageRef);
   const [facilities, setFacilities] = useState<PublicFacility[]>([]);
+  /**
+   * S-07 — la carte est filtrable : Tout / Commerces / Particuliers / Transport.
+   * La maquette acceptée porte ce rail (`filterrail`) ; l'app ne l'avait pas.
+   * Le filtre porte sur l'ENTITÉ (S-13 : un particulier EST une entité), pas sur
+   * un attribut de produit — c'est ce qui rend découvrable « un particulier vend
+   * son objet » sans exiger un filtre neuf/occasion.
+   */
+  const [mapFilter, setMapFilter] = useState<MapFilter>('tout');
   const [mapState, setMapState] = useState<MapState>('loading');
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -1356,13 +1365,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!highlightedProductId) return sorted;
     return [...sorted].sort((a2, b2) => Number(b2.id === highlightedProductId) - Number(a2.id === highlightedProductId));
   }, [selectedFacility, highlightedProductId]);
+  /* S-07 — la carte est filtrée à la source : ce que le rail montre est ce que la carte dessine. */
+  const visibleFacilities = useMemo(() => filterFacilities(facilities, mapFilter), [facilities, mapFilter]);
 
   return (
     <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
       <section className="mapbase" aria-label="Carte Omni">
         <Suspense fallback={<div role="status">Chargement de la carte…</div>}>
           <TrunkMap
-            facilities={facilities}
+            facilities={visibleFacilities}
             selectedId={selectedId}
             onSelect={handlePinSelect}
             onBoundsChange={setBounds}
@@ -1378,9 +1389,34 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             resultCount={results.length > 0 ? results.length : null}
           />
         </Suspense>
+        {role === 'buyer' && sheet === 'none' && (
+          <div className="filterrail" role="group" aria-label="Filtrer la carte">
+            {MAP_FILTERS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={`fchip${mapFilter === option.id ? ' on' : ''}${option.soon ? ' soon' : ''}`}
+                aria-pressed={option.soon ? undefined : mapFilter === option.id}
+                aria-disabled={option.soon || undefined}
+                disabled={option.soon}
+                title={option.soon ? option.soonReason : `Filtre ${option.label}`}
+                onClick={() => { if (!option.soon) setMapFilter(option.id); }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
       {mapState === 'error' && <div className="map-legend" role="alert"><span>{error}</span></div>}
       {mapState === 'empty' && <div className="map-legend" role="status"><span>Aucun lieu dans cette vue.</span></div>}
+      {mapState === 'ready' && mapFilter !== 'tout' && visibleFacilities.length === 0 && (
+        /* S-05 : ne jamais laisser un vide illisible. Un filtre qui ne trouve rien doit le dire,
+           et rappeler que le fond de carte `unclaimed` n'est ni un commerce ni un particulier. */
+        <div className="map-legend" role="status">
+          <span>{`Aucun ${MAP_FILTERS.find((f) => f.id === mapFilter)?.label.toLowerCase() ?? ''} dans cette zone — élargissez ou revenez à « Tout ».`}</span>
+        </div>
+      )}
       <div className="rolepill" role="tablist" aria-label="Changer de rôle">
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />

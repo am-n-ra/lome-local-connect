@@ -68,6 +68,13 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .rolepill button{border-radius:999px;padding:5px 10px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:.2s var(--ease)}
 .rolepill button.on{color:#fff;background:var(--ink)}
 .map-legend{position:absolute;z-index:6;top:calc(var(--safe-top, 12px)+36px);left:16px;font-size:8px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase}
+/* S-07 — rail de filtres de la carte (porté 1:1 de la maquette acceptée `filterrail`).
+   Position : sous le rolepill, en haut à gauche de la carte. */
+.filterrail{position:absolute;left:12px;top:50px;display:flex;gap:6px;z-index:6;flex-wrap:wrap;max-width:220px}
+.fchip{background:rgba(255,255,255,.92);backdrop-filter:blur(8px);border:1px solid var(--line);border-radius:999px;padding:5px 10px;font-size:9.5px;font-weight:700;box-shadow:var(--sh-sm);color:var(--ink);cursor:pointer}
+.fchip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.fchip.soon{color:var(--ink-faint);cursor:default}
+.fchip[disabled]{cursor:default}
 .sheet{position:absolute;z-index:8;left:0;right:0;bottom:0;top:auto;background:var(--bg);border-radius:24px 24px 0 0;box-shadow:0 -14px 44px rgba(0,0,0,.16);padding:10px 15px 92px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none;border-top:1px solid var(--line);transition:transform .38s var(--ease),opacity .28s var(--ease);transform:translateY(var(--ty,0px));opacity:1;animation:sheetIn .38s var(--ease) backwards}
 .sheet::-webkit-scrollbar{width:0;display:none}
 .sheet.h-full{height:64%}.sheet.h-mid{height:52%}.sheet.h-auto{height:auto;max-height:60%}.sheet.h-low{height:auto;max-height:44%}
@@ -241,6 +248,8 @@ body{background:#dadad7;padding:0}
 .sheet[data-sheet]:not([data-sheet="search"]){position:absolute;left:64px;top:76px;bottom:0;right:auto;width:346px;height:auto;max-height:none;border:0;border-right:1px solid var(--line);border-radius:0;box-shadow:none;padding:16px 16px 20px;transform:none!important;overflow-y:auto;z-index:15}
 .sheet[data-sheet]:not([data-sheet="search"]) .handle{display:none}
 .sheet[data-sheet="results"] .hgrid{display:grid!important;grid-template-columns:1fr;gap:9px;overflow:visible;margin-top:10px;scroll-snap-type:none;padding-bottom:0}
+/* S-07 — le rail suit la carte quand elle se décale (panneau gauche ouvert). */
+.filterrail{left:calc(64px + 12px)}
 .sheet[data-sheet="results"] .hgrid .hcard{flex:none;width:100%;scroll-snap-align:none}
 .sheet[data-sheet="results"] .btnrow{margin-top:14px}
 /* everything else (menu, account, home, wallet, plans, saved, auth) is a genuinely separate destination — a right-hand drawer over the map is the correct pattern there */
