@@ -10,6 +10,7 @@ import type { AdCampaignCreateResult, AdCampaignListResult, AvailabilityResponse
 import { createFedaPayCheckout, fetchFedaPayTransaction, isFedaPayConfigured } from './fedapay-adapter';
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedia } from '../trunk/offer-existence';
+import { normalizeStockForUniqueness, uniquenessStockRejection } from '../trunk/offer-uniqueness';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -526,6 +527,7 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
             availabilityExpiresAt: (row.availability_expires_at as string | Date | null) ?? null,
             quantityAllocated: Number(row.quantity_allocated_omni ?? 0),
             quantityReserved: Number(row.quantity_reserved_omni ?? 0),
+            uniquenessKind: row.uniqueness_kind === null || row.uniqueness_kind === undefined ? null : String(row.uniqueness_kind),
           }),
           integrity: computeIntegrity({
             media: row.media,
@@ -575,6 +577,27 @@ function normalizeOfferCharacteristics(input: {
     priceKind: pick(input.priceKind, OFFER_PRICE_KINDS),
     conditionKind: pick(input.conditionKind, OFFER_CONDITION_KINDS),
   };
+}
+
+/**
+ * La nature EXISTANTE d'une offre, bornée à son propriétaire.
+ *
+ * Sert à appliquer l'invariant de pièce unique quand l'appelant ne fournit pas la
+ * caractéristique (édition partielle) : sans cette lecture, un PATCH contournerait l'invariant et
+ * écraserait la nature de l'offre. Un appelant non-propriétaire obtient `null` — il n'apprend rien.
+ */
+async function readProductUniquenessKind(sql: ReturnType<typeof neon>, authUserId: string, productId: string): Promise<string | null> {
+  const rows = await retryDatabase(() => sql`
+    select p.uniqueness_kind
+    from v2_products p
+    join v2_facilities f on f.id = p.facility_id
+    join v2_accounts a on a.id = f.account_id
+    where p.id = ${productId}::uuid and a.auth_user_id = ${authUserId} and a.suspended_at is null
+    limit 1
+  `);
+  const row = (rows as Record<string, unknown>[])[0];
+  if (!row) return null;
+  return row.uniqueness_kind === null || row.uniqueness_kind === undefined ? null : String(row.uniqueness_kind);
 }
 
 export function createTrunkRepository(sql: ReturnType<typeof neon> = database()) {
@@ -2470,6 +2493,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       // not by a separate "type". Validated here (not only at the HTTP edge) so the repository
       // cannot be driven around by an internal caller.
       const carac = normalizeOfferCharacteristics(input);
+      // S-01 : une pièce unique se déclare 1 (présente) ou 0 (retirée), jamais « 3 exemplaires ».
+      const rejectStock = uniquenessStockRejection(input.stockLoueOmni, carac.uniquenessKind);
+      if (rejectStock) throw new SellerCataloguePolicyError('UNIQUENESS_INCOHERENT_STOCK');
+      const stockLoueOmni = normalizeStockForUniqueness(input.stockLoueOmni, carac.uniquenessKind);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         with seller as (
@@ -2494,7 +2521,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           insert into v2_products
             (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value, quantity_allocated_omni, idempotency_key, publication_state,
              position_kind, uniqueness_kind, handover_kind, price_kind, condition_kind)
-          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft',
+          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${stockLoueOmni}, ${input.idempotencyKey}, 'draft',
                  ${carac.positionKind}, ${carac.uniquenessKind}, ${carac.handoverKind}, ${carac.priceKind}, ${carac.conditionKind}
           from owned_facility of
           where exists (select 1 from slot_check)
@@ -2512,6 +2539,15 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
       if (String(row.discount_kind) !== 'percentage' || Number(row.discount_value) !== input.pourcentageReduction || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
       return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', prixReduit: input.prixOriginal - discount };
+    },
+
+    /**
+     * La nature EXISTANTE d'une offre (propriétaire seulement). Sert à lire la caractéristique que
+     * l'appelant n'a pas fournie — sans cette lecture, l'invariant de pièce unique serait
+     * contournable par un simple PATCH, et l'édition écraserait la nature de l'offre.
+     */
+    async readProductUniquenessKindForOwner(input: { authUserId: string; productId: string }): Promise<string | null> {
+      return readProductUniquenessKind(sql, input.authUserId, input.productId);
     },
 
     async updateSellerProductDraft(input: {
@@ -2532,11 +2568,20 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     }): Promise<{ productId: string; publicationState: 'draft'; prixReduit: number }> {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) throw new SellerCataloguePolicyError('INVALID_INPUT');
       const carac = normalizeOfferCharacteristics(input);
+      // PRÉSERVER PAR DÉFAUT : l'édition d'une offre ne doit pas la rendre muette. Un appel qui
+      // omet une caractéristique la GARDE (coalesce sur la valeur existante) ; un appel qui la
+      // fournit la pose. Avant, toutes étaient écrasées à null/'' → une offre publiée redevenait
+      // un brouillon « caractère manquant ». L'édition ne peut pas changer la NATURE de l'offre :
+      // si elle n'est pas fournie, l'invariant de stock lit la nature EXISTANTE.
+      const effectiveUniqueness = carac.uniquenessKind ?? (await readProductUniquenessKind(sql, input.authUserId, input.productId));
+      const rejectStock = uniquenessStockRejection(input.stockLoueOmni, effectiveUniqueness);
+      if (rejectStock) throw new SellerCataloguePolicyError('UNIQUENESS_INCOHERENT_STOCK');
+      const stockLoueOmni = normalizeStockForUniqueness(input.stockLoueOmni, effectiveUniqueness);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni},
-            position_kind = ${carac.positionKind}, uniqueness_kind = ${carac.uniquenessKind}, handover_kind = ${carac.handoverKind}, price_kind = ${carac.priceKind}, condition_kind = ${carac.conditionKind},
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value = ${input.pourcentageReduction}, quantity_allocated_omni = ${stockLoueOmni},
+            position_kind = ${carac.positionKind ?? sql`p.position_kind`}, uniqueness_kind = ${carac.uniquenessKind ?? sql`p.uniqueness_kind`}, handover_kind = ${carac.handoverKind ?? sql`p.handover_kind`}, price_kind = ${carac.priceKind ?? sql`p.price_kind`}, condition_kind = ${carac.conditionKind ?? sql`p.condition_kind`},
             publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id

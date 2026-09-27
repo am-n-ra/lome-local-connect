@@ -209,13 +209,33 @@ describe('public product boundary (v3 model)', () => {
     const repository = createTrunkRepository(call.sql);
     await repository.createSellerProductDraft({
       authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-write',
-      positionKind: 'mobile', uniquenessKind: 'piece_unique', handoverKind: 'livraison', priceKind: 'negociable', conditionKind: 'occasion',
+      positionKind: 'mobile', uniquenessKind: 'renouvelable', handoverKind: 'livraison', priceKind: 'negociable', conditionKind: 'occasion',
     });
     expect(call.queries[0]).toContain('position_kind');
     expect(call.queries[0]).toContain('uniqueness_kind');
     expect(call.queries[0]).toContain('handover_kind');
     expect(call.queries[0]).toContain('price_kind');
     expect(call.queries[0]).toContain('condition_kind');
+  });
+
+  it('rejects a piece_unique declared with several copies — presence, not stock (S-01)', async () => {
+    const repository = createTrunkRepository(stubSql([]).sql);
+    await expect(
+      repository.createSellerProductDraft({
+        authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Ordinateur d\'occasion', description: null, unit: 'pièce', prixOriginal: 90000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 3, idempotencyKey: 'idem-piece-unique',
+        uniquenessKind: 'piece_unique',
+      }),
+    ).rejects.toMatchObject({ message: 'UNIQUENESS_INCOHERENT_STOCK' });
+  });
+
+  it('normalizes a piece_unique to one copy before writing (S-01)', async () => {
+    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000001', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Appartement', publication_state: 'draft', price_minor: 5000000, discount_kind: 'percentage', discount_value: 10 }]);
+    await createTrunkRepository(call.sql).createSellerProductDraft({
+      authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Appartement', description: null, unit: 'lot', prixOriginal: 5000000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 1, idempotencyKey: 'idem-piece-unique-1',
+      uniquenessKind: 'piece_unique',
+    });
+    // La valeur écrite est 1 : la présence, pas le nombre fourni par le formulaire.
+    expect(call.queries[0]).toContain('quantity_allocated_omni');
   });
 
   it('rejects an unknown characteristic value instead of writing it (R-B / S-01)', async () => {

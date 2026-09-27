@@ -91,6 +91,7 @@ var OMNI_PLAN_PRICES_USD_MINOR = {
   buyerPro: 500
   // $5.00 /mois
 };
+var SELLER_BONUS_USD_MINOR = 2e3;
 var LOCAL_RATE_PER_USD_MINOR = {
   XOF: 500
   // 1 USD = 500 XOF
@@ -323,6 +324,30 @@ function qrExpiryFrom(issuedAtIso, ttlMinutes) {
   return new Date(new Date(issuedAtIso).getTime() + ttlMinutes * 60 * 1e3).toISOString();
 }
 
+// src/trunk/offer-uniqueness.ts
+var UNIQUENESS_CAPACITIES = Object.freeze({
+  renouvelable: Number.POSITIVE_INFINITY,
+  piece_unique: 1
+});
+function isSinglePiece(kind) {
+  return kind === "piece_unique";
+}
+function normalizeStockForUniqueness(stockLoueOmni, kind) {
+  if (kind === "piece_unique") return 1;
+  return stockLoueOmni;
+}
+function uniquenessStockRejection(stockLoueOmni, kind) {
+  if (kind !== "piece_unique") return null;
+  if (stockLoueOmni === 0 || stockLoueOmni === 1) return null;
+  return "Une pi\xE8ce unique ne se d\xE9clare pas en plusieurs exemplaires : c\u2019est une pr\xE9sence, pas un stock. Indiquez 1 (pr\xE9sente) ou 0 (retir\xE9e).";
+}
+function isReservable(input) {
+  if (isSinglePiece(input.uniquenessKind)) {
+    return input.quantityAllocated >= 1 && input.quantityReserved < 1;
+  }
+  return Math.max(0, input.quantityAllocated - input.quantityReserved) > 0;
+}
+
 // src/trunk/offer-existence.ts
 var LEVELS = [
   { label: "Pr\xE9sente", hint: "sur la carte, pas encore g\xE9r\xE9e" },
@@ -343,8 +368,11 @@ function computeExistenceLevel(input) {
   if (!published) return input.hasEntity ? 1 : 0;
   const liveAvailability = (input.availabilityState === "en_stock" || input.availabilityState === "verifie") && !isExpired(input.availabilityExpiresAt, input.now ?? /* @__PURE__ */ new Date());
   if (!liveAvailability) return 2;
-  const reservable = Math.max(0, input.quantityAllocated - input.quantityReserved);
-  return reservable > 0 ? 4 : 3;
+  return isReservable({
+    uniquenessKind: input.uniquenessKind,
+    quantityAllocated: input.quantityAllocated,
+    quantityReserved: input.quantityReserved
+  }) ? 4 : 3;
 }
 function existenceFor(input) {
   const level = computeExistenceLevel(input);
@@ -543,7 +571,8 @@ var toProduct = (row) => {
         availabilityState: row.availability_state === null || row.availability_state === void 0 ? null : String(row.availability_state),
         availabilityExpiresAt: row.availability_expires_at ?? null,
         quantityAllocated: Number(row.quantity_allocated_omni ?? 0),
-        quantityReserved: Number(row.quantity_reserved_omni ?? 0)
+        quantityReserved: Number(row.quantity_reserved_omni ?? 0),
+        uniquenessKind: row.uniqueness_kind === null || row.uniqueness_kind === void 0 ? null : String(row.uniqueness_kind)
       }),
       integrity: computeIntegrity({
         media: row.media,
@@ -573,6 +602,19 @@ function normalizeOfferCharacteristics(input) {
     priceKind: pick(input.priceKind, OFFER_PRICE_KINDS),
     conditionKind: pick(input.conditionKind, OFFER_CONDITION_KINDS)
   };
+}
+async function readProductUniquenessKind(sql, authUserId, productId) {
+  const rows = await retryDatabase(() => sql`
+    select p.uniqueness_kind
+    from v2_products p
+    join v2_facilities f on f.id = p.facility_id
+    join v2_accounts a on a.id = f.account_id
+    where p.id = ${productId}::uuid and a.auth_user_id = ${authUserId} and a.suspended_at is null
+    limit 1
+  `);
+  const row = rows[0];
+  if (!row) return null;
+  return row.uniqueness_kind === null || row.uniqueness_kind === void 0 ? null : String(row.uniqueness_kind);
 }
 function createTrunkRepository(sql = database()) {
   return {
@@ -2388,6 +2430,9 @@ function createTrunkRepository(sql = database()) {
         throw new SellerCataloguePolicyError("INVALID_INPUT");
       }
       const carac = normalizeOfferCharacteristics(input);
+      const rejectStock = uniquenessStockRejection(input.stockLoueOmni, carac.uniquenessKind);
+      if (rejectStock) throw new SellerCataloguePolicyError("UNIQUENESS_INCOHERENT_STOCK");
+      const stockLoueOmni = normalizeStockForUniqueness(input.stockLoueOmni, carac.uniquenessKind);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         with seller as (
@@ -2412,7 +2457,7 @@ function createTrunkRepository(sql = database()) {
           insert into v2_products
             (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value, quantity_allocated_omni, idempotency_key, publication_state,
              position_kind, uniqueness_kind, handover_kind, price_kind, condition_kind)
-          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft',
+          select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || "unit"}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${stockLoueOmni}, ${input.idempotencyKey}, 'draft',
                  ${carac.positionKind}, ${carac.uniquenessKind}, ${carac.handoverKind}, ${carac.priceKind}, ${carac.conditionKind}
           from owned_facility of
           where exists (select 1 from slot_check)
@@ -2431,14 +2476,26 @@ function createTrunkRepository(sql = database()) {
       if (String(row.discount_kind) !== "percentage" || Number(row.discount_value) !== input.pourcentageReduction || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError("IDEMPOTENCY_CONFLICT");
       return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: "draft", prixReduit: input.prixOriginal - discount };
     },
+    /**
+     * La nature EXISTANTE d'une offre (propriétaire seulement). Sert à lire la caractéristique que
+     * l'appelant n'a pas fournie — sans cette lecture, l'invariant de pièce unique serait
+     * contournable par un simple PATCH, et l'édition écraserait la nature de l'offre.
+     */
+    async readProductUniquenessKindForOwner(input) {
+      return readProductUniquenessKind(sql, input.authUserId, input.productId);
+    },
     async updateSellerProductDraft(input) {
       if (!input.name.trim() || input.name.trim().length > 180 || !Number.isInteger(input.prixOriginal) || input.prixOriginal <= 0 || !Number.isInteger(input.pourcentageReduction) || input.pourcentageReduction < 1 || input.pourcentageReduction > 90 || !Number.isInteger(input.stockLoueOmni) || input.stockLoueOmni < 0) throw new SellerCataloguePolicyError("INVALID_INPUT");
       const carac = normalizeOfferCharacteristics(input);
+      const effectiveUniqueness = carac.uniquenessKind ?? await readProductUniquenessKind(sql, input.authUserId, input.productId);
+      const rejectStock = uniquenessStockRejection(input.stockLoueOmni, effectiveUniqueness);
+      if (rejectStock) throw new SellerCataloguePolicyError("UNIQUENESS_INCOHERENT_STOCK");
+      const stockLoueOmni = normalizeStockForUniqueness(input.stockLoueOmni, effectiveUniqueness);
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni},
-            position_kind = ${carac.positionKind}, uniqueness_kind = ${carac.uniquenessKind}, handover_kind = ${carac.handoverKind}, price_kind = ${carac.priceKind}, condition_kind = ${carac.conditionKind},
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || "unit"}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value = ${input.pourcentageReduction}, quantity_allocated_omni = ${stockLoueOmni},
+            position_kind = ${carac.positionKind ?? sql`p.position_kind`}, uniqueness_kind = ${carac.uniquenessKind ?? sql`p.uniqueness_kind`}, handover_kind = ${carac.handoverKind ?? sql`p.handover_kind`}, price_kind = ${carac.priceKind ?? sql`p.price_kind`}, condition_kind = ${carac.conditionKind ?? sql`p.condition_kind`},
             publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
         where p.id = ${input.productId}::uuid and p.facility_id = f.id
@@ -3128,6 +3185,7 @@ function createTrunkRepository(sql = database()) {
       };
     },
     async submitTransactionRating(input) {
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const note = input.note?.trim() || null;
       if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
         throw new TransactionPolicyError("A rating score between 1 and 5 is required.");
@@ -3250,7 +3308,7 @@ function createTrunkRepository(sql = database()) {
         bonus_grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select bw.wallet_id, 'bonus_grant', 10000, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select bw.wallet_id, 'bonus_grant', ${sellerBonusLocalMinor}, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from bonus_wallet bw
           on conflict (wallet_id, kind, reference) do nothing
           returning id, facility_id
@@ -3529,6 +3587,7 @@ function createTrunkRepository(sql = database()) {
     },
     async unlockFacilityBonus(input) {
       const reference = `facility-bonus:${input.facilityId}`;
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const rows = await retryDatabase(() => sql`
         with facility as (
           -- C-6/S-14 : le seuil suit le volume. Un particulier (individu) prouve par 1 vente,
@@ -3569,7 +3628,7 @@ function createTrunkRepository(sql = database()) {
         grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select w.wallet_id, 'bonus_grant', 10000, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select w.wallet_id, 'bonus_grant', ${sellerBonusLocalMinor}, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from wallet w
           join unlocked u on true
           on conflict (wallet_id, kind, reference) do nothing
@@ -3596,12 +3655,13 @@ function createTrunkRepository(sql = database()) {
         ledgerEntryId: String(row.id),
         walletId: String(row.wallet_id),
         kind: "bonus_grant",
-        amountMinor: 1e4,
+        amountMinor: sellerBonusLocalMinor,
         status: "confirmed",
         facilityId: String(row.facility_id)
       };
     },
     async getFacilityBonusStatus(input) {
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const rows = await retryDatabase(() => sql`
         select
           f.id as facility_id,
@@ -3630,7 +3690,7 @@ function createTrunkRepository(sql = database()) {
           distinctBuyerCount: 0,
           requiredCount: 3,
           status: "locked",
-          amountMinor: 1e4,
+          amountMinor: sellerBonusLocalMinor,
           trustState: "unconfirmed",
           qualifyingSales: 0,
           bonusUnlockedAt: null
@@ -3643,7 +3703,7 @@ function createTrunkRepository(sql = database()) {
           distinctBuyerCount: 0,
           requiredCount: Number(row.kind_required_count),
           status: "locked",
-          amountMinor: 1e4,
+          amountMinor: sellerBonusLocalMinor,
           trustState: String(row.trust_state),
           qualifyingSales: Number(row.qualifying_sales ?? 0),
           bonusUnlockedAt: null

@@ -11,6 +11,7 @@
  */
 
 import type { ProductMediaItem } from './types';
+import { isReservable } from './offer-uniqueness';
 
 export type ExistenceLevel = 0 | 1 | 2 | 3 | 4;
 
@@ -55,6 +56,8 @@ export interface ExistenceInput {
   availabilityExpiresAt: string | Date | null;
   quantityAllocated: number;
   quantityReserved: number;
+  /** S-01 : une pièce unique est disponible par PRÉSENCE, pas par décompte. */
+  uniquenessKind?: string | null;
   /** Injectable for tests; defaults to now. */
   now?: Date;
 }
@@ -84,9 +87,13 @@ export function computeExistenceLevel(input: ExistenceInput): ExistenceLevel {
     !isExpired(input.availabilityExpiresAt, input.now ?? new Date());
   if (!liveAvailability) return 2;
 
-  // FF-8: availability net of reservations. Never negative.
-  const reservable = Math.max(0, input.quantityAllocated - input.quantityReserved);
-  return reservable > 0 ? 4 : 3;
+  // S-01 : la disponibilité se lit dans la caractéristique. Une pièce unique par PRÉSENCE,
+  // une offre renouvelable par décompte (FF-8, net de réservations, jamais négatif).
+  return isReservable({
+    uniquenessKind: input.uniquenessKind,
+    quantityAllocated: input.quantityAllocated,
+    quantityReserved: input.quantityReserved,
+  }) ? 4 : 3;
 }
 
 export function existenceFor(input: ExistenceInput): OfferExistence {

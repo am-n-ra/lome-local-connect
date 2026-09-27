@@ -3,6 +3,7 @@ import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
+import { isSinglePiece } from './offer-uniqueness';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 import { formatMoney, formatUsdSticker } from '../domain/currency';
 import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
@@ -63,6 +64,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [offerQty, setOfferQty] = useState('1');
   const [offerPosition, setOfferPosition] = useState<OfferPositionKind>('fixe');
   const [offerUniqueness, setOfferUniqueness] = useState<OfferUniquenessKind>('renouvelable');
+  const offerUnique = isSinglePiece(offerUniqueness);
   const [offerHandover, setOfferHandover] = useState<OfferHandoverKind>('retrait');
   const [offerPriceKind, setOfferPriceKind] = useState<OfferPriceKind>('fixe');
   const [offerCondition, setOfferCondition] = useState<OfferConditionKind>('neuf');
@@ -157,6 +159,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     const price = Math.round(Number(offerPrice) * 100);
     const discount = Math.round(Number(offerDiscount));
     const qty = Math.round(Number(offerQty));
+    if (offerUnique && qty !== 0 && qty !== 1) { setOfferError('Une pièce unique est présente (1) ou retirée (0).'); return; }
     if (!offerName.trim()) { setOfferError("Le nom de l'offre est requis."); return; }
     if (!Number.isInteger(price) || price <= 0) { setOfferError('Prix invalide.'); return; }
     if (!Number.isInteger(discount) || discount < 1 || discount > 90) { setOfferError("L'avantage Omni doit être entre 1 et 90 %."); return; }
@@ -557,8 +560,16 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                   <input className="input" type="number" inputMode="numeric" min={1} max={90} value={offerDiscount} onChange={(e) => setOfferDiscount(e.target.value)} style={{ width: '100%' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <label className="tiny muted" style={{ display: 'block' }}>Quantité</label>
-                  <input className="input" type="number" inputMode="numeric" min={0} value={offerQty} onChange={(e) => setOfferQty(e.target.value)} style={{ width: '100%' }} />
+                  <label className="tiny muted" style={{ display: 'block' }}>{offerUnique ? 'Présence' : 'Quantité'}</label>
+                  {offerUnique ? (
+                    <div className="btnrow" style={{ gap: 6 }}>
+                      {([['1', 'Présente'], ['0', 'Retirée']] as const).map(([v, label]) => (
+                        <button key={v} type="button" className={offerQty === v ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferQty(v)}>{label}</button>
+                      ))}
+                    </div>
+                  ) : (
+                    <input className="input" type="number" inputMode="numeric" min={0} value={offerQty} onChange={(e) => setOfferQty(e.target.value)} style={{ width: '100%' }} />
+                  )}
                 </div>
               </div>
               <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Unité</label>
@@ -575,6 +586,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                   <button key={k} type="button" className={offerUniqueness === k ? 'btn sm' : 'btn ghost sm'} style={{ width: 'auto', flex: 1, minHeight: 30 }} onClick={() => setOfferUniqueness(k)}>{k === 'renouvelable' ? 'Renouvelable' : 'Pièce unique'}</button>
                 ))}
               </div>
+              {offerUnique && <span className="tiny muted" style={{ display: 'block', marginTop: 4 }}>Une pièce unique est une présence : elle se vend une fois, puis disparaît de la recherche.</span>}
               <label className="tiny muted" style={{ display: 'block', marginTop: 9 }}>Remise</label>
               <div className="btnrow" style={{ gap: 6, marginTop: 4 }}>
                 {(['retrait', 'livraison', 'immateriel'] as OfferHandoverKind[]).map((k) => (

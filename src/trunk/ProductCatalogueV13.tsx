@@ -24,6 +24,7 @@ export function publicationMessage(code: string): string {
   if (code === 'HANDOVER_REQUIRED') return 'Précisez le mode de remise (retrait, livraison ou immatériel).';
   if (code === 'PRICE_KIND_REQUIRED') return 'Précisez si le prix est fixe ou à négocier.';
   if (code === 'CONDITION_REQUIRED') return "Précisez si l'offre est neuve ou d'occasion.";
+  if (code === 'UNIQUENESS_INCOHERENT_STOCK') return "Une pièce unique est une présence : elle se déclare présente (1) ou retirée (0), jamais en plusieurs exemplaires.";
   if (code === 'FORBIDDEN_OR_LIMIT_REACHED') return "Publication refusée : plafond d'offres gratuites atteint, ou offre non modifiable.";
   return 'La publication a été refusée.';
 }
