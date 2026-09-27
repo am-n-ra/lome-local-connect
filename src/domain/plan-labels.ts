@@ -9,8 +9,8 @@
  * (measured 2026-09-27).
  */
 
-import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from './pricing';
-import { formatScaledAmount, type ResolvedCurrency } from './currency';
+import { OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from './pricing';
+import { formatScaledAmount, formatUsdSticker, type ResolvedCurrency } from './currency';
 
 export type PlanKind = 'sellerPro' | 'buyerPro';
 
@@ -22,12 +22,7 @@ export type PlanKind = 'sellerPro' | 'buyerPro';
 export function planPriceLabel(kind: PlanKind, resolved: ResolvedCurrency): string {
   const usdMinor = OMNI_PLAN_PRICES_USD_MINOR[kind];
   const localMinor = convertUsdMinorToLocal(usdMinor, resolved.currency);
-  const usd = Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: OMNI_BASE_CURRENCY,
-    maximumFractionDigits: 0,
-  }).format(usdMinor / 100);
-  return `${usd}/mois${localMinor !== usdMinor ? ` ≈ ${formatScaledAmount(localMinor, resolved)}` : ''}`;
+  return `${formatUsdSticker(usdMinor)}/mois${localMinor !== usdMinor ? ` ≈ ${formatScaledAmount(localMinor, resolved)}` : ''}`;
 }
 
 /** Compact local price for buttons and reminders ("5 000 F"). Same convention as `planPriceLabel`. */

@@ -4,15 +4,7 @@ import { getAuthToken } from '../auth';
 import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
-
-function money(minor: number, currency: string): string {
-  const whole = Number.isInteger(minor / 100);
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
-}
-
-function planUsdLabel(usdMinor: number): string {
-  return Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(usdMinor / 100);
-}
+import { formatMoney, formatUsdSticker } from '../domain/currency';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -617,7 +609,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <div>
               <b className="tiny" style={{ display: 'block' }}>Pro · renouvellement</b>
               {renewalStatus.plan === 'pro_active' ? (
-                <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {planUsdLabel(renewalStatus.baseProPriceUsdMinor)}/mois ≈ {money(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}</span>
+                <span className="tiny muted">Actif · reste {renewalStatus.daysLeft} j · {formatUsdSticker(renewalStatus.baseProPriceUsdMinor)}/mois ≈ {formatMoney(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}</span>
               ) : renewalStatus.plan === 'pro_expired' ? (
                 <span className="tiny muted">Expiré — renouvellement via portefeuille</span>
               ) : (
@@ -632,7 +624,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             )}
           </div>
           {renewalStatus.plan === 'pro_expired' && renewalStatus.renewalOptIn && !renewalStatus.sufficientFunds && (
-            <p className="tiny" style={{ marginTop: 6, color: 'var(--warn)' }}>Solde insuffisant pour le renouvellement auto ({money(renewalStatus.walletBalanceMinor, renewalStatus.billingCurrency)} sur {money(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}). Rechargez votre portefeuille.</p>
+            <p className="tiny" style={{ marginTop: 6, color: 'var(--warn)' }}>Solde insuffisant pour le renouvellement auto ({formatMoney(renewalStatus.walletBalanceMinor, renewalStatus.billingCurrency)} sur {formatMoney(renewalStatus.proPriceMinor, renewalStatus.billingCurrency)}). Rechargez votre portefeuille.</p>
           )}
           {renewalStatus.plan === 'pro_expired' && (
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={renewalBusy} onClick={() => void runRenewNow()}>{renewalBusy ? '…' : 'Renouveler Pro maintenant'}</button>
@@ -662,7 +654,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               </div>
               <div>
                 <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>Revenu</small>
-                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{money(analytics.grossRevenueMinor, analytics.billingCurrency)}</strong>
+                <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{formatMoney(analytics.grossRevenueMinor, analytics.billingCurrency)}</strong>
               </div>
               <div>
                 <small className="fs-7" style={{ display: 'block', color: 'var(--ink-soft)' }}>QR vérifiés</small>
@@ -679,7 +671,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               <b className="tiny" style={{ display: 'block' }}>Campagnes sponsorisées</b>
               <span className="tiny muted">
                 {renewalStatus.plan === 'pro_active'
-                  ? `Budget portefeuille restant ${adBudgetRemaining === null ? '…' : money(adBudgetRemaining, 'XOF')}`
+                  ? `Budget portefeuille restant ${adBudgetRemaining === null ? '…' : formatMoney(adBudgetRemaining, 'XOF')}`
                   : 'Réservé aux facilités Pro actives'}
               </span>
             </div>
@@ -704,7 +696,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                     <div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 8, background: 'var(--panel)', borderRadius: 10, padding: '6px 8px' }}>
                       <div>
                         <b className="tiny" style={{ display: 'block' }}>{c.name}</b>
-                        <span className="tiny muted">{money(c.budgetMinor, 'XOF')} · dépensé {money(c.spentMinor, 'XOF')} · du {new Date(c.startsAt).toLocaleDateString('fr-FR')} au {new Date(c.endsAt).toLocaleDateString('fr-FR')}</span>
+                        <span className="tiny muted">{formatMoney(c.budgetMinor, 'XOF')} · dépensé {formatMoney(c.spentMinor, 'XOF')} · du {new Date(c.startsAt).toLocaleDateString('fr-FR')} au {new Date(c.endsAt).toLocaleDateString('fr-FR')}</span>
                       </div>
                       <span className={`status ${c.status === 'active' ? 'ok' : c.status === 'terminee' ? 'dash' : 'warn'}`}>{c.status === 'active' ? 'Active' : c.status === 'planifiee' ? 'Planifiée' : c.status === 'pausee' ? 'En pause' : 'Terminée'}</span>
                     </div>

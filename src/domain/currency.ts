@@ -121,27 +121,81 @@ export function currencyFor(fact?: string | null): ResolvedCurrency {
 }
 
 /**
- * Formats an amount held in the app's **whole-number minor convention**
- * (amount × 100), always showing the symbol.
- *
- * Two conventions coexist in Omni, deliberately:
- * - the WALLET family (balance, ledger, credit packs, plan prices) is stored as
- *   amount × 100, even for a 0-decimal currency like XOF — so 500 000 minor is
- *   5 000 F;
- * - OFFER prices are stored in raw local units — so 6 500 is 6 500 F, and
- *   `formatAmount` (decimals-aware) is the correct one for them.
- *
- * Using the wrong formatter is not cosmetic: it showed "500 000 F" for a 5 000 F
- * plan and "7,20 $" for a 720 F offer (both measured 2026-09-27). Keep the pairing.
+ * The canonical USD sticker for a plan's base price ("10 $US"). This is the
+ * published base currency, not a stored Omni amount, so it is not scaled like
+ * the rest — keep it separate from `formatMoney`.
  */
-export function formatScaledAmount(minor: number, resolved: ResolvedCurrency): string {
-  const value = minor / 100;
+export function formatUsdSticker(usdMinor: number): string {
+  return Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(usdMinor / 100);
+}
+
+/**
+ * THE money formatter for the single convention: **stored = value × 100**, for
+ * every column and every currency, XOF included. 500 000 renders as 5 000 F.
+ *
+ * This is the one and only way to render a stored amount. It was previously
+ * copy-pasted into four components (TrunkAppV13, SellerV13, BuyerFlowV13,
+ * SellerReplyV13) and paired inconsistently with a decimals-aware formatter,
+ * which produced four separate ×100 mistakes in a single session. Do not add a
+ * fifth copy and do not reach for `Intl` inline — import this.
+ *
+ * Used for the Wallet family AND, after UNI-MONEY-1, for offers too.
+ */
+export function formatMoney(minor: number, currency: string): string {
+  const value = minor / MONEY_SCALE;
   const whole = Number.isInteger(value);
-  const rendered = value.toLocaleString('fr-FR', {
-    minimumFractionDigits: whole ? 0 : 2,
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency,
     maximumFractionDigits: whole ? 0 : 2,
-  });
-  return `${rendered} ${resolved.symbol}`;
+  }).format(value);
+}
+
+/**
+ * The declared money convention (D-LOC-9) — see `money-convention.test.ts`,
+ * which fails when a monetary column is not listed here.
+ *
+ * Omni had four conventions and no written rule, which produced four separate
+ * x100 mistakes in one session. Adding a monetary column without deciding its
+ * unit is the exact mistake this registry exists to block.
+ */
+export const MONEY_SCALE = 100;
+
+/** Columns that hold a ×100 amount. Everything monetary belongs here. */
+export const MONEY_COLUMNS: readonly string[] = [
+  'v2_wallet_recharge_intents.amount_minor',
+  'v2_wallet_ledger_entries.amount_minor',
+  'v2_facility_entitlements.price_minor',
+  'v2_buyer_pro_entitlements.price_minor',
+  'v2_seller_unlocks.amount_minor',
+  'v2_ad_campaigns.budget_minor',
+  'v2_ad_campaigns.spent_minor',
+  'v2_availability_credit_ledger.amount',
+  'v2_products.price_minor',
+  'v2_transaction_snapshots.unit_price_minor',
+  'v2_transaction_snapshots.net_amount_minor',
+  'v2_availability_responses.price_minor',
+  'v2_availability_requests.budget_minor',
+];
+
+/**
+ * A `*_minor` column that is NOT a money amount. Each needs a written reason —
+ * the name is actively misleading, so silence is not an option.
+ */
+export const NON_MONEY_MINOR_COLUMNS: Readonly<Record<string, string>> = {
+  'v2_products.discount_value_minor':
+    'holds a PERCENTAGE (10..30) when discount_kind=percentage, and a raw amount when discount_kind=fixed. ' +
+    'Not a unit at all; rename to discount_value (UNI-MONEY-1 UM-3).',
+};
+
+
+/** Same as `formatMoney`, but from a resolved currency (offer/market aware). */
+export function formatScaledAmount(minor: number, resolved: ResolvedCurrency): string {
+  return formatMoney(minor, resolved.currency);
 }
 
 /** Formats a minor amount in the resolved currency, always showing the symbol (D-LOC-4). */

@@ -39,7 +39,7 @@ import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
-import { resolveUserCurrency, currencyFor, formatAmount, type ResolvedCurrency } from '../domain/currency';
+import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
@@ -78,11 +78,6 @@ function statusLabel(requestStatus: string): string {
   if (requestStatus === 'expired') return 'Expirée';
   if (requestStatus === 'cancelled') return 'Annulée';
   return 'Indisponible';
-}
-
-function money(minor: number, currency: string): string {
-  const whole = Number.isInteger(minor / 100);
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
 }
 
 const LOME = [1.22, 6.13] as const;
@@ -1999,7 +1994,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <p className="tiny muted" style={{ marginTop: 8 }}>Vérification des invitations d’équipe…</p>
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? money(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : '—'}</b></div>
+            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : '—'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -2043,7 +2038,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </div>
                 <div className="row" style={{ gap: 4, marginTop: 4 }}>
                   <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
-                  {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {money(request.budgetMinor, 'XOF')}</span>}
+                  {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {formatMoney(request.budgetMinor, 'XOF')}</span>}
                 </div>
                 {request.note && <p className="tiny muted" style={{ marginTop: 4 }}>{request.note}</p>}
                 <span className="tiny muted">{request.responseCount} réponse{request.responseCount === 1 ? '' : 's'} · {new Date(request.createdAt).toLocaleDateString('fr-FR')}</span>
@@ -2096,7 +2091,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <div className="cardbox" style={{ background: 'var(--ink)', color: '#fff' }}>
                 <p className="tiny" style={{ color: '#bbb' }}>Solde disponible</p>
                 <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}>
-                  <strong className="fs-26">{money(wallet.balanceMinor, wallet.currency)}</strong>
+                  <strong className="fs-26">{formatMoney(wallet.balanceMinor, wallet.currency)}</strong>
                   <span className="status gray">{wallet.currency}</span>
                 </div>
               </div>
@@ -2106,8 +2101,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
 {wallet.entries.length > 0 && (
                 <div className="stat" style={{ marginTop: 8 }}>
-                  <div className="tile"><small>Crédits récents</small><strong>{money(walletBucketTotals(wallet.entries).creditMinor, wallet.currency)}</strong></div>
-                  <div className="tile"><small>Services engagés récents</small><strong>{money(walletBucketTotals(wallet.entries).spendMinor, wallet.currency)}</strong></div>
+                  <div className="tile"><small>Crédits récents</small><strong>{formatMoney(walletBucketTotals(wallet.entries).creditMinor, wallet.currency)}</strong></div>
+                  <div className="tile"><small>Services engagés récents</small><strong>{formatMoney(walletBucketTotals(wallet.entries).spendMinor, wallet.currency)}</strong></div>
                 </div>
               )}
               <div className="cardbox">
@@ -2123,7 +2118,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {rechargeError && <p className="sub" role="alert">{rechargeError}</p>}
                 {rechargeState === 'success' && rechargeResult ? (
                   <div className="cardbox" style={{ marginTop: 8 }}>
-                    <p className="sub" role="status">Recharge créée · {money(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
+                    <p className="sub" role="status">Recharge créée · {formatMoney(rechargeResult.amountMinor, rechargeResult.currency)} en attente de confirmation.</p>
                     <button className="btn" type="button" style={{ marginTop: 8 }} onClick={() => { window.location.assign(rechargeResult.checkoutUrl); }}>Continuer le paiement FedaPay <ArrowRight size={15} /></button>
                     <button className="btn ghost sm" type="button" style={{ marginTop: 8 }} onClick={() => { setRechargeState('idle'); setRechargeResult(null); setRechargeAmount('100'); }}>Nouvelle recharge</button>
                   </div>
@@ -2188,7 +2183,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     {bulkPacks.map((pack) => (
                       <div className="kv" key={pack.id} style={{ gap: 8 }}>
                         <span><b>{pack.credits} crédit(s)</b><span className="tiny muted" style={{ display: 'block' }}>surplus de crédits bulk</span></span>
-                        <button className="btn sm" type="button" disabled={packBuyingId !== null} style={{ minHeight: 28 }} onClick={() => void purchasePack(pack)}>{packBuyingId === pack.id ? 'Préparation…' : `Acheter ${money(pack.priceMinor, pack.billingCurrency)}`}</button>
+                        <button className="btn sm" type="button" disabled={packBuyingId !== null} style={{ minHeight: 28 }} onClick={() => void purchasePack(pack)}>{packBuyingId === pack.id ? 'Préparation…' : `Acheter ${formatMoney(pack.priceMinor, pack.billingCurrency)}`}</button>
                       </div>
                     ))}
                   </div>
@@ -2200,7 +2195,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   {wallet.entries.slice(0, 5).map((entry) => (
                     <div className="kv" key={entry.id}>
                       <span>{entry.kind.replaceAll('_', ' ')}</span>
-                      <b>{entry.amountMinor > 0 ? '+' : ''}{money(entry.amountMinor, wallet.currency)}</b>
+                      <b>{entry.amountMinor > 0 ? '+' : ''}{formatMoney(entry.amountMinor, wallet.currency)}</b>
                     </div>
                   ))}
                 </div>

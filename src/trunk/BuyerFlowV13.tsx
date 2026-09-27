@@ -6,6 +6,7 @@ import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResu
 import { useFreshnessTimer } from './useFreshnessTimer';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
+import { formatMoney } from '../domain/currency';
 
 type FlowProduct = { id: string; name: string };
 type FlowFacility = { id: string; name: string; latitude?: number | null; longitude?: number | null };
@@ -21,11 +22,6 @@ type BuyerFlowV13Props = {
   /** FF-2 — si fourni, on saute directement au suivi de la transaction (reprise). */
   resumeTxnId?: string | null;
 };
-
-function money(minor: number, currency = 'XOF'): string {
-  const whole = Number.isInteger(minor / 100);
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
-}
 
 const STEPS: Array<{ id: Stage; label: string }> = [
   { id: 'avail', label: 'Dispo' },
@@ -508,7 +504,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div>
           <div className="cardbox">
             <div className="row" style={{ justifyContent: 'space-between' }}>
-              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible — recharger via le Wallet' : `${money(walletBalanceMinor, 'XOF')} disponible`}</span></div>
+              <div><b>Omni Wallet</b><br /><span className="tiny muted">{walletBalanceMinor === null || walletBalanceMinor === undefined ? 'Solde indisponible — recharger via le Wallet' : `${formatMoney(walletBalanceMinor, 'XOF')} disponible`}</span></div>
               <span className="status gray">{walletBalanceMinor !== null && walletBalanceMinor !== undefined && walletBalanceMinor > 0 ? 'Disponible' : 'Indisponible'}</span>
             </div>
           </div>

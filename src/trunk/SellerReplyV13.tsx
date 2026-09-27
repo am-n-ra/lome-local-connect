@@ -3,15 +3,11 @@ import { X } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerAvailabilityQueue, requestSellerAvailabilityResponse } from './api';
 import type { SellerAvailabilityRequest } from './types';
+import { formatMoney } from '../domain/currency';
 
 type SellerReplyV13Props = { onClose: () => void };
 
 type ReplyDraft = { status: 'available' | 'partial' | 'unavailable'; quantity: string; price: string; message: string };
-
-function money(minor: number): string {
-  const whole = Number.isInteger(minor / 100);
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
-}
 
 export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
   const [error, setError] = useState('');
@@ -95,7 +91,7 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
             </div>
             <div className="row" style={{ gap: 4, marginTop: 4 }}>
               <span className="chip" style={{ margin: 0 }}>{request.deliveryMode === 'livraison' ? 'Livraison' : 'Retrait'}</span>
-              {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {money(request.budgetMinor)}</span>}
+              {request.budgetMinor !== null && <span className="chip" style={{ margin: 0 }}>≤ {formatMoney(request.budgetMinor, 'XOF')}</span>}
             </div>
             {request.requestNote && <p className="tiny muted" style={{ marginTop: 4 }}>« {request.requestNote} »</p>}
             <div className="seg" style={{ display: 'flex', gap: 0, borderRadius: 999, border: '1px solid var(--line)', overflow: 'hidden', marginTop: 8 }}>
