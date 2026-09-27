@@ -195,7 +195,7 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
-| **Active gate (COURANT)** | **Root** — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root OUVERT** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = finir le socle `R-B`…`R-E`**, puis aligner l'app sur la maquette | ⚠️ **L'app N'EST PAS alignée** (chips figés, devise en dur) — **maintenant débloqué** puisque Root est ouvert. **`public.markets` absente** du canonique v2 ; **dette data** (9 produits `USD` tarifés en francs) ; **bug serveur** : filtre budget aveugle à la devise |
+| **Active gate (COURANT)** | **Root** — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root OUVERT** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = décision fondateur sur la 1re caractéristique vivante** (§ci-dessous) | ⚠️ **RE-MESURÉ 2026-09-27** — les 4 blocages annoncés ci-dessous sont **PÉRIMÉS** (voir mesure) |
 | **Seed V2** | `omni-intent-brief-v2-2026-09-23.md` — 32 décisions **S-01…S-32**, `founder-confirmed`. Mot du fondateur : **« c'est ça »**. Supersede l'Intent Brief du 2026-09-02. | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` | **CLOS** | Fondateur | Sert de référence unique à T-11/T-12 | Toute décision S-xx non couverte par une surface = travail Species |
 | **Species V2** | Maquette `docs/maquette/omni-species-v2-interactive.html` — **74 écrans**. `SP-1…SP-10` **livrés ET ACCEPTÉS**. **2026-09-25 : volet CONTRAINTES** — D-CON-1…5 + D-LOC-1…5 (devise par localisation) ; seuils réglables, fiche lisant la contrainte active, distance non dupliquée, 3 groupes explicites ; gardes falsifiés. | maquette V2 + registre + `omni-search-constraints-decisions-D-CON-2026-09-25.md` + `omni-currency-localization-contract-2026-09-25.md` | **CLOSE `founder-confirmed` 2026-09-25** | **Fondateur (donné)** | — (clos) | `T-12` **refait et clos** — audit par **rendu navigateur**. ⚠️ **Dénominateur corrigé 2026-09-25 (`COH-V2-18`)** : l'audit imprimait « 16/16 » avec un dénominateur **choisi par lui-même** (15 décisions sur 34). Désormais il **lit le Seed** et **classe chaque décision** → **27/27 conforme, 26 rendues, `NON MESURÉ = 0`**, exit ≠ 0 si un non-conforme survit. **1 écart réel corrigé** (`S-04`). Les 5 dernières `règle écrite` (`S-09`, `S-13`, `S-16`, `S-17`, `S-28`) sont **désormais mesurées au rendu** — 2 prédicats faux corrigés (`S-17` sur 3 surfaces ; `S-28` casse `innerText`). |
 | **Décisions V2** | `D-1a` fusion maquette+app (**appliqué**) ; `D-2a` **l'offre appartient à l'ENTITÉ** (**appliqué**). | Intent Brief V2 + registre de cohérence | `done` | Fondateur | — | — |
@@ -417,3 +417,46 @@ Only omni-v2-rebuild is touched. Never merge to main. "Merge" = "push prod branc
 > **Écart de registre à connaître :** `omni_schema_migrations` sur le canonique s'arrête à **`053`**, alors que les **objets** de `052` (`v2_teams`), `054` (colonnes contact) et `055` (`quantity_reserved_omni`) **existent bien**. Le registre et le schéma réel ont divergé — donc **ne pas conclure « non appliquée » de l'absence au registre**, et vérifier les objets, pas le registre. **Tant que `057` n'est pas appliquée, le budget est inerte** : la route exige déjà une identité, mais le plafond par acheteur ne compte rien (l'échec est ouvert par conception).
 >
 > **Prochaine porte à confirmer par le fondateur :** **(a)** **V-9** — nettoyage des dettes TEC-1 non bloquantes (arbre de routes TanStack **mort**, 14 fichiers, 0 importeur ; **6 tests placeholder** qui n'assertent que `toBeDefined()` sur des composants **inexistants** = fausse couverture) — **suppression = décision fondateur requise** ; **(b)** **exercer le cycle authentifié en session fondateur** (intention → QR → paiement → verrouillage → avis) : **seul segment encore BLOCKED**, attesté et jamais simulé, car il exige un compte réel ; **(c)** **Gate 7 Venture Lifecycle** (`/nature-way-venture-lifecycle`) — preuve de demande Lomé (65 000 F / 13 Pro sellers **à vérifier** par reçus/cash book, CAC segmenté **à mesurer**, jamais supposé). **Aucun élargissement au-delà de M-01.**
+
+---
+
+## HQ RECONCILIATION — 2026-09-27 (dispatch `/nature-way` · Root)
+
+> **Déclencheur fondateur :** « on a assez tourné en rond… je pense qu'on a raté tout le process
+> depuis Species… la présentation visuelle est bien mais **tout le fond et la logique qui doit faire
+> de Omni Omni n'est pas là**, et il y a beaucoup d'incohérence. »
+
+**Ce qui est confirmé (à ne pas refaire) :** la séquence Seed → Species → Root **a bien été suivie**,
+et Seed V2 + Species V2 sont **clos `founder-confirmed`**. Continuer à invoquer « tout est à refaire
+depuis Species » détruirait les deux étapes les plus coûteuses, déjà payées. **La porte courante est
+Root, et elle est ouverte.**
+
+**Mesure au HEAD — la liste des blocages Root était PÉRIMÉE dans les deux sens :**
+
+| Blocage annoncé | Mesure | Verdict |
+|---|---|---|
+| Chips figés `'Quantité 10'`/`'≤ 15 000 FCFA'` | 0 occurrence dans `TrunkAppV13.tsx` | **résolu** |
+| Devise en dur | `resolveUserCurrency` **imposé** par `currency.ts` (usage direct interdit) et **appelé** par l'UI | **résolu** |
+| Filtre budget aveugle à la devise | `trunk-repository.ts:2058–2071` — même-devise + conversion USD→local + **exclusion** des devises non convertibles | **résolu** |
+| `public.markets` absente | toujours absente ; repli hors-ligne `MARKETS` conçu pour ce cas | **dette non bloquante** |
+
+**Découverte mesurée — le vrai écart Root :** les caractéristiques d'offre (`uniqueness_kind`,
+`price_kind`, `condition_kind`, `handover_kind`) existent **en colonnes**, sont **transportées**
+(lues/écrites/affichées), mais ont **0 usage de logique**. Le schéma a la forme universelle S-01 ;
+la logique ne connaît qu'un cas — *quantité fongible avec un nombre*. C'est **exactement** la dette
+que S-01/S-02 nomment, et elle est **déguisée en vocabulaire**, pas supprimée. Cause unique de
+l'« incohérence » observée : **la maquette V2 décrit le cœur complet, le Root n'en implémente qu'une
+expression.**
+
+**Artefact :** `docs/nature-way/omni-root-vs-seed-v2-diagnosis-2026-09-27.md` (Resource Receipt,
+mesures, 6 réponses board, résidu honnête).
+
+**⏭️ DÉCISION FONDATEUR DEMANDÉE (une seule) :** quelle **expression de disponibilité** rendre
+*vivante* en premier — **A** place créneau (service) · **B** position (transport) · **C** présence
+(objet unique) · **D** négociation (`price_kind='negociable'`). **Recommandation réversible : C**,
+car `quantity_*` est déjà en place → écart minimal, preuve atteignable, valide S-01 sans nouveau
+sous-système. **Ne pas ouvrir Trunk/Branches avant cette décision.** Rappel : **S-02 est `proposé`
+« accord fondateur requis »** — cette décision est déjà ouverte.
+
+**Mesure annexe :** `entity-search.test.ts` déclarait encore une colonne `discount_value_minor`
+**renommée par `062`** ; fixture corrigé (le test passait par chance, `undefined → 0`).

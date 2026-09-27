@@ -56,7 +56,7 @@ const offerRow = {
   price_minor: 850,
   currency: 'XOF',
   discount_kind: null,
-  discount_value_minor: 0,
+  discount_value: 0,
   quantity_allocated_omni: 24,
   quantity_reserved_omni: 0,
   position_kind: 'fixe',
