@@ -39,7 +39,7 @@ import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
-import { resolveUserCurrency, formatAmount, type ResolvedCurrency } from '../domain/currency';
+import { resolveUserCurrency, currencyFor, formatAmount, type ResolvedCurrency } from '../domain/currency';
 import './ui-v13.css';
 
 type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity';
@@ -1717,11 +1717,13 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             {[...compareResults].sort((a2,b2) => compareFacilities(a2,b2,compareSort, bulkDetails)).map((facility) => {
               const detail = bulkDetails[facility.id];
               const product = detail?.products?.find((p) => p.stockLoueOmni > 0) ?? detail?.products?.[0];
+              // An offer price carries its OWN currency, not the viewer's market (D-LOC-3).
+              const cheapest = detail?.products?.length ? detail.products.reduce((a, b) => (b.prixReduit < a.prixReduit ? b : a)) : null;
               return (
                 <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
-                    {detail?.products?.length ? <span className="status ok">dès {formatAmount(Math.min(...detail.products.map((p) => p.prixReduit)), userCurrency)}</span> : <span className="status gray">Non transactable</span>}
+                    {cheapest ? <span className="status ok">dès {formatAmount(cheapest.prixReduit, currencyFor(cheapest.currency))}</span> : <span className="status gray">Non transactable</span>}
                   </div>
                   {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
                 </button>
@@ -1832,7 +1834,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> — {trust.missing.join(', ')}</span>}</span>
                     </span>
-                    <span className="pr">{formatAmount(product.prixReduit, userCurrency)}</span>
+                    <span className="pr">{formatAmount(product.prixReduit, currencyFor(product.currency))}</span>
                   </div>
                 );
               })}
@@ -1889,7 +1891,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <span className="chk" aria-hidden="true" />
                 <span className="pthumb" />
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
-                <span className="pr">{formatAmount(offer.prixReduit, userCurrency)}</span>
+                <span className="pr">{formatAmount(offer.prixReduit, currencyFor(offer.currency))}</span>
               </div>
             );
           })}

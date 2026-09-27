@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue } from './api';
+import { currencyFor, formatAmount } from '../domain/currency';
 import type { SellerCatalogueProduct } from './types';
 
 type OffersV13Props = { onClose: () => void };
@@ -23,9 +24,12 @@ export function OffersV13({ onClose }: OffersV13Props) {
   useEffect(() => { void load(); }, [load]);
 
   const first = products[0];
-  const normalPrice = first ? first.prixReduit / 100 : 0;
+  // `prixReduit` is ALREADY the discounted amount: applying the percentage again
+  // double-counted it. Both prices are shown in the OFFER's currency.
+  const offerCurrency = currencyFor(first?.currency);
+  const normalPrice = first ? formatAmount(first.prixOriginal, offerCurrency) : '';
+  const omniPrice = first ? formatAmount(first.prixReduit, offerCurrency) : '';
   const discountPct = first?.pourcentageReduction ?? 0;
-  const omniPrice = normalPrice * (1 - discountPct / 100);
 
   return (
     <section className="sheet h-mid" data-sheet="offers" role="region" aria-label="Offres Omni">
@@ -39,9 +43,9 @@ export function OffersV13({ onClose }: OffersV13Props) {
       {first && (
         <>
           <div className="cardbox">
-            <div className="kv"><span>Prix normal</span><b className="code">{normalPrice.toFixed(2)} {first.currency}</b></div>
+            <div className="kv"><span>Prix normal</span><b className="code">{normalPrice}</b></div>
             <div className="kv"><span>Remise Omni</span><b className="code" style={{ color: 'var(--accent)' }}>{discountPct} %</b></div>
-            <div className="kv"><span>Prix Omni</span><b className="code">{omniPrice.toFixed(2)} {first.currency}</b></div>
+            <div className="kv"><span>Prix Omni</span><b className="code">{omniPrice}</b></div>
           </div>
           <p className="tiny muted" style={{ marginTop: 7 }}>Sans remise Omni configurée : la facilité reste découvrable, mais l'offre n'est pas transactable.</p>
           <button className="btn" style={{ marginTop: 10 }} type="button" disabled>Enregistrer l'offre</button>

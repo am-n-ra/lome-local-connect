@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveUserCurrency, formatAmount, normaliseMinor } from './currency';
+import { resolveUserCurrency, currencyFor, formatAmount, normaliseMinor } from './currency';
 
 describe('currency resolution (D-LOC-1…5)', () => {
   it('resolves the Lomé market row to XOF with its symbol and rate', () => {
@@ -52,6 +52,34 @@ describe('amount formatting (D-LOC-4 — always show the currency)', () => {
   it('always carries the symbol', () => {
     const ghs = resolveUserCurrency({ locale: 'en-GH' });
     expect(formatAmount(1000, ghs)).toContain(ghs.symbol);
+  });
+});
+
+describe('offer price currency (the price carries ITS currency, not the viewer\'s)', () => {
+  it('renders a XOF-stored offer as XOF even for a US-locale viewer', () => {
+    // Measured defect 2026-09-27: the offer sheet passed the VIEWER's market currency
+    // to a bare XOF number, so 720 FCFA displayed as "7,20 $" on an en-US browser.
+    const offer = currencyFor('XOF');
+    expect(offer.currency).toBe('XOF');
+    expect(offer.decimals).toBe(0);
+    expect(formatAmount(720, offer).replace(/\u202f|\u00a0/g, ' ')).toBe('720 F');
+    // The same amount, mislabelled with the viewer's currency, is the bug:
+    const viewerUs = resolveUserCurrency({ locale: 'en-US' });
+    expect(formatAmount(720, viewerUs)).toContain('7,20');
+  });
+
+  it('keeps an offer in its own currency when it is not the pilot currency', () => {
+    const usd = currencyFor('USD');
+    expect(formatAmount(1250, usd)).toContain('12,50');
+    expect(formatAmount(1250, usd)).toContain('$');
+  });
+
+  it('falls back to the pilot currency rather than inventing a market', () => {
+    expect(currencyFor(null).currency).toBe('XOF');
+    expect(currencyFor('').currency).toBe('XOF');
+    // An unknown code is shown as itself, never silently swapped for a known one.
+    expect(currencyFor('XYZ').currency).toBe('XYZ');
+    expect(currencyFor('xof').currency).toBe('XOF');
   });
 });
 
