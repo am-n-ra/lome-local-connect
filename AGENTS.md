@@ -943,6 +943,19 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - Preuve : **596/596 tests**, tsc + 6 gardes verts. Registre :
   `docs/nature-way/omni-rg-piece-unique-presence-evidence-2026-09-27.md` ; handoff
   `docs/founder-hq/handoff-receipt-HO-OMNI-HQ-2026-09-27.md`.
-- **Prochain `R-H`** (décision fondateur requise sur l'ordre) : `price_kind='negociable'` (la
-  négociation) est la candidate recommandée — elle s'ajoute à la machine transactionnelle à 10 états
-  déjà robuste, donc sans fragiliser.
+- **`R-H` LIVRÉE** (2ᵉ caractéristique d'offre vivante, `51a1e85`, prod `index-BGUSIwRj.js`) :
+  **`price_kind='negociable'` décide désormais.** Règle : **négocier, c'est chercher un prix PLUS
+  BAS** (une proposition supérieure au prix affiché est refusée) ; **prix fixe ⇒ aucune
+  proposition** ; **caractéristique non déclarée ⇒ aucun droit présumé** (offre héritée) ;
+  proposition absente = valide. Module **pur partagé** `src/trunk/offer-price.ts` importé par le
+  serveur **ET** l'UI ⇒ ils ne peuvent pas diverger. Migration **`064`** (`proposed_price_minor`
+  int CHECK `>= 0`) **appliquée au canonique** `br-dawn-hill-am5amy22` (0 ligne réécrite, registre
+  `1bd7c051…`). Garde **en profondeur SQL** en plus du refus lisible 409. **604/604 tests** (+8).
+  **Prochain `R-I`** (décision fondateur sur l'ordre) : `condition_kind` ou `handover_kind`.
+- **Méthode de preuve R-H — deux leçons à ne pas réapprendre.** (1) **Un commentaire SQL dans un
+  template literal TypeScript ne peut pas contenir de backtick** : `` `price_kind` `` écrit dans un
+  commentaire `--` **ferme le template literal** et produit `TS1005 ',' expected` à une ligne sans
+  rapport. Écrire `price_kind` nu. (2) **Un test qui ne peut pas échouer ne prouve rien** : sur toute
+  règle neuve, **neutraliser la règle** et vérifier que des tests **tombent** (ici 4/7), puis
+  restaurer. **Prouver une migration sur branche jetable AVANT le canonique** : y rejouer deux fois
+  (idempotence) et y tester le cas hostile (CHECK doit rejeter `-1`).
