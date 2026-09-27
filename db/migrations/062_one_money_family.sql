@@ -12,8 +12,8 @@ declare
   snapshots_before int;
   snapshots_after int;
 begin
-  if exists (select 1 from public.omni_schema_migrations where filename = '058_one_money_family.sql') then
-    raise notice '058 already applied';
+  if exists (select 1 from public.omni_schema_migrations where filename = '062_one_money_family.sql') then
+    raise notice '062 already applied';
     return;
   end if;
 
@@ -67,11 +67,42 @@ begin
      set budget_minor = budget_minor * 100
    where budget_minor is not null and budget_minor < 100000;
 
+  -- UM-6 (D-H, founder 2026-09-27) — the $20 seller trust bonus was written with TWO
+  -- different wrong literals: the server wrote 10 000 (= 100 F = 0.20 USD) and the demo
+  -- seed wrote 2 000 (= 20 F = 0.04 USD). Both promise "$20" and both are wrong by 100x
+  -- and 500x. Bring the bonus to the one true amount, $20 = 10 000 F = 1 000 000 minor.
+  --
+  -- The wallet ledger is append-only (v2_wallet_ledger_append_only_guard): its history is
+  -- never rewritten. A wrong amount is corrected the way a real ledger does it — with an
+  -- appended, auditable adjustment — not with an UPDATE that erases what was recorded.
+  -- The `reversal` kind counts as credit, so the delta lands the wallet on 1 000 000.
+  insert into public.v2_wallet_ledger_entries
+    (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
+  select e.wallet_id, 'reversal', 1000000 - e.amount_minor, 'confirmed',
+         'bonus-correction:' || e.facility_id::text, e.facility_id, now(), now()
+    from public.v2_wallet_ledger_entries e
+   where e.kind = 'bonus_grant' and e.amount_minor <> 1000000
+     and not exists (
+       select 1 from public.v2_wallet_ledger_entries r
+        where r.kind = 'reversal' and r.reference = 'bonus-correction:' || e.facility_id::text
+     );
+
+  -- v2_seller_unlocks is a record, not a ledger: bring it into the family and fix the
+  -- default so a future row cannot drift back to a wrong literal.
+  update public.v2_seller_unlocks
+     set amount_minor = 1000000
+   where amount_minor <> 1000000;
+
+  alter table public.v2_seller_unlocks alter column amount_minor set default 1000000;
+
+  comment on column public.v2_seller_unlocks.amount_minor is
+    'D-H/UM-6: $20 = 10 000 XOF = 1 000 000 minor (Omni money family, D-LOC-9). One-time nonwithdrawable credit (kind bonus_grant).';
+
   -- UM-3 — the name lied: this column holds a percentage when kind=percentage.
   alter table public.v2_products rename column discount_value_minor to discount_value;
 
   insert into public.omni_schema_migrations (filename, checksum, applied_at)
-  values ('058_one_money_family.sql', 'uni-money-1-dloc-9-v1', now());
+  values ('062_one_money_family.sql', 'uni-money-1-dloc-9-v1', now());
 end $$;
 
 -- UM-2 — declare the rule on every monetary column, so the schema itself says it.

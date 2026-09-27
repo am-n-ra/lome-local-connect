@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  BULK_PACKS, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR,
+  BULK_PACKS, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, SELLER_BONUS_USD_MINOR,
   bulkPackById, convertUsdMinorToLocal, planBaseUsdMinor,
 } from './pricing';
 
@@ -51,5 +51,16 @@ describe('bulk credit packs (NW-13i, D-J hypothesis)', () => {
   it('resolves a known pack by id and rejects unknown ones', () => {
     expect(bulkPackById(BULK_PACKS[0].id)).toBeDefined();
     expect(bulkPackById('bogus')).toBeUndefined();
+  });
+});
+describe('seller trust bonus (D-H / UM-6, founder 2026-09-27)', () => {
+  it('is $20, expressed once in USD like every other price', () => {
+    expect(SELLER_BONUS_USD_MINOR).toBe(2000); // $20.00
+  });
+
+  it('converts to the one true local amount in the money family — $20 = 10 000 F = 1 000 000 minor', () => {
+    // Le serveur ecrivait 10 000 (100 F) et le seed 2 000 (20 F) : aucun des deux ne valait $20.
+    // C'est le montant que le ledger XOF doit porter, en convention D-LOC-9 (valeur x100).
+    expect(convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, 'XOF')).toBe(1000000);
   });
 });

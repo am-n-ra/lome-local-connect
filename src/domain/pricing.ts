@@ -21,6 +21,21 @@ export const OMNI_PLAN_PRICES_USD_MINOR = {
   buyerPro: 500,   // $5.00 /mois
 } as const;
 
+/**
+ * D-H — trust bonus granted to a seller after 3 Omni sales to distinct buyers.
+ * Founder decision 2026-09-27: **$20**, one-time, not withdrawable.
+ *
+ * Expressed ONCE, in USD minor units, like every other price. The wallet ledger
+ * runs in the local currency (XOF for the Lomé pilot, 0 decimals), so the amount
+ * the ledger receives is `convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, 'XOF')`
+ * = 10 000 XOF — never a literal duplicated at each write site.
+ *
+ * Before this constant, the value existed twice and disagreed: the server wrote
+ * `10000` (XOF francs) while the demo seed wrote `2000` (USD cents) — both "20"
+ * in their own unit, two readings of the same promise, 5× apart in the wallet.
+ */
+export const SELLER_BONUS_USD_MINOR = 2000; // $20.00
+
 /** Local rate receipts, in local minor units per 1 USD minor (1 USD = 100 usd-minor).
  *  Pilot (Lomé/Togo): 1 USD = 500 XOF → 1 usd-minor = 500 XOF-minor. */
 const LOCAL_RATE_PER_USD_MINOR: Record<string, number> = {

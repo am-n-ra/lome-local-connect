@@ -25,7 +25,7 @@
 >
 > - **UM-1/UM-7 poussés (`6df05e3`)** : `formatMoney` unique ; 4 copies de `money()` supprimées ; registre
 >   `MONEY_COLUMNS`/`MONEY_SCALE` + test qui **échoue** si une colonne monétaire n'est pas déclarée.
-> - **UM-2/3/4/5 — `058_one_money_family.sql` + code couplé, commit `b5f1804` LOCAL, PAS POUSSÉ.**
+> - **UM-2/3/4/5 — `062_one_money_family.sql` + code couplé, commit `b5f1804` LOCAL, PAS POUSSÉ.**
 >   Le rescale des **snapshots** a été **refusé par le trigger append-only** — et c'était la trouvaille
 >   la plus importante : les laisser bruts aurait mis une offre à 20 000 F face aux **200 acceptés par
 >   l'acheteur**. Précédent FF-8 : disable→rescale→assert count→re-arm. La migration **renomme**

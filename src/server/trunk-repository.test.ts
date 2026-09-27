@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { neon } from '@neondatabase/serverless';
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, FieldPilotPolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError, createTrunkRepository, toProduct } from './trunk-repository';
 import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
+import { SELLER_BONUS_USD_MINOR, convertUsdMinorToLocal, OMNI_DEFAULT_LOCAL_CURRENCY } from '../domain/pricing';
+
+// D-H/UM-6 : derive the expected amount from the SAME source as the server. These tests used
+// to hardcode `10000` — the wrong value (0.20 USD) the fix removed. Deriving makes it
+// impossible for a test to freeze on a stale amount again.
+const SELLER_BONUS_LOCAL_MINOR = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
 
 type SqlStub = ReturnType<typeof neon>;
 
@@ -36,14 +42,17 @@ const resultRow = {
   debited: 1,
 };
 
-function stubSql(rows: Record<string, unknown>[]): { sql: SqlStub; queries: string[] } {
+function stubSql(rows: Record<string, unknown>[]): { sql: SqlStub; queries: string[]; values: unknown[][] } {
   const queries: string[] = [];
-  const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+  const values: unknown[][] = [];
+  const sql = ((strings: TemplateStringsArray, ...bound: unknown[]) => {
     queries.push(strings.raw.join('¦'));
-    void values;
+    // Les valeurs liees n'apparaissent jamais dans le texte SQL : on les capture ici pour
+    // pouvoir asserter un montant devenu parametre (source unique, UM-6).
+    values.push(bound);
     return Promise.resolve(rows);
   }) as SqlStub;
-  return { sql, queries };
+  return { sql, queries, values };
 }
 
 /** Alternates between the given row-sets on every call (credit standing then main statement). */
@@ -1081,7 +1090,7 @@ describe('wallet persistence Root seam', () => {
       ledgerEntryId: 'bonus-ledger-1',
       walletId: 'wallet-1',
       kind: 'bonus_grant',
-      amountMinor: 10000,
+      amountMinor: SELLER_BONUS_LOCAL_MINOR,
       status: 'confirmed',
       facilityId: 'facility-1',
     });
@@ -1092,7 +1101,9 @@ describe('wallet persistence Root seam', () => {
     expect(call.queries[0]).toContain("e.kind = 'individu'");
     expect(call.queries[0]).toContain('f.bonus_unlocked_at is null');
     expect(call.queries[0]).toContain('for update of f');
-    expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
+    // Le montant est desormais une VALEUR LIEE (source unique), pas un litteral : le stub
+    // `stubSqlSequence` capture les valeurs parce qu'elles n'apparaissent jamais dans le texte.
+    expect(call.values[0]).toContain(SELLER_BONUS_LOCAL_MINOR);
     expect(call.queries[0]).toContain('e.reference =');
   });
 
@@ -1138,7 +1149,7 @@ describe('wallet persistence Root seam', () => {
       required_count: 3,
       kind_required_count: 3,
       status: 'locked',
-      amount_minor: 10000,
+      amount_minor: SELLER_BONUS_LOCAL_MINOR,
       trust_state: 'unconfirmed',
       qualifying_sales: 2,
       bonus_unlocked_at: null,
@@ -1153,7 +1164,7 @@ describe('wallet persistence Root seam', () => {
       distinctBuyerCount: 2,
       requiredCount: 3,
       status: 'locked',
-      amountMinor: 10000,
+      amountMinor: SELLER_BONUS_LOCAL_MINOR,
       trustState: 'unconfirmed',
       qualifyingSales: 2,
       bonusUnlockedAt: null,
@@ -1174,7 +1185,7 @@ describe('wallet persistence Root seam', () => {
       required_count: 3,
       kind_required_count: 1,
       status: 'eligible',
-      amount_minor: 10000,
+      amount_minor: SELLER_BONUS_LOCAL_MINOR,
       trust_state: 'confirmed',
       qualifying_sales: 1,
       bonus_unlocked_at: null,
@@ -1198,7 +1209,7 @@ describe('wallet persistence Root seam', () => {
       required_count: 1,
       kind_required_count: 1,
       status: 'eligible',
-      amount_minor: 10000,
+      amount_minor: SELLER_BONUS_LOCAL_MINOR,
       trust_state: 'confirmed',
       qualifying_sales: 1,
       bonus_unlocked_at: null,
@@ -1220,7 +1231,7 @@ describe('wallet persistence Root seam', () => {
       distinctBuyerCount: 0,
       requiredCount: 3,
       status: 'locked',
-      amountMinor: 10000,
+      amountMinor: SELLER_BONUS_LOCAL_MINOR,
       trustState: 'unconfirmed',
       qualifyingSales: 0,
       bonusUnlockedAt: null,
@@ -2162,7 +2173,7 @@ describe('Buyer transaction rating persistence Root seam', () => {
     expect(call.queries[0]).toContain('entity_qualified as (');
     expect(call.queries[0]).toContain('update v2_entities e');
     expect(call.queries[0]).toContain('set qualifying_sales = q.qualifying_sales, trust_state = q.trust_state');
-    expect(call.queries[0]).toContain("'bonus_grant', 10000, 'confirmed'");
+    expect(call.values[0]).toContain(SELLER_BONUS_LOCAL_MINOR);
     expect(call.queries[0]).toContain("'facility-bonus:' || bw.facility_id::text");
     expect(call.queries[0]).toContain("'pro_test_credit_20_usd'");
     // FF-3 : la clôture de la transaction marque l'intention 'completed'.

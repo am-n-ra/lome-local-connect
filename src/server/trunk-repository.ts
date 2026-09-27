@@ -1,6 +1,6 @@
 import { neon } from '@neondatabase/serverless';
 import { createHash, randomBytes } from 'node:crypto';
-import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR } from '../domain/pricing';
+import { BULK_PACKS, bulkPackById, convertUsdMinorToLocal, OMNI_BASE_CURRENCY, OMNI_DEFAULT_LOCAL_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, SELLER_BONUS_USD_MINOR } from '../domain/pricing';
 import { CONFIRMED_SALES_THRESHOLD, FREE_OFFER_LIMIT, INDIVIDUAL_CONFIRMED_SALES_THRESHOLD } from '../domain/invariants';
 
 import type { OfferOwnerKind, QrVerificationResult, TransactionState, WalletEntryKind } from '../domain/contracts';
@@ -189,7 +189,7 @@ export interface FacilityBonusPersistenceResult {
   ledgerEntryId: string;
   walletId: string;
   kind: 'bonus_grant';
-  amountMinor: 10000;
+  amountMinor: number;
   status: 'confirmed';
   facilityId: string;
 }
@@ -3308,6 +3308,10 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       correlationId: string;
       now: string;
     }): Promise<TransactionRatingPersistenceResult> {
+      // D-H/UM-6 : le bonus est défini UNE fois en USD ($20) et converti en devise locale
+      // ici. Le ledger est en XOF (0 décimale) — jamais un littéral « 10000 » écrit à deux
+      // endroits qui finissent par diverger de 5× (voir le seed historique).
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const note = input.note?.trim() || null;
       if (!Number.isInteger(input.score) || input.score < 1 || input.score > 5) {
         throw new TransactionPolicyError('A rating score between 1 and 5 is required.');
@@ -3430,7 +3434,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         bonus_grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select bw.wallet_id, 'bonus_grant', 10000, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select bw.wallet_id, 'bonus_grant', ${sellerBonusLocalMinor}, 'confirmed', 'facility-bonus:' || bw.facility_id::text, bw.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from bonus_wallet bw
           on conflict (wallet_id, kind, reference) do nothing
           returning id, facility_id
@@ -3724,6 +3728,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       now: string;
     }): Promise<FacilityBonusPersistenceResult> {
       const reference = `facility-bonus:${input.facilityId}`;
+      // D-H/UM-6 : même source unique que `submitTransactionRating` (le grant « une fois »
+      // et le déblocage explicite doivent créditer le MÊME montant).
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const rows = await retryDatabase(() => sql`
         with facility as (
           -- C-6/S-14 : le seuil suit le volume. Un particulier (individu) prouve par 1 vente,
@@ -3764,7 +3771,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         grant as (
           insert into v2_wallet_ledger_entries
             (wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at)
-          select w.wallet_id, 'bonus_grant', 10000, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
+          select w.wallet_id, 'bonus_grant', ${sellerBonusLocalMinor}, 'confirmed', ${reference}, u.facility_id, ${input.now}::timestamptz, ${input.now}::timestamptz
           from wallet w
           join unlocked u on true
           on conflict (wallet_id, kind, reference) do nothing
@@ -3791,13 +3798,14 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         ledgerEntryId: String(row.id),
         walletId: String(row.wallet_id),
         kind: 'bonus_grant',
-        amountMinor: 10000,
+        amountMinor: sellerBonusLocalMinor,
         status: 'confirmed',
         facilityId: String(row.facility_id),
       };
     },
 
     async getFacilityBonusStatus(input: { authUserId: string; facilityId: string }): Promise<FacilityBonusStatus> {
+      const sellerBonusLocalMinor = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, OMNI_DEFAULT_LOCAL_CURRENCY);
       const rows = await retryDatabase(() => sql`
         select
           f.id as facility_id,
@@ -3826,7 +3834,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           distinctBuyerCount: 0,
           requiredCount: 3,
           status: 'locked',
-          amountMinor: 10000,
+          amountMinor: sellerBonusLocalMinor,
           trustState: 'unconfirmed',
           qualifyingSales: 0,
           bonusUnlockedAt: null,
@@ -3841,7 +3849,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           distinctBuyerCount: 0,
           requiredCount: Number(row.kind_required_count),
           status: 'locked',
-          amountMinor: 10000,
+          amountMinor: sellerBonusLocalMinor,
           trustState: String(row.trust_state) as 'unclaimed' | 'verification_draft' | 'verification_submitted' | 'admin_review' | 'certified' | 'unconfirmed' | 'confirmed' | 'rejected' | 'suspended',
           qualifyingSales: Number(row.qualifying_sales ?? 0),
           bonusUnlockedAt: null,

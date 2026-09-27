@@ -79,6 +79,28 @@ Raison du choix — c'est la direction qui **touche le moins de choses** et **s'
 
 **UM-6 exige un arbitrage** : le bonus vaut-il **20 $ (≈ 10 000 F)** ou **2 000 F** ? Le code débite 2 000 F et la glose promet 20 $. **Je ne peux pas trancher à votre place** — c'est la même classe d'erreur que « 5 000 F », mais sur de l'argent promis à un vendeur.
 
+### UM-6 — tranché par le fondateur (2026-09-27) : **le bonus vaut $20**
+
+Décision fondateur : bonus = **$20**. La mesure a corrigé l'énoncé du problème.
+
+**Le relevé exact, mesuré en base :**
+
+| Écriture | Valeur stockée | Vaut réellement | Promet |
+|---|---|---|---|
+| serveur (`trunk-repository`) | `10 000` | 100 F = **0,20 $** | « 20 USD » |
+| seed démo (`seed-demo-lome`) | `2 000` | 20 F = **0,04 $** | « $20 × 2 » |
+| **ce que $20 exige** | **`1 000 000`** | **10 000 F = 20 $** | — |
+
+La question « 2 000 vs 10 000 » supposait qu'un des deux valait $20 : **aucun des deux**. Sous la convention famille (stocké = valeur × 100), `10 000` vaut 100 F, pas 10 000 F — le serveur se trompait d'un facteur **100**, le seed d'un facteur **500**. La mesure FedaPay confirme la convention (`amount_minor = 10000` ⇒ 100 F).
+
+**Correction livrée (UM-6) :**
+- **Une seule source** : `SELLER_BONUS_USD_MINOR = 2000` (=$20.00) dans `src/domain/pricing.ts`, convertie par `convertUsdMinorToLocal` → `1 000 000` XOF minor. Le serveur, le seed et l'UI en **dérivent** ; plus aucun littéral de bonus nulle part.
+- **La base** (`062`) : le wallet est **append-only** (garde `v2_wallet_ledger_append_only_guard`) — l'histoire financière ne se réécrit pas. La correction est une **écriture ajoutée** (`reversal`, référence `bonus-correction:…`), idempotente : le solde net devient `1 000 000` exactement. `v2_seller_unlocks` (registre, pas ledger) est ramené à `1 000 000` et son `DEFAULT` fixé.
+- **L'UI** dérive le libellé (`formatUsdSticker(SELLER_BONUS_USD_MINOR)`) : les quatre « 20 USD » en dur sont remplacés.
+- **Tests** : dérivent la valeur attendue de la **même source** — ils ne peuvent plus se figer sur un montant périmé, ce que les trois tests codant `10 000` avaient fait.
+
+**Preuve :** branche jetable `money-062-proof-2026-09-27` (10/10 statements, bonus net `1 000 000` par facilité, rejeu idempotent — `2` corrections et non `4`, garde append-only ré-armée) puis **appliqué sur la canonique** `br-dawn-hill-am5amy22` (registre `c1f2dfa4…`, 11 offres + 9 snapshots rescalés, colonne renommée).
+
 ---
 
 ## 5. Ce qui est livré dans cette tranche

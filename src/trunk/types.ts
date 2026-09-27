@@ -800,7 +800,7 @@ export interface FacilityBonusPersistenceResult {
   ledgerEntryId: string;
   walletId: string;
   kind: 'bonus_grant';
-  amountMinor: 10000;
+  amountMinor: number;
   status: 'confirmed';
   facilityId: string;
 }

@@ -49,6 +49,13 @@
 
 import { writeFileSync } from 'node:fs';
 
+// D-H/UM-6 — le bonus vendeur est défini UNE fois en USD ($20) puis converti dans la devise
+// du wallet (XOF, 0 décimale). Avant, ce fichier écrivait `2000` (cents USD) là où le serveur
+// écrivait `10000` (francs) : le libellé promettait « $20 » et la ligne créditait 4 $.
+// Le seed importe le catalogue canonique pour ne plus jamais pouvoir diverger.
+import { SELLER_BONUS_USD_MINOR, convertUsdMinorToLocal } from '../src/domain/pricing.ts';
+const SELLER_BONUS_LOCAL_MINOR = convertUsdMinorToLocal(SELLER_BONUS_USD_MINOR, 'XOF');
+
 // ── Demo fixture identity (all demo rows live in these fixed UUID ranges) ────────────
 const SELLER_ACCOUNT_ID = '10000000-0000-0000-0000-000000000201';
 const SELLER_AUTH_REF = 'omni-demo-seed-lome-2026-08-29';
@@ -592,8 +599,8 @@ on conflict (transaction_id) do update set
   wallet_id, kind, amount_minor, status, reference, facility_id, created_at, confirmed_at
 )
 values
-  ('${WALLET_ID}'::uuid, 'bonus_grant', 2000, 'confirmed', 'facility-bonus:${FACILITY_1_ID}', '${FACILITY_1_ID}'::uuid, ${`now() - interval '7 days'`}, ${`now() - interval '7 days'`}),
-  ('${WALLET_ID}'::uuid, 'bonus_grant', 2000, 'confirmed', 'facility-bonus:${FACILITY_2_ID}', '${FACILITY_2_ID}'::uuid, ${`now() - interval '2 days'`}, ${`now() - interval '2 days'`})
+  ('${WALLET_ID}'::uuid, 'bonus_grant', ${SELLER_BONUS_LOCAL_MINOR}, 'confirmed', 'facility-bonus:${FACILITY_1_ID}', '${FACILITY_1_ID}'::uuid, ${`now() - interval '7 days'`}, ${`now() - interval '7 days'`}),
+  ('${WALLET_ID}'::uuid, 'bonus_grant', ${SELLER_BONUS_LOCAL_MINOR}, 'confirmed', 'facility-bonus:${FACILITY_2_ID}', '${FACILITY_2_ID}'::uuid, ${`now() - interval '2 days'`}, ${`now() - interval '2 days'`})
 on conflict (wallet_id, kind, reference) do nothing`,
   },
   {

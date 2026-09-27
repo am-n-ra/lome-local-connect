@@ -5,6 +5,7 @@ import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaig
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 import { formatMoney, formatUsdSticker } from '../domain/currency';
+import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
 
 type SellerV13Props = {
   onClose: () => void;
@@ -26,6 +27,10 @@ type SellerV13Props = {
   publicFacilities?: PublicFacility[];
   ownedIds?: string[];
 };
+
+// D-H/UM-6 : l'UI ne doit jamais recopier « 20 USD » en dur — elle derive de la source
+// canonique. Une seule verite, du catalogue jusqu'au libelle.
+const BONUS_LABEL = formatUsdSticker(SELLER_BONUS_USD_MINOR);
 
 export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
@@ -265,7 +270,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     try {
       const result = await unlockFacilityBonus({ token, facilityId: ws.selFacilityId });
       if (result.ok && result.data) {
-        setToast('Bonus confiance 20 USD crédité dans votre portefeuille.');
+        setToast(`Bonus confiance ${BONUS_LABEL} crédité dans votre portefeuille.`);
         setBonusStatus((cur) => cur ? { ...cur, status: 'granted', bonusUnlockedAt: new Date().toISOString() } : cur);
       } else {
         setError(result.error?.message ?? 'Le bonus ne peut pas encore être débloqué.');
@@ -483,11 +488,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <div>
               <b className="tiny" style={{ display: 'block' }}>Bonus confiance</b>
               {bonusStatus?.status === 'granted' ? (
-                <span className="tiny" style={{ color: 'var(--accent)' }}>✓ 20 USD crédités dans le portefeuille — merci pour votre confiance.</span>
+                <span className="tiny" style={{ color: 'var(--accent)' }}>✓ {BONUS_LABEL} crédités dans le portefeuille — merci pour votre confiance.</span>
               ) : bonusStatus?.status === 'eligible' ? (
-                <span className="tiny" style={{ color: 'var(--accent)' }}>3/3 acheteurs distincts — le bonus 20 USD est débloqué.</span>
+                <span className="tiny" style={{ color: 'var(--accent)' }}>3/3 acheteurs distincts — le bonus {BONUS_LABEL} est débloqué.</span>
               ) : (
-                <span className="tiny muted">{bonusStatus?.distinctBuyerCount ?? 0}/3 acheteurs distincts · 20 USD verrouillé (ventes QR)</span>
+                <span className="tiny muted">{bonusStatus?.distinctBuyerCount ?? 0}/3 acheteurs distincts · {BONUS_LABEL} verrouillé (ventes QR)</span>
               )}
             </div>
             {bonusStatus?.status === 'eligible' && (
