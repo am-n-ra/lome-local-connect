@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ImagePlus, PackageOpen } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue, transitionSellerProduct, uploadSellerProductMedia } from './api';
-import { currencyFor, formatAmount } from '../domain/currency';
+import { currencyFor, formatMoney } from '../domain/currency';
 import type { SellerCatalogueProduct } from './types';
 
 type ProductCatalogueV13Props = { onClose: () => void; onStockEvent: (productId: string) => void };
@@ -125,7 +125,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
                   </small>
                 )}
               </span>
-              <span className="pr">{formatAmount(product.prixReduit, currencyFor(product.currency))}</span>
+              <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
               <span className="btnrow" style={{ gap: 6, marginTop: 6 }}>
                 <button
                   className="btn ghost sm"

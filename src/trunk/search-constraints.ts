@@ -24,6 +24,17 @@ export const BUDGET_DEFAULT_LOCAL_MINOR = 2500; // pilot display, 1 USD = 500 XO
 /** Quantity threshold default (D-CON-2) — 1, genuinely editable. */
 export const QUANTITY_DEFAULT = 1;
 
+/**
+ * The budget field shows whole francs; stored money is ×100 (D-LOC-9). This is
+ * the single place that crossing happens — before it existed, the field value
+ * went straight into `budgetMaxMinor` and the chip rendered "25 F" for a 2 500 F
+ * budget. Empty input means "no threshold", not zero.
+ */
+export function budgetFieldToMinor(raw: string): number | null {
+  const digits = raw.replace(/[^\d]/g, '');
+  return digits === '' ? null : Number(digits) * 100;
+}
+
 /** Portées de rayon de recherche — échelle métier réelle( quartier → ville → région → monde(. */
 export const RAYON_SCOPES: readonly { label: string; rayonKm: number | null }[] = [
   { label: '1 km', rayonKm: 1 },

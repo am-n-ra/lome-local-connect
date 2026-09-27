@@ -174,7 +174,6 @@ export const MONEY_COLUMNS: readonly string[] = [
   'v2_seller_unlocks.amount_minor',
   'v2_ad_campaigns.budget_minor',
   'v2_ad_campaigns.spent_minor',
-  'v2_availability_credit_ledger.amount',
   'v2_products.price_minor',
   'v2_transaction_snapshots.unit_price_minor',
   'v2_transaction_snapshots.net_amount_minor',
@@ -187,7 +186,7 @@ export const MONEY_COLUMNS: readonly string[] = [
  * the name is actively misleading, so silence is not an option.
  */
 export const NON_MONEY_MINOR_COLUMNS: Readonly<Record<string, string>> = {
-  'v2_products.discount_value_minor':
+  'v2_products.discount_value':
     'holds a PERCENTAGE (10..30) when discount_kind=percentage, and a raw amount when discount_kind=fixed. ' +
     'Not a unit at all; rename to discount_value (UNI-MONEY-1 UM-3).',
 };

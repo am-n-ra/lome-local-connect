@@ -488,7 +488,7 @@ export class WalletPolicyError extends Error {
 
 export const toProduct = (row: Record<string, unknown>): PublicProduct => {
   const priceMinor = Number(row.price_minor ?? 0);
-  const discountValueMinor = row.discount_value_minor === null || row.discount_value_minor === undefined ? 0 : Number(row.discount_value_minor);
+  const discountValueMinor = row.discount_value === null || row.discount_value === undefined ? 0 : Number(row.discount_value);
   const percentage = row.discount_kind === 'percentage' ? Math.round(discountValueMinor) : 0;
   const discountAmount = percentage > 0 ? Math.floor((priceMinor * percentage) / 100) : 0;
   const prixReduit = Math.max(0, priceMinor - discountAmount);
@@ -2061,11 +2061,11 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                 and (
                   -- same currency: direct comparison
                   (upper(coalesce(bpp.currency, 'XOF')) = ${budgetCurrency}
-                    and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) <= ${budgetMaxMinor})
+                    and (bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value between 1 and 90 then floor(bpp.price_minor * bpp.discount_value / 100.0) else 0 end)) <= ${budgetMaxMinor})
                   -- USD-priced offer against a local budget: convert through the USD base.
                   -- A currency we cannot convert is EXCLUDED, never silently compared.
                   or (upper(coalesce(bpp.currency, 'XOF')) = 'USD' and ${budgetCurrency} = 'XOF'
-                    and round((bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value_minor between 1 and 90 then floor(bpp.price_minor * bpp.discount_value_minor / 100.0) else 0 end)) * ${budgetRatePerUsdMinor}) <= ${budgetMaxMinor})
+                    and round((bpp.price_minor - (case when bpp.discount_kind = 'percentage' and bpp.discount_value between 1 and 90 then floor(bpp.price_minor * bpp.discount_value / 100.0) else 0 end)) * ${budgetRatePerUsdMinor}) <= ${budgetMaxMinor})
                 )
             )`}
             ${centerLng === null || centerLat === null || rayonKm === null ? sql`` : sql`and (
@@ -2114,7 +2114,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) return null;
       const products = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
-               p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
+               p.price_minor, p.currency, p.discount_kind, p.discount_value,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
                p.media, p.publication_state, p.availability_state, p.availability_expires_at,
@@ -2221,7 +2221,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) return null;
       const offers = await retryDatabase(() => sql`
         select p.id, p.facility_id, p.name, p.description, p.category, p.unit,
-               p.price_minor, p.currency, p.discount_kind, p.discount_value_minor,
+               p.price_minor, p.currency, p.discount_kind, p.discount_value,
                p.quantity_allocated_omni, p.quantity_reserved_omni,
                p.position_kind, p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
                p.media, p.publication_state, p.availability_state, p.availability_expires_at,
@@ -2381,14 +2381,14 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           p.price_minor,
           p.currency,
           p.discount_kind,
-          p.discount_value_minor,
+          p.discount_value,
           p.quantity_allocated_omni,
           p.quantity_reserved_omni,
           case
-            when p.discount_kind = 'percentage' and p.discount_value_minor between 1 and 90
-              then p.price_minor - floor((p.price_minor * p.discount_value_minor) / 100.0)
-            when p.discount_kind = 'fixed' and p.discount_value_minor > 0 and p.discount_value_minor < p.price_minor
-              then p.price_minor - p.discount_value_minor
+            when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+              then p.price_minor - floor((p.price_minor * p.discount_value) / 100.0)
+            when p.discount_kind = 'fixed' and p.discount_value > 0 and p.discount_value < p.price_minor
+              then p.price_minor - p.discount_value
             else null
           end as net_price_minor,
           p.publication_state,
@@ -2431,7 +2431,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         stockLoueOmni: row.quantity_allocated_omni === null || row.quantity_allocated_omni === undefined ? 0 : Math.max(0, Number(row.quantity_allocated_omni) - Number(row.quantity_reserved_omni ?? 0)),
         prixOriginal: Number(row.price_minor),
         prixReduit: row.net_price_minor === null || row.net_price_minor === undefined ? Number(row.price_minor) : Number(row.net_price_minor),
-        pourcentageReduction: row.discount_kind === 'percentage' ? Math.round(Number(row.discount_value_minor ?? 0)) : 0,
+        pourcentageReduction: row.discount_kind === 'percentage' ? Math.round(Number(row.discount_value ?? 0)) : 0,
         publicationState: String(row.publication_state) as SellerCatalogueProduct['publicationState'],
         availabilityState: (['en_stock', 'verifie', 'a_valider', 'bientot'].includes(String(row.availability_state)) ? String(row.availability_state) : 'a_valider') as SellerCatalogueProduct['availabilityState'],
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === undefined ? null : new Date(String(row.availability_expires_at)).toISOString(),
@@ -2492,25 +2492,25 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             and fs.status = 'assigned'
         ), inserted as (
           insert into v2_products
-            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value_minor, quantity_allocated_omni, idempotency_key, publication_state,
+            (facility_id, entity_id, name, description, unit, price_minor, currency, discount_kind, discount_value, quantity_allocated_omni, idempotency_key, publication_state,
              position_kind, uniqueness_kind, handover_kind, price_kind, condition_kind)
           select of.id, of.entity_id, ${input.name.trim()}, ${input.description?.trim() || null}, ${input.unit.trim() || 'unit'}, ${input.prixOriginal}, ${input.currency.toUpperCase()}, 'percentage', ${input.pourcentageReduction}, ${input.stockLoueOmni}, ${input.idempotencyKey}, 'draft',
                  ${carac.positionKind}, ${carac.uniquenessKind}, ${carac.handoverKind}, ${carac.priceKind}, ${carac.conditionKind}
           from owned_facility of
           where exists (select 1 from slot_check)
           on conflict (facility_id, idempotency_key) where idempotency_key is not null do nothing
-          returning id, facility_id, name, publication_state, price_minor, discount_kind, discount_value_minor
+          returning id, facility_id, name, publication_state, price_minor, discount_kind, discount_value
         )
         select * from inserted
         union all
-        select p.id, p.facility_id, p.name, p.publication_state, p.price_minor, p.discount_kind, p.discount_value_minor
+        select p.id, p.facility_id, p.name, p.publication_state, p.price_minor, p.discount_kind, p.discount_value
         from v2_products p
         where p.facility_id = ${input.facilityId}::uuid and p.idempotency_key = ${input.idempotencyKey}
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_SLOT_REQUIRED');
-      if (String(row.discount_kind) !== 'percentage' || Number(row.discount_value_minor) !== input.pourcentageReduction || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
+      if (String(row.discount_kind) !== 'percentage' || Number(row.discount_value) !== input.pourcentageReduction || String(row.name ?? input.name) !== input.name.trim()) throw new SellerCataloguePolicyError('IDEMPOTENCY_CONFLICT');
       return { productId: String(row.id), facilityId: String(row.facility_id), publicationState: 'draft', prixReduit: input.prixOriginal - discount };
     },
 
@@ -2535,7 +2535,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const discount = Math.floor(input.prixOriginal * input.pourcentageReduction / 100);
       const rows = await retryDatabase(() => sql`
         update v2_products p
-        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value_minor = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni},
+        set name = ${input.name.trim()}, description = ${input.description?.trim() || null}, unit = ${input.unit.trim() || 'unit'}, price_minor = ${input.prixOriginal}, currency = ${input.currency.toUpperCase()}, discount_kind = 'percentage', discount_value = ${input.pourcentageReduction}, quantity_allocated_omni = ${input.stockLoueOmni},
             position_kind = ${carac.positionKind}, uniqueness_kind = ${carac.uniquenessKind}, handover_kind = ${carac.handoverKind}, price_kind = ${carac.priceKind}, condition_kind = ${carac.conditionKind},
             publication_state = case when p.publication_state = 'published' then 'draft' else p.publication_state end, updated_at = now()
         from v2_facilities f join v2_accounts a on a.id = f.account_id
@@ -2556,7 +2556,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             -- E-03 / E-04 : les deux faits qui bloquent une PREMIERE publication. Lus ici
             -- pour que le refus soit prononce par la meme instruction que la transition.
             (case when jsonb_typeof(p.media) = 'array' then jsonb_array_length(p.media) else 0 end) as media_count,
-            coalesce(p.discount_value_minor, 0) as discount,
+            coalesce(p.discount_value, 0) as discount,
             -- RH-02 « on exige » : les quatre caracteristiques qui font d'une offre une offre.
             -- Lues ici pour que le refus soit prononce par la MEME instruction que la transition
             -- (une lecture separee pourrait voir un etat different de celui qui publie).

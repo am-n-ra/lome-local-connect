@@ -105,7 +105,7 @@ describe('public product boundary (v3 model)', () => {
       price_minor: 2000,
       currency: 'XOF',
       discount_kind: 'percentage',
-      discount_value_minor: 25,
+      discount_value: 25,
       quantity_allocated_omni: 12,
       coupon_label: null,
     });
@@ -125,7 +125,7 @@ describe('public product boundary (v3 model)', () => {
   });
 
   it('computes a mandatory prixReduit and percent reduction from a percentage discount', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 3 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value: 10, quantity_allocated_omni: 3 });
     expect(product.pourcentageReduction).toBe(10);
     expect(product.prixReduit).toBe(4500);
     expect(product.prixReduit).toBeLessThan(product.prixOriginal);
@@ -133,16 +133,16 @@ describe('public product boundary (v3 model)', () => {
   });
 
   it('projects reserved units out of the advertised stock (FF-8 no oversell)', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 10, quantity_reserved_omni: 4 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value: 10, quantity_allocated_omni: 10, quantity_reserved_omni: 4 });
     expect(product.stockLoueOmni).toBe(6);
     // Une réservation historique supérieure au stock déclaré ne doit jamais
     // produire une disponibilité négative.
-    const overReserved = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 2, quantity_reserved_omni: 5 });
+    const overReserved = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 2, quantity_reserved_omni: 5 });
     expect(overReserved.stockLoueOmni).toBe(0);
   });
 
   it('a discount-less row maps to 0% (creation itself rejects discount-less products)', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 0 });
     expect(product.pourcentageReduction).toBe(0);
     expect(product.prixReduit).toBe(product.prixOriginal);
   });
@@ -150,7 +150,7 @@ describe('public product boundary (v3 model)', () => {
   it('S-06/S-32 — derives existence, integrity and reputation when the query supplies the facts', () => {
     const product = toProduct({
       id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF',
-      discount_kind: null, discount_value_minor: null,
+      discount_kind: null, discount_value: null,
       quantity_allocated_omni: 10, quantity_reserved_omni: 0,
       media: [], description: 'Une description assez longue.',
       publication_state: 'published', availability_state: 'en_stock', availability_expires_at: null,
@@ -166,7 +166,7 @@ describe('public product boundary (v3 model)', () => {
   it('S-06 — published with nothing reservable is level 3, never 4 (the oversell lie)', () => {
     const product = toProduct({
       id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF',
-      discount_kind: null, discount_value_minor: null,
+      discount_kind: null, discount_value: null,
       quantity_allocated_omni: 2, quantity_reserved_omni: 2,
       media: [], description: 'Une description assez longue.',
       publication_state: 'published', availability_state: 'verifie', availability_expires_at: null,
@@ -177,7 +177,7 @@ describe('public product boundary (v3 model)', () => {
   });
 
   it('S-06/S-32 — a legacy row without the facts omits the fields instead of inventing them', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 1 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 1 });
     expect(product).not.toHaveProperty('existence');
     expect(product).not.toHaveProperty('integrity');
     expect(product).not.toHaveProperty('reputation');
@@ -196,7 +196,7 @@ describe('public product boundary (v3 model)', () => {
   // les cinq colonnes `*_kind` existaient en base mais n'étaient JAMAIS renseignées :
   // une offre naissait sans aucune caractéristique, ce qui vidait « tout est offre ».
   it('writes the offer characteristics into the draft insert (R-B / S-01)', async () => {
-    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000001', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value_minor: 10 }]);
+    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000001', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value: 10 }]);
     const repository = createTrunkRepository(call.sql);
     await repository.createSellerProductDraft({
       authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-write',
@@ -220,7 +220,7 @@ describe('public product boundary (v3 model)', () => {
   });
 
   it('accepts an offer with no declared characteristic (nullable by design)', async () => {
-    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000002', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value_minor: 10 }]);
+    const call = stubSql([{ id: '30000000-0000-0000-0000-000000000002', facility_id: '20000000-0000-0000-0000-000000000001', name: 'Riz', publication_state: 'draft', price_minor: 5000, discount_kind: 'percentage', discount_value: 10 }]);
     const repository = createTrunkRepository(call.sql);
     await expect(repository.createSellerProductDraft({
       authUserId: 'auth-1', facilityId: '20000000-0000-0000-0000-000000000001', name: 'Riz', description: null, unit: 'sac', prixOriginal: 5000, currency: 'XOF', pourcentageReduction: 10, stockLoueOmni: 5, idempotencyKey: 'idem-carac-null',
@@ -229,14 +229,14 @@ describe('public product boundary (v3 model)', () => {
 
   it('reads the offer characteristics back on the public offer (R-B / S-01)', () => {
     const product = toProduct({
-      id: 'p', facility_id: 'f', name: 'Ordinateur Dell', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 1,
+      id: 'p', facility_id: 'f', name: 'Ordinateur Dell', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value: 10, quantity_allocated_omni: 1,
       position_kind: 'fixe', uniqueness_kind: 'piece_unique', handover_kind: 'retrait', price_kind: 'negociable', condition_kind: 'occasion',
     });
     expect(product).toMatchObject({ positionKind: 'fixe', uniquenessKind: 'piece_unique', handoverKind: 'retrait', priceKind: 'negociable', conditionKind: 'occasion' });
   });
 
   it('never invents a characteristic the row does not carry (R-B / S-01)', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 1000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 0 });
     expect(product).toMatchObject({ positionKind: null, uniquenessKind: null, handoverKind: null, priceKind: null, conditionKind: null });
   });
 });
@@ -2319,12 +2319,12 @@ describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
   });
 
   it('reads media back on the public product (E-03 surface)', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 1, media: [{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }] });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value: 10, quantity_allocated_omni: 1, media: [{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }] });
     expect(product.media).toEqual([{ url: 'https://blob.omni.test/a.jpg', kind: 'image' }]);
   });
 
   it('never invents media the row does not carry', () => {
-    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0 });
+    const product = toProduct({ id: 'p', facility_id: 'f', name: 'n', unit: 'u', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 0 });
     expect(product.media).toEqual([]);
   });
 });
@@ -2416,7 +2416,7 @@ describe('Product availability Root seam (G-04 trunk)', () => {
 
   it('returns seller catalogue with availability fields after opportunistic expiry', async () => {
     const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, operational_state: 'ouvert', currency: 'XOF', product_count: 1 }];
-    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value_minor: 10, quantity_allocated_omni: 3, net_price_minor: 4500, publication_state: 'published', availability_state: 'en_stock', availability_expires_at: '2026-09-02T16:00:00.000Z', availability_pro_eligible: true }];
+    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: 'percentage', discount_value: 10, quantity_allocated_omni: 3, net_price_minor: 4500, publication_state: 'published', availability_state: 'en_stock', availability_expires_at: '2026-09-02T16:00:00.000Z', availability_pro_eligible: true }];
     const queries: string[] = [];
     const seq = [[], [{ id: 'account-1' }], facilityRows, productRows];
     let index = 0;
@@ -2455,7 +2455,7 @@ describe('Product availability Root seam (G-04 trunk)', () => {
 
   it('flags the seller catalogue as not ready when no sellable stock exists', async () => {
     const facilityRows = [{ id: 'facility-1', name: 'Boutique', category: 'Marché', address: null, operational_state: 'ouvert', currency: 'XOF', product_count: 1 }];
-    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value_minor: null, quantity_allocated_omni: 0, net_price_minor: null, publication_state: 'published', availability_state: 'a_valider', availability_expires_at: null, availability_pro_eligible: false }];
+    const productRows = [{ id: 'product-1', facility_id: 'facility-1', facility_name: 'Boutique', name: 'Riz 5kg', description: null, unit: 'sac', price_minor: 5000, currency: 'XOF', discount_kind: null, discount_value: null, quantity_allocated_omni: 0, net_price_minor: null, publication_state: 'published', availability_state: 'a_valider', availability_expires_at: null, availability_pro_eligible: false }];
     const { sql, queries } = stubSqlSequence([[], [{ id: 'account-1' }], facilityRows, productRows]);
     const repository = createTrunkRepository(sql);
     const result = await repository.listSellerCatalogue({ authUserId: 'auth-seller-1' });

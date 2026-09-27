@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { chipHintFor, chipOptionsFor, chipStatusFor, chipsToSearchOptions, emptyConstraints, activeConstraintCount, isRayonScope, rayonScopeOptionsFor, rayonScopeStatusFor, summarizeActiveChips, CONSTRAINT_GROUPS } from './search-constraints';
+import { chipHintFor, chipOptionsFor, chipStatusFor, chipsToSearchOptions, emptyConstraints, activeConstraintCount, isRayonScope, rayonScopeOptionsFor, rayonScopeStatusFor, summarizeActiveChips, CONSTRAINT_GROUPS, budgetFieldToMinor } from './search-constraints';
+import { formatMoney } from '../domain/currency';
 
 describe('search constraint helpers (NW-12.1, D-CON-1…5)', () => {
   it('wires switches to real server options', () => {
@@ -92,5 +93,25 @@ describe('rayon scope chips (P0-C', () => {
   it('treats scope labels as non-soon chips', () => {
     expect(chipStatusFor('10 km')).toBe('wired');
     expect(chipStatusFor('100 km')).toBe('wired');
+  });
+});
+
+describe('budget field boundary (D-LOC-9 / UNI-MONEY-1)', () => {
+  it('turns whole francs into a stored x100 amount', () => {
+    expect(budgetFieldToMinor('2500')).toBe(250000);
+  });
+
+  it('renders the threshold the user typed, not 100x smaller', () => {
+    // The bug: 2500 went straight into the x100 formatter as "25 F".
+    expect(formatMoney(budgetFieldToMinor('2500')!, 'XOF')).toContain('2\u202f500');
+  });
+
+  it('treats an empty field as no threshold, not zero', () => {
+    expect(budgetFieldToMinor('')).toBeNull();
+    expect(budgetFieldToMinor('abc')).toBeNull();
+  });
+
+  it('ignores separators and stray characters', () => {
+    expect(budgetFieldToMinor('2 500 F')).toBe(250000);
   });
 });

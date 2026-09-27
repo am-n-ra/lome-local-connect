@@ -36,7 +36,7 @@ import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
 import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
-import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
+import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
@@ -1263,9 +1263,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   /** D-CON-1 — budget is a set threshold in the user's currency, not a frozen chip. */
   const setBudgetThreshold = useCallback((raw: string) => {
-    const digits = raw.replace(/[^\d]/g, '');
-    setBudgetDraft(digits);
-    setSearchConstraints((current) => ({ ...current, budgetMaxMinor: digits === '' ? null : Number(digits) }));
+    setBudgetDraft(raw.replace(/[^\d]/g, ''));
+    setSearchConstraints((current) => ({ ...current, budgetMaxMinor: budgetFieldToMinor(raw) }));
   }, []);
 
   /** D-CON-2 — quantity threshold, default 1. */
@@ -1503,7 +1502,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </>
               )}
               {(() => {
-                const applied = summarizeActiveChips(searchConstraints, (minor) => formatAmount(minor, userCurrency));
+                const applied = summarizeActiveChips(searchConstraints, (minor) => formatMoney(minor, userCurrency.currency));
                 if (applied.length === 0) return null;
                 return <p className="tiny muted" role="status" style={{ marginTop: 4 }}>Appliqué: {applied.join(' · ')}</p>;
               })()}
@@ -1703,7 +1702,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <button key={facility.id} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { if (facility.trust !== 'unclaimed' && product) { startFlow({ id: facility.id, name: facility.name, latitude: facility.latitude, longitude: facility.longitude }, { id: product.id, name: product.name }); } else { setSheet('facility'); void handlePinSelect(facility); } }}>
                   <div className="row" style={{ justifyContent: 'space-between' }}>
                     <div><b>{facility.name}</b><br /><span className="tiny muted">{facility.category} · {facility.plan}</span></div>
-                    {cheapest ? <span className="status ok">dès {formatAmount(cheapest.prixReduit, currencyFor(cheapest.currency))}</span> : <span className="status gray">Non transactable</span>}
+                    {cheapest ? <span className="status ok">dès {formatMoney(cheapest.prixReduit, currencyFor(cheapest.currency).currency)}</span> : <span className="status gray">Non transactable</span>}
                   </div>
                   {product && <p className="tiny muted" style={{ marginTop: 4 }}>{product.name} · {moneyOrQty(product.stockLoueOmni)}</p>}
                 </button>
@@ -1814,7 +1813,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <span><b>{product.name}</b>{highlighted && <span className="status ink" style={{ marginLeft: 6 }}>Recherché</span>}<small>{product.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> — {trust.missing.join(', ')}</span>}</span>
                     </span>
-                    <span className="pr">{formatAmount(product.prixReduit, currencyFor(product.currency))}</span>
+                    <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
                   </div>
                 );
               })}
@@ -1871,7 +1870,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <span className="chk" aria-hidden="true" />
                 <span className="pthumb" />
                 <span><b>{offer.name}</b><small>{offer.stockLoueOmni > 0 ? 'En stock' : 'À valider'}</small>{carac.length > 0 && <small style={{ display: 'block', marginTop: 2 }}>{carac.map((c) => c.value).join(' · ')}</small>}</span>
-                <span className="pr">{formatAmount(offer.prixReduit, currencyFor(offer.currency))}</span>
+                <span className="pr">{formatMoney(offer.prixReduit, currencyFor(offer.currency).currency)}</span>
               </div>
             );
           })}

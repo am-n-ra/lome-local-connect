@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue } from './api';
-import { currencyFor, formatAmount } from '../domain/currency';
+import { currencyFor, formatMoney } from '../domain/currency';
 import type { SellerCatalogueProduct } from './types';
 
 type OffersV13Props = { onClose: () => void };
@@ -27,8 +27,8 @@ export function OffersV13({ onClose }: OffersV13Props) {
   // `prixReduit` is ALREADY the discounted amount: applying the percentage again
   // double-counted it. Both prices are shown in the OFFER's currency.
   const offerCurrency = currencyFor(first?.currency);
-  const normalPrice = first ? formatAmount(first.prixOriginal, offerCurrency) : '';
-  const omniPrice = first ? formatAmount(first.prixReduit, offerCurrency) : '';
+  const normalPrice = first ? formatMoney(first.prixOriginal, offerCurrency.currency) : '';
+  const omniPrice = first ? formatMoney(first.prixReduit, offerCurrency.currency) : '';
   const discountPct = first?.pourcentageReduction ?? 0;
 
   return (
