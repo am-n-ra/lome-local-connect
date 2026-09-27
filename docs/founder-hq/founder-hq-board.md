@@ -2,6 +2,19 @@
 
 **As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25** · **`R-G` LIVRÉE** (première caractéristique d'offre **vivante** : la pièce unique est une présence, `3753c95`) · **`R-H` LIVRÉE** (2ᵉ caractéristique vivante : la négociation — « négocier, c'est chercher moins cher ») — **604/604 tests**.
 
+## MESURE FRAÎCHE (2026-09-27, après `R-H`) — la même plainte, une mesure plus juste
+
+> **Mesuré directement sur le canonique `br-dawn-hill-am5amy22`, pas repris d'un document :**
+>
+> | Question fondateur | Mesure du jour | Verdict |
+> |---|---|---|
+> | « le fond et la logique ne sont pas là » | **16 offres ; 3 seulement déclarent la moindre caractéristique** (`price_kind`/`uniqueness_kind`/`condition_kind`/`handover_kind` = 3/16, les mêmes 3). **13 offres ne décrivent rien.** | **CONFIRMÉ** |
+> | « incohérence entre ce qu'on veut et ce qu'on propose » | **Monnaie : c'est PROPRE** — 16/16 offres en `XOF`, prix 20 000–650 000 minor, **1 seule devise**, `062` appliqué, bonus dérivé d'`pricing` (plus de littéral dupliqué). **2 dettes monétaires restent** : `D-LOC-6` (unités) et `D-LOC-8` (devise d'origine vs marché). | **PARTIELLEMENT INFIRMÉ** |
+> | « on a raté le process depuis Species » | `R-G` + `R-H` = **2 caractéristiques rendues vivantes** ; registre migrations à jour jusqu'à `064`. Mais `price_kind` est vivant **sans être déclaré par aucune offre** → `064` n'est exercé par 0 ligne. | **PARTIEL — la cause est l'usage, pas la capacité** |
+>
+> **Ce que ça change :** la capacité n'est plus le goulot. **L'usage l'est.** Les deux tranches `R-G`/`R-H`
+> ont construit le *comment* ; il manque le *pourquoi* — une offre réelle qui **dit** ce qu'elle est.
+
 ## HQ RECONCILIATION — « même plainte, deuxième fois » (2026-09-27) + UNI-MONEY-1
 
 > **Déclencheur fondateur (verbatim) :** *« dis j'ai essayé de finir omni ces dernières semaines avec open hands mais leur IA ne m'a pas arrangé, on a assez tourné en rond et je pense qu'on a raté tout le process depuis Species ; même si j'aime bien la présentation visuelle globale actuelle mais tout le fond et la logique qui doit faire de omni omni n'est pas là et même il y a beaucoup d'incohérence dans ce qu'on veut réellement faire et proposer. »*
