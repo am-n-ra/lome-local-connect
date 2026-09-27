@@ -907,3 +907,42 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 
 
 
+
+## Root — R-G : une pièce unique est une PRÉSENCE (2026-09-27, commit `3753c95`, poussé)
+
+- **Défaut de fond mesuré (et non supposé) :** `uniqueness_kind`, `price_kind`, `condition_kind`,
+  `handover_kind` existaient en **colonnes**, circulaient jusqu'à l'écran, et **aucun code ne
+  branchait dessus**. Une offre « pièce unique » portait un stock de N et s'affichait « en stock ».
+  Les cas fondateur (ordinateur d'occasion, appartement) n'étaient servis par **aucune** logique.
+  **`R-G` a rendu UNE caractéristique vivante** ; les 3 autres restent des déclarations (S-02 « un
+  vrai à la fois »).
+- **Règle unique partagée** `src/trunk/offer-uniqueness.ts` (serveur **et** UI l'importent, donc
+  impossible qu'ils divergent) : capacité 1, normalisation N→1, refus de « 3 pièces uniques
+  identiques », `null` (héritage) **inchangé**. `offer-existence.ts` : niveau 4 lu **par présence**.
+- **Deux bugs réels trouvés en travaillant** — à retenir comme classe :
+  1. **`updateSellerProductDraft` écrasait les cinq caractéristiques à `null`** → modifier une offre
+     la rendait **muette** et lui faisait perdre sa nature. Corrigé en **préservation par défaut**
+     (`coalesce` sur la valeur existante), et l'invariant lit la nature **existante** quand elle n'est
+     pas fournie — sinon un simple PATCH l'aurait contourné. **Leçon : un chemin d'édition partielle
+     doit préserver par défaut ; écraser à null est un mensonge silencieux.**
+  2. **Bug dans ma propre formule, trouvé par falsification** : `isReservable` utilisait
+     `max(1, allocated)`, ce qui rendait une pièce **retirée** (`allocated = 0`) *réservable*. Corrigé
+     en `allocated >= 1 && reserved < 1`. **La falsification trouve ce que la relecture rate.**
+- **Migration `063_v2_piece_unique_presence.sql`** (CHECK) : prouvée sur branche jetable
+  (`br-winter-boat-amangwe5` : `piece_unique`+40 **refusé**, `null`/`renouvelable`+40 et
+  `piece_unique`+1 **acceptés**, 0 trace, branche supprimée) **puis** appliquée au canonique
+  `br-dawn-hill-am5amy22` (registre checksum `fce55080…`). **0 ligne réécrite** : 16 produits, 13 NULL
+  intactes (dont 11 avec stock > 1, **grandfatherisées**). **Une migration ne réécrit pas le sens
+  d'offres qui n'ont jamais déclaré leur nature.**
+- **Ne pas se fier au board sans vérifier les commits, ni l'inverse.** `R-F` **existait déjà**
+  (`ecdb398`, `S-06`/`S-32`) → mon étiquette `R-F` a été renommée **`R-G`**. Et l'écart
+  **664 → 596 tests** s'explique par `fed06b0` (V-9') : 29 fichiers de tests v1 morts + 6 tests
+  **factices** (`toBeDefined()` sur des composants inexistants) supprimés. **Vérifier
+  `git merge-base --is-ancestor <sha> HEAD` avant de déclarer le board périmé** — quatre tranches
+  livrées avaient été lues comme « à faire ».
+- Preuve : **596/596 tests**, tsc + 6 gardes verts. Registre :
+  `docs/nature-way/omni-rg-piece-unique-presence-evidence-2026-09-27.md` ; handoff
+  `docs/founder-hq/handoff-receipt-HO-OMNI-HQ-2026-09-27.md`.
+- **Prochain `R-H`** (décision fondateur requise sur l'ordre) : `price_kind='negociable'` (la
+  négociation) est la candidate recommandée — elle s'ajoute à la machine transactionnelle à 10 états
+  déjà robuste, donc sans fragiliser.
