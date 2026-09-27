@@ -1,6 +1,6 @@
 # Intent Brief V2 — Omni
 
-> **Status:** **Seed V2 — cœur confirmé (`founder-confirmed` 2026-09-23)** · ⚠️ **deux dettes mesurées, voir `docs/nature-way/omni-seed-closure-audit-2026-09-26.md`** : la fourchette est **`S-01…S-32`** (et non `S-34` — artefact de comptage corrigé partout le 2026-09-26) ; `S-06` (échelle 0→4) et `S-32` (intégrité/réputation de l'offre) sont **confirmés mais non construits**. Le Seed est **close comme intention** ; ces deux décisions attendent un arbitrage fondateur (tranche Root ou report écrit).
+> **Status:** **Seed V2 — cœur confirmé (`founder-confirmed` 2026-09-23)** · **CLOS 2026-09-26** : les deux dettes mesurées sont **fermées**. (1) La fourchette est **`S-01…S-32`** (et non `S-34` — artefact de comptage corrigé partout le 2026-09-26 ; le garde `check:species-t12` lit désormais les décisions à leur **position structurelle** pour qu'une note qui *mentionne* un id inexistant ne le compte plus). (2) `S-06` (échelle 0→4) et `S-32` (intégrité/réputation de l'offre) sont **CONSTRUITS** — tranche Root `R-F`, commit `ecdb398`, dérivés de faits existants sans migration ; preuve `docs/nature-way/omni-root-rf-s06-s32-evidence-2026-09-26.md`. Le Seed est **clos comme intention**.
 > **As of:** 2026-09-23
 > **Owner:** Founder (intent) / Nature Way (drafting)
 > **Supersedes (une fois confirmé):** `docs/nature-way/omni-intent-brief-2026-09-02.md`

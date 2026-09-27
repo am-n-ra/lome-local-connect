@@ -278,7 +278,14 @@ if (bad.length) process.exitCode = 1;
 // phrase was actually read on a screen; `code`/`rule` are model constraints that
 // have no screen to render; anything else is honestly UNMEASURED.
 const seed = readFileSync(resolve('docs/nature-way/omni-intent-brief-v2-2026-09-23.md'), 'utf8');
-const seedIds = [...new Set([...seed.matchAll(/S-\d{2}/g)].map((m) => m[0]))].sort();
+// Parse a decision from its STRUCTURAL position only: a table row `| **S-xx** |` or a
+// heading `### S-xx`. Matching every `S-\d{2}` in the file would count a correction note
+// that merely *mentions* a non-existent id - which is exactly what happened here: the fix
+// for the "S-34" miscount reintroduced the string `S-34` in the note explaining that
+// S-34 does not exist, and the old regex counted it as an unmeasured decision.
+const seedIds = [...new Set(
+  [...seed.matchAll(/^\|\s*\*\*(S-\d{2})\*\*|^#+\s*(S-\d{2})\b/gm)].map((m) => m[1] ?? m[2]),
+)].sort();
 const CLASS = {
   code: ['S-02', 'S-15', 'S-23', 'S-26'],           // model constraint, verified in DB/code
   // Deliberately out of V1 scope by the Seed itself — NOT conformant claims.
