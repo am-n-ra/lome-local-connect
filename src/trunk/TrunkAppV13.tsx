@@ -40,6 +40,7 @@ import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, em
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, type ResolvedCurrency } from '../domain/currency';
+import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
 type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity';
@@ -82,22 +83,6 @@ function statusLabel(requestStatus: string): string {
 function money(minor: number, currency: string): string {
   const whole = Number.isInteger(minor / 100);
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency, maximumFractionDigits: whole ? 0 : 2 }).format(minor / 100);
-}
-
-/** Plan price label: canonical USD base + local equivalent ("5 $/mois ≈ 2 500 F").
- *  D-LOC-2 — the local side uses the **user's** resolved currency, never the
- *  hardcoded pilot constant. */
-function planPriceLabel(kind: 'sellerPro' | 'buyerPro', resolved: ResolvedCurrency): string {
-  const usdMinor = OMNI_PLAN_PRICES_USD_MINOR[kind];
-  const localMinor = convertUsdMinorToLocal(usdMinor, resolved.currency);
-  const usd = Intl.NumberFormat('fr-FR', { style: 'currency', currency: OMNI_BASE_CURRENCY, maximumFractionDigits: 0 }).format(usdMinor / 100);
-  return `${usd}/mois${localMinor !== usdMinor ? ` ≈ ${formatAmount(localMinor, resolved)}` : ''}`;
-}
-
-/** Compact local price for buttons/reminders ("≈ 2 500 F"). */
-function localPlanPriceLabel(kind: 'sellerPro' | 'buyerPro', resolved: ResolvedCurrency): string {
-  const localMinor = convertUsdMinorToLocal(OMNI_PLAN_PRICES_USD_MINOR[kind], resolved.currency);
-  return formatAmount(localMinor, resolved);
 }
 
 const LOME = [1.22, 6.13] as const;
@@ -2014,7 +1999,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <p className="tiny muted" style={{ marginTop: 8 }}>Vérification des invitations d’équipe…</p>
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? `${formatAmount(wallet.balanceMinor ?? 0, { ...userCurrency, currency: wallet.currency ?? userCurrency.currency })}` : '—'}</b></div>
+            <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? money(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : '—'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>

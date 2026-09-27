@@ -120,6 +120,30 @@ export function currencyFor(fact?: string | null): ResolvedCurrency {
   return { ...FALLBACK, source: 'offer' };
 }
 
+/**
+ * Formats an amount held in the app's **whole-number minor convention**
+ * (amount × 100), always showing the symbol.
+ *
+ * Two conventions coexist in Omni, deliberately:
+ * - the WALLET family (balance, ledger, credit packs, plan prices) is stored as
+ *   amount × 100, even for a 0-decimal currency like XOF — so 500 000 minor is
+ *   5 000 F;
+ * - OFFER prices are stored in raw local units — so 6 500 is 6 500 F, and
+ *   `formatAmount` (decimals-aware) is the correct one for them.
+ *
+ * Using the wrong formatter is not cosmetic: it showed "500 000 F" for a 5 000 F
+ * plan and "7,20 $" for a 720 F offer (both measured 2026-09-27). Keep the pairing.
+ */
+export function formatScaledAmount(minor: number, resolved: ResolvedCurrency): string {
+  const value = minor / 100;
+  const whole = Number.isInteger(value);
+  const rendered = value.toLocaleString('fr-FR', {
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
+  });
+  return `${rendered} ${resolved.symbol}`;
+}
+
 /** Formats a minor amount in the resolved currency, always showing the symbol (D-LOC-4). */
 export function formatAmount(minor: number, resolved: ResolvedCurrency): string {
   const value = resolved.decimals === 0 ? Math.round(minor) : minor / 100;
