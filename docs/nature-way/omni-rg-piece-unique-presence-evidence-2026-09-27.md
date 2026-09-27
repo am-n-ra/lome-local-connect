@@ -1,6 +1,6 @@
-# R-F — la disponibilité par PRÉSENCE (pièce unique) — Root, 2026-09-27
+# R-G — la disponibilité par PRÉSENCE (pièce unique) — Root, 2026-09-27
 
-> **Tranche :** `R-F` (Root). **Décision fondateur :** « ne me fais pas réfléchir inutilement, tu
+> **Tranche :** `R-G` (Root). **Décision fondateur :** « ne me fais pas réfléchir inutilement, tu
 > connais la finalité de la v1, fais le nécessaire » → option **C** retenue (présence / objet
 > unique), la plus petite qui rend vraie la promesse « offres particulières » du S-07.
 > **Diagnostic amont :** `omni-root-vs-seed-v2-diagnosis-2026-09-27.md`.
@@ -14,6 +14,11 @@
 | Loaded | `nature-way-founder-hq/references/{ecosystem-orchestration-protocol,ecosystem-activation-manifest,founder-hq-board}.md`, `templates/skill-handoff-receipt.md` |
 | Template instantiated | `templates/skill-handoff-receipt.md` (voir §Retour HQ) |
 | Not loaded / reason | `intra-skill-execution-controller.md` — le plan local `NW-PROD-OMNI-01` porte déjà le contrôleur, étendu ici. |
+
+> **Note d'étiquette :** un `R-F` **existe déjà** (`ecdb398`, `S-06`/`S-32` — échelle
+> d'existence et intégrité de l'offre). Ma tranche porte donc **`R-G`** pour ne pas écraser un
+> identifiant livré. Le fond manquant était bien la suite directe de `R-F` : `R-F` a *rendu* le
+> niveau d'existence ; `R-G` rend **vraie** la caractéristique qui le gouverne.
 
 ## 1. Le défaut mesuré (rappel exact, pas une impression)
 
@@ -98,7 +103,27 @@ qu'elle n'est plus là. Corrigé en `allocated >= 1 && reserved < 1`, et le cas 
 `renouvelable = 3`. La contrainte n'a donc **rien** à corriger ; elle n'engage que les écritures
 futures. Une migration ne réécrit pas au passage le sens d'offres qui n'ont jamais déclaré leur nature.
 
-## 4. Ce qui n'est PAS fait (résidu honnête)
+## 4. Vérification que je n'écrase pas du travail livré (2026-09-27)
+
+La mesure a buté sur un fait qui méritait d'être tranché avant de continuer : le board citait un
+`R-F` livré (`ecdb398`, `S-06`/`S-32`) à **664 tests**, alors que la suite en compte **596**.
+
+- **Le board n'était pas périmé :** `ecdb398`, `c6e973b`, `0423fea`, `27a1661`, `85c1669` existent et
+  sont **tous ancêtres de HEAD**. `R-C`, `R-D`, `R-E`, `R-F` et l'alignement app↔maquette sont bien
+  livrés. Ce que ma session précédente avait lu comme « board périmé » était ma propre non-lecture.
+- **L'écart 664 → 596 est expliqué :** le commit **`fed06b0` (V-9')** a supprimé **29 fichiers de
+  tests** (code mort v1 : `src/lib/*.unit.test.ts`, `src/routes/*`, `src/components/omni/*`, les **6
+  tests factices** `toBeDefined()` sur des composants inexistants) et en a ajouté 5. **Perte nette
+  attendue, pas une régression silencieuse.**
+- **La capacité a survécu, elle a été déplacée :** les tests supprimés `transaction-steps` /
+  `transaction-timeline` couvraient des modules v1 également supprimés. Le stepper de confirmation
+  vit désormais dans `BuyerFlowV13.tsx` (les étapes, `:319`) et `transaction-time.ts` (échéance et
+  responsable par étape, FF-6, `:3`). **Le cœur transactionnel n'a pas perdu son rendu.**
+- **Ce qui n'est PAS couvert** : le mapping « état → étapes du stepper » n'a plus de test unitaire
+  propre après V-9' (il est exercé indirectement par la preuve E2E transactionnelle
+  `prove-v2-transaction-lifecycle.mjs`, pas au niveau du stepper). Dette mineure, nommée ici.
+
+## 5. Ce qui n'est PAS fait (résidu honnête)
 
 - **Les 13 offres NULL ne sont pas classées.** Les convertir demanderait une décision par offre
   (un « sac de riz » est-il renouvelable ou une pièce unique ?) — ce n'est pas une migration, c'est

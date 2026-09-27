@@ -1,6 +1,6 @@
 # Founder HQ Board — Omni
 
-**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25**.
+**As of:** **2026-09-27 (UTC)** — **PORTE COURANTE = ROOT (ouverte)** — Species V2 **CLOSE `founder-confirmed` 2026-09-25** · **`R-G` LIVRÉE** (première caractéristique d'offre **vivante** : la pièce unique est une présence) — commit `3753c95`, 596/596 tests.
 
 ## HQ RECONCILIATION — « même plainte, deuxième fois » (2026-09-27) + UNI-MONEY-1
 
@@ -112,6 +112,54 @@
 > 3/4 — la maquette affiche ✓ partout, la réalité non ; cet écart est **rendu visible et explicable**,
 > son arbitrage (maquette ou visuels) remonte au fondateur. Détail :
 > `docs/nature-way/omni-root-rf-s06-s32-evidence-2026-09-26.md`.
+
+## HQ RECONCILIATION — « le fond et la logique qui font de omni omni n'est pas là » (2026-09-27)
+
+> **Verdict fondateur re-mesuré, réponse directe : oui pour l'incohérence du fond, non pour le
+> process.** Le fondateur a raison sur un point précis et je le chiffre : **les caractéristiques
+> d'offre n'ont aucune logique.** Raison sur le second : le process n'a pas été « raté » — **Species
+> V2 est close `founder-confirmed` 2026-09-25** et `R-C`/`R-D`/`R-E`/`R-F` sont **livrés et poussés**
+> (vérifié : `ecdb398`, `c6e973b`, `0423fea`, `27a1661` sont tous ancêtres de HEAD). Ce qui a tourné
+> en rond est **ma lecture**, pas le produit : j'ai cru le board périmé alors qu'il décrivait
+> fidèlement quatre tranches que je n'avais pas lues.
+
+> **Le défaut de fond, nommé et chiffré :** `uniqueness_kind`, `price_kind`, `condition_kind` et
+> `handover_kind` existent en **colonnes**, circulent jusqu'à l'écran, et **aucun code ne branche
+> dessus**. Une offre « pièce unique » portait donc un stock de N, s'affichait « en stock », et son
+> niveau 4 se déduisait d'un décompte absurde pour un objet unique — **les cas fondateur (ordinateur
+> d'occasion, appartement) n'étaient servis par AUCUNE logique.** C'est exactement « le fond qui doit
+> faire de omni omni n'est pas là ».
+
+> ✅ **TRANCHE `R-G` LIVRÉE** (fondateur : « fais le nécessaire, tu connais la finalité de la v1 ») —
+> la première caractéristique **vivante**. Une pièce unique est désormais une **présence** : capacité
+> 1, refus de « 3 pièces uniques identiques », normalisation avant écriture, niveau 4 par présence
+> (présente = transactable, vendue ou retirée = non), surface vendeur « Quantité » → « Présence »,
+> CHECK `063` en défense en profondeur (prouvé sur branche jetable **puis** appliqué au canonique
+> `br-dawn-hill-am5amy22`, registre `fce55080` — **0 ligne réécrite**, 13 offres héritées
+> grandfatherisées). **Un bug réel corrigé au passage** : `updateSellerProductDraft` écrasait les
+> cinq caractéristiques à `null` — modifier une offre la rendait **muette**. **Un bug réel trouvé par
+> falsification dans ma propre formule** : une pièce **retirée** était annoncée réservable. Commit
+> `3753c95`, **596/596 tests**, tsc + 6 gardes verts. Détail :
+> `docs/nature-way/omni-rg-piece-unique-presence-evidence-2026-09-27.md`.
+> ⚠️ **Note :** mon étiquette initiale `R-F` **entrait en collision** avec un `R-F` déjà livré → renommée `R-G`.
+
+> **Réponse à « a-t-on raté le process depuis Species ? » — vérifié, pas supposé :**
+> - **Species : non.** Close `founder-confirmed` (`SP-1…SP-10`), 74 écrans, `27/27`, `NON MESURÉ = 0`.
+> - **Le fond : partiellement oui, et c'est maintenant chiffré** — les 4 caractéristiques d'offre sont
+>   des **déclarations sans logique** (0 usage). `R-G` en a rendu **une** vivante ; `price_kind`,
+>   `condition_kind`, `handover_kind` restent des déclarations. **« S-02 : un vrai à la fois »** — la
+>   liste est écrite, pas promise.
+> - **Les tests 664 → 596 expliqués** : `fed06b0` (V-9') a supprimé 29 fichiers de tests v1 morts et
+>   6 tests **factices** (`toBeDefined()` sur des composants inexistants). Perte attendue ; la
+>   capacité (stepper, timeline) vit dans `BuyerFlowV13.tsx` + `transaction-time.ts`. Dette mineure
+>   nommée : plus de test unitaire propre du mapping état→étapes.
+
+> **Prochaine tranche `R-H` — la caractéristique suivante, et non un élargissement :** rendre
+> **`price_kind = 'negociable'`** vivant (la négociation). C'est la candidate la plus porteuse : elle
+> touche la machine transactionnelle à 10 états, déjà robuste et prouvée, donc elle s'ajoute **sans
+> fragiliser**. **Décision fondateur requise** sur l'ordre : négociation d'abord, ou `condition_kind`
+> / `handover_kind` d'abord ? **Ne pas rouvrir Seed/Species, ne pas élargir.**
+
 >
 > ⚠️ **Cette recommandation a été corrigée trois fois** : le 2026-09-26 à 01:10 elle ordonnait « `R-B`
 > d'abord », alors que son code était livré depuis 00:05 le même jour ; le soir elle listait encore
