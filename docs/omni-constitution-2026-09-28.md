@@ -1,7 +1,7 @@
 # Constitution Omni — pack autonomie (index de synthèse)
 
-> **Statut :** `draft` — **validation fondateur requise** (une revue, puis ce document devient
-> l'index de travail sans présence).
+> **Statut :** `validé fondateur 2026-09-28` (« go c'est ça ») — index de travail sans
+> présence ACTIF. Tranches enchaînées sans aval par pas ; stop sur points réservés §10.
 > **Ce document n'est PAS un master.** C'est un index qui pointe les autorités. En cas de
 > divergence entre une ligne ci-dessous et l'autorité citée, **l'autorité citée prévaut**.
 > Il ne remplace ni le Seed V2, ni le SDM, ni les contrats Root, ni la maquette, ni l'état
@@ -148,6 +148,11 @@ avancée — jamais pour exister ou être vu. **Aucune commission** (biens payé
   propre (16/16 XOF). **Goulot = usage, pas capacité.**
 - **Maturité : `prototype`** (maquette `pilot-ready`, app non). Cap `production-ready` décidé
   2026-09-28 — verdict par preuve, pas par déclaration.
+- **Portée 2026-09-28 (DEC-V2-11) :** plus de staging « launch Lomé de test » — V1 prod-ready
+  avec couverture monde via données cartes par défaut, en unclaimed. Lomé reste premier terrain
+  d'usage (vendeurs/acheteurs réels, démo), pas une phase séparée. A-4 intact (première géographie
+  d'usage) ; boucle E prévoyait déjà la carte mondiale. Implications amplifiées : géocodage
+  (6/206 adresses), fantômes hors zone, D-LOC par marché critique, voix/routage par zone.
 - **État vérifié ce jour :** `check:state` CONSISTENT ; HEAD `d08d888` = origin.
 
 ## 8. Maquette (source : `docs/maquette/omni-species-v2-interactive.html`)
@@ -173,9 +178,10 @@ avancée — jamais pour exister ou être vu. **Aucune commission** (biens payé
 ## 10. Réservé au fondateur + délégation (source : FMC §Frontière + DEC-V2-10)
 
 **Fondateur-gated (bloquant) :** montants/wallet/paiements · données personnelles · migrations
-destructives et patterns disable-trigger · autorité données/sécurité · hors pilote Lomé · prod
-(T-07d) · engagements externes · réouverture Seed/Species · **décisions ouvertes : H1–H4, ordre
-R-I, D-LOC-6/8, essai voix RT-4, application 062 au canonique.**
+destructives et patterns disable-trigger · autorité données/sécurité · activation d'une
+géographie hors données cartes couvertes (le monde couvert est délégué ; MAJ DEC-V2-11, remplace
+« hors pilote Lomé ») · prod (T-07d) · engagements externes · réouverture Seed/Species ·
+**décisions ouvertes : H1–H4, ordre R-I, D-LOC-6/8, essai voix RT-4, application 062 au canonique.**
 **Délégué :** tranches de routine, bugs avec preuve, migrations additives, docs/tests/gardes,
 pushes docs-only. Revue asynchrone par receipts ; stop-and-report sur garde rouge ou incident.
 **Délégation réversible à tout moment**, revue 2026-12-26 ou déclencheur.
