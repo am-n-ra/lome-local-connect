@@ -50,7 +50,8 @@
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `done` | forecast `a05ad9f` + 61 766 créés (9 pays), 385 917 live, 0 doublon, p95 165ms ≤186, T-07d ✅ | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S4b | POP-1c-A-S5 | Root/run (MCP) | S4-bis Maroc/Algérie : forecast avant, dry-run, runs, stop-and-report | S5 + accès DB + GO fondateur | MCP session | `blocked` | forecast `1765155` figé ✅ ; B2/B3 **BLOQUÉS** par la **limite disque Neon 512 Mo** (canonique 522 Mo logiques) — dry-run même 200 lignes refusé | reprendre sans débloquer la capacité | décision capacité |
+| POP-1c-A-S4b | POP-1c-A-S5 | Root/run (MCP) | S4-bis Maroc/Algérie : forecast avant, dry-run, runs, stop-and-report | S5 + accès DB + GO fondateur | MCP session | `suspended` | BLOQUÉ capacité PUIS pivot Togo-only (DEC-V2-27) : forecast `1765155` conservé, rejouable si direction change | reprendre sans décision | pivot Togo-only |
+| POP-1d | POP-1c-A-S4b | Root/data (MCP) | Prune Togo-only : D0 deletes testés, snapshot, D1 census, D2 suppression par lots, D3 vacuum + probe écriture | POP-1c-A-S4b + accès DB | MCP session | `ready` | handoff + counts + taille < 400 Mo + probe PASS | suppression hors prédicat | rapport reçu |
 
 > **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
 > Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
@@ -114,6 +115,7 @@
 | 2026-09-28 | Oui fondateur (« go ») : S4 GARDÉE (rollback décliné, DEC-V2-22), S5 Australe GO (DEC-V2-23) ; handoff S5 activé | S5 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S5 |
 | 2026-09-28 | RELAY-RETOUR S5 Australe réconcilié : forecast figé avant runs (a05ad9f), 61 766 créés (9 pays, 0 doublon, 535 existing 358 intra + 177 canoniques frontière S2/S3), 324 151 → 385 917 live, world tier 375 303, p95 165 ms, prod T-07d ✅, Maroc/Algérie exclus | S5 `done`, acceptation S5 + prochaine sous-vague (Sahel/Ouest-nord ou Maroc-Algérie) en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 | 2026-09-28 | Oui fondateur (« go ») : S5 GARDÉE (rollback décliné, DEC-V2-24), S4-bis Maroc/Algérie GO (DEC-V2-25) ; handoff S4-bis activé | S4-bis `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S4-bis |
+| 2026-09-28 | Oui fondateur (« go bbox pays, stop imports, supprime ») : pivot Togo-only + lazy (DEC-V2-27) ; S4-bis suspendue (forecast conservé) ; POP-1d prune `ready`, handoff écrit | POP-1d `ready` (relais MCP) | `advance` relais MCP | Nature Way | rapport POP-1d |
 | 2026-09-28 | RELAY-RETOUR S4-bis Maroc/Algérie PARTIEL : forecast figé avant runs (1765155 : Maroc 42389/34020, Algérie 43269/25288 ; Sahara occ. exclu motivé ; chev. intra 12 + canonique 72) ✅ ; **B2/B3 BLOQUÉS** — **limite disque projet Neon free_v3 = 512 Mo, canonique déjà à 522 Mo logiques** → toute écriture refusée (« could not extend file »), même 200 lignes sur jetable ; 0 ligne S4-bis écrite, canonique 385 917 intacte, jetable nettoyée | S4-bis `blocked`, **décision capacité requise** (augmenter le plan / élaguer unclaimed / scinder) | `block` capacité infra | Nature Way | décision fondateur capacité |
 
 ## Handoff to Founder HQ
@@ -126,8 +128,7 @@
 - **Écart résiduel :** preuve navigateur authentifiée (acheteur→claim) non exercée (sandbox sans
   session ; contrat claim prouvé unitairement S-18 sur la donnée S5 réelle) · rollbacks planifiés
   non exécutés (vagues saines) · Réunion/Mayotte hors extrait.
-- **Owner :** Nature Way. **Prochaine action :** **décision capacité fondateur** — la limite disque
-  projet Neon (`free_v3`, 512 Mo/branche) est dépassée par la canonique (522 Mo logiques) → toute vague
-  suivante échoue. Options : augmenter le plan / élaguer les `public_import` unclaimed / scinder.
-  Ensuite **re-jouer S4-bis tel quel** (forecast déjà figé à `1765155`). Rollbacks déclinés (vagues gardées).
-  **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
+- **Owner :** Nature Way. **Prochaine action :** relais MCP POP-1d prune Togo-only (GO reçu
+  2026-09-28, handoff activé, DEC-V2-27) — D0 deletes testés d'abord (si bloqués : upgrade Launch),
+  puis census, suppression par lots, vacuum + probe écriture. S4-bis suspendue (pas annulée).
+  **Re-plan :** fait contredit, garde rouge, D0 négatif, ou stop fondateur.
