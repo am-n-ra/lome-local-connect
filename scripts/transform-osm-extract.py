@@ -6,6 +6,13 @@ Filter: shop=* · amenity in a bounded subset · craft=* · office=* ·
 tourism in {hotel, guest_house, hostel}. No further quality pre-filter: the
 delivered classifier (place-intake.ts) makes the pilot/world/quarantine call.
 
+PRE-FILTER (POP-1c-O): the batch route rejects the WHOLE lot with 400 if any item
+has an empty name (http.ts normalizes every item before writing). So this tool
+splits the extract: `<out>` holds ONLY importable points (non-empty name) for the
+route, and `<out>.all.json` holds EVERY matched point so the caller can still
+report the full classifier distribution (pilot/world/quarantine incl. nameless).
+The pre-filter lives in the tooling; the 400 batch-reject stays the API contract.
+
 Output: JSON array of {sourceRef, name, category, address, latitude, longitude}
 (attribution carried alongside by the caller). sourceRef = "<type>/<id>" (stable
 and unique per OSM object) so dedupe on (source_id, source_ref) is replay-safe.
@@ -91,16 +98,22 @@ def main():
     pbf, out_path = sys.argv[1], sys.argv[2]
     handler = Handler()
     handler.apply_file(pbf, locations=True)
+    all_points = handler.out
+    importable = [p for p in all_points if p["name"]]
+    prefiltered = len(all_points) - len(importable)
     by_cat = {}
-    for p in handler.out:
+    for p in importable:
         key = p["category"] or "null"
         by_cat[key] = by_cat.get(key, 0) + 1
     with open(out_path, "w") as fh:
-        json.dump(handler.out, fh)
+        json.dump(importable, fh)
+    with open(out_path + ".all.json", "w") as fh:
+        json.dump(all_points, fh)
     summary = {
-        "total": len(handler.out),
-        "named": sum(1 for p in handler.out if p["name"]),
-        "withAddress": sum(1 for p in handler.out if p["address"]),
+        "totalMatched": len(all_points),
+        "importable": len(importable),
+        "prefilteredEmptyName": prefiltered,
+        "withAddress": sum(1 for p in importable if p["address"]),
         "byCat": by_cat,
     }
     print(json.dumps(summary, indent=2), file=sys.stderr)

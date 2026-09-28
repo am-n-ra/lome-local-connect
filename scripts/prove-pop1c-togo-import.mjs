@@ -7,13 +7,14 @@
 // import per admitted point. The operator-role guard in the repository is exercised
 // for real (a real operator account's auth_user_id is required).
 //
-// Safety: refuses to run on the canonical branch (URL must not contain 'dawn-hill')
-// and requires POP1C_ALLOW=1. Writes ONLY to the URL given.
+// Safety: refuses to run UNLESS POP1C_ALLOW=1. Writes ONLY to the URL given. On the
+// CANONICAL branch the URL contains 'dawn-hill', so a second explicit opt-in
+// (POP1C_ALLOW_CANONICAL=1) is required — a dry-run must never touch canonical by slip.
 //
-// Usage:
-//   POP1C_ALLOW=1 POP1C_DATABASE_URL=<branch> POP1C_OPERATOR_AUTH_USER_ID=<uuid> \
-//   POP1C_PAYLOADS=/tmp/togo-payloads.json [POP1C_LIMIT=100] \
-//   npx tsx scripts/prove-pop1c-togo-import.mjs
+// Usage dry-run : POP1C_ALLOW=1 POP1C_DATABASE_URL=<throwaway>
+// Usage canonique: POP1C_ALLOW=1 POP1C_ALLOW_CANONICAL=1 POP1C_DATABASE_URL=<canonical>
+//   POP1C_OPERATOR_AUTH_USER_ID=<uuid> POP1C_PAYLOADS=<country>.json [POP1C_LIMIT=100]
+//   [POP1C_CONCURRENCY=12] [POP1C_LABEL=ghana]
 import { readFileSync } from 'node:fs';
 import { neon } from '@neondatabase/serverless';
 import { createTrunkRepository } from '../src/server/trunk-repository.ts';
@@ -23,12 +24,13 @@ import { isInsidePilotZone } from '../src/server/routing-adapter.ts';
 const url = process.env.POP1C_DATABASE_URL ?? '';
 const operator = process.env.POP1C_OPERATOR_AUTH_USER_ID ?? '';
 const payloadsPath = process.env.POP1C_PAYLOADS ?? '';
+const label = process.env.POP1C_LABEL ?? 'pop1c';
 if (process.env.POP1C_ALLOW !== '1' || !url.trim() || !operator.trim() || !payloadsPath) {
   console.error('REFUSED: set POP1C_ALLOW=1, POP1C_DATABASE_URL, POP1C_OPERATOR_AUTH_USER_ID, POP1C_PAYLOADS.');
   process.exit(2);
 }
-if (url.includes('dawn-hill')) {
-  console.error('REFUSED: the URL looks like the CANONICAL branch.');
+if (url.includes('dawn-hill') && process.env.POP1C_ALLOW_CANONICAL !== '1') {
+  console.error('REFUSED: the URL looks like the CANONICAL branch. Set POP1C_ALLOW_CANONICAL=1 to write canonically.');
   process.exit(2);
 }
 const limit = process.env.POP1C_LIMIT ? Number(process.env.POP1C_LIMIT) : Infinity;
@@ -81,7 +83,7 @@ async function importOne(item) {
     latitude: item.latitude,
     longitude: item.longitude,
     address: item.address,
-    correlationId: `pop1c-togo-${item.sourceRef.replace('/', '-')}`,
+    correlationId: `pop1c-${label}-${item.sourceRef.replace('/', '-')}`,
     intakeTier: item.intakeTier,
   });
   runIds.add(result.runId);
@@ -103,6 +105,7 @@ latencies.sort((a, b) => a - b);
 const p95 = latencies.length ? latencies[Math.min(latencies.length - 1, Math.floor(latencies.length * 0.95))] : 0;
 
 console.log(JSON.stringify({
+  label,
   input: limited.length,
   rejectedByNormalization,
   admitted: admission.admitted.length,
