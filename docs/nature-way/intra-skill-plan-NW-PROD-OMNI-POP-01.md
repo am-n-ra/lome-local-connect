@@ -48,7 +48,7 @@
 | POP-1c-A-S1 | POP-1c-A | Root/run (MCP) | S1 Ouest-restante : 11 pays, 78 124 créés, 0 doublon | handoff Afrique | MCP session | `done` | dry-run + canonique + p95 186ms + T-07d | rollback planifié non exécuté | rapport reçu |
 | POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `done` | forecast `5fa6341` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `ready` | bloqué sur acceptation S3 (stop-and-report) | lancer sans rapport accepté | GO fondateur requis |
+| POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `in_progress` | S3 acceptée (DEC-V2-20), S4 GO (DEC-V2-21) | enchaînement sans rapport | rapport attendu |
 
 > **S3 Est exécutée 2026-09-28 (MCP, stop-and-report).** 14 extraits Geofabrik (Kenya, Ouganda,
 > Tanzanie, Rwanda, Burundi, Éthiopie, Somalie, Soudan du Sud, Érythrée, Djibouti, Madagascar,
@@ -90,6 +90,7 @@
 | 2026-09-28 | RELAY-RETOUR Afrique-S2 Centrale : forecast `5fa6341` figé avant runs · 8 extraits (incl. Sao Tomé) · 24 617 créés (0 doublon, 52 existing réconciliés 50 intra + 2 canon) · canonique 117 854 → 142 471 · dry-run jetable 0 canonique · p95 chaud 173–177 ≤ 186 · claim S-18 agnostique · prod T-07d · rollback écrit non exécuté | S2 `done`, S3 Est `ready` (bloqué sur acceptation fondateur) | `advance` décisions | Nature Way | mots fondateur |
 | 2026-09-28 | Oui fondateur (« oui et go ») : S1/S2 GARDÉES (rollbacks déclinés, DEC-V2-18), S3 Est GO (DEC-V2-19) ; handoff S3 activé | S3 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S3 |
 | 2026-09-28 | RELAY-RETOUR S3 Est réconcilié : forecast figé avant runs (80fb0b7), 136 526 créés (14 extraits, 0 doublon, 683 existing réconciliés), 278 997 live, p95 169ms, prod T-07d ✅, Réunion+Mayotte exclues (pas d'extrait propre), Soudan/Égypte/Libye/Tunisie → Nord, Malawi/Mozambique/Zambie/Zimbabwe → Australe | S3 `done`, acceptation S3 + S4 Nord en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
+| 2026-09-28 | Oui fondateur (« oui et go ») : S3 GARDÉE (rollback décliné, DEC-V2-20), S4 Nord GO (DEC-V2-21) ; handoff S4 activé | S4 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S4 |
 
 ## Handoff to Founder HQ
 
@@ -100,5 +101,6 @@
   tsc 0 · gardes state/docs verts · canonique **278 997** (… → 142 471 → 278 997).
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
   revue couvrent le passage) · rollbacks S1/S2/S3 planifiés non exécutés (vagues saines) · S4 Nord prête.
-- **Owner :** Nature Way. **Prochaine action :** mots fondateur (S3 gardée ? S4 Nord GO ?) puis
-  handoff MCP S4. **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
+- **Owner :** Nature Way. **Prochaine action :** relais MCP S4 Nord (GO reçu 2026-09-28, handoff
+  activé) — attendre le RELAY-RETOUR S4, puis réconcilier. Rollbacks S1/S2/S3 déclinés (vagues gardées).
+  **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
