@@ -11,7 +11,7 @@
 4. `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-POP-01.md` (POP-1c-O `ready`)
 5. `docs/nature-way/omni-pop1-intake-contract-2026-09-28.md` (§7 : scope, tiers, quarantine)
 6. `docs/decisions/omni-decision-log.md` (DEC-V2-12/13/14 en vigueur)
-7. `docs/founder-hq/mcp-report-2026-09-28-pop1c-togo-import.md` (précédent vague 0 : méthode éprouvée)
+7. `docs/founder-hq/mcp-report-2026-09-28-pop1c-togo.md` (précédent vague 0 : méthode éprouvée)
 8. Ce fichier (tâches O1–O5 + interdits + rapport + prompt retour)
 
 ## 1. Règles (non négociables)
