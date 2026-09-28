@@ -1,7 +1,7 @@
 # MCP Handoff — POP-1c-A S4 Nord : forecast d'abord, sous-vague pays, stop-and-report (2026-09-28)
 
-> **STATUT : EN ATTENTE DES MOTS FONDATEUR** (S3 gardée ? S4 Nord GO ?). Ne pas exécuter sans
-> les deux. Pré-écrit pour ne pas perdre un tour.
+> **STATUT : GO FONDATEUR REÇU 2026-09-28** (« oui et go » — S3 gardée, S4 Nord GO, DEC-V2-20/21).
+> Exécutable immédiatement.
 > **Protocole relais :** HQ a réconcilié S3 ; MCP exécute le DB/Vercel, committe, rapporte,
 > termine par le prompt retour §7. Pull latest d'abord.
 
