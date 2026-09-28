@@ -9,6 +9,7 @@ import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError,
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
+import { classifyIntakePoint } from '../domain/place-intake';
 import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
 import {
   RoutingConfigurationError,
@@ -706,7 +707,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       const skippedOutOfZone = normalized.length - inZone.length;
       const results = [];
       for (const item of inZone) {
-        results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
+        // POP-1a: tier recorded in raw_metadata; admission unchanged (pilot filter above stays the gate).
+        const intakeTier = classifyIntakePoint({ latitude: item.latitude, longitude: item.longitude, name: item.name, address: item.address }, isInsidePilotZone).tier;
+        results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, intakeTier, correlationId }));
       }
       json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone, results } });
       return true;
@@ -736,7 +739,9 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 400, errorBody(correlationId, 'OUT_OF_PILOT_ZONE', 'This facility is outside the Omni pilot zone and cannot be imported.'));
         return true;
       }
-      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, correlationId });
+      // POP-1a: tier recorded in raw_metadata; admission unchanged (guard above stays the gate).
+      const intakeTier = classifyIntakePoint({ latitude, longitude, name, address }, isInsidePilotZone).tier;
+      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, intakeTier, correlationId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }

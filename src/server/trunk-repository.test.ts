@@ -2065,6 +2065,41 @@ describe('field pilot registry Root seam', () => {
     expect(call.queries).toHaveLength(0);
   });
 
+  it('records the intake tier in raw_metadata when provided (POP-1a)', async () => {
+    const queries: string[] = [];
+    const values: unknown[][] = [];
+    let callNumber = 0;
+    const sql = ((strings: TemplateStringsArray, ...vals: unknown[]) => {
+      queries.push(strings.raw.join('¦'));
+      values.push(vals);
+      callNumber += 1;
+      return Promise.resolve(callNumber === 1 ? [{ id: 'account-1' }] : callNumber === 2 ? [{ id: 'source-1' }] : [{ run_id: 'run-1', facility_id: 'facility-1', created: true }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-operator', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market', category: 'Market', latitude: 6.13, longitude: 1.22, address: 'Lomé', intakeTier: 'pilot', correlationId: 'corr-import-tier',
+    })).resolves.toEqual({ runId: 'run-1', facilityId: 'facility-1', sourceRef: 'node/1', created: true, trust: 'unclaimed' });
+    // The raw_metadata JSON is a BOUND value (JSON.stringify at runtime), never literal SQL
+    // text: the stub joins template parts with ¦, so assertions belong on values, not queries.
+    expect(values[2].some((v) => typeof v === 'string' && v.includes('"intake_tier":"pilot"'))).toBe(true);
+  });
+
+  it('writes no intake tier key when absent (backward compatible, POP-1a)', async () => {
+    const values: unknown[][] = [];
+    let callNumber = 0;
+    const sql = ((strings: TemplateStringsArray, ...vals: unknown[]) => {
+      void strings;
+      values.push(vals);
+      callNumber += 1;
+      return Promise.resolve(callNumber === 1 ? [{ id: 'account-1' }] : callNumber === 2 ? [{ id: 'source-1' }] : [{ run_id: 'run-1', facility_id: 'facility-1', created: true }]);
+    }) as unknown as SqlStub;
+    const repository = createTrunkRepository(sql);
+    await expect(repository.createPublicFacilityImport({
+      authUserId: 'auth-operator', provider: 'openstreetmap', attribution: '© OpenStreetMap contributors', sourceRef: 'node/1', name: 'Market', category: 'Market', latitude: 6.13, longitude: 1.22, address: 'Lomé', correlationId: 'corr-import-notier',
+    })).resolves.toEqual({ runId: 'run-1', facilityId: 'facility-1', sourceRef: 'node/1', created: true, trust: 'unclaimed' });
+    expect(values.flat().some((v) => typeof v === 'string' && v.includes('intake_tier'))).toBe(false);
+  });
+
   it('creates a claim draft only from an unowned public facility and returns a safe replay shape', async () => {
     const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', version: 1, created: true }]);
     const repository = createTrunkRepository(call.sql);

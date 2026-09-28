@@ -281,6 +281,9 @@ export interface PublicFacilityImportInput {
   longitude: number;
   address: string | null;
   correlationId: string;
+  // POP-1a: intake tier (place-intake.ts) recorded into raw_metadata. Optional so
+  // historical callers behave exactly as before; admission rules live in http.ts.
+  intakeTier?: string;
 }
 
 export interface PublicFacilityImportResult {
@@ -1418,7 +1421,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           returning f.id
         ), referenced as (
           insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
-          select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null })}::jsonb
+          select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null, ...(input.intakeTier ? { intake_tier: input.intakeTier } : {}) })}::jsonb
           from selected
           on conflict (source_id, source_ref) do update set raw_metadata = excluded.raw_metadata, last_seen_at = now()
           returning facility_id
