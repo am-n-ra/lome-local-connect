@@ -37,10 +37,11 @@
 | ID | Parent | Structural path / phase | Objective | Depends on | Owner | Status | Acceptance / proof | Risk/debt boundary | Re-plan trigger |
 |---|---|---|---|---|---|---|---|---|---|
 | POP-1a-01 | — | Root/inspect | Existant mesuré (import, périmètre, claim, schéma) | DEC-V2-10/11 | Nature Way | `done` | §1 ci-dessous | — | fait contredit |
-| POP-1a-02 | POP-1a-01 | Root/contract | Contrat données écrit | POP-1a-01 | Nature Way | `todo` | contrat + 0 colonne | fetcher automatisé = POP-1b | direction changée |
-| POP-1a-03 | POP-1a-02 | Root/unit | Classifieur pur + tests falsifiés | POP-1a-02 | Nature Way | `todo` | 11 tests verts, rouge neutralisé | seeding monde sans claim = non | prédicat faux |
-| POP-1a-04 | POP-1a-03 | Root/wire | Tier en `raw_metadata`, admission inchangée | POP-1a-03 | Nature Way | `todo` | tests repo + suite + gardes verts | refus Ghana inchangé (défaut connu, POP-1b) | régression |
-| POP-1b | POP-1a-04 | Root/prove (MCP) | Admission monde + dry-run jetable + preuve | POP-1a-04 + accès DB | MCP session | `planned` | handoff + rapport + prompt retour | écritures canoniques = relais seul | DB indisponible |
+| POP-1a-02 | POP-1a-01 | Root/contract | Contrat données écrit | POP-1a-01 | Nature Way | `done` | contrat + §7 amendement POP-1b | fetcher automatisé = POP-1b | direction changée |
+| POP-1a-03 | POP-1a-02 | Root/unit | Classifieur pur + tests falsifiés | POP-1a-02 | Nature Way | `done` | 12 tests verts, rouge neutralisé + restauré | seeding monde sans claim = non | prédicat faux |
+| POP-1a-04 | POP-1a-03 | Root/wire | Tier en `raw_metadata`, admission inchangée | POP-1a-03 | Nature Way | `done` | 2 tests repo falsifiés + suite 621/621 + gardes | refus Ghana inchangé (défaut connu, POP-1b) | régression |
+| POP-1b-code | POP-1a-04 | Root/admit | Admission monde (?scope, quarantine comptée, QUARANTINED) | POP-1a-04 | Nature Way | `done` | 4 tests falsifiés + suite 625/625 + tsc + gardes | route non exercée (tsc+revue) | régression |
+| POP-1b | POP-1b-code | Root/prove (MCP) | Dry-run jetable + preuve canonique + claim spot-check | POP-1b-code + accès DB | MCP session | `ready` | handoff + rapport + prompt retour | écritures canoniques = relais seul | rapport reçu |
 
 ## §1. Inspection (faite, code lu — pas inférée)
 
@@ -65,15 +66,19 @@
 |---|---|---|---|---|---|
 | 2026-09-28 | DEC-V2-10/11 + Constitution validée : monde unclaimed, sans staging pilote | POP-01 créé (ce plan) | `advance` POP-1a | Nature Way | fin POP-1a |
 | 2026-09-28 | POP-1a exécutée : contrat + `place-intake.ts` (8 tests) + câblage tier (2 tests) + suite 621/621 + tsc 0 + 5 gardes verts | POP-1a-02/03/04 `done` ; POP-1b `ready` (relais MCP) | `advance` POP-1b | Nature Way | dry-run jetable |
+| 2026-09-28 | POP-1b code livré ici : `admitIntakeBatch` + `parseIntakeScope` (4 tests falsifiés) + câblage routes + contrat §7 ; suite 625/625, tsc 0, 5 gardes verts ; preuve DB reléguée au relais | POP-1b-code `done`, preuve DB `ready` | `advance` relais MCP | Nature Way | rapport MCP |
 
 ## Handoff to Founder HQ
 
-- **Gate :** Root System — peuplement unclaimed (contrat + classification + stockage du tier).
-- **Statut :** `verified` POP-1a (contrat, 10 tests neufs falsifiés, câblage additif, 0 changement d'admission).
-- **Preuves (2026-09-28) :** `place-intake.test.ts` 8/8 (rouge neutralisé, vert restauré) ·
-  câblage 2/2 (rouge par suppression du spread, vert restauré) · suite **621/621** (604+7+8+2) ·
-  tsc 0 · gardes state/docs/boundary/live-surface(70 fichiers)/coherence verts.
+- **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde).
+- **Statut :** `verified` POP-1a + POP-1b-code (contrat §7, 14 tests neufs falsifiés, câblage additif,
+  défaut pilote préservé, quarantine refusée-comptée dans les deux scopes).
+- **Preuves (2026-09-28) :** `place-intake.test.ts` 12/12 (rouges neutralisés, verts restaurés) ·
+  câblage 2/2 (rouge par suppression du spread, vert restauré) · suite **625/625** (604+7+8+2+4) ·
+  tsc 0 · gardes state/docs/boundary/live-surface/coherence verts.
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
-  revue couvrent le passage) · admission monde = POP-1b · run canonique = POP-1c.
-- **Owner :** Nature Way. **Prochaine action :** handoff MCP POP-1b (admission monde + dry-run
-  jetable + preuve). **Re-plan :** fait contredit, garde rouge, ou décision fondateur sur le volume.
+  revue couvrent le passage) · dry-run jetable + preuve canonique + claim spot-check = relais MCP ·
+  re-vérification hash prod du présent push = relais MCP.
+- **Owner :** Nature Way. **Prochaine action :** handoff MCP POP-1b (voir
+  `docs/founder-hq/mcp-handoff-2026-09-28-pop1b-world-dryrun.md`). **Re-plan :** fait contredit,
+  garde rouge, ou décision fondateur sur le volume.

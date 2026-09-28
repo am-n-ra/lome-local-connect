@@ -1,7 +1,7 @@
 // Unit proof for the POP-1a intake classifier (DEC-V2-10/11).
 // The pilot predicate is injected: these tests pin the tier logic, never a bbox.
 import { describe, expect, it, vi } from 'vitest';
-import { classifyIntakePoint } from './place-intake';
+import { admitIntakeBatch, classifyIntakePoint, parseIntakeScope } from './place-intake';
 
 const PILOT_YES = () => true;
 const PILOT_NO = () => false;
@@ -48,5 +48,45 @@ describe('classifyIntakePoint (POP-1a world population)', () => {
     const spy = vi.fn(() => false);
     classifyIntakePoint({ latitude: 6.131, longitude: 1.221, name: 'X' }, spy);
     expect(spy).toHaveBeenCalledWith({ latitude: 6.131, longitude: 1.221 });
+  });
+});
+
+describe('parseIntakeScope (POP-1b)', () => {
+  it('opens world only on the exact value, defaults to pilot otherwise', () => {
+    expect(parseIntakeScope('world')).toBe('world');
+    expect(parseIntakeScope(undefined)).toBe('pilot');
+    expect(parseIntakeScope(null)).toBe('pilot');
+    expect(parseIntakeScope('')).toBe('pilot');
+    expect(parseIntakeScope('WORLD')).toBe('pilot');
+    expect(parseIntakeScope('pilot')).toBe('pilot');
+  });
+});
+
+describe('admitIntakeBatch (POP-1b scope-aware admission)', () => {
+  const LOME = { sourceRef: 'node/1', name: 'Marché', category: 'Market', address: 'Lomé', latitude: 6.13, longitude: 1.22 };
+  const GHANA = { sourceRef: 'node/2', name: 'Boutique', category: 'Shop', address: 'Accra', latitude: 5.6, longitude: -0.5 };
+  const NULL_ISLAND = { sourceRef: 'node/3', name: 'X', category: null, address: null, latitude: 0, longitude: 0 };
+  const LOME_ZONE = (p: { latitude: number; longitude: number }) => p.latitude === 6.13 && p.longitude === 1.22;
+
+  it('pilot scope preserves the legacy gate: pilot admitted, rest refused and counted', () => {
+    const out = admitIntakeBatch([LOME, GHANA, NULL_ISLAND], 'pilot', LOME_ZONE);
+    expect(out.admitted).toEqual([{ ...LOME, intakeTier: 'pilot' }]);
+    expect(out.skippedOutOfZone).toBe(1);
+    expect(out.skippedQuarantine).toBe(1);
+  });
+
+  it('world scope admits pilot + world with tiers, refuses quarantine counted', () => {
+    const out = admitIntakeBatch([LOME, GHANA, NULL_ISLAND], 'world', LOME_ZONE);
+    expect(out.admitted).toEqual([
+      { ...LOME, intakeTier: 'pilot' },
+      { ...GHANA, intakeTier: 'world' },
+    ]);
+    expect(out.skippedOutOfZone).toBe(0);
+    expect(out.skippedQuarantine).toBe(1);
+  });
+
+  it('carries caller fields through (sourceRef survives for dedupe)', () => {
+    const out = admitIntakeBatch([LOME], 'pilot', PILOT_YES);
+    expect(out.admitted[0].sourceRef).toBe('node/1');
   });
 });

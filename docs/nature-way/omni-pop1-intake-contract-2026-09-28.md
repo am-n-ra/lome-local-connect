@@ -53,3 +53,15 @@ zéro écriture canonique ; puis preuve claim spot-check ; puis rapport + prompt
 
 Fetcheur Overpass/extrait · backfill canonique · enrichissement d'adresses · file de revue
 quarantine · exposition UI des tiers (la fiche n'affiche rien de nouveau) · changement d'admission.
+
+## 7. Amendement POP-1b — admission monde (scope param, quarantine dans les deux scopes)
+
+- **`?scope=world`, défaut `pilot`.** Défaut = gate legacy exacte (seul le pilot admis, reste refusé-compté).
+- **Quarantine refusée-comptée dans les DEUX scopes** (`skippedQuarantine`, même honnêteté que
+  `skippedOutOfZone`). Seul changement de comportement pilote : un placeholder-sans-adresse dans la
+  zone (admis avant, vide et inroutable) est désormais refusé-compté — documenté, pas silencieux.
+- **Réponse batch** : `+ skippedQuarantine` (additif, clients existants insensibles).
+- **Route unitaire** : quarantine → `400 QUARANTINED` + raisons ; monde hors zone en scope monde → admis
+  avec tier ; scope pilote hors zone → `400 OUT_OF_PILOT_ZONE` inchangé.
+- **Preuve** : `admitIntakeBatch`/`parseIntakeScope` unitaires falsifiés (POP-1b) ; câblage route couvert
+  par tsc + revue (pas de harness de route — résidu assumé, preuve DB au relais MCP).

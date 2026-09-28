@@ -9,7 +9,7 @@ import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError,
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
 import type { ClaimEvidenceItem, FacilityType } from '../trunk/types';
-import { classifyIntakePoint } from '../domain/place-intake';
+import { admitIntakeBatch, classifyIntakePoint, parseIntakeScope } from '../domain/place-intake';
 import { verifyFedaPayWebhookSignature } from './fedapay-adapter';
 import {
   RoutingConfigurationError,
@@ -703,15 +703,15 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       // unroutable, placeholder-named supply on the map (see
       // omni-route-supply-data-evidence-2026-09-17.md), so they are refused at
       // the source. The skipped count is returned, never dropped silently.
-      const inZone = normalized.filter((item) => isInsidePilotZone(item));
-      const skippedOutOfZone = normalized.length - inZone.length;
+      // POP-1b: scope-aware admission (?scope=world, default pilot). Quarantine is refused
+      // and counted in both scopes, never published silently. Pilot default = legacy gate.
+      const scope = parseIntakeScope(url.searchParams.get('scope'));
+      const admission = admitIntakeBatch(normalized, scope, isInsidePilotZone);
       const results = [];
-      for (const item of inZone) {
-        // POP-1a: tier recorded in raw_metadata; admission unchanged (pilot filter above stays the gate).
-        const intakeTier = classifyIntakePoint({ latitude: item.latitude, longitude: item.longitude, name: item.name, address: item.address }, isInsidePilotZone).tier;
-        results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, intakeTier, correlationId }));
+      for (const item of admission.admitted) {
+        results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
       }
-      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone, results } });
+      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone: admission.skippedOutOfZone, skippedQuarantine: admission.skippedQuarantine, results } });
       return true;
     }
     if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'operator-import') {
@@ -733,15 +733,19 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates.'));
         return true;
       }
-      // Same perimeter guard as the batch import: refuse supply the pilot
-      // cannot route to, instead of publishing a pin nobody can reach.
-      if (!isInsidePilotZone({ latitude, longitude })) {
+      // POP-1b: scope-aware admission (default pilot = legacy OUT_OF_PILOT_ZONE). Quarantine is
+      // refused with reasons in both scopes, never published silently.
+      const scope = parseIntakeScope(url.searchParams.get('scope'));
+      const verdict = classifyIntakePoint({ latitude, longitude, name, address }, isInsidePilotZone);
+      if (verdict.tier === 'quarantine') {
+        json(res, 400, errorBody(correlationId, 'QUARANTINED', `This place cannot be imported (${verdict.reasons.join(', ')}).`));
+        return true;
+      }
+      if (scope === 'pilot' && verdict.tier !== 'pilot') {
         json(res, 400, errorBody(correlationId, 'OUT_OF_PILOT_ZONE', 'This facility is outside the Omni pilot zone and cannot be imported.'));
         return true;
       }
-      // POP-1a: tier recorded in raw_metadata; admission unchanged (guard above stays the gate).
-      const intakeTier = classifyIntakePoint({ latitude, longitude, name, address }, isInsidePilotZone).tier;
-      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, intakeTier, correlationId });
+      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, intakeTier: verdict.tier, correlationId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }

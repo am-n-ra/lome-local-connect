@@ -46,3 +46,43 @@ export function classifyIntakePoint(point: IntakePoint, isPilotZone: PilotZonePr
   }
   return { tier: 'world', reasons: ['outside-pilot-zone'] };
 }
+
+// POP-1b — scope-aware batch admission (DEC-V2-10/11).
+// 'pilot' (default) preserves the legacy gate exactly: only pilot-tier admitted, everything
+// else refused and counted as out-of-zone — except quarantine, which is refused and counted
+// separately in BOTH scopes (insane/placeholder data can never be honestly published).
+// 'world' admits pilot + world with their tiers; quarantine stays refused-and-counted.
+export type IntakeScope = 'pilot' | 'world';
+
+export interface IntakeAdmission<T extends IntakePoint> {
+  admitted: Array<T & { intakeTier: IntakeTier }>;
+  skippedOutOfZone: number;
+  skippedQuarantine: number;
+}
+
+export function parseIntakeScope(value: unknown): IntakeScope {
+  return value === 'world' ? 'world' : 'pilot';
+}
+
+export function admitIntakeBatch<T extends IntakePoint>(
+  items: T[],
+  scope: IntakeScope,
+  isPilotZone: PilotZonePredicate,
+): IntakeAdmission<T> {
+  const admitted: Array<T & { intakeTier: IntakeTier }> = [];
+  let skippedOutOfZone = 0;
+  let skippedQuarantine = 0;
+  for (const item of items) {
+    const verdict = classifyIntakePoint(item, isPilotZone);
+    if (verdict.tier === 'quarantine') {
+      skippedQuarantine += 1;
+      continue;
+    }
+    if (scope === 'pilot' && verdict.tier !== 'pilot') {
+      skippedOutOfZone += 1;
+      continue;
+    }
+    admitted.push({ ...item, intakeTier: verdict.tier });
+  }
+  return { admitted, skippedOutOfZone, skippedQuarantine };
+}
