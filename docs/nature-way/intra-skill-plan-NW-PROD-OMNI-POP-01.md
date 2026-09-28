@@ -50,6 +50,7 @@
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `done` | forecast `a05ad9f` + 61 766 créés (9 pays), 385 917 live, 0 doublon, p95 165ms ≤186, T-07d ✅ | enchaînement sans rapport | rapport reçu |
+| POP-1c-A-S4b | POP-1c-A-S5 | Root/run (MCP) | S4-bis Maroc/Algérie : forecast avant, dry-run, runs, stop-and-report | S5 + accès DB + GO fondateur | MCP session | `in_progress` | S5 acceptée (DEC-V2-24), S4-bis GO (DEC-V2-25) | enchaînement sans rapport | rapport attendu |
 
 > **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
 > Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
@@ -112,19 +113,18 @@
 | 2026-09-28 | RELAY-RETOUR S4 Nord réconcilié : forecast figé avant runs (6d139ab), 45 154 créés (4 pays, 0 doublon, 18 existing réconciliés 15 S3 + 3 intra), 324 151 live, intake_tier 324 018, p95 60 ms, prod T-07d ✅ | S4 `done`, acceptation S4 + S5 Australe en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 | 2026-09-28 | Oui fondateur (« go ») : S4 GARDÉE (rollback décliné, DEC-V2-22), S5 Australe GO (DEC-V2-23) ; handoff S5 activé | S5 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S5 |
 | 2026-09-28 | RELAY-RETOUR S5 Australe réconcilié : forecast figé avant runs (a05ad9f), 61 766 créés (9 pays, 0 doublon, 535 existing 358 intra + 177 canoniques frontière S2/S3), 324 151 → 385 917 live, world tier 375 303, p95 165 ms, prod T-07d ✅, Maroc/Algérie exclus | S5 `done`, acceptation S5 + prochaine sous-vague (Sahel/Ouest-nord ou Maroc-Algérie) en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
+| 2026-09-28 | Oui fondateur (« go ») : S5 GARDÉE (rollback décliné, DEC-V2-24), S4-bis Maroc/Algérie GO (DEC-V2-25) ; handoff S4-bis activé | S4-bis `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S4-bis |
 
 ## Handoff to Founder HQ
 
 - **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde + runs).
-- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord + S5 Australe (forecast figé
-  avant runs, dry-run, 61 766 créés, 0 doublon, prod T-07d). Acceptation S5 + prochaine sous-vague
-  en attente fondateur.
+- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord + S5 Australe (forecast figé avant runs,
+  dry-run, 61 766 créés, 0 doublon, prod T-07d). S5 acceptée ; S4-bis Maroc/Algérie GO (DEC-V2-25).
 - **Preuves (2026-09-28) :** rapports MCP S1/S2/S3/S4/S5 + réconciliation HQ · suite **625/625** ·
   tsc 0 · gardes state/docs verts · canonique **385 917** (… → 278 997 → 324 151 → 385 917).
-- **Écart résiduel :** preuve naviguateur authentifiée (acheteur→claim) non exercée (sandbox sans
-  session ; contrat claim prouvé unitairement S-18 sur la donnée S5 réelle) · rollbacks S1/S2/S3/S4/S5
-  planifiés non exécutés (vagues saines) · Maroc/Algérie arbitrage séparé · Réunion/Mayotte hors
-  extrait.
-- **Owner :** Nature Way. **Prochaine action :** attendre acceptation S5 + décision fondateur sur la
-  sous-vague suivante (Sahel/Ouest-nord ou Maroc-Algérie). Rollbacks déclinés (vagues gardées).
+- **Écart résiduel :** preuve navigateur authentifiée (acheteur→claim) non exercée (sandbox sans
+  session ; contrat claim prouvé unitairement S-18 sur la donnée S5 réelle) · rollbacks planifiés
+  non exécutés (vagues saines) · Réunion/Mayotte hors extrait.
+- **Owner :** Nature Way. **Prochaine action :** relais MCP S4-bis Maroc/Algérie (GO reçu 2026-09-28,
+  handoff activé) — attendre le RELAY-RETOUR S4-bis, puis réconcilier. Rollbacks déclinés (vagues gardées).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
