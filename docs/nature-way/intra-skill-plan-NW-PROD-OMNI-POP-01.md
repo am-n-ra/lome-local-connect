@@ -49,7 +49,7 @@
 | POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `done` | forecast `5fa6341` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `ready` | bloqué sur acceptation S4 (stop-and-report) | lancer sans rapport accepté | GO fondateur requis |
+| POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `in_progress` | S4 acceptée (DEC-V2-22), S5 GO (DEC-V2-23) | enchaînement sans rapport | rapport attendu |
 
 > **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
 > Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
@@ -100,16 +100,18 @@
 | 2026-09-28 | Oui fondateur (« oui et go ») : S1/S2 GARDÉES (rollbacks déclinés, DEC-V2-18), S3 Est GO (DEC-V2-19) ; handoff S3 activé | S3 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S3 |
 | 2026-09-28 | RELAY-RETOUR S3 Est réconcilié : forecast figé avant runs (80fb0b7), 136 526 créés (14 extraits, 0 doublon, 683 existing réconciliés), 278 997 live, p95 169ms, prod T-07d ✅, Réunion+Mayotte exclues (pas d'extrait propre), Soudan/Égypte/Libye/Tunisie → Nord, Malawi/Mozambique/Zambie/Zimbabwe → Australe | S3 `done`, acceptation S3 + S4 Nord en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 | 2026-09-28 | Oui fondateur (« oui et go ») : S3 GARDÉE (rollback décliné, DEC-V2-20), S4 Nord GO (DEC-V2-21) ; handoff S4 activé | S4 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S4 |
+| 2026-09-28 | RELAY-RETOUR S4 Nord réconcilié : forecast figé avant runs (6d139ab), 45 154 créés (4 pays, 0 doublon, 18 existing réconciliés 15 S3 + 3 intra), 324 151 live, intake_tier 324 018, p95 60 ms, prod T-07d ✅ | S4 `done`, acceptation S4 + S5 Australe en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
+| 2026-09-28 | Oui fondateur (« go ») : S4 GARDÉE (rollback décliné, DEC-V2-22), S5 Australe GO (DEC-V2-23) ; handoff S5 activé | S5 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S5 |
 
 ## Handoff to Founder HQ
 
 - **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde + runs).
-- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est (forecast figé avant runs,
-  dry-run, 136 526 créés, 0 doublon, prod T-07d). Acceptation S3 + S4 Nord en attente fondateur.
-- **Preuves (2026-09-28) :** rapports MCP S1/S2/S3 + réconciliation HQ · suite **625/625** ·
-  tsc 0 · gardes state/docs verts · canonique **278 997** (… → 142 471 → 278 997).
+- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord (forecast figé avant runs,
+  dry-run, 45 154 créés, 0 doublon, prod T-07d). Acceptation S4 + S5 Australe en attente fondateur.
+- **Preuves (2026-09-28) :** rapports MCP S1/S2/S3/S4 + réconciliation HQ · suite **625/625** ·
+  tsc 0 · gardes state/docs verts · canonique **324 151** (… → 278 997 → 324 151).
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
-  revue couvrent le passage) · rollbacks S1/S2/S3 planifiés non exécutés (vagues saines) · S4 Nord prête.
-- **Owner :** Nature Way. **Prochaine action :** relais MCP S4 Nord (GO reçu 2026-09-28, handoff
-  activé) — attendre le RELAY-RETOUR S4, puis réconcilier. Rollbacks S1/S2/S3 déclinés (vagues gardées).
+  revue couvrent le passage) · rollbacks S1/S2/S3/S4 planifiés non exécutés (vagues saines) · S5 prête.
+- **Owner :** Nature Way. **Prochaine action :** relais MCP S5 Australe (GO reçu 2026-09-28, handoff
+  activé) — attendre le RELAY-RETOUR S5, puis réconcilier. Rollbacks déclinés (vagues gardées).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
