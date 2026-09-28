@@ -1405,7 +1405,7 @@ function createTrunkRepository(sql = database()) {
           returning f.id
         ), referenced as (
           insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
-          select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null })}::jsonb
+          select id, ${String(source.id)}::uuid, ${input.sourceRef.trim()}, ${JSON.stringify({ provider: input.provider, name: input.name.trim(), category: input.category?.trim() || null, latitude: input.latitude, longitude: input.longitude, address: input.address?.trim() || null, ...input.intakeTier ? { intake_tier: input.intakeTier } : {} })}::jsonb
           from selected
           on conflict (source_id, source_ref) do update set raw_metadata = excluded.raw_metadata, last_seen_at = now()
           returning facility_id
@@ -6257,6 +6257,51 @@ async function verifyOfferMediaObjects(productId, raw) {
   return verified;
 }
 
+// src/domain/place-intake.ts
+var PLACEHOLDER_NAME = /^\s*unnamed\b/i;
+function classifyIntakePoint(point, isPilotZone) {
+  const { latitude, longitude } = point;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return { tier: "quarantine", reasons: ["insane-coordinates"] };
+  }
+  if (latitude === 0 && longitude === 0) {
+    return { tier: "quarantine", reasons: ["null-island"] };
+  }
+  const name = (point.name ?? "").trim();
+  const address = (point.address ?? "")?.trim() || null;
+  if (!name) {
+    return address ? { tier: "world", reasons: ["nameless-with-address"] } : { tier: "quarantine", reasons: ["nameless"] };
+  }
+  if (PLACEHOLDER_NAME.test(name) && !address) {
+    return { tier: "quarantine", reasons: ["placeholder-no-address"] };
+  }
+  if (isPilotZone({ latitude, longitude })) {
+    return { tier: "pilot", reasons: [] };
+  }
+  return { tier: "world", reasons: ["outside-pilot-zone"] };
+}
+function parseIntakeScope(value) {
+  return value === "world" ? "world" : "pilot";
+}
+function admitIntakeBatch(items, scope, isPilotZone) {
+  const admitted = [];
+  let skippedOutOfZone = 0;
+  let skippedQuarantine = 0;
+  for (const item of items) {
+    const verdict = classifyIntakePoint(item, isPilotZone);
+    if (verdict.tier === "quarantine") {
+      skippedQuarantine += 1;
+      continue;
+    }
+    if (scope === "pilot" && verdict.tier !== "pilot") {
+      skippedOutOfZone += 1;
+      continue;
+    }
+    admitted.push({ ...item, intakeTier: verdict.tier });
+  }
+  return { admitted, skippedOutOfZone, skippedQuarantine };
+}
+
 // src/server/routing-adapter.ts
 var PILOT_ZONE_BOUNDS = { west: 1, south: 5.85, east: 2.45, north: 6.5 };
 var RoutingOutOfZoneError = class extends Error {
@@ -7008,13 +7053,13 @@ async function handleApi(req, res, pathname, url) {
         }
         return { sourceRef, name, category, address, latitude, longitude };
       });
-      const inZone = normalized.filter((item) => isInsidePilotZone(item));
-      const skippedOutOfZone = normalized.length - inZone.length;
+      const scope = parseIntakeScope(url.searchParams.get("scope"));
+      const admission = admitIntakeBatch(normalized, scope, isInsidePilotZone);
       const results = [];
-      for (const item of inZone) {
+      for (const item of admission.admitted) {
         results.push(await repository.createPublicFacilityImport({ authUserId, provider, attribution, ...item, correlationId }));
       }
-      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone, results } });
+      json(res, 200, { ok: true, correlationId, data: { imported: results.length, created: results.filter((result) => result.created).length, existing: results.filter((result) => !result.created).length, skippedOutOfZone: admission.skippedOutOfZone, skippedQuarantine: admission.skippedQuarantine, results } });
       return true;
     }
     if (req.method === "POST" && pathname === "/api/v2/public/facilities" && url.searchParams.get("action") === "operator-import") {
@@ -7036,11 +7081,17 @@ async function handleApi(req, res, pathname, url) {
         json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a bounded OpenStreetMap source, facility name, attribution and valid coordinates."));
         return true;
       }
-      if (!isInsidePilotZone({ latitude, longitude })) {
+      const scope = parseIntakeScope(url.searchParams.get("scope"));
+      const verdict = classifyIntakePoint({ latitude, longitude, name, address }, isInsidePilotZone);
+      if (verdict.tier === "quarantine") {
+        json(res, 400, errorBody(correlationId, "QUARANTINED", `This place cannot be imported (${verdict.reasons.join(", ")}).`));
+        return true;
+      }
+      if (scope === "pilot" && verdict.tier !== "pilot") {
         json(res, 400, errorBody(correlationId, "OUT_OF_PILOT_ZONE", "This facility is outside the Omni pilot zone and cannot be imported."));
         return true;
       }
-      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, correlationId });
+      const result = await repository.createPublicFacilityImport({ authUserId, provider, attribution, sourceRef, name, category, latitude, longitude, address, intakeTier: verdict.tier, correlationId });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }

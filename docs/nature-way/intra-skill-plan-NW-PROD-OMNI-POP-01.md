@@ -67,6 +67,7 @@
 | 2026-09-28 | DEC-V2-10/11 + Constitution validée : monde unclaimed, sans staging pilote | POP-01 créé (ce plan) | `advance` POP-1a | Nature Way | fin POP-1a |
 | 2026-09-28 | POP-1a exécutée : contrat + `place-intake.ts` (8 tests) + câblage tier (2 tests) + suite 621/621 + tsc 0 + 5 gardes verts | POP-1a-02/03/04 `done` ; POP-1b `ready` (relais MCP) | `advance` POP-1b | Nature Way | dry-run jetable |
 | 2026-09-28 | POP-1b code livré ici : `admitIntakeBatch` + `parseIntakeScope` (4 tests falsifiés) + câblage routes + contrat §7 ; suite 625/625, tsc 0, 5 gardes verts ; preuve DB reléguée au relais | POP-1b-code `done`, preuve DB `ready` | `advance` relais MCP | Nature Way | rapport MCP |
+| 2026-09-28 | RELAY-RETOUR MCP réconcilié : prod 890e9e9 T-07d ✅ · dry-run conforme (pilot 4/world 11/quarantine 7, zéro-canonique prouvé, jetable supprimée) · claim agnostique au tier (3 lieux, S-18 intact) · census refresh (44 hors zone vraie bbox — corrige « 21 ») · bundles api/v2 RÉGÉNÉRÉS ici (dette HAUTE close) | POP-1b `done` ; POP-1c `ready` (volume + fetcher à trancher) | `advance` POP-1c | Nature Way | décision VOLUME |
 
 ## Handoff to Founder HQ
 
@@ -79,6 +80,7 @@
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
   revue couvrent le passage) · dry-run jetable + preuve canonique + claim spot-check = relais MCP ·
   re-vérification hash prod du présent push = relais MCP.
-- **Owner :** Nature Way. **Prochaine action :** handoff MCP POP-1b (voir
-  `docs/founder-hq/mcp-handoff-2026-09-28-pop1b-world-dryrun.md`). **Re-plan :** fait contredit,
-  garde rouge, ou décision fondateur sur le volume.
+- **Owner :** Nature Way. **Prochaine action :** POP-1c (run canonique) — bloquée sur
+  **décision VOLUME fondateur** (combien de lieux monde ; les 44 hors zone bornent le périmètre) +
+  spec fetcher. Relais MCP suivant : re-vérification hash prod du présent push + dry-run POP-1c.
+  **Re-plan :** fait contredit, garde rouge, ou décision fondateur sur le volume.
