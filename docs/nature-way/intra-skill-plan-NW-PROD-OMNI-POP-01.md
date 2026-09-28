@@ -44,7 +44,9 @@
 | POP-1b | POP-1b-code | Root/prove (MCP) | Dry-run jetable + preuve canonique + claim spot-check | POP-1b-code + accès DB | MCP session | `done` | rapport 453ec94 + regen 688a0ce | — | rapport reçu |
 | POP-1c | POP-1b | Root/run (MCP) | Backfill monde par vagues, VOLUME décidé (DEC-V2-12) | POP-1b + accès DB | MCP session | `in_progress` | vague 0 DONE + acceptée (DEC-V2-13) ; vague Ouest GO (DEC-V2-14) | stop après chaque vague | rapport reçu |
 | POP-1c-O | POP-1c | Root/run (MCP) | Vague Ouest : Ghana + Bénin + Burkina Faso, pré-filtre, stop-and-report | POP-1c vague 0 | MCP session | `done` | 28 360 créés, 0 doublon, rollback décliné (DEC-V2-15) | stop après chaque vague | rapport reçu |
-| POP-1c-A | POP-1c-O | Root/run (MCP) | Vague Afrique par sous-vagues (DEC-V2-17) | POP-1c-O + accès DB | MCP session | `ready` | handoff + forecast + counts + prompt retour | enchaînement sans rapport | rapport reçu |
+| POP-1c-A | POP-1c-O | Root/run (MCP) | Vague Afrique par sous-vagues (DEC-V2-17) | POP-1c-O + accès DB | MCP session | `in_progress` | S1 Ouest-restante DONE (rapport 2026-09-28) ; acceptation + Centrale en attente | stop après chaque sous-vague | rapport reçu |
+| POP-1c-A-S1 | POP-1c-A | Root/run (MCP) | S1 Ouest-restante : 11 pays, 78 124 créés, 0 doublon | handoff Afrique | MCP session | `done` | dry-run + canonique + p95 186ms + T-07d | rollback planifié non exécuté | rapport reçu |
+| POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `ready` | handoff + forecast + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 
 ## §1. Inspection (faite, code lu — pas inférée)
 
@@ -74,19 +76,16 @@
 | 2026-09-28 | VOLUME tranché MONDE ENTIER (DEC-V2-12) : POP-1c `ready`, vagues Togo → Ouest → Afrique → monde, stop-and-report | handoff MCP POP-1c à écrire | `advance` relais MCP | Nature Way | rapport POP-1c |
 | 2026-09-28 | Blanket-go : Ouest GARDÉE (DEC-V2-15), boîte documentée (DEC-V2-16), Afrique GO par sous-vagues (DEC-V2-17) ; handoff MCP Afrique écrit | POP-1c-A `ready` | `advance` relais MCP | Nature Way | rapport Afrique |
 | 2026-09-28 | Oui ×3 fondateur : vague 0 GARDÉE (rollback décliné, DEC-V2-13), vague Ouest GO Ghana+Bénin+Burkina (DEC-V2-14), batch-reject conservé + pré-filtre outillage | POP-1c-O `ready`, handoff à écrire | `advance` relais MCP | Nature Way | rapport Ouest |
+| 2026-09-28 | RELAY-RETOUR Afrique-S1 réconcilié : 78 124 créés (11 pays), 0 doublon (148 intra + 63 canoniques), 117 854 live, intake_tier 117 721, claim agnostique, p95 186ms, prod T-07d ✅, forecast figé avant runs | S1 `done`, acceptation S1 + S2 Centrale en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 
 ## Handoff to Founder HQ
 
-- **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde).
-- **Statut :** `verified` POP-1a + POP-1b-code (contrat §7, 14 tests neufs falsifiés, câblage additif,
-  défaut pilote préservé, quarantine refusée-comptée dans les deux scopes).
-- **Preuves (2026-09-28) :** `place-intake.test.ts` 12/12 (rouges neutralisés, verts restaurés) ·
-  câblage 2/2 (rouge par suppression du spread, vert restauré) · suite **625/625** (604+7+8+2+4) ·
-  tsc 0 · gardes state/docs/boundary/live-surface/coherence verts.
+- **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde + runs).
+- **Statut :** `verified` POP-1a + POP-1b-code + S1 Ouest-restante (forecast figé avant runs, dry-run,
+  78 124 créés, 0 doublon, prod T-07d). Acceptation S1 + S2 Centrale en attente fondateur.
+- **Preuves (2026-09-28) :** rapport MCP Afrique-S1 + réconciliation HQ · suite **625/625** · tsc 0 ·
+  gardes state/docs verts · canonique **117 854** (206 → 11 370 → 39 730 → 117 854).
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
-  revue couvrent le passage) · dry-run jetable + preuve canonique + claim spot-check = relais MCP ·
-  re-vérification hash prod du présent push = relais MCP.
-- **Owner :** Nature Way. **Prochaine action :** POP-1c-A vague Afrique par sous-vagues
-  (DEC-V2-17) — handoff MCP écrit ce jour : forecast avant, dry-run jetable, runs séparés,
-  stop-and-report par sous-vague. Togo + Ouest acceptés et gardés (DEC-V2-13/15, 39 730 live).
-  **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
+  revue couvrent le passage) · rollback S1 planifié non exécuté (vague saine) · S2 Centrale prête.
+- **Owner :** Nature Way. **Prochaine action :** mots fondateur (S1 gardée ? S2 Centrale GO ?) puis
+  handoff MCP S2. **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
