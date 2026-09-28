@@ -18,3 +18,4 @@ dist/
 
 # POP-1c OSM extract scratch (Geofabrik downloads + transform payloads) — never committed
 .pop1c-s2/
+.pop1c-s3/
