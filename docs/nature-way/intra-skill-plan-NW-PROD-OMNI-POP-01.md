@@ -48,7 +48,16 @@
 | POP-1c-A-S1 | POP-1c-A | Root/run (MCP) | S1 Ouest-restante : 11 pays, 78 124 créés, 0 doublon | handoff Afrique | MCP session | `done` | dry-run + canonique + p95 186ms + T-07d | rollback planifié non exécuté | rapport reçu |
 | POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `done` | forecast `5fa6341` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `in_progress` | S3 acceptée (DEC-V2-20), S4 GO (DEC-V2-21) | enchaînement sans rapport | rapport attendu |
+| POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
+| POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `ready` | bloqué sur acceptation S4 (stop-and-report) | lancer sans rapport accepté | GO fondateur requis |
+
+> **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
+> Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
+> 0 quarantaine dans les runs.** Canonique **278 997 → 324 151** ; 3 revendiquées intactes ;
+> p50 55 / p95 60 ms (N=120, ≤ 186) ; registre 044→064 sans trou. Rollback écrit, non exécuté.
+> **Maroc/Algérie** ne sont nommés dans aucune sous-vague → signalés (décision fondateur).
+> **Sous-vague Australe (S5) NON lancée** — attend rapport accepté. Rapport :
+> `docs/founder-hq/mcp-report-2026-09-28-pop1c-afrique-s4-nord.md` ; forecast `6d139ab`.
 
 > **S3 Est exécutée 2026-09-28 (MCP, stop-and-report).** 14 extraits Geofabrik (Kenya, Ouganda,
 > Tanzanie, Rwanda, Burundi, Éthiopie, Somalie, Soudan du Sud, Érythrée, Djibouti, Madagascar,
