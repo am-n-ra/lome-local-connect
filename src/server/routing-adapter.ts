@@ -22,9 +22,13 @@
  * explicitly labelled straight line.
  */
 
-/** Pilot zone. Every Omni facility today sits inside this box (see
- * `omni-route-supply-data-evidence-2026-09-17.md`), minus 17 imported points
- * that fall in Ghana and are refused rather than routed to. */
+/** Coverage box (historical name kept on purpose: the `pilot`/`world` tier vocabulary is
+ * stored data and referenced by tests — renaming would churn without behavior gain).
+ * Since DEC-V2-11 the world is populated: inside → tier `pilot`, outside with sane data →
+ * tier `world` (visible unclaimed, S-05), junk → `quarantine` (refused-and-counted). The tier
+ * grants NO rights (S-05/S-18/S-30 verified); first usage ground stays Lomé. Revisit only if
+ * the tier ever gains an effect (rights, price, routing) — explicit trigger (DEC-V2-16).
+ * See `docs/nature-way/omni-pop1-intake-contract-2026-09-28.md` §7. */
 export const PILOT_ZONE_BOUNDS = { west: 1.0, south: 5.85, east: 2.45, north: 6.5 } as const;
 
 export type RoutePoint = { latitude: number; longitude: number };
