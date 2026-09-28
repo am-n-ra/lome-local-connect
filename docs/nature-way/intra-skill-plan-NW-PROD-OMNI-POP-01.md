@@ -41,7 +41,8 @@
 | POP-1a-03 | POP-1a-02 | Root/unit | Classifieur pur + tests falsifiés | POP-1a-02 | Nature Way | `done` | 12 tests verts, rouge neutralisé + restauré | seeding monde sans claim = non | prédicat faux |
 | POP-1a-04 | POP-1a-03 | Root/wire | Tier en `raw_metadata`, admission inchangée | POP-1a-03 | Nature Way | `done` | 2 tests repo falsifiés + suite 621/621 + gardes | refus Ghana inchangé (défaut connu, POP-1b) | régression |
 | POP-1b-code | POP-1a-04 | Root/admit | Admission monde (?scope, quarantine comptée, QUARANTINED) | POP-1a-04 | Nature Way | `done` | 4 tests falsifiés + suite 625/625 + tsc + gardes | route non exercée (tsc+revue) | régression |
-| POP-1b | POP-1b-code | Root/prove (MCP) | Dry-run jetable + preuve canonique + claim spot-check | POP-1b-code + accès DB | MCP session | `ready` | handoff + rapport + prompt retour | écritures canoniques = relais seul | rapport reçu |
+| POP-1b | POP-1b-code | Root/prove (MCP) | Dry-run jetable + preuve canonique + claim spot-check | POP-1b-code + accès DB | MCP session | `done` | rapport 453ec94 + regen 688a0ce | — | rapport reçu |
+| POP-1c | POP-1b | Root/run (MCP) | Backfill monde par vagues, VOLUME décidé (DEC-V2-12) | POP-1b + accès DB | MCP session | `ready` | handoff + counts par vague + prompt retour | volume sans mesure | rapport reçu |
 
 ## §1. Inspection (faite, code lu — pas inférée)
 
@@ -68,6 +69,7 @@
 | 2026-09-28 | POP-1a exécutée : contrat + `place-intake.ts` (8 tests) + câblage tier (2 tests) + suite 621/621 + tsc 0 + 5 gardes verts | POP-1a-02/03/04 `done` ; POP-1b `ready` (relais MCP) | `advance` POP-1b | Nature Way | dry-run jetable |
 | 2026-09-28 | POP-1b code livré ici : `admitIntakeBatch` + `parseIntakeScope` (4 tests falsifiés) + câblage routes + contrat §7 ; suite 625/625, tsc 0, 5 gardes verts ; preuve DB reléguée au relais | POP-1b-code `done`, preuve DB `ready` | `advance` relais MCP | Nature Way | rapport MCP |
 | 2026-09-28 | RELAY-RETOUR MCP réconcilié : prod 890e9e9 T-07d ✅ · dry-run conforme (pilot 4/world 11/quarantine 7, zéro-canonique prouvé, jetable supprimée) · claim agnostique au tier (3 lieux, S-18 intact) · census refresh (44 hors zone vraie bbox — corrige « 21 ») · bundles api/v2 RÉGÉNÉRÉS ici (dette HAUTE close) | POP-1b `done` ; POP-1c `ready` (volume + fetcher à trancher) | `advance` POP-1c | Nature Way | décision VOLUME |
+| 2026-09-28 | VOLUME tranché MONDE ENTIER (DEC-V2-12) : POP-1c `ready`, vagues Togo → Ouest → Afrique → monde, stop-and-report | handoff MCP POP-1c à écrire | `advance` relais MCP | Nature Way | rapport POP-1c |
 
 ## Handoff to Founder HQ
 
@@ -80,7 +82,7 @@
 - **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
   revue couvrent le passage) · dry-run jetable + preuve canonique + claim spot-check = relais MCP ·
   re-vérification hash prod du présent push = relais MCP.
-- **Owner :** Nature Way. **Prochaine action :** POP-1c (run canonique) — bloquée sur
-  **décision VOLUME fondateur** (combien de lieux monde ; les 44 hors zone bornent le périmètre) +
-  spec fetcher. Relais MCP suivant : re-vérification hash prod du présent push + dry-run POP-1c.
-  **Re-plan :** fait contredit, garde rouge, ou décision fondateur sur le volume.
+- **Owner :** Nature Way. **Prochaine action :** POP-1c (run canonique par vagues, VOLUME monde
+  entier décidé DEC-V2-12, extrait préparé) — handoff MCP écrit ce jour. Relais MCP : re-vérification
+  hash prod + dry-run jetable par vague + run Togo + stop-and-report.
+  **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une vague.
