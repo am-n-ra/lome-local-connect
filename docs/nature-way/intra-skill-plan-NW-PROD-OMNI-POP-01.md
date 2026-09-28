@@ -49,15 +49,24 @@
 | POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `done` | forecast `5fa6341` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `in_progress` | S4 acceptée (DEC-V2-22), S5 GO (DEC-V2-23) | enchaînement sans rapport | rapport attendu |
+| POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `done` | forecast `a05ad9f` + 61 766 créés (9 pays), 385 917 live, 0 doublon, p95 165ms ≤186, T-07d ✅ | enchaînement sans rapport | rapport reçu |
 
 > **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
 > Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
 > 0 quarantaine dans les runs.** Canonique **278 997 → 324 151** ; 3 revendiquées intactes ;
 > p50 55 / p95 60 ms (N=120, ≤ 186) ; registre 044→064 sans trou. Rollback écrit, non exécuté.
 > **Maroc/Algérie** ne sont nommés dans aucune sous-vague → signalés (décision fondateur).
-> **Sous-vague Australe (S5) NON lancée** — attend rapport accepté. Rapport :
-> `docs/founder-hq/mcp-report-2026-09-28-pop1c-afrique-s4-nord.md` ; forecast `6d139ab`.
+> Rapport : `docs/founder-hq/mcp-report-2026-09-28-pop1c-afrique-s4-nord.md` ; forecast `6d139ab`.
+
+> **S5 Australe exécutée 2026-09-28 (MCP, stop-and-report).** 9 extraits Geofabrik (Malawi, Mozambique,
+> Zambie, Zimbabwe **+ Angola, Namibie, Botswana, Afrique-du-Sud+Lesotho, Eswatini**). Forecast figé
+> avant runs (`a05ad9f`) : 73 173 matched / 62 301 importables / 10 872 pré-filtrés ; tiers pilot 0 /
+> world 63 480 / quarantine 9 693. **61 766 créés / 535 existants (358 intra-S5 + 177 canoniques
+> frontière S2/S3) / 0 doublon / 0 quarantaine.** Canonique **324 151 → 385 917** ; world tier
+> 313 537 → 375 303 ; 16 produits + 3 entités + 3 revendiquées intacts ; `max_created_at`
+> 16:11→17:28Z. p95 165 ms ≤ 186 ms. Dry-run jetable (pic 385 917, zéro canonique prouvé) supprimée.
+> S-18 spot-check PASS sur nœud S5 réel. Rollback écrit, non exécuté. **Maroc/Algérie EXCLUS**.
+> Rapport : `docs/founder-hq/mcp-report-2026-09-28-pop1c-afrique-s5-australe.md`.
 
 > **S3 Est exécutée 2026-09-28 (MCP, stop-and-report).** 14 extraits Geofabrik (Kenya, Ouganda,
 > Tanzanie, Rwanda, Burundi, Éthiopie, Somalie, Soudan du Sud, Érythrée, Djibouti, Madagascar,
@@ -102,16 +111,20 @@
 | 2026-09-28 | Oui fondateur (« oui et go ») : S3 GARDÉE (rollback décliné, DEC-V2-20), S4 Nord GO (DEC-V2-21) ; handoff S4 activé | S4 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S4 |
 | 2026-09-28 | RELAY-RETOUR S4 Nord réconcilié : forecast figé avant runs (6d139ab), 45 154 créés (4 pays, 0 doublon, 18 existing réconciliés 15 S3 + 3 intra), 324 151 live, intake_tier 324 018, p95 60 ms, prod T-07d ✅ | S4 `done`, acceptation S4 + S5 Australe en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 | 2026-09-28 | Oui fondateur (« go ») : S4 GARDÉE (rollback décliné, DEC-V2-22), S5 Australe GO (DEC-V2-23) ; handoff S5 activé | S5 `in_progress` (relais MCP) | `advance` relais MCP | Nature Way | rapport S5 |
+| 2026-09-28 | RELAY-RETOUR S5 Australe réconcilié : forecast figé avant runs (a05ad9f), 61 766 créés (9 pays, 0 doublon, 535 existing 358 intra + 177 canoniques frontière S2/S3), 324 151 → 385 917 live, world tier 375 303, p95 165 ms, prod T-07d ✅, Maroc/Algérie exclus | S5 `done`, acceptation S5 + prochaine sous-vague (Sahel/Ouest-nord ou Maroc-Algérie) en attente fondateur | `advance` décisions | Nature Way | mots fondateur |
 
 ## Handoff to Founder HQ
 
 - **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde + runs).
-- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord (forecast figé avant runs,
-  dry-run, 45 154 créés, 0 doublon, prod T-07d). Acceptation S4 + S5 Australe en attente fondateur.
-- **Preuves (2026-09-28) :** rapports MCP S1/S2/S3/S4 + réconciliation HQ · suite **625/625** ·
-  tsc 0 · gardes state/docs verts · canonique **324 151** (… → 278 997 → 324 151).
-- **Écart résiduel :** preuve route (http → repo) non exercée (aucun harness de route import ; tsc +
-  revue couvrent le passage) · rollbacks S1/S2/S3/S4 planifiés non exécutés (vagues saines) · S5 prête.
-- **Owner :** Nature Way. **Prochaine action :** relais MCP S5 Australe (GO reçu 2026-09-28, handoff
-  activé) — attendre le RELAY-RETOUR S5, puis réconcilier. Rollbacks déclinés (vagues gardées).
+- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord + S5 Australe (forecast figé
+  avant runs, dry-run, 61 766 créés, 0 doublon, prod T-07d). Acceptation S5 + prochaine sous-vague
+  en attente fondateur.
+- **Preuves (2026-09-28) :** rapports MCP S1/S2/S3/S4/S5 + réconciliation HQ · suite **625/625** ·
+  tsc 0 · gardes state/docs verts · canonique **385 917** (… → 278 997 → 324 151 → 385 917).
+- **Écart résiduel :** preuve naviguateur authentifiée (acheteur→claim) non exercée (sandbox sans
+  session ; contrat claim prouvé unitairement S-18 sur la donnée S5 réelle) · rollbacks S1/S2/S3/S4/S5
+  planifiés non exécutés (vagues saines) · Maroc/Algérie arbitrage séparé · Réunion/Mayotte hors
+  extrait.
+- **Owner :** Nature Way. **Prochaine action :** attendre acceptation S5 + décision fondateur sur la
+  sous-vague suivante (Sahel/Ouest-nord ou Maroc-Algérie). Rollbacks déclinés (vagues gardées).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur après une sous-vague.
