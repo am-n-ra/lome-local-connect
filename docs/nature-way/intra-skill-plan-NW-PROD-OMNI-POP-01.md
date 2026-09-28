@@ -47,7 +47,16 @@
 | POP-1c-A | POP-1c-O | Root/run (MCP) | Vague Afrique par sous-vagues (DEC-V2-17) | POP-1c-O + accès DB | MCP session | `in_progress` | S1 Ouest-restante DONE (rapport 2026-09-28) ; acceptation + Centrale en attente | stop après chaque sous-vague | rapport reçu |
 | POP-1c-A-S1 | POP-1c-A | Root/run (MCP) | S1 Ouest-restante : 11 pays, 78 124 créés, 0 doublon | handoff Afrique | MCP session | `done` | dry-run + canonique + p95 186ms + T-07d | rollback planifié non exécuté | rapport reçu |
 | POP-1c-A-S2 | POP-1c-A-S1 | Root/run (MCP) | S2 Centrale : forecast avant, dry-run, runs, stop-and-report | S1 + accès DB | MCP session | `done` | forecast `5fa6341` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
-| POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `in_progress` | S1/S2 acceptées (DEC-V2-18), S3 GO (DEC-V2-19) | enchaînement sans rapport | rapport attendu |
+| POP-1c-A-S3 | POP-1c-A-S2 | Root/run (MCP) | S3 Est : forecast avant, dry-run, runs, stop-and-report | S2 + accès DB + GO fondateur | MCP session | `done` | forecast `80fb0b7` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
+| POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `ready` | bloqué sur acceptation S3 (stop-and-report) | lancer sans rapport accepté | GO fondateur requis |
+
+> **S3 Est exécutée 2026-09-28 (MCP, stop-and-report).** 14 extraits Geofabrik (Kenya, Ouganda,
+> Tanzanie, Rwanda, Burundi, Éthiopie, Somalie, Soudan du Sud, Érythrée, Djibouti, Madagascar,
+> Maurice, Comores, Seychelles). **136 526 créés / 683 existants / 0 doublon** ; canonique
+> **142 471 → 278 997** ; 3 revendiquées intactes ; p95 169 ms ≤ 186 ms ; registre 044→064 sans trou.
+> Rollback écrit, non exécuté. **Réunion/Mayotte exclus** (aucun extrait propre). **Sous-vague Nord (S4)
+> NON lancée** — attend rapport accepté. Rapport :
+> `docs/founder-hq/mcp-report-2026-09-28-pop1c-afrique-s3-est.md` ; forecast `80fb0b7`.
 
 ## §1. Inspection (faite, code lu — pas inférée)
 
