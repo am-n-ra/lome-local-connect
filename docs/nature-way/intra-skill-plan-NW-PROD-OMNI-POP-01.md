@@ -51,7 +51,7 @@
 | POP-1c-A-S4 | POP-1c-A-S3 | Root/run (MCP) | S4 Nord : forecast avant, dry-run, runs, stop-and-report | S3 + accès DB + GO fondateur | MCP session | `done` | forecast `6d139ab` + rapport + counts + prompt retour | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S5 | POP-1c-A-S4 | Root/run (MCP) | S5 Australe : forecast avant, dry-run, runs, stop-and-report | S4 + accès DB + GO fondateur | MCP session | `done` | forecast `a05ad9f` + 61 766 créés (9 pays), 385 917 live, 0 doublon, p95 165ms ≤186, T-07d ✅ | enchaînement sans rapport | rapport reçu |
 | POP-1c-A-S4b | POP-1c-A-S5 | Root/run (MCP) | S4-bis Maroc/Algérie : forecast avant, dry-run, runs, stop-and-report | S5 + accès DB + GO fondateur | MCP session | `suspended` | BLOQUÉ capacité PUIS pivot Togo-only (DEC-V2-27) : forecast `1765155` conservé, rejouable si direction change | reprendre sans décision | pivot Togo-only |
-| POP-1d | POP-1c-A-S4b | Root/data (MCP) | Prune Togo-only : D0 deletes testés, snapshot, D1 census, D2 suppression par lots, D3 vacuum + probe écriture | POP-1c-A-S4b + accès DB | MCP session | `ready` | handoff + counts + taille < 400 Mo + probe PASS | suppression hors prédicat | rapport reçu |
+| POP-1d | POP-1c-A-S4b | Root/data (MCP) | Prune Togo-only : D0 deletes testés, snapshot, D1 census, D2 suppression par lots, D3 vacuum + probe écriture | POP-1c-A-S4b + accès DB | MCP session | `done` | D0 DELETE passe · 372 173 supprimées (13 744 restantes) · db 301 Mo < 400 · probe écriture PASS (50 000 rollback) · claim S-18 PASS · prod T-07d ✅ · snapshot non-root refusé (rétention 6 h) | suppression hors prédicat | rapport POP-1d + DEC-V2-28 |
 
 > **S4 Nord exécutée 2026-09-28 (MCP, stop-and-report).** 4 extraits Geofabrik (Soudan, Égypte, Libye,
 > Tunisie). **45 154 créés / 18 existants (15 canoniques S3 frontière + 3 intra-S4) / 0 doublon /
@@ -128,7 +128,11 @@
 - **Écart résiduel :** preuve navigateur authentifiée (acheteur→claim) non exercée (sandbox sans
   session ; contrat claim prouvé unitairement S-18 sur la donnée S5 réelle) · rollbacks planifiés
   non exécutés (vagues saines) · Réunion/Mayotte hors extrait.
-- **Owner :** Nature Way. **Prochaine action :** relais MCP POP-1d prune Togo-only (GO reçu
-  2026-09-28, handoff activé, DEC-V2-27) — D0 deletes testés d'abord (si bloqués : upgrade Launch),
-  puis census, suppression par lots, vacuum + probe écriture. S4-bis suspendue (pas annulée).
-  **Re-plan :** fait contredit, garde rouge, D0 négatif, ou stop fondateur.
+- **Owner :** Nature Way. **Prochaine action :** POP-1d **exécutée** (2026-09-28, DEC-V2-28) —
+  D0 DELETE passe, census fait, **372 173 supprimées** (canonique **13 744** = 3 owned + 13 741
+  Togo-unclaimed), `VACUUM` fait, db **301 Mo < 400**, **probe écriture PASS**, claim S-18 PASS,
+  prod T-07d ✅. **Attendre** l'expiration de l'historique Neon (~6 h) puis **S4-bis replay**
+  (forecast `1765155` conservé) **dans le périmètre bbox pays**, ou prochaine sous-vague gouvernée.
+  **Ne pas relancer l'import eager monde.** **Gap à décider :** index permanent
+  `v2_facility_source_refs(facility_id)` (moyen).
+  **Re-plan :** fait contredit, garde rouge, ou stop fondateur.
