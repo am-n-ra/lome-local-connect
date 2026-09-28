@@ -15,3 +15,6 @@ dist/
 
 # Agent scratch output (render dumps, temp JSON)
 .agent_tmp/
+
+# POP-1c OSM extract scratch (Geofabrik downloads + transform payloads) — never committed
+.pop1c-s2/
