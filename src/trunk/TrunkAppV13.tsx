@@ -7,6 +7,7 @@ import {
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
+  claimFacilityByOsmRef,
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   cancelAvailabilityRequest,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
@@ -23,6 +24,7 @@ import type {
 } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
 import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
+import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -45,7 +47,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -286,11 +288,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [claimSubmitError, setClaimSubmitError] = useState('');
   const [claimActionState, setClaimActionState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [claimActionError, setClaimActionError] = useState('');
+// Tile-tap claim (DEC-V2-30): a tap on bare map resolves the OSM reference through one
+// user-triggered reverse lookup, then joins the proven claim flow (draft → claim sheet).
+  const [tileTap, setTileTap] = useState<TileTapPoint | null>(null);
+  const [tileResolveState, setTileResolveState] = useState<'idle' | 'loading' | 'error' | 'ready'>('idle');
+  const [tileResolveError, setTileResolveError] = useState('');
+  const [tileResolved, setTileResolved] = useState<ResolvedTilePlace | null>(null);
+  const [tileName, setTileName] = useState('');
+  const [tileClaimState, setTileClaimState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [tileClaimError, setTileClaimError] = useState('');
   const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1105,6 +1116,55 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth]);
 
+  const handleTileTap = useCallback(async (tap: TileTapPoint) => {
+    setTileTap(tap); setTileResolved(null); setTileName('');
+    setTileClaimState('idle'); setTileClaimError('');
+    setTileResolveState('loading'); setTileResolveError('');
+    setSheet('tile-place');
+    const resolved = await resolveTilePlace(tap);
+    if (!resolved.ok) { setTileResolveState('error'); setTileResolveError(resolved.error); return; }
+    setTileResolved(resolved.data);
+    setTileName(resolved.data.name ?? tap.hintName ?? '');
+    setTileResolveState('ready');
+  }, []);
+
+  const claimTilePlace = useCallback(async () => {
+    if (!tileResolved) return;
+    const name = tileName.trim();
+    if (name.length < 1 || name.length > 180) {
+      setTileClaimState('error');
+      setTileClaimError('Nommez ce lieu (1 à 180 caractères).');
+      return;
+    }
+    const token = await requireAuth();
+    if (!token) return;
+    setTileClaimState('loading'); setTileClaimError('');
+    try {
+      const draft = await claimFacilityByOsmRef({
+        token, osmType: tileResolved.osmType, osmId: tileResolved.osmId, name,
+        category: tileResolved.category, address: tileResolved.address,
+        latitude: tileResolved.latitude, longitude: tileResolved.longitude,
+      });
+      if (!draft.ok || !draft.data) {
+        setTileClaimState('error');
+        setTileClaimError(draft.error?.message ?? 'Ce lieu ne peut pas être revendiqué.');
+        return;
+      }
+      const storage = await getClaimStorageStatus({ facilityId: draft.data.facilityId, token }).catch(() => null);
+      const detail = await getFacilityDetail(draft.data.facilityId).catch(() => null);
+      setClaimResult(draft.data);
+      setClaimStorage(storage?.ok === true ? Boolean(storage.data?.available) : null);
+      setClaimEvidence([]); setClaimUploadState('idle'); setClaimSubmitState('idle'); setClaimActionState('idle'); setClaimState('success');
+      if (detail?.ok && detail.data) { setSelectedFacility(detail.data); setSelectedId(detail.data.id); }
+      setSheet('claim');
+      // The claimed place is new to the map: reload the window so its pin appears.
+      if (isUsableViewportBounds(bounds)) void loadPublic(bounds).catch(() => undefined);
+    } catch (caught) {
+      setTileClaimState('error');
+      setTileClaimError(caught instanceof Error ? caught.message : 'Ce lieu ne peut pas être revendiqué.');
+    }
+  }, [tileResolved, tileName, requireAuth, bounds, loadPublic]);
+
   const uploadClaimEvidence = useCallback(async (kind: EvidenceKind, file: File) => {
     if (!claimResult || claimResult.state === 'submitted') return;
     setClaimUploadState('uploading'); setClaimUploadProgress(0); setClaimUploadError('');
@@ -1265,6 +1325,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'entity') { setSheet('results'); return; }
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
+      if (sheet === 'tile-place') { setSheet('none'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
@@ -1404,6 +1465,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             selectedId={selectedId}
             onSelect={handlePinSelect}
             onBoundsChange={setBounds}
+            onTileTap={handleTileTap}
             onRevealStateChange={handleRevealStateChange}
             revealKey={revealKey}
             focusTarget={focusTarget}
@@ -2409,6 +2471,41 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
             </div>
           ))}
+        </section>
+      )}
+      {sheet === 'tile-place' && tileTap && (
+        <section className="sheet h-mid" data-sheet="tile-place" role="region" aria-label="Lieu sur la carte">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Lieu sur la carte</div><h1>{tileName.trim() || tileTap.hintName || 'Lieu sans nom'}</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('none')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          {tileResolveState === 'loading' && <p className="sub" role="status">Repérage du lieu…</p>}
+          {tileResolveState === 'error' && (
+            <div className="cardbox" role="alert">
+              <p className="sub">{tileResolveError}</p>
+              <button className="btn ghost sm" type="button" onClick={() => void handleTileTap(tileTap)}>Réessayer</button>
+            </div>
+          )}
+          {tileResolveState === 'ready' && tileResolved && (
+            <div>
+              <div className="cardbox">
+                <div className="kv"><span>Niveau</span><b>Niv. 0 · Non revendiquée</b></div>
+                <div className="kv"><span>Géré par</span><b>aucune entité</b></div>
+                {tileResolved.category && <div className="kv"><span>Catégorie</span><b>{tileResolved.category}</b></div>}
+                {tileResolved.address && <div className="kv"><span>Adresse</span><b>{tileResolved.address}</b></div>}
+              </div>
+              <p className="sub">Ce qu’Omni ne peut pas dire sur ce lieu : disponibilité, prix, horaires.</p>
+              <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>Nom du lieu</label>
+              <input className="input" type="text" value={tileName} maxLength={180} onChange={(event) => setTileName(event.currentTarget.value)} placeholder="Nommez ce lieu" aria-label="Nom du lieu" style={{ width: '100%' }} />
+              {tileClaimError && <p className="sub" role="alert">{tileClaimError}</p>}
+              <button className="btn" type="button" disabled={tileClaimState === 'loading' || tileName.trim().length < 1} style={{ marginTop: 10 }} onClick={() => void claimTilePlace()}>{tileClaimState === 'loading' ? 'Revendication…' : 'Revendiquer ce lieu'} <ArrowRight size={15} /></button>
+              <div className="btnrow" style={{ marginTop: 8 }}>
+                <button className="btn ghost" type="button" onClick={() => { setSellerCreateIntent(true); setSheet('seller'); }}>Créer une facilité ici</button>
+              </div>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>La revendication crée le lieu dans Omni puis ouvre le parcours de preuve — rien n’est certifié au clic.</p>
+            </div>
+          )}
         </section>
       )}
       {sheet === 'claim' && claimResult && (

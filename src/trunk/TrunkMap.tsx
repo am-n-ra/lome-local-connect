@@ -16,6 +16,7 @@ import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurface
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { isUsableViewportBounds } from './viewport-bounds';
+import type { TileTapPoint } from './tile-place-resolve';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
@@ -48,6 +49,10 @@ type Props = {
   selectedId: string | null;
   onSelect: (facility: PublicFacility) => void;
   onBoundsChange?: (bounds: [number, number, number, number]) => void;
+  // DEC-V2-30 tile-tap claim: a tap on bare map (no pin, no cluster) reports coordinates
+  // plus a best-effort tile label hint. Vector-MapLibre only: the fallback surface has no
+  // click event, so tile-tap is unavailable there (honest limitation, not a silent gap).
+  onTileTap?: (tap: TileTapPoint) => void;
   onRevealStateChange?: (active: boolean) => void;
   revealKey?: string | null;
   contextSurfaceOpen?: boolean;
@@ -201,7 +206,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null, resultCount = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onTileTap, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null, resultCount = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapEngine | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -213,9 +218,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onR
   // "zoom does not explore / it snaps back to the world view" regression.
   const onSelectRef = useRef(onSelect);
   const onBoundsChangeRef = useRef(onBoundsChange);
+  const onTileTapRef = useRef(onTileTap);
   const onRevealStateChangeRef = useRef(onRevealStateChange);
   onSelectRef.current = onSelect;
   onBoundsChangeRef.current = onBoundsChange;
+  onTileTapRef.current = onTileTap;
   onRevealStateChangeRef.current = onRevealStateChange;
   const facilitiesRef = useRef(facilities);
   const facilitiesKeyRef = useRef('');
@@ -1037,6 +1044,28 @@ const syncCameraPadding = () => {
           onSelectRef.current(facility);
           target.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 700 });
         }
+      });
+      (target as Map).on('click', (event: MapLayerMouseEvent) => {
+        // Bare-map tap: pin/cluster layer handlers own their hits (both fire), so skip
+        // anything landing on our data. What remains is tile (or empty ocean): report
+        // coordinates plus a best-effort POI label — the OSM reference itself comes from
+        // the user-triggered reverse lookup, never from tile properties (CARTO poi has
+        // no osm id, verified on a real tile).
+        if (!(target instanceof Map)) return;
+        if (!Number.isFinite(event.lngLat.lng) || !Number.isFinite(event.lngLat.lat)) return;
+        const ownHit = target.queryRenderedFeatures(event.point, { layers: ['omni-pins', 'omni-clusters', 'omni-cluster-count'] });
+        if (ownHit.length > 0) return;
+        let hintName: string | null = null;
+        let hintClass: string | null = null;
+        try {
+          const named = target.queryRenderedFeatures(event.point).find((feature) => typeof feature.properties?.name === 'string' && (feature.properties.name as string).trim().length > 0);
+          if (named?.properties) {
+            hintName = String(named.properties.name);
+            const cls = named.properties.class ?? named.properties.subclass ?? null;
+            hintClass = typeof cls === 'string' ? cls : null;
+          }
+        } catch { /* label hint is best-effort; coordinates always work */ }
+        onTileTapRef.current?.({ longitude: event.lngLat.lng, latitude: event.lngLat.lat, hintName, hintClass });
       });
       for (const layer of ['omni-clusters', 'omni-pins']) {
         (target as Map).on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });

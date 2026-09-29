@@ -547,6 +547,22 @@ export interface ClaimDraftResult {
   created: boolean;
 }
 
+// DEC-V2-30 claim-by-OSM-reference: the server derives sourceRef, the client only carries
+// tile facts. `materialized` tells the UI whether this tap created the place row.
+export interface ClaimByOsmRefInput {
+  osmType: 'node' | 'way' | 'relation';
+  osmId: number;
+  name: string;
+  category: string | null;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+}
+
+export interface ClaimByOsmRefResult extends ClaimDraftResult {
+  materialized: boolean;
+}
+
 export interface ClaimEvidenceItem {
   evidenceKind: EvidenceKind;
   objectKey: string;

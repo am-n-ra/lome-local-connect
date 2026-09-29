@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -770,6 +770,18 @@ export async function createFacilityClaimDraft(input: { facilityId: string; toke
     body: JSON.stringify({}),
   });
   return parse<ClaimDraftResult>(response);
+}
+
+// DEC-V2-30: a place known only from the tiles has no facilityId. The tile facts travel in
+// the body; sourceRef is derived server-side and never accepted from the client.
+export async function claimFacilityByOsmRef(input: ClaimByOsmRefInput & { token: string }): Promise<ApiResult<ClaimByOsmRefResult>> {
+  const { token, ...facts } = input;
+  const response = await fetchWithRecovery('/api/v2/facilities?action=claim-by-osm-ref', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(facts),
+  });
+  return parse<ClaimByOsmRefResult>(response);
 }
 
 export async function getClaimStorageStatus(input: { facilityId: string; token: string }): Promise<ApiResult<{ available: boolean }>> {

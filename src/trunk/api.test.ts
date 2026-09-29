@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -306,7 +306,6 @@ describe('createSellerFacility contract (NW-13c)', () => {
       }),
     );
   });
-
   it('serializes a digital facility without coordinates', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { facilityId: 'facility-2', slotId: 'slot-2', trustState: 'unconfirmed', facilityType: 'digital', created: true } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
 
@@ -316,6 +315,27 @@ describe('createSellerFacility contract (NW-13c)', () => {
       '/api/v2/seller/facilities',
       expect.objectContaining({ body: JSON.stringify({ name: 'Boutique en ligne', facilityType: 'digital', ownerKind: 'organisation', category: 'Textile', description: null, address: null, latitude: null, longitude: null, rayonKm: null, contactPhone: null, contactWhatsapp: null }) }),
     );
+  });
+});
+
+describe('claim-by-osm-ref client contract (DEC-V2-30)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('posts tile facts without any client-supplied source reference', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { requestId: 'request-1', facilityId: 'facility-1', state: 'draft', version: 1, created: true, materialized: true } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await claimFacilityByOsmRef({ token: 'session-token', osmType: 'node', osmId: 452001, name: 'Pharmacie du Port', category: 'pharmacy', address: 'Lomé', latitude: 6.1372, longitude: 1.2224 });
+
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { requestId: 'request-1', facilityId: 'facility-1', state: 'draft', version: 1, created: true, materialized: true } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities?action=claim-by-osm-ref',
+      {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' },
+        body: JSON.stringify({ osmType: 'node', osmId: 452001, name: 'Pharmacie du Port', category: 'pharmacy', address: 'Lomé', latitude: 6.1372, longitude: 1.2224 }),
+      },
+    );
+    expect(String((fetchMock.mock.calls[0] as unknown[])[1])).not.toContain('sourceRef');
   });
 });
 

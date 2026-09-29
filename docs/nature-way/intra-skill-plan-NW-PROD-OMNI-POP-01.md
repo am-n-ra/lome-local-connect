@@ -154,3 +154,9 @@
   `viewportMovedSignificantly`, anciens pins gardés jusqu'à l'arrivée, pause pendant les
   résultats de recherche), ordre serveur = sponsors puis distance au centre (`acos`
   seulement avec bounds). Preuve navigateur réelle au prochain spot-check fondateur.
+- **Trunk tap-sur-tuile LIVRÉ (2026-09-29, go fondateur /nature-way)** — les tuiles CARTO
+  ne portent aucun osm_id (vérifié sur tuile réelle : poi = class/subclass/name/rank) : le tap
+  donne coords + hint best-effort, la réf OSM vient d'UN reverse Nominatim user-triggered
+  (`tile-place-resolve.ts`, zéro appel OSM serveur). Sheet `tile-place` (Niv.0 honnête, nom
+  éditable requis, claim + créer), puis parcours claim prouvé (draft → ClaimSheet). Preuve
+  navigateur réelle au spot-check fondateur (tap terrain, session connectée).
