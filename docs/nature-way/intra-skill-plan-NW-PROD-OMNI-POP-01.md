@@ -148,3 +148,9 @@
   C'est le chaînon qui permet de revendiquer les **13 741** Togo sans pré-import.
   **Gap à décider :** index permanent `v2_facility_source_refs(facility_id)` (moyen).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur.
+- **Tranche exploration viewport LIVRÉE (2026-09-29, ordre fondateur « go »)** — la carte
+  montrait un jeu monde figé de 250 lieux (un seul chargement sans bbox, jamais rechargé
+  au pan/zoom) : recharge par fenêtre au `moveend` (debounce 750 ms, seuil significatif
+  `viewportMovedSignificantly`, anciens pins gardés jusqu'à l'arrivée, pause pendant les
+  résultats de recherche), ordre serveur = sponsors puis distance au centre (`acos`
+  seulement avec bounds). Preuve navigateur réelle au prochain spot-check fondateur.

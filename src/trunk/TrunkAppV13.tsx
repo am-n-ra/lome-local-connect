@@ -22,6 +22,7 @@ import type {
   FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
+import { viewportMovedSignificantly } from './viewport-bounds';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -224,6 +225,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [revealActive, setRevealActive] = useState(false);
   const [revealPending, setRevealPending] = useState(false);
   const [bounds, setBounds] = useState<[number, number, number, number] | null>(null);
+  const [viewportLoading, setViewportLoading] = useState(false);
+  const lastLoadedBoundsRef = useRef<[number, number, number, number] | null>(null);
+  const viewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [simMode, setSimMode] = useState<'normal' | 'vide' | 'lent' | 'erreur'>('normal');
 
   const bulkCost = useMemo(() => {
@@ -337,6 +341,29 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     void loadPublic().catch(() => { if (active) { setMapState('error'); setError('La découverte publique est temporairement indisponible.'); } });
     return () => { active = false; };
   }, [loadPublic]);
+
+  // Viewport-driven discovery: the map explores the corpus window by window. After the
+  // initial world load, every settled viewport movement past the significance threshold
+  // refetches that window (debounced: one moveend per gesture, not one request per frame).
+  // Paused while search results own the pins — a pan must never clobber an explicit query.
+  // Old pins stay visible until the new window arrives: no flash, no invented emptiness.
+  useEffect(() => {
+    if (!bounds || results.length > 0) return;
+    if (lastLoadedBoundsRef.current && !viewportMovedSignificantly(lastLoadedBoundsRef.current, bounds)) return;
+    if (viewportTimerRef.current) clearTimeout(viewportTimerRef.current);
+    const target = bounds;
+    viewportTimerRef.current = setTimeout(() => {
+      viewportTimerRef.current = null;
+      lastLoadedBoundsRef.current = target;
+      setViewportLoading(true);
+      void loadPublic(target)
+        .catch(() => { setError('La découverte publique est temporairement indisponible.'); setMapState('error'); })
+        .finally(() => { setViewportLoading(false); });
+    }, 750);
+    return () => {
+      if (viewportTimerRef.current) { clearTimeout(viewportTimerRef.current); viewportTimerRef.current = null; }
+    };
+  }, [bounds, results.length, loadPublic]);
 
   // Espace Seller map-first (V-7a(: la donnée vendeur est levée une fois au niveau
   // de l'app — les pins détenus (owner) portent l'anneau Evergreen sur la carte
@@ -2467,6 +2494,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       )}
 
       {mapState === 'loading' && <div className="map-legend" role="status"><span>Chargement…</span></div>}
+      {viewportLoading && mapState !== 'loading' && <div className="map-legend" role="status"><span>Mise à jour de la vue…</span></div>}
     </div>
   );
 }

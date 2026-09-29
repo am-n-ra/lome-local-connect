@@ -316,6 +316,26 @@ describe('public facility trust boundary', () => {
     expect(query).not.toContain('min(camp.id)');
     expect(query).toContain('(count(camp.id) > 0) as sponsored');
   });
+
+  it('orders by distance from the viewport center when bounds are given, legacy order otherwise', async () => {
+    const row = {
+      id: 'facility-1', name: 'Marche de Hanoukope', category: 'Market', address: null,
+      latitude: 6.1256, longitude: 1.2124, trust_state: 'unclaimed', commercial_plan: 'free', product_count: 0,
+    };
+    const bounded = stubSql([row]);
+    await createTrunkRepository(bounded.sql).listPublicFacilities([1.0, 6.0, 1.4, 6.3]);
+    // Fragment interpolations evaluate the stub first: assert on the joined query text.
+    const boundedQuery = bounded.queries.join('¦');
+    expect(boundedQuery).toContain('acos');
+    // The outer statement keeps the sponsored boost first and the legacy tail (NW-13j intact).
+    const outer = bounded.queries[bounded.queries.length - 1];
+    expect(outer.indexOf('(count(camp.id) > 0)::int desc')).toBeLessThan(outer.indexOf("= 'unclaimed'"));
+    expect(outer).toContain(', f.name');
+
+    const world = stubSql([row]);
+    await createTrunkRepository(world.sql).listPublicFacilities();
+    expect(world.queries.join('¦')).not.toContain('acos');
+  });
 });
 
 describe('availability repository Root seam', () => {
