@@ -2783,9 +2783,12 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             -- Lues ici pour que le refus soit prononce par la MEME instruction que la transition
             -- (une lecture separee pourrait voir un etat different de celui qui publie).
             p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
-            -- R-I : l'etat d'une occasion se lit dans sa description (regle partagee
-            -- offer-condition.ts). Lu ici pour que le refus soit prononce par la MEME
-            -- instruction que la transition.
+            -- R-I handover : position_kind n'est PAS exige (D-RH-8) mais la branche
+            -- HANDOVER_INCOHERENT le LIT ; il doit donc figurer ici. Sans cette colonne,
+            -- Postgres rejette l'instruction ENTIERE (column "position_kind" does not exist)
+            -- et AUCUN vendeur ne peut publier/archiver. Trouve par le harnais read-paths sur
+            -- Postgres reel ; invisible a la suite a SQL stubbe (aucun SQL n'est compile).
+            p.position_kind,
             p.description,
             -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
             -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
