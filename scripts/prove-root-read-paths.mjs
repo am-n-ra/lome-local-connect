@@ -45,6 +45,7 @@ async function check(label, fn) {
     // Postgres-level failure means the SQL itself cannot run.
     const policyRejection =
       error?.name === 'SellerAuthorizationPolicyError' ||
+      error?.name === 'SellerCataloguePolicyError' ||
       error?.name === 'WalletPolicyError' ||
       error?.name === 'BuyerSearchPolicyError' ||
       error?.name === 'FieldPilotPolicyError' ||
@@ -74,6 +75,10 @@ await check('listPublicFacilities (buyer map)', () => repository.listPublicFacil
 await check('listPublicFacilities + query', () => repository.listPublicFacilities(undefined, 'boulangerie'));
 await check('listPublicFacilities + constraints', () =>
   repository.listPublicFacilities(undefined, '', undefined, { quantiteMin: 1, rayonKm: 25 }));
+// Viewport exploration: the ORDER BY gains a haversine fragment with bounds (same
+// GROUP BY risk class as RB-PROD-3 — a column the GROUP BY does not cover).
+await check('listPublicFacilities + bounds (viewport nearest-first)', () =>
+  repository.listPublicFacilities([1.0, 6.0, 1.4, 6.3]));
 
 if (anyFacilityId) {
   await check('getFacilityDetail', () => repository.getFacilityDetail(anyFacilityId));
@@ -127,6 +132,14 @@ if (ownedFacilityId) {
   await check('getFacilityRenewalStatus', () => repository.getFacilityRenewalStatus({ authUserId: SEED_COMPLETE, facilityId: ownedFacilityId }));
   await check('listFacilityAdCampaigns', () => repository.listFacilityAdCampaigns({ authUserId: SEED_COMPLETE, facilityId: ownedFacilityId }));
 }
+
+// R-I (condition + handover): the publication gate compiles new CASE branches and a new
+// `owned` column. Driven with a nonexistent product: `owned` is empty, the UPDATE touches
+// zero rows (read-only safe — verified by reading the statement: every write is keyed on
+// `select id from owned`), and the expected FORBIDDEN_OR_LIMIT_REACHED proves the whole
+// statement compiled and ran. Branch LOGIC stays covered by the stub suite + falsification.
+await check('transitionSellerProduct (publication gate compiles)', () =>
+  repository.transitionSellerProduct({ authUserId: SEED_COMPLETE, productId: '00000000-0000-0000-0000-000000000000', to: 'published' }));
 
 console.log(`root-read-path: ${ran - failures}/${ran} read paths answered against real SQL`);
 if (failures > 0) {
