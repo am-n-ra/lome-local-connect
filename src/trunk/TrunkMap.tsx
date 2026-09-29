@@ -13,7 +13,7 @@ import { getRoadRoute } from './api';
 import { routeReasonLabel } from './route-reason-label';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
-import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
+import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, isFiniteCameraCenter, isFiniteCameraZoom, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
 import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { isUsableViewportBounds } from './viewport-bounds';
 import type { TileTapPoint } from './tile-place-resolve';
@@ -397,7 +397,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
           rotating.current = false;
           cameraMode.current = 'manual_navigation';
           setCameraModeState('manual_navigation');
-          mapRef.current?.easeTo({ center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
+          const located = mapRef.current;
+          if (located) safeEaseTo(located, { center: [position.coords.longitude, position.coords.latitude], zoom: approximate ? 5 : 7, duration: 900, essential: true });
         }
       },
       (error) => {
@@ -414,14 +415,18 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     const map = mapRef.current;
     if (!map) return;
     pauseMotion();
-    map.easeTo({ zoom: map.getZoom() + 1, duration: 0, essential: true });
+    const next = map.getZoom() + 1;
+    if (!isFiniteCameraZoom(next)) return;
+    safeEaseTo(map, { zoom: next, duration: 0, essential: true });
   };
 
   const zoomOut = () => {
     const map = mapRef.current;
     if (!map) return;
     pauseMotion();
-    map.easeTo({ zoom: Math.max(0, map.getZoom() - 1), duration: 0, essential: true });
+    const next = Math.max(0, map.getZoom() - 1);
+    if (!isFiniteCameraZoom(next)) return;
+    safeEaseTo(map, { zoom: next, duration: 0, essential: true });
   };
 
   useEffect(() => {
@@ -550,6 +555,9 @@ const syncCameraPadding = () => {
           const elapsedSeconds = Math.min(0.1, Math.max(0, time - previousTime) / 1000);
           previousTime = time;
           const [lng0, lat0] = centerOf(map);
+          // A sick transform reads back NaN: jumping there every frame would perpetuate
+          // the poison forever. Stop the rotation instead; user gestures resume it.
+          if (!isFiniteCameraCenter([lng0, lat0])) { stopRotation(); return; }
           map.jumpTo({ center: [lng0 + (2.8 * elapsedSeconds), lat0], bearing: 0, pitch: 0 });
           rotationFrame.current = window.requestAnimationFrame(frame);
         };
@@ -662,7 +670,7 @@ const syncCameraPadding = () => {
 
         setRevealLabel(step.label);
         const dur = step.flightDuration ?? FLIGHT_DURATION;
-        map.flyTo({
+        safeFlyTo(map, {
           center: step.center,
           zoom: step.zoom,
           duration: dur,
@@ -1033,7 +1041,10 @@ const syncCameraPadding = () => {
         const clusterId = feature?.properties?.cluster_id;
         if (!feature || clusterId === undefined) return;
         const source = target.getSource(SOURCE) as GeoJSONSource;
-        source.getClusterExpansionZoom(Number(clusterId)).then((nextZoom) => target.easeTo({ center: (feature.geometry as { type: 'Point'; coordinates: number[] }).coordinates as [number, number], zoom: nextZoom })).catch(() => undefined);
+        source.getClusterExpansionZoom(Number(clusterId)).then((nextZoom) => {
+          const coords = (feature.geometry as { type: 'Point'; coordinates: number[] }).coordinates as [number, number];
+          safeEaseTo(target, { center: coords, zoom: nextZoom });
+        }).catch(() => undefined);
       });
       (target as Map).on('click', 'omni-pins', (event: MapLayerMouseEvent) => {
         if (!(target instanceof Map)) return;
@@ -1042,7 +1053,7 @@ const syncCameraPadding = () => {
         if (facility) {
           pauseMotion('interaction', false);
           onSelectRef.current(facility);
-          target.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 700 });
+          safeEaseTo(target, { center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 700 });
         }
       });
       (target as Map).on('click', (event: MapLayerMouseEvent) => {
@@ -1128,7 +1139,7 @@ const syncCameraPadding = () => {
         const east = finalBounds[1][0];
         const north = finalBounds[1][1];
         if (Math.abs(east - west) < 0.0001 && Math.abs(north - south) < 0.0001) {
-          map.easeTo({ center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
+          safeEaseTo(map, { center: [west, south], zoom: RESULT_LOCAL_ZOOM, duration: 600, essential: true });
         } else {
           const isDesktop = window.innerWidth >= 1040;
           const pad = map.getPadding() ?? { top: 0, right:  0, bottom:  0, left:  0 };
@@ -1202,7 +1213,7 @@ const syncCameraPadding = () => {
       const toGlobe = async (): Promise<void> => {
         if (isStale()) return;
         const [clng, clat] = centerOf(map);
-        map.flyTo({ center: [clng, clat], zoom:  1.8, bearing:  ​0, pitch:​  0, curve:​  1.1, duration: FLIGHT_DURATION, essential: true });
+        safeFlyTo(map, { center: [clng, clat], zoom:  1.8, bearing:  0, pitch:  0, curve:  1.1, duration: FLIGHT_DURATION, essential: true });
         await waitSettle(map, FLIGHT_DURATION +  400);
       };
       type SearchStop = { center: [number, number]; zoom: number; pause: number; flightDuration?: number };
@@ -1212,7 +1223,7 @@ const syncCameraPadding = () => {
         if (!step) return;
         setLabel(labelForZoom(step.zoom) ?? labelForZoom(2));
         const dur = step.flightDuration ?? FLIGHT_DURATION;
-        map.flyTo({ center: step.center, zoom: step.zoom, duration: dur, speed:  0.7, curve:  1.1, essential: true });
+        safeFlyTo(map, { center: step.center, zoom: step.zoom, duration: dur, speed:  0.7, curve:  1.1, essential: true });
         await waitSettle(map, dur +  400);
         if (isStale()) return;
         await loadBoundariesForZoom(map, step.zoom);
@@ -1233,7 +1244,7 @@ const syncCameraPadding = () => {
       ];
       if (isReduced) {
         setLabel(labelForZoom(2));
-        map.flyTo({ center: flight.targetCenter, zoom: flight.targetZoom, bearing:  0, pitch:  0, curve:  1.25, duration:  620, essential: true });
+        safeFlyTo(map, { center: flight.targetCenter, zoom: flight.targetZoom, bearing:  0, pitch:  0, curve:  1.25, duration:  620, essential: true });
         map.once('moveend', () => { if (!isStale()) revealPinsStaggered(); });
         return;
       }
@@ -1284,12 +1295,20 @@ const syncCameraPadding = () => {
     // recentre donc explicitement sur le pin, décalé vers le HAUT du padding basal reel du sheet.
     const pad = map.getPadding();
     const bottomPad = pad?.bottom ?? 0;
+    // project/unproject on a sick transform throws or yields NaN: never feed that back
+    // into the camera (self-poisoning). Fall through to direct centering instead.
+    let centered = false;
     if (bottomPad > 0) {
-      const pt = map.project([selected.longitude, selected.latitude]);
-      const target = map.unproject([pt.x, pt.y - (bottomPad +  64) / 2]);
-      map.easeTo({ center: [target.lng, target.lat], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
-    } else {
-      map.easeTo({ center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
+      try {
+        const pt = map.project([selected.longitude, selected.latitude]);
+        const target = map.unproject([pt.x, pt.y - (bottomPad +  64) / 2]);
+        centered = safeEaseTo(map, { center: [target.lng, target.lat], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
+      } catch {
+        centered = false;
+      }
+    }
+    if (!centered) {
+      safeEaseTo(map, { center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
     }
   }, [facilities, selectedId]);
 
@@ -1305,7 +1324,7 @@ const syncCameraPadding = () => {
     rotating.current = false;
     cameraMode.current = 'selected_facility';
     setCameraModeState('selected_facility');
-    map.easeTo({ center: [focusTarget.longitude, focusTarget.latitude], zoom: Math.max(map.getZoom(), 14), duration: 900, essential: true });
+    safeEaseTo(map, { center: [focusTarget.longitude, focusTarget.latitude], zoom: Math.max(map.getZoom(), 14), duration: 900, essential: true });
   }, [focusTarget]);
 
   // Défilement contextuel bidirectionnel (v1.3 §4.4: le scroll de la grille
@@ -1323,7 +1342,7 @@ const syncCameraPadding = () => {
     if (revealRunningRef.current || cameraMode.current === 'search_reveal') return;
     rotating.current = false;
     const followZoom = Math.max(map.getZoom(),11.5);
-    map.easeTo({ center: [followTarget.longitude, followTarget.latitude], zoom: followZoom, duration:500, essential: true });
+    safeEaseTo(map, { center: [followTarget.longitude, followTarget.latitude], zoom: followZoom, duration:500, essential: true });
   }, [followTarget]);
 
   // Real road geometry from the server proxy. Independent of the trace effect

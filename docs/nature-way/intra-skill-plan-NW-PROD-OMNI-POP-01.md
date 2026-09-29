@@ -160,3 +160,11 @@
   (`tile-place-resolve.ts`, zéro appel OSM serveur). Sheet `tile-place` (Niv.0 honnête, nom
   éditable requis, claim + créer), puis parcours claim prouvé (draft → ClaimSheet). Preuve
   navigateur réelle au spot-check fondateur (tap terrain, session connectée).
+- **Durcissement caméra LIVRÉ (2026-09-29, go fondateur sur log prod NaN)** — le flood
+  `Invalid LngLat (0,NaN)` + `_calcMatrices` null venait d'un transform malade que CHAQUE
+  lecture (`getBounds`, `project`/`unproject`, `flyTo`) ré-empoisonnait : `emitBounds`
+  try/catch + fini (déjà livré), puis TOUTE commande caméra via `safeEaseTo`/`safeFlyTo`
+  (`map-camera.ts`, testé + falsifié) — entrée insane skippée, moteur malade catché, jamais
+  levé. Suspect n°1 neutralisé : `project`/`unproject` du recentrage pin avec repli direct.
+  Root cause première (pourquoi le transform tombe malade sur l'appareil) TOUJOURS OUVERTE
+  — détails appareil/gestes attendus.
