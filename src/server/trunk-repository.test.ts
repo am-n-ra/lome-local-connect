@@ -2383,6 +2383,15 @@ describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
       .rejects.toThrow('ADVANTAGE_REQUIRED');
   });
 
+  it('refuses to publish an occasion with no word on its state, naming the reason (R-I)', async () => {
+    const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'OCCASION_DETAIL_REQUIRED' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+      .rejects.toThrow('OCCASION_DETAIL_REQUIRED');
+    expect(call.queries[0]).toContain('publication_block');
+    expect(call.queries[0]).toContain('OCCASION_DETAIL_REQUIRED');
+  });
+
   it('the refusal only fires on draft→published, never on archive (grandfathering D-RH-5)', async () => {
     // The block CTE must be scoped so an already-published offer is never retro-blocked.
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);

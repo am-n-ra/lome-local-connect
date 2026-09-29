@@ -2682,6 +2682,10 @@ function createTrunkRepository(sql = database()) {
             -- Lues ici pour que le refus soit prononce par la MEME instruction que la transition
             -- (une lecture separee pourrait voir un etat different de celui qui publie).
             p.uniqueness_kind, p.handover_kind, p.price_kind, p.condition_kind,
+            -- R-I : l'etat d'une occasion se lit dans sa description (regle partagee
+            -- offer-condition.ts). Lu ici pour que le refus soit prononce par la MEME
+            -- instruction que la transition.
+            p.description,
             -- R-4b / D-04 : la capacite Pro se juge sur l'ENTITLEMENT VIVANT (ce qui encode la fenetre
             -- payee), jamais sur la colonne commercial_plan — jamais remise a 'free', aucun balayage.
             -- Avant, cette porte lisait e.commercial_plan SEUL, colonne que rien n'alimentait :
@@ -2722,6 +2726,11 @@ function createTrunkRepository(sql = database()) {
             when (select handover_kind from owned) is null then 'HANDOVER_REQUIRED'
             when (select price_kind from owned) is null then 'PRICE_KIND_REQUIRED'
             when (select condition_kind from owned) is null then 'CONDITION_REQUIRED'
+            -- R-I : on ne vend pas de l'occasion sans dire son etat. Apres CONDITION_REQUIRED
+            -- (la caracteristique doit etre declaree pour que cette branche voie une valeur) ;
+            -- l'egalite tombe sur NULL pour un etranger (cf. T8 RH-02), jamais de fuite.
+            when (select condition_kind from owned) = 'occasion'
+              and char_length(btrim(coalesce((select description from owned), ''))) < 10 then 'OCCASION_DETAIL_REQUIRED'
             else null
           end as reason
         ), published_count as (

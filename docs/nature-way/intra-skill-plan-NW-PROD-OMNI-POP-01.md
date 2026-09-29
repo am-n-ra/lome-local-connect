@@ -168,3 +168,9 @@
   levé. Suspect n°1 neutralisé : `project`/`unproject` du recentrage pin avec repli direct.
   Root cause première (pourquoi le transform tombe malade sur l'appareil) TOUJOURS OUVERTE
   — détails appareil/gestes attendus.
+- **R-I LIVRÉE (2026-09-29, ordre fondateur : condition d'abord)** — `condition_kind`
+  décide : occasion sans état décrit (< 10 car., seuil S-32 réutilisé) ne publie pas
+  (`OCCASION_DETAIL_REQUIRED`, porte `publication_block` après `CONDITION_REQUIRED`,
+  fuite étranger impossible par construction d'égalité NULL) ; module pur partagé
+  `offer-condition.ts` + miroir client honnête (bouton bloqué + motif, serveur tranche) ;
+  zéro migration (colonnes existantes), offres héritées muettes intactes. Reste handover.
