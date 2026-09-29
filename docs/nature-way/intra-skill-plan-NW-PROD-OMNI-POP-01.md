@@ -121,8 +121,9 @@
 ## Handoff to Founder HQ
 
 - **Gate :** Root System — peuplement unclaimed (contrat + classification + admission monde + runs).
-- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord + S5 Australe (forecast figé avant runs,
-  dry-run, 61 766 créés, 0 doublon, prod T-07d). S5 acceptée ; S4-bis Maroc/Algérie GO (DEC-V2-25).
+- **Statut :** `verified` POP-1a + POP-1b-code + S1 + S2 + S3 Est + S4 Nord + S5 Australe + **POP-1d
+  (élagage Togo-only)**. S5 acceptée ; **S4-bis ANNULÉE** (DEC-V2-29, remplace DEC-V2-25 GO).
+  **Vagues eager SUSPENDUES** — direction = lazy (DEC-V2-30).
 - **Preuves (2026-09-28) :** rapports MCP S1/S2/S3/S4/S5 + réconciliation HQ · suite **625/625** ·
   tsc 0 · gardes state/docs verts · canonique **385 917** (… → 278 997 → 324 151 → 385 917).
 - **Écart résiduel :** preuve navigateur authentifiée (acheteur→claim) non exercée (sandbox sans
@@ -131,8 +132,15 @@
 - **Owner :** Nature Way. **Prochaine action :** POP-1d **exécutée** (2026-09-28, DEC-V2-28) —
   D0 DELETE passe, census fait, **372 173 supprimées** (canonique **13 744** = 3 owned + 13 741
   Togo-unclaimed), `VACUUM` fait, db **301 Mo < 400**, **probe écriture PASS**, claim S-18 PASS,
-  prod T-07d ✅. **Attendre** l'expiration de l'historique Neon (~6 h) puis **S4-bis replay**
-  (forecast `1765155` conservé) **dans le périmètre bbox pays**, ou prochaine sous-vague gouvernée.
-  **Ne pas relancer l'import eager monde.** **Gap à décider :** index permanent
-  `v2_facility_source_refs(facility_id)` (moyen).
+  prod T-07d ✅.
+- **S4-bis ANNULÉE (DEC-V2-29, 2026-09-28)** — plus de replay : rejouer contredirait le pivot
+  Togo-only + lazy. Forecast `1765155` archivé en repo, rejouable **seulement** sur une nouvelle
+  décision de direction monde-eager. **Ne pas relancer l'import eager monde** (règle).
+- **Doctrine lazy CONFIRMÉE permanente (DEC-V2-30)** : affichage = tuiles monde entier (zéro
+  import) ; recherche = corpus DB (Togo + claimed + touchés) ; **matérialisation** = au claim,
+  à l'interaction ou à la création uniquement. Réévaluable **sur preuve d'usage** uniquement.
+- **Prochaine tranche : claim-par-référence-OSM** (`omni-claim-by-osm-ref-contract-2026-09-28.md`)
+  — Root d'abord (`createClaimDraftFromOsmRef`), UI ensuite. C'est le chaînon qui permet de
+  revendiquer les **13 741** Togo sans pré-import.
+  **Gap à décider :** index permanent `v2_facility_source_refs(facility_id)` (moyen).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur.
