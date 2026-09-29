@@ -174,3 +174,10 @@
   fuite étranger impossible par construction d'égalité NULL) ; module pur partagé
   `offer-condition.ts` + miroir client honnête (bouton bloqué + motif, serveur tranche) ;
   zéro migration (colonnes existantes), offres héritées muettes intactes. Reste handover.
+- **R-I handover LIVRÉ (2026-09-29, même go)** — `handover_kind` décide : position
+  immaterielle + retrait refusés (`HANDOVER_INCOHERENT`, même porte, égalités NULL-sûres) ;
+  module pur partagé `offer-handover.ts` (seule cette combinaison est un mensonge — livraison
+  d'immatériel et remise de code au comptoir délibérément permises, cf. SP-5) + miroir
+  catalogue + phrase. Zéro migration. **Les 4 caractéristiques qui font une offre sont
+  vivantes : R-G (unicité), R-H (prix), R-I (condition + remise). R-I CLOSE.**
+  Prochaine : finition Root → revue.

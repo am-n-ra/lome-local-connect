@@ -2832,6 +2832,12 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
             -- l'egalite tombe sur NULL pour un etranger (cf. T8 RH-02), jamais de fuite.
             when (select condition_kind from owned) = 'occasion'
               and char_length(btrim(coalesce((select description from owned), ''))) < 10 then 'OCCASION_DETAIL_REQUIRED'
+            -- R-I handover : on ne retire pas sur place ce qui n'a pas de lieu (regle partagee
+            -- offer-handover.ts). Apres les REQUIRED (les deux caracteristiques doivent etre
+            -- declarees pour que cette branche voie des valeurs) ; l'egalite tombe sur NULL
+            -- pour un etranger (cf. T8 RH-02), jamais de fuite.
+            when (select position_kind from owned) = 'immaterielle'
+              and (select handover_kind from owned) = 'retrait' then 'HANDOVER_INCOHERENT'
             else null
           end as reason
         ), published_count as (

@@ -4,6 +4,7 @@ import { getAuthToken } from '../auth';
 import { getSellerCatalogue, transitionSellerProduct, uploadSellerProductMedia } from './api';
 import { currencyFor, formatMoney } from '../domain/currency';
 import { occasionDetailMissing } from './offer-condition';
+import { handoverIncoherent } from './offer-handover';
 import type { SellerCatalogueProduct } from './types';
 
 type ProductCatalogueV13Props = { onClose: () => void; onStockEvent: (productId: string) => void };
@@ -26,6 +27,7 @@ export function publicationMessage(code: string): string {
   if (code === 'PRICE_KIND_REQUIRED') return 'Précisez si le prix est fixe ou à négocier.';
   if (code === 'CONDITION_REQUIRED') return "Précisez si l'offre est neuve ou d'occasion.";
   if (code === 'OCCASION_DETAIL_REQUIRED') return "Décrivez l'état de cette occasion (10 caractères minimum) : on ne vend pas de l'occasion sans dire son état.";
+  if (code === 'HANDOVER_INCOHERENT') return "On ne retire pas sur place ce qui n'a pas de lieu : une offre immatérielle ne se retire pas au comptoir.";
   if (code === 'UNIQUENESS_INCOHERENT_STOCK') return "Une pièce unique est une présence : elle se déclare présente (1) ou retirée (0), jamais en plusieurs exemplaires.";
   if (code === 'FORBIDDEN_OR_LIMIT_REACHED') return "Publication refusée : plafond d'offres gratuites atteint, ou offre non modifiable.";
   return 'La publication a été refusée.';
@@ -114,7 +116,8 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
           // R-I : miroir client de la porte serveur (OCCASION_DETAIL_REQUIRED). Le serveur
           // tranche ; ceci evite l'aller-retour en disant d'avance ce qui manque.
           const missingOccasionDetail = occasionDetailMissing(product.conditionKind, product.description);
-          const blocked = isDraft && (!hasVisual || !hasAdvantage || missingOccasionDetail);
+          const incoherentHandover = handoverIncoherent(product.positionKind, product.handoverKind);
+          const blocked = isDraft && (!hasVisual || !hasAdvantage || missingOccasionDetail || incoherentHandover);
           return (
             <div className="pitem" key={product.id}>
               {hasVisual
@@ -127,7 +130,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
                 </small>
                 {blocked && (
                   <small className="muted" style={{ display: 'block' }}>
-                    {!hasVisual ? '1 image requise' : ''}{!hasVisual && (!hasAdvantage || missingOccasionDetail) ? ' · ' : ''}{!hasAdvantage ? 'Avantage Omni requis' : ''}{!hasAdvantage && missingOccasionDetail ? ' · ' : ''}{missingOccasionDetail ? 'État de l’occasion à décrire' : ''}
+                    {!hasVisual ? '1 image requise' : ''}{!hasVisual && (!hasAdvantage || missingOccasionDetail || incoherentHandover) ? ' · ' : ''}{!hasAdvantage ? 'Avantage Omni requis' : ''}{(!hasAdvantage && (missingOccasionDetail || incoherentHandover)) ? ' · ' : ''}{missingOccasionDetail ? 'État de l’occasion à décrire' : ''}{(missingOccasionDetail && incoherentHandover) ? ' · ' : ''}{incoherentHandover ? 'Retrait impossible sur une offre immatérielle' : ''}
                   </small>
                 )}
               </span>

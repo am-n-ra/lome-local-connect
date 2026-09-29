@@ -2392,6 +2392,15 @@ describe('publication honnête Root seam (E-03 / E-04, RH-01)', () => {
     expect(call.queries[0]).toContain('OCCASION_DETAIL_REQUIRED');
   });
 
+  it('refuses a physical pickup on an immaterial offer, naming the reason (R-I handover)', async () => {
+    const call = stubSql([{ changed_id: null, changed_state: null, block_reason: 'HANDOVER_INCOHERENT' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.transitionSellerProduct({ authUserId: 'auth-seller-1', productId: 'product-1', to: 'published' }))
+      .rejects.toThrow('HANDOVER_INCOHERENT');
+    expect(call.queries[0]).toContain('publication_block');
+    expect(call.queries[0]).toContain('HANDOVER_INCOHERENT');
+  });
+
   it('the refusal only fires on draft→published, never on archive (grandfathering D-RH-5)', async () => {
     // The block CTE must be scoped so an already-published offer is never retro-blocked.
     const call = stubSql([{ changed_id: 'product-1', changed_state: 'archived', block_reason: null }]);

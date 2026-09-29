@@ -19,6 +19,7 @@ describe('publication refusal reaches the seller, named (RH-02)', () => {
     'PRICE_KIND_REQUIRED',
     'CONDITION_REQUIRED',
     'OCCASION_DETAIL_REQUIRED',
+    'HANDOVER_INCOHERENT',
     'FORBIDDEN_OR_LIMIT_REACHED',
   ];
 
