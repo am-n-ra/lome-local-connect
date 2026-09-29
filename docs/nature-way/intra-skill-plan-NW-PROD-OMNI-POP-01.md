@@ -181,3 +181,8 @@
   catalogue + phrase. Zéro migration. **Les 4 caractéristiques qui font une offre sont
   vivantes : R-G (unicité), R-H (prix), R-I (condition + remise). R-I CLOSE.**
   Prochaine : finition Root → revue.
+- **Résidu accepté (2026-09-29, mesuré prod headless)** — burst borné au démarrage : 6 requêtes
+  (monde + 4 paliers du vol d'arrivée + Lomé, ~370 Ko, aucune boucle en idle). Le vol
+  n'expose aucun mode caméra distinct : le supprimer demanderait une plomberie à risque
+  de blocage (pause coincée = carte sans pins). Accepté : coût modeste, pins corrects à
+  l'atterrissage. T-07d vérifié : prod sert `index-DitKQXaO.js` (viewport + R-I).
