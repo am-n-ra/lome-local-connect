@@ -2110,6 +2110,65 @@ describe('field pilot registry Root seam', () => {
   });
 });
 
+describe('claim-by-OSM-reference Root seam', () => {
+  const osmRefInput = {
+    authUserId: 'auth-claimant',
+    osmType: 'node' as const,
+    osmId: 123,
+    name: 'Pharmacie du Port',
+    category: 'pharmacy',
+    address: 'Boulevard de la Paix',
+    latitude: 6.13,
+    longitude: 1.22,
+    intakeTier: 'pilot' as const,
+  };
+
+  it('derives the source reference server-side and ignores a client-supplied one', async () => {
+    const call = stubSql([{ request_id: 'request-1', facility_id: 'facility-1', version: 1, created: true, state: 'draft', materialized: true }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createClaimDraftFromOsmRef({ ...osmRefInput, sourceRef: 'node/999' } as never)).resolves.toEqual({
+      requestId: 'request-1', facilityId: 'facility-1', state: 'draft', version: 1, created: true, materialized: true,
+    });
+    expect(call.values[0]).toContain('node/123');
+    expect(call.values[0]).not.toContain('node/999');
+    expect(call.queries[0]).toContain('v2_facility_source_refs');
+    expect(call.queries[0]).toContain('materialized');
+  });
+
+  it('resolves an existing row without materialising and replays an active draft', async () => {
+    const call = stubSql([{ request_id: 'request-2', facility_id: 'facility-2', version: 3, created: false, state: 'submitted', materialized: false }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createClaimDraftFromOsmRef(osmRefInput)).resolves.toEqual({
+      requestId: 'request-2', facilityId: 'facility-2', state: 'submitted', version: 3, created: false, materialized: false,
+    });
+  });
+
+  it('refuses an already-claimed facility with a policy error', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createClaimDraftFromOsmRef(osmRefInput)).rejects.toBeInstanceOf(FieldPilotPolicyError);
+  });
+
+  it('rejects an invalid OSM reference or tile facts before any SQL', async () => {
+    const bad = [
+      { ...osmRefInput, osmType: 'planet' },
+      { ...osmRefInput, osmId: 0 },
+      { ...osmRefInput, osmId: 1.5 },
+      { ...osmRefInput, name: '   ' },
+      { ...osmRefInput, name: 'x'.repeat(181) },
+      { ...osmRefInput, latitude: 91 },
+      { ...osmRefInput, longitude: -181 },
+      { ...osmRefInput, intakeTier: 'pilot-zone' },
+    ];
+    for (const input of bad) {
+      const call = stubSql([]);
+      const repository = createTrunkRepository(call.sql);
+      await expect(repository.createClaimDraftFromOsmRef(input as never)).rejects.toBeInstanceOf(FieldPilotPolicyError);
+      expect(call.queries).toHaveLength(0);
+    }
+  });
+});
+
 
 describe('claim Heartwood seam', () => {
   it('rejects raw or public evidence references before persistence', async () => {

@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateFacilityZoneAssignment, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -368,5 +368,37 @@ describe('team invite / facility zone validators (NW-15 P2-C)', () => {
   it('rejects a malformed facility id or an over-long zone', () => {
     expect(() => validateFacilityZoneAssignment({ zone: 'A' }, 'not-a-uuid')).toThrow(ApiInputError);
     expect(() => validateFacilityZoneAssignment({ zone: 'x'.repeat(121) }, facilityId)).toThrow(ApiInputError);
+  });
+});
+
+describe('validateClaimByOsmRef', () => {
+  const validBody = { osmType: 'node', osmId: 123, name: 'Pharmacie du Port', category: 'pharmacy', address: 'Boulevard de la Paix', latitude: 6.13, longitude: 1.22 };
+
+  it('accepts tile facts with an optional category and address', () => {
+    expect(validateClaimByOsmRef(validBody)).toEqual({ osmType: 'node', osmId: 123, name: 'Pharmacie du Port', category: 'pharmacy', address: 'Boulevard de la Paix', latitude: 6.13, longitude: 1.22 });
+    expect(validateClaimByOsmRef({ ...validBody, category: null, address: undefined })).toEqual({ ...validBody, category: null, address: null });
+  });
+  it('rejects a client-supplied source reference outright', () => {
+    expect(() => validateClaimByOsmRef({ ...validBody, sourceRef: 'node/123' })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, sourceRef: 'node/999' })).toThrow(ApiInputError);
+  });
+  it('rejects an invalid reference type or id', () => {
+    expect(() => validateClaimByOsmRef({ ...validBody, osmType: 'planet' })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, osmId: 0 })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, osmId: 1.5 })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, osmId: 'abc' })).toThrow(ApiInputError);
+  });
+  it('rejects an empty or over-long name and over-long category or address', () => {
+    expect(() => validateClaimByOsmRef({ ...validBody, name: '   ' })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, name: 'x'.repeat(181) })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, category: 'x'.repeat(121) })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, address: 'x'.repeat(241) })).toThrow(ApiInputError);
+  });
+  it('rejects missing, null or out-of-range coordinates', () => {
+    expect(() => validateClaimByOsmRef({ ...validBody, latitude: null })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, longitude: undefined })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, latitude: 91 })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, longitude: -181 })).toThrow(ApiInputError);
+    expect(() => validateClaimByOsmRef({ ...validBody, latitude: 'north' })).toThrow(ApiInputError);
   });
 });

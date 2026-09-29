@@ -1550,6 +1550,134 @@ function createTrunkRepository(sql = database()) {
       if (!row) throw new FieldPilotPolicyError("The facility is unavailable for a claim or already claimed by another account.");
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: row.state ? String(row.state) : "draft", version: Number(row.version), created: row.created === true };
     },
+    // DEC-V2-30 claim-by-OSM-reference. A place known ONLY from the map tiles has no row, so
+    // createClaimDraft cannot be reached. One guarded statement resolves or materialises the
+    // facility AND creates the draft: the claim is the moment of materialisation (no OSM call,
+    // no backfill, no eager import).
+    async createClaimDraftFromOsmRef(input) {
+      const osmType = input.osmType;
+      const osmId = input.osmId;
+      const name = String(input.name ?? "").trim();
+      const category = input.category === null || input.category === void 0 ? null : String(input.category).trim() || null;
+      const address = input.address === null || input.address === void 0 ? null : String(input.address).trim() || null;
+      const intakeTier = input.intakeTier;
+      if (osmType !== "node" && osmType !== "way" && osmType !== "relation") throw new FieldPilotPolicyError("The OpenStreetMap reference type is invalid.");
+      if (!Number.isSafeInteger(osmId) || osmId < 1) throw new FieldPilotPolicyError("The OpenStreetMap reference id is invalid.");
+      if (name.length < 1 || name.length > 180) throw new FieldPilotPolicyError("The facility name must be 1 to 180 characters.");
+      if (!Number.isFinite(input.latitude) || input.latitude < -90 || input.latitude > 90) throw new FieldPilotPolicyError("The facility latitude is invalid.");
+      if (!Number.isFinite(input.longitude) || input.longitude < -180 || input.longitude > 180) throw new FieldPilotPolicyError("The facility longitude is invalid.");
+      if (category !== null && category.length > 120 || address !== null && address.length > 240) throw new FieldPilotPolicyError("The facility category or address is too long.");
+      if (intakeTier !== "pilot" && intakeTier !== "world" && intakeTier !== "quarantine") throw new FieldPilotPolicyError("The intake tier is invalid.");
+      const sourceRef = `${osmType}/${osmId}`;
+      const rawMetadata = JSON.stringify({
+        provider: "openstreetmap",
+        name,
+        category,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        address,
+        intake_tier: intakeTier,
+        origin: "claim-on-sight"
+      });
+      const rows = await retryDatabase(() => sql`
+        with src_existing as (
+          select id from v2_public_sources where provider = 'openstreetmap' limit 1
+        ), src_inserted as (
+          insert into v2_public_sources (provider, attribution)
+          select 'openstreetmap', 'OpenStreetMap contributors'
+          where not exists (select 1 from src_existing)
+          returning id
+        ), src as (
+          select id from src_existing
+          union all
+          select id from src_inserted
+          limit 1
+        ), resolved as (
+          select f.id, f.account_id, f.trust_state, false as created
+          from v2_facility_source_refs fr
+          join v2_facilities f on f.id = fr.facility_id
+          join src on src.id = fr.source_id
+          where fr.source_ref = ${sourceRef}
+          union
+          select f.id, f.account_id, f.trust_state, false as created
+          from v2_facilities f
+          where f.source_name = 'openstreetmap' and f.source_ref = ${sourceRef}
+        ), materialized as (
+          insert into v2_facilities
+            (account_id, source_kind, source_name, source_ref, name, category, latitude, longitude, address, trust_state)
+          select null, 'public_import', 'openstreetmap', ${sourceRef}, ${name}, ${category},
+            ${input.latitude}, ${input.longitude}, ${address}, 'verification_draft'
+          where not exists (select 1 from resolved)
+            and exists (select 1 from src)
+          returning id, account_id, trust_state, true as created
+        ), placed as (
+          select id, account_id, trust_state, created from resolved
+          union all
+          select id, account_id, trust_state, created from materialized
+          limit 1
+        ), referenced as (
+          insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
+          select placed.id, src.id, ${sourceRef}, ${rawMetadata}::jsonb
+          from placed cross join src
+          where placed.created
+          on conflict (source_id, source_ref) do nothing
+          returning facility_id
+        ), account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          values (${input.authUserId}, 'seller_ready')
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ), actor as (
+          select id from account
+          union all
+          select id from v2_accounts where auth_user_id = ${input.authUserId} limit 1
+        ), facility as (
+          select id from placed
+          where account_id is null
+            and trust_state in ('unclaimed', 'verification_draft', 'needs_more_evidence')
+          limit 1
+        ), existing as (
+          select vr.id, vr.facility_id, vr.version, false as created
+          from v2_verification_requests vr
+          join actor on actor.id = vr.claimant_account_id
+          join facility on facility.id = vr.facility_id
+          where vr.state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')
+          limit 1
+        ), inserted as (
+          insert into v2_verification_requests (facility_id, claimant_account_id, state, version)
+          select facility.id, actor.id, 'draft', 1
+          from facility cross join actor
+          where not exists (select 1 from existing)
+          returning id, facility_id, version, true as created
+        ), selected as (
+          select id, facility_id, version, created from inserted
+          union all
+          select id, facility_id, version, created from existing
+          limit 1
+        ), marked as (
+          update v2_facilities f
+          set trust_state = 'verification_draft', updated_at = now()
+          from selected
+          where f.id = selected.facility_id
+            and selected.created
+          returning f.id
+        )
+        select selected.id as request_id, selected.facility_id, selected.version, selected.created,
+          coalesce((select state from v2_verification_requests where id = selected.id), 'draft') as state,
+          coalesce((select created from placed limit 1), false) as materialized
+        from selected
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("The facility is unavailable for a claim or already claimed by another account.");
+      return {
+        requestId: String(row.request_id),
+        facilityId: String(row.facility_id),
+        state: row.state ? String(row.state) : "draft",
+        version: Number(row.version),
+        created: row.created === true,
+        materialized: row.materialized === true
+      };
+    },
     async cancelClaim(input) {
       if (!Number.isInteger(input.version) || input.version < 1) throw new FieldPilotPolicyError("The claim version is invalid.");
       const rows = await retryDatabase(() => sql`
@@ -6636,6 +6764,23 @@ function validateFacilityZoneAssignment(body, facilityId) {
   }
   return { facilityId, zone };
 }
+function validateClaimByOsmRef(body) {
+  if (body.sourceRef !== void 0) throw new ApiInputError("The OpenStreetMap reference is derived by the server and cannot be supplied.");
+  const osmType = body.osmType;
+  if (osmType !== "node" && osmType !== "way" && osmType !== "relation") throw new ApiInputError("A valid OpenStreetMap reference type (node, way, relation) is required.");
+  const osmId = Number(body.osmId);
+  if (!Number.isSafeInteger(osmId) || osmId < 1) throw new ApiInputError("A valid OpenStreetMap reference id is required.");
+  const name = typeof body.name === "string" ? body.name.trim() : "";
+  if (name.length < 1 || name.length > 180) throw new ApiInputError("A facility name of 1 to 180 characters is required.");
+  const category = body.category === null || body.category === void 0 ? null : typeof body.category === "string" ? body.category.trim() : "";
+  const address = body.address === null || body.address === void 0 ? null : typeof body.address === "string" ? body.address.trim() : "";
+  if (category !== null && category.length > 120 || address !== null && address.length > 240) throw new ApiInputError("The facility category or address is too long.");
+  if (body.latitude === null || body.latitude === void 0 || body.longitude === null || body.longitude === void 0) throw new ApiInputError("Valid facility coordinates are required.");
+  const latitude = Number(body.latitude);
+  const longitude = Number(body.longitude);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new ApiInputError("Valid facility coordinates are required.");
+  return { osmType, osmId, name, category, address, latitude, longitude };
+}
 function extractFedaPayTransaction(payload) {
   const object = payload.object && typeof payload.object === "object" && !Array.isArray(payload.object) ? payload.object : null;
   const nested = object && object.transaction && typeof object.transaction === "object" && !Array.isArray(object.transaction) ? object.transaction : object ?? null;
@@ -7169,6 +7314,28 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.listNotificationInbox({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/facilities" && url.searchParams.get("action") === "claim-by-osm-ref") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Create or open your Omni account before starting a facility claim."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateClaimByOsmRef(input);
+      const scope = parseIntakeScope(url.searchParams.get("scope"));
+      const verdict = classifyIntakePoint({ latitude: validated.latitude, longitude: validated.longitude, name: validated.name, address: validated.address }, isInsidePilotZone);
+      if (verdict.tier === "quarantine") {
+        json(res, 400, errorBody(correlationId, "QUARANTINED", `This place cannot be claimed (${verdict.reasons.join(", ")}).`));
+        return true;
+      }
+      if (scope === "pilot" && verdict.tier !== "pilot") {
+        json(res, 400, errorBody(correlationId, "OUT_OF_PILOT_ZONE", "This facility is outside the Omni pilot zone and cannot be claimed."));
+        return true;
+      }
+      const result = await repository.createClaimDraftFromOsmRef({ authUserId, ...validated, intakeTier: verdict.tier });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "claim") {

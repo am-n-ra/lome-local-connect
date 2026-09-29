@@ -139,8 +139,12 @@
 - **Doctrine lazy CONFIRMÉE permanente (DEC-V2-30)** : affichage = tuiles monde entier (zéro
   import) ; recherche = corpus DB (Togo + claimed + touchés) ; **matérialisation** = au claim,
   à l'interaction ou à la création uniquement. Réévaluable **sur preuve d'usage** uniquement.
-- **Prochaine tranche : claim-par-référence-OSM** (`omni-claim-by-osm-ref-contract-2026-09-28.md`)
-  — Root d'abord (`createClaimDraftFromOsmRef`), UI ensuite. C'est le chaînon qui permet de
-  revendiquer les **13 741** Togo sans pré-import.
+- **Tranche claim-par-référence-OSM : ROOT LIVRÉ, preuve live en attente**
+  (`omni-claim-by-osm-ref-contract-2026-09-28.md`) — `createClaimDraftFromOsmRef`
+  (référence→ligne→draft en UNE instruction gardée) + validateur `validateClaimByOsmRef`
+  + route `POST /api/v2/facilities?action=claim-by-osm-ref` + 9 tests stub (2 falsifiés)
+  + script `scripts/prove-v2-claim-by-osm-ref.mjs` (T1–T6, branche jetable requise).
+  **Reste :** exécuter la preuve live (URL de branche jetable requise), puis UI (Trunk).
+  C'est le chaînon qui permet de revendiquer les **13 741** Togo sans pré-import.
   **Gap à décider :** index permanent `v2_facility_source_refs(facility_id)` (moyen).
   **Re-plan :** fait contredit, garde rouge, ou stop fondateur.

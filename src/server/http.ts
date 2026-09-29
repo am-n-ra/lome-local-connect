@@ -241,6 +241,28 @@ export function validateFacilityZoneAssignment(body: Record<string, unknown>, fa
   return { facilityId, zone };
 }
 
+// DEC-V2-30 claim-by-OSM-reference. There is deliberately NO sourceRef field: the server derives
+// `osmType/osmId` into the canonical reference, so two clients naming the same place differently
+// cannot create two rows for one place.
+export function validateClaimByOsmRef(body: Record<string, unknown>): { osmType: 'node' | 'way' | 'relation'; osmId: number; name: string; category: string | null; address: string | null; latitude: number; longitude: number } {
+  if (body.sourceRef !== undefined) throw new ApiInputError('The OpenStreetMap reference is derived by the server and cannot be supplied.');
+  const osmType = body.osmType;
+  if (osmType !== 'node' && osmType !== 'way' && osmType !== 'relation') throw new ApiInputError('A valid OpenStreetMap reference type (node, way, relation) is required.');
+  const osmId = Number(body.osmId);
+  if (!Number.isSafeInteger(osmId) || osmId < 1) throw new ApiInputError('A valid OpenStreetMap reference id is required.');
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (name.length < 1 || name.length > 180) throw new ApiInputError('A facility name of 1 to 180 characters is required.');
+  const category = body.category === null || body.category === undefined ? null : typeof body.category === 'string' ? body.category.trim() : '';
+  const address = body.address === null || body.address === undefined ? null : typeof body.address === 'string' ? body.address.trim() : '';
+  if ((category !== null && category.length > 120) || (address !== null && address.length > 240)) throw new ApiInputError('The facility category or address is too long.');
+  // Number(null) is 0, not NaN: an explicit null would silently become Null Island.
+  if (body.latitude === null || body.latitude === undefined || body.longitude === null || body.longitude === undefined) throw new ApiInputError('Valid facility coordinates are required.');
+  const latitude = Number(body.latitude);
+  const longitude = Number(body.longitude);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw new ApiInputError('Valid facility coordinates are required.');
+  return { osmType, osmId, name, category, address, latitude, longitude };
+}
+
 export function extractFedaPayTransaction(payload: Record<string, unknown>): { transaction: Record<string, unknown>; metadata: Record<string, unknown> } {
   const object = payload.object && typeof payload.object === 'object' && !Array.isArray(payload.object)
     ? payload.object as Record<string, unknown>
@@ -823,6 +845,32 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.listNotificationInbox({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    // DEC-V2-30 claim-by-OSM-reference: reference to draft in ONE guarded statement. A place known
+    // only from the tiles has no row, so action=claim cannot be reached — this is the missing link.
+    // The intake gate mirrors operator-import: outside the pilot zone the claim is refused, never
+    // admitted silently (scope=world keeps the world view lazy, DEC-V2-27/28).
+    if (req.method === 'POST' && pathname === '/api/v2/facilities' && url.searchParams.get('action') === 'claim-by-osm-ref') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Create or open your Omni account before starting a facility claim.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateClaimByOsmRef(input);
+      const scope = parseIntakeScope(url.searchParams.get('scope'));
+      const verdict = classifyIntakePoint({ latitude: validated.latitude, longitude: validated.longitude, name: validated.name, address: validated.address }, isInsidePilotZone);
+      if (verdict.tier === 'quarantine') {
+        json(res, 400, errorBody(correlationId, 'QUARANTINED', `This place cannot be claimed (${verdict.reasons.join(', ')}).`));
+        return true;
+      }
+      if (scope === 'pilot' && verdict.tier !== 'pilot') {
+        json(res, 400, errorBody(correlationId, 'OUT_OF_PILOT_ZONE', 'This facility is outside the Omni pilot zone and cannot be claimed.'));
+        return true;
+      }
+      const result = await repository.createClaimDraftFromOsmRef({ authUserId, ...validated, intakeTier: verdict.tier });
+      json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim') {

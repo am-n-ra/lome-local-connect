@@ -313,6 +313,26 @@ export interface ClaimDraftResult {
   created: boolean;
 }
 
+// DEC-V2-30 claim-by-OSM-reference: a place known ONLY from the map tiles has no row, so
+// createClaimDraft cannot be reached. This input carries the tile facts and NOTHING that the
+// server derives itself — there is deliberately no sourceRef field.
+export interface ClaimByOsmRefInput {
+  authUserId: string;
+  osmType: 'node' | 'way' | 'relation';
+  osmId: number;
+  name: string;
+  category: string | null;
+  address: string | null;
+  latitude: number;
+  longitude: number;
+  intakeTier: 'pilot' | 'world' | 'quarantine';
+}
+
+export interface ClaimByOsmRefResult extends ClaimDraftResult {
+  /** true when this call created the facility row (materialised at claim, never before). */
+  materialized: boolean;
+}
+
 export interface ClaimSubmitInput {
   authUserId: string;
   requestId: string;
@@ -1569,6 +1589,139 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new FieldPilotPolicyError('The facility is unavailable for a claim or already claimed by another account.');
       return { requestId: String(row.request_id), facilityId: String(row.facility_id), state: (row.state ? String(row.state) : 'draft') as ClaimDraftResult['state'], version: Number(row.version), created: row.created === true };
+    },
+
+    // DEC-V2-30 claim-by-OSM-reference. A place known ONLY from the map tiles has no row, so
+    // createClaimDraft cannot be reached. One guarded statement resolves or materialises the
+    // facility AND creates the draft: the claim is the moment of materialisation (no OSM call,
+    // no backfill, no eager import).
+    async createClaimDraftFromOsmRef(input: ClaimByOsmRefInput): Promise<ClaimByOsmRefResult> {
+      const osmType = input.osmType;
+      const osmId = input.osmId;
+      const name = String(input.name ?? '').trim();
+      const category = input.category === null || input.category === undefined ? null : String(input.category).trim() || null;
+      const address = input.address === null || input.address === undefined ? null : String(input.address).trim() || null;
+      const intakeTier = input.intakeTier;
+      if (osmType !== 'node' && osmType !== 'way' && osmType !== 'relation') throw new FieldPilotPolicyError('The OpenStreetMap reference type is invalid.');
+      if (!Number.isSafeInteger(osmId) || osmId < 1) throw new FieldPilotPolicyError('The OpenStreetMap reference id is invalid.');
+      if (name.length < 1 || name.length > 180) throw new FieldPilotPolicyError('The facility name must be 1 to 180 characters.');
+      if (!Number.isFinite(input.latitude) || input.latitude < -90 || input.latitude > 90) throw new FieldPilotPolicyError('The facility latitude is invalid.');
+      if (!Number.isFinite(input.longitude) || input.longitude < -180 || input.longitude > 180) throw new FieldPilotPolicyError('The facility longitude is invalid.');
+      if ((category !== null && category.length > 120) || (address !== null && address.length > 240)) throw new FieldPilotPolicyError('The facility category or address is too long.');
+      if (intakeTier !== 'pilot' && intakeTier !== 'world' && intakeTier !== 'quarantine') throw new FieldPilotPolicyError('The intake tier is invalid.');
+
+      // Derived SERVER-side and NEVER accepted from the client: two clients naming the same OSM
+      // node differently would otherwise create two rows for one place.
+      const sourceRef = `${osmType}/${osmId}`;
+      const rawMetadata = JSON.stringify({
+        provider: 'openstreetmap',
+        name,
+        category,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        address,
+        intake_tier: intakeTier,
+        origin: 'claim-on-sight',
+      });
+
+      const rows = await retryDatabase(() => sql`
+        with src_existing as (
+          select id from v2_public_sources where provider = 'openstreetmap' limit 1
+        ), src_inserted as (
+          insert into v2_public_sources (provider, attribution)
+          select 'openstreetmap', 'OpenStreetMap contributors'
+          where not exists (select 1 from src_existing)
+          returning id
+        ), src as (
+          select id from src_existing
+          union all
+          select id from src_inserted
+          limit 1
+        ), resolved as (
+          select f.id, f.account_id, f.trust_state, false as created
+          from v2_facility_source_refs fr
+          join v2_facilities f on f.id = fr.facility_id
+          join src on src.id = fr.source_id
+          where fr.source_ref = ${sourceRef}
+          union
+          select f.id, f.account_id, f.trust_state, false as created
+          from v2_facilities f
+          where f.source_name = 'openstreetmap' and f.source_ref = ${sourceRef}
+        ), materialized as (
+          insert into v2_facilities
+            (account_id, source_kind, source_name, source_ref, name, category, latitude, longitude, address, trust_state)
+          select null, 'public_import', 'openstreetmap', ${sourceRef}, ${name}, ${category},
+            ${input.latitude}, ${input.longitude}, ${address}, 'verification_draft'
+          where not exists (select 1 from resolved)
+            and exists (select 1 from src)
+          returning id, account_id, trust_state, true as created
+        ), placed as (
+          select id, account_id, trust_state, created from resolved
+          union all
+          select id, account_id, trust_state, created from materialized
+          limit 1
+        ), referenced as (
+          insert into v2_facility_source_refs (facility_id, source_id, source_ref, raw_metadata)
+          select placed.id, src.id, ${sourceRef}, ${rawMetadata}::jsonb
+          from placed cross join src
+          where placed.created
+          on conflict (source_id, source_ref) do nothing
+          returning facility_id
+        ), account as (
+          insert into v2_accounts (auth_user_id, onboarding_state)
+          values (${input.authUserId}, 'seller_ready')
+          on conflict (auth_user_id) do update set updated_at = now()
+          returning id
+        ), actor as (
+          select id from account
+          union all
+          select id from v2_accounts where auth_user_id = ${input.authUserId} limit 1
+        ), facility as (
+          select id from placed
+          where account_id is null
+            and trust_state in ('unclaimed', 'verification_draft', 'needs_more_evidence')
+          limit 1
+        ), existing as (
+          select vr.id, vr.facility_id, vr.version, false as created
+          from v2_verification_requests vr
+          join actor on actor.id = vr.claimant_account_id
+          join facility on facility.id = vr.facility_id
+          where vr.state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')
+          limit 1
+        ), inserted as (
+          insert into v2_verification_requests (facility_id, claimant_account_id, state, version)
+          select facility.id, actor.id, 'draft', 1
+          from facility cross join actor
+          where not exists (select 1 from existing)
+          returning id, facility_id, version, true as created
+        ), selected as (
+          select id, facility_id, version, created from inserted
+          union all
+          select id, facility_id, version, created from existing
+          limit 1
+        ), marked as (
+          update v2_facilities f
+          set trust_state = 'verification_draft', updated_at = now()
+          from selected
+          where f.id = selected.facility_id
+            and selected.created
+          returning f.id
+        )
+        select selected.id as request_id, selected.facility_id, selected.version, selected.created,
+          coalesce((select state from v2_verification_requests where id = selected.id), 'draft') as state,
+          coalesce((select created from placed limit 1), false) as materialized
+        from selected
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('The facility is unavailable for a claim or already claimed by another account.');
+      return {
+        requestId: String(row.request_id),
+        facilityId: String(row.facility_id),
+        state: (row.state ? String(row.state) : 'draft') as ClaimDraftResult['state'],
+        version: Number(row.version),
+        created: row.created === true,
+        materialized: row.materialized === true,
+      };
     },
 
     async cancelClaim(input: { authUserId: string; requestId: string; version: number; correlationId: string }): Promise<{ requestId: string; facilityId: string; state: 'cancelled'; version: number }> {
