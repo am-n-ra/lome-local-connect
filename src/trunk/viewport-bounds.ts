@@ -4,6 +4,11 @@
 
 export type ViewportBounds = [number, number, number, number]; // west, south, east, north
 
+/** A sick map transform yields NaN/Infinity bounds: never load, never store, never request. */
+export function isUsableViewportBounds(bounds: ViewportBounds | null): bounds is ViewportBounds {
+  return bounds !== null && bounds.every(Number.isFinite);
+}
+
 export function viewportCenter(bounds: ViewportBounds): { latitude: number; longitude: number } {
   return { latitude: (bounds[1] + bounds[3]) / 2, longitude: (bounds[0] + bounds[2]) / 2 };
 }

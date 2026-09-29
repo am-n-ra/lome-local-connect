@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { viewportCenter, viewportMovedSignificantly } from './viewport-bounds';
+import { isUsableViewportBounds, viewportCenter, viewportMovedSignificantly } from './viewport-bounds';
 
 describe('viewport exploration contract', () => {
   it('treats the first viewport as a load', () => {
@@ -20,5 +20,11 @@ describe('viewport exploration contract', () => {
   });
   it('centers a viewport the way the server orders it', () => {
     expect(viewportCenter([1.0, 6.0, 1.4, 6.3])).toEqual({ latitude: 6.15, longitude: 1.2 });
+  });
+  it('refuses a sick viewport before it reaches a request', () => {
+    expect(isUsableViewportBounds(null)).toBe(false);
+    expect(isUsableViewportBounds([1.0, 6.0, Number.NaN, 6.3])).toBe(false);
+    expect(isUsableViewportBounds([1.0, 6.0, 1.4, Number.POSITIVE_INFINITY])).toBe(false);
+    expect(isUsableViewportBounds([1.0, 6.0, 1.4, 6.3])).toBe(true);
   });
 });

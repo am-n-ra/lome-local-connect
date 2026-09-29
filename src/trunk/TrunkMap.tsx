@@ -15,6 +15,7 @@ import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, projectionForZoom } from './map-camera';
 import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { isUsableViewportBounds } from './viewport-bounds';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
@@ -778,8 +779,16 @@ const syncCameraPadding = () => {
 
     if (!isFallback) (map as Map).on('style.load', configureStyle);
     const emitBounds = () => {
-      const bounds = map.getBounds();
-      const next: [number, number, number, number] = [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()];
+      // A sick map transform (NaN matrices) makes getBounds THROW inside the moveend/dragend/
+      // zoomend handlers: uncaught on every gesture, and no usable window anyway. Refuse first.
+      let raw: { getWest(): number; getSouth(): number; getEast(): number; getNorth(): number };
+      try {
+        raw = map.getBounds();
+      } catch {
+        return;
+      }
+      const next: [number, number, number, number] = [raw.getWest(), raw.getSouth(), raw.getEast(), raw.getNorth()];
+      if (!isUsableViewportBounds(next)) return;
       const key = next.map((value) => value.toFixed(4)).join(',');
       if (key === lastBoundsKey.current) return;
       lastBoundsKey.current = key;

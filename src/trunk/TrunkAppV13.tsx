@@ -22,7 +22,7 @@ import type {
   FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
-import { viewportMovedSignificantly } from './viewport-bounds';
+import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -348,7 +348,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Paused while search results own the pins — a pan must never clobber an explicit query.
   // Old pins stay visible until the new window arrives: no flash, no invented emptiness.
   useEffect(() => {
-    if (!bounds || results.length > 0) return;
+    if (!isUsableViewportBounds(bounds) || results.length > 0) return;
     if (lastLoadedBoundsRef.current && !viewportMovedSignificantly(lastLoadedBoundsRef.current, bounds)) return;
     if (viewportTimerRef.current) clearTimeout(viewportTimerRef.current);
     const target = bounds;
