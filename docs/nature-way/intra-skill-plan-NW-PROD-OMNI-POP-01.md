@@ -181,6 +181,13 @@
   catalogue + phrase. Zéro migration. **Les 4 caractéristiques qui font une offre sont
   vivantes : R-G (unicité), R-H (prix), R-I (condition + remise). R-I CLOSE.**
   Prochaine : finition Root → revue.
+- **HOTFIX `3e68047` (2026-09-29, trouvé par MCP-2, pas par la suite)** — ma branche R-I
+  handover lisait `(select position_kind from owned)` sans `p.position_kind` au CTE : Postgres
+  rejetait l'instruction ENTIÈRE → **aucune publication/archivage vendeur depuis `fb4f03f`**.
+  Invisible aux 662 tests stubbés (aucun SQL compilé) — 3e occurrence de la classe après
+  NW-13j et RB-PROD-3. Leçon : un test « branche présente dans le texte » ne vaut rien ;
+  seul le harnais réel couvre. Garde `cte-column-completeness.test.ts` ajoutée (falsifiée).
+  32/32 read-paths, déployé (dep 6745301289).
 - **Résidu accepté (2026-09-29, mesuré prod headless)** — burst borné au démarrage : 6 requêtes
   (monde + 4 paliers du vol d'arrivée + Lomé, ~370 Ko, aucune boucle en idle). Le vol
   n'expose aucun mode caméra distinct : le supprimer demanderait une plomberie à risque
