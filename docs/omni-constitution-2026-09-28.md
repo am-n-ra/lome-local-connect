@@ -181,7 +181,8 @@ avancée — jamais pour exister ou être vu. **Aucune commission** (biens payé
 destructives et patterns disable-trigger · autorité données/sécurité · activation d'une
 géographie hors données cartes couvertes (le monde couvert est délégué ; MAJ DEC-V2-11, remplace
 « hors pilote Lomé ») · prod (T-07d) · engagements externes · réouverture Seed/Species ·
-**décisions ouvertes : H1–H4, ordre R-I, D-LOC-6/8, essai voix RT-4, application 062 au canonique.**
+**décisions ouvertes : H1–H4, D-LOC-6, essai voix RT-4, application 062 au canonique.**
+(R-I clos et D-LOC-8 tranchée DEC-V2-32 le 2026-09-29 — retirés de cette liste.)
 **Délégué :** tranches de routine, bugs avec preuve, migrations additives, docs/tests/gardes,
 pushes docs-only. Revue asynchrone par receipts ; stop-and-report sur garde rouge ou incident.
 **Délégation réversible à tout moment**, revue 2026-12-26 ou déclencheur.
