@@ -10,6 +10,8 @@
 //  2. Le libellé du bouton d'itinéraire est « Itinéraire vers ce vendeur », et les
 //     résultats sont des `button` portant le nom de la facilité (pas de `.hcard`).
 //     Chercher une chaîne inexistante échoue sans que le produit soit en cause.
+//  3. RT-D2 option (b) SUPERSEDE COR-0a : ne plus cliquer le bouton itinéraire
+//     (verrouillé jusqu'à l'intention) — assertir le verrou + l'absence de tracé.
 import { chromium } from 'playwright';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -80,8 +82,10 @@ async function proveWidth(browser, width) {
     `${pinCount} pins ouvrables`,
   );
 
-  // 2. Barre de recherche présente et ouvrable.
-  const searchBtn = page.getByRole('button', { name: 'Recherche' });
+  // 2. Barre de recherche présente et ouvrable. Scopée au navpill en match exact :
+  // le corpus contient désormais des lieux nommés « …Recherche » (ministère), qu'un
+  // match flou prendrait pour le dock. Prouver le dock, pas un pin homonyme.
+  const searchBtn = page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true });
   record(width, 'search-affordance', (await searchBtn.count()) > 0 ? 'PASS' : 'FAIL', 'bouton Recherche');
   await searchBtn.first().click();
   await page.waitForTimeout(1500);
@@ -96,15 +100,19 @@ async function proveWidth(browser, width) {
   }
 
   // 3. Contraintes : la zone s'ouvre à la frappe (divulgation progressive).
+  // D-CON-5 : 3 groupes nommés, pas un bloc « CONTRAINTES » (renommé, tester le neuf).
+  // Mesurer le texte RENDU, casse comprise : le CSS desktop passe les labels en capitales
+  // (classe S-28), donc match insensible à la casse — pas le source.
   await input.fill(QUERY);
   await page.waitForTimeout(1500);
   const constraintText = await page.locator('body').innerText();
 
+  const groupsFound = [/disponibilité/i, /votre besoin/i, /attributs/i].filter((re) => re.test(constraintText));
   record(
     width,
     'constraints-chips',
-    /CONTRAINTES/i.test(constraintText) ? 'PASS' : 'FAIL',
-    'bloc Contraintes ouvert après saisie',
+    groupsFound.length === 3 ? 'PASS' : 'FAIL',
+    `groupes = ${groupsFound.length}/3`,
   );
 
   const radiusFound = RADIUS_LABELS.filter((r) => constraintText.includes(r));
@@ -172,20 +180,26 @@ async function proveWidth(browser, width) {
   const trustHonest = /Non revendiquée|À confirmer|Confirmée/.test(fiche);
   record(width, 'trust-state-honest', trustHonest ? 'PASS' : 'FAIL', 'libellé de confiance');
 
-  // 7. COR-0a : itinéraire disponible AVANT intention d'achat.
+  // 7. RT-D2 option (b) — SUPERSEDE COR-0a : l'itinéraire est VERROUILLÉ jusqu'à
+  // l'intention. Bouton visible mais désactivé, avec le vrai chemin dans le title.
+  // Cliquer testerait l'ancien contrat (COR-0a, remplacé) : on assert le verrou.
   const routeBtn = page.getByRole('button', { name: /Itinéraire vers ce vendeur/i });
-  const routeBefore = (await routeBtn.count()) > 0;
+  const routeCount = await routeBtn.count();
+  const routeDisabled = routeCount > 0 ? await routeBtn.first().isDisabled() : false;
+  const routeAria = routeCount > 0 ? await routeBtn.first().getAttribute('aria-disabled') : null;
+  const routeTitle = routeCount > 0 ? (await routeBtn.first().getAttribute('title')) ?? '' : '';
+  const routeLocked = routeCount > 0 && routeDisabled && routeAria === 'true' && /intention/i.test(routeTitle);
   record(
     width,
-    'route-available-before-intent',
-    routeBefore ? 'PASS' : 'FAIL',
-    'bouton itinéraire sur la fiche, avant intention',
+    'route-locked-before-intent',
+    routeLocked ? 'PASS' : 'FAIL',
+    routeLocked ? 'bouton visible désactivé, chemin intention nommé' : 'VERROU RT-D2 ABSENT',
   );
   record(
     width,
     'route-promise-honest',
-    /Contact & chat restent débloqués après intention/i.test(fiche) ? 'PASS' : 'FAIL',
-    'promesse contact/chat honnête',
+    /comme le contact vendeur, l.+itinéraire se débloque après/i.test(fiche) ? 'PASS' : 'FAIL',
+    'promesse verrou-intention honnête (RT-D2)',
   );
 
   // 8. RAC-1 : le contact n'est PAS exposé avant intention.
@@ -199,31 +213,20 @@ async function proveWidth(browser, width) {
 
   await page.screenshot({ path: `${OUT}/w${width}-facility-fiche.png`, fullPage: false });
 
-  // 9. Déclencher l'itinéraire — la géoloc est refusée par construction dans
-  // cette preuve, donc le contrat honnête est : soit le tracé, soit le message
-  // « Position indisponible… ». Assertir le tracé seul serait un faux négatif.
-  if (routeBefore) {
-    await routeBtn.first().click();
-    await page.waitForTimeout(3500);
+  // 9. Pré-intention : aucun tracé ne peut partir (le bouton est désactivé, le
+  // callback ne pose jamais de routeTarget). Contrat honnête : chip absente ou
+  // dégradé étiqueté — jamais un faux tracé.
+  {
     const chip = page.locator('.route-status-chip');
     const chipCount = await chip.count();
     const chipText = chipCount ? (await chip.first().innerText()).trim().replace(/\s+/g, ' ') : '';
     const chipState = chipCount ? await chip.first().getAttribute('data-state') : null;
-    const honest =
-      /Itinéraire vers/i.test(chipText) || /Position indisponible/i.test(chipText);
+    const noLiveTrace = chipCount === 0 || chipState === 'unavailable';
     record(
       width,
-      'route-render',
-      chipCount > 0 && honest ? 'PASS' : 'FAIL',
-      chipCount ? `data-state=${chipState} — « ${chipText.slice(0, 80)} »` : 'aucun statut d’itinéraire',
-    );
-    record(
-      width,
-      'route-degraded-honest',
-      !/Position indisponible/i.test(chipText) || chipState === 'unavailable' ? 'PASS' : 'FAIL',
-      chipState === 'unavailable'
-        ? 'dégradé étiqueté « unavailable », pas un faux tracé'
-        : 'tracé réel affiché',
+      'no-route-before-intent',
+      noLiveTrace ? 'PASS' : 'FAIL',
+      chipCount ? `data-state=${chipState} — « ${chipText.slice(0, 80)} »` : 'aucun tracé avant intention',
     );
     await page.screenshot({ path: `${OUT}/w${width}-route.png`, fullPage: false });
   }

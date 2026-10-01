@@ -1,6 +1,6 @@
 {
   "baseUrl": "https://omni.sparkafrika.online/",
-  "asOf": "2026-09-20T13:11:41.459Z",
+  "asOf": "2026-10-01T09:07:18.156Z",
   "widths": [
     360,
     768,
@@ -9,8 +9,8 @@
   ],
   "query": "boulangerie",
   "summary": {
-    "total": 80,
-    "pass": 80,
+    "total": 76,
+    "pass": 76,
     "fail": 0,
     "blocked": 0
   },
@@ -37,7 +37,7 @@
       "width": 360,
       "step": "supply-present",
       "status": "PASS",
-      "detail": "206 pins ouvrables"
+      "detail": "250 pins ouvrables"
     },
     {
       "width": 360,
@@ -55,7 +55,7 @@
       "width": 360,
       "step": "constraints-chips",
       "status": "PASS",
-      "detail": "bloc Contraintes ouvert après saisie"
+      "detail": "groupes = 3/3"
     },
     {
       "width": 360,
@@ -85,7 +85,7 @@
       "width": 360,
       "step": "result-item-present",
       "status": "PASS",
-      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+      "detail": "carte résultat « Boulangerie notre dame de la trinité shop:bakery · 0 produit »"
     },
     {
       "width": 360,
@@ -101,15 +101,15 @@
     },
     {
       "width": 360,
-      "step": "route-available-before-intent",
+      "step": "route-locked-before-intent",
       "status": "PASS",
-      "detail": "bouton itinéraire sur la fiche, avant intention"
+      "detail": "bouton visible désactivé, chemin intention nommé"
     },
     {
       "width": 360,
       "step": "route-promise-honest",
       "status": "PASS",
-      "detail": "promesse contact/chat honnête"
+      "detail": "promesse verrou-intention honnête (RT-D2)"
     },
     {
       "width": 360,
@@ -119,15 +119,9 @@
     },
     {
       "width": 360,
-      "step": "route-render",
+      "step": "no-route-before-intent",
       "status": "PASS",
-      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
-    },
-    {
-      "width": 360,
-      "step": "route-degraded-honest",
-      "status": "PASS",
-      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+      "detail": "aucun tracé avant intention"
     },
     {
       "width": 360,
@@ -157,7 +151,7 @@
       "width": 768,
       "step": "supply-present",
       "status": "PASS",
-      "detail": "206 pins ouvrables"
+      "detail": "250 pins ouvrables"
     },
     {
       "width": 768,
@@ -175,7 +169,7 @@
       "width": 768,
       "step": "constraints-chips",
       "status": "PASS",
-      "detail": "bloc Contraintes ouvert après saisie"
+      "detail": "groupes = 3/3"
     },
     {
       "width": 768,
@@ -221,15 +215,15 @@
     },
     {
       "width": 768,
-      "step": "route-available-before-intent",
+      "step": "route-locked-before-intent",
       "status": "PASS",
-      "detail": "bouton itinéraire sur la fiche, avant intention"
+      "detail": "bouton visible désactivé, chemin intention nommé"
     },
     {
       "width": 768,
       "step": "route-promise-honest",
       "status": "PASS",
-      "detail": "promesse contact/chat honnête"
+      "detail": "promesse verrou-intention honnête (RT-D2)"
     },
     {
       "width": 768,
@@ -239,15 +233,9 @@
     },
     {
       "width": 768,
-      "step": "route-render",
+      "step": "no-route-before-intent",
       "status": "PASS",
-      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
-    },
-    {
-      "width": 768,
-      "step": "route-degraded-honest",
-      "status": "PASS",
-      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+      "detail": "aucun tracé avant intention"
     },
     {
       "width": 768,
@@ -277,7 +265,7 @@
       "width": 1280,
       "step": "supply-present",
       "status": "PASS",
-      "detail": "206 pins ouvrables"
+      "detail": "250 pins ouvrables"
     },
     {
       "width": 1280,
@@ -295,7 +283,7 @@
       "width": 1280,
       "step": "constraints-chips",
       "status": "PASS",
-      "detail": "bloc Contraintes ouvert après saisie"
+      "detail": "groupes = 3/3"
     },
     {
       "width": 1280,
@@ -341,15 +329,15 @@
     },
     {
       "width": 1280,
-      "step": "route-available-before-intent",
+      "step": "route-locked-before-intent",
       "status": "PASS",
-      "detail": "bouton itinéraire sur la fiche, avant intention"
+      "detail": "bouton visible désactivé, chemin intention nommé"
     },
     {
       "width": 1280,
       "step": "route-promise-honest",
       "status": "PASS",
-      "detail": "promesse contact/chat honnête"
+      "detail": "promesse verrou-intention honnête (RT-D2)"
     },
     {
       "width": 1280,
@@ -359,15 +347,9 @@
     },
     {
       "width": 1280,
-      "step": "route-render",
+      "step": "no-route-before-intent",
       "status": "PASS",
-      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
-    },
-    {
-      "width": 1280,
-      "step": "route-degraded-honest",
-      "status": "PASS",
-      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+      "detail": "aucun tracé avant intention"
     },
     {
       "width": 1280,
@@ -397,7 +379,7 @@
       "width": 1920,
       "step": "supply-present",
       "status": "PASS",
-      "detail": "206 pins ouvrables"
+      "detail": "250 pins ouvrables"
     },
     {
       "width": 1920,
@@ -415,7 +397,7 @@
       "width": 1920,
       "step": "constraints-chips",
       "status": "PASS",
-      "detail": "bloc Contraintes ouvert après saisie"
+      "detail": "groupes = 3/3"
     },
     {
       "width": 1920,
@@ -445,7 +427,7 @@
       "width": 1920,
       "step": "result-item-present",
       "status": "PASS",
-      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+      "detail": "carte résultat « Boulangerie notre dame de la trinité shop:bakery · 0 produit »"
     },
     {
       "width": 1920,
@@ -461,15 +443,15 @@
     },
     {
       "width": 1920,
-      "step": "route-available-before-intent",
+      "step": "route-locked-before-intent",
       "status": "PASS",
-      "detail": "bouton itinéraire sur la fiche, avant intention"
+      "detail": "bouton visible désactivé, chemin intention nommé"
     },
     {
       "width": 1920,
       "step": "route-promise-honest",
       "status": "PASS",
-      "detail": "promesse contact/chat honnête"
+      "detail": "promesse verrou-intention honnête (RT-D2)"
     },
     {
       "width": 1920,
@@ -479,15 +461,9 @@
     },
     {
       "width": 1920,
-      "step": "route-render",
+      "step": "no-route-before-intent",
       "status": "PASS",
-      "detail": "data-state=unavailable — « Position indisponible. Activez la localisation puis relancez « Voir l’itinéraire »"
-    },
-    {
-      "width": 1920,
-      "step": "route-degraded-honest",
-      "status": "PASS",
-      "detail": "dégradé étiqueté « unavailable », pas un faux tracé"
+      "detail": "aucun tracé avant intention"
     },
     {
       "width": 1920,
