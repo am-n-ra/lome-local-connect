@@ -14,12 +14,12 @@
 
 | Field | Value |
 |---|---|
-| **Gate** | `SPECIES_CLOSED_ROOT_OPEN` |
-| **As of** | 2026-09-25 |
-| **Decided by** | Fondateur |
+| **Gate** | `ROOT_CLOSED` |
+| **As of** | 2026-09-29 |
+| **Decided by** | Fondateur (verdict « Root CLOSE », voir §Verdict Root ci-dessous) |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`) |
 | **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
-| **Root** | **OUVERT** — finition du socle (`R-B`…`R-E`) puis alignement de l'app sur la maquette |
+| **Root** | **CLOS `founder-confirmed` 2026-09-29** — voir §Verdict Root. 4 caractéristiques vivantes (R-G/R-H/R-I), claim Root+UI, viewport, tap-claim, caméra durcie, preuves MCP réconciliées, revue relais 76/76. |
 
 > **⚠️ La validation fondateur est arrivée le 2026-09-25** (« Ok Validé »). Elle porte sur **`SP-1…SP-10`**.
 > **Un audit conforme ne vaut pas acceptation** — la règle reste ; ici l'acceptation est **explicite et
@@ -34,7 +34,18 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Root OUVERT** · Trunk/Branches/Canopy **non ouverts** |
+| **Downstream gates** | **Root CLOSE 2026-09-29** · porte suivante **à désigner par HQ** (candidat naturel : usage réel terrain, Gate 7 en watch) · Trunk/Branches/Canopy : tranches au service de Root livrées, pas des portes ouvertes |
+
+## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
+
+> **Règle rappelée :** livrer ne clôt pas ; seule une décision fondateur enregistrée clôt.
+> Verdict rendu sur le dossier de revue relais : batterie 664/664 + tsc 0 + 7 gardes
+> (species-t12 27/27, maquette 74), MCP-1 claim ALL PASS, MCP-2 32/32 (après hotfix
+> `3e68047`), MCP-3 T-07d, PRE-1 navigateur 76/76 aux 4 largeurs.
+> **Réserves actées (suivies hors Root) :** UM-062 hors clone (b5f1804 autre session),
+> spot-checks terrain + root cause NaN appareil (session requise), décisions ouvertes
+> (UM-6, D-LOC-6/8, D-C5, RT-4, H1–H4), sheet `tile-place` (conformité Species à re-mesurer).
+> **Ne rouvrir Root que sur fait nouveau** (régression prouvée ou décision fondateur).
 
 ### ⚠️ Correction d'exécution — 2026-09-23 (incident, à ne pas réapprendre)
 

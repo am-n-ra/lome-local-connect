@@ -20,21 +20,24 @@ if (!gate) {
   console.error(`FAIL  ${SOR}: could not read the Gate value`);
   process.exit(1);
 }
-if (gate !== 'SPECIES_CLOSED_ROOT_OPEN') {
+if (gate !== 'ROOT_CLOSED') {
   console.error(`FAIL  ${SOR}: unexpected gate "${gate}"`);
   process.exit(1);
 }
 
-// The marker every operational artifact must carry now that the founder closed Species
-// (2026-09-25) and Root is the current gate. The previous marker proved the REOPEN; this
-// one proves the CLOSURE. A stale reopen marker after validation would re-assert an open
-// gate — the exact drift this script exists to catch.
+// TURNED 2026-09-29 (suite-11 precedent): the founder closed Root, so claiming it open
+// is now the mistake. What stays required is the recorded closure + the still-valid
+// Species marker. The stale gate code must not survive in the source of record.
 const MARKER = 'Species V2 CLOSE';
+const ROOT_MARKER = 'Root CLOSE';
 
 const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', MARKER],
   ['docs/founder-hq/founder-hq-master-plan.md', MARKER],
   ['AGENTS.md', MARKER],
+  ['docs/founder-hq/founder-hq-board.md', ROOT_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', ROOT_MARKER],
+  ['AGENTS.md', ROOT_MARKER],
 ];
 
 const mustPointToV2 = [
@@ -64,6 +67,7 @@ const incident = [
 // still asserts an open gate after validation.
 const forbiddenClaims = [
   ['docs/founder-hq/current-state.md', '`SEED_CLOSED_SPECIES_REOPENED`', 'must not re-assert the closed reopen gate'],
+  ['docs/founder-hq/current-state.md', '`SPECIES_CLOSED_ROOT_OPEN`', 'must not re-assert the superseded gate code after Root closure 2026-09-29'],
   ['docs/founder-hq/founder-hq-board.md', 'le socle ne suit pas.', 'must not assert the stale "le socle ne suit pas" verdict as current'],
   ['docs/founder-hq/founder-hq-board.md', 'Species RÉOUVERTE — `SP-VALIDATION` toujours ouverte', 'must not still call SP-VALIDATION pending after the founder validated'],
 ];

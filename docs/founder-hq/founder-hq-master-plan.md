@@ -28,13 +28,15 @@ These supersede the product framing in `OMNI-V3-MASTER-PLAN.md §2–3` where th
 
 ## Ordered gate plan
 
-> ⚠️ **PORTE COURANTE = ROOT (ouverte). Species V2 CLOSE `founder-confirmed` 2026-09-25.**
-> Marker de contrôle : **Species V2 CLOSE**. Validation fondateur reçue (« Validé ») sur **`SP-1…SP-10`**.
+> ⚠️ **PORTE COURANTE : verdict Root CLOSE `founder-confirmed` 2026-09-29 — porte suivante à désigner par HQ.**
+> Marker de contrôle : **Species V2 CLOSE** (toujours valide) + **Root CLOSE** (2026-09-29, §Verdict Root de `current-state.md`). Historique ci-dessous (lignes 2026-09-25) : porte Root alors ouverte.
 > Historique : Seed reconciliation + Species reconciliation (RÉOUVERTE 2026-09-23 → CLOSE 2026-09-25).
 > Les statuts `done` des lignes 1–2 ci-dessous décrivent l'état **V1 du 2026-09-02**, **superseded** :
 > le fondateur a rouvert Seed puis Species le **2026-09-23** (voir §« HQ RECONCILIATION — 2026-09-23 »
 > en fin de document). Le Seed V2 est **clos `founder-confirmed`** ; **Species V2 est CLOSE**
-> (validation fondateur 2026-09-25). **La porte courante est Root** — Trunk/Branches/Canopy restent fermés.
+> (validation fondateur 2026-09-25). **Root est CLOS `founder-confirmed` 2026-09-29**
+> (verdict, voir `current-state.md` §Verdict Root) — Trunk/Branches/Canopy : tranches au
+> service de Root livrées, pas des portes ouvertes ; porte suivante à désigner par HQ.
 > **Source de vérité de l'état courant : la section de réconciliation en fin de document.**
 > Seed V2 : `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`, `founder-confirmed`).
 

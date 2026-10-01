@@ -15,8 +15,9 @@ Omni: a map-first, constraint-based search engine for local supply (Lomé field 
 - **Coherence/debt register (CURRENT):** `docs/nature-way/omni-v2-coherence-and-debt-2026-09-23.md`.
 - Method skills live in `.agents/skills/` (nature-way ecosystem). Always start via Nature Way Founder HQ; route product work to `/nature-way`.
 
-## ⚠️ CURRENT GATE — read this first (as of 2026-09-23)
+## ⚠️ CURRENT GATE — read this first (as of 2026-09-23, TURNED 2026-09-25 then 2026-09-29 — read current-state.md, never this header alone)
 **Seed reconciliation + Species reconciliation — RÉOUVERTE 2026-09-23** (par le fondateur).
+**Root CLOSE `founder-confirmed` 2026-09-29** — verdict fondateur (preuves : 664/664, 7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). Porte suivante à désigner par HQ. Ne rouvrir Root que sur fait nouveau.
 > Source de vérité : `docs/founder-hq/current-state.md`.
 Founder: « on a assez tourne en rond… je pense qu'on a rate tout le process depuis Species » and
 « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse » → asked to **restart from Seed**.

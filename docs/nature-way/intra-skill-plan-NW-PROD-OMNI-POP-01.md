@@ -193,3 +193,7 @@
   n'expose aucun mode caméra distinct : le supprimer demanderait une plomberie à risque
   de blocage (pause coincée = carte sans pins). Accepté : coût modeste, pins corrects à
   l'atterrissage. T-07d vérifié : prod sert `index-DitKQXaO.js` (viewport + R-I).
+- **Root CLOSE 2026-09-29 (verdict fondateur)** — porte fermée sur dossier revue (664/664,
+  7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). Gardes retournés
+  (`ROOT_CLOSED`, marqueurs, ancien code interdit). Réserves hors Root : UM-062, spot-checks,
+  NaN appareil, décisions ouvertes. Ne rouvrir que sur fait nouveau.
