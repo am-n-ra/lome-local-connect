@@ -10,7 +10,11 @@
 // Read the state, never infer it.
 import { chromium } from 'playwright';
 import { resolve } from 'node:path';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+
+// The scratch dir is gitignored and may not exist on a fresh session (ENOENT wall):
+// the guard creates its own workspace instead of assuming it.
+mkdirSync(resolve('.agent_tmp'), { recursive: true });
 
 const htmlPath = resolve('docs/maquette/omni-species-v2-interactive.html');
 const html = readFileSync(htmlPath, 'utf8');
