@@ -204,7 +204,11 @@ const [bulkCreditSummary, setBulkCreditSummary] = useState<BuyerCreditSummary | 
 const [stockEventProductId, setStockEventProductId] = useState<string | null>(null);
 const [pendingSearch, setPendingSearch] = useState('');
 const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
-const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  // D-C5 : la fiche multi-produits d'UNE facilité rend des vérifications manuelles
+  // gratuites, pas un bulk. La sheet partage l'affichage des lignes, jamais le nom :
+  // l'en-tête dit d'où vient ce qu'on voit.
+  const [bulkOrigin, setBulkOrigin] = useState<'search' | 'fiche' | null>(null);
   const [myTeamInvites, setMyTeamInvites] = useState<MyTeamInvite[]>([]);
   const [myTeamInvitesState, setMyTeamInvitesState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [myTeamInvitesError, setMyTeamInvitesError] = useState('');
@@ -242,11 +246,15 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       }
       return true;
     });
+    // D-C5 / R-4 : 1 crédit par BESOIN, quel que soit le nombre de fournisseurs.
+    // Miroir exact du serveur (`createBulkAvailabilityRequest`) : l'ancien ceil(N/100)
+    // sur-facturait au-delà de 100 et a été retiré des deux côtés (coût ET reste).
+    const cost = targets.length === 0 ? 0 : 1;
     return {
       targets,
       count: targets.length,
-      cost: targets.length === 0 ? 0 : Math.ceil(targets.length / 100),
-      remaining: (bulkCreditSummary?.creditsRemaining ?? 0) - (targets.length === 0 ? 0 : Math.ceil(targets.length / 100)),
+      cost,
+      remaining: (bulkCreditSummary?.creditsRemaining ?? 0) - cost,
     };
   }, [bulkFacilities, bulkSelection, bulkRayon, bounds, bulkCreditSummary]);
 
@@ -596,6 +604,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   const openBulk = useCallback(async () => {
     setSheet('bulk');
+    setBulkOrigin('search');
     setBulkSending(false);
     setBulkResults(null);
     setBulkErrors(null);
@@ -623,7 +632,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token || bulkSending) return;
     if (bulkCost.count === 0) { setBulkErrors('Sélectionnez au moins une facilité pour le bulk.'); return; }
-    if (bulkCost.cost === 0 && bulkCost.count > 0) { setBulkErrors('Ce bulk ne peut pas être nul.'); return; }
+    if (bulkCost.count < 2) { setBulkErrors('Un bulk compare un besoin chez au moins 2 facilités — une seule passe en vérification manuelle gratuite.'); return; }
     const productRef = bulkCost.targets
       .map((facility) => bulkDetails[facility.id]?.products)
       .filter((products): products is NonNullable<typeof products> => Boolean(products && products.length > 0))
@@ -1713,9 +1722,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="bulk" role="region" aria-label="Disponibilité groupée">
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Demande bulk</div><h1>Un besoin, plusieurs facilités</h1></div>
+            {bulkOrigin === 'fiche' && bulkResults
+              ? <div><div className="eyebrow">Demandes manuelles</div><h1>Plusieurs produits, une facilité</h1></div>
+              : <div><div className="eyebrow">Demande bulk</div><h1>Un besoin, plusieurs facilités</h1></div>}
           </div>
-          <p className="tiny muted">La demande part vers chaque facilité sélectionnée. Le coût se compte en bulks : 1 crédit par tranche de 100 facilités payante (1 à 100 = 1, 101 à 200 = 2…). La vérification d'une seule facilité reste gratuite.</p>
+          {bulkOrigin === 'fiche' && bulkResults && (
+            <p className="tiny muted">Gratuit — chaque produit fait l'objet d'une vérification manuelle auprès de cette facilité.</p>
+          )}
+          <p className="tiny muted">La demande part vers chaque facilité sélectionnée (2 minimum). Coût : <b>1 crédit par besoin</b>, quel que soit le nombre de facilités. La vérification d'une seule facilité reste gratuite.</p>
           {!bulkLoading && !bulkResults && bulkCreditSummary && (
             <div className={`cardbox ${bulkCost.cost > (bulkCreditSummary?.creditsRemaining ?? 0) ? 'dash' : ''}`} style={{ marginTop: 8 }}>
               <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -1954,6 +1968,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                         const token = await requireAuth();
                         if (!token) return;
                         setBulkResults(null); setBulkErrors(null); setSheet('bulk');
+                        setBulkOrigin('fiche');
                         const rows = await Promise.all(picked.map(async (product) => {
                           const res = await requestAvailability({ productId: product.id, facilityId: selectedFacility.id, quantity: 1, budgetMode: 'unlimited', budgetMinor: null, deliveryMode: 'retrait', note: null, token, idempotencyKey: 'fac-' + selectedFacility.id + '-' + product.id + '-' + crypto.randomUUID() });
                           return { facilityId: selectedFacility.id, facilityName: selectedFacility.name, productId: product.id, productName: product.name, status: (res.ok && res.data ? 'submitted' : 'error') as 'submitted' | 'error', quantityAvailable: null, observedAt: null };
