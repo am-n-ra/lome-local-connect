@@ -97,8 +97,10 @@ avancée — jamais pour exister ou être vu. **Aucune commission** (biens payé
 | Bulk | 3 / mois | 100 / mois |
 | Favoris/comparateur | limité (comparateur ≤ 3) | illimité + alertes (comparateur ≤ 10) |
 
-- **Bulk (état actuel) :** 1 produit × N facilités (≥ 2), coût `ceil(N/100)` crédits ; multi-produits
-  chez un vendeur = demande groupée gratuite. **D-C5 (nommage) OUVERT.**
+- **Bulk (état actuel) :** 1 produit × N facilités (≥ 2), coût **1 crédit par besoin**
+  (R-4 `019d97f`, miroir client `bulk-cost-contract`) ; multi-produits chez un vendeur =
+  **demandes manuelles** gratuites (sheet dédiée, jamais « bulk »). **D-C5 CLOS par exécution
+  2026-09-29** (facturation R-4 + nommage `887a547`) — rouvrir d'un mot si le libellé déplaît.
 - **Bonus confiance : 20 USD — CONFIRMÉ fondateur 2026-09-28 (UM-6, DEC-V2-09).**
   Constante unique `SELLER_BONUS_USD_MINOR`, seuil adapté au volume (S-14).
 - **Wallet = recharges XOF (FedaPay), pas de retrait.** Packs bulk = hypothèse réversible.
