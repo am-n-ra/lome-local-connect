@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Crosshair, Minus, Plus, X } from 'lucide-react';
+import { Crosshair, Minus, Plus, Square, Volume2, X } from 'lucide-react';
 import { Map, setWorkerUrl, type GeoJSONSource, type MapGeoJSONFeature, type MapLayerMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 // Bundle the MapLibre web worker from the SAME installed maplibre-gl package as the
@@ -16,6 +16,7 @@ import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurface
 import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, isFiniteCameraCenter, isFiniteCameraZoom, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
 import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { isUsableViewportBounds } from './viewport-bounds';
+import { pickFrenchVoice, speakRoute, stopRouteVoice, voiceCapability } from './route-voice';
 import type { TileTapPoint } from './tile-place-resolve';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
@@ -278,6 +279,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
   const [routeStatus, setRouteStatus] = useState<string | null>(null);
   const [roadRoute, setRoadRoute] = useState<RoutingAvailable | null>(null);
   const [roadRouteReason, setRoadRouteReason] = useState<string | null>(null);
+  // RT-4 voice: user-triggered readout only (never autoplay), stopped when the
+  // itinerary closes. FR-voice availability on real Android is UNPROVEN (device trial
+  // pending): without one we read with the standard voice AND say so.
+  const [voiceSpeaking, setVoiceSpeaking] = useState(false);
+  const [voiceNote, setVoiceNote] = useState<string | null>(null);
   // RT-D1: codes are stable, so the client owns the wording. See
   // `route-reason-label.ts` for why an unlabelled reason is a real defect and
   // not a cosmetic one.
@@ -1433,6 +1439,45 @@ const syncCameraPadding = () => {
     );
   }, [routeTarget, userPosition, locationState, roadRoute, roadRouteReason]);
 
+  // Voice stops when the itinerary closes or the component unmounts: never speak
+  // over a route the user already dismissed.
+  useEffect(() => {
+    if (!routeTarget && voiceSpeaking) {
+      stopRouteVoice(typeof window !== 'undefined' ? window.speechSynthesis ?? null : null);
+      setVoiceSpeaking(false);
+    }
+  }, [routeTarget, voiceSpeaking]);
+  useEffect(() => () => {
+    stopRouteVoice(typeof window !== 'undefined' ? window.speechSynthesis ?? null : null);
+  }, []);
+
+  const toggleRouteVoice = useCallback(() => {
+    const synth = typeof window !== 'undefined' ? window.speechSynthesis ?? null : null;
+    if (voiceSpeaking) {
+      stopRouteVoice(synth);
+      setVoiceSpeaking(false);
+      return;
+    }
+    if (!roadRoute || roadRoute.steps.length === 0 || !routeTarget) return;
+    const voices = synth ? synth.getVoices() : [];
+    const capability = voiceCapability(synth, voices);
+    if (capability === 'unsupported') {
+      setVoiceNote('Guidage vocal non supporté sur cet appareil — itinéraire consultable ci-dessus.');
+      return;
+    }
+    const voice = pickFrenchVoice(voices);
+    setVoiceNote(voice ? null : 'Voix française indisponible — lecture standard.');
+    const summary = `Itinéraire vers ${routeTarget.name} : ${roadRoute.distanceLabel}, ${roadRoute.durationLabel}.`;
+    const handle = speakRoute(synth, {
+      summary,
+      steps: roadRoute.steps.map((step) => step.instruction),
+      voice,
+      onEnd: () => setVoiceSpeaking(false),
+    });
+    setVoiceSpeaking(handle !== null);
+    if (!handle) setVoiceNote('Lecture impossible pour le moment.');
+  }, [voiceSpeaking, roadRoute, routeTarget]);
+
   const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const locationCopy = locationState === 'requesting'
     ? { title: 'Localisation en cours…', detail: 'La carte reste sur votre vue pendant la demande.' }
@@ -1454,9 +1499,10 @@ const syncCameraPadding = () => {
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {resultCount !== null && resultCount > 0 && <div className="countmark" role="status">{(resultCount > 999 ? '999+' : resultCount)}</div>}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
-      {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') || routeStatus?.includes('tracé direct') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span><button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
+      {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') || routeStatus?.includes('tracé direct') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span>{roadRoute && roadRoute.steps.length > 0 && <button type="button" onClick={toggleRouteVoice} aria-label={voiceSpeaking ? 'Arrêter la lecture' : 'Écouter l’itinéraire'} title={voiceSpeaking ? 'Arrêter la lecture' : 'Écouter l’itinéraire'}>{voiceSpeaking ? <Square size={14} /> : <Volume2 size={14} />}</button>}<button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
+      {voiceNote && routeTarget && <div className="map-legend" role="status"><span>{voiceNote}</span></div>}
       <div className="map-pin-a11y" aria-label="Lieux publics sur la carte">
-        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); map.easeTo({ center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true }); }}>{facility.name}</button>)}
+        {facilities.map((facility) => <button key={facility.id} type="button" aria-label={`Ouvrir ${facility.name}`} onClick={() => { const map = mapRef.current; if (!map) return; pauseMotion('interaction', false); onSelect(facility); safeEaseTo(map, { center: [facility.longitude, facility.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true }); }}>{facility.name}</button>)}
       </div>
       <div className="map-texture" aria-hidden="true" />
       <div className="map-attribution">© OpenStreetMap contributors</div>
