@@ -14,9 +14,9 @@
 
 | Field | Value |
 |---|---|
-| **Gate** | `ROOT_CLOSED` |
-| **As of** | 2026-09-29 |
-| **Decided by** | Fondateur (verdict « Root CLOSE », voir §Verdict Root ci-dessous) |
+| **Gate** | `ROOT_CLOSED_TRUNK_OPEN` |
+| **As of** | 2026-10-02 |
+| **Decided by** | Fondateur (ordre « next gate » ; cadrage Trunk proposé par le relais, validation du périmètre pendante) |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`) |
 | **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
 | **Root** | **CLOS `founder-confirmed` 2026-09-29** — voir §Verdict Root. 4 caractéristiques vivantes (R-G/R-H/R-I), claim Root+UI, viewport, tap-claim, caméra durcie, preuves MCP réconciliées, revue relais 76/76. |
@@ -34,7 +34,7 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Root CLOSE 2026-09-29** · porte suivante **à désigner par HQ** (candidat naturel : usage réel terrain, Gate 7 en watch) · Trunk/Branches/Canopy : tranches au service de Root livrées, pas des portes ouvertes |
+| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-1 usage réel (owner fondateur, première slice), TT-2 données, TT-3 conformité tile-place close · Branches/Canopy non ouvertes |
 
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 

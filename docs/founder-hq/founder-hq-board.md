@@ -260,7 +260,15 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 
 ---
 
-## Root CLOSE 2026-09-29 — verdict fondateur (porte suivante à désigner par HQ)
+## Trunk OPEN 2026-10-02 — porte COURANTE (cadrage à valider, première slice TT-1 usage)
+
+> Marker de contrôle : **Trunk OPEN** · source de vérité : `docs/founder-hq/current-state.md` (Gate `ROOT_CLOSED_TRUNK_OPEN`).
+
+| Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
+|---|---|---|---|---|---|---|
+| **Trunk** | Porte ouverte sur ordre fondateur (« next gate »). Périmètre proposé : TT-0 argent CLOS · TT-1 usage réel (première slice, vendeurs Lomé observés) · TT-2 données · TT-3 tile-conformance close. Définition de fini et validation du cadrage pendantes. | `current-state.md` (Gate + Downstream) | **OPEN 2026-10-02** | Fondateur (désignation + cadrage) · Relais (exécution) | Valider le cadrage (périmètre + fini), puis TT-1 | Une tranche sans rattachement S-xx ne démarre pas (H1) |
+
+## Root CLOSE 2026-09-29 — verdict fondateur (porte précédente, voir Trunk ci-dessus)
 
 > Marker de contrôle : **Root CLOSE** · source de vérité : `docs/founder-hq/current-state.md` (Gate `ROOT_CLOSED`, §Verdict Root).
 
@@ -274,7 +282,7 @@ Le fondateur : *« tout le fond et la logique qui doit faire de omni omni n'est 
 
 | Area | Current truth | Authority / record | Gate or status | Owner | Next action | Capacity / risk |
 |---|---|---|---|---|---|---|
-| **Active gate (COURANT)** | **Root CLOSE `founder-confirmed` 2026-09-29** (était : **Root** ouvert) — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root CLOSE `founder-confirmed` 2026-09-29** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = décision fondateur sur la 1re caractéristique vivante** (§ci-dessous) | ⚠️ **RE-MESURÉ 2026-09-27** — les 4 blocages annoncés ci-dessous sont **PÉRIMÉS** (voir mesure) |
+| **Active gate (COURANT)** | **Trunk OPEN 2026-10-02** (était : **Root CLOSE `founder-confirmed` 2026-09-29**) — **Species V2 CLOSE `founder-confirmed` 2026-09-25** (fondateur : « **Validé** »), validation portant sur **`SP-1…SP-10`**. Mesure à la clôture : `check:species-t12` **26 rendues / 32, `NON MESURÉ = 0`, 0 non conforme** ; `check:maquette` 74 écrans ; **600/600 tests**. Volet contraintes (D-CON-1…5 + D-LOC-1…5) livré et falsifié. | `current-state.md` §Gate ; `omni-species-v2-decision-registry-2026-09-23.md` ; `omni-search-constraints-decisions-D-CON-2026-09-25.md` ; `omni-currency-localization-contract-2026-09-25.md` | **Species CLOSE · Root CLOSE `founder-confirmed` 2026-09-29** | Fondateur (validation donnée) · Nature Way (exécution) | **⏭️ ACTION COURANTE = décision fondateur sur la 1re caractéristique vivante** (§ci-dessous) | ⚠️ **RE-MESURÉ 2026-09-27** — les 4 blocages annoncés ci-dessous sont **PÉRIMÉS** (voir mesure) |
 | **Seed V2** | `omni-intent-brief-v2-2026-09-23.md` — 32 décisions **S-01…S-32**, `founder-confirmed`. Mot du fondateur : **« c'est ça »**. Supersede l'Intent Brief du 2026-09-02. | `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` | **CLOS** | Fondateur | Sert de référence unique à T-11/T-12 | Toute décision S-xx non couverte par une surface = travail Species |
 | **Species V2** | Maquette `docs/maquette/omni-species-v2-interactive.html` — **74 écrans**. `SP-1…SP-10` **livrés ET ACCEPTÉS**. **2026-09-25 : volet CONTRAINTES** — D-CON-1…5 + D-LOC-1…5 (devise par localisation) ; seuils réglables, fiche lisant la contrainte active, distance non dupliquée, 3 groupes explicites ; gardes falsifiés. | maquette V2 + registre + `omni-search-constraints-decisions-D-CON-2026-09-25.md` + `omni-currency-localization-contract-2026-09-25.md` | **CLOSE `founder-confirmed` 2026-09-25** | **Fondateur (donné)** | — (clos) | `T-12` **refait et clos** — audit par **rendu navigateur**. ⚠️ **Dénominateur corrigé 2026-09-25 (`COH-V2-18`)** : l'audit imprimait « 16/16 » avec un dénominateur **choisi par lui-même** (15 décisions sur 34). Désormais il **lit le Seed** et **classe chaque décision** → **27/27 conforme, 26 rendues, `NON MESURÉ = 0`**, exit ≠ 0 si un non-conforme survit. **1 écart réel corrigé** (`S-04`). Les 5 dernières `règle écrite` (`S-09`, `S-13`, `S-16`, `S-17`, `S-28`) sont **désormais mesurées au rendu** — 2 prédicats faux corrigés (`S-17` sur 3 surfaces ; `S-28` casse `innerText`). |
 | **Décisions V2** | `D-1a` fusion maquette+app (**appliqué**) ; `D-2a` **l'offre appartient à l'ENTITÉ** (**appliqué**). | Intent Brief V2 + registre de cohérence | `done` | Fondateur | — | — |

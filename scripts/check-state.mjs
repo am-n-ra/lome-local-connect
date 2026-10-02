@@ -20,16 +20,17 @@ if (!gate) {
   console.error(`FAIL  ${SOR}: could not read the Gate value`);
   process.exit(1);
 }
-if (gate !== 'ROOT_CLOSED') {
+if (gate !== 'ROOT_CLOSED_TRUNK_OPEN') {
   console.error(`FAIL  ${SOR}: unexpected gate "${gate}"`);
   process.exit(1);
 }
 
-// TURNED 2026-09-29 (suite-11 precedent): the founder closed Root, so claiming it open
-// is now the mistake. What stays required is the recorded closure + the still-valid
-// Species marker. The stale gate code must not survive in the source of record.
+// TURNED 2026-10-02 : le fondateur a désigné Trunk (« next gate »). Le marqueur Root
+// CLOSE reste exigé (la clôture ne s'efface pas), plus le nouveau marqueur Trunk OPEN.
+// L'ancien code seul est interdit dans la source de vérité.
 const MARKER = 'Species V2 CLOSE';
 const ROOT_MARKER = 'Root CLOSE';
+const TRUNK_MARKER = 'Trunk OPEN';
 
 const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', MARKER],
@@ -38,6 +39,9 @@ const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', ROOT_MARKER],
   ['docs/founder-hq/founder-hq-master-plan.md', ROOT_MARKER],
   ['AGENTS.md', ROOT_MARKER],
+  ['docs/founder-hq/founder-hq-board.md', TRUNK_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', TRUNK_MARKER],
+  ['AGENTS.md', TRUNK_MARKER],
 ];
 
 const mustPointToV2 = [
