@@ -2506,19 +2506,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div>
               <div className="cardbox">
                 <div className="kv"><span>Niveau</span><b>Niv. 0 · Non revendiquée</b></div>
+                <div className="kv"><span>Position</span><b>point de la carte · {tileResolved.latitude.toFixed(4)}, {tileResolved.longitude.toFixed(4)}</b></div>
                 <div className="kv"><span>Géré par</span><b>aucune entité</b></div>
                 {tileResolved.category && <div className="kv"><span>Catégorie</span><b>{tileResolved.category}</b></div>}
                 {tileResolved.address && <div className="kv"><span>Adresse</span><b>{tileResolved.address}</b></div>}
               </div>
-              <p className="sub">Ce qu’Omni ne peut pas dire sur ce lieu : disponibilité, prix, horaires.</p>
+              <p className="sub">Ce qu’Omni ne peut pas dire sur ce lieu : disponibilité, prix, horaires — tant qu’aucune entité ne le gère, il n’y a rien à interroger, et Omni ne l’inventera pas.</p>
               <label className="tiny muted" style={{ display: 'block', marginTop: 8 }}>Nom du lieu</label>
               <input className="input" type="text" value={tileName} maxLength={180} onChange={(event) => setTileName(event.currentTarget.value)} placeholder="Nommez ce lieu" aria-label="Nom du lieu" style={{ width: '100%' }} />
               {tileClaimError && <p className="sub" role="alert">{tileClaimError}</p>}
               <button className="btn" type="button" disabled={tileClaimState === 'loading' || tileName.trim().length < 1} style={{ marginTop: 10 }} onClick={() => void claimTilePlace()}>{tileClaimState === 'loading' ? 'Revendication…' : 'Revendiquer ce lieu'} <ArrowRight size={15} /></button>
-              <div className="btnrow" style={{ marginTop: 8 }}>
-                <button className="btn ghost" type="button" onClick={() => { setSellerCreateIntent(true); setSheet('seller'); }}>Créer une facilité ici</button>
+              <div className="cardbox" style={{ marginTop: 8 }}>
+                <div className="kv"><span>Revendiquer</span><b>Preuve + arbitrage opérateur</b></div>
+                <div className="kv"><span>Créer</span><b>Immédiat · badge « Non vérifié »</b></div>
               </div>
-              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>La revendication crée le lieu dans Omni puis ouvre le parcours de preuve — rien n’est certifié au clic.</p>
+              <div className="btnrow" style={{ marginTop: 8 }}>
+                <button className="btn ghost" type="button" onClick={() => { setSellerCreateIntent(true); setSheet('seller'); }}>Créer (pas ce lieu)</button>
+              </div>
+              <p className="tiny muted" style={{ textAlign: 'center', marginTop: 8 }}>Revendiquer un lieu réel ≠ créer : la preuve de contrôle empêche l’usurpation. Rien n’est certifié au clic.</p>
             </div>
           )}
         </section>
