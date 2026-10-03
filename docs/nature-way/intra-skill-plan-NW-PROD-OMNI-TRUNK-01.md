@@ -1,8 +1,7 @@
 # Plan local — Trunk V2 (NW-PROD-OMNI-TRUNK-01)
 
-> **Porte :** Trunk OPEN 2026-10-02 (ordre fondateur « next gate », `ROOT_CLOSED_TRUNK_OPEN`).
-> **Cadrage proposé par le relais, validation fondateur pendante** — aucune tranche Trunk
-> ne démarre sans rattachement S-xx (H1, debout depuis DEC-V2-35).
+> **Porte :** Trunk OPEN 2026-10-02. **Cadrage VALIDÉ par le fondateur** (ordre « continu »).
+> TT-0 CLOS, TT-3 CLOS. TT-1/TT-2 : owner fondateur (usage/données réelles).
 > **Définition de fini de la porte :** les parcours principaux exécutables de bout en bout
 > par un vrai utilisateur sur prod, états honnêtes, argent juste, surfaces conformes —
 > clôture par verdict fondateur uniquement, jamais par livraison.
@@ -35,3 +34,22 @@ recommandations · toute feature sans rattachement S-xx.
 ## Re-plan
 
 Fait contredit, garde rouge, refus de validation du cadrage, ou stop fondateur.
+
+## Annexe — delta maquette (74 écrans) → app (mesuré 2026-10-03, pas inféré)
+
+Couvert (~60) : search, results (+empty), offer, avail/pending/reply/intent/qr/txn-track/pay/txn-proof/rate (stages du flow), menu, demandes (file acheteur), favorites, saved, wallet, account, auth, bulk, compare, seller-entry/entity, lieu-connaitre (= tile-place, conformité gardée), seller-claim (= claim), seller-dash/validate/publish/offers/pro/reply/requests/response/orders/stock/automation/entity-fiche, company, entite-publique (+empty), produit-multi (panier vendeur), admin-console/review/roles/audit (+teams/zones), home, room (= salle transaction), recul — voir statuts ; remise/fraicheur (affichages embarqués), state-slow/error (légendes honnêtes, pas des sheets).
+
+Sans équivalent app (maquette-only, à arbitrer HQ avant tout code — H1 : pas de tranche sans rattachement S-xx) :
+| Écran | Objet probable | Statut |
+|---|---|---|
+| op-queue / op-visit / op-report / op-side | Opérations terrain (visites, rapports) | ABSENT (4 écrans) |
+| signal | Signaler un contenu | ABSENT présumé |
+| recu | Reçu de transaction | ABSENT présumé |
+| recovery | Récupération de compte | ABSENT présumé |
+| scan-entity / entity-from-qr | QR → fiche entité | PARTIEL (scan générique existe) |
+| admin-signal | Couche intel admin | PARTIEL (données existent, surface dédiée ?) |
+| notifications / notif-centre | Centre de notifications | PARTIEL (API+seen existent, centre ?) |
+| facility-apex | Sens incertain | À NOMMER avant d'arbitrer |
+
+Règle : aucun de ces écrans ne se construit sans décision HQ (garder / écarter / reporter).
+Les construire à l'aveugle répéterait l'incident du 2026-09-23 (portes empilées).
