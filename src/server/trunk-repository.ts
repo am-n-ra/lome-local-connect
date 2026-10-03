@@ -1724,6 +1724,39 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       };
     },
 
+    // MV1 X03 — deep-link d'une notification vers sa demande : lecture membre-scopée
+    // (demandeur) ou reviewer actif. Un étranger reçoit la même absence qu'un id inconnu.
+    async getClaimRequest(input: { authUserId: string; requestId: string }): Promise<{ requestId: string; facilityId: string; state: string; version: number } | null> {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(input.requestId)) throw new FieldPilotPolicyError('The claim request id is invalid.');
+      const rows = await retryDatabase(() => sql`
+        with me as (
+          select id from v2_accounts where auth_user_id = ${input.authUserId} and suspended_at is null limit 1
+        )
+        select vr.id, vr.facility_id, vr.state, vr.version
+        from v2_verification_requests vr
+        where vr.id = ${input.requestId}::uuid
+          and (
+            vr.claimant_account_id = (select id from me)
+            or exists (
+              select 1 from v2_account_roles ar
+              where ar.account_id = (select id from me)
+                and ar.role in ('reviewer', 'admin', 'operator')
+                and ar.status = 'active'
+            )
+          )
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return {
+        requestId: String(row.id),
+        facilityId: String(row.facility_id),
+        state: String(row.state),
+        version: Number(row.version),
+      };
+    },
+
     async cancelClaim(input: { authUserId: string; requestId: string; version: number; correlationId: string }): Promise<{ requestId: string; facilityId: string; state: 'cancelled'; version: number }> {
       if (!Number.isInteger(input.version) || input.version < 1) throw new FieldPilotPolicyError('The claim version is invalid.');
       const rows = await retryDatabase(() => sql`

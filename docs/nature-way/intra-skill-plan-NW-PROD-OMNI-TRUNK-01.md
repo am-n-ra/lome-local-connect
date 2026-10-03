@@ -63,9 +63,9 @@ S-xx indiqué = rattachement H1 proposé ; « S-?? » = à trancher avec HQ avan
 
 | Slice | Contenu | S-xx / décision HQ requise | Taille | Données |
 |---|---|---|---|---|
-| TF-1 notif-centre (X03) | Centre notifications : événements avec deep-links (réponse dispo, vérifié, paiement, prêt, clôturé) | MV1 X03 ; Seed : S-?? (notifications = ? ) | S | Lecture seule (API existe) |
 | TF-2 demand-signal (X04) | « Sauver cette recherche ? » sur vide → DemandSignal → côté vendeurs/acquisition | Seed : S-11 ? S-25 ? | M | NOUVELLE table + migration (MCP apply) |
-| TF-3 historique closes (B18) + TF-4 reçu (recu) | **LIVRÉS** — S-26 dérivé : `listClosedTransactions` (miroir `= 'closed'` + vendeur), route, client, `TransactionReceiptV13` (ref stable, partage honnête), section Terminées home. Suite + falsifiés. | S-26 | S+S | Lecture |
+| TF-3 historique closes (B18) + TF-4 reçu (recu) | **LIVRÉS** — S-26 dérivé : `listClosedTransactions` (miroir `= 'closed'` + vendeur), route, client, `TransactionReceiptV13` (ref stable, partage honnête), section Terminées home. Suite + falsifiés. |
+| TF-1 notif-centre (X03) | **LIVRÉ** — centre événements + deep-links (flow/facility/seller/admin, `none` honnête), `getClaimRequest` membre-scopée + route, `NotificationCenterV13` testé, entrées menu, marquage vu-avant-navigation. Suite + falsifié. | S-26 | S+S | Lecture |
 | TF-5 signalement (signal + admin-signal) | Signaler un contenu + file intel admin : LIRE les 2 écrans maquette d'abord, spec à écrire | S-32 ? | M | À cadrer (modération = autorité ?) |
 | TF-6 ops terrain (op-*) | Queue/visite/rapport/side : modèle visites + surfaces | S-?? + usage TT-1 (le terrain dira si utile) | L | NOUVELLES tables ; REPORTER après TT-1 sauf besoin observé |
 | TF-7 scan-entité | QR boutique → fiche entité + remise appliquée | S-27 ? | S/M | Vérifier le scan actuel d'abord |

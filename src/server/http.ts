@@ -873,6 +873,31 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
       return true;
     }
+    // MV1 X03 — lecture d'une demande pour deep-link notification. L'id occupe le même
+    // slot que les routes claim existantes ; l'action distingue (pas de conflit).
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim-request') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view the claim request.'));
+        return true;
+      }
+      const requestId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      try {
+        const result = await repository.getClaimRequest({ authUserId, requestId });
+        if (!result) {
+          json(res, 404, errorBody(correlationId, 'EVIDENCE_NOT_FOUND', 'This claim request is not available to this account.'));
+          return true;
+        }
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'claim') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

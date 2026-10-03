@@ -12,7 +12,7 @@ import {
   cancelAvailabilityRequest,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
-  listOpenTransactions, getTransaction,
+  listOpenTransactions, getTransaction, getNotificationInbox, markNotificationSeen, getClaimRequest,
   listMyTeamInvites, acceptTeamInvite,
   searchPublicEntities, getPublicEntity,
 } from './api';
@@ -20,12 +20,14 @@ import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sort
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
-  FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, NotificationSummary, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
+import type { NotificationTarget } from './notification-center';
 import { relativeAge, transactionStateLabel } from './transaction-time';
 import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
 import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
 import { TransactionReceiptV13 } from './TransactionReceiptV13';
+import { NotificationCenterV13 } from './NotificationCenterV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -48,7 +50,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -269,6 +271,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [closedTxn, setClosedTxn] = useState<ClosedTransactionSummary[]>([]);
   const [closedTxnState, setClosedTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [receiptTx, setReceiptTx] = useState<ClosedTransactionSummary | null>(null);
+// MV1 X03 — le centre liste des événements, chacun avec sa cible.
+  const [notifs, setNotifs] = useState<NotificationSummary[]>([]);
+  const [notifsState, setNotifsState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [notifsError, setNotifsError] = useState('');
   const [pendingResumeTxnId, setPendingResumeTxnId] = useState<string | null>(null);
   // Wallet
   const [wallet, setWallet] = useState<WalletOverviewResult | null>(null);
@@ -314,7 +320,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -753,6 +759,65 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth]);
 
+  // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
+  // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
+  // Déclaré avant openNotification (qui le réutilise pour les deep-links).
+  const resumeTransaction = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null }) => {
+    const token = await requireAuth();
+    if (!token) return;
+    const result = await getTransaction({ transactionId: transaction.transactionId, token });
+    if (!result.ok || !result.data) {
+      setBuyerRequestsError(result.error?.message ?? 'Cette transaction ne peut pas être reprise pour le moment.');
+      return;
+    }
+    setFlowFacility({ id: result.data.facilityId, name: result.data.sellerFacilityName ?? transaction.facilityName ?? '' });
+    setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
+    setPendingResumeTxnId(transaction.transactionId);
+    setSheet('flow');
+  }, [requireAuth]);
+
+  const openNotifs = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setSheet('notifs'); setNotifsState('loading'); setNotifsError('');
+    try {
+      const result = await getNotificationInbox({ token });
+      if (result.ok && result.data) { setNotifs(result.data.notifications ?? []); setNotifsState('idle'); }
+      else { setNotifsState('error'); setNotifsError(result.error?.message ?? 'Vos notifications ne peuvent pas être chargées pour le moment.'); }
+    } catch (caught) {
+      setNotifsState('error');
+      setNotifsError(caught instanceof Error ? caught.message : 'Vos notifications ne peuvent pas être chargées pour le moment.');
+    }
+  }, [requireAuth]);
+
+  const openNotification = useCallback(async (notification: NotificationSummary, target: NotificationTarget) => {
+    const token = await requireAuth();
+    if (!token) return;
+    // Marquer vue d'abord (best-effort), naviguer ensuite : un échec réseau ne doit
+    // jamais avaler le tap, et la navigation ne doit jamais précéder le marquage.
+    try {
+      const seen = await markNotificationSeen({ notificationId: notification.id, token });
+      if (seen.ok) setNotifs((current) => current.map((item) => item.id === notification.id ? { ...item, seenAt: new Date().toISOString() } : item));
+    } catch { /* marquage best-effort : la navigation suit quand même */ }
+    try {
+      if (target.kind === 'flow') {
+        await resumeTransaction({ transactionId: target.transactionId });
+      } else if (target.kind === 'claim-request') {
+        const request = await getClaimRequest({ requestId: target.requestId, token });
+        if (!request.ok || !request.data) { setNotifsError('Cette demande n’est plus disponible pour ce compte.'); return; }
+        const detail = await getFacilityDetail(request.data.facilityId);
+        if (!detail.ok || !detail.data) { setNotifsError('Cette facilité n’est plus disponible.'); return; }
+        setSelectedFacility(detail.data); setSelectedId(detail.data.id); setSheet('facility');
+      } else if (target.kind === 'seller') {
+        setSheet('seller');
+      } else if (target.kind === 'review') {
+        setSheet('admin');
+      }
+    } catch {
+      setNotifsError('Cette notification ne peut pas être ouverte pour le moment.');
+    }
+  }, [requireAuth, resumeTransaction]);
+
   // FF-4 — annulation d'une demande de dispo (Phase A uniquement). Sans effet monétaire ;
   // refusée par le serveur si une intention est déjà engagée (le verrou est pris).
   const cancelBuyerRequest = useCallback(async (requestId: string) => {
@@ -765,22 +830,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       return;
     }
     setBuyerRequests((current) => current.map((request) => (request.id === requestId ? { ...request, requestStatus: 'cancelled' } : request)));
-  }, [requireAuth]);
-
-  // FF-2 — reprendre une transaction en cours : recharge son état (l'intention reste
-  // verrouillée côté serveur, jamais annulée) sans repasser par la dispo.
-  const resumeTransaction = useCallback(async (transaction: OpenTransactionSummary) => {
-    const token = await requireAuth();
-    if (!token) return;
-    const result = await getTransaction({ transactionId: transaction.transactionId, token });
-    if (!result.ok || !result.data) {
-      setBuyerRequestsError(result.error?.message ?? 'Cette transaction ne peut pas être reprise pour le moment.');
-      return;
-    }
-    setFlowFacility({ id: result.data.facilityId, name: result.data.sellerFacilityName ?? transaction.facilityName ?? '' });
-    setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
-    setPendingResumeTxnId(transaction.transactionId);
-    setSheet('flow');
   }, [requireAuth]);
 
   // Démarre un flux d'achat NEUF (pas une reprise) : on purge tout id de reprise résiduel.
@@ -1346,6 +1395,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
       if (sheet === 'tile-place') { setSheet('none'); return; }
       if (sheet === 'receipt') { setSheet('home'); return; }
+      if (sheet === 'notifs') { setSheet('menu'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
@@ -2083,6 +2133,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><RefreshCw size={15} /></span><span><b>Transactions en cours</b><small>reprendre où vous en êtes</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>vos établissements</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
@@ -2092,6 +2143,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {role === 'seller' && (
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
@@ -2102,6 +2154,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {(role === 'admin' || role === 'operator') && (
                   <>
                     <button className="menuitem" type="button" onClick={() => setSheet('admin')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Console</b><small>revue & audit</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>demandes à examiner, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
                   </>
                 )}
@@ -2558,6 +2611,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       )}
       {sheet === 'receipt' && receiptTx && (
         <TransactionReceiptV13 summary={receiptTx} onClose={() => setSheet('home')} />
+      )}
+      {sheet === 'notifs' && (
+        <NotificationCenterV13 notifications={notifs} state={notifsState} error={notifsError} onOpen={(notification, target) => void openNotification(notification, target)} onClose={() => setSheet('menu')} />
       )}
       {sheet === 'claim' && claimResult && (
         <section className="sheet h-mid" data-sheet="claim" role="region" aria-label="Revendiquer">

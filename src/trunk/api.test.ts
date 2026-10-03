@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -450,6 +450,18 @@ describe('closed-transaction history client contract (S-26 / B18)', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/buyer/transactions/closed',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('reads a claim request by id for notification deep-links', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { requestId: 'request-1', facilityId: 'facility-1', state: 'submitted', version: 2 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await getClaimRequest({ requestId: 'request-1', token: 'session-token' });
+
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { requestId: 'request-1', facilityId: 'facility-1', state: 'submitted', version: 2 } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/request-1?action=claim-request',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });

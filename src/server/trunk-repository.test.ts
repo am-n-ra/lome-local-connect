@@ -3207,6 +3207,33 @@ describe('closed-transaction history Root seam (S-26 / B18)', () => {
   });
 });
 
+describe('claim-request read seam (MV1 X03 deep-link)', () => {
+  it('reads an owned-or-reviewable request with its facility', async () => {
+    const call = stubSql([{ id: 'request-1', facility_id: 'facility-1', state: 'submitted', version: 2 }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getClaimRequest({ authUserId: 'auth-user-1', requestId: '11111111-1111-4111-8111-111111111111' }))
+      .resolves.toEqual({ requestId: 'request-1', facilityId: 'facility-1', state: 'submitted', version: 2 });
+    expect(call.queries[0]).toContain('v2_verification_requests');
+    expect(call.queries[0]).toContain('v2_account_roles');
+    expect(call.queries[0]).toContain("ar.role in ('reviewer', 'admin', 'operator')");
+  });
+
+  it('returns null for a stranger or unknown id, never the row', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getClaimRequest({ authUserId: 'auth-stranger', requestId: '22222222-2222-4222-8222-222222222222' }))
+      .resolves.toBeNull();
+  });
+
+  it('rejects a malformed request id before any SQL', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.getClaimRequest({ authUserId: 'auth-user-1', requestId: 'not-a-uuid' }))
+      .rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+});
+
 describe('FF-4 buyer cancels an availability request (Phase A only)', () => {
   it('cancels an owned, non-expired request while no purchase intent exists', async () => {
     const call = stubSql([{ id: 'request-1', status: 'cancelled' }]);

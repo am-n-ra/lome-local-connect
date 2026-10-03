@@ -799,6 +799,14 @@ export async function getClaimStorageStatus(input: { facilityId: string; token: 
   return parse<{ available: boolean }>(response);
 }
 
+// MV1 X03 — lecture d'une demande pour deep-link notification (demandeur ou reviewer).
+export async function getClaimRequest(input: { requestId: string; token: string }): Promise<ApiResult<{ requestId: string; facilityId: string; state: string; version: number }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.requestId)}?action=claim-request`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<{ requestId: string; facilityId: string; state: string; version: number }>(response);
+}
+
 export async function uploadFacilityEvidence(input: { requestId: string; evidenceKind: EvidenceKind; file: File; token: string; onProgress?: (percentage: number) => void }): Promise<ClaimEvidenceItem> {
   const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'evidence';
   const pathname = `claims/${input.requestId}/${input.evidenceKind}/${safeName}`;

@@ -1678,6 +1678,38 @@ function createTrunkRepository(sql = database()) {
         materialized: row.materialized === true
       };
     },
+    // MV1 X03 — deep-link d'une notification vers sa demande : lecture membre-scopée
+    // (demandeur) ou reviewer actif. Un étranger reçoit la même absence qu'un id inconnu.
+    async getClaimRequest(input) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(input.requestId)) throw new FieldPilotPolicyError("The claim request id is invalid.");
+      const rows = await retryDatabase(() => sql`
+        with me as (
+          select id from v2_accounts where auth_user_id = ${input.authUserId} and suspended_at is null limit 1
+        )
+        select vr.id, vr.facility_id, vr.state, vr.version
+        from v2_verification_requests vr
+        where vr.id = ${input.requestId}::uuid
+          and (
+            vr.claimant_account_id = (select id from me)
+            or exists (
+              select 1 from v2_account_roles ar
+              where ar.account_id = (select id from me)
+                and ar.role in ('reviewer', 'admin', 'operator')
+                and ar.status = 'active'
+            )
+          )
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        requestId: String(row.id),
+        facilityId: String(row.facility_id),
+        state: String(row.state),
+        version: Number(row.version)
+      };
+    },
     async cancelClaim(input) {
       if (!Number.isInteger(input.version) || input.version < 1) throw new FieldPilotPolicyError("The claim version is invalid.");
       const rows = await retryDatabase(() => sql`
@@ -7437,6 +7469,29 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.createClaimDraftFromOsmRef({ authUserId, ...validated, intakeTier: verdict.tier });
       json(res, result.created ? 201 : 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "claim-request") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view the claim request."));
+        return true;
+      }
+      const requestId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      try {
+        const result = await repository.getClaimRequest({ authUserId, requestId });
+        if (!result) {
+          json(res, 404, errorBody(correlationId, "EVIDENCE_NOT_FOUND", "This claim request is not available to this account."));
+          return true;
+        }
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
       return true;
     }
     if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "claim") {
