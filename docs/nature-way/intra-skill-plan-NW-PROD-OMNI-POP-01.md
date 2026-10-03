@@ -197,3 +197,7 @@
   7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). Gardes retournés
   (`ROOT_CLOSED`, marqueurs, ancien code interdit). Réserves hors Root : UM-062, spot-checks,
   NaN appareil, décisions ouvertes. Ne rouvrir que sur fait nouveau.
+- **Déblocage déploiement 2026-10-03 (`373cbcf`)** — prod figée 19 h sur `DitKQXaO` : Vercel
+  bloquait tout build sur `@tanstack/react-start@1.168.46` vulnérable (transitif via
+  `better-auth`, 0 import). Retiré du lock/disque + `overrides` en garde (jamais de
+  `DANGEROUSLY_DEPLOY`). Prod sert `index-B7beX-wT.js` === build local (T-07d ✅).
