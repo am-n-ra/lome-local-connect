@@ -1,6 +1,6 @@
 {
   "baseUrl": "https://omni.sparkafrika.online/",
-  "asOf": "2026-10-03T09:28:30.326Z",
+  "asOf": "2026-10-03T10:01:30.527Z",
   "widths": [
     360,
     768,
@@ -10,8 +10,8 @@
   "query": "boulangerie",
   "summary": {
     "total": 88,
-    "pass": 87,
-    "fail": 1,
+    "pass": 88,
+    "fail": 0,
     "blocked": 0
   },
   "results": [
@@ -103,7 +103,7 @@
       "width": 360,
       "step": "result-item-present",
       "status": "PASS",
-      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
+      "detail": "carte résultat « Boulangerie notre dame de la trinité shop:bakery · 0 produit »"
     },
     {
       "width": 360,
@@ -144,8 +144,8 @@
     {
       "width": 360,
       "step": "no-console-errors",
-      "status": "FAIL",
-      "detail": "pageerror: Style is not done loading."
+      "status": "PASS",
+      "detail": "console propre"
     },
     {
       "width": 768,
