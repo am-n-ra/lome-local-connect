@@ -36,11 +36,13 @@ describe('tile-place Species conformance (lieu-connaitre)', () => {
 
   it('never lets a tap throw uncaught (style loading or sick map)', () => {
     // `queryRenderedFeatures` throws synchronously while the style loads. The prod
-    // flood class is one uncaught throw per gesture: the whole tap body (in TrunkMap)
-    // is guarded, with an early return while the style is not ready. Scoped to the
-    // tap handler block — `isStyleLoaded` also appears elsewhere in the file.
+    // flood class is one uncaught throw per gesture. Scoped to the tap handler block:
+    // it must carry its own try/catch (an `isStyleLoaded()` pre-check ALONE proved
+    // insufficient — its reporting can lag and silently eat every tap).
     const tapHandler = mapSource.slice(mapSource.indexOf('Bare-map tap'));
-    expect(tapHandler.slice(0, 2500)).toContain('isStyleLoaded');
+    const block = tapHandler.slice(0, 2500);
+    expect(block).toContain('a tap must never throw uncaught');
+    expect((block.match(/catch/g) ?? []).length).toBeGreaterThanOrEqual(2);
     expect(mapSource).toContain('a tap must never throw uncaught');
   });
 });

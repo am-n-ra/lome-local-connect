@@ -1072,10 +1072,12 @@ const syncCameraPadding = () => {
         // The WHOLE body is guarded: `queryRenderedFeatures` throws synchronously when
         // the style is still loading, and a sick transform throws inside it too. An
         // uncaught throw here becomes one console error PER TAP (the prod flood class).
-        // Tapping a half-loaded map does nothing — honest, since nothing is rendered yet.
+        // Deliberately NO `isStyleLoaded()` pre-check: style-loaded reporting itself can
+        // lag or stick false (slow sprites/glyphs), which would silently eat every tap —
+        // a false negative no probe can distinguish from a dead map. The catch below is
+        // sufficient: a query that cannot run is skipped, one that can, runs.
         if (!(target instanceof Map)) return;
         try {
-          if (!target.isStyleLoaded()) return;
           if (!Number.isFinite(event.lngLat.lng) || !Number.isFinite(event.lngLat.lat)) return;
           const ownHit = target.queryRenderedFeatures(event.point, { layers: ['omni-pins', 'omni-clusters', 'omni-cluster-count'] });
           if (ownHit.length > 0) return;
