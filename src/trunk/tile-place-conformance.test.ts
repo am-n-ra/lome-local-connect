@@ -10,6 +10,7 @@ import { describe, expect, it } from 'vitest';
  * the source: mounting the map to check a sentence would cost more than it proves.
  */
 const source = readFileSync(new URL('./TrunkAppV13.tsx', import.meta.url), 'utf8');
+const mapSource = readFileSync(new URL('./TrunkMap.tsx', import.meta.url), 'utf8');
 
 describe('tile-place Species conformance (lieu-connaitre)', () => {
   it('states the unclaimed level and the absent owner', () => {
@@ -31,5 +32,15 @@ describe('tile-place Species conformance (lieu-connaitre)', () => {
     expect(source).toContain('Preuve + arbitrage opérateur');
     expect(source).toContain('Non vérifié');
     expect(source).toContain('empêche l’usurpation');
+  });
+
+  it('never lets a tap throw uncaught (style loading or sick map)', () => {
+    // `queryRenderedFeatures` throws synchronously while the style loads. The prod
+    // flood class is one uncaught throw per gesture: the whole tap body (in TrunkMap)
+    // is guarded, with an early return while the style is not ready. Scoped to the
+    // tap handler block — `isStyleLoaded` also appears elsewhere in the file.
+    const tapHandler = mapSource.slice(mapSource.indexOf('Bare-map tap'));
+    expect(tapHandler.slice(0, 2500)).toContain('isStyleLoaded');
+    expect(mapSource).toContain('a tap must never throw uncaught');
   });
 });

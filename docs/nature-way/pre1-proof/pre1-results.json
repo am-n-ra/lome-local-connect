@@ -1,6 +1,6 @@
 {
   "baseUrl": "https://omni.sparkafrika.online/",
-  "asOf": "2026-10-01T09:07:18.156Z",
+  "asOf": "2026-10-03T09:28:30.326Z",
   "widths": [
     360,
     768,
@@ -9,9 +9,9 @@
   ],
   "query": "boulangerie",
   "summary": {
-    "total": 76,
-    "pass": 76,
-    "fail": 0,
+    "total": 88,
+    "pass": 87,
+    "fail": 1,
     "blocked": 0
   },
   "results": [
@@ -38,6 +38,24 @@
       "step": "supply-present",
       "status": "PASS",
       "detail": "250 pins ouvrables"
+    },
+    {
+      "width": 360,
+      "step": "tile-tap-sheet",
+      "status": "PASS",
+      "detail": "sheet tile-place ouverte au tap"
+    },
+    {
+      "width": 360,
+      "step": "tile-resolve-honest",
+      "status": "PASS",
+      "detail": "résolution nommée ou erreur dite"
+    },
+    {
+      "width": 360,
+      "step": "tile-sheet-close",
+      "status": "PASS",
+      "detail": "sheet refermée"
     },
     {
       "width": 360,
@@ -85,7 +103,7 @@
       "width": 360,
       "step": "result-item-present",
       "status": "PASS",
-      "detail": "carte résultat « Boulangerie notre dame de la trinité shop:bakery · 0 produit »"
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
     },
     {
       "width": 360,
@@ -126,8 +144,8 @@
     {
       "width": 360,
       "step": "no-console-errors",
-      "status": "PASS",
-      "detail": "console propre"
+      "status": "FAIL",
+      "detail": "pageerror: Style is not done loading."
     },
     {
       "width": 768,
@@ -152,6 +170,24 @@
       "step": "supply-present",
       "status": "PASS",
       "detail": "250 pins ouvrables"
+    },
+    {
+      "width": 768,
+      "step": "tile-tap-sheet",
+      "status": "PASS",
+      "detail": "sheet tile-place ouverte au tap"
+    },
+    {
+      "width": 768,
+      "step": "tile-resolve-honest",
+      "status": "PASS",
+      "detail": "résolution nommée ou erreur dite"
+    },
+    {
+      "width": 768,
+      "step": "tile-sheet-close",
+      "status": "PASS",
+      "detail": "sheet refermée"
     },
     {
       "width": 768,
@@ -269,6 +305,24 @@
     },
     {
       "width": 1280,
+      "step": "tile-tap-sheet",
+      "status": "PASS",
+      "detail": "sheet tile-place ouverte au tap"
+    },
+    {
+      "width": 1280,
+      "step": "tile-resolve-honest",
+      "status": "PASS",
+      "detail": "résolution nommée ou erreur dite"
+    },
+    {
+      "width": 1280,
+      "step": "tile-sheet-close",
+      "status": "PASS",
+      "detail": "sheet refermée"
+    },
+    {
+      "width": 1280,
       "step": "search-affordance",
       "status": "PASS",
       "detail": "bouton Recherche"
@@ -383,6 +437,24 @@
     },
     {
       "width": 1920,
+      "step": "tile-tap-sheet",
+      "status": "PASS",
+      "detail": "sheet tile-place ouverte au tap"
+    },
+    {
+      "width": 1920,
+      "step": "tile-resolve-honest",
+      "status": "PASS",
+      "detail": "résolution nommée ou erreur dite"
+    },
+    {
+      "width": 1920,
+      "step": "tile-sheet-close",
+      "status": "PASS",
+      "detail": "sheet refermée"
+    },
+    {
+      "width": 1920,
       "step": "search-affordance",
       "status": "PASS",
       "detail": "bouton Recherche"
@@ -427,7 +499,7 @@
       "width": 1920,
       "step": "result-item-present",
       "status": "PASS",
-      "detail": "carte résultat « Boulangerie notre dame de la trinité shop:bakery · 0 produit »"
+      "detail": "carte résultat « ✓ Boulangerie du Marché d'Adawlato Boulangerie · 3 produits »"
     },
     {
       "width": 1920,

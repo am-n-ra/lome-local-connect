@@ -48,7 +48,7 @@ async function proveWidth(browser, width) {
   page.on('console', (m) => {
     if (m.type() === 'error') consoleErrors.push(m.text());
   });
-  page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message}`));
+  page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${e.message} :: ${(e.stack ?? '').split('\n').slice(0, 4).join(' <- ').slice(0, 300)}`));
 
   console.log(`\n=== ${width}x${height} ===`);
   await page.goto(BASE, { waitUntil: 'load', timeout: 60000 });
@@ -81,6 +81,85 @@ async function proveWidth(browser, width) {
     pinCount > 0 ? 'PASS' : 'FAIL',
     `${pinCount} pins ouvrables`,
   );
+
+  // 1b. Entrée claim par tuile : tap sur fond nu → sheet tile-place. Le coin fixe
+  // tapait le dock sur petit écran : on choisit le premier pixel dont l'élément est
+  // le canvas (ni UI ni overlay), parmi des candidats bas-gauche (océan à Lomé).
+  // On prouve le TUYAU (tap → sheet → résolution honnête → fermeture), pas la donnée.
+  // Trois constats par largeur dans tous les cas (dénominateur stable) : en surface de
+  // secours (style vectoriel non chargé) le tap n'existe pas — BLOCKED, limite nommée.
+  const fallbackMode = (await page.locator('text=Cartographie de secours').count()) > 0;
+  if (fallbackMode) {
+    record(width, 'tile-tap-sheet', 'BLOCKED', 'surface de secours, tap non supporté');
+    record(width, 'tile-resolve-honest', 'BLOCKED', 'surface de secours');
+    record(width, 'tile-sheet-close', 'BLOCKED', 'surface de secours');
+  } else {
+    const doTap = async () => {
+      const tapPoint = await page.evaluate(({ w, h }) => {
+        const candidates = [];
+        for (const dy of [160, 120, 200, 240]) {
+          for (const fx of [0.08, 0.15, 0.25]) candidates.push([Math.floor(w * fx), h - dy]);
+        }
+        for (const [x, y] of candidates) {
+          const el = document.elementFromPoint(x, y);
+          if (el && el.tagName === 'CANVAS') return { x, y };
+        }
+        return null;
+      }, { w: width, h: height });
+      if (!tapPoint) return false;
+      await page.mouse.click(tapPoint.x, tapPoint.y);
+      await page.waitForTimeout(4000);
+      return (await page.locator('[data-sheet="tile-place"],[data-sheet="facility"]').count()) > 0;
+    };
+    // A tap while the style still loads is silently ignored by design (nothing rendered
+    // yet): one retry after the style settles distinguishes that from a lost tap.
+    let sheetSeen = await doTap();
+    if (!sheetSeen) {
+      await page.waitForTimeout(6000);
+      sheetSeen = await doTap();
+    }
+    if (!sheetSeen) {
+      record(width, 'tile-tap-sheet', 'FAIL', 'tap sans sheet (hors carte ?)');
+      record(width, 'tile-resolve-honest', 'BLOCKED', 'sans sheet');
+      record(width, 'tile-sheet-close', 'BLOCKED', 'sans sheet');
+    }
+  }
+  const tileSheet = page.locator('[data-sheet="tile-place"]');
+  const tileOpen = !fallbackMode && (await tileSheet.count()) > 0;
+  const facSheet = page.locator('[data-sheet="facility"]');
+  const facOpen = !fallbackMode && (await facSheet.count()) > 0;
+  if (!fallbackMode && !tileOpen && facOpen) {
+    // Tap honnête sur un pin (la carte a bougé depuis le choix du pixel) : le pipeline
+    // tuile n'est pas testé ici — BLOCKED, pas FAIL. La section recherche suivante
+    // reprend la main sur les sheets, rien à refermer.
+    record(width, 'tile-tap-sheet', 'BLOCKED', 'tap sur un pin, pas sur le fond');
+    record(width, 'tile-resolve-honest', 'BLOCKED', 'tap sur un pin');
+    record(width, 'tile-sheet-close', 'BLOCKED', 'tap sur un pin');
+  }
+  if (!fallbackMode && !tileOpen && !facOpen) {
+    record(width, 'tile-tap-sheet', 'FAIL', 'tap sans sheet (hors carte ?)');
+    record(width, 'tile-resolve-honest', 'BLOCKED', 'sans sheet');
+    record(width, 'tile-sheet-close', 'BLOCKED', 'sans sheet');
+  }
+  if (tileOpen) {
+    record(width, 'tile-tap-sheet', 'PASS', 'sheet tile-place ouverte au tap');
+    await page.waitForTimeout(7000);
+    const tileBody = await page.locator('body').innerText();
+    const tileHonest =
+      /Niv\. 0|Non revendiquée|Réessayer|indisponible|Point invalide|Nommez ce lieu|Repérage du lieu/i.test(tileBody);
+    record(
+      width,
+      'tile-resolve-honest',
+      tileHonest ? 'PASS' : 'FAIL',
+      tileHonest ? 'résolution nommée ou erreur dite' : 'sheet muette',
+    );
+    await page.screenshot({ path: `${OUT}/w${width}-tile-place.png`, fullPage: false });
+    const tileClose = tileSheet.locator('button.sheet-close');
+    if ((await tileClose.count()) > 0) await tileClose.first().click();
+    await page.waitForTimeout(1200);
+    const tileClosed = (await page.locator('[data-sheet="tile-place"]').count()) === 0;
+    record(width, 'tile-sheet-close', tileClosed ? 'PASS' : 'FAIL', tileClosed ? 'sheet refermée' : 'sheet collée');
+  }
 
   // 2. Barre de recherche présente et ouvrable. Scopée au navpill en match exact :
   // le corpus contient désormais des lieux nommés « …Recherche » (ministère), qu'un

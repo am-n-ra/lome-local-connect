@@ -1068,21 +1068,29 @@ const syncCameraPadding = () => {
         // coordinates plus a best-effort POI label — the OSM reference itself comes from
         // the user-triggered reverse lookup, never from tile properties (CARTO poi has
         // no osm id, verified on a real tile).
+        //
+        // The WHOLE body is guarded: `queryRenderedFeatures` throws synchronously when
+        // the style is still loading, and a sick transform throws inside it too. An
+        // uncaught throw here becomes one console error PER TAP (the prod flood class).
+        // Tapping a half-loaded map does nothing — honest, since nothing is rendered yet.
         if (!(target instanceof Map)) return;
-        if (!Number.isFinite(event.lngLat.lng) || !Number.isFinite(event.lngLat.lat)) return;
-        const ownHit = target.queryRenderedFeatures(event.point, { layers: ['omni-pins', 'omni-clusters', 'omni-cluster-count'] });
-        if (ownHit.length > 0) return;
-        let hintName: string | null = null;
-        let hintClass: string | null = null;
         try {
-          const named = target.queryRenderedFeatures(event.point).find((feature) => typeof feature.properties?.name === 'string' && (feature.properties.name as string).trim().length > 0);
-          if (named?.properties) {
-            hintName = String(named.properties.name);
-            const cls = named.properties.class ?? named.properties.subclass ?? null;
-            hintClass = typeof cls === 'string' ? cls : null;
-          }
-        } catch { /* label hint is best-effort; coordinates always work */ }
-        onTileTapRef.current?.({ longitude: event.lngLat.lng, latitude: event.lngLat.lat, hintName, hintClass });
+          if (!target.isStyleLoaded()) return;
+          if (!Number.isFinite(event.lngLat.lng) || !Number.isFinite(event.lngLat.lat)) return;
+          const ownHit = target.queryRenderedFeatures(event.point, { layers: ['omni-pins', 'omni-clusters', 'omni-cluster-count'] });
+          if (ownHit.length > 0) return;
+          let hintName: string | null = null;
+          let hintClass: string | null = null;
+          try {
+            const named = target.queryRenderedFeatures(event.point).find((feature) => typeof feature.properties?.name === 'string' && (feature.properties.name as string).trim().length > 0);
+            if (named?.properties) {
+              hintName = String(named.properties.name);
+              const cls = named.properties.class ?? named.properties.subclass ?? null;
+              hintClass = typeof cls === 'string' ? cls : null;
+            }
+          } catch { /* label hint is best-effort; coordinates always work */ }
+          onTileTapRef.current?.({ longitude: event.lngLat.lng, latitude: event.lngLat.lat, hintName, hintClass });
+        } catch { /* a tap must never throw uncaught, loaded style or not */ }
       });
       for (const layer of ['omni-clusters', 'omni-pins']) {
         (target as Map).on('mouseenter', layer, () => { target.getCanvas().style.cursor = 'pointer'; });
