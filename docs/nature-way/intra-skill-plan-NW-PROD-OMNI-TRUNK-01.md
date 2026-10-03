@@ -53,3 +53,25 @@ Sans équivalent app (maquette-only, à arbitrer HQ avant tout code — H1 : pas
 
 Règle : aucun de ces écrans ne se construit sans décision HQ (garder / écarter / reporter).
 Les construire à l'aveugle répéterait l'incident du 2026-09-23 (portes empilées).
+
+## Tranches de finition proposées (ordre fondateur « tout ce qui manque »)
+
+Chacune : contrat avant code, preuve falsifiée, gardes verts. Tailles en tranches-relais
+(~1 session chacune à ce rythme ; aucun calendrier promis — le rythme dépend de
+l'arbitrage et des retours terrain, pas du clavier).
+S-xx indiqué = rattachement H1 proposé ; « S-?? » = à trancher avec HQ avant de coder.
+
+| Slice | Contenu | S-xx / décision HQ requise | Taille | Données |
+|---|---|---|---|---|
+| TF-1 notif-centre (X03) | Centre notifications : événements avec deep-links (réponse dispo, vérifié, paiement, prêt, clôturé) | MV1 X03 ; Seed : S-?? (notifications = ? ) | S | Lecture seule (API existe) |
+| TF-2 demand-signal (X04) | « Sauver cette recherche ? » sur vide → DemandSignal → côté vendeurs/acquisition | Seed : S-11 ? S-25 ? | M | NOUVELLE table + migration (MCP apply) |
+| TF-3 historique closes (B18) | Liste closes (lieu/date/produits/montant/statut, tap = record) | Flow S-?? | S | Lecture (param closed) |
+| TF-4 reçu (recu) | Reçu de transaction partageable | Flow S-?? | S | Lecture |
+| TF-5 signalement (signal + admin-signal) | Signaler un contenu + file intel admin : LIRE les 2 écrans maquette d'abord, spec à écrire | S-32 ? | M | À cadrer (modération = autorité ?) |
+| TF-6 ops terrain (op-*) | Queue/visite/rapport/side : modèle visites + surfaces | S-?? + usage TT-1 (le terrain dira si utile) | L | NOUVELLES tables ; REPORTER après TT-1 sauf besoin observé |
+| TF-7 scan-entité | QR boutique → fiche entité + remise appliquée | S-27 ? | S/M | Vérifier le scan actuel d'abord |
+| TF-8 recovery (X05) | Récupération de compte | Auth : que permet Neon Auth ? | S | Vérifier le provider d'abord |
+| facility-apex | RÉSOLU SANS CODE : l'aperçu-pin = la fiche (un tap de moins, même contenu) | — | — | — |
+
+**Ordre recommandé :** TF-3 + TF-4 (petits, danych certaines, closent B18/recu) → TF-1 (X03, lecture) → TF-7 (vérifier puis compléter) → TF-2 (migration, avec MCP) → TF-8 (après réalité auth) → TF-5/TF-6 (spec d'abord, TF-6 après TT-1 sauf besoin observé).
+**« Fini » redéfini :** maquette 74 − parqués HQ + app équivalents prouvés + verdict. Pas de date : le chemin critique est arbitrage (toi) + terrain (toi), pas le code.
