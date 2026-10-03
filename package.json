@@ -65,5 +65,8 @@
     "tsx": "^4.23.12",
     "vitest": "latest"
   },
+  "overrides": {
+    "@tanstack/react-start": "1.168.60"
+  },
   "packageManager": "npm@10.9.8"
 }
