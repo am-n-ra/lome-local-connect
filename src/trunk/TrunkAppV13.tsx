@@ -183,6 +183,7 @@ export function TrunkAppV13() {
   const [facilityLoading, setFacilityLoading] = useState(false);
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrScanKey, setQrScanKey] = useState(0);
+  const [qrManualCode, setQrManualCode] = useState('');
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
@@ -1921,6 +1922,19 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           </div>
           {qrError && <p className="sub" role="alert" style={{ marginTop: 8 }}>{qrError}</p>}
           <PublicQrScannerSheet key={qrScanKey} onDetected={(facilityId: string) => void handleQrDetected(facilityId)} onClose={() => setSheet('menu')} />
+          <label className="tiny muted" style={{ display: 'block', marginTop: 10 }}>Caméra indisponible ? Saisissez le code</label>
+          <div className="row" style={{ gap: 6, marginTop: 4 }}>
+            <input className="input" type="text" value={qrManualCode} maxLength={200} onChange={(event) => setQrManualCode(event.currentTarget.value)} placeholder="Code du QR" aria-label="Code du QR" style={{ flex: 1 }} />
+            <button
+              className="btn sm"
+              type="button"
+              style={{ width: 'auto', minHeight: 28 }}
+              disabled={qrManualCode.trim().length === 0}
+              onClick={() => { const code = qrManualCode.trim(); setQrManualCode(''); void handleQrDetected(code); }}
+            >
+              Saisir le code
+            </button>
+          </div>
         </section>
       )}
       {sheet === 'facility' && (
