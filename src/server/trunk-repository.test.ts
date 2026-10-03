@@ -3178,6 +3178,35 @@ describe('FF-2 open transactions Root seam', () => {
   });
 });
 
+describe('closed-transaction history Root seam (S-26 / B18)', () => {
+  it('lists only closed transactions with the seller name for the receipt', async () => {
+    const call = stubSql([{
+      transaction_id: 'transaction-9', current_state: 'closed', actor_role: 'buyer',
+      product_id: 'product-9', product_name: 'Spaghetti', facility_id: 'facility-9',
+      facility_name: 'Boutique Kodjo', seller_name: 'Boutique Kodjo',
+      quantity: 2, net_amount_minor: 1700,
+      last_event_at: '2026-09-29T14:32:00.000Z', created_at: '2026-09-29T14:00:00.000Z',
+    }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listClosedTransactions({ authUserId: 'auth-user-1' });
+    expect(result.transactions).toHaveLength(1);
+    expect(result.transactions[0]).toMatchObject({
+      transactionId: 'transaction-9', state: 'closed', sellerName: 'Boutique Kodjo',
+      quantity: 2, netAmountMinor: 1700,
+    });
+    expect(call.queries[0]).toContain('join v2_transaction_members');
+    expect(call.queries[0]).toContain("current_state = 'closed'");
+    expect(call.queries[0]).not.toContain("current_state <> 'closed'");
+  });
+
+  it('returns an empty history when the caller closed nothing', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listClosedTransactions({ authUserId: 'auth-user-empty' });
+    expect(result.transactions).toEqual([]);
+  });
+});
+
 describe('FF-4 buyer cancels an availability request (Phase A only)', () => {
   it('cancels an owned, non-expired request while no purchase intent exists', async () => {
     const call = stubSql([{ id: 'request-1', status: 'cancelled' }]);

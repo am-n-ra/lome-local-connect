@@ -316,6 +316,16 @@ export interface OpenTransactionsResult {
   transactions: OpenTransactionSummary[];
 }
 
+/** S-26 / B18 — une transaction CLÔTURÉE de l'utilisateur connecté (version gelée :
+ * prix + coupon au moment T). Sert l'historique « Terminées » et le reçu. */
+export interface ClosedTransactionSummary extends OpenTransactionSummary {
+  sellerName: string | null;
+}
+
+export interface ClosedTransactionsResult {
+  transactions: ClosedTransactionSummary[];
+}
+
 export interface ExternalPaymentDeclarationResult {
   declarationId: string;
   transactionId: string;

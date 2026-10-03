@@ -1910,6 +1910,18 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    // S-26 / B18 : l'historique des closes (versions gelées). Même garde que l'ouvert :
+    // identité exigée, lecture membre-scopée, jamais de ligne d'autrui.
+    if (req.method === 'GET' && pathname === '/api/v2/buyer/transactions/closed') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your transaction history.'));
+        return true;
+      }
+      const result = await repository.listClosedTransactions({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/buyer/credits') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

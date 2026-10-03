@@ -586,6 +586,14 @@ export async function listOpenTransactions(input: { token: string }): Promise<Ap
   return parse<import('./types').OpenTransactionsResult>(response);
 }
 
+// S-26 / B18 : l'historique des closes (versions gelées). Même garde que l'ouvert.
+export async function listClosedTransactions(input: { token: string }): Promise<ApiResult<import('./types').ClosedTransactionsResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/transactions/closed', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').ClosedTransactionsResult>(response);
+}
+
 export async function createPurchaseIntent(input: { responseId: string; token: string; idempotencyKey: string }): Promise<ApiResult<PurchaseIntentResult>> {
   const response = await fetchWithRecovery('/api/v2/purchase-intents', {
     method: 'POST',

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -436,6 +436,21 @@ describe('facility ad campaign contract (NW-13j)', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/seller/facilities/facility-1/campaigns',
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token', 'Idempotency-Key': 'nw13j-key-0001' }, body: JSON.stringify({ name: 'Coup de projecteur', budgetMinor: 50000, startsAt: '2026-09-13T00:00:00.000Z', endsAt: '2026-10-13T00:00:00.000Z' }) },
+    );
+  });
+});
+
+describe('closed-transaction history client contract (S-26 / B18)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads the member-scoped closed list with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { transactions: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listClosedTransactions({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/transactions/closed',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });
 });

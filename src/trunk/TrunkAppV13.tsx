@@ -7,7 +7,7 @@ import {
 import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
-  claimFacilityByOsmRef,
+  claimFacilityByOsmRef, listClosedTransactions,
   getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
   cancelAvailabilityRequest,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
@@ -19,12 +19,13 @@ import {
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
-  AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, EvidenceKind,
+  AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
   FacilityDetail, MyTeamInvite, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import { relativeAge, transactionStateLabel } from './transaction-time';
 import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-bounds';
 import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
+import { TransactionReceiptV13 } from './TransactionReceiptV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -47,7 +48,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -264,6 +265,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [buyerRequestsError, setBuyerRequestsError] = useState('');
   const [openTxn, setOpenTxn] = useState<OpenTransactionSummary[]>([]);
   const [openTxnState, setOpenTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
+// S-26 / B18 : l'historique des closes (versions gelées) + le reçu.
+  const [closedTxn, setClosedTxn] = useState<ClosedTransactionSummary[]>([]);
+  const [closedTxnState, setClosedTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [receiptTx, setReceiptTx] = useState<ClosedTransactionSummary | null>(null);
   const [pendingResumeTxnId, setPendingResumeTxnId] = useState<string | null>(null);
   // Wallet
   const [wallet, setWallet] = useState<WalletOverviewResult | null>(null);
@@ -309,7 +314,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -728,6 +733,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (res.ok && res.data) { setOpenTxn(res.data.transactions ?? []); setOpenTxnState('idle'); }
       else setOpenTxnState('error');
     }).catch(() => setOpenTxnState('error'));
+    setClosedTxnState('loading');
+    void listClosedTransactions({ token }).then((res) => {
+      if (res.ok && res.data) { setClosedTxn(res.data.transactions ?? []); setClosedTxnState('idle'); }
+      else setClosedTxnState('error');
+    }).catch(() => setClosedTxnState('error'));
     try {
       const result = await getBuyerAvailabilityRequests({ token });
       if (result.ok && result.data) {
@@ -1335,6 +1345,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'facility') { setSheet(results.length ? 'results' : 'none'); return; }
       if (sheet === 'flow' || sheet === 'claim') { setSheet('facility'); return; }
       if (sheet === 'tile-place') { setSheet('none'); return; }
+      if (sheet === 'receipt') { setSheet('home'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
@@ -2205,6 +2216,23 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
             </button>
           ))}
+          <div className="eyebrow" style={{ marginTop: 14 }}>Terminées</div>
+          {closedTxnState === 'loading' && <p className="tiny muted" style={{ marginTop: 6 }}>Chargement de votre historique…</p>}
+          {closedTxnState === 'error' && (
+            <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Votre historique ne peut pas être chargé pour le moment.</p></div>
+          )}
+          {closedTxnState === 'idle' && closedTxn.length === 0 && (
+            <p className="sub" style={{ marginTop: 6 }}>Aucune transaction clôturée. Vos versions gelées apparaîtront ici.</p>
+          )}
+          {closedTxn.map((transaction) => (
+            <button key={transaction.transactionId} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => { setReceiptTx(transaction); setSheet('receipt'); }}>
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                <span className="status ok">Clôturée</span>
+              </div>
+              <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reçu · {relativeAge(transaction.lastEventAt)}</span>
+            </button>
+          ))}
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ghost" type="button" onClick={() => void openWallet()}><Wallet size={15} /> Wallet</button>
             <button className="btn ghost" type="button" onClick={() => setSheet('plans')}>Plans</button>
@@ -2527,6 +2555,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </div>
           )}
         </section>
+      )}
+      {sheet === 'receipt' && receiptTx && (
+        <TransactionReceiptV13 summary={receiptTx} onClose={() => setSheet('home')} />
       )}
       {sheet === 'claim' && claimResult && (
         <section className="sheet h-mid" data-sheet="claim" role="region" aria-label="Revendiquer">
