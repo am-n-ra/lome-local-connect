@@ -1081,11 +1081,12 @@ function createTrunkRepository(sql = database()) {
              where coalesce(e.trust_state, f.trust_state) in ('unconfirmed', 'confirmed', 'certified')
                and candidate.onboarding_state <> 'seller_ready' and candidate.suspended_at is null) as pending_activations,
           (select count(*)::int from v2_discovery_runs where created_at >= now() - interval '7 days') as operator_runs,
-          (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today
+          (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today,
+          (select count(*)::int from v2_offer_reports where state = 'nouveau') as pending_reports
       `);
       const row = rows[0];
-      if (!row || Number(row.is_admin) === 0) return { authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0 };
-      return { authorized: true, pendingClaims: Number(row.pending_claims), pendingActivations: Number(row.pending_activations), operatorRuns: Number(row.operator_runs), auditEventsToday: Number(row.audit_today) };
+      if (!row || Number(row.is_admin) === 0) return { authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0, pendingReports: 0 };
+      return { authorized: true, pendingClaims: Number(row.pending_claims), pendingActivations: Number(row.pending_activations), operatorRuns: Number(row.operator_runs), auditEventsToday: Number(row.audit_today), pendingReports: Number(row.pending_reports ?? 0) };
     },
     async setFacilityOperationalState(input) {
       if (!FACILITY_OPERATIONAL_STATES.includes(input.state) || input.reason.trim().length < 3 || input.reason.trim().length > 1e3) {
@@ -5807,6 +5808,254 @@ function createTrunkRepository(sql = database()) {
         }))
       };
     },
+    // TF-5 — signaler une offre (maquette `signal`). UNE instruction : le re-clic
+    // du même acheteur sur la même offre renvoie la ligne existante (`duplicate`),
+    // jamais une erreur — un no-op honnête (D-SIG-3). Le vendeur visé n'apparaît
+    // nulle part (D-SIG-5) ; aucun effet sur S-32 ici (D-SIG-2, flag séparé à venir).
+    async createOfferReport(input) {
+      const motif = input.motif;
+      if (motif !== "prix_trompeur" && motif !== "visuel_non_conforme" && motif !== "indisponible") {
+        throw new FieldPilotPolicyError("MOTIF_REQUIRED");
+      }
+      const detail = (input.detail ?? "").trim();
+      if (detail.length > 500) throw new FieldPilotPolicyError("DETAIL_TOO_LONG");
+      const rows = await retryDatabase(() => sql`
+        with reporter as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select p.id
+          from v2_products p
+          where p.id = ${input.productId}::uuid and p.publication_state = 'published'
+          limit 1
+        ), existing as (
+          select r.id, r.product_id, r.motif, r.detail, r.state, r.created_at
+          from v2_offer_reports r
+          join reporter on reporter.id = r.reporter_account_id
+          where r.product_id = ${input.productId}::uuid and r.state = 'nouveau'
+          limit 1
+        ), inserted as (
+          insert into v2_offer_reports (product_id, reporter_account_id, motif, detail)
+          select target.id, reporter.id, ${motif}, ${detail === "" ? null : detail}
+          from reporter cross join target
+          where not exists (select 1 from existing)
+          returning id, product_id, motif, detail, state, created_at
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select reporter.id, 'offer_report_created', 'offer_report', inserted.id::text, ${input.correlationId}, ${motif}
+          from inserted cross join reporter
+          returning entity_id
+        )
+        select id, product_id, motif, detail, state, created_at, false as duplicate from inserted
+        union all
+        select id, product_id, motif, detail, state, created_at, true as duplicate from existing
+        where not exists (select 1 from inserted)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This offer cannot receive a report right now.");
+      return {
+        report: {
+          id: String(row.id),
+          productId: String(row.product_id),
+          motif: String(row.motif),
+          detail: row.detail === null || row.detail === void 0 ? null : String(row.detail),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        },
+        duplicate: Boolean(row.duplicate)
+      };
+    },
+    async listOfferReports(input) {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!authorizationRows[0]) return { authorized: false, reports: [] };
+      const rows = await retryDatabase(() => sql`
+        select r.id, r.product_id, p.name as product_name, r.motif, r.detail, r.state, r.created_at
+        from v2_offer_reports r
+        join v2_products p on p.id = r.product_id
+        order by (r.state = 'nouveau') desc, r.created_at desc, r.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        reports: rows.map((row) => ({
+          id: String(row.id),
+          productId: String(row.product_id),
+          productName: String(row.product_name ?? ""),
+          motif: String(row.motif),
+          detail: row.detail === null || row.detail === void 0 ? null : String(row.detail),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        }))
+      };
+    },
+    // TF-5 / D-SIG-1 — trancher après constat. L'opérateur constate
+    // (`constate_*`, depuis `nouveau` seulement) ; reviewer/admin constate OU clôt
+    // (`traite`, depuis `nouveau` ou constaté). Motif obligatoire : une décision
+    // sans raison est incroyable. Une seule erreur générique (état, droit, inconnu).
+    async decideOfferReport(input) {
+      const outcome = input.outcome;
+      if (outcome !== "constate_infirme" && outcome !== "constate_confirme" && outcome !== "traite") {
+        throw new FieldPilotPolicyError("OUTCOME_REQUIRED");
+      }
+      const reason = input.reason.trim();
+      if (reason.length < 3 || reason.length > 1e3) throw new FieldPilotPolicyError("REASON_REQUIRED");
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), decider as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_offer_reports r
+          set state = ${outcome}, decided_by_account_id = staff.id, decided_at = now(), decision_note = ${reason}
+          from staff
+          where r.id = ${input.reportId}::uuid
+            and r.state in ('nouveau', 'constate_infirme', 'constate_confirme')
+            and ((${outcome} = 'constate_infirme' or ${outcome} = 'constate_confirme') and r.state = 'nouveau'
+              or ${outcome} = 'traite')
+            and (${outcome} <> 'traite' or exists (select 1 from decider))
+          returning r.id, r.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'offer_report_decided', 'offer_report', updated.id::text, ${input.correlationId}, ${outcome + ": " + reason}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This report cannot be decided in its current state.");
+      return { id: String(row.id), state: String(row.state) };
+    },
+    // TF-5 / D-SIG-4 — objectifs d'acquisition : de vrais objets suivis, nourris
+    // par la demande TF-2. Même pattern no-op honnête : un objectif ouvert identique
+    // existe déjà → renvoyé (`duplicate`), pas dupliqué.
+    async createAcquisitionObjective(input) {
+      const query = input.query.trim();
+      if (query.length < 1 || query.length > 120) throw new FieldPilotPolicyError("QUERY_REQUIRED");
+      const zone = (input.zone ?? "").trim() === "" ? null : (input.zone ?? "").trim();
+      const seekersSnapshot = Number.isInteger(input.seekersSnapshot) && input.seekersSnapshot >= 0 ? input.seekersSnapshot : 0;
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), existing as (
+          select o.id, o.query, o.zone, o.seekers_snapshot, o.state, o.created_at
+          from v2_acquisition_objectives o
+          where lower(trim(o.query)) = lower(trim(${query}))
+            and coalesce(o.zone, '') = coalesce(${zone}, '')
+            and o.state in ('ouvert', 'recrute')
+          limit 1
+        ), inserted as (
+          insert into v2_acquisition_objectives (query, zone, seekers_snapshot, created_by_account_id)
+          select ${query}, ${zone}, ${seekersSnapshot}, staff.id
+          from staff
+          where not exists (select 1 from existing)
+          returning id, query, zone, seekers_snapshot, state, created_at
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'acquisition_objective_created', 'acquisition_objective', inserted.id::text, ${input.correlationId}, ${query}
+          from inserted cross join staff
+          returning entity_id
+        )
+        select id, query, zone, seekers_snapshot, state, created_at, false as duplicate from inserted
+        union all
+        select id, query, zone, seekers_snapshot, state, created_at, true as duplicate from existing
+        where not exists (select 1 from inserted)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This acquisition objective cannot be created right now.");
+      return {
+        objective: {
+          id: String(row.id),
+          query: String(row.query),
+          zone: row.zone === null || row.zone === void 0 ? null : String(row.zone),
+          seekersSnapshot: Number(row.seekers_snapshot ?? 0),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        },
+        duplicate: Boolean(row.duplicate)
+      };
+    },
+    async listAcquisitionObjectives(input) {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!authorizationRows[0]) return { authorized: false, objectives: [] };
+      const rows = await retryDatabase(() => sql`
+        select o.id, o.query, o.zone, o.seekers_snapshot, o.state, o.created_at
+        from v2_acquisition_objectives o
+        order by (o.state = 'clos') asc, o.created_at desc, o.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        objectives: rows.map((row) => ({
+          id: String(row.id),
+          query: String(row.query),
+          zone: row.zone === null || row.zone === void 0 ? null : String(row.zone),
+          seekersSnapshot: Number(row.seekers_snapshot ?? 0),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        }))
+      };
+    },
+    async setAcquisitionObjectiveState(input) {
+      const state = input.state;
+      if (state !== "ouvert" && state !== "recrute" && state !== "clos") {
+        throw new FieldPilotPolicyError("STATE_REQUIRED");
+      }
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_acquisition_objectives o
+          set state = ${state}
+          from staff
+          where o.id = ${input.objectiveId}::uuid
+          returning o.id, o.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'acquisition_objective_state', 'acquisition_objective', updated.id::text, ${input.correlationId}, ${state}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This acquisition objective cannot be updated right now.");
+      return { id: String(row.id), state: String(row.state) };
+    },
     async getTransaction(input) {
       const rows = await retryDatabase(() => sql`
         select
@@ -6929,6 +7178,46 @@ function validateFacilityZoneAssignment(body, facilityId) {
   }
   return { facilityId, zone };
 }
+function validateOfferReportCreate(body) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const productId = typeof body.productId === "string" ? body.productId : "";
+  const motif = body.motif;
+  if (!uuidPattern.test(productId)) throw new ApiInputError("A valid offer id is required.");
+  if (motif !== "prix_trompeur" && motif !== "visuel_non_conforme" && motif !== "indisponible") {
+    throw new ApiInputError("A valid report motif (prix_trompeur, visuel_non_conforme, indisponible) is required.");
+  }
+  const detail = typeof body.detail === "string" ? body.detail.trim() : "";
+  if (detail.length > 500) throw new ApiInputError("The report detail is bounded to 500 chars.");
+  return { productId, motif, detail: detail === "" ? null : detail };
+}
+function validateOfferReportDecision(body, reportId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const outcome = body.outcome;
+  if (!uuidPattern.test(reportId)) throw new ApiInputError("A valid report id is required.");
+  if (outcome !== "constate_infirme" && outcome !== "constate_confirme" && outcome !== "traite") {
+    throw new ApiInputError("A valid decision outcome (constate_infirme, constate_confirme, traite) is required.");
+  }
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded decision reason (3\u20131000 chars) is required.");
+  return { reportId, outcome, reason };
+}
+function validateAcquisitionObjectiveCreate(body) {
+  const query = typeof body.query === "string" ? body.query.trim() : "";
+  const zone = body.zone === null || body.zone === void 0 ? null : typeof body.zone === "string" ? body.zone.trim() : "";
+  const seekersSnapshot = typeof body.seekersSnapshot === "number" && Number.isInteger(body.seekersSnapshot) && body.seekersSnapshot >= 0 ? body.seekersSnapshot : 0;
+  if (query.length < 1 || query.length > 120) throw new ApiInputError("A bounded demand query (1\u2013120 chars) is required.");
+  if (zone !== null && (zone.length < 1 || zone.length > 120)) throw new ApiInputError("An optional zone (\u2264120 chars) is required.");
+  return { query, zone, seekersSnapshot };
+}
+function validateAcquisitionObjectiveState(body, objectiveId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const state = body.state;
+  if (!uuidPattern.test(objectiveId)) throw new ApiInputError("A valid objective id is required.");
+  if (state !== "ouvert" && state !== "recrute" && state !== "clos") {
+    throw new ApiInputError("A valid objective state (ouvert, recrute, clos) is required.");
+  }
+  return { objectiveId, state };
+}
 function validateClaimByOsmRef(body) {
   if (body.sourceRef !== void 0) throw new ApiInputError("The OpenStreetMap reference is derived by the server and cannot be supplied.");
   const osmType = body.osmType;
@@ -7479,6 +7768,108 @@ async function handleApi(req, res, pathname, url) {
       }
       const result = await repository.listDemandSignals({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/buyer/offer-reports") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before reporting an offer."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateOfferReportCreate(input);
+      try {
+        const result = await repository.createOfferReport({ authUserId, productId: validated.productId, motif: validated.motif, detail: validated.detail, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("reviewer") === "offer-reports") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member to view offer reports."));
+        return true;
+      }
+      const result = await repository.listOfferReports({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "decide-report") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before deciding a report."));
+        return true;
+      }
+      const reportId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const input = await parseRequestBody(req);
+      const validated = validateOfferReportDecision(input, reportId);
+      try {
+        const result = await repository.decideOfferReport({ authUserId, reportId: validated.reportId, outcome: validated.outcome, reason: validated.reason, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("reviewer") === "acquisition-objectives") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member to view acquisition objectives."));
+        return true;
+      }
+      const result = await repository.listAcquisitionObjectives({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/public/facilities" && url.searchParams.get("action") === "acquisition-objective") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before creating an acquisition objective."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateAcquisitionObjectiveCreate(input);
+      try {
+        const result = await repository.createAcquisitionObjective({ authUserId, query: validated.query, zone: validated.zone, seekersSnapshot: validated.seekersSnapshot, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "acquisition-objective-state") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before updating an acquisition objective."));
+        return true;
+      }
+      const objectiveId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const input = await parseRequestBody(req);
+      const validated = validateAcquisitionObjectiveState(input, objectiveId);
+      try {
+        const result = await repository.setAcquisitionObjectiveState({ authUserId, objectiveId: validated.objectiveId, state: validated.state, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
       return true;
     }
     if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("inbox") === "1") {

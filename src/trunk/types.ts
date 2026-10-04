@@ -613,6 +613,8 @@ export interface AdminConsoleResult {
   pendingActivations: number;
   operatorRuns: number;
   auditEventsToday: number;
+  // TF-5 — signalements d'offre en attente (maquette `admin-console`).
+  pendingReports: number;
 }
 
 export interface AdminAuditEvent {
@@ -649,6 +651,63 @@ export interface DemandSignal {
 export interface DemandSignalsResult {
   authorized: boolean;
   signals: DemandSignal[];
+}
+
+// TF-5 — signaler une offre (maquette `signal`) : 3 motifs, texte optionnel.
+// D-SIG-2 : aucun effet automatique sur S-32 ; D-SIG-5 : vendeur aveugle.
+export type OfferReportMotif = 'prix_trompeur' | 'visuel_non_conforme' | 'indisponible';
+export type OfferReportState = 'nouveau' | 'constate_infirme' | 'constate_confirme' | 'traite';
+
+export interface OfferReport {
+  id: string;
+  productId: string;
+  motif: OfferReportMotif;
+  detail: string | null;
+  state: OfferReportState;
+  createdAt: string;
+}
+
+export interface OfferReportCreateResult {
+  report: OfferReport;
+  duplicate: boolean;
+}
+
+export interface OfferReportQueueItem extends OfferReport {
+  productName: string;
+}
+
+export interface OfferReportListResult {
+  authorized: boolean;
+  reports: OfferReportQueueItem[];
+}
+
+export type OfferReportOutcome = 'constate_infirme' | 'constate_confirme' | 'traite';
+
+export interface OfferReportDecisionResult {
+  id: string;
+  state: OfferReportState;
+}
+
+// TF-5 / D-SIG-4 — objectifs d'acquisition : de vrais objets suivis.
+export type AcquisitionObjectiveState = 'ouvert' | 'recrute' | 'clos';
+
+export interface AcquisitionObjective {
+  id: string;
+  query: string;
+  zone: string | null;
+  seekersSnapshot: number;
+  state: AcquisitionObjectiveState;
+  createdAt: string;
+}
+
+export interface AcquisitionObjectiveCreateResult {
+  objective: AcquisitionObjective;
+  duplicate: boolean;
+}
+
+export interface AcquisitionObjectiveListResult {
+  authorized: boolean;
+  objectives: AcquisitionObjective[];
 }
 
 export type ReviewOutcome = 'certified' | 'rejected' | 'needs_more_evidence';

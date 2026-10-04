@@ -241,6 +241,53 @@ export function validateFacilityZoneAssignment(body: Record<string, unknown>, fa
   return { facilityId, zone };
 }
 
+// TF-5 — signaler une offre (D-SIG-3 : re-clic = no-op, jamais une erreur de saisie).
+export function validateOfferReportCreate(body: Record<string, unknown>): { productId: string; motif: 'prix_trompeur' | 'visuel_non_conforme' | 'indisponible'; detail: string | null } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const productId = typeof body.productId === 'string' ? body.productId : '';
+  const motif = body.motif;
+  if (!uuidPattern.test(productId)) throw new ApiInputError('A valid offer id is required.');
+  if (motif !== 'prix_trompeur' && motif !== 'visuel_non_conforme' && motif !== 'indisponible') {
+    throw new ApiInputError('A valid report motif (prix_trompeur, visuel_non_conforme, indisponible) is required.');
+  }
+  const detail = typeof body.detail === 'string' ? body.detail.trim() : '';
+  if (detail.length > 500) throw new ApiInputError('The report detail is bounded to 500 chars.');
+  return { productId, motif, detail: detail === '' ? null : detail };
+}
+
+// TF-5 / D-SIG-1 — trancher après constat (motif obligatoire, comme les files sœurs).
+export function validateOfferReportDecision(body: Record<string, unknown>, reportId: string): { reportId: string; outcome: 'constate_infirme' | 'constate_confirme' | 'traite'; reason: string } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const outcome = body.outcome;
+  if (!uuidPattern.test(reportId)) throw new ApiInputError('A valid report id is required.');
+  if (outcome !== 'constate_infirme' && outcome !== 'constate_confirme' && outcome !== 'traite') {
+    throw new ApiInputError('A valid decision outcome (constate_infirme, constate_confirme, traite) is required.');
+  }
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+  if (reason.length < 3 || reason.length > 1000) throw new ApiInputError('A bounded decision reason (3–1000 chars) is required.');
+  return { reportId, outcome, reason };
+}
+
+// TF-5 / D-SIG-4 — objectifs d'acquisition : de vrais objets, requêtes bornées.
+export function validateAcquisitionObjectiveCreate(body: Record<string, unknown>): { query: string; zone: string | null; seekersSnapshot: number } {
+  const query = typeof body.query === 'string' ? body.query.trim() : '';
+  const zone = body.zone === null || body.zone === undefined ? null : typeof body.zone === 'string' ? body.zone.trim() : '';
+  const seekersSnapshot = typeof body.seekersSnapshot === 'number' && Number.isInteger(body.seekersSnapshot) && body.seekersSnapshot >= 0 ? body.seekersSnapshot : 0;
+  if (query.length < 1 || query.length > 120) throw new ApiInputError('A bounded demand query (1–120 chars) is required.');
+  if (zone !== null && (zone.length < 1 || zone.length > 120)) throw new ApiInputError('An optional zone (≤120 chars) is required.');
+  return { query, zone, seekersSnapshot };
+}
+
+export function validateAcquisitionObjectiveState(body: Record<string, unknown>, objectiveId: string): { objectiveId: string; state: 'ouvert' | 'recrute' | 'clos' } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const state = body.state;
+  if (!uuidPattern.test(objectiveId)) throw new ApiInputError('A valid objective id is required.');
+  if (state !== 'ouvert' && state !== 'recrute' && state !== 'clos') {
+    throw new ApiInputError('A valid objective state (ouvert, recrute, clos) is required.');
+  }
+  return { objectiveId, state };
+}
+
 // DEC-V2-30 claim-by-OSM-reference. There is deliberately NO sourceRef field: the server derives
 // `osmType/osmId` into the canonical reference, so two clients naming the same place differently
 // cannot create two rows for one place.
@@ -847,6 +894,112 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       }
       const result = await repository.listDemandSignals({ authUserId });
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    // TF-5 — signaler une offre (maquette `signal`). Authentifié (D-05) ; un seul
+    // signalement actif par offre et par acheteur, re-clic = no-op (D-SIG-3).
+    if (req.method === 'POST' && pathname === '/api/v2/buyer/offer-reports') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before reporting an offer.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateOfferReportCreate(input);
+      try {
+        const result = await repository.createOfferReport({ authUserId, productId: validated.productId, motif: validated.motif, detail: validated.detail, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    // TF-5 — file des signalements (opérateur constate, reviewer/admin tranche, D-SIG-1).
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'offer-reports') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member to view offer reports.'));
+        return true;
+      }
+      const result = await repository.listOfferReports({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'decide-report') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before deciding a report.'));
+        return true;
+      }
+      const reportId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const input = await parseRequestBody(req);
+      const validated = validateOfferReportDecision(input, reportId);
+      try {
+        const result = await repository.decideOfferReport({ authUserId, reportId: validated.reportId, outcome: validated.outcome, reason: validated.reason, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    // TF-5 / D-SIG-4 — objectifs d'acquisition : de vrais objets suivis (staff only).
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'acquisition-objectives') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member to view acquisition objectives.'));
+        return true;
+      }
+      const result = await repository.listAcquisitionObjectives({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/public/facilities' && url.searchParams.get('action') === 'acquisition-objective') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before creating an acquisition objective.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateAcquisitionObjectiveCreate(input);
+      try {
+        const result = await repository.createAcquisitionObjective({ authUserId, query: validated.query, zone: validated.zone, seekersSnapshot: validated.seekersSnapshot, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'acquisition-objective-state') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before updating an acquisition objective.'));
+        return true;
+      }
+      const objectiveId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const input = await parseRequestBody(req);
+      const validated = validateAcquisitionObjectiveState(input, objectiveId);
+      try {
+        const result = await repository.setAcquisitionObjectiveState({ authUserId, objectiveId: validated.objectiveId, state: validated.state, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('inbox') === '1') {

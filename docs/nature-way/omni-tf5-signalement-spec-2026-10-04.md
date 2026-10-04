@@ -61,15 +61,15 @@ L'intégrité est automatique et dérivée. Trois options :
 - (c) les signalements ne touchent que la **réputation** (avis), jamais l'intégrité.
 Voir D-SIG-2. Dans tous les cas : **aucun effet automatique d'un `nouveau` non constaté.**
 
-## 6. Décisions requises (HQ/fondateur — la spec ne les prend pas)
+## 6. Décisions — TRANCHÉES 2026-10-04 (DEC-V2-36)
 
-| ID | Question | Recommandation (pas une décision) |
-|---|---|---|
-| D-SIG-1 | Qui tranche le badge final après constat opérateur ? | Reviewer/admin (la maquette interdit à l'opérateur de décider) |
-| D-SIG-2 | Effet sur S-32 ? | (a) flag séparé (voir §5) |
-| D-SIG-3 | Anti-abus ? | 1 actif/offre/acheteur (garde) ; signalements abusifs répétés = à définir (pas de sanction auto sans décision) |
-| D-SIG-4 | « Objectif d'acquisition » (`admin-signal`) : vrai objet ou reporté ? | Reporté — le toast maquette reste un toast ; TF-2 mesure déjà, l'action vient avec TF-6/terrain |
-| D-SIG-5 | Vendeur notifié du signalement ? | Non avant constat (présomption d'honnêteté) ; notifié à `traite` si confirmé, avec motif |
+| ID | Décision fondateur |
+|---|---|
+| D-SIG-1 | Le badge final est tranché par **reviewer/admin** |
+| D-SIG-2 | **Flag de modération séparé**, équipe uniquement ; jamais d'effet auto d'un `nouveau` |
+| D-SIG-3 | **1 signalement actif par offre et par acheteur** (re-clic = no-op), pas de sanction auto |
+| D-SIG-4 | **« Objectif d'acquisition » = vrai objet** (contre la recommandation de report — demande explicite) : créé depuis `admin-signal`/cardbox demande, suivi (états), sans vente de données |
+| D-SIG-5 | **Vendeur non notifié avant constat** ; notifié si confirmé, avec motif |
 
 ## 7. Preuve prévue (implémentation, plus tard)
 

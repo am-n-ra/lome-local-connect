@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -853,6 +853,59 @@ export async function getDemandSignals(input: { token: string }): Promise<ApiRes
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
   });
   return parse<DemandSignalsResult>(response);
+}
+
+// TF-5 — signaler une offre (D-SIG-3 : re-clic = no-op renvoyé, pas une erreur).
+export async function createOfferReport(input: { token: string; productId: string; motif: OfferReportMotif; detail?: string | null }): Promise<ApiResult<OfferReportCreateResult>> {
+  const response = await fetchWithRecovery('/api/v2/buyer/offer-reports', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ productId: input.productId, motif: input.motif, detail: input.detail ?? null }),
+  });
+  return parse<OfferReportCreateResult>(response);
+}
+
+export async function listOfferReports(input: { token: string }): Promise<ApiResult<OfferReportListResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=offer-reports', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<OfferReportListResult>(response);
+}
+
+// TF-5 / D-SIG-1 — trancher après constat (motif obligatoire).
+export async function decideOfferReport(input: { reportId: string; outcome: OfferReportOutcome; reason: string; token: string }): Promise<ApiResult<OfferReportDecisionResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.reportId)}?action=decide-report`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ outcome: input.outcome, reason: input.reason }),
+  });
+  return parse<OfferReportDecisionResult>(response);
+}
+
+// TF-5 / D-SIG-4 — objectifs d'acquisition (staff only).
+export async function listAcquisitionObjectives(input: { token: string }): Promise<ApiResult<AcquisitionObjectiveListResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=acquisition-objectives', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<AcquisitionObjectiveListResult>(response);
+}
+
+export async function createAcquisitionObjective(input: { token: string; query: string; zone?: string | null; seekersSnapshot?: number }): Promise<ApiResult<AcquisitionObjectiveCreateResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?action=acquisition-objective', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ query: input.query, zone: input.zone ?? null, seekersSnapshot: input.seekersSnapshot ?? 0 }),
+  });
+  return parse<AcquisitionObjectiveCreateResult>(response);
+}
+
+export async function setAcquisitionObjectiveState(input: { objectiveId: string; state: AcquisitionObjectiveState; token: string }): Promise<ApiResult<{ id: string; state: AcquisitionObjectiveState }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.objectiveId)}?action=acquisition-objective-state`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ state: input.state }),
+  });
+  return parse(response);
 }
 
 export async function reviewFacilityClaim(input: { requestId: string; outcome: ReviewOutcome; reason: string; token: string }): Promise<ApiResult<ReviewClaimResult>> {

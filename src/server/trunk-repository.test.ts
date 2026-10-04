@@ -2267,6 +2267,99 @@ describe('review and inbox Root seam', () => {
     expect(call.queries[1]).toContain('count(distinct s.account_id)');
   });
 
+  // TF-5 — signalements d'offre + objectifs d'acquisition (même file de revue).
+  it('rejects a report with an unknown motif before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createOfferReport({ authUserId: 'auth-buyer-1', productId: '11111111-1111-4111-8111-111111111111', motif: 'trop_cher', correlationId: 'corr-tf5-1' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('creates a report in one statement and returns it as new', async () => {
+    const call = stubSql([{ id: 'report-1', product_id: 'product-1', motif: 'prix_trompeur', detail: null, state: 'nouveau', created_at: '2026-10-04T08:00:00.000Z', duplicate: false }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createOfferReport({ authUserId: 'auth-buyer-1', productId: '11111111-1111-4111-8111-111111111111', motif: 'prix_trompeur', correlationId: 'corr-tf5-2' });
+    expect(result).toEqual({
+      report: { id: 'report-1', productId: 'product-1', motif: 'prix_trompeur', detail: null, state: 'nouveau', createdAt: '2026-10-04T08:00:00.000Z' },
+      duplicate: false,
+    });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('v2_offer_reports');
+    expect(call.queries[0]).toContain('offer_report_created');
+  });
+
+  it('returns the existing active report as duplicate on re-click', async () => {
+    const call = stubSql([{ id: 'report-1', product_id: 'product-1', motif: 'prix_trompeur', detail: null, state: 'nouveau', created_at: '2026-10-04T08:00:00.000Z', duplicate: true }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createOfferReport({ authUserId: 'auth-buyer-1', productId: '11111111-1111-4111-8111-111111111111', motif: 'prix_trompeur', correlationId: 'corr-tf5-3' });
+    expect(result.duplicate).toBe(true);
+    expect(result.report.id).toBe('report-1');
+  });
+
+  it('locks the report queue behind a staff role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listOfferReports({ authUserId: 'auth-buyer-1' })).resolves.toEqual({ authorized: false, reports: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('rejects a decision with an unknown outcome before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.decideOfferReport({ authUserId: 'auth-operator-1', reportId: 'report-1', outcome: 'archiver', reason: 'constat terrain', correlationId: 'corr-tf5-4' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('rejects a decision with an unbounded reason before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.decideOfferReport({ authUserId: 'auth-operator-1', reportId: 'report-1', outcome: 'constate_confirme', reason: 'x', correlationId: 'corr-tf5-5' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('decides a report with the decider guard in one statement', async () => {
+    const call = stubSql([{ id: 'report-1', state: 'constate_confirme' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.decideOfferReport({ authUserId: 'auth-operator-1', reportId: 'report-1', outcome: 'constate_confirme', reason: 'prix affiche different en rayon', correlationId: 'corr-tf5-6' });
+    expect(result).toEqual({ id: 'report-1', state: 'constate_confirme' });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('offer_report_decided');
+    expect(call.queries[0]).toContain('decider');
+  });
+
+  it('rejects an acquisition objective with an empty query before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createAcquisitionObjective({ authUserId: 'auth-operator-1', query: '   ', correlationId: 'corr-tf5-7' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('creates an acquisition objective in one statement', async () => {
+    const call = stubSql([{ id: 'objective-1', query: 'gaz butane 6 kg', zone: 'Adawlato', seekers_snapshot: 38, state: 'ouvert', created_at: '2026-10-04T08:00:00.000Z', duplicate: false }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createAcquisitionObjective({ authUserId: 'auth-operator-1', query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38, correlationId: 'corr-tf5-8' });
+    expect(result).toEqual({
+      objective: { id: 'objective-1', query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38, state: 'ouvert', createdAt: '2026-10-04T08:00:00.000Z' },
+      duplicate: false,
+    });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('v2_acquisition_objectives');
+    expect(call.queries[0]).toContain('acquisition_objective_created');
+  });
+
+  it('locks the objectives behind a staff role and updates state', async () => {
+    const locked = stubSql([]);
+    const repository = createTrunkRepository(locked.sql);
+    await expect(repository.listAcquisitionObjectives({ authUserId: 'auth-buyer-1' })).resolves.toEqual({ authorized: false, objectives: [] });
+    expect(locked.queries).toHaveLength(1);
+    const call = stubSql([{ id: 'objective-1', state: 'recrute' }]);
+    const staff = createTrunkRepository(call.sql);
+    await expect(staff.setAcquisitionObjectiveState({ authUserId: 'auth-operator-1', objectiveId: 'objective-1', state: 'bientot' as 'recrute', correlationId: 'corr-tf5-9' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+    await expect(staff.setAcquisitionObjectiveState({ authUserId: 'auth-operator-1', objectiveId: 'objective-1', state: 'recrute', correlationId: 'corr-tf5-10' })).resolves.toEqual({ id: 'objective-1', state: 'recrute' });
+    expect(call.queries).toHaveLength(1);
+  });
+
   it('rejects a review with an unbounded reason before persistence', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);
@@ -2676,17 +2769,18 @@ describe('admin console Root seam (T-07a)', () => {
   it('locks the console for a session without an active admin role', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.getAdminConsole({ authUserId: 'auth-user-1' })).resolves.toEqual({ authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0 });
+    await expect(repository.getAdminConsole({ authUserId: 'auth-user-1' })).resolves.toEqual({ authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0, pendingReports: 0 });
     expect(call.queries).toHaveLength(1);
     expect(call.queries[0]).toContain("ar.role = 'admin'");
   });
 
   it('maps real queue counts for an active admin', async () => {
-    const call = stubSql([{ is_admin: 1, pending_claims: 3, pending_activations: 2, operator_runs: 5, audit_today: 7 }]);
+    const call = stubSql([{ is_admin: 1, pending_claims: 3, pending_activations: 2, operator_runs: 5, audit_today: 7, pending_reports: 4 }]);
     const repository = createTrunkRepository(call.sql);
-    await expect(repository.getAdminConsole({ authUserId: 'auth-admin' })).resolves.toEqual({ authorized: true, pendingClaims: 3, pendingActivations: 2, operatorRuns: 5, auditEventsToday: 7 });
+    await expect(repository.getAdminConsole({ authUserId: 'auth-admin' })).resolves.toEqual({ authorized: true, pendingClaims: 3, pendingActivations: 2, operatorRuns: 5, auditEventsToday: 7, pendingReports: 4 });
     expect(call.queries[0]).toContain("state in ('submitted', 'admin_review')");
     expect(call.queries[0]).toContain('v2_audit_events');
+    expect(call.queries[0]).toContain("v2_offer_reports where state = 'nouveau'");
   });
 });
 

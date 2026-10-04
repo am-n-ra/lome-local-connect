@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createAcquisitionObjective, createFacilityAdCampaign, createOfferReport, createPurchaseIntent, createSellerFacility, decideOfferReport, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listAcquisitionObjectives, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listOfferReports, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setAcquisitionObjectiveState, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -479,6 +479,74 @@ describe('demand-signal client contract (MV1 X04)', () => {
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/public/facilities?reviewer=demand-signals',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+});
+
+describe('offer report and acquisition objective client contract (TF-5)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('creates an offer report with motif and bounded detail', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { report: { id: 'report-1', productId: 'product-1', motif: 'prix_trompeur', detail: null, state: 'nouveau', createdAt: '2026-10-04T08:00:00.000Z' }, duplicate: false } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await createOfferReport({ token: 'session-token', productId: 'product-1', motif: 'prix_trompeur' });
+
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { report: { id: 'report-1', productId: 'product-1', motif: 'prix_trompeur', detail: null, state: 'nouveau', createdAt: '2026-10-04T08:00:00.000Z' }, duplicate: false } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/buyer/offer-reports',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ productId: 'product-1', motif: 'prix_trompeur', detail: null }) },
+    );
+  });
+
+  it('reads the staff-only report queue with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true, reports: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listOfferReports({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?reviewer=offer-reports',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('decides a report by id with outcome and reason', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { id: 'report-1', state: 'constate_confirme' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await decideOfferReport({ reportId: 'report-1', outcome: 'constate_confirme', reason: 'prix rayon different', token: 'session-token' });
+
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { id: 'report-1', state: 'constate_confirme' } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/report-1?action=decide-report',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ outcome: 'constate_confirme', reason: 'prix rayon different' }) },
+    );
+  });
+
+  it('creates an acquisition objective from a demand signal', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { objective: { id: 'objective-1', query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38, state: 'ouvert', createdAt: '2026-10-04T08:00:00.000Z' }, duplicate: false } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createAcquisitionObjective({ token: 'session-token', query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?action=acquisition-objective',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38 }) },
+    );
+  });
+
+  it('reads and advances acquisition objectives on staff endpoints', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true, objectives: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { id: 'objective-1', state: 'recrute' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listAcquisitionObjectives({ token: 'session-token' });
+    await setAcquisitionObjectiveState({ objectiveId: 'objective-1', state: 'recrute', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1,
+      '/api/v2/public/facilities?reviewer=acquisition-objectives',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(2,
+      '/api/v2/facilities/objective-1?action=acquisition-objective-state',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ state: 'recrute' }) },
     );
   });
 });

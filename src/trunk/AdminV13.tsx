@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getDemandSignals, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
-import type { AdminConsoleResult, DemandSignal, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
+import { getAdminConsole, getReviewQueue, getDemandSignals, listOfferReports, decideOfferReport, listAcquisitionObjectives, createAcquisitionObjective, setAcquisitionObjectiveState, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
+import type { AdminConsoleResult, DemandSignal, OfferReportOutcome, OfferReportQueueItem, AcquisitionObjective, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
   onClose: () => void;
@@ -16,6 +16,12 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
   // MV1 X04 — ce que Lomé cherche sans trouver (lecture staff-only).
   const [demandSignals, setDemandSignals] = useState<DemandSignal[]>([]);
+  // TF-5 — signalements d'offre + objectifs d'acquisition (D-SIG-1…5).
+  const [reports, setReports] = useState<OfferReportQueueItem[]>([]);
+  const [reportReasons, setReportReasons] = useState<Record<string, string>>({});
+  const [reportBusy, setReportBusy] = useState<string | null>(null);
+  const [objectives, setObjectives] = useState<AcquisitionObjective[]>([]);
+  const [objectiveBusy, setObjectiveBusy] = useState<string | null>(null);
   const [audits, setAudits] = useState<Array<{ id: string; eventType: string; entityType: string; entityId: string; createdAt: string; facilityName: string | null }>>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'unauthorized'>('loading');
   const [error, setError] = useState('');
@@ -43,7 +49,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     try {
       const token = await getAuthToken();
       if (!token) { setState('unauthorized'); return; }
-      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult, teamResult, demandResult] = await Promise.all([
+      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult, teamResult, demandResult, reportResult, objectiveResult] = await Promise.all([
         getAdminConsole({ token }),
         getReviewQueue({ token }),
         listAdminAuditEvents({ token, limit: 12 }),
@@ -51,6 +57,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
         getAdminSellerActivationQueue({ token }),
         listTeams({ token }),
         getDemandSignals({ token }),
+        listOfferReports({ token }),
+        listAcquisitionObjectives({ token }),
       ]);
       if (!consoleResult.ok || !consoleResult.data) {
         setState('unauthorized');
@@ -60,6 +68,8 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setConsoleData(consoleResult.data);
       setQueue(queueResult.ok && queueResult.data ? queueResult.data.requests : []);
       setDemandSignals(demandResult.ok && demandResult.data && demandResult.data.authorized ? demandResult.data.signals : []);
+      setReports(reportResult.ok && reportResult.data && reportResult.data.authorized ? reportResult.data.reports : []);
+      setObjectives(objectiveResult.ok && objectiveResult.data && objectiveResult.data.authorized ? objectiveResult.data.objectives : []);
       setAudits(auditResult.ok && auditResult.data ? auditResult.data.events : []);
       setRoleAccounts(roleResult.ok && roleResult.data ? roleResult.data.accounts : []);
       setSellerCandidates(sellerActivationResult.ok && sellerActivationResult.data ? sellerActivationResult.data.candidates : []);
@@ -98,6 +108,73 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Décision non enregistrée.' });
     } finally {
       setActingId(null);
+    }
+  }, [load]);
+
+  // TF-5 / D-SIG-1 — trancher un signalement (motif obligatoire, audité).
+  // Vue réservée admin ici : reviewer/admin peuvent constater ET clore.
+  const decideReport = useCallback(async (reportId: string, productName: string, outcome: OfferReportOutcome) => {
+    const reason = (reportReasons[reportId] ?? '').trim();
+    if (reason.length < 3) { setToast({ kind: 'err', text: 'Motivez la décision (3 lettres minimum).' }); return; }
+    setReportBusy(reportId);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await decideOfferReport({ reportId, outcome, reason, token });
+      if (result.ok && result.data) {
+        const label = result.data.state === 'constate_infirme' ? 'infirmé' : result.data.state === 'constate_confirme' ? 'confirmé' : 'traité';
+        setToast({ kind: 'ok', text: `${productName}: signalement ${label}.` });
+        setReportReasons((d) => ({ ...d, [reportId]: '' }));
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Décision non enregistrée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Décision non enregistrée.' });
+    } finally {
+      setReportBusy(null);
+    }
+  }, [load, reportReasons]);
+
+  // TF-5 / D-SIG-4 — faire d'un vide mesuré un objectif d'acquisition suivi.
+  const makeObjective = useCallback(async (query: string, seekers: number) => {
+    setObjectiveBusy(query);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await createAcquisitionObjective({ token, query, seekersSnapshot: seekers });
+      if (result.ok && result.data) {
+        setToast({ kind: 'ok', text: result.data.duplicate ? 'Objectif déjà ouvert pour cette demande.' : `Objectif d’acquisition créé : ${query}.` });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Objectif non créé.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Objectif non créé.' });
+    } finally {
+      setObjectiveBusy(null);
+    }
+  }, [load]);
+
+  const advanceObjective = useCallback(async (objectiveId: string, query: string, state: AcquisitionObjective['state']) => {
+    setObjectiveBusy(objectiveId);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await setAcquisitionObjectiveState({ objectiveId, state, token });
+      if (result.ok && result.data) {
+        setToast({ kind: 'ok', text: `${query} : ${state === 'recrute' ? 'en recrutement' : state === 'clos' ? 'clos' : 'rouvert'}.` });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Objectif non mis à jour.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Objectif non mis à jour.' });
+    } finally {
+      setObjectiveBusy(null);
     }
   }, [load]);
 
@@ -336,6 +413,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
           <div className="stat">
             <div className="tile"><small>Créations</small><strong>{consoleData.pendingActivations}</strong></div>
             <div className="tile"><small>Claims</small><strong>{consoleData.pendingClaims}</strong></div>
+            <div className="tile"><small>Signalements</small><strong>{consoleData.pendingReports}</strong></div>
             <div className="tile"><small>Audit aujourd’hui</small><strong>{consoleData.auditEventsToday}</strong></div>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
@@ -504,12 +582,65 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
             </div>
           ))}
           <div className="cardbox">
+            <div className="eyebrow">Signalements d’offre · à contrôler</div>
+            {reports.length === 0 && <p className="tiny muted">Aucun signalement en attente.</p>}
+            {reports.map((report) => (
+              <div className="cardbox" key={report.id} style={{ marginTop: 6 }}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div>
+                    <b>{report.productName || 'Offre'}</b>
+                    <br />
+                    <span className="tiny muted">{report.motif === 'prix_trompeur' ? 'Prix trompeur' : report.motif === 'visuel_non_conforme' ? 'Visuel ne correspond pas' : 'Indisponible en réalité'}{report.detail ? ` · ${report.detail}` : ''}</span>
+                  </div>
+                  <span className="status ink">{report.state === 'nouveau' ? 'À contrôler' : report.state === 'constate_infirme' ? 'Infirmé' : report.state === 'constate_confirme' ? 'Confirmé' : 'Traité'}</span>
+                </div>
+                {report.state !== 'traite' && (
+                  <>
+                    <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                      <input className="fld" style={{ flex: 1, minHeight: 32 }} type="text" value={reportReasons[report.id] ?? ''} onChange={(e) => setReportReasons((d) => ({ ...d, [report.id]: e.target.value }))} placeholder="Motif de la décision (constat…)" aria-label={`Motif pour ${report.productName || 'cette offre'}`} />
+                    </div>
+                    <div className="btnrow">
+                      <button className="btn ghost sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'constate_infirme')}>Infirmer</button>
+                      <button className="btn ghost sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'constate_confirme')}>Confirmer</button>
+                      <button className="btn sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'traite')}>Traiter</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="cardbox">
             <div className="eyebrow">Demande du marché · ce que Lomé cherche sans trouver</div>
             {demandSignals.length === 0 && <p className="tiny muted">Aucun vide signalé pour le moment.</p>}
             {demandSignals.slice(0, 10).map((signal) => (
               <div className="kv" key={signal.query}>
                 <span>{signal.query}</span>
                 <b>{signal.seekers} chercheur{signal.seekers === 1 ? '' : 's'}</b>
+              </div>
+            ))}
+            {demandSignals.length > 0 && (
+              <div className="btnrow" style={{ marginTop: 6 }}>
+                <span className="tiny muted">Recruter l’offre manquante :</span>
+              </div>
+            )}
+            {demandSignals.slice(0, 5).map((signal) => (
+              <div className="row" key={`obj-${signal.query}`} style={{ justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
+                <span className="tiny">« {signal.query} »</span>
+                <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 28 }} disabled={objectiveBusy === signal.query} onClick={() => void makeObjective(signal.query, signal.seekers)}>{objectiveBusy === signal.query ? '…' : 'En faire un objectif'}</button>
+              </div>
+            ))}
+          </div>
+          <div className="cardbox">
+            <div className="eyebrow">Objectifs d’acquisition · recruter l’offre manquante</div>
+            {objectives.length === 0 && <p className="tiny muted">Aucun objectif ouvert.</p>}
+            {objectives.map((objective) => (
+              <div className="kv" key={objective.id}>
+                <span>« {objective.query} »{objective.zone ? ` · ${objective.zone}` : ''} · {objective.seekersSnapshot} chercheur{objective.seekersSnapshot === 1 ? '' : 's'} · {objective.state === 'ouvert' ? 'Ouvert' : objective.state === 'recrute' ? 'En recrutement' : 'Clos'}</span>
+                <b>
+                  {objective.state === 'ouvert' && <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26 }} disabled={objectiveBusy === objective.id} onClick={() => void advanceObjective(objective.id, objective.query, 'recrute')}>Recruter</button>}
+                  {objective.state === 'recrute' && <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26 }} disabled={objectiveBusy === objective.id} onClick={() => void advanceObjective(objective.id, objective.query, 'clos')}>Clore</button>}
+                  {objective.state === 'clos' && <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26 }} disabled={objectiveBusy === objective.id} onClick={() => void advanceObjective(objective.id, objective.query, 'ouvert')}>Rouvrir</button>}
+                </b>
               </div>
             ))}
           </div>

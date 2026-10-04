@@ -422,6 +422,8 @@ export interface AdminConsoleResult {
   pendingActivations: number;
   operatorRuns: number;
   auditEventsToday: number;
+  // TF-5 — signalements d'offre en attente (maquette `admin-console`).
+  pendingReports: number;
 }
 
 export interface FacilityOperationalStateResult {
@@ -1083,11 +1085,12 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
              where coalesce(e.trust_state, f.trust_state) in ('unconfirmed', 'confirmed', 'certified')
                and candidate.onboarding_state <> 'seller_ready' and candidate.suspended_at is null) as pending_activations,
           (select count(*)::int from v2_discovery_runs where created_at >= now() - interval '7 days') as operator_runs,
-          (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today
+          (select count(*)::int from v2_audit_events where created_at >= date_trunc('day', now())) as audit_today,
+          (select count(*)::int from v2_offer_reports where state = 'nouveau') as pending_reports
       `);
       const row = (rows as Record<string, unknown>[])[0];
-      if (!row || Number(row.is_admin) === 0) return { authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0 };
-      return { authorized: true, pendingClaims: Number(row.pending_claims), pendingActivations: Number(row.pending_activations), operatorRuns: Number(row.operator_runs), auditEventsToday: Number(row.audit_today) };
+      if (!row || Number(row.is_admin) === 0) return { authorized: false, pendingClaims: 0, pendingActivations: 0, operatorRuns: 0, auditEventsToday: 0, pendingReports: 0 };
+      return { authorized: true, pendingClaims: Number(row.pending_claims), pendingActivations: Number(row.pending_activations), operatorRuns: Number(row.operator_runs), auditEventsToday: Number(row.audit_today), pendingReports: Number(row.pending_reports ?? 0) };
     },
 
     async setFacilityOperationalState(input: { authUserId: string; facilityId: string; state: FacilityOperationalState; reason: string; correlationId: string }): Promise<FacilityOperationalStateResult> {
@@ -6140,6 +6143,260 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           lastSeenAt: new Date(String(row.last_seen_at)).toISOString(),
         })),
       };
+    },
+
+    // TF-5 — signaler une offre (maquette `signal`). UNE instruction : le re-clic
+    // du même acheteur sur la même offre renvoie la ligne existante (`duplicate`),
+    // jamais une erreur — un no-op honnête (D-SIG-3). Le vendeur visé n'apparaît
+    // nulle part (D-SIG-5) ; aucun effet sur S-32 ici (D-SIG-2, flag séparé à venir).
+    async createOfferReport(input: { authUserId: string; productId: string; motif: string; detail?: string | null; correlationId: string }): Promise<{ report: { id: string; productId: string; motif: string; detail: string | null; state: string; createdAt: string }; duplicate: boolean }> {
+      const motif = input.motif;
+      if (motif !== 'prix_trompeur' && motif !== 'visuel_non_conforme' && motif !== 'indisponible') {
+        throw new FieldPilotPolicyError('MOTIF_REQUIRED');
+      }
+      const detail = (input.detail ?? '').trim();
+      if (detail.length > 500) throw new FieldPilotPolicyError('DETAIL_TOO_LONG');
+      const rows = await retryDatabase(() => sql`
+        with reporter as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select p.id
+          from v2_products p
+          where p.id = ${input.productId}::uuid and p.publication_state = 'published'
+          limit 1
+        ), existing as (
+          select r.id, r.product_id, r.motif, r.detail, r.state, r.created_at
+          from v2_offer_reports r
+          join reporter on reporter.id = r.reporter_account_id
+          where r.product_id = ${input.productId}::uuid and r.state = 'nouveau'
+          limit 1
+        ), inserted as (
+          insert into v2_offer_reports (product_id, reporter_account_id, motif, detail)
+          select target.id, reporter.id, ${motif}, ${detail === '' ? null : detail}
+          from reporter cross join target
+          where not exists (select 1 from existing)
+          returning id, product_id, motif, detail, state, created_at
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select reporter.id, 'offer_report_created', 'offer_report', inserted.id::text, ${input.correlationId}, ${motif}
+          from inserted cross join reporter
+          returning entity_id
+        )
+        select id, product_id, motif, detail, state, created_at, false as duplicate from inserted
+        union all
+        select id, product_id, motif, detail, state, created_at, true as duplicate from existing
+        where not exists (select 1 from inserted)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This offer cannot receive a report right now.');
+      return {
+        report: {
+          id: String(row.id),
+          productId: String(row.product_id),
+          motif: String(row.motif),
+          detail: row.detail === null || row.detail === undefined ? null : String(row.detail),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        },
+        duplicate: Boolean(row.duplicate),
+      };
+    },
+
+    async listOfferReports(input: { authUserId: string }): Promise<{ authorized: boolean; reports: Array<{ id: string; productId: string; productName: string; motif: string; detail: string | null; state: string; createdAt: string }> }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, reports: [] };
+      const rows = await retryDatabase(() => sql`
+        select r.id, r.product_id, p.name as product_name, r.motif, r.detail, r.state, r.created_at
+        from v2_offer_reports r
+        join v2_products p on p.id = r.product_id
+        order by (r.state = 'nouveau') desc, r.created_at desc, r.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        reports: (rows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.id),
+          productId: String(row.product_id),
+          productName: String(row.product_name ?? ''),
+          motif: String(row.motif),
+          detail: row.detail === null || row.detail === undefined ? null : String(row.detail),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
+    // TF-5 / D-SIG-1 — trancher après constat. L'opérateur constate
+    // (`constate_*`, depuis `nouveau` seulement) ; reviewer/admin constate OU clôt
+    // (`traite`, depuis `nouveau` ou constaté). Motif obligatoire : une décision
+    // sans raison est incroyable. Une seule erreur générique (état, droit, inconnu).
+    async decideOfferReport(input: { authUserId: string; reportId: string; outcome: string; reason: string; correlationId: string }): Promise<{ id: string; state: string }> {
+      const outcome = input.outcome;
+      if (outcome !== 'constate_infirme' && outcome !== 'constate_confirme' && outcome !== 'traite') {
+        throw new FieldPilotPolicyError('OUTCOME_REQUIRED');
+      }
+      const reason = input.reason.trim();
+      if (reason.length < 3 || reason.length > 1000) throw new FieldPilotPolicyError('REASON_REQUIRED');
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), decider as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_offer_reports r
+          set state = ${outcome}, decided_by_account_id = staff.id, decided_at = now(), decision_note = ${reason}
+          from staff
+          where r.id = ${input.reportId}::uuid
+            and r.state in ('nouveau', 'constate_infirme', 'constate_confirme')
+            and ((${outcome} = 'constate_infirme' or ${outcome} = 'constate_confirme') and r.state = 'nouveau'
+              or ${outcome} = 'traite')
+            and (${outcome} <> 'traite' or exists (select 1 from decider))
+          returning r.id, r.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'offer_report_decided', 'offer_report', updated.id::text, ${input.correlationId}, ${outcome + ': ' + reason}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This report cannot be decided in its current state.');
+      return { id: String(row.id), state: String(row.state) };
+    },
+
+    // TF-5 / D-SIG-4 — objectifs d'acquisition : de vrais objets suivis, nourris
+    // par la demande TF-2. Même pattern no-op honnête : un objectif ouvert identique
+    // existe déjà → renvoyé (`duplicate`), pas dupliqué.
+    async createAcquisitionObjective(input: { authUserId: string; query: string; zone?: string | null; seekersSnapshot?: number; correlationId: string }): Promise<{ objective: { id: string; query: string; zone: string | null; seekersSnapshot: number; state: string; createdAt: string }; duplicate: boolean }> {
+      const query = input.query.trim();
+      if (query.length < 1 || query.length > 120) throw new FieldPilotPolicyError('QUERY_REQUIRED');
+      const zone = (input.zone ?? '').trim() === '' ? null : (input.zone ?? '').trim();
+      const seekersSnapshot = Number.isInteger(input.seekersSnapshot) && (input.seekersSnapshot as number) >= 0 ? (input.seekersSnapshot as number) : 0;
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), existing as (
+          select o.id, o.query, o.zone, o.seekers_snapshot, o.state, o.created_at
+          from v2_acquisition_objectives o
+          where lower(trim(o.query)) = lower(trim(${query}))
+            and coalesce(o.zone, '') = coalesce(${zone}, '')
+            and o.state in ('ouvert', 'recrute')
+          limit 1
+        ), inserted as (
+          insert into v2_acquisition_objectives (query, zone, seekers_snapshot, created_by_account_id)
+          select ${query}, ${zone}, ${seekersSnapshot}, staff.id
+          from staff
+          where not exists (select 1 from existing)
+          returning id, query, zone, seekers_snapshot, state, created_at
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'acquisition_objective_created', 'acquisition_objective', inserted.id::text, ${input.correlationId}, ${query}
+          from inserted cross join staff
+          returning entity_id
+        )
+        select id, query, zone, seekers_snapshot, state, created_at, false as duplicate from inserted
+        union all
+        select id, query, zone, seekers_snapshot, state, created_at, true as duplicate from existing
+        where not exists (select 1 from inserted)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This acquisition objective cannot be created right now.');
+      return {
+        objective: {
+          id: String(row.id),
+          query: String(row.query),
+          zone: row.zone === null || row.zone === undefined ? null : String(row.zone),
+          seekersSnapshot: Number(row.seekers_snapshot ?? 0),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        },
+        duplicate: Boolean(row.duplicate),
+      };
+    },
+
+    async listAcquisitionObjectives(input: { authUserId: string }): Promise<{ authorized: boolean; objectives: Array<{ id: string; query: string; zone: string | null; seekersSnapshot: number; state: string; createdAt: string }> }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, objectives: [] };
+      const rows = await retryDatabase(() => sql`
+        select o.id, o.query, o.zone, o.seekers_snapshot, o.state, o.created_at
+        from v2_acquisition_objectives o
+        order by (o.state = 'clos') asc, o.created_at desc, o.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        objectives: (rows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.id),
+          query: String(row.query),
+          zone: row.zone === null || row.zone === undefined ? null : String(row.zone),
+          seekersSnapshot: Number(row.seekers_snapshot ?? 0),
+          state: String(row.state),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
+    async setAcquisitionObjectiveState(input: { authUserId: string; objectiveId: string; state: string; correlationId: string }): Promise<{ id: string; state: string }> {
+      const state = input.state;
+      if (state !== 'ouvert' && state !== 'recrute' && state !== 'clos') {
+        throw new FieldPilotPolicyError('STATE_REQUIRED');
+      }
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_acquisition_objectives o
+          set state = ${state}
+          from staff
+          where o.id = ${input.objectiveId}::uuid
+          returning o.id, o.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'acquisition_objective_state', 'acquisition_objective', updated.id::text, ${input.correlationId}, ${state}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This acquisition objective cannot be updated right now.');
+      return { id: String(row.id), state: String(row.state) };
     },
     async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
       const rows = await retryDatabase(() => sql`

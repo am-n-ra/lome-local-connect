@@ -14,13 +14,13 @@ import {
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
   listOpenTransactions, getTransaction, getNotificationInbox, markNotificationSeen, getClaimRequest,
   listMyTeamInvites, acceptTeamInvite,
-  searchPublicEntities, getPublicEntity,
+  searchPublicEntities, getPublicEntity, createOfferReport,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
-  FacilityDetail, MyTeamInvite, NotificationSummary, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, NotificationSummary, OfferReportMotif, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import type { NotificationTarget } from './notification-center';
 import { relativeAge, transactionStateLabel } from './transaction-time';
@@ -51,7 +51,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -320,11 +320,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [tileName, setTileName] = useState('');
   const [tileClaimState, setTileClaimState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [tileClaimError, setTileClaimError] = useState('');
+  // TF-5 — signaler une offre (maquette `signal`) : 3 motifs, texte optionnel.
+  const [signalTarget, setSignalTarget] = useState<{ productId: string; productName: string } | null>(null);
+  const [signalMotif, setSignalMotif] = useState<OfferReportMotif>('prix_trompeur');
+  const [signalDetail, setSignalDetail] = useState('');
+  const [signalState, setSignalState] = useState<'idle' | 'sending' | 'sent' | 'duplicate' | 'error'>('idle');
+  const [signalError, setSignalError] = useState('');
   const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1143,6 +1149,35 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setSavedError(caught instanceof Error ? caught.message : 'Cette recherche n’a pas pu être enregistrée.');
     }
   }, [query, results.length, bounds, requireAuth, openSaved]);
+
+  // TF-5 — signaler une offre : ouvre la sheet `signal`, envoie en 3 taps.
+  const openSignal = useCallback((productId: string, productName: string) => {
+    setSignalTarget({ productId, productName });
+    setSignalMotif('prix_trompeur');
+    setSignalDetail('');
+    setSignalState('idle');
+    setSignalError('');
+    setSheet('signal');
+  }, []);
+
+  const sendSignal = useCallback(async () => {
+    if (!signalTarget || signalState === 'sending') return;
+    const token = await requireAuth();
+    if (!token) return;
+    setSignalState('sending'); setSignalError('');
+    try {
+      const result = await createOfferReport({ token, productId: signalTarget.productId, motif: signalMotif, detail: signalDetail.trim() === '' ? null : signalDetail.trim() });
+      if (result.ok && result.data) {
+        setSignalState(result.data.duplicate ? 'duplicate' : 'sent');
+      } else {
+        setSignalState('error');
+        setSignalError(result.error?.message ?? 'Ce signalement n’a pas pu être envoyé.');
+      }
+    } catch (caught) {
+      setSignalState('error');
+      setSignalError(caught instanceof Error ? caught.message : 'Ce signalement n’a pas pu être envoyé.');
+    }
+  }, [signalTarget, signalState, signalMotif, signalDetail, requireAuth]);
 
   const removeSavedSearch = useCallback(async (search: SavedSearch) => {
     const token = await requireAuth();
@@ -2055,6 +2090,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                       <span className={`trust${trust.ok ? ' ok' : ''}${trust.muted ? ' muted' : ''}`}>{trust.text}{trust.missing.length > 0 && <span className="miss"> — {trust.missing.join(', ')}</span>}</span>
                     </span>
                     <span className="pr">{formatMoney(product.prixReduit, currencyFor(product.currency).currency)}</span>
+                    <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 26, fontSize: 11 }} title="Signaler un problème sur cette offre" onClick={(e) => { e.stopPropagation(); openSignal(product.id, product.name); }}>Signaler</button>
                   </div>
                 );
               })}
@@ -2668,6 +2704,42 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
           <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
           <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
+        </section>
+      )}
+      {sheet === 'signal' && signalTarget && (
+        <section className="sheet h-mid" data-sheet="signal" role="region" aria-label="Signaler une offre">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Signalement d’offre</div><h1>Signaler « {signalTarget.productName} »</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('facility')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          {(signalState === 'idle' || signalState === 'sending' || signalState === 'error') && (
+            <>
+              <div className="chiprow" style={{ marginTop: 9 }}>
+                {([['prix_trompeur', 'Prix trompeur'], ['visuel_non_conforme', 'Visuel ne correspond pas'], ['indisponible', 'Indisponible en réalité']] as Array<[OfferReportMotif, string]>).map(([motif, label]) => (
+                  <span key={motif} className={`chip${signalMotif === motif ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setSignalMotif(motif)}><span className="dot" />{label}</span>
+                ))}
+              </div>
+              <div className="fld" style={{ marginTop: 9 }}>
+                <input value={signalDetail} onChange={(event) => setSignalDetail(event.target.value)} placeholder="Précisez (optionnel)…" aria-label="Précision optionnelle" maxLength={500} />
+              </div>
+              {signalState === 'error' && <p className="sub" role="alert">{signalError}</p>}
+              <button className="btn" type="button" style={{ marginTop: 10 }} disabled={signalState === 'sending'} onClick={() => void sendSignal()}>{signalState === 'sending' ? 'Envoi…' : 'Envoyer le signalement'}</button>
+              <p className="tiny muted" style={{ marginTop: 8 }}>Votre signalement part à l’équipe pour contrôle terrain. Le vendeur n’est pas informé à ce stade.</p>
+            </>
+          )}
+          {signalState === 'sent' && (
+            <div className="cardbox">
+              <p className="sub">Signalement envoyé à l’opérateur.</p>
+              <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('facility')}>Retour à l’offre</button>
+            </div>
+          )}
+          {signalState === 'duplicate' && (
+            <div className="cardbox">
+              <p className="sub">Vous avez déjà signalé cette offre — l’équipe l’a en contrôle.</p>
+              <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('facility')}>Retour à l’offre</button>
+            </div>
+          )}
         </section>
       )}
       {sheet === 'recovery' && (

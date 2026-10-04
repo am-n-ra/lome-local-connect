@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -400,5 +400,47 @@ describe('validateClaimByOsmRef', () => {
     expect(() => validateClaimByOsmRef({ ...validBody, latitude: 91 })).toThrow(ApiInputError);
     expect(() => validateClaimByOsmRef({ ...validBody, longitude: -181 })).toThrow(ApiInputError);
     expect(() => validateClaimByOsmRef({ ...validBody, latitude: 'north' })).toThrow(ApiInputError);
+  });
+});
+
+describe('offer report and acquisition objective validators (TF-5)', () => {
+  const productId = '11111111-1111-4111-8111-111111111111';
+  const reportId = '22222222-2222-4222-8222-222222222222';
+
+  it('accepts a report with a known motif and optional bounded detail', () => {
+    expect(validateOfferReportCreate({ productId, motif: 'prix_trompeur' })).toEqual({ productId, motif: 'prix_trompeur', detail: null });
+    expect(validateOfferReportCreate({ productId, motif: 'visuel_non_conforme', detail: '  photo floue  ' })).toEqual({ productId, motif: 'visuel_non_conforme', detail: 'photo floue' });
+  });
+  it('rejects a malformed offer id, an unknown motif or an over-long detail', () => {
+    expect(() => validateOfferReportCreate({ productId: 'not-a-uuid', motif: 'prix_trompeur' })).toThrow(ApiInputError);
+    expect(() => validateOfferReportCreate({ productId, motif: 'trop_cher' })).toThrow(ApiInputError);
+    expect(() => validateOfferReportCreate({ productId, motif: 'indisponible', detail: 'x'.repeat(501) })).toThrow(ApiInputError);
+  });
+
+  it('accepts a decision with a known outcome and a bounded reason', () => {
+    expect(validateOfferReportDecision({ outcome: 'constate_confirme', reason: 'prix rayon different' }, reportId)).toEqual({ reportId, outcome: 'constate_confirme', reason: 'prix rayon different' });
+  });
+  it('rejects a malformed report id, an unknown outcome or an unbounded reason', () => {
+    expect(() => validateOfferReportDecision({ outcome: 'constate_confirme', reason: 'prix rayon different' }, 'not-a-uuid')).toThrow(ApiInputError);
+    expect(() => validateOfferReportDecision({ outcome: 'archiver', reason: 'constat terrain' }, reportId)).toThrow(ApiInputError);
+    expect(() => validateOfferReportDecision({ outcome: 'traite', reason: 'x' }, reportId)).toThrow(ApiInputError);
+  });
+
+  it('accepts a bounded acquisition query with optional zone and seekers', () => {
+    expect(validateAcquisitionObjectiveCreate({ query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38 })).toEqual({ query: 'gaz butane 6 kg', zone: 'Adawlato', seekersSnapshot: 38 });
+    expect(validateAcquisitionObjectiveCreate({ query: 'gaz butane 6 kg' })).toEqual({ query: 'gaz butane 6 kg', zone: null, seekersSnapshot: 0 });
+  });
+  it('rejects an empty or over-long query or zone', () => {
+    expect(() => validateAcquisitionObjectiveCreate({ query: '   ' })).toThrow(ApiInputError);
+    expect(() => validateAcquisitionObjectiveCreate({ query: 'x'.repeat(121) })).toThrow(ApiInputError);
+    expect(() => validateAcquisitionObjectiveCreate({ query: 'gaz', zone: 'x'.repeat(121) })).toThrow(ApiInputError);
+  });
+
+  it('accepts a known objective state on a valid id', () => {
+    expect(validateAcquisitionObjectiveState({ state: 'recrute' }, reportId)).toEqual({ objectiveId: reportId, state: 'recrute' });
+  });
+  it('rejects a malformed objective id or an unknown state', () => {
+    expect(() => validateAcquisitionObjectiveState({ state: 'recrute' }, 'not-a-uuid')).toThrow(ApiInputError);
+    expect(() => validateAcquisitionObjectiveState({ state: 'bientot' }, reportId)).toThrow(ApiInputError);
   });
 });
