@@ -6108,6 +6108,39 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         seenAt: row.seen_at ? new Date(String(row.seen_at)).toISOString() : null,
       };
     },
+
+    // MV1 X04 — ce que Lomé cherche sans trouver : les recherches sauvegardées
+    // marquées `no_match` (vide constaté), agrégées par demande normalisée. ZÉRO
+    // migration : le marqueur vit dans le jsonb `constraints` des sauvegardes (jamais
+    // relu par la recherche — le replay ne rejoue que le texte). Garde staff
+    // (reviewer/admin/operator) comme les files : c'est de l'intel marché, pas du public.
+    async listDemandSignals(input: { authUserId: string }): Promise<{ authorized: boolean; signals: Array<{ query: string; seekers: number; lastSeenAt: string }> }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, signals: [] };
+      const rows = await retryDatabase(() => sql`
+        select lower(trim(s.query)) as query, count(distinct s.account_id)::int as seekers, max(s.created_at) as last_seen_at
+        from v2_saved_searches s
+        where s.active and (s.constraints->>'no_match') = 'true'
+        group by lower(trim(s.query))
+        order by seekers desc, last_seen_at desc
+        limit 50
+      `);
+      return {
+        authorized: true,
+        signals: (rows as Record<string, unknown>[]).map((row) => ({
+          query: String(row.query),
+          seekers: Number(row.seekers ?? 0),
+          lastSeenAt: new Date(String(row.last_seen_at)).toISOString(),
+        })),
+      };
+    },
     async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
       const rows = await retryDatabase(() => sql`
         select

@@ -1125,13 +1125,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     }
   }, [requireAuth, loadBuyerProStatus]);
 
-  const saveCurrentSearch = useCallback(async () => {
+  const saveCurrentSearch = useCallback(async (markNoMatch = false) => {
     const q = query.trim() || (results.length ? 'résultats courants' : '');
     if (!q) { setError('Lancez d’abord une recherche à enregistrer.'); return; }
     const token = await requireAuth();
     if (!token) return;
     const constraints: Record<string, unknown> = {};
     if (bounds) constraints.rayonKm = Math.round((bounds[3] - bounds[1]) / 2);
+    // MV1 X04 — un vide constaté se marque dans la sauvegarde (write-only :
+    // la relance ne rejoue que le texte, jamais ce marqueur).
+    if (markNoMatch) constraints.no_match = 'true';
     try {
       const result = await createSavedSearch({ token, query: q, constraints });
       if (result.ok) { setSavedState('idle'); void openSaved(); }
@@ -1780,6 +1783,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className="cardbox">
               <p className="sub">Aucune fourniture ne correspond à ces contraintes ici. Essayez d'élargir la distance ou le budget.</p>
               <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('search')}>Élargir les contraintes</button>
+              <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={() => void saveCurrentSearch(true)}>Sauvegarder cette recherche</button>
             </div>
           )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>

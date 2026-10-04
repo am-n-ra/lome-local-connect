@@ -837,6 +837,18 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    // MV1 X04 — signaux de demande (recherches sauvegardées marquées no_match).
+    // Même garde staff que les files : intel marché, jamais public.
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'demand-signals') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member to view demand signals.'));
+        return true;
+      }
+      const result = await repository.listDemandSignals({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('inbox') === '1') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

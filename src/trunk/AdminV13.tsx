@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
-import type { AdminConsoleResult, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
+import { getAdminConsole, getReviewQueue, getDemandSignals, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
+import type { AdminConsoleResult, DemandSignal, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
   onClose: () => void;
@@ -14,6 +14,8 @@ type Toast = { kind: 'ok' | 'err'; text: string };
 export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [consoleData, setConsoleData] = useState<AdminConsoleResult | null>(null);
   const [queue, setQueue] = useState<ReviewQueueItem[]>([]);
+  // MV1 X04 — ce que Lomé cherche sans trouver (lecture staff-only).
+  const [demandSignals, setDemandSignals] = useState<DemandSignal[]>([]);
   const [audits, setAudits] = useState<Array<{ id: string; eventType: string; entityType: string; entityId: string; createdAt: string; facilityName: string | null }>>([]);
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'unauthorized'>('loading');
   const [error, setError] = useState('');
@@ -41,13 +43,14 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     try {
       const token = await getAuthToken();
       if (!token) { setState('unauthorized'); return; }
-      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult, teamResult] = await Promise.all([
+      const [consoleResult, queueResult, auditResult, roleResult, sellerActivationResult, teamResult, demandResult] = await Promise.all([
         getAdminConsole({ token }),
         getReviewQueue({ token }),
         listAdminAuditEvents({ token, limit: 12 }),
         getRoleManagementAccounts({ token }),
         getAdminSellerActivationQueue({ token }),
         listTeams({ token }),
+        getDemandSignals({ token }),
       ]);
       if (!consoleResult.ok || !consoleResult.data) {
         setState('unauthorized');
@@ -56,6 +59,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       }
       setConsoleData(consoleResult.data);
       setQueue(queueResult.ok && queueResult.data ? queueResult.data.requests : []);
+      setDemandSignals(demandResult.ok && demandResult.data && demandResult.data.authorized ? demandResult.data.signals : []);
       setAudits(auditResult.ok && auditResult.data ? auditResult.data.events : []);
       setRoleAccounts(roleResult.ok && roleResult.data ? roleResult.data.accounts : []);
       setSellerCandidates(sellerActivationResult.ok && sellerActivationResult.data ? sellerActivationResult.data.candidates : []);
@@ -499,6 +503,16 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               </div>
             </div>
           ))}
+          <div className="cardbox">
+            <div className="eyebrow">Demande du marché · ce que Lomé cherche sans trouver</div>
+            {demandSignals.length === 0 && <p className="tiny muted">Aucun vide signalé pour le moment.</p>}
+            {demandSignals.slice(0, 10).map((signal) => (
+              <div className="kv" key={signal.query}>
+                <span>{signal.query}</span>
+                <b>{signal.seekers} chercheur{signal.seekers === 1 ? '' : 's'}</b>
+              </div>
+            ))}
+          </div>
           {audits.length > 0 && (
             <div className="cardbox">
               <div className="eyebrow">Audit récent</div>

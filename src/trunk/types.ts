@@ -638,6 +638,19 @@ export interface ReviewQueueResult {
   requests: ReviewQueueItem[];
 }
 
+// MV1 X04 — ce que Lomé cherche sans trouver : une demande = une requête
+// normalisée + combien de comptes distincts l'ont sauvegardée après un vide.
+export interface DemandSignal {
+  query: string;
+  seekers: number;
+  lastSeenAt: string;
+}
+
+export interface DemandSignalsResult {
+  authorized: boolean;
+  signals: DemandSignal[];
+}
+
 export type ReviewOutcome = 'certified' | 'rejected' | 'needs_more_evidence';
 
 export interface ReviewClaimResult {

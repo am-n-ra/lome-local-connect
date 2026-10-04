@@ -2239,6 +2239,34 @@ describe('review and inbox Root seam', () => {
     expect(call.queries).toHaveLength(1);
   });
 
+  it('locks demand signals behind a staff role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listDemandSignals({ authUserId: 'auth-buyer-1' })).resolves.toEqual({ authorized: false, signals: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('aggregates no-match saves by normalized query for staff', async () => {
+    const call = stubSqlAlternating([
+      [{ id: 'account-9' }],
+      [
+        { query: 'pneu 4x4', seekers: 3, last_seen_at: '2026-10-03T10:00:00.000Z' },
+        { query: 'Pneu 4X4 ', seekers: 1, last_seen_at: '2026-10-02T10:00:00.000Z' },
+      ],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listDemandSignals({ authUserId: 'auth-operator-1' });
+    expect(result).toEqual({
+      authorized: true,
+      signals: [
+        { query: 'pneu 4x4', seekers: 3, lastSeenAt: '2026-10-03T10:00:00.000Z' },
+        { query: 'Pneu 4X4 ', seekers: 1, lastSeenAt: '2026-10-02T10:00:00.000Z' },
+      ],
+    });
+    expect(call.queries[1]).toContain("constraints->>'no_match'");
+    expect(call.queries[1]).toContain('count(distinct s.account_id)');
+  });
+
   it('rejects a review with an unbounded reason before persistence', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);

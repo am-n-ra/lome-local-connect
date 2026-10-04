@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createFacilityAdCampaign, createPurchaseIntent, createSellerFacility, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -462,6 +462,22 @@ describe('closed-transaction history client contract (S-26 / B18)', () => {
     expect(result).toEqual({ ok: true, correlationId: 'test', data: { requestId: 'request-1', facilityId: 'facility-1', state: 'submitted', version: 2 } });
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/v2/facilities/request-1?action=claim-request',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+});
+
+describe('demand-signal client contract (MV1 X04)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('reads staff-only demand signals with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true, signals: [{ query: 'pneu 4x4', seekers: 3, lastSeenAt: '2026-10-03T10:00:00.000Z' }] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const result = await getDemandSignals({ token: 'session-token' });
+
+    expect(result).toEqual({ ok: true, correlationId: 'test', data: { authorized: true, signals: [{ query: 'pneu 4x4', seekers: 3, lastSeenAt: '2026-10-03T10:00:00.000Z' }] } });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?reviewer=demand-signals',
       { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
     );
   });
