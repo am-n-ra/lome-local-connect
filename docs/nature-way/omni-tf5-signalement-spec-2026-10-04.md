@@ -71,12 +71,14 @@ Voir D-SIG-2. Dans tous les cas : **aucun effet automatique d'un `nouveau` non c
 | D-SIG-4 | **« Objectif d'acquisition » = vrai objet** (contre la recommandation de report — demande explicite) : créé depuis `admin-signal`/cardbox demande, suivi (états), sans vente de données |
 | D-SIG-5 | **Vendeur non notifié avant constat** ; notifié si confirmé, avec motif |
 
-## 7. Preuve prévue (implémentation, plus tard)
+## 7. Preuve rendue (MCP M1+M2 PROUVÉ 2026-10-04, `bf57398`, T-07d ✅)
 
-Tests dépôt falsifiés (garde auth, idempotence re-clic, non-propriétaire aveugle comme
-RH-02) ; preuve MCP sur jetable (cycle `nouveau`→`constate_confirme`→`traite`,
-re-clic no-op, vendeur aveugle) ; T-07d. Estimation : tranche M (migration + serveur
-+ 3 surfaces), ~1 session après décisions.
+M1 : 065 appliquée (checksum `17fa9794…`, CHECKs ×3 + unique partiel + index ×3
+prouvés, re-run no-op, registre inscrit, 0 résidu). M2 round-trip prod (produit
+`7cb7b2ed…` « Panier fruits de saison ») : 201 `nouveau` + re-clic no-op même id ;
+acheteur locked ; opérateur voit productName sans vendeur ; traite opérateur 400 ;
+reason 'x' 400 ; reviewer constate+traite 200 ; audits 1+2 ; objectif 201 + cycle
+recrute→clos→ouvert + audits ; cleanup 0/0 (canonique 13744/9/16).
 
 ## 8. Non-goals
 
