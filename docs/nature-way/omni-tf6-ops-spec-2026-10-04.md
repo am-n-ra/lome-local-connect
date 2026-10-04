@@ -89,13 +89,17 @@ privées, jamais d'URL publique durable.
 | D-OPS-5 | **Lecture seule restreinte** : statut + offres + compteurs ; jamais contenu des messages ni contacts acheteurs |
 | D-OPS-6 | **Scope Blob `visit`** : même backend privé, scope séparé, mêmes bornes que le scope claim |
 
-## 6. Preuve prévue (implémentation, plus tard)
+## 6. Preuve rendue (MCP M1+M2 PROUVÉ 2026-10-04, `aa0b8b3`, T-07d ✅)
 
-Tests dépôt falsifiés (garde rôle, prise idempotente, transmission sans preuves
-refusée, jamais de touche badge, file scopée zone) ; validateurs purs + tests ;
-preuve MCP sur jetable puis canonique (cycle a_visiter→en_cours→transmis,
-reprogrammation, opérateur verrouillé hors zone) ; T-07d. Estimation : tranche L
-(migration + serveur + 4 surfaces), ~1–2 sessions après décisions.
+M1 : 066 appliquée (checksum `85b37ce0…`, CHECKs ×4 + unique partiel + index ×2,
+re-run no-op, registre inscrit, 0 résidu). M2 round-trip prod 22/22 (sujet
+`2599262b…` « Box déjeuner togolais ») : 201 `a_visiter` (zone=null — aucune zone
+sur la facilité, dérivation=null honnête, pas de repli inventé) + doublon 400 ;
+acheteur locked ; opérateur voit dossier mine:false ; claim + re-claim no-op
+(audit claimed=1) ; sans-photos/hors-scope/NaN 400 ×3 ; transmis 200 + report
+1 ligne conforme ; audits 1+1+1 ; reprogram 400-puis-200 ; **badges inchangés
+avant/après, y compris après decide-report TF-5** ; cleanup 0/0 (canonique
+13744/9/16, identités réelles admin/operator/acheteur).
 
 ## 7. Non-goals
 
