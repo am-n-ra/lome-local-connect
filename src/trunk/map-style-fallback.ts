@@ -6,8 +6,12 @@ export type StyleChoice = {
   basemap: MapBasemap;
 };
 
-/** Vector monochrome globe style (CARTO Positron GL,. */
-export const VECTOR_STYLE_URL = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+/**
+ * Vector monochrome globe style. OpenFreeMap "positron" — key-less, CORS-open,
+ * globe-capable, and the provider the OMNI master interface names for the V1
+ * globe. CARTO Positron is kept only as the last-resort raster below.
+ */
+export const VECTOR_STYLE_URL = 'https://tiles.openfreemap.org/styles/positron';
 /** Local raster fallback: committed at /omni-local-style.json (CARTO light_all,@2x(. Serve even when the vector font/tile host is unreachable. */
 export const RASTER_STYLE_URL = '/omni-local-style.json';
 
