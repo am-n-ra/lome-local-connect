@@ -4,7 +4,7 @@ import { routingGate } from './routing-gate';
 import { recordRouteRequest, pruneRouteRequests, routeQuotaExceeded } from './route-quota';
 import { AvailabilityPolicyError, AvailabilityResponsePolicyError, BuyerSearchPolicyError, createTrunkRepository, ExternalPaymentMethod, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, SellerCataloguePolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { EvidenceStoragePolicyError, FieldPilotPolicyError, hasPrivateBlobConfiguration } from './evidence-contract';
-import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, readPrivateEvidence } from './evidence-storage';
+import { ClaimEvidenceNotFoundError, handleClaimEvidenceUpload, handleVisitEvidenceUpload, readPrivateEvidence } from './evidence-storage';
 import { handleOfferMediaUpload, verifyOfferMediaObjects, OfferMediaPolicyError, OfferMediaStorageError, OfferMediaAuthError, OfferMediaRequestError } from './offer-media-storage';
 import type { TransactionState } from '../domain/contracts';
 import type { OfferOwnerKind } from '../domain/contracts';
@@ -286,6 +286,63 @@ export function validateAcquisitionObjectiveState(body: Record<string, unknown>,
     throw new ApiInputError('A valid objective state (ouvert, recrute, clos) is required.');
   }
   return { objectiveId, state };
+}
+
+// TF-6 — mettre un dossier en tournée (admin ; la décision reste aux files).
+export function validateFieldVisitCreate(body: Record<string, unknown>): { subjectType: 'verification' | 'claim' | 'offer_report'; subjectId: string; zone: string | null } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const subjectType = body.subjectType;
+  const subjectId = typeof body.subjectId === 'string' ? body.subjectId : '';
+  const zone = body.zone === null || body.zone === undefined ? null : typeof body.zone === 'string' ? body.zone.trim() : '';
+  if (subjectType !== 'verification' && subjectType !== 'claim' && subjectType !== 'offer_report') {
+    throw new ApiInputError('A valid visit subject kind (verification, claim, offer_report) is required.');
+  }
+  if (!uuidPattern.test(subjectId)) throw new ApiInputError('A valid subject id is required.');
+  if (zone !== null && (zone.length < 1 || zone.length > 120)) throw new ApiInputError('An optional zone (≤120 chars) is required.');
+  return { subjectType, subjectId, zone };
+}
+
+export function validateVisitClaim(body: Record<string, unknown>, visitId: string): { visitId: string } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(visitId)) throw new ApiInputError('A valid visit id is required.');
+  return { visitId };
+}
+
+// TF-6 / D-OPS-2 — preuves bloquantes : photos scope `visit` + position finie.
+export function validateVisitReportSubmit(body: Record<string, unknown>, visitId: string): { visitId: string; lieuOk: boolean; activite: string; contactOk: boolean; reserve: string | null; photoRefs: string[]; latitude: number; longitude: number } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(visitId)) throw new ApiInputError('A valid visit id is required.');
+  if (typeof body.lieuOk !== 'boolean' || typeof body.contactOk !== 'boolean') {
+    throw new ApiInputError('The field findings (lieuOk, contactOk) are required.');
+  }
+  const activite = typeof body.activite === 'string' ? body.activite.trim() : '';
+  if (activite.length < 1 || activite.length > 500) throw new ApiInputError('A bounded activity finding (1–500 chars) is required.');
+  const reserve = body.reserve === null || body.reserve === undefined ? null : typeof body.reserve === 'string' ? body.reserve.trim() : '';
+  if (reserve !== null && reserve.length > 500) throw new ApiInputError('The visit reserve is bounded to 500 chars.');
+  const prefix = `visits/${visitId}/photo/`;
+  const photoRefs = Array.isArray(body.photoRefs) ? body.photoRefs : [];
+  if (photoRefs.length < 1 || photoRefs.length > 4) throw new ApiInputError('One to four visit photo references are required.');
+  for (const ref of photoRefs) {
+    if (typeof ref !== 'string' || !ref.startsWith(prefix)) throw new ApiInputError('Visit photos must be bound to this visit.');
+    const tail = ref.slice(prefix.length);
+    if (!tail || tail.includes('/') || tail.includes('..') || tail.includes('\\') || /\s/.test(tail) || tail.length > 200) {
+      throw new ApiInputError('Visit photos must be bound to this visit.');
+    }
+  }
+  const latitude = typeof body.latitude === 'number' ? body.latitude : Number.NaN;
+  const longitude = typeof body.longitude === 'number' ? body.longitude : Number.NaN;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new ApiInputError('A finite recorded position is required.');
+  }
+  return { visitId, lieuOk: body.lieuOk as boolean, activite, contactOk: body.contactOk as boolean, reserve: reserve === '' ? null : reserve, photoRefs: photoRefs as string[], latitude, longitude };
+}
+
+export function validateVisitReprogram(body: Record<string, unknown>, visitId: string): { visitId: string; reason: string } {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const reason = typeof body.reason === 'string' ? body.reason.trim() : '';
+  if (!uuidPattern.test(visitId)) throw new ApiInputError('A valid visit id is required.');
+  if (reason.length < 3 || reason.length > 1000) throw new ApiInputError('A bounded reprogram reason (3–1000 chars) is required.');
+  return { visitId, reason };
 }
 
 // DEC-V2-30 claim-by-OSM-reference. There is deliberately NO sourceRef field: the server derives
@@ -1000,6 +1057,150 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         }
         throw error;
       }
+      return true;
+    }
+    // TF-6 — mettre un dossier en tournée (admin ; D-OPS-3 : la décision reste
+    // aux files existantes).
+    if (req.method === 'POST' && pathname === '/api/v2/admin/field-visits') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an Omni admin before planning a field visit.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateFieldVisitCreate(input);
+      try {
+        const result = await repository.createFieldVisit({ authUserId, subjectType: validated.subjectType, subjectId: validated.subjectId, zone: validated.zone, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    // TF-6 — tournée du jour (maquette `op-queue`, même scope zone que les files).
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'field-visits') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member to view the field tour.'));
+        return true;
+      }
+      const result = await repository.listVisitQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-claim') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before taking a dossier.'));
+        return true;
+      }
+      const visitId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitClaim(input, visitId);
+      try {
+        const result = await repository.claimVisit({ authUserId, visitId: validated.visitId, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-report') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before transmitting a constat.'));
+        return true;
+      }
+      const visitId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitReportSubmit(input, visitId);
+      try {
+        const result = await repository.submitVisitReport({ authUserId, visitId: validated.visitId, lieuOk: validated.lieuOk, activite: validated.activite, contactOk: validated.contactOk, reserve: validated.reserve, photoRefs: validated.photoRefs, latitude: validated.latitude, longitude: validated.longitude, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-reprogram') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before reprogramming a visit.'));
+        return true;
+      }
+      const visitId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitReprogram(input, visitId);
+      try {
+        const result = await repository.reprogramVisit({ authUserId, visitId: validated.visitId, reason: validated.reason, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    // TF-6 / D-OPS-6 — photos de visite : même backend Blob privé, scope `visit`
+    // séparé (`visits/{visitId}/photo/`), mêmes bornes que le scope claim.
+    if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-upload') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member before uploading visit evidence.'));
+        return true;
+      }
+      const visitId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(visitId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid field visit.'));
+        return true;
+      }
+      const body = await parseRequestBody(req);
+      const result = await handleVisitEvidenceUpload({ body, headers: req.headers, url: url.toString(), visitId });
+      json(res, 200, result);
+      return true;
+    }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-evidence') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in before reading private visit evidence.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/facilities/'.length).split('?')[0];
+      const visitId = url.searchParams.get('visitId') ?? '';
+      const index = Number(url.searchParams.get('index') ?? '0');
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !uuidPattern.test(visitId) || !Number.isInteger(index) || index < 0 || index >= 12) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Choose a valid visit evidence reference.'));
+        return true;
+      }
+      const evidence = await repository.getVisitEvidenceForViewer({ authUserId, visitId, index });
+      if (!evidence) {
+        json(res, 404, errorBody(correlationId, 'EVIDENCE_NOT_FOUND', 'The private evidence is unavailable to this account.'));
+        return true;
+      }
+      const result = await readPrivateEvidence(evidence.objectKey);
+      res.statusCode = 200;
+      res.setHeader('Content-Type', result.contentType);
+      res.setHeader('Content-Length', String(result.size));
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.end(result.body);
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('inbox') === '1') {

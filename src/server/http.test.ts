@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateFieldVisitCreate, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept, validateVisitClaim, validateVisitReprogram, validateVisitReportSubmit } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -442,5 +442,45 @@ describe('offer report and acquisition objective validators (TF-5)', () => {
   it('rejects a malformed objective id or an unknown state', () => {
     expect(() => validateAcquisitionObjectiveState({ state: 'recrute' }, 'not-a-uuid')).toThrow(ApiInputError);
     expect(() => validateAcquisitionObjectiveState({ state: 'bientot' }, reportId)).toThrow(ApiInputError);
+  });
+});
+
+describe('field visit validators (TF-6)', () => {
+  const visitId = '55555555-5555-4555-8555-555555555555';
+  const subjectId = '66666666-6666-4666-8666-666666666666';
+  const photo = `visits/${visitId}/photo/a.png`;
+  const validReport = { lieuOk: true, activite: 'Enseigne vue, prix conformes', contactOk: true, photoRefs: [photo], latitude: 6.13, longitude: 1.22 };
+
+  it('accepts a visit on a known subject kind with optional zone', () => {
+    expect(validateFieldVisitCreate({ subjectType: 'offer_report', subjectId, zone: 'Adawlato' })).toEqual({ subjectType: 'offer_report', subjectId, zone: 'Adawlato' });
+    expect(validateFieldVisitCreate({ subjectType: 'claim', subjectId })).toEqual({ subjectType: 'claim', subjectId, zone: null });
+  });
+  it('rejects an unknown subject kind, a malformed subject id or an over-long zone', () => {
+    expect(() => validateFieldVisitCreate({ subjectType: 'fantome', subjectId })).toThrow(ApiInputError);
+    expect(() => validateFieldVisitCreate({ subjectType: 'claim', subjectId: 'not-a-uuid' })).toThrow(ApiInputError);
+    expect(() => validateFieldVisitCreate({ subjectType: 'claim', subjectId, zone: 'x'.repeat(121) })).toThrow(ApiInputError);
+  });
+
+  it('accepts a visit claim on a valid id', () => {
+    expect(validateVisitClaim({}, visitId)).toEqual({ visitId });
+    expect(() => validateVisitClaim({}, 'not-a-uuid')).toThrow(ApiInputError);
+  });
+
+  it('accepts a documented constat with bound photos and a finite position', () => {
+    expect(validateVisitReportSubmit({ ...validReport }, visitId)).toEqual({ visitId, lieuOk: true, activite: 'Enseigne vue, prix conformes', contactOk: true, reserve: null, photoRefs: [photo], latitude: 6.13, longitude: 1.22 });
+  });
+  it('rejects missing findings, unbound photos or a non-finite position', () => {
+    expect(() => validateVisitReportSubmit({ ...validReport, lieuOk: 'yes' }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReportSubmit({ ...validReport, activite: '  ' }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReportSubmit({ ...validReport, photoRefs: [] }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReportSubmit({ ...validReport, photoRefs: ['claims/other/photo/a.png'] }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReportSubmit({ ...validReport, latitude: Number.NaN }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReportSubmit({ ...validReport, reserve: 'x'.repeat(501) }, visitId)).toThrow(ApiInputError);
+  });
+
+  it('accepts a reprogram with a bounded reason on a valid id', () => {
+    expect(validateVisitReprogram({ reason: 'Boutique fermée, repasser jeudi' }, visitId)).toEqual({ visitId, reason: 'Boutique fermée, repasser jeudi' });
+    expect(() => validateVisitReprogram({ reason: 'x' }, visitId)).toThrow(ApiInputError);
+    expect(() => validateVisitReprogram({ reason: 'Boutique fermée' }, 'not-a-uuid')).toThrow(ApiInputError);
   });
 });

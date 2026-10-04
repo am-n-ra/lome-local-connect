@@ -710,6 +710,48 @@ export interface AcquisitionObjectiveListResult {
   objectives: AcquisitionObjective[];
 }
 
+// TF-6 — ops terrain (maquette `op-queue/visit/report/side`). L'opérateur
+// constate et transmet ; la décision badge reste aux files (D-OPS-3).
+export type FieldVisitSubjectType = 'verification' | 'claim' | 'offer_report';
+export type FieldVisitState = 'a_visiter' | 'en_cours' | 'transmis' | 'reprogramme';
+
+export interface FieldVisit {
+  id: string;
+  subjectType: FieldVisitSubjectType;
+  subjectId: string;
+  subjectName: string;
+  zone: string | null;
+  state: FieldVisitState;
+  mine: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  createdAt: string;
+}
+
+export interface FieldVisitCreateResult {
+  id: string;
+  subjectType: FieldVisitSubjectType;
+  subjectId: string;
+  zone: string | null;
+  state: FieldVisitState;
+}
+
+export interface FieldVisitListResult {
+  authorized: boolean;
+  visits: FieldVisit[];
+}
+
+export interface FieldVisitClaimResult {
+  id: string;
+  state: FieldVisitState;
+  alreadyMine: boolean;
+}
+
+export interface VisitReportSubmitResult {
+  visitId: string;
+  state: FieldVisitState;
+}
+
 export type ReviewOutcome = 'certified' | 'rejected' | 'needs_more_evidence';
 
 export interface ReviewClaimResult {

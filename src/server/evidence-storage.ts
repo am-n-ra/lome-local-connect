@@ -76,6 +76,43 @@ export async function handleClaimEvidenceUpload(input: { body: unknown; headers:
   });
 }
 
+// TF-6 / D-OPS-6 — photos de visite : même backend Blob privé, scope `visit`
+// séparé (`visits/{visitId}/photo/`), mêmes bornes que le scope claim. L'upload
+// est réservé au preneur de la visite (ou reviewer/admin) — miroir du garde
+// `canUploadClaimEvidence`, via `canUploadVisitEvidence`.
+export async function handleVisitEvidenceUpload(input: { body: unknown; headers: IncomingHttpHeaders; url: string; visitId: string }): Promise<unknown> {
+  if (!hasPrivateBlobConfiguration()) throw new EvidenceStoragePolicyError('Private evidence storage is not configured; no upload token was issued.');
+  if (!REQUEST_ID_PATTERN.test(input.visitId)) throw new FieldPilotPolicyError('The field visit is invalid.');
+  const token = requiredBlobToken();
+  const repository = createTrunkRepository();
+  const webRequest = requestFromHeaders(input.url, input.headers, input.body);
+  return handleUpload({
+    body: input.body as HandleUploadBody,
+    request: webRequest,
+    token,
+    onBeforeGenerateToken: async (pathname, _clientPayload) => {
+      const authUserId = await getAuthUserId(input.headers);
+      if (!authUserId) throw new FieldPilotPolicyError('An authenticated team session is required for visit evidence upload.');
+      const expectedPrefix = `visits/${input.visitId}/photo/`;
+      const filePart = pathname.startsWith(expectedPrefix) ? pathname.slice(expectedPrefix.length) : '';
+      if (!filePart || filePart.includes('/') || filePart.includes('..') || filePart.includes('\\') || /\s/.test(filePart)) throw new FieldPilotPolicyError('The upload path is not bound to this visit.');
+      const authorized = await repository.canUploadVisitEvidence({ authUserId, visitId: input.visitId });
+      if (!authorized) throw new FieldPilotPolicyError('Only the assignee of an open visit may upload visit evidence.');
+      return {
+        allowedContentTypes: [...CLAIM_EVIDENCE_CONTENT_TYPES],
+        maximumSizeInBytes: CLAIM_EVIDENCE_MAX_BYTES,
+        addRandomSuffix: true,
+        tokenPayload: JSON.stringify({ visitId: input.visitId }),
+      };
+    },
+    onUploadCompleted: async ({ blob, tokenPayload }) => {
+      let payload: { visitId?: string };
+      try { payload = JSON.parse(tokenPayload ?? '{}') as { visitId?: string }; } catch { throw new FieldPilotPolicyError('The upload completion context is invalid.'); }
+      if (!payload.visitId || !blob.pathname.startsWith(`visits/${payload.visitId}/photo/`)) throw new FieldPilotPolicyError('The completed object is not bound to the visit.');
+    },
+  });
+}
+
 export async function readPrivateEvidence(objectKey: string): Promise<{ body: Buffer; contentType: string; size: number }> {
   if (!hasPrivateBlobConfiguration()) throw new EvidenceStoragePolicyError('Private evidence storage is not configured.');
   const result = await get(providerPathFromInternalKey(objectKey), { access: 'private', token: requiredBlobToken(), useCache: false });

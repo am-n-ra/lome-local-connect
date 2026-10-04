@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, createAcquisitionObjective, createFacilityAdCampaign, createOfferReport, createPurchaseIntent, createSellerFacility, decideOfferReport, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listAcquisitionObjectives, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listOfferReports, listPublicFacilities, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, requestBulkAvailability, setAcquisitionObjectiveState, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, unlockFacilityBonus, verifyQrToken } from './api';
+import { activateBuyerPro, activateSellerAccount, addFavorite, claimFacilityByOsmRef, claimVisit, createAcquisitionObjective, createFacilityAdCampaign, createFieldVisit, createOfferReport, createPurchaseIntent, createSellerFacility, decideOfferReport, getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBuyerProRenewalStatus, getBuyerProStatus, getClaimRequest, getDemandSignals, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerActivationQueue, getSellerAvailabilityQueue, getTransaction, issueBuyerQrToken, issueQrToken, listAcquisitionObjectives, listClosedTransactions, listFacilityAdCampaigns, listFavorites, listOfferReports, listPublicFacilities, listVisitQueue, rebindDemoSeller, removeFavorite, renewBuyerPro, renewFacilityPro, reprogramVisit, requestBulkAvailability, setAcquisitionObjectiveState, setBuyerProRenewalOptIn, setFacilityRenewalOptIn, setSellerAccountSuspension, submitVisitReport, unlockFacilityBonus, verifyQrToken } from './api';
 
 describe('account context contract', () => {
   afterEach(() => vi.restoreAllMocks());
@@ -547,6 +547,65 @@ describe('offer report and acquisition objective client contract (TF-5)', () => 
     expect(fetchMock).toHaveBeenNthCalledWith(2,
       '/api/v2/facilities/objective-1?action=acquisition-objective-state',
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ state: 'recrute' }) },
+    );
+  });
+});
+
+describe('field visit client contract (TF-6)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('enqueues a dossier from the admin endpoint', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { id: 'visit-1', subjectType: 'offer_report', subjectId: 'product-1', zone: 'Adawlato', state: 'a_visiter' } }), { status: 201, headers: { 'Content-Type': 'application/json' } }));
+
+    await createFieldVisit({ token: 'session-token', subjectType: 'offer_report', subjectId: 'product-1', zone: 'Adawlato' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/admin/field-visits',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ subjectType: 'offer_report', subjectId: 'product-1', zone: 'Adawlato' }) },
+    );
+  });
+
+  it('reads the zone-scoped tour with the bearer token', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { authorized: true, visits: [] } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await listVisitQueue({ token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/public/facilities?reviewer=field-visits',
+      { headers: { Accept: 'application/json', Authorization: 'Bearer session-token' } },
+    );
+  });
+
+  it('takes a dossier by id', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { id: 'visit-1', state: 'en_cours', alreadyMine: false } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await claimVisit({ visitId: 'visit-1', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/visit-1?action=visit-claim',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({}) },
+    );
+  });
+
+  it('transmits a documented constat with bound proofs', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { visitId: 'visit-1', state: 'transmis' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await submitVisitReport({ visitId: 'visit-1', lieuOk: true, activite: 'Enseigne vue', contactOk: true, photoRefs: ['visits/visit-1/photo/a.png'], latitude: 6.13, longitude: 1.22, token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/visit-1?action=visit-report',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ lieuOk: true, activite: 'Enseigne vue', contactOk: true, reserve: null, photoRefs: ['visits/visit-1/photo/a.png'], latitude: 6.13, longitude: 1.22 }) },
+    );
+  });
+
+  it('reprograms a visit with a bounded reason', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ ok: true, correlationId: 'test', data: { id: 'visit-1', state: 'reprogramme' } }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    await reprogramVisit({ visitId: 'visit-1', reason: 'Boutique fermee', token: 'session-token' });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v2/facilities/visit-1?action=visit-reprogram',
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Bearer session-token' }, body: JSON.stringify({ reason: 'Boutique fermee' }) },
     );
   });
 });

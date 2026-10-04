@@ -2360,6 +2360,98 @@ describe('review and inbox Root seam', () => {
     expect(call.queries).toHaveLength(1);
   });
 
+  // TF-6 — ops terrain (même file de revue : l'opérateur constate, ne décide pas).
+  it('rejects a visit with an unknown subject kind before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.createFieldVisit({ authUserId: 'auth-admin-1', subjectType: 'fantome', subjectId: '33333333-3333-4333-8333-333333333333', correlationId: 'corr-tf6-1' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('enqueues a dossier in one guarded statement', async () => {
+    const call = stubSql([{ id: 'visit-1', subject_type: 'offer_report', subject_id: 'product-1', zone: 'Adawlato', state: 'a_visiter' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.createFieldVisit({ authUserId: 'auth-admin-1', subjectType: 'offer_report', subjectId: '44444444-4444-4434-8434-444444444444', zone: 'Adawlato', correlationId: 'corr-tf6-2' });
+    expect(result).toEqual({ id: 'visit-1', subjectType: 'offer_report', subjectId: 'product-1', zone: 'Adawlato', state: 'a_visiter' });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('v2_field_visits');
+    expect(call.queries[0]).toContain('field_visit_created');
+  });
+
+  it('locks the tour behind a staff role', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.listVisitQueue({ authUserId: 'auth-buyer-1' })).resolves.toEqual({ authorized: false, visits: [] });
+    expect(call.queries).toHaveLength(1);
+  });
+
+  it('maps the tour with subject names, mine flag and coordinates', async () => {
+    const call = stubSqlAlternating([
+      [{ id: 'account-7' }],
+      [{ id: 'visit-1', subject_type: 'offer_report', subject_id: 'product-1', subject_name: 'Huile 1 L', zone: 'Adawlato', state: 'a_visiter', mine: false, latitude: 6.13, longitude: 1.22, created_at: '2026-10-04T09:00:00.000Z' }],
+    ]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.listVisitQueue({ authUserId: 'auth-operator-1' });
+    expect(result).toEqual({
+      authorized: true,
+      visits: [{ id: 'visit-1', subjectType: 'offer_report', subjectId: 'product-1', subjectName: 'Huile 1 L', zone: 'Adawlato', state: 'a_visiter', mine: false, latitude: 6.13, longitude: 1.22, createdAt: '2026-10-04T09:00:00.000Z' }],
+    });
+    expect(call.queries[1]).toContain('v2_field_visits');
+    expect(call.queries[1]).toContain('t.zone = v.zone');
+  });
+
+  it('takes a dossier and returns the own prise as no-op', async () => {
+    const fresh = stubSql([{ id: 'visit-1', state: 'en_cours', already_mine: false }]);
+    const repository = createTrunkRepository(fresh.sql);
+    await expect(repository.claimVisit({ authUserId: 'auth-operator-1', visitId: 'visit-1', correlationId: 'corr-tf6-3' })).resolves.toEqual({ id: 'visit-1', state: 'en_cours', alreadyMine: false });
+    expect(fresh.queries).toHaveLength(1);
+    expect(fresh.queries[0]).toContain('field_visit_claimed');
+    const mine = stubSql([{ id: 'visit-1', state: 'en_cours', already_mine: true }]);
+    const retaken = createTrunkRepository(mine.sql);
+    await expect(retaken.claimVisit({ authUserId: 'auth-operator-1', visitId: 'visit-1', correlationId: 'corr-tf6-4' })).resolves.toEqual({ id: 'visit-1', state: 'en_cours', alreadyMine: true });
+  });
+
+  it('refuses a constat without bound proofs before persistence', async () => {
+    const call = stubSql([]);
+    const repository = createTrunkRepository(call.sql);
+    const base = { authUserId: 'auth-operator-1', visitId: 'visit-1', lieuOk: true, activite: 'Enseigne vue, prix conformes', contactOk: true, photoRefs: ['visits/visit-1/photo/a.png'], latitude: 6.13, longitude: 1.22, correlationId: 'corr-tf6-5' };
+    await expect(repository.submitVisitReport({ ...base, photoRefs: [] })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.submitVisitReport({ ...base, photoRefs: ['claims/other/photo/a.png'] })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.submitVisitReport({ ...base, latitude: Number.NaN, longitude: 1.22 })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.submitVisitReport({ ...base, activite: '  ' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('transmits a documented constat in one statement', async () => {
+    const call = stubSql([{ id: 'visit-1', state: 'transmis' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.submitVisitReport({ authUserId: 'auth-operator-1', visitId: 'visit-1', lieuOk: true, activite: 'Enseigne vue, prix conformes', contactOk: true, reserve: null, photoRefs: ['visits/visit-1/photo/a.png'], latitude: 6.13, longitude: 1.22, correlationId: 'corr-tf6-6' });
+    expect(result).toEqual({ visitId: 'visit-1', state: 'transmis' });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('v2_visit_reports');
+    expect(call.queries[0]).toContain('field_visit_transmitted');
+  });
+
+  it('reprograms with a bounded reason and gates evidence reads', async () => {
+    const call = stubSql([{ id: 'visit-1', state: 'reprogramme' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.reprogramVisit({ authUserId: 'auth-operator-1', visitId: 'visit-1', reason: 'x', correlationId: 'corr-tf6-7' })).rejects.toBeInstanceOf(FieldPilotPolicyError);
+    await expect(repository.reprogramVisit({ authUserId: 'auth-operator-1', visitId: 'visit-1', reason: 'Boutique fermée, repasser jeudi', correlationId: 'corr-tf6-8' })).resolves.toEqual({ id: 'visit-1', state: 'reprogramme' });
+    expect(call.queries).toHaveLength(1);
+    expect(call.queries[0]).toContain('field_visit_reprogrammed');
+    const locked = stubSql([]);
+    const viewer = createTrunkRepository(locked.sql);
+    await expect(viewer.getVisitEvidenceForViewer({ authUserId: 'auth-buyer-1', visitId: 'visit-1', index: 0 })).resolves.toBeNull();
+    expect(locked.queries).toHaveLength(1);
+    const found = stubSql([{ object_key: 'visits/visit-1/photo/a.png' }]);
+    const staff = createTrunkRepository(found.sql);
+    await expect(staff.getVisitEvidenceForViewer({ authUserId: 'auth-operator-1', visitId: 'visit-1', index: 0 })).resolves.toEqual({ objectKey: 'visits/visit-1/photo/a.png' });
+    await expect(staff.canUploadVisitEvidence({ authUserId: 'auth-operator-1', visitId: 'visit-1' })).resolves.toBe(true);
+    const denied = stubSql([]);
+    const stranger = createTrunkRepository(denied.sql);
+    await expect(stranger.canUploadVisitEvidence({ authUserId: 'auth-buyer-9', visitId: 'visit-1' })).resolves.toBe(false);
+  });
+
   it('rejects a review with an unbounded reason before persistence', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);

@@ -6056,6 +6056,303 @@ function createTrunkRepository(sql = database()) {
       if (!row) throw new FieldPilotPolicyError("This acquisition objective cannot be updated right now.");
       return { id: String(row.id), state: String(row.state) };
     },
+    // TF-6 — mettre un dossier en tournée (admin). La décision badge reste aux
+    // files existantes (D-OPS-3) : la visite ne fait que constater. Un dossier =
+    // une tournée active (garde DB + pré-contrôle honnête).
+    async createFieldVisit(input) {
+      const subjectType = input.subjectType;
+      if (subjectType !== "verification" && subjectType !== "claim" && subjectType !== "offer_report") {
+        throw new FieldPilotPolicyError("SUBJECT_REQUIRED");
+      }
+      const zone = (input.zone ?? "").trim() === "" ? null : (input.zone ?? "").trim();
+      if (zone !== null && zone.length > 120) throw new FieldPilotPolicyError("ZONE_TOO_LONG");
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select f.id, f.zone from v2_facilities f
+          where f.id = ${input.subjectId}::uuid and ${subjectType} in ('verification', 'claim')
+          union
+          select p.id, pf.zone from v2_products p
+          left join v2_facilities pf on pf.id = p.facility_id
+          where p.id = ${input.subjectId}::uuid and p.publication_state = 'published' and ${subjectType} = 'offer_report'
+          limit 1
+        ), existing as (
+          select v.id from v2_field_visits v
+          where v.subject_type = ${subjectType} and v.subject_id = ${input.subjectId}::uuid
+            and v.state in ('a_visiter', 'en_cours')
+          limit 1
+        ), inserted as (
+          insert into v2_field_visits (subject_type, subject_id, zone)
+          select ${subjectType}, target.id, coalesce(${zone}, target.zone)
+          from admin cross join target
+          where not exists (select 1 from existing)
+          returning id, subject_type, subject_id, zone, state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'field_visit_created', 'field_visit', inserted.id::text, ${input.correlationId}, ${subjectType}
+          from inserted cross join admin
+          returning entity_id
+        )
+        select inserted.id, inserted.subject_type, inserted.subject_id, inserted.zone, inserted.state from inserted
+        where exists (select 1 from audit where audit.entity_id = inserted.id::text)
+      `);
+      const visitRow = rows[0];
+      if (!visitRow) throw new FieldPilotPolicyError("This dossier cannot join the tour right now.");
+      return {
+        id: String(visitRow.id),
+        subjectType: String(visitRow.subject_type),
+        subjectId: String(visitRow.subject_id),
+        zone: visitRow.zone === null || visitRow.zone === void 0 ? null : String(visitRow.zone),
+        state: String(visitRow.state)
+      };
+    },
+    // TF-6 — tournée du jour (maquette `op-queue`). Même garde et même scope
+    // zone que les files (P2-C) : sans équipe zonée, tout est visible ; sinon,
+    // la zone de mission filtre. Les non-assignées portent `mine: false`.
+    async listVisitQueue(input) {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!authorizationRows[0]) return { authorized: false, visits: [] };
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), scoped as (
+          select 1 from v2_team_members tmz
+          join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
+          join staff on staff.id = tmz.account_id
+          where tmz.status = 'active'
+          limit 1
+        )
+        select v.id, v.subject_type, v.subject_id, v.zone, v.state, v.created_at,
+          coalesce(f.name, p.name, '') as subject_name,
+          (v.assignee_account_id = staff.id) as mine,
+          coalesce(f.latitude, pf.latitude) as latitude,
+          coalesce(f.longitude, pf.longitude) as longitude
+        from v2_field_visits v
+        cross join staff
+        left join v2_facilities f on f.id = v.subject_id and v.subject_type in ('verification', 'claim')
+        left join v2_products p on p.id = v.subject_id and v.subject_type = 'offer_report'
+        left join v2_facilities pf on pf.id = p.facility_id
+        where (
+          not exists (select 1 from scoped)
+          or exists (
+            select 1 from v2_team_members tm
+            join v2_teams t on t.id = tm.team_id and t.zone is not null and t.zone = v.zone
+            join staff s2 on s2.id = tm.account_id
+            where tm.status = 'active'
+          )
+        )
+        order by case v.state when 'a_visiter' then 0 when 'en_cours' then 1 when 'reprogramme' then 2 else 3 end,
+          v.created_at desc, v.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        visits: rows.map((row) => ({
+          id: String(row.id),
+          subjectType: String(row.subject_type),
+          subjectId: String(row.subject_id),
+          subjectName: String(row.subject_name ?? ""),
+          zone: row.zone === null || row.zone === void 0 ? null : String(row.zone),
+          state: String(row.state),
+          mine: Boolean(row.mine),
+          latitude: row.latitude === null || row.latitude === void 0 ? null : Number(row.latitude),
+          longitude: row.longitude === null || row.longitude === void 0 ? null : Number(row.longitude),
+          createdAt: new Date(String(row.created_at)).toISOString()
+        }))
+      };
+    },
+    // TF-6 — prise d'un dossier (D-OPS-1 : file premier-preneur). Re-prise par le
+    // même opérateur = no-op honnête (`alreadyMine`), jamais une erreur.
+    async claimVisit(input) {
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_field_visits v
+          set state = 'en_cours', assignee_account_id = staff.id
+          from staff
+          where v.id = ${input.visitId}::uuid and v.state = 'a_visiter'
+          returning v.id, v.state
+        ), mine as (
+          select v.id, v.state
+          from v2_field_visits v
+          join staff on staff.id = v.assignee_account_id
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+            and not exists (select 1 from updated)
+          limit 1
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_claimed', 'field_visit', updated.id::text, ${input.correlationId}, 'prise de dossier'
+          from updated cross join staff
+          returning entity_id
+        )
+        select id, state, false as already_mine from updated
+        union all
+        select id, state, true as already_mine from mine
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This dossier cannot be taken right now.");
+      return { id: String(row.id), state: String(row.state), alreadyMine: Boolean(row.already_mine) };
+    },
+    // TF-6 — transmettre le constat (maquette `op-report`). Preuves BLOQUANTES
+    // (D-OPS-2) : photos scope `visit` + position relevée, contrôlées ici, pas
+    // seulement côté client. Le constaté ne touche aucun badge (D-OPS-3).
+    async submitVisitReport(input) {
+      if (typeof input.lieuOk !== "boolean" || typeof input.contactOk !== "boolean") {
+        throw new FieldPilotPolicyError("FINDINGS_REQUIRED");
+      }
+      const activite = input.activite.trim();
+      if (activite.length < 1 || activite.length > 500) throw new FieldPilotPolicyError("ACTIVITE_REQUIRED");
+      const reserve = (input.reserve ?? "").trim();
+      if (reserve.length > 500) throw new FieldPilotPolicyError("RESERVE_TOO_LONG");
+      const prefix = `visits/${input.visitId}/photo/`;
+      const photoRefs = Array.isArray(input.photoRefs) ? input.photoRefs : [];
+      if (photoRefs.length < 1 || photoRefs.length > 4) throw new FieldPilotPolicyError("PHOTOS_REQUIRED");
+      for (const ref of photoRefs) {
+        if (typeof ref !== "string" || !ref.startsWith(prefix)) throw new FieldPilotPolicyError("PHOTO_NOT_BOUND");
+        const tail = ref.slice(prefix.length);
+        if (!tail || tail.includes("/") || tail.includes("..") || tail.includes("\\") || /\s/.test(tail) || tail.length > 200) {
+          throw new FieldPilotPolicyError("PHOTO_NOT_BOUND");
+        }
+      }
+      if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
+        throw new FieldPilotPolicyError("POSITION_REQUIRED");
+      }
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), mine as (
+          select v.id
+          from v2_field_visits v
+          join staff on staff.id = v.assignee_account_id
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+          limit 1
+        ), inserted as (
+          insert into v2_visit_reports (visit_id, lieu_ok, activite, contact_ok, reserve, photo_refs, latitude, longitude, reporter_account_id)
+          select mine.id, ${input.lieuOk}, ${activite}, ${input.contactOk}, ${reserve === "" ? null : reserve}, ${JSON.stringify(photoRefs)}::jsonb, ${input.latitude}, ${input.longitude}, staff.id
+          from mine cross join staff
+          returning visit_id
+        ), updated as (
+          update v2_field_visits v
+          set state = 'transmis', transmitted_at = now()
+          from inserted
+          where v.id = inserted.visit_id
+          returning v.id, v.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_transmitted', 'field_visit', updated.id::text, ${input.correlationId}, ${activite}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This constat cannot be transmitted right now.");
+      return { visitId: String(row.id), state: String(row.state) };
+    },
+    // TF-6 — reprogrammer : sortie honnête sans preuves (D-OPS-2), motif obligatoire.
+    async reprogramVisit(input) {
+      const reason = input.reason.trim();
+      if (reason.length < 3 || reason.length > 1e3) throw new FieldPilotPolicyError("REASON_REQUIRED");
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_field_visits v
+          set state = 'reprogramme'
+          from staff
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+            and v.assignee_account_id = staff.id
+          returning v.id, v.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_reprogrammed', 'field_visit', updated.id::text, ${input.correlationId}, ${reason}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = rows[0];
+      if (!row) throw new FieldPilotPolicyError("This visit cannot be reprogrammed right now.");
+      return { id: String(row.id), state: String(row.state) };
+    },
+    // TF-6 / D-OPS-6 — l'upload photo visite est réservé au preneur (ou
+    // reviewer/admin) d'une visite en cours. Miroir de `canUploadClaimEvidence`.
+    async canUploadVisitEvidence(input) {
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select 1 as allowed
+        from v2_field_visits v
+        join staff on 1 = 1
+        where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+          and (
+            v.assignee_account_id = staff.id
+            or exists (
+              select 1 from v2_account_roles ar
+              where ar.account_id = staff.id and ar.role in ('reviewer', 'admin') and ar.status = 'active'
+            )
+          )
+        limit 1
+      `);
+      return Boolean(rows[0]);
+    },
+    // TF-6 — lecture staff d'une preuve de visite (privée, no-store côté HTTP).
+    async getVisitEvidenceForViewer(input) {
+      if (!Number.isInteger(input.index) || input.index < 0 || input.index > 11) return null;
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select r.photo_refs->>${input.index} as object_key
+        from v2_visit_reports r
+        join v2_field_visits v on v.id = r.visit_id
+        cross join staff
+        where v.id = ${input.visitId}::uuid
+        limit 1
+      `);
+      const row = rows[0];
+      const key = row === void 0 ? null : row.object_key;
+      if (typeof key !== "string" || key === "") return null;
+      return { objectKey: key };
+    },
     async getTransaction(input) {
       const rows = await retryDatabase(() => sql`
         select
@@ -6672,6 +6969,42 @@ async function handleClaimEvidenceUpload(input) {
     }
   });
 }
+async function handleVisitEvidenceUpload(input) {
+  if (!hasPrivateBlobConfiguration()) throw new EvidenceStoragePolicyError("Private evidence storage is not configured; no upload token was issued.");
+  if (!REQUEST_ID_PATTERN2.test(input.visitId)) throw new FieldPilotPolicyError("The field visit is invalid.");
+  const token = requiredBlobToken();
+  const repository = createTrunkRepository();
+  const webRequest = requestFromHeaders(input.url, input.headers, input.body);
+  return handleUpload({
+    body: input.body,
+    request: webRequest,
+    token,
+    onBeforeGenerateToken: async (pathname, _clientPayload) => {
+      const authUserId = await getAuthUserId(input.headers);
+      if (!authUserId) throw new FieldPilotPolicyError("An authenticated team session is required for visit evidence upload.");
+      const expectedPrefix = `visits/${input.visitId}/photo/`;
+      const filePart = pathname.startsWith(expectedPrefix) ? pathname.slice(expectedPrefix.length) : "";
+      if (!filePart || filePart.includes("/") || filePart.includes("..") || filePart.includes("\\") || /\s/.test(filePart)) throw new FieldPilotPolicyError("The upload path is not bound to this visit.");
+      const authorized = await repository.canUploadVisitEvidence({ authUserId, visitId: input.visitId });
+      if (!authorized) throw new FieldPilotPolicyError("Only the assignee of an open visit may upload visit evidence.");
+      return {
+        allowedContentTypes: [...CLAIM_EVIDENCE_CONTENT_TYPES],
+        maximumSizeInBytes: CLAIM_EVIDENCE_MAX_BYTES,
+        addRandomSuffix: true,
+        tokenPayload: JSON.stringify({ visitId: input.visitId })
+      };
+    },
+    onUploadCompleted: async ({ blob, tokenPayload }) => {
+      let payload;
+      try {
+        payload = JSON.parse(tokenPayload ?? "{}");
+      } catch {
+        throw new FieldPilotPolicyError("The upload completion context is invalid.");
+      }
+      if (!payload.visitId || !blob.pathname.startsWith(`visits/${payload.visitId}/photo/`)) throw new FieldPilotPolicyError("The completed object is not bound to the visit.");
+    }
+  });
+}
 async function readPrivateEvidence(objectKey) {
   if (!hasPrivateBlobConfiguration()) throw new EvidenceStoragePolicyError("Private evidence storage is not configured.");
   const result = await get(providerPathFromInternalKey(objectKey), { access: "private", token: requiredBlobToken(), useCache: false });
@@ -7217,6 +7550,57 @@ function validateAcquisitionObjectiveState(body, objectiveId) {
     throw new ApiInputError("A valid objective state (ouvert, recrute, clos) is required.");
   }
   return { objectiveId, state };
+}
+function validateFieldVisitCreate(body) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const subjectType = body.subjectType;
+  const subjectId = typeof body.subjectId === "string" ? body.subjectId : "";
+  const zone = body.zone === null || body.zone === void 0 ? null : typeof body.zone === "string" ? body.zone.trim() : "";
+  if (subjectType !== "verification" && subjectType !== "claim" && subjectType !== "offer_report") {
+    throw new ApiInputError("A valid visit subject kind (verification, claim, offer_report) is required.");
+  }
+  if (!uuidPattern.test(subjectId)) throw new ApiInputError("A valid subject id is required.");
+  if (zone !== null && (zone.length < 1 || zone.length > 120)) throw new ApiInputError("An optional zone (\u2264120 chars) is required.");
+  return { subjectType, subjectId, zone };
+}
+function validateVisitClaim(body, visitId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(visitId)) throw new ApiInputError("A valid visit id is required.");
+  return { visitId };
+}
+function validateVisitReportSubmit(body, visitId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(visitId)) throw new ApiInputError("A valid visit id is required.");
+  if (typeof body.lieuOk !== "boolean" || typeof body.contactOk !== "boolean") {
+    throw new ApiInputError("The field findings (lieuOk, contactOk) are required.");
+  }
+  const activite = typeof body.activite === "string" ? body.activite.trim() : "";
+  if (activite.length < 1 || activite.length > 500) throw new ApiInputError("A bounded activity finding (1\u2013500 chars) is required.");
+  const reserve = body.reserve === null || body.reserve === void 0 ? null : typeof body.reserve === "string" ? body.reserve.trim() : "";
+  if (reserve !== null && reserve.length > 500) throw new ApiInputError("The visit reserve is bounded to 500 chars.");
+  const prefix = `visits/${visitId}/photo/`;
+  const photoRefs = Array.isArray(body.photoRefs) ? body.photoRefs : [];
+  if (photoRefs.length < 1 || photoRefs.length > 4) throw new ApiInputError("One to four visit photo references are required.");
+  for (const ref of photoRefs) {
+    if (typeof ref !== "string" || !ref.startsWith(prefix)) throw new ApiInputError("Visit photos must be bound to this visit.");
+    const tail = ref.slice(prefix.length);
+    if (!tail || tail.includes("/") || tail.includes("..") || tail.includes("\\") || /\s/.test(tail) || tail.length > 200) {
+      throw new ApiInputError("Visit photos must be bound to this visit.");
+    }
+  }
+  const latitude = typeof body.latitude === "number" ? body.latitude : Number.NaN;
+  const longitude = typeof body.longitude === "number" ? body.longitude : Number.NaN;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new ApiInputError("A finite recorded position is required.");
+  }
+  return { visitId, lieuOk: body.lieuOk, activite, contactOk: body.contactOk, reserve: reserve === "" ? null : reserve, photoRefs, latitude, longitude };
+}
+function validateVisitReprogram(body, visitId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+  if (!uuidPattern.test(visitId)) throw new ApiInputError("A valid visit id is required.");
+  if (reason.length < 3 || reason.length > 1e3) throw new ApiInputError("A bounded reprogram reason (3\u20131000 chars) is required.");
+  return { visitId, reason };
 }
 function validateClaimByOsmRef(body) {
   if (body.sourceRef !== void 0) throw new ApiInputError("The OpenStreetMap reference is derived by the server and cannot be supplied.");
@@ -7870,6 +8254,145 @@ async function handleApi(req, res, pathname, url) {
         }
         throw error;
       }
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/admin/field-visits") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an Omni admin before planning a field visit."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      const validated = validateFieldVisitCreate(input);
+      try {
+        const result = await repository.createFieldVisit({ authUserId, subjectType: validated.subjectType, subjectId: validated.subjectId, zone: validated.zone, correlationId });
+        json(res, 201, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("reviewer") === "field-visits") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member to view the field tour."));
+        return true;
+      }
+      const result = await repository.listVisitQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "visit-claim") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before taking a dossier."));
+        return true;
+      }
+      const visitId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitClaim(input, visitId);
+      try {
+        const result = await repository.claimVisit({ authUserId, visitId: validated.visitId, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "visit-report") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before transmitting a constat."));
+        return true;
+      }
+      const visitId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitReportSubmit(input, visitId);
+      try {
+        const result = await repository.submitVisitReport({ authUserId, visitId: validated.visitId, lieuOk: validated.lieuOk, activite: validated.activite, contactOk: validated.contactOk, reserve: validated.reserve, photoRefs: validated.photoRefs, latitude: validated.latitude, longitude: validated.longitude, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "visit-reprogram") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before reprogramming a visit."));
+        return true;
+      }
+      const visitId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const input = await parseRequestBody(req);
+      const validated = validateVisitReprogram(input, visitId);
+      try {
+        const result = await repository.reprogramVisit({ authUserId, visitId: validated.visitId, reason: validated.reason, correlationId });
+        json(res, 200, { ok: true, correlationId, data: result });
+      } catch (error) {
+        if (error instanceof FieldPilotPolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", error.message));
+          return true;
+        }
+        throw error;
+      }
+      return true;
+    }
+    if (req.method === "POST" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "visit-upload") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member before uploading visit evidence."));
+        return true;
+      }
+      const visitId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(visitId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid field visit."));
+        return true;
+      }
+      const body = await parseRequestBody(req);
+      const result = await handleVisitEvidenceUpload({ body, headers: req.headers, url: url.toString(), visitId });
+      json(res, 200, result);
+      return true;
+    }
+    if (req.method === "GET" && pathname.startsWith("/api/v2/facilities/") && url.searchParams.get("action") === "visit-evidence") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in before reading private visit evidence."));
+        return true;
+      }
+      const facilityId = pathname.slice("/api/v2/facilities/".length).split("?")[0];
+      const visitId = url.searchParams.get("visitId") ?? "";
+      const index = Number(url.searchParams.get("index") ?? "0");
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId) || !uuidPattern.test(visitId) || !Number.isInteger(index) || index < 0 || index >= 12) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Choose a valid visit evidence reference."));
+        return true;
+      }
+      const evidence = await repository.getVisitEvidenceForViewer({ authUserId, visitId, index });
+      if (!evidence) {
+        json(res, 404, errorBody(correlationId, "EVIDENCE_NOT_FOUND", "The private evidence is unavailable to this account."));
+        return true;
+      }
+      const result = await readPrivateEvidence(evidence.objectKey);
+      res.statusCode = 200;
+      res.setHeader("Content-Type", result.contentType);
+      res.setHeader("Content-Length", String(result.size));
+      res.setHeader("Cache-Control", "private, no-store");
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.end(result.body);
       return true;
     }
     if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("inbox") === "1") {

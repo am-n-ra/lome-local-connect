@@ -1,5 +1,5 @@
 import { upload as uploadPrivateBlob } from '@vercel/blob/client';
-import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AccountCapabilitiesResult, AdCampaignCreateResult, AdCampaignListResult, AdminAuditListResult, AdminConsoleResult, ApiResult, BulkPack, ClaimByOsmRefInput, ClaimByOsmRefResult, CreateSellerFacilityResult, CreateTeamResult, FacilityOperationalState, FacilityType, MyTeamInvite, RoleManagementAccount, RoleManagementResult, TeamInviteResult, TeamListResult, TeamMemberResult, TeamInviteAcceptResult, FacilityZoneAssignment, AvailabilityResponseStatus, AvailabilityResponsesResult, AvailabilityResult, BuyerAvailabilityRequestList, BuyerCreditSummary, BulkAvailabilityResult, CancelAvailabilityRequestResult, ClaimDraftResult, ClaimEvidenceItem, ClaimSubmitResult, EvidenceKind, PublicEntity, PublicEntityDetail, ExternalPaymentConfirmationResult, ExternalPaymentDeclarationResult, ExternalPaymentMethod, FacilityBonusPersistenceResult, FacilityBonusStatus, FacilityDetail, FacilityRenewalOptInResult, FacilityRenewalResult, FacilityRenewalStatus, NotificationInboxResult, OperatorRunsResult, PublicFacility, PublicFacilityImportResult, RoutingResult, PurchaseIntentResult, QrTokenIssueResult, QrRevocationResult, QrVerificationResult, DemandSignalsResult, OfferReportMotif, OfferReportCreateResult, OfferReportListResult, OfferReportOutcome, OfferReportDecisionResult, AcquisitionObjectiveListResult, AcquisitionObjectiveCreateResult, AcquisitionObjectiveState, FieldVisitSubjectType, FieldVisitCreateResult, FieldVisitListResult, FieldVisitClaimResult, FieldVisitState, VisitReportSubmitResult, ReviewClaimResult, ReviewOutcome, ReviewQueueResult, SearchOptions, SellerAvailabilityQueue, SellerCatalogueResult, SellerFacilityAnalytics, TransactionRatingResult, TransactionMessagesResult, TransactionState, TransactionTransitionResult, WalletOverviewResult, WalletRechargeResult, FacilityProActivationResult, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 
 async function parse<T>(response: Response): Promise<ApiResult<T>> {
   const payload = (await response.json()) as ApiResult<T>;
@@ -906,6 +906,66 @@ export async function setAcquisitionObjectiveState(input: { objectiveId: string;
     body: JSON.stringify({ state: input.state }),
   });
   return parse(response);
+}
+
+// TF-6 — ops terrain : tournée scopée zone, prise, constat transmis, reprogrammation.
+export async function createFieldVisit(input: { token: string; subjectType: FieldVisitSubjectType; subjectId: string; zone?: string | null }): Promise<ApiResult<FieldVisitCreateResult>> {
+  const response = await fetchWithRecovery('/api/v2/admin/field-visits', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ subjectType: input.subjectType, subjectId: input.subjectId, zone: input.zone ?? null }),
+  });
+  return parse<FieldVisitCreateResult>(response);
+}
+
+export async function listVisitQueue(input: { token: string }): Promise<ApiResult<FieldVisitListResult>> {
+  const response = await fetchWithRecovery('/api/v2/public/facilities?reviewer=field-visits', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<FieldVisitListResult>(response);
+}
+
+export async function claimVisit(input: { visitId: string; token: string }): Promise<ApiResult<FieldVisitClaimResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.visitId)}?action=visit-claim`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({}),
+  });
+  return parse<FieldVisitClaimResult>(response);
+}
+
+export async function submitVisitReport(input: { visitId: string; lieuOk: boolean; activite: string; contactOk: boolean; reserve?: string | null; photoRefs: string[]; latitude: number; longitude: number; token: string }): Promise<ApiResult<VisitReportSubmitResult>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.visitId)}?action=visit-report`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ lieuOk: input.lieuOk, activite: input.activite, contactOk: input.contactOk, reserve: input.reserve ?? null, photoRefs: input.photoRefs, latitude: input.latitude, longitude: input.longitude }),
+  });
+  return parse<VisitReportSubmitResult>(response);
+}
+
+export async function reprogramVisit(input: { visitId: string; reason: string; token: string }): Promise<ApiResult<{ id: string; state: FieldVisitState }>> {
+  const response = await fetchWithRecovery(`/api/v2/facilities/${encodeURIComponent(input.visitId)}?action=visit-reprogram`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ reason: input.reason }),
+  });
+  return parse(response);
+}
+
+// TF-6 / D-OPS-6 — photos de visite : même backend Blob privé, scope `visit`.
+export async function uploadVisitEvidence(input: { visitId: string; file: File; token: string; onProgress?: (percentage: number) => void }): Promise<{ objectKey: string }> {
+  const safeName = input.file.name.normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 120) || 'evidence';
+  const pathname = `visits/${input.visitId}/photo/${safeName}`;
+  const blob = await uploadPrivateBlob(pathname, input.file, {
+    access: 'private',
+    contentType: input.file.type,
+    multipart: input.file.size > 4 * 1024 * 1024,
+    clientPayload: JSON.stringify({}),
+    handleUploadUrl: `/api/v2/facilities/${encodeURIComponent(input.visitId)}?action=visit-upload`,
+    headers: { Authorization: `Bearer ${input.token}` },
+    onUploadProgress: (event) => input.onProgress?.(event.percentage),
+  });
+  return { objectKey: `private://omni/${blob.pathname}` };
 }
 
 export async function reviewFacilityClaim(input: { requestId: string; outcome: ReviewOutcome; reason: string; token: string }): Promise<ApiResult<ReviewClaimResult>> {

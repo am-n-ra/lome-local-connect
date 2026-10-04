@@ -57,8 +57,10 @@ voir D-OPS-1), `state` CHECK (`a_visiter`/`en_cours`/`transmis`/`reprogramme`),
 `lieu_ok` bool, `activite` text ≤500, `contact_ok` bool, `reserve` text ≤500 nullable,
 `photo_refs` jsonb (refs Blob scope `visit`, ≤4 comme les médias offre),
 `latitude`/`longitude` numeric nullable (relevé au constat),
-`reporter_account_id` (signé), `reported_at` (horodaté), `decision_note` —
+`reporter_account_id` (signé), `reported_at` (horodaté) —
 le « qui a constaté quoi, quand » de la maquette, lisible admin/reviewer.
+(Raffinement à l'implémentation : pas de `decision_note` ici — la décision vit
+dans les files existantes, D-OPS-3, pour ne pas créer un second canal.)
 
 **Transitions** : `a_visiter` → `en_cours` (prise, operator, idempotent) →
 `transmis` (+ ligne `v2_visit_reports`, preuves obligatoires — voir D-OPS-2) ou
@@ -76,16 +78,16 @@ décision badge (garde : aucun `state` badge touché par ces routes) ; audit
 `v2_audit_events` (prise, transmission, reprogrammation) ; photos = refs Blob
 privées, jamais d'URL publique durable.
 
-## 5. Décisions requises (HQ/fondateur — la spec ne les prend pas)
+## 5. Décisions — TRANCHÉES 2026-10-04 (DEC-V2-37)
 
-| ID | Question | Recommandation (pas une décision) |
-|---|---|---|
-| D-OPS-1 | Assignation des dossiers : file de zone premier-preneur, ou assignés par admin ? | File de zone (pas de dispatcher humain à construire ; traçabilité par prise) |
-| D-OPS-2 | Preuves obligatoires : photo + position exigées avant transmission (maquette) ? | Oui, bloquant (sinon le constat est déclaratif) ; reprogrammation = sortie honnête sans preuves |
-| D-OPS-3 | Constat → quelle file ? Signalements → `decide-report` TF-5 (existe) ; vérifications/revendications → ? | Signalements : TF-5 ; vérifications : file reviewer existante (`admin-review`) — pas de nouvelle file |
-| D-OPS-4 | Message de suivi (`op-side`) : nouveau scope, existant détourné, ou reporté ? | Reporté (comme D-SIG-4 l'était avant demande explicite) — l'aperçu lecture seule suffit en TF-6 |
-| D-OPS-5 | `op-side` : jusqu'où la lecture seule (offres + file messages comme maquette) ? | Statut + offres + compteurs, jamais le contenu des messages ni les contacts acheteurs |
-| D-OPS-6 | Photos visite : nouveau scope Blob `visit` (même backend) ? | Oui — même backend privé, scope séparé, mêmes bornes que le scope claim |
+| ID | Décision fondateur |
+|---|---|
+| D-OPS-1 | **File de zone, premier-preneur** (pas de dispatcher ; traçabilité par la prise) |
+| D-OPS-2 | **Preuves bloquantes** : photo + position exigées avant transmission ; reprogrammer = sortie honnête sans preuves |
+| D-OPS-3 | **Files existantes** : signalements → `decide-report` TF-5 ; vérifications → `admin-review` ; aucune file neuve |
+| D-OPS-4 | **Message de suivi reporté** : l'aperçu lecture seule suffit en TF-6 |
+| D-OPS-5 | **Lecture seule restreinte** : statut + offres + compteurs ; jamais contenu des messages ni contacts acheteurs |
+| D-OPS-6 | **Scope Blob `visit`** : même backend privé, scope séparé, mêmes bornes que le scope claim |
 
 ## 6. Preuve prévue (implémentation, plus tard)
 

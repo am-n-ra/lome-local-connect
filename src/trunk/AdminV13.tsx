@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { getAdminConsole, getReviewQueue, getDemandSignals, listOfferReports, decideOfferReport, listAcquisitionObjectives, createAcquisitionObjective, setAcquisitionObjectiveState, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
+import { getAdminConsole, getReviewQueue, getDemandSignals, listOfferReports, decideOfferReport, listAcquisitionObjectives, createAcquisitionObjective, setAcquisitionObjectiveState, createFieldVisit, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
 import type { AdminConsoleResult, DemandSignal, OfferReportOutcome, OfferReportQueueItem, AcquisitionObjective, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
@@ -108,6 +108,28 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Décision non enregistrée.' });
     } finally {
       setActingId(null);
+    }
+  }, [load]);
+
+  // TF-6 — mettre un dossier en tournée (admin ; la décision reste aux files).
+  const [tourBusy, setTourBusy] = useState<string | null>(null);
+  const enqueueTour = useCallback(async (key: string, subjectType: 'verification' | 'claim' | 'offer_report', subjectId: string, label: string) => {
+    setTourBusy(key);
+    setToast(null);
+    try {
+      const token = await getAuthToken();
+      if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
+      const result = await createFieldVisit({ token, subjectType, subjectId });
+      if (result.ok && result.data) {
+        setToast({ kind: 'ok', text: `${label} : en tournée.` });
+        void load();
+      } else {
+        setToast({ kind: 'err', text: result.error?.message ?? 'Dossier non mis en tournée.' });
+      }
+    } catch (caught) {
+      setToast({ kind: 'err', text: caught instanceof Error ? caught.message : 'Dossier non mis en tournée.' });
+    } finally {
+      setTourBusy(null);
     }
   }, [load]);
 
@@ -578,6 +600,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               <div className="btnrow">
                 <button className="btn sm" disabled={actingId === item.requestId} onClick={() => void review(item.requestId, 'certified', item.facilityName)}><CheckCircle2 size={14} /> Valider</button>
                 <button className="btn ghost sm" disabled={actingId === item.requestId} onClick={() => void review(item.requestId, 'needs_more_evidence', item.facilityName)}><Archive size={14} /> Preuve</button>
+                <button className="btn ghost sm" type="button" disabled={tourBusy === item.requestId} onClick={() => void enqueueTour(item.requestId, item.state === 'claim' ? 'claim' : 'verification', item.facilityId, item.facilityName)}>{tourBusy === item.requestId ? '…' : 'Mettre en tournée'}</button>
               </div>
             </div>
           ))}
@@ -603,6 +626,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
                       <button className="btn ghost sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'constate_infirme')}>Infirmer</button>
                       <button className="btn ghost sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'constate_confirme')}>Confirmer</button>
                       <button className="btn sm" disabled={reportBusy === report.id} onClick={() => void decideReport(report.id, report.productName || 'Offre', 'traite')}>Traiter</button>
+                      <button className="btn ghost sm" type="button" disabled={tourBusy === report.id} onClick={() => void enqueueTour(report.id, 'offer_report', report.productId, report.productName || 'Offre')}>{tourBusy === report.id ? '…' : 'Mettre en tournée'}</button>
                     </div>
                   </>
                 )}

@@ -15,12 +15,13 @@ import {
   listOpenTransactions, getTransaction, getNotificationInbox, markNotificationSeen, getClaimRequest,
   listMyTeamInvites, acceptTeamInvite,
   searchPublicEntities, getPublicEntity, createOfferReport,
+  listVisitQueue, claimVisit, submitVisitReport, reprogramVisit, uploadVisitEvidence,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
-  FacilityDetail, MyTeamInvite, NotificationSummary, OfferReportMotif, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
+  FacilityDetail, MyTeamInvite, NotificationSummary, OfferReportMotif, FieldVisit, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
 } from './types';
 import type { NotificationTarget } from './notification-center';
 import { relativeAge, transactionStateLabel } from './transaction-time';
@@ -51,7 +52,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -326,11 +327,28 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [signalDetail, setSignalDetail] = useState('');
   const [signalState, setSignalState] = useState<'idle' | 'sending' | 'sent' | 'duplicate' | 'error'>('idle');
   const [signalError, setSignalError] = useState('');
+  // TF-6 — ops terrain (maquette `op-queue/visit/report`) : tournée scopée zone,
+  // prise, constat avec preuves bloquantes, transmission ou reprogrammation.
+  const [visits, setVisits] = useState<FieldVisit[]>([]);
+  const [tourState, setTourState] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [tourError, setTourError] = useState('');
+  const [selVisitId, setSelVisitId] = useState<string | null>(null);
+  const [visitBusy, setVisitBusy] = useState<string | null>(null);
+  const [visitToast, setVisitToast] = useState('');
+  const [findingLieu, setFindingLieu] = useState(true);
+  const [findingActivite, setFindingActivite] = useState('');
+  const [findingContact, setFindingContact] = useState(true);
+  const [findingReserve, setFindingReserve] = useState('');
+  const [findingPhotos, setFindingPhotos] = useState<string[]>([]);
+  const [findingUploading, setFindingUploading] = useState(false);
+  const [findingPosition, setFindingPosition] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [findingLocating, setFindingLocating] = useState(false);
+  const [reprogramReason, setReprogramReason] = useState('');
   const [desktop, setDesktop] = useState(() => (typeof window !== 'undefined' && (window.matchMedia?.('(min-width:1040px)').matches ?? false)));
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1178,6 +1196,132 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setSignalError(caught instanceof Error ? caught.message : 'Ce signalement n’a pas pu être envoyé.');
     }
   }, [signalTarget, signalState, signalMotif, signalDetail, requireAuth]);
+
+  // TF-6 — tournée : charge la file scopée zone, prend, constate, transmet.
+  const openTour = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setSheet('tour'); setTourState('loading'); setTourError(''); setVisitToast('');
+    try {
+      const result = await listVisitQueue({ token });
+      if (result.ok && result.data && result.data.authorized) {
+        setVisits(result.data.visits ?? []);
+        setTourState('idle');
+      } else {
+        setTourState('error');
+        setTourError(result.error?.message ?? 'La tournée ne peut pas être chargée pour le moment.');
+      }
+    } catch (caught) {
+      setTourState('error');
+      setTourError(caught instanceof Error ? caught.message : 'La tournée ne peut pas être chargée pour le moment.');
+    }
+  }, [requireAuth]);
+
+  const openDossier = useCallback((visit: FieldVisit) => {
+    setSelVisitId(visit.id);
+    setFindingLieu(true);
+    setFindingActivite('');
+    setFindingContact(true);
+    setFindingReserve('');
+    setFindingPhotos([]);
+    setFindingPosition(null);
+    setReprogramReason('');
+    setVisitToast('');
+  }, []);
+
+  const claimDossier = useCallback(async (visitId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    setVisitBusy(visitId); setVisitToast('');
+    try {
+      const result = await claimVisit({ visitId, token });
+      if (result.ok && result.data) {
+        setVisitToast(result.data.alreadyMine ? 'Dossier déjà pris.' : 'Dossier pris — à vous de constater.');
+        void openTour();
+      } else {
+        setVisitToast(result.error?.message ?? 'Ce dossier ne peut pas être pris.');
+      }
+    } catch (caught) {
+      setVisitToast(caught instanceof Error ? caught.message : 'Ce dossier ne peut pas être pris.');
+    } finally {
+      setVisitBusy(null);
+    }
+  }, [requireAuth, openTour]);
+
+  const locateForFinding = useCallback(() => {
+    if (!('geolocation' in navigator)) { setVisitToast('Géolocalisation indisponible sur cet appareil.'); return; }
+    setFindingLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setFindingPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        setFindingLocating(false);
+      },
+      () => { setVisitToast('Position indisponible — autorisez la localisation pour constater.'); setFindingLocating(false); },
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  }, []);
+
+  const uploadFindingPhotos = useCallback(async (visitId: string, files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const token = await requireAuth();
+    if (!token) return;
+    setFindingUploading(true); setVisitToast('');
+    try {
+      const picked = Array.from(files).slice(0, 4 - findingPhotos.length);
+      for (const file of picked) {
+        const uploaded = await uploadVisitEvidence({ visitId, file, token });
+        setFindingPhotos((current) => (current.length >= 4 ? current : [...current, uploaded.objectKey.replace('private://omni/', '')]));
+      }
+    } catch (caught) {
+      setVisitToast(caught instanceof Error ? caught.message : 'Ces photos n’ont pas pu être envoyées.');
+    } finally {
+      setFindingUploading(false);
+    }
+  }, [requireAuth, findingPhotos.length]);
+
+  const transmitConstat = useCallback(async (visitId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    if (findingPhotos.length < 1) { setVisitToast('Ajoutez au moins une photo du lieu avant de transmettre.'); return; }
+    if (!findingPosition) { setVisitToast('Relevez la position avant de transmettre.'); return; }
+    if (findingActivite.trim().length < 1) { setVisitToast('Décrivez l’activité visible avant de transmettre.'); return; }
+    setVisitBusy(visitId); setVisitToast('');
+    try {
+      const result = await submitVisitReport({ visitId, lieuOk: findingLieu, activite: findingActivite.trim(), contactOk: findingContact, reserve: findingReserve.trim() === '' ? null : findingReserve.trim(), photoRefs: findingPhotos, latitude: findingPosition.latitude, longitude: findingPosition.longitude, token });
+      if (result.ok) {
+        setVisitToast('Constat transmis à l’admin.');
+        setSelVisitId(null);
+        void openTour();
+      } else {
+        setVisitToast(result.error?.message ?? 'Ce constat n’a pas pu être transmis.');
+      }
+    } catch (caught) {
+      setVisitToast(caught instanceof Error ? caught.message : 'Ce constat n’a pas pu être transmis.');
+    } finally {
+      setVisitBusy(null);
+    }
+  }, [requireAuth, openTour, findingPhotos, findingPosition, findingLieu, findingActivite, findingContact, findingReserve]);
+
+  const reprogramDossier = useCallback(async (visitId: string) => {
+    const token = await requireAuth();
+    if (!token) return;
+    if (reprogramReason.trim().length < 3) { setVisitToast('Motivez la reprogrammation (3 lettres minimum).'); return; }
+    setVisitBusy(visitId); setVisitToast('');
+    try {
+      const result = await reprogramVisit({ visitId, reason: reprogramReason.trim(), token });
+      if (result.ok) {
+        setVisitToast('Visite à reprogrammer.');
+        setSelVisitId(null);
+        void openTour();
+      } else {
+        setVisitToast(result.error?.message ?? 'Cette visite ne peut pas être reprogrammée.');
+      }
+    } catch (caught) {
+      setVisitToast(caught instanceof Error ? caught.message : 'Cette visite ne peut pas être reprogrammée.');
+    } finally {
+      setVisitBusy(null);
+    }
+  }, [requireAuth, openTour, reprogramReason]);
 
   const removeSavedSearch = useCallback(async (search: SavedSearch) => {
     const token = await requireAuth();
@@ -2232,6 +2376,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {(role === 'admin' || role === 'operator') && (
                   <>
                     <button className="menuitem" type="button" onClick={() => setSheet('admin')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Console</b><small>revue & audit</small></span></button>
+                    {role === 'operator' && (
+                      <button className="menuitem" type="button" onClick={() => void openTour()}><span className="mi"><MapPin size={15} /></span><span><b>Tournée du jour</b><small>dossiers à constater</small></span></button>
+                    )}
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>demandes à examiner, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
                   </>
@@ -2740,6 +2887,102 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <button className="btn ghost sm" style={{ marginTop: 9 }} onClick={() => setSheet('facility')}>Retour à l’offre</button>
             </div>
           )}
+        </section>
+      )}
+      {sheet === 'tour' && (
+        <section className="sheet h-mid" data-sheet="tour" role="region" aria-label="Tournée du jour">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Terrain</div><h1>Ma tournée du jour</h1></div>
+            <button type="button" className="sheet-close" onClick={() => { setSelVisitId(null); setSheet('menu'); }} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          {tourState === 'loading' && <p className="sub" role="status">Chargement de la tournée…</p>}
+          {tourState === 'error' && (
+            <div role="alert">
+              <p className="sub">{tourError}</p>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => void openTour()}><RefreshCw size={14} /> Réessayer</button>
+            </div>
+          )}
+          {visitToast !== '' && <p className="sub" role="status">{visitToast}</p>}
+          {tourState === 'idle' && selVisitId === null && (
+            <>
+              {visits.length === 0 && <p className="sub">Aucun dossier à visiter pour le moment.</p>}
+              {visits.map((visit) => (
+                <div className="cardbox" key={visit.id}>
+                  <div className="row" style={{ justifyContent: 'space-between' }}>
+                    <div>
+                      <b>{visit.subjectName || (visit.subjectType === 'offer_report' ? 'Signalement' : visit.subjectType === 'claim' ? 'Revendication' : 'Vérification')}</b>
+                      <br />
+                      <span className="tiny muted">{visit.subjectType === 'offer_report' ? 'Signalement' : visit.subjectType === 'claim' ? 'Revendication' : 'Vérification'}{visit.zone ? ` · ${visit.zone}` : ''}</span>
+                    </div>
+                    <span className="status ink">{visit.state === 'a_visiter' ? 'À visiter' : visit.state === 'en_cours' ? (visit.mine ? 'À constater' : 'Pris') : visit.state === 'transmis' ? 'Transmis' : 'Reprogrammé'}</span>
+                  </div>
+                  <div className="btnrow">
+                    {(visit.state === 'a_visiter' || (visit.state === 'en_cours' && visit.mine)) && (
+                      <button className="btn sm" type="button" disabled={visitBusy === visit.id} onClick={() => { openDossier(visit); }}>{visit.state === 'a_visiter' ? 'Prendre' : 'Constater'}</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+          {tourState === 'idle' && selVisitId !== null && (() => {
+            const visit = visits.find((item) => item.id === selVisitId);
+            if (!visit) return <p className="sub">Dossier introuvable — rechargez la tournée.</p>;
+            return (
+              <>
+                <div className="cardbox">
+                  <div className="eyebrow">Dossier · {visit.subjectType === 'offer_report' ? 'Signalement' : visit.subjectType === 'claim' ? 'Revendication' : 'Vérification'}</div>
+                  <div className="kv"><span>Objet</span><b>{visit.subjectName || '—'}</b></div>
+                  <div className="kv"><span>Zone</span><b>{visit.zone ?? '—'}</b></div>
+                  <div className="kv"><span>État</span><b>{visit.state === 'a_visiter' ? 'À visiter' : visit.state === 'en_cours' ? 'En cours' : visit.state === 'transmis' ? 'Transmis' : 'Reprogrammé'}</b></div>
+                </div>
+                {visit.state === 'a_visiter' && (
+                  <button className="btn" type="button" style={{ marginTop: 10 }} disabled={visitBusy === visit.id} onClick={() => void claimDossier(visit.id)}>{visitBusy === visit.id ? 'Prise…' : 'Prendre ce dossier'}</button>
+                )}
+                {visit.state === 'en_cours' && visit.mine && (
+                  <>
+                    <div className="eyebrow" style={{ marginTop: 11 }}>Preuves de terrain (obligatoires)</div>
+                    <div className="row" style={{ gap: 6, marginTop: 6 }}>
+                      <label className="btn ghost sm" style={{ width: 'auto', minHeight: 32 }}>
+                        {findingUploading ? 'Envoi…' : `Photo du lieu (${findingPhotos.length}/4)`}
+                        <input type="file" accept="image/*" capture="environment" multiple hidden disabled={findingUploading || findingPhotos.length >= 4} onChange={(e) => void uploadFindingPhotos(visit.id, e.target.files)} />
+                      </label>
+                      <button className="btn ghost sm" type="button" style={{ width: 'auto', minHeight: 32 }} disabled={findingLocating} onClick={() => locateForFinding()}>{findingPosition ? 'Position relevée ✓' : findingLocating ? 'Localisation…' : 'Relever la position'}</button>
+                    </div>
+                    <div className="eyebrow" style={{ marginTop: 11 }}>Ce que j’ai constaté</div>
+                    <div className="chiprow" style={{ marginTop: 6 }}>
+                      <span className={`chip${findingLieu ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setFindingLieu(true)}><span className="dot" />Lieu conforme</span>
+                      <span className={`chip${!findingLieu ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setFindingLieu(false)}><span className="dot" />Lieu non conforme</span>
+                    </div>
+                    <div className="fld" style={{ marginTop: 9 }}>
+                      <input value={findingActivite} onChange={(event) => setFindingActivite(event.target.value)} placeholder="Activité visible…" aria-label="Activité visible" maxLength={500} />
+                    </div>
+                    <div className="chiprow" style={{ marginTop: 6 }}>
+                      <span className={`chip${findingContact ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setFindingContact(true)}><span className="dot" />Contact joignable</span>
+                      <span className={`chip${!findingContact ? ' active' : ''}`} role="button" tabIndex={0} onClick={() => setFindingContact(false)}><span className="dot" />Injoignable</span>
+                    </div>
+                    <div className="fld" style={{ marginTop: 9 }}>
+                      <input value={findingReserve} onChange={(event) => setFindingReserve(event.target.value)} placeholder="Réserve (optionnel)…" aria-label="Réserve optionnelle" maxLength={500} />
+                    </div>
+                    <button className="btn ok" type="button" style={{ marginTop: 10 }} disabled={visitBusy === visit.id || findingUploading} onClick={() => void transmitConstat(visit.id)}>{visitBusy === visit.id ? 'Transmission…' : 'Transmettre à l’admin'}</button>
+                    <div className="fld" style={{ marginTop: 9 }}>
+                      <input value={reprogramReason} onChange={(event) => setReprogramReason(event.target.value)} placeholder="Motif de reprogrammation…" aria-label="Motif de reprogrammation" maxLength={1000} />
+                    </div>
+                    <button className="btn ghost sm" type="button" style={{ marginTop: 6 }} disabled={visitBusy === visit.id} onClick={() => void reprogramDossier(visit.id)}>Reprogrammer</button>
+                    <p className="tiny muted" style={{ marginTop: 8 }}>Vous constatez et transmettez la preuve — l’admin décide du badge final.</p>
+                  </>
+                )}
+                {visit.state === 'en_cours' && !visit.mine && (
+                  <p className="sub">Dossier pris par un autre membre de l’équipe.</p>
+                )}
+                {(visit.state === 'transmis' || visit.state === 'reprogramme') && (
+                  <p className="sub">{visit.state === 'transmis' ? 'Dossier transmis — la décision revient à l’équipe de revue.' : 'Dossier reprogrammé — il reviendra en tournée.'}</p>
+                )}
+                <button className="btn ghost sm" style={{ marginTop: 10 }} onClick={() => setSelVisitId(null)}>Retour à la tournée</button>
+              </>
+            );
+          })()}
         </section>
       )}
       {sheet === 'recovery' && (

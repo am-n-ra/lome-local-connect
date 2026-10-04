@@ -6398,6 +6398,310 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       if (!row) throw new FieldPilotPolicyError('This acquisition objective cannot be updated right now.');
       return { id: String(row.id), state: String(row.state) };
     },
+
+    // TF-6 — mettre un dossier en tournée (admin). La décision badge reste aux
+    // files existantes (D-OPS-3) : la visite ne fait que constater. Un dossier =
+    // une tournée active (garde DB + pré-contrôle honnête).
+    async createFieldVisit(input: { authUserId: string; subjectType: string; subjectId: string; zone?: string | null; correlationId: string }): Promise<{ id: string; subjectType: string; subjectId: string; zone: string | null; state: string }> {
+      const subjectType = input.subjectType;
+      if (subjectType !== 'verification' && subjectType !== 'claim' && subjectType !== 'offer_report') {
+        throw new FieldPilotPolicyError('SUBJECT_REQUIRED');
+      }
+      const zone = (input.zone ?? '').trim() === '' ? null : (input.zone ?? '').trim();
+      if (zone !== null && zone.length > 120) throw new FieldPilotPolicyError('ZONE_TOO_LONG');
+      const rows = await retryDatabase(() => sql`
+        with admin as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role = 'admin' and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), target as (
+          select f.id, f.zone from v2_facilities f
+          where f.id = ${input.subjectId}::uuid and ${subjectType} in ('verification', 'claim')
+          union
+          select p.id, pf.zone from v2_products p
+          left join v2_facilities pf on pf.id = p.facility_id
+          where p.id = ${input.subjectId}::uuid and p.publication_state = 'published' and ${subjectType} = 'offer_report'
+          limit 1
+        ), existing as (
+          select v.id from v2_field_visits v
+          where v.subject_type = ${subjectType} and v.subject_id = ${input.subjectId}::uuid
+            and v.state in ('a_visiter', 'en_cours')
+          limit 1
+        ), inserted as (
+          insert into v2_field_visits (subject_type, subject_id, zone)
+          select ${subjectType}, target.id, coalesce(${zone}, target.zone)
+          from admin cross join target
+          where not exists (select 1 from existing)
+          returning id, subject_type, subject_id, zone, state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select admin.id, 'field_visit_created', 'field_visit', inserted.id::text, ${input.correlationId}, ${subjectType}
+          from inserted cross join admin
+          returning entity_id
+        )
+        select inserted.id, inserted.subject_type, inserted.subject_id, inserted.zone, inserted.state from inserted
+        where exists (select 1 from audit where audit.entity_id = inserted.id::text)
+      `);
+      const visitRow = (rows as Record<string, unknown>[])[0];
+      if (!visitRow) throw new FieldPilotPolicyError('This dossier cannot join the tour right now.');
+      return {
+        id: String(visitRow.id),
+        subjectType: String(visitRow.subject_type),
+        subjectId: String(visitRow.subject_id),
+        zone: visitRow.zone === null || visitRow.zone === undefined ? null : String(visitRow.zone),
+        state: String(visitRow.state),
+      };
+    },
+
+    // TF-6 — tournée du jour (maquette `op-queue`). Même garde et même scope
+    // zone que les files (P2-C) : sans équipe zonée, tout est visible ; sinon,
+    // la zone de mission filtre. Les non-assignées portent `mine: false`.
+    async listVisitQueue(input: { authUserId: string }): Promise<{ authorized: boolean; visits: Array<{ id: string; subjectType: string; subjectId: string; subjectName: string; zone: string | null; state: string; mine: boolean; latitude: number | null; longitude: number | null; createdAt: string }> }> {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!(authorizationRows as Record<string, unknown>[])[0]) return { authorized: false, visits: [] };
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), scoped as (
+          select 1 from v2_team_members tmz
+          join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
+          join staff on staff.id = tmz.account_id
+          where tmz.status = 'active'
+          limit 1
+        )
+        select v.id, v.subject_type, v.subject_id, v.zone, v.state, v.created_at,
+          coalesce(f.name, p.name, '') as subject_name,
+          (v.assignee_account_id = staff.id) as mine,
+          coalesce(f.latitude, pf.latitude) as latitude,
+          coalesce(f.longitude, pf.longitude) as longitude
+        from v2_field_visits v
+        cross join staff
+        left join v2_facilities f on f.id = v.subject_id and v.subject_type in ('verification', 'claim')
+        left join v2_products p on p.id = v.subject_id and v.subject_type = 'offer_report'
+        left join v2_facilities pf on pf.id = p.facility_id
+        where (
+          not exists (select 1 from scoped)
+          or exists (
+            select 1 from v2_team_members tm
+            join v2_teams t on t.id = tm.team_id and t.zone is not null and t.zone = v.zone
+            join staff s2 on s2.id = tm.account_id
+            where tm.status = 'active'
+          )
+        )
+        order by case v.state when 'a_visiter' then 0 when 'en_cours' then 1 when 'reprogramme' then 2 else 3 end,
+          v.created_at desc, v.id
+        limit 100
+      `);
+      return {
+        authorized: true,
+        visits: (rows as Record<string, unknown>[]).map((row) => ({
+          id: String(row.id),
+          subjectType: String(row.subject_type),
+          subjectId: String(row.subject_id),
+          subjectName: String(row.subject_name ?? ''),
+          zone: row.zone === null || row.zone === undefined ? null : String(row.zone),
+          state: String(row.state),
+          mine: Boolean(row.mine),
+          latitude: row.latitude === null || row.latitude === undefined ? null : Number(row.latitude),
+          longitude: row.longitude === null || row.longitude === undefined ? null : Number(row.longitude),
+          createdAt: new Date(String(row.created_at)).toISOString(),
+        })),
+      };
+    },
+
+    // TF-6 — prise d'un dossier (D-OPS-1 : file premier-preneur). Re-prise par le
+    // même opérateur = no-op honnête (`alreadyMine`), jamais une erreur.
+    async claimVisit(input: { authUserId: string; visitId: string; correlationId: string }): Promise<{ id: string; state: string; alreadyMine: boolean }> {
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_field_visits v
+          set state = 'en_cours', assignee_account_id = staff.id
+          from staff
+          where v.id = ${input.visitId}::uuid and v.state = 'a_visiter'
+          returning v.id, v.state
+        ), mine as (
+          select v.id, v.state
+          from v2_field_visits v
+          join staff on staff.id = v.assignee_account_id
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+            and not exists (select 1 from updated)
+          limit 1
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_claimed', 'field_visit', updated.id::text, ${input.correlationId}, 'prise de dossier'
+          from updated cross join staff
+          returning entity_id
+        )
+        select id, state, false as already_mine from updated
+        union all
+        select id, state, true as already_mine from mine
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This dossier cannot be taken right now.');
+      return { id: String(row.id), state: String(row.state), alreadyMine: Boolean(row.already_mine) };
+    },
+
+    // TF-6 — transmettre le constat (maquette `op-report`). Preuves BLOQUANTES
+    // (D-OPS-2) : photos scope `visit` + position relevée, contrôlées ici, pas
+    // seulement côté client. Le constaté ne touche aucun badge (D-OPS-3).
+    async submitVisitReport(input: { authUserId: string; visitId: string; lieuOk: boolean; activite: string; contactOk: boolean; reserve?: string | null; photoRefs: string[]; latitude: number; longitude: number; correlationId: string }): Promise<{ visitId: string; state: string }> {
+      if (typeof input.lieuOk !== 'boolean' || typeof input.contactOk !== 'boolean') {
+        throw new FieldPilotPolicyError('FINDINGS_REQUIRED');
+      }
+      const activite = input.activite.trim();
+      if (activite.length < 1 || activite.length > 500) throw new FieldPilotPolicyError('ACTIVITE_REQUIRED');
+      const reserve = (input.reserve ?? '').trim();
+      if (reserve.length > 500) throw new FieldPilotPolicyError('RESERVE_TOO_LONG');
+      const prefix = `visits/${input.visitId}/photo/`;
+      const photoRefs = Array.isArray(input.photoRefs) ? input.photoRefs : [];
+      if (photoRefs.length < 1 || photoRefs.length > 4) throw new FieldPilotPolicyError('PHOTOS_REQUIRED');
+      for (const ref of photoRefs) {
+        if (typeof ref !== 'string' || !ref.startsWith(prefix)) throw new FieldPilotPolicyError('PHOTO_NOT_BOUND');
+        const tail = ref.slice(prefix.length);
+        if (!tail || tail.includes('/') || tail.includes('..') || tail.includes('\\') || /\s/.test(tail) || tail.length > 200) {
+          throw new FieldPilotPolicyError('PHOTO_NOT_BOUND');
+        }
+      }
+      if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
+        throw new FieldPilotPolicyError('POSITION_REQUIRED');
+      }
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), mine as (
+          select v.id
+          from v2_field_visits v
+          join staff on staff.id = v.assignee_account_id
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+          limit 1
+        ), inserted as (
+          insert into v2_visit_reports (visit_id, lieu_ok, activite, contact_ok, reserve, photo_refs, latitude, longitude, reporter_account_id)
+          select mine.id, ${input.lieuOk}, ${activite}, ${input.contactOk}, ${reserve === '' ? null : reserve}, ${JSON.stringify(photoRefs)}::jsonb, ${input.latitude}, ${input.longitude}, staff.id
+          from mine cross join staff
+          returning visit_id
+        ), updated as (
+          update v2_field_visits v
+          set state = 'transmis', transmitted_at = now()
+          from inserted
+          where v.id = inserted.visit_id
+          returning v.id, v.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_transmitted', 'field_visit', updated.id::text, ${input.correlationId}, ${activite}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This constat cannot be transmitted right now.');
+      return { visitId: String(row.id), state: String(row.state) };
+    },
+
+    // TF-6 — reprogrammer : sortie honnête sans preuves (D-OPS-2), motif obligatoire.
+    async reprogramVisit(input: { authUserId: string; visitId: string; reason: string; correlationId: string }): Promise<{ id: string; state: string }> {
+      const reason = input.reason.trim();
+      if (reason.length < 3 || reason.length > 1000) throw new FieldPilotPolicyError('REASON_REQUIRED');
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), updated as (
+          update v2_field_visits v
+          set state = 'reprogramme'
+          from staff
+          where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+            and v.assignee_account_id = staff.id
+          returning v.id, v.state
+        ), audit as (
+          insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason)
+          select staff.id, 'field_visit_reprogrammed', 'field_visit', updated.id::text, ${input.correlationId}, ${reason}
+          from updated cross join staff
+          returning entity_id
+        )
+        select updated.id, updated.state from updated
+        where exists (select 1 from audit where audit.entity_id = updated.id::text)
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new FieldPilotPolicyError('This visit cannot be reprogrammed right now.');
+      return { id: String(row.id), state: String(row.state) };
+    },
+
+    // TF-6 / D-OPS-6 — l'upload photo visite est réservé au preneur (ou
+    // reviewer/admin) d'une visite en cours. Miroir de `canUploadClaimEvidence`.
+    async canUploadVisitEvidence(input: { authUserId: string; visitId: string }): Promise<boolean> {
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select 1 as allowed
+        from v2_field_visits v
+        join staff on 1 = 1
+        where v.id = ${input.visitId}::uuid and v.state = 'en_cours'
+          and (
+            v.assignee_account_id = staff.id
+            or exists (
+              select 1 from v2_account_roles ar
+              where ar.account_id = staff.id and ar.role in ('reviewer', 'admin') and ar.status = 'active'
+            )
+          )
+        limit 1
+      `);
+      return Boolean((rows as Record<string, unknown>[])[0]);
+    },
+
+    // TF-6 — lecture staff d'une preuve de visite (privée, no-store côté HTTP).
+    async getVisitEvidenceForViewer(input: { authUserId: string; visitId: string; index: number }): Promise<{ objectKey: string } | null> {
+      if (!Number.isInteger(input.index) || input.index < 0 || input.index > 11) return null;
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          join v2_account_roles ar on ar.account_id = a.id and ar.role in ('operator', 'reviewer', 'admin') and ar.status = 'active'
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        )
+        select r.photo_refs->>${input.index} as object_key
+        from v2_visit_reports r
+        join v2_field_visits v on v.id = r.visit_id
+        cross join staff
+        where v.id = ${input.visitId}::uuid
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      const key = row === undefined ? null : (row.object_key as unknown);
+      if (typeof key !== 'string' || key === '') return null;
+      return { objectKey: key };
+    },
     async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
       const rows = await retryDatabase(() => sql`
         select
