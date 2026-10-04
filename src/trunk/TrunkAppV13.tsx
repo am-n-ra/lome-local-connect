@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
-  Compass, Home, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
+  Compass, History, Home, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
@@ -17,7 +17,7 @@ import {
   searchPublicEntities, getPublicEntity,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
-import { cartProductsFor, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
+import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
   FacilityDetail, MyTeamInvite, NotificationSummary, OpenTransactionSummary, PublicEntity, PublicEntityDetail, PublicFacility, PublicProduct, SavedSearch, SearchOptions, SellerAvailabilityRequest, SellerCatalogueResult, WalletOverviewResult, WalletRechargeResult,
@@ -28,6 +28,7 @@ import { viewportMovedSignificantly, isUsableViewportBounds } from './viewport-b
 import { resolveTilePlace, type ResolvedTilePlace, type TileTapPoint } from './tile-place-resolve';
 import { TransactionReceiptV13 } from './TransactionReceiptV13';
 import { NotificationCenterV13 } from './NotificationCenterV13';
+import { RecoveryCartRow, RecoverySearchRow, RecoveryTxnsRow } from './RecoveryV13';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import { useViewportInsets } from '../hooks/use-viewport-insets';
 import { TrunkMap } from './TrunkMap';
@@ -50,7 +51,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -238,6 +239,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [viewportLoading, setViewportLoading] = useState(false);
   const lastLoadedBoundsRef = useRef<[number, number, number, number] | null>(null);
   const viewportTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // TF-8 recovery : dernière recherche commise (pour « Revenir à ma recherche »).
+  const lastSearchRef = useRef<string>('');
   const [simMode, setSimMode] = useState<'normal' | 'vide' | 'lent' | 'erreur'>('normal');
 
   const bulkCost = useMemo(() => {
@@ -321,7 +324,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'seller', 'seller-reply', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -474,6 +477,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const runSearch = useCallback(async (raw: string, opts?: SearchOptions) => {
     const trimmed = raw.trim();
     if (!trimmed) return;
+    lastSearchRef.current = trimmed;
     setSearchedTerm(trimmed);
     setResultsLoading(true);
     setSheet('none');
@@ -775,6 +779,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
     setPendingResumeTxnId(transaction.transactionId);
     setSheet('flow');
+  }, [requireAuth]);
+
+  // TF-8 recovery (maquette `recovery`) : après une panne, rien n'est perdu —
+  // panier (session), dernière recherche commise, transactions reprenables.
+  // Lecture seule d'états existants : aucune persistance neuve, aucun appel neuf
+  // sauf le rafraîchissement des transactions (même appel que l'accueil).
+  const openRecovery = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    setSheet('recovery');
+    setOpenTxnState('loading');
+    try {
+      const res = await listOpenTransactions({ token });
+      if (res.ok && res.data) { setOpenTxn(res.data.transactions ?? []); setOpenTxnState('idle'); }
+      else setOpenTxnState('error');
+    } catch {
+      setOpenTxnState('error');
+    }
   }, [requireAuth]);
 
   const openNotifs = useCallback(async () => {
@@ -1397,6 +1419,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'tile-place') { setSheet('none'); return; }
       if (sheet === 'receipt') { setSheet('home'); return; }
       if (sheet === 'notifs') { setSheet('menu'); return; }
+      if (sheet === 'recovery') { setSheet('menu'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
@@ -2147,6 +2170,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><RefreshCw size={15} /></span><span><b>Transactions en cours</b><small>reprendre où vous en êtes</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openRecovery()}><span className="mi"><History size={15} /></span><span><b>Reprendre où j'en étais</b><small>panier, recherche, transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>vos établissements</small></span></button>
@@ -2628,6 +2652,32 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       )}
       {sheet === 'notifs' && (
         <NotificationCenterV13 notifications={notifs} state={notifsState} error={notifsError} onOpen={(notification, target) => void openNotification(notification, target)} onClose={() => setSheet('menu')} />
+      )}
+      {sheet === 'recovery' && (
+        <section className="sheet h-mid" data-sheet="recovery" role="region" aria-label="Reprendre">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Reprise</div><h1>Reprendre où j'en étais</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          <p className="sub">Après une panne : rien n’est perdu — panier, recherche et transaction se reprennent.</p>
+          <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
+          <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
+          <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
+        </section>
+      )}
+      {sheet === 'recovery' && (
+        <section className="sheet h-mid" data-sheet="recovery" role="region" aria-label="Reprendre">
+          <div className="handle" />
+          <div className="sheet-head">
+            <div><div className="eyebrow">Reprise</div><h1>Reprendre où j'en étais</h1></div>
+            <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
+          </div>
+          <p className="sub">Après une panne : rien n’est perdu — panier, recherche et transaction se reprennent.</p>
+          <RecoveryCartRow carts={carts} facilities={facilities} onOpenFacility={(facility) => void handlePinSelect(facility)} />
+          <RecoverySearchRow lastQuery={lastSearchRef.current} onResume={(query) => { setQuery(query); void runSearch(query, currentSearchOptions()); }} />
+          <RecoveryTxnsRow transactions={openTxn} state={openTxnState} onResume={(transaction) => void resumeTransaction(transaction)} />
+        </section>
       )}
       {sheet === 'claim' && claimResult && (
         <section className="sheet h-mid" data-sheet="claim" role="region" aria-label="Revendiquer">
