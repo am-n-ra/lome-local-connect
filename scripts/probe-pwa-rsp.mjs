@@ -57,15 +57,19 @@ const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN |
   await context.close();
 }
 
-// T2 — offline total : pas de page blanche.
+// T2 — offline total : visite en ligne (installe SW + peuple le cache assets),
+// puis coupure + reload → offline.html honnête, jamais de page blanche.
 {
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, offline: true });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
-  await page.goto(PROD, { waitUntil: 'domcontentloaded' }).catch(() => {});
-  await page.waitForTimeout(3000);
-  const text = await page.evaluate(() => (document.body?.innerText || '').trim().length);
-  const title = await page.title().catch(() => '');
-  verdict('PWA-2-offline', text > 50, `innerText=${text} chars, title="${title}"`);
+  await page.goto(PROD, { waitUntil: 'networkidle' }).catch(() => {});
+  await page.waitForTimeout(5000);
+  await context.setOffline(true);
+  await page.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForTimeout(2000);
+  const text = await page.evaluate(() => (document.body?.innerText || '').trim()).catch(() => '');
+  const honest = text.length > 50 && /connexion|réseau|reviendra|offline/i.test(text);
+  verdict('PWA-2-offline', honest, `innerText=${text.length} chars, title="${await page.title().catch(() => '')}"`);
   await context.close();
 }
 
