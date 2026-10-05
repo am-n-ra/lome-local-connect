@@ -18,6 +18,7 @@ import {
   listVisitQueue, claimVisit, submitVisitReport, reprogramVisit, uploadVisitEvidence,
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
+import { Skeleton, SkeletonDetail } from './Skeleton';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
@@ -1928,7 +1929,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <span className="status gray">{entityResults.length}</span>
               </div>
               <p className="lead" style={{ marginTop: 4 }}>Le niveau <b>entité</b> cherche un <b>offreur</b> — les contraintes d’offre (distance, budget, quantité) ne s’appliquent pas ici.</p>
-              {entityLoading && <p className="sub" role="status">Recherche d’entités…</p>}
+              {entityLoading && <Skeleton variant="pitem" count={3} />}
               {!entityLoading && entityResults.length === 0 && (
                 <div className="cardbox">
                   <p className="sub">Aucune entité ne correspond à ce nom.</p>
@@ -1956,7 +1957,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Résultats · correspondant à vos contraintes</div><h1>Facilités proches</h1></div>
             <span className="status gray">{results.length}</span>
           </div>
-          {resultsLoading && <p className="sub" role="status">Recherche en cours dans votre zone…</p>}
+          {resultsLoading && <Skeleton variant="hcard" count={3} />}
           {error && !resultsLoading && <p className="sub" role="alert">{error}</p>}
           {!resultsLoading && !error && results.length === 0 && (
             <div className="cardbox">
@@ -2033,7 +2034,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </span>
             </div>
           )}
-          {bulkLoading && <p className="sub" role="status">Chargement des facilités…</p>}
+          {bulkLoading && <Skeleton variant="pitem" count={4} />}
           {bulkErrors && !bulkLoading && !bulkSending && !bulkResults && <p className="sub" role="alert">{bulkErrors}</p>}
           {!bulkLoading && !bulkResults && (
             <div className="plist" id="bulkList">
@@ -2154,7 +2155,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </button>
             )}
           </div>
-          {facilityLoading && <p className="sub">Chargement…</p>}
+          {facilityLoading && <SkeletonDetail rows={4} />}
           {!facilityLoading && selectedFacility && (
             <div>
               <div className={`fhero${selectedFacility.trust === 'unclaimed' ? ' unclaimed' : ''}`}><span className="tag">{selectedFacility.category}</span></div>
@@ -2419,7 +2420,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </div>
           )}
           {myTeamInvitesState === 'loading' && groupInvites.length === 0 && (
-            <p className="tiny muted" style={{ marginTop: 8 }}>Vérification des invitations d’équipe…</p>
+            <Skeleton variant="kv" count={2} />
           )}
           <div className="cardbox" style={{ marginTop: 8 }}>
             <div className="kv"><span>Wallet</span><b>{walletState === 'idle' && wallet ? formatMoney(wallet.balanceMinor ?? 0, wallet.currency ?? userCurrency.currency) : '—'}</b></div>
@@ -2439,7 +2440,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Espace Buyer</div><h1>Vos demandes & transactions.</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          {buyerRequestsState === 'loading' && <p className="sub" role="status">Chargement de vos demandes…</p>}
+          {buyerRequestsState === 'loading' && <Skeleton variant="kv" count={3} />}
           {buyerRequestsState === 'error' && (
             <div role="alert">
               <p className="sub">{buyerRequestsError}</p>
@@ -2478,7 +2479,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             );
           })}
           <div className="eyebrow" style={{ marginTop: 14 }}>Transactions en cours</div>
-          {openTxnState === 'loading' && <p className="tiny muted" style={{ marginTop: 6 }}>Chargement de vos transactions…</p>}
+          {openTxnState === 'loading' && <Skeleton variant="kv" count={2} />}
           {openTxnState === 'error' && (
             <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Vos transactions ne peuvent pas être chargées pour le moment.</p></div>
           )}
@@ -2495,7 +2496,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             </button>
           ))}
           <div className="eyebrow" style={{ marginTop: 14 }}>Terminées</div>
-          {closedTxnState === 'loading' && <p className="tiny muted" style={{ marginTop: 6 }}>Chargement de votre historique…</p>}
+          {closedTxnState === 'loading' && <Skeleton variant="kv" count={3} />}
           {closedTxnState === 'error' && (
             <div role="alert"><p className="tiny muted" style={{ marginTop: 6 }}>Votre historique ne peut pas être chargé pour le moment.</p></div>
           )}
@@ -2524,7 +2525,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Omni Wallet</div><h1>Votre pouvoir de recherche.</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          {walletState === 'loading' && <p className="sub" role="status">Vérification du Wallet…</p>}
+          {walletState === 'loading' && <Skeleton variant="kv" count={3} />}
           {walletState === 'error' && (
             <div role="alert">
               <p className="sub">{walletError}</p>
@@ -2591,7 +2592,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               )}
               <div className="cardbox">
                 <div className="eyebrow">Buyer Pro</div>
-                {buyerProState === 'loading' && <p className="sub" role="status">Vérification de votre plan…</p>}
+                {buyerProState === 'loading' && <Skeleton variant="kv" count={2} />}
                 {buyerProState === 'error' && <p className="sub" role="alert">{buyerProError}</p>}
                 {buyerProStatus?.plan === 'pro_active' && (
                   <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
@@ -2621,7 +2622,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {bulkCreditSummary && (
                   <p className="sub" style={{ marginTop: 4 }}>Solde actuel : <b>{bulkCreditSummary.creditsRemaining} crédit(s)</b> {bulkCreditSummary.plan === 'pro' ? '· plan Pro' : '· plan Free (3/mois)'}</p>
                 )}
-                {bulkPacksState === 'loading' && <p className="sub" role="status">Chargement des packs…</p>}
+                {bulkPacksState === 'loading' && <Skeleton variant="kv" count={3} />}
                 {bulkPacksState === 'error' && <p className="sub" role="alert">{bulkPacksError}</p>}
                 {bulkPacksState === 'idle' && bulkPacks.length > 0 && (
                   <div style={{ marginTop: 6, display: 'grid', gap: 6 }}>
@@ -2670,7 +2671,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <div><b>Buyer Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
                   <span className="status ink">{planPriceLabel('buyerPro', userCurrency)}</span>
                 </div>
-                {buyerProState === 'loading' && <p className="sub" role="status" style={{ marginTop: 8 }}>Vérification de votre plan…</p>}
+                {buyerProState === 'loading' && <Skeleton variant="kv" count={2} />}
                 {buyerProState === 'error' && <p className="sub" role="alert" style={{ marginTop: 8 }}>{buyerProError}</p>}
                 {buyerProStatus?.plan === 'pro_active' && (
                   <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
@@ -2729,7 +2730,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Recherches enregistrées</div><h1>Vos alertes</h1></div>
             <span className="status gray">{savedSearches.length}</span>
           </div>
-          {savedState === 'loading' && <p className="sub" role="status">Chargement de vos recherches…</p>}
+          {savedState === 'loading' && <Skeleton variant="kv" count={3} />}
           {savedState === 'error' && (
             <div role="alert">
               <p className="sub">{savedError}</p>
@@ -2766,7 +2767,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Favoris</div><h1>Vos établissements</h1></div>
             <span className="status gray">{favorites.length}</span>
           </div>
-          {favoritesState === 'loading' && <p className="sub" role="status">Chargement de vos favoris…</p>}
+          {favoritesState === 'loading' && <Skeleton variant="pitem" count={3} />}
           {favoritesState === 'error' && (
             <div role="alert">
               <p className="sub">{favoritesError}</p>
@@ -2801,7 +2802,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Lieu sur la carte</div><h1>{tileName.trim() || tileTap.hintName || 'Lieu sans nom'}</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('none')} aria-label="Fermer"><X size={15} /></button>
           </div>
-          {tileResolveState === 'loading' && <p className="sub" role="status">Repérage du lieu…</p>}
+          {tileResolveState === 'loading' && <SkeletonDetail rows={3} />}
           {tileResolveState === 'error' && (
             <div className="cardbox" role="alert">
               <p className="sub">{tileResolveError}</p>
@@ -2896,7 +2897,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Terrain</div><h1>Ma tournée du jour</h1></div>
             <button type="button" className="sheet-close" onClick={() => { setSelVisitId(null); setSheet('menu'); }} aria-label="Fermer"><X size={15} /></button>
           </div>
-          {tourState === 'loading' && <p className="sub" role="status">Chargement de la tournée…</p>}
+          {tourState === 'loading' && <Skeleton variant="pitem" count={4} />}
           {tourState === 'error' && (
             <div role="alert">
               <p className="sub">{tourError}</p>

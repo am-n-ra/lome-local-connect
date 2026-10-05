@@ -4,6 +4,7 @@ import { getAuthToken } from '../auth';
 import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
+import { Skeleton, SkeletonDetail } from './Skeleton';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 import { formatMoney, formatUsdSticker } from '../domain/currency';
 import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
@@ -382,11 +383,11 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
       </div>
       {error && <p className="sub" role="alert">{error}</p>}
       {toast && <p className="sub" role="status">{toast}</p>}
-      {busy && !hasData && <p className="sub">…</p>}
+      {busy && !hasData && <SkeletonDetail rows={4} />}
       {!hasData && !busy && (
         <div className="cardbox" style={{ marginTop: 9 }}>
           <div className="eyebrow">Espace vendeur</div>
-          <p className="sub">Chargement de votre espace…</p>
+          <Skeleton variant="kv" count={2} />
         </div>
       )}
       {hasData && !hasFacility && (
@@ -658,7 +659,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => void loadAnalytics()}>Actualiser</button>
           </div>
           {!analytics ? (
-            <p className="tiny muted" style={{ marginTop: 6 }}>Chargement des indicateurs…</p>
+            <div style={{ marginTop: 9 }}><Skeleton variant="stat" count={2} /></div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 9 }}>
               <div>

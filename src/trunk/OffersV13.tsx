@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getSellerCatalogue } from './api';
 import { currencyFor, formatMoney } from '../domain/currency';
+import { Skeleton } from './Skeleton';
 import type { SellerCatalogueProduct } from './types';
 
 type OffersV13Props = { onClose: () => void };
@@ -38,7 +39,7 @@ export function OffersV13({ onClose }: OffersV13Props) {
         <div><div className="eyebrow">Offres Omni</div><h1>Prix & remise</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
       </div>
-      {loading && <p className="sub">Chargement…</p>}
+      {loading && <Skeleton variant="pitem" count={3} />}
       {!loading && !first && <p className="sub">Aucun produit à configurer.</p>}
       {first && (
         <>

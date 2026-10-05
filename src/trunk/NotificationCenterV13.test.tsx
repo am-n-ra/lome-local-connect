@@ -62,7 +62,8 @@ describe('notification centre contract (MV1 X03)', () => {
     await act(async () => {
       root.render(<NotificationCenterV13 notifications={[]} state="loading" error="" onOpen={() => undefined} onClose={() => undefined} />);
     });
-    expect(container.textContent).toContain('Chargement de votre activité');
+    // Le chargement montre la FORME du contenu (squelette), pas un mot.
+    expect(container.querySelector('.skeleton')).not.toBeNull();
     await act(async () => {
       root.render(<NotificationCenterV13 notifications={[]} state="error" error="Panne." onOpen={() => undefined} onClose={() => undefined} />);
     });

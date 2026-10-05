@@ -989,3 +989,15 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 
 
 
+
+
+## NW-PROD-OMNI-SKELETON-01 (2026-10-04) — squelettes de chargement partout où c'est du contenu
+- **Demande fondateur** : « introduisons des loading skeleton partout où nécessaire dans omni ». Mesure de départ : **~26 sites de chargement, tous en texte brut** (« Chargement… »), **zéro squelette**, aucun motif squelette dans la maquette Species ni dans `design.md` → **motif neuf** héritant de l'ADN verrouillé (monochrome, reduced-motion-aware).
+- **Distinction fondatrice (SK-3)** : un **contenu** qui charge montre une **forme** ; une **action** qui s'exécute reste un **libellé** (« Vérification… » d'un submit, `.map-status` `aria-live`, fallback `Suspense`). Convertir les boutons aurait menti sur ce qui se passe.
+- **Livré** : `src/trunk/Skeleton.tsx` (`line/block/thumb/hcard/pitem/kv/stat`, `SkeletonDetail`) + CSS `.skeleton`/`.sk-*`/`.sk-shimmer` ; **17 sites convertis** (TrunkApp ×13 : bulk, fiche, demandes, txn en cours/terminées, wallet, Buyer Pro ×2, packs, recherches, favoris, entités, lieu, tournée ; + Admin, Company, NotificationCenter, Offers, Stock, Seller ×2, Recovery).
+- **ADN respecté** : `background:var(--panel)`, **jamais `--accent`** (réservé à la confiance) ; `role="status"`+`aria-busy="true"`+`aria-label="Chargement"` conservés ; shimmer **coupé** sous `prefers-reduced-motion` (vérifié `animation:none;display:none`).
+- **Garde SK-4** `skeleton-coverage.test.ts` : échoue si un `<p>` réintroduit un libellé de chargement sur une surface de contenu ; **auto-falsifié** dans le test + **falsifié** en réintroduisant le motif (FAIL → restauré PASS).
+- **Preuve navigateur (mesurée, preview 390)** : recherche **entité** avec API throttlée → `.skeleton.sk-shimmer.sk-pitem` **rendu**, 0 `pageerror`. Le squelette **résultats** (offre) est un **filet de sécurité** : `runSearch` n'ouvre la feuille qu'**après** chargement (révélation fondateur) → non observable en flux normal — dit, pas caché.
+- **Leçon** : *une surface de chargement a deux natures — contenu (forme) et action (libellé) ; convertir la mauvaise crée un mensonge, pas un progrès.* Et : *un squelette doit reprendre la **forme réelle** (`.hcard`/`.pitem`/`.kv`) — sinon il décore au lieu d'informer.*
+- **État** : **773/773**, `tsc` 0, 6 gardes PASS ; build `index-BwIkS1e-.js` ; **non poussé** (ordre séparé requis). Plan `docs/nature-way/intra-skill-plan-NW-PROD-OMNI-SKELETON-01.md`, retour `docs/founder-hq/handoff-receipt-HO-OMNI-30.md`.
+

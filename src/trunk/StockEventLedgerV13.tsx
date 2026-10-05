@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getProductStockEvents } from './api';
+import { Skeleton } from './Skeleton';
 import type { ProductStockEvent } from './types';
 
 type StockEventLedgerV13Props = { productId: string; onClose: () => void };
@@ -35,7 +36,7 @@ export function StockEventLedgerV13({ productId, onClose }: StockEventLedgerV13P
         <span className="status gray">Read-only</span>
       </div>
       <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginBottom: 8 }} onClick={onClose}><ArrowLeft size={15} /> Retour</button>
-      {loading && <p className="sub">Chargement…</p>}
+      {loading && <Skeleton variant="kv" count={3} />}
       {!loading && events.length === 0 && <p className="sub">Aucun événement de stock pour ce produit.</p>}
       <div className="cardbox">
         {events.map((event) => (

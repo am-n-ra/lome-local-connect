@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, UserX, RefreshCw, CheckCircle2, Archive } from 'lucide-react';
 import { getAuthToken } from '../auth';
 import { getAdminConsole, getReviewQueue, getDemandSignals, listOfferReports, decideOfferReport, listAcquisitionObjectives, createAcquisitionObjective, setAcquisitionObjectiveState, createFieldVisit, getRoleManagementAccounts, listTeams, createTeam, inviteTeamMember, revokeTeamInvite, setTeamMemberStatus, listAdminAuditEvents, reconcileRecharges, reviewFacilityClaim, setFacilityOperationalState, setManagedStaffRole, getAdminSellerActivationQueue, adminActivateSellerAccount, assignFacilityZone } from './api';
+import { Skeleton } from './Skeleton';
 import type { AdminConsoleResult, DemandSignal, OfferReportOutcome, OfferReportQueueItem, AcquisitionObjective, ReviewOutcome, ReviewQueueItem, RoleManagementAccount, Team, TeamInvite, TeamMember } from './types';
 
 type AdminV13Props = {
@@ -422,7 +423,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
         <div><div className="eyebrow">Espace équipe</div><h1>Revue Omni</h1></div>
         <span className="status ink">Admin</span>
       </div>
-      {state === 'loading' && <p className="sub" role="status">Chargement du centre…</p>}
+      {state === 'loading' && <Skeleton variant="pitem" count={4} />}
       {state === 'unauthorized' && <p className="sub" role="alert">{error || 'Accès équipe non ouvert pour cette session.'}</p>}
       {state === 'error' && (
         <div role="alert">

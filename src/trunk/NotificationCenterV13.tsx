@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { relativeAge } from './transaction-time';
 import { notificationLabel, notificationTarget, type NotificationTarget } from './notification-center';
+import { Skeleton } from './Skeleton';
 import type { NotificationSummary } from './types';
 
 /** MV1 X03 — le centre liste des ÉVÉNEMENTS (pas des messages) : chacun porte sa cible.
@@ -21,7 +22,7 @@ export function NotificationCenterV13({ notifications, state, error, onOpen, onC
         <div><div className="eyebrow">Activité</div><h1>Notifications</h1></div>
         <button type="button" className="sheet-close" onClick={onClose} aria-label="Fermer"><X size={15} /></button>
       </div>
-      {state === 'loading' && <p className="sub" role="status">Chargement de votre activité…</p>}
+      {state === 'loading' && <Skeleton variant="pitem" count={3} />}
       {state === 'error' && <p className="sub" role="alert">{error || 'Vos notifications ne peuvent pas être chargées pour le moment.'}</p>}
       {state === 'idle' && notifications.length === 0 && (
         <p className="sub">Aucune activité pour le moment. Les réponses, vérifications et tours de transaction apparaîtront ici.</p>

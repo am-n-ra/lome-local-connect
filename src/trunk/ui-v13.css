@@ -279,3 +279,21 @@ body{background:#dadad7;padding:0}
 .trust.muted{font-style:italic;color:var(--ink-soft);opacity:.75}
 .trust.ok{color:var(--accent)}
 .trust .miss{color:var(--warn)}
+
+/* Squelettes de chargement — la forme du contenu, pas un mot.
+   Monochrome (--panel), jamais l'accent #2E8B6F (réservé à la confiance).
+   Le shimmer s'éteint sous prefers-reduced-motion (ADN comportemental obligatoire). */
+.skeleton{background:var(--panel);border-radius:6px;overflow:hidden;position:relative}
+.skeleton.sk-line{height:9px}
+.skeleton.sk-block{height:64px;border-radius:11px}
+.skeleton.sk-thumb{width:34px;height:28px;border-radius:7px}
+.skeleton.sk-hcard{flex:0 0 128px;height:96px;border-radius:13px}
+.skeleton.sk-pitem{height:42px;border-radius:11px}
+.skeleton.sk-kv{height:8px;border-radius:4px;margin:6px 0}
+.skeleton.sk-stat{height:54px;border-radius:13px}
+.sk-stack{display:flex;flex-direction:column;gap:8px}
+.sk-rail{display:flex;gap:9px;overflow:hidden}
+.sk-shimmer::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(15,15,15,.045),transparent);transform:translateX(-100%);animation:skShimmer 1.3s var(--ease) infinite}
+@keyframes skShimmer{100%{transform:translateX(100%)}}
+@media (prefers-reduced-motion: reduce){.sk-shimmer::after{animation:none;display:none}}
+

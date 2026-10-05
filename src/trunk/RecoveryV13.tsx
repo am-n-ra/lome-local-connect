@@ -1,4 +1,5 @@
 import { relativeAge, transactionStateLabel } from './transaction-time';
+import { Skeleton } from './Skeleton';
 import type { FacilityCarts } from './facility-cart';
 import { cartProductCount } from './facility-cart';
 import type { OpenTransactionSummary, PublicFacility } from './types';
@@ -65,7 +66,8 @@ export function RecoveryTxnsRow({ transactions, state, onResume }: {
 }) {
   return (
     <div className="cardbox" style={{ marginTop: 8 }}>
-      <div className="kv"><span>Transaction en cours</span><b>{state === 'loading' ? 'Chargement…' : transactions.length === 0 ? 'Aucune' : `${transactions.length} reprenable${transactions.length === 1 ? '' : 's'}`}</b></div>
+      {state === 'loading' && <div style={{ marginTop: 6 }}><Skeleton variant="kv" count={3} /></div>}
+      <div className="kv"><span>Transaction en cours</span><b>{transactions.length === 0 ? 'Aucune' : `${transactions.length} reprenable${transactions.length === 1 ? '' : 's'}`}</b></div>
       {state === 'error' && <p className="sub" role="alert">Reprise indisponible pour le moment.</p>}
       {transactions.map((transaction) => (
         <div className="kv" key={transaction.transactionId}>

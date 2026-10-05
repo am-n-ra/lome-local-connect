@@ -1,4 +1,5 @@
 import { ArrowLeft, Package, Boxes } from 'lucide-react';
+import { Skeleton } from './Skeleton';
 import type { SellerCatalogueProduct, SellerCatalogueResult } from './types';
 
 type CompanyV13Props = { onClose: () => void; onProducts: () => void; onOffers: () => void; catalogue: SellerCatalogueResult | null };
@@ -11,7 +12,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
         <div><div className="eyebrow">Compagnies</div><h1>Mes compagnies</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
       </div>
-      <p className="sub">Chargement des données compagnie…</p>
+      <Skeleton variant="pitem" count={3} />
     </section>
   );
 
