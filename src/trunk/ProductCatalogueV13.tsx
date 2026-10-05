@@ -96,7 +96,7 @@ export function ProductCatalogueV13({ onClose, onStockEvent }: ProductCatalogueV
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Produits</div><h1>Catalogue</h1></div>
-        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
+        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       <input
         ref={fileInput}

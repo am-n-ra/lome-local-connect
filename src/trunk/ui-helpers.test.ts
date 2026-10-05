@@ -20,8 +20,8 @@ describe('PendingAction resume contract', () => {
     const items = [
       { id: 'a', name: 'Riz', stockLoueOmni: 0 },
       { id: 'b', name: 'Huile', stockLoueOmni: 4 },
-      { id: 'c', name: 'Sel', stockLoueOmni:  ​2 },
-      { id: 'd', name: 'Sucre', stockLoueOmni:  ​0 },
+      { id: 'c', name: 'Sel', stockLoueOmni:  2 },
+      { id: 'd', name: 'Sucre', stockLoueOmni:  0 },
     ];
     const sorted = sortProductsStockFirst(items);
     expect(sorted.map((p) => p.id)).toEqual(['b', 'c', 'a', 'd']);
@@ -31,10 +31,10 @@ describe('PendingAction resume contract', () => {
 
   it('splits wallet buckets from ledger kinds', () => {
     const totals = walletBucketTotals([
-      { kind: 'recharge', amountMinor:  ​1000 },
-      { kind: 'bonus_grant', amountMinor:​  ​500 },
-      { kind: 'slot_spend', amountMinor:​  ​300 },
-      { kind: 'facility_pro_spend', amountMinor:​  ​200 },
+      { kind: 'recharge', amountMinor:  1000 },
+      { kind: 'bonus_grant', amountMinor:  500 },
+      { kind: 'slot_spend', amountMinor:  300 },
+      { kind: 'facility_pro_spend', amountMinor:  200 },
     ]);
     expect(totals).toEqual({ creditMinor:1500, spendMinor:500 });
   });

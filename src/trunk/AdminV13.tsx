@@ -450,7 +450,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               <div className="eyebrow">Équipe · Rôles</div>
               <p className="tiny muted" style={{ marginBottom: 6 }}>Octroyer ou révoquer les rôles Opérateur / Réviseur ( motif obligatoire, audité(.</p>
               {roleAccounts.map((account) => (
-                <div className="kv" key={account.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line, #e8e8e6)' }}>
+                <div className="kv" key={account.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
                   <span>
                     <b>{account.name || account.email || (account.onboardingState === 'seller_ready' ? 'Vendeur prêt' : 'Compte')}</b>
                     {account.name && account.email && <span className="tiny muted"> · {account.email}</span>}
@@ -494,7 +494,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               <div className="eyebrow">Activation vendeurs</div>
               <p className="tiny muted" style={{ marginBottom: 6 }}>Comptes avec une facilité prête a être activés comme vendeur. L'activation suit la certification.r</p>
               {sellerCandidates.map((candidate) => (
-                <div className="kv" key={candidate.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line, #e8e8e6)' }}>
+                <div className="kv" key={candidate.accountId} style={{ padding: '6px 0', borderBottom: '1px solid var(--line)' }}>
                   <span>
                     <b>{candidate.suspended ? 'Suspendu' : 'Vendeur candidat'}</b>
                     <br />
@@ -526,7 +526,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               const members = teamMembers.filter((m) => m.teamId === team.id);
               const invites = teamInvites.filter((i) => i.teamId === team.id && i.status === 'pending');
               return (
-                <div key={team.id} style={{ marginTop: 8, borderTop: '1px solid var(--line, #e8e8e6)', paddingTop: 8 }}>
+                <div key={team.id} style={{ marginTop: 8, borderTop: '1px solid var(--line)', paddingTop: 8 }}>
                   <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <b>{team.name}</b>
@@ -592,7 +592,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
                 <span className="status ink">À valider</span>
               </div>
               {(onFocusFacility && item.latitude && item.longitude) && (
-                <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop:  ​6 }} onClick={() => onFocusFacility(item.latitude, item.longitude, `review-${item.requestId}`)}><ShieldCheck size={13} /> Voir sur la carte</button>
+                <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop:  6 }} onClick={() => onFocusFacility(item.latitude, item.longitude, `review-${item.requestId}`)}><ShieldCheck size={13} /> Voir sur la carte</button>
               )}
               <div className="row" style={{ gap: 6, marginTop: 6 }}>
                 <input className="fld" style={{ flex: 1, minHeight: 32 }} type="text" value={zoneDrafts[item.facilityId] ?? item.zone ?? ''} onChange={(e) => setZoneDrafts((d) => ({ ...d, [item.facilityId]: e.target.value }))} placeholder="Zone de mission (ex. Lomé Est)" aria-label={`Zone de ${item.facilityName}`} />

@@ -101,7 +101,7 @@ describe('createFallbackMap — carte monde animée', () => {
     map.jumpTo({ zoom: -5 });
     const lo = map.getZoom();
     expect(lo).toBe(0);
-    const fit = map.cameraForBounds({ _ne: { lng: 1.236, lat: 6.14 }, _sw: { lng:  ​1.215, lat:  ​6.122 } }, { maxZoom: 13 });
+    const fit = map.cameraForBounds({ _ne: { lng: 1.236, lat: 6.14 }, _sw: { lng:  1.215, lat:  6.122 } }, { maxZoom: 13 });
     const fz = fit.zoom;
     expect(fz).toBe(13);
     map.remove();
@@ -131,8 +131,8 @@ describe('createFallbackMap — carte monde animée', () => {
   });
 
   const FACILITIES: FallbackFacility[] = [
-    { id: 'f1', name: 'Marché de Hanoukopé', latitude:  ​6.1304, longitude:  ​1.2253 },
-    { id: 'f2', name: 'Atelier Kegue', latitude:  ​6.127, longitude:  ​1.2195, kind: 'claimed' },
-    { id: 'f3', name: 'Cantine mobile', latitude:  ​6.134, longitude:  ​1.23, kind: 'mobile' },
+    { id: 'f1', name: 'Marché de Hanoukopé', latitude:  6.1304, longitude:  1.2253 },
+    { id: 'f2', name: 'Atelier Kegue', latitude:  6.127, longitude:  1.2195, kind: 'claimed' },
+    { id: 'f3', name: 'Cantine mobile', latitude:  6.134, longitude:  1.23, kind: 'mobile' },
   ];
 });

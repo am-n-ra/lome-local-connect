@@ -37,7 +37,7 @@ export function OffersV13({ onClose }: OffersV13Props) {
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Offres Omni</div><h1>Prix & remise</h1></div>
-        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
+        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       {loading && <Skeleton variant="pitem" count={3} />}
       {!loading && !first && <p className="sub">Aucun produit à configurer.</p>}

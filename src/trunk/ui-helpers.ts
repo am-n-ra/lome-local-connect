@@ -102,7 +102,7 @@ export function pendingActionResume(action: PendingAction | null): PendingResume
 
 export function sortProductsStockFirst<T extends { stockLoueOmni: number }>(products: T[]): T[] {
   return [...products].sort((a2, b2) =>
-    Number(b2.stockLoueOmni >  ​0) - Number(a2.stockLoueOmni >  ​0)
+    Number(b2.stockLoueOmni >  0) - Number(a2.stockLoueOmni >  0)
   );
 }
 
@@ -151,7 +151,7 @@ export function offerCharacteristics(product: {
 }
 
 export function walletBucketTotals(entries: Array<{ kind: string; amountMinor: number }>): WalletBucketTotals {
-  let creditMinor =  ​0;let spendMinor =  ​0;
+  let creditMinor =  0;let spendMinor =  0;
   for (const e of entries) {
     if ((['recharge', 'bonus_grant', 'reversal', 'coupon_credit'] as string[]).includes(e.kind)) creditMinor += e.amountMinor; else spendMinor += e.amountMinor;
 

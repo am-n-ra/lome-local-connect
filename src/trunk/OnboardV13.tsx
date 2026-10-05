@@ -62,7 +62,7 @@ export function OnboardV13({ pendingSearch, onClose, onComplete }: OnboardV13Pro
         <>
           <div className="sheet-head">
             <div><div className="eyebrow">Avant de continuer</div><h1>Omni trouve l'offre près de vous.</h1></div>
-            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
+            <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
           </div>
           <p className="sub">Un moteur de recherche de l'offre locale : vous décrivez ce que vous voulez et vos contraintes, Omni vous montre où ça existe vraiment, maintenant.</p>
           <div className="cardbox">

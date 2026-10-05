@@ -10,7 +10,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Compagnies</div><h1>Mes compagnies</h1></div>
-        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><ArrowLeft size={15} /></button>
+        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       <Skeleton variant="pitem" count={3} />
     </section>
@@ -26,10 +26,10 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
 
   const availabilityCount = (products: SellerCatalogueProduct[]): { enStock: number; aValider: number } =>
     products.reduce((counts, product) => {
-      if (product.stockLoueOmni >  ​0) counts.enStock +=  ​1;
-      else counts.aValider +=  ​1;
+      if (product.stockLoueOmni >  0) counts.enStock +=  1;
+      else counts.aValider +=  1;
       return counts;
-    }, { enStock:  ​0, aValider:  ​0 });
+    }, { enStock:  0, aValider:  0 });
 
   const totalStock = (products: SellerCatalogueProduct[]): number =>
     products.reduce((sum, product) => sum + product.stockLoueOmni, 0);
@@ -39,7 +39,7 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
       <div className="handle" />
       <div className="sheet-head">
         <div><div className="eyebrow">Compagnies</div><h1>Mes compagnies</h1></div>
-        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight:  ​28 }} onClick={onClose}><ArrowLeft size={15} /></button>
+        <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight:  28 }} onClick={onClose} aria-label="Fermer"><ArrowLeft size={15} /></button>
       </div>
       <div className="cardbox">
         <div className="row" style={{ justifyContent: 'space-between' }}>

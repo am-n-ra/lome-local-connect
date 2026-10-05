@@ -41,7 +41,7 @@ const TXN_STAGES = [
 ];
 
 function qrStyle(token: string): string {
-  return token.split('').reduce((acc, ch) => acc + (ch.charCodeAt(0) % 2 ===  ​0 ? '█' : '▓'), '');
+  return token.split('').reduce((acc, ch) => acc + (ch.charCodeAt(0) % 2 ===  0 ? '█' : '▓'), '');
 }
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
@@ -318,7 +318,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
         <div><div className="eyebrow">Disponibilité</div><h1>{product.name}</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><X size={15} /> Fermer</button>
       </div>
-      <div className="row" style={{ gap: 4, marginBottom:  ​6 }}>
+      <div className="row" style={{ gap: 4, marginBottom:  6 }}>
         {STEPS.map((step) => (
           <span key={step.id} className={stage === step.id ? 'status ok' : 'status gray'}>{step.label}</span>
         ))}
@@ -497,10 +497,10 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       )}
       {stage === 'qr' && qrToken && (
         <div className="cardbox" style={{ textAlign: 'center' }}>
-          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  ​1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  ​8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
+          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
           <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
           {qrExpired ? (
-            <p className="tiny" style={{ color: 'var(--warn, #8a5a00)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>
+            <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>
           ) : (
             <p className="tiny muted">Expire {new Date(qrExpires).toLocaleString('fr-FR')} ({deadlineLabel(qrMinutesLeft)})</p>
           )}
@@ -540,8 +540,8 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       )}
       {stage === 'rate' && (
         <div className="cardbox">
-          <div className="row" style={{ gap: 6, marginBottom:  ​6 }}>
-            {[1, 2,  ​3,  ​4,  ​5].map((value) => (
+          <div className="row" style={{ gap: 6, marginBottom:  6 }}>
+            {[1, 2,  3,  4,  5].map((value) => (
               <button type="button" key={value} className={score === value ? 'status ok' : 'status gray'} aria-label={`${value} étoiles`} onClick={() => setScore(value)}><Star size={14} /> {value}</button>
             ))}
           </div>

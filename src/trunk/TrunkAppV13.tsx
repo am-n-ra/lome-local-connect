@@ -1831,7 +1831,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className={`fld${resultsLoading ? ' busy' : ''}`}>
               <svg width="16" height="16" aria-hidden="true"><use href="#iSearch" /></svg>
               <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={role === 'buyer' && searchLevel === 'entity' ? ENTITY_SEARCH_PLACEHOLDER : SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
-              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, padding: '0 10px' }} type="submit"><ArrowRight size={15} /></button>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, padding: '0 10px' }} type="submit" aria-label="Rechercher"><ArrowRight size={15} /></button>
             </div>
           {constraintsOpen && !(role === 'buyer' && searchLevel === 'entity') && (
             <div className="constraint-zone">
@@ -2150,7 +2150,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <div className="sheet-head">
             <div><div className="eyebrow">Facilité</div><h1>{selectedFacility?.name ?? '—'}</h1></div>
             {selectedFacility && (
-              <button type="button" className="iconbtn" aria-label={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} title={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} style={{ color: favoriteFacilityIds.has(selectedFacility.id) ? '#2E8B6F' : 'var(--ink)', background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => void toggleFavorite(selectedFacility.id)}>
+              <button type="button" className="iconbtn" aria-label={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} title={favoriteFacilityIds.has(selectedFacility.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'} style={{ color: favoriteFacilityIds.has(selectedFacility.id) ? 'var(--accent)' : 'var(--ink)', background: 'transparent', border: 'none', cursor: 'pointer' }} onClick={() => void toggleFavorite(selectedFacility.id)}>
                 <Star size={20} fill={favoriteFacilityIds.has(selectedFacility.id) ? 'currentColor' : 'none'} />
               </button>
             )}
