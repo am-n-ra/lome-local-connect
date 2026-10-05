@@ -74,7 +74,7 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
     <section className="sheet h-mid" data-sheet="seller-reply" role="region" aria-label="Répondre aux demandes">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Espace Seller</div><h1>Répondre aux demandes</h1></div>
+        <div><div className="eyebrow">Espace vendeur</div><h1>Répondre aux demandes</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={onClose}><X size={15} /> Fermer</button>
       </div>
       {error && <p className="sub" role="alert">{error}</p>}

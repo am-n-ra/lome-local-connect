@@ -55,6 +55,6 @@ A/B non identique sur `UI-S5`/`UI-S6` → arrêter, isoler la règle, ne pas ret
 
 **Commits :** `c077881` (S1..S3), `bdbfc2f` (S4), `97c377d` (UI-5). A/B pré/post = **`RENDER IDENTICAL`**.
 **UI-5** fermé (4 dialogues natifs → toast + bannière inline ; garde `no-native-dialogs`).
-**UI-6** mesuré : la maquette utilise **déjà le FR** (`Acheteur/Vendeur/Opérateur`) ; l'app diverge. Correctif prouvable mais **visible** → 1 lot à valider (hors règle RENDER IDENTICAL).
+**UI-6** fermé (lot FR appliqué ; garde `french-chrome` ; preuve navigateur avant/après).
 
 

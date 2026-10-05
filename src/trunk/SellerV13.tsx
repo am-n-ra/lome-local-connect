@@ -378,7 +378,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     <section className="sheet h-mid" data-sheet="seller" role="region" aria-label="Espace vendeur">
       <div className="handle" />
       <div className="sheet-head">
-        <div><div className="eyebrow">Espace Seller</div><h1>Ce qui demande votre attention.</h1></div>
+        <div><div className="eyebrow">Espace vendeur</div><h1>Ce qui demande votre attention.</h1></div>
         <button type="button" className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} onClick={() => { if (onRefresh) onRefresh(); else void load(); }}><RefreshCw size={14} /> Actualiser</button>
       </div>
       {error && <p className="sub" role="alert">{error}</p>}
@@ -631,7 +631,7 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
               ) : renewalStatus.plan === 'pro_expired' ? (
                 <span className="tiny muted">Expiré — renouvellement via portefeuille</span>
               ) : (
-                <span className="tiny muted">Free — le Pro débloque catalogue + dispo auto</span>
+                <span className="tiny muted">Gratuit — le Pro débloque catalogue + dispo auto</span>
               )}
             </div>
             {renewalStatus.plan !== 'free' && (

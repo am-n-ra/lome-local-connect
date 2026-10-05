@@ -299,7 +299,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       if (!token) { setToast({ kind: 'err', text: 'Session requise.' }); return; }
       const result = await adminActivateSellerAccount({ token, accountId: candidate.accountId });
       if (result.ok) {
-        setToast({ kind: 'ok', text: 'Compte vendeur activé — le switch montrera Seller.' });
+        setToast({ kind: 'ok', text: 'Compte vendeur activé — le switch montrera Vendeur.' });
         void load();
       } else {
         setToast({ kind: 'err', text: result.error?.message ?? 'Activation non enregistrée.' });

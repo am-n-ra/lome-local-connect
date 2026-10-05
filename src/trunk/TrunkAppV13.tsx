@@ -110,7 +110,7 @@ const ROLE_CONSTRAINTS: Record<Role, string[]> = {
 
 const SEARCH_LABEL: Record<Role, [string, string]> = {
   buyer: ['Recherche', 'Que cherchez-vous ?'],
-  seller: ['Recherche Seller', 'Trouvez vos compagnies & facilités'],
+  seller: ['Recherche vendeur', 'Trouvez vos compagnies & facilités'],
   admin: ['Recherche équipe', 'Trouvez un objet de revue'],
   operator: ['Recherche équipe', 'Trouvez un point de tournée'],
 };
@@ -1092,11 +1092,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         return true;
       }
       setBuyerProState('error');
-      setBuyerProError(result.error?.message ?? 'Votre plan Buyer Pro ne peut pas être chargé pour le moment.');
+      setBuyerProError(result.error?.message ?? 'Votre plan Acheteur Pro ne peut pas être chargé pour le moment.');
       return false;
     } catch (caught) {
       setBuyerProState('error');
-      setBuyerProError(caught instanceof Error ? caught.message : 'Votre plan Buyer Pro ne peut pas être chargé pour le moment.');
+      setBuyerProError(caught instanceof Error ? caught.message : 'Votre plan Acheteur Pro ne peut pas être chargé pour le moment.');
       return false;
     }
   }, [requireAuth]);
@@ -1111,11 +1111,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         await loadBuyerProStatus();
         setBuyerProActivating(false);
       } else {
-        setBuyerProError(result.error?.message ?? 'La souscription Buyer Pro n’a pas pu être confirmée.');
+        setBuyerProError(result.error?.message ?? 'La souscription Acheteur Pro n’a pas pu être confirmée.');
         setBuyerProActivating(false);
       }
     } catch (caught) {
-      setBuyerProError(caught instanceof Error ? caught.message : 'La souscription Buyer Pro n’a pas pu être confirmée.');
+      setBuyerProError(caught instanceof Error ? caught.message : 'La souscription Acheteur Pro n’a pas pu être confirmée.');
       setBuyerProActivating(false);
     }
   }, [requireAuth, loadBuyerProStatus]);
@@ -1146,10 +1146,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (result.ok && result.data) {
         await loadBuyerProStatus();
       } else {
-        setBuyerProError(result.error?.message ?? 'Le renouvellement Buyer Pro n’a pas pu être effectué.');
+        setBuyerProError(result.error?.message ?? 'Le renouvellement Acheteur Pro n’a pas pu être effectué.');
       }
     } catch (caught) {
-      setBuyerProError(caught instanceof Error ? caught.message : 'Le renouvellement Buyer Pro n’a pas pu être effectué.');
+      setBuyerProError(caught instanceof Error ? caught.message : 'Le renouvellement Acheteur Pro n’a pas pu être effectué.');
     }
   }, [requireAuth, loadBuyerProStatus]);
 
@@ -1790,7 +1790,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <div className="roleswitch" ref={rolesRef}>
           <span className="ind" ref={rolesIndRef} />
           {(switchRoles.length ? switchRoles : ['buyer'] as Role[]).map((r: Role) => (
-            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : r === 'seller' ? 'seller' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Buyer' : r === 'seller' ? 'Seller' : r === 'admin' ? 'Admin' : 'Opé.'}</button>
+            <button key={r} type="button" role="tab" aria-selected={role === r} className={role === r ? 'on' : ''} onClick={() => { setRole(r); setSheet(r === 'buyer' ? 'none' : r === 'seller' ? 'seller' : 'menu'); if (r === 'seller' && sessionUser) void loadSellerWorkspace(); }}>{r === 'buyer' ? 'Acheteur' : r === 'seller' ? 'Vendeur' : r === 'admin' ? 'Admin' : 'Opérateur'}</button>
           ))}
         </div>
       </div>
@@ -2098,7 +2098,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           {compareBlocked > 0 && (
             <div className="cardbox" style={{ marginTop: 8 }}>
               <div className="row" style={{ justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
-                <p className="sub" style={{ flex: 1, minWidth: 0 }}><b>Buyer Pro</b> · vous ne voyez que {buyerProStatus?.plan === 'pro_active' ? 5 : 1} de {compareBlocked + (buyerProStatus?.plan === 'pro_active' ? 5 : 1)} établissements. Passez Pro pour comparer jusqu’à 5.</p>
+                <p className="sub" style={{ flex: 1, minWidth: 0 }}><b>Acheteur Pro</b> · vous ne voyez que {buyerProStatus?.plan === 'pro_active' ? 5 : 1} de {compareBlocked + (buyerProStatus?.plan === 'pro_active' ? 5 : 1)} établissements. Passez Pro pour comparer jusqu’à 5.</p>
                 <button className="btn sm" style={{ width: 'auto', minHeight: 28, flexShrink: 0 }} onClick={() => { setSheet('plans'); }}>Passer Pro</button>
               </div>
             </div>
@@ -2345,8 +2345,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="menu" key={role} role="dialog" aria-modal="false" aria-label="Espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : 'Espace ' + role}</h1></div>
-            <span className="status ink">{role}{role === 'admin' || role === 'operator' ? ' · équipe' : ''}</span>
+            <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : role === 'seller' ? 'Espace vendeur' : 'Espace acheteur'}</h1></div>
+            <span className="status ink">{role === 'buyer' ? 'Acheteur' : role === 'seller' ? 'Vendeur' : role === 'admin' ? 'Admin' : 'Opérateur'}{role === 'admin' || role === 'operator' ? ' · équipe' : ''}</span>
           </div>
           <div className="menugrid" style={{ display: 'grid', gap: 8, marginTop: 10 }}>
             {!sessionUser && (
@@ -2374,7 +2374,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde, Pro & recharges</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Free vs Pro</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('plans')}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>Gratuit vs Pro</small></span></button>
                   </>
                 )}
                 {(role === 'admin' || role === 'operator') && (
@@ -2431,7 +2431,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('wallet')}>Recharger le wallet</button>
           </div>
           <div className="cardbox" style={{ marginTop: 8 }}>
-            <div className="kv"><span>Plan</span><b>{sellerAvailable ? 'Vendeur Free' : 'Acheteur Free'}</b></div>
+            <div className="kv"><span>Plan</span><b>{sellerAvailable ? 'Vendeur Gratuit' : 'Acheteur Gratuit'}</b></div>
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" onClick={() => setSheet('plans')}>Voir les plans</button>
           </div>
           <button className="btn ghost" style={{ marginTop: 10, width: '100%' }} type="button" onClick={() => { void authClient.signOut(); setSessionUser(null); setSheet('search'); }}><LogOut size={15} /> Déconnexion</button>
@@ -2441,7 +2441,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="home" role="dialog" aria-modal="false" aria-label="Mon espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Espace Buyer</div><h1>Vos demandes & transactions.</h1></div>
+            <div><div className="eyebrow">Espace acheteur</div><h1>Vos demandes & transactions.</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {buyerRequestsState === 'loading' && <Skeleton variant="kv" count={3} />}
@@ -2589,24 +2589,24 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                           </span>
                         )}
                       </span>
-                      <b>{facility.plan === 'pro_active' ? `Pro actif${facility.daysLeft > 0 ? ` · ${facility.daysLeft} j` : ''}` : facility.plan === 'pro_expired' ? 'Pro expiré' : 'Free · 5 offres max'}</b>
+                      <b>{facility.plan === 'pro_active' ? `Pro actif${facility.daysLeft > 0 ? ` · ${facility.daysLeft} j` : ''}` : facility.plan === 'pro_expired' ? 'Pro expiré' : 'Gratuit · 5 offres max'}</b>
                     </div>
                   ))}
                 </div>
               )}
               <div className="cardbox">
-                <div className="eyebrow">Buyer Pro</div>
+                <div className="eyebrow">Acheteur Pro</div>
                 {buyerProState === 'loading' && <Skeleton variant="kv" count={2} />}
                 {buyerProState === 'error' && <p className="sub" role="alert">{buyerProError}</p>}
                 {buyerProStatus?.plan === 'pro_active' && (
                   <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
-                    <span><b>Buyer Pro actif</b>{buyerProStatus.daysLeft > 0 ? <span className="tiny muted"> · {buyerProStatus.daysLeft} j restants</span> : null}</span>
+                    <span><b>Acheteur Pro actif</b>{buyerProStatus.daysLeft > 0 ? <span className="tiny muted"> · {buyerProStatus.daysLeft} j restants</span> : null}</span>
                     <span className="status ok">Comparateur 5</span>
                   </div>
                 )}
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="row" style={{ justifyContent: 'space-between', marginTop: 4 }}>
-                    <span><b>Buyer Pro expiré</b></span>
+                    <span><b>Acheteur Pro expiré</b></span>
                     <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler ({localPlanPriceLabel('buyerPro', userCurrency)})</button>
                   </div>
                 )}
@@ -2624,7 +2624,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div className="eyebrow">Packs crédits bulk</div>
                 <p className="tiny muted">Des crédits surplus pour vos demandes multi-commerces. Payés via FedaPay (Mobile Money au paiement), confirmés par webhook.</p>
                 {bulkCreditSummary && (
-                  <p className="sub" style={{ marginTop: 4 }}>Solde actuel : <b>{bulkCreditSummary.creditsRemaining} crédit(s)</b> {bulkCreditSummary.plan === 'pro' ? '· plan Pro' : '· plan Free (3/mois)'}</p>
+                  <p className="sub" style={{ marginTop: 4 }}>Solde actuel : <b>{bulkCreditSummary.creditsRemaining} crédit(s)</b> {bulkCreditSummary.plan === 'pro' ? '· plan Pro' : '· plan Gratuit (3/mois)'}</p>
                 )}
                 {bulkPacksState === 'loading' && <Skeleton variant="kv" count={3} />}
                 {bulkPacksState === 'error' && <p className="sub" role="alert">{bulkPacksError}</p>}
@@ -2658,7 +2658,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="plans" role="dialog" aria-modal="false" aria-label="Plans" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Seller' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Buyer'}</h1></div>
+            <div><div className="eyebrow">Plans</div><h1>{role === 'seller' ? 'Plans Vendeur' : role === 'admin' || role === 'operator' ? 'Accès équipe' : 'Plans Acheteur'}</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {(role === 'buyer') ? (
@@ -2672,14 +2672,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </div>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Buyer Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
+                  <div><b>Acheteur Pro</b><br /><span className="tiny muted">Comparateur 5 établissements + alertes</span></div>
                   <span className="status ink">{planPriceLabel('buyerPro', userCurrency)}</span>
                 </div>
                 {buyerProState === 'loading' && <Skeleton variant="kv" count={2} />}
                 {buyerProState === 'error' && <p className="sub" role="alert" style={{ marginTop: 8 }}>{buyerProError}</p>}
                 {buyerProStatus?.plan === 'pro_active' && (
                   <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
-                    <p className="sub"><CheckCircle2 size={14} /> Buyer Pro actif{buyerProStatus.daysLeft > 0 ? ` · ${buyerProStatus.daysLeft} j restants` : ''}</p>
+                    <p className="sub"><CheckCircle2 size={14} /> Acheteur Pro actif{buyerProStatus.daysLeft > 0 ? ` · ${buyerProStatus.daysLeft} j restants` : ''}</p>
                     <div className="row" style={{ justifyContent: 'space-between', marginTop: 6 }}>
                       <span className="tiny muted">Renouvellement auto</span>
                       <button type="button" className={`btn ${buyerProStatus.renewalOptIn ? 'ok' : 'ghost'} sm`} style={{ width: 'auto', minHeight: 26 }} onClick={() => void toggleBuyerProRenewal()}>{buyerProStatus.renewalOptIn ? 'Activé' : 'Désactivé'}</button>
@@ -2692,11 +2692,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 {buyerProStatus?.plan === 'pro_expired' && (
                   <div className="cardbox" style={{ marginTop: 8, background: 'var(--panel)' }}>
                     <p className="sub">Pro expiré.{buyerProStatus.renewalOptIn && buyerProStatus.sufficientFunds ? ' Renouvellement disponible.' : ''}</p>
-                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Buyer Pro ({localPlanPriceLabel('buyerPro', userCurrency)})</button>
+                    <button className="btn" type="button" style={{ marginTop: 6 }} onClick={() => void renewBuyerProUI()} disabled={!buyerProStatus.sufficientFunds}>Renouveler Acheteur Pro ({localPlanPriceLabel('buyerPro', userCurrency)})</button>
                   </div>
                 )}
                 {(buyerProStatus?.plan === 'free' || !buyerProStatus) && (
-                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : `Passer à Buyer Pro (${planPriceLabel('buyerPro', userCurrency)})`}</button>
+                  <button className="btn" type="button" style={{ marginTop: 8 }} disabled={buyerProActivating} onClick={() => void activateBuyerProUI()}>{buyerProActivating ? 'Activation en cours…' : `Passer à Acheteur Pro (${planPriceLabel('buyerPro', userCurrency)})`}</button>
                 )}
                 {buyerProError && <p className="sub" role="alert" style={{ marginTop: 6 }}>{buyerProError}</p>}
               </div>
@@ -2705,7 +2705,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <>
               <div className="cardbox">
                 <div className="row" style={{ justifyContent: 'space-between' }}>
-                  <div><b>Free</b><br /><span className="tiny muted">Découverte + 5 produits</span></div>
+                  <div><b>Gratuit</b><br /><span className="tiny muted">Découverte + 5 produits</span></div>
                   <span className="status gray">Actuel</span>
                 </div>
               </div>
