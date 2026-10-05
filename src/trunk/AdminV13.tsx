@@ -27,6 +27,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'unauthorized'>('loading');
   const [error, setError] = useState('');
   const [toast, setToast] = useState<Toast | null>(null);
+  const [confirm, setConfirm] = useState<{ text: string; run: () => void } | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
   const [reconciling, setReconciling] = useState(false);
   const [roleAccounts, setRoleAccounts] = useState<RoleManagementAccount[]>([]);
@@ -357,8 +358,7 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [inviteDraft, load]);
 
-  const submitTeamInviteRevoke = useCallback(async (invite: TeamInvite) => {
-    if (!window.confirm(`Révoquer l'invitation de ${invite.email} ?`)) return;
+  const performTeamInviteRevoke = useCallback(async (invite: TeamInvite) => {
     setTeamBusy(`revoke:${invite.id}`);
     setToast(null);
     try {
@@ -378,8 +378,11 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
     }
   }, [load]);
 
-  const submitTeamMemberStatus = useCallback(async (member: TeamMember, status: 'active' | 'revoked') => {
-    if (status === 'revoked' && !window.confirm(`Retirer ${member.authUserId || member.accountId} de l'équipe ?`)) return;
+  const submitTeamInviteRevoke = useCallback((invite: TeamInvite) => {
+    setConfirm({ text: `Révoquer l'invitation de ${invite.email} ?`, run: () => { void performTeamInviteRevoke(invite); } });
+  }, [performTeamInviteRevoke]);
+
+  const performTeamMemberStatus = useCallback(async (member: TeamMember, status: 'active' | 'revoked') => {
     setTeamBusy(`member:${member.id}`);
     setToast(null);
     try {
@@ -398,6 +401,14 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
       setTeamBusy(null);
     }
   }, [load]);
+
+  const submitTeamMemberStatus = useCallback((member: TeamMember, status: 'active' | 'revoked') => {
+    if (status === 'revoked') {
+      setConfirm({ text: `Retirer ${member.authUserId || member.accountId} de l'équipe ?`, run: () => { void performTeamMemberStatus(member, status); } });
+    } else {
+      void performTeamMemberStatus(member, status);
+    }
+  }, [performTeamMemberStatus]);
 
   const roleLabel = (role: string) => role === 'operator' ? 'Opérateur' : role === 'reviewer' ? 'Réviseur' : role === 'admin' ? 'Admin' : role === 'seller' ? 'Vendeur' : 'Acheteur';
   const roleChip = (account: RoleManagementAccount, role: 'operator' | 'reviewer', desired: 'active' | 'revoked') => {
@@ -579,6 +590,15 @@ export function AdminV13({ onClose, onFocusFacility }: AdminV13Props) {
               );
             })}
           </div>
+          {confirm && (
+            <div className="cardbox" role="alertdialog" aria-label="Confirmation" style={{ marginTop: 8 }}>
+              <p className="sub" style={{ marginTop: 0 }}>{confirm.text}</p>
+              <div className="btnrow">
+                <button className="btn ghost sm" type="button" onClick={() => setConfirm(null)}>Annuler</button>
+                <button className="btn sm" type="button" onClick={() => { const run = confirm.run; setConfirm(null); run(); }}>Confirmer</button>
+              </div>
+            </div>
+          )}
           {toast && <p className="sub" role="status">{toast.text}</p>}
           {queue.length === 0 && <p className="sub" style={{ marginTop: 8 }}>Aucune demande en attente.</p>}
           {queue.map((item) => (

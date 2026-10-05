@@ -220,6 +220,7 @@ const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
   const [myTeamInvitesState, setMyTeamInvitesState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [myTeamInvitesError, setMyTeamInvitesError] = useState('');
   const [myTeamInviteBusy, setMyTeamInviteBusy] = useState<string | null>(null);
+  const [inviteToast, setInviteToast] = useState('');
 const [bulkSending, setBulkSending] = useState(false);
 const [bulkResults, setBulkResults] = useState<Array<{ facilityId: string; facilityName: string; productId: string; productName: string; status: 'submitted' | 'available' | 'partial' | 'unavailable' | 'expired' | 'error'; quantityAvailable: number | null; observedAt: string | null }> | null>(null);
 const [bulkErrors, setBulkErrors] = useState<string | null>(null);
@@ -920,15 +921,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const token = await requireAuth();
     if (!token) return;
     setMyTeamInviteBusy(inviteId);
+    setInviteToast('');
     try {
       const result = await acceptTeamInvite({ token, inviteId });
       if (result.ok && result.data) {
         setMyTeamInvites((prev) => prev.filter((i) => i.id !== inviteId));
+        setInviteToast('Invitation acceptée — vous rejoignez l’équipe.');
       } else {
-        window.alert(result.error?.message ?? 'Impossible d’accepter l’invitation.');
+        setInviteToast(result.error?.message ?? 'Impossible d’accepter l’invitation.');
       }
     } catch (caught) {
-      window.alert(caught instanceof Error ? caught.message : 'Impossible d’accepter l’invitation.');
+      setInviteToast(caught instanceof Error ? caught.message : 'Impossible d’accepter l’invitation.');
     } finally {
       setMyTeamInviteBusy(null);
     }
@@ -2419,6 +2422,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               ))}
             </div>
           )}
+          {inviteToast !== '' && <p className="sub" role="status" style={{ marginTop: 8 }}>{inviteToast}</p>}
           {myTeamInvitesState === 'loading' && groupInvites.length === 0 && (
             <Skeleton variant="kv" count={2} />
           )}

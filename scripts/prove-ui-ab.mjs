@@ -28,7 +28,9 @@ const SNAPSHOT = () => {
     const r = el.getBoundingClientRect();
     if (r.width === 0 && r.height === 0) continue;
     const tag = el.tagName.toLowerCase();
-    const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter(Boolean).sort().join('.') : '';
+    // maplibregl-* tokens are added by the map library from touch detection and
+    // are not app CSS — strip them so the fingerprint reflects our own classes.
+    const cls = typeof el.className === 'string' ? el.className.trim().split(/\s+/).filter((c) => c && !c.startsWith('maplibregl-')).sort().join('.') : '';
     const bg = parse(cs.backgroundColor);
     const hasBg = bg && bg.length >= 3 && (bg[3] === undefined || bg[3] > 0);
     // Structural + stable-style fingerprint. Geometry (x/y/w/h) is excluded:
