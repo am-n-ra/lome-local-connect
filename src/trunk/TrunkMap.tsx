@@ -538,6 +538,21 @@ const syncCameraPadding = () => {
     };
     syncCameraPadding();
 
+    // GLOBE-START — apply a projection change only once the style is ready. MapLibre's
+    // setProjection throws ("Style is not done loading.") before that; setting the
+    // intent flag before the throwing call poisoned it, so every later guard saw
+    // "already globe" and skipped the real application — the map rested on mercator.
+    // The flag moves only after a successful call, so an early throw can never lie.
+    const applyProjection = (wantsGlobe: boolean) => {
+      if (isFallback) return;
+      const typed = map as Map;
+      if (!typed.isStyleLoaded()) return;
+      typed.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+      setGlobeContextLabelVisibility(typed, globeContextLabelsVisibleForZoom(typed.getZoom()));
+      setProjection(wantsGlobe ? 'globe' : 'mercator');
+      globeProjection = wantsGlobe;
+    };
+
     const stopRotation = () => {
       if (rotationFrame.current !== null) {
         window.cancelAnimationFrame(rotationFrame.current);
@@ -775,10 +790,7 @@ const syncCameraPadding = () => {
       // and actually different.
       const initialGlobe = initialBasemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (!map.isMoving() && initialGlobe !== globeProjection) {
-        globeProjection = initialGlobe;
-        map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
-        setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
-        setProjection(initialGlobe ? 'globe' : 'mercator');
+        applyProjection(initialGlobe);
         map.resize();
       }
       applyCanopyPalette(map);
@@ -963,7 +975,17 @@ const syncCameraPadding = () => {
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
     });
     // LOCAL_STYLE is used directly — no remote fallback needed.
-    let globeProjection = true;
+    // A style with no `projection` field makes MapLibre default to mercator, so the
+    // globe only exists once `setProjection` has run. Seed the intent from the map's
+    // ACTUAL projection: assuming `true` made the "already correct" guard skip the
+    // very first globe application, and the map rested on mercator at world zoom.
+    let globeProjection: boolean;
+    if (!isFallback) {
+      const active = (map as Map).getProjection();
+      globeProjection = active?.type === 'globe';
+    } else {
+      globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
+    }
     const syncProjection = () => {
       if (arrivalInProgressRef.current) return;
       // Never swap the projection mid-gesture/mid-flight. Changing it while the camera
@@ -973,13 +995,10 @@ const syncCameraPadding = () => {
       if (map.isMoving()) return;
       const wantsGlobe = basemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
-        globeProjection = wantsGlobe;
-        map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
-        setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
-        setProjection(wantsGlobe ? 'globe' : 'mercator');
         // No map.resize() here: the ResizeObserver owns container sizing, and
         // resizing mid-gesture is what left the globe transform matrix null on
         // maplibre < 6.9 (fixed upstream in #8374/#8351).
+        applyProjection(wantsGlobe);
         map.triggerRepaint();
       }
     };
@@ -991,7 +1010,10 @@ const syncCameraPadding = () => {
     map.on('load', () => { if (isFallback) return; // map status set by P0-A fallback path
       setMapStatus('ready');
       configureStyle();
-      globeProjection = map.getZoom() < GLOBE_TO_MERCATOR_ZOOM;
+      // The style is now loaded, so setProjection is legal: apply the globe for the
+      // resting world view. Guarded so a style that already declares globe is untouched.
+      const wantsGlobe = initialBasemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
+      if (wantsGlobe !== globeProjection) applyProjection(wantsGlobe);
       resume();
       beginArrival();
     });

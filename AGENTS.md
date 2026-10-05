@@ -976,4 +976,16 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **M2 (round-trip du code livré, `scripts/prove-tf6-field-visits.mjs`)** : **14/14 PASS** sur branche jetable — CHECKs rejettent `subject` bogus + `state` bogus + `activite` vide + `reserve` 501 ; `createFieldVisit`→`claimVisit`(operator)→`submitVisitReport`(`transmis`) ; **2ᵉ visite active même sujet refusée**, **re-acceptée après `transmis`** (unique partiel) ; acheteur sans rôle refusé ; re-prise = no-op honnête ; position/photo non liée rejetées. **Résidu 0**, canonique intacte.
 - **Fingerprint canonique vérifié** : **13 744 facilités / 9 comptes / 16 produits** = celui de l'ordre.
 
+## GLOBE-START (2026-10-04) — la carte ne commençait plus par le globe
+
+- **Signal fondateur** : « pourquoi la carte ne démarre plus depuis le globe ? ». **Réel, mesuré** : `data-projection` restait `mercator` à **zoom 1.25** (vue monde) — le globe ne s'affichait jamais.
+- **Cause racine (2 défauts, tous deux introduits par le durcissement `903b6e6`)** :
+  1. **`globeProjection` supposé `true`** alors que le style OpenFreeMap Positron **ne déclare aucune projection** → MapLibre 6.12 défaut à **mercator** ; le globe n'existe qu'après `setProjection`. La garde « déjà correct » (`initialGlobe !== globeProjection`) **sautait donc la première application**.
+  2. **Le drapeau était écrit AVANT l'appel qui lève.** `setProjection` lève `Style is not done loading.` tant que le style n'est pas chargé ; comme `globeProjection = true` était posé **avant** l'appel, le drapeau **mentait** (« déjà globe ») et **toutes** les gardes suivantes sautaient l'application réelle. La trace navigateur est décisive : `wantsGlobe=true flag=false` puis **`PAGEERROR: Style is not done loading.`** → ensuite `wantsGlobe=true flag=true` (skippé).
+- **Correctif** : helper unique `applyProjection(wantsGlobe)` qui **garde `isStyleLoaded()`**, applique, et **ne déplace le drapeau qu'après** l'appel réussi ; `syncProjection` et `configureStyle` l'utilisent ; le handler `load` applique l'intention globe **une fois le style chargé** ; intention seedée depuis la **projection réelle** (`getProjection().type`), jamais supposée.
+- **Preuve navigateur locale (mesurée)** : avant → `mercator` en permanence ; après → **`globe` à 1.0s (zoom 1.25)** puis **`mercator` à 9.4s (zoom 14.2, rue)** — globe **puis** mercator, ordre correct, **0 pageerror**.
+- **Garde `map-transform-lock.test.ts` étendu (5 tests)** : aucun `setProjection` sans `isStyleLoaded()` ; le drapeau bouge **après** l'appel ; jamais `let globeProjection = true`. **Falsifié** : garde + ordre inversés → **2/5 ÉCHOUENT** ; restauré → 5/5.
+- **Leçon à ne pas réapprendre** : *un drapeau d'intention qui décrit un effet ne doit être posé qu'après la réussite de cet effet — sinon un throw synchrone le laisse mentir, et chaque garde « déjà fait » saute le travail.* Et : *un style sans `projection` fait défaut à mercator ; supposer `true` laisse la carte sans globe.*
+
+
 

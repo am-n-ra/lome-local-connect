@@ -2,33 +2,45 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * MAP-TRANSFORM — un changement de projection pendant que la caméra bouge casse la
- * transformation MapLibre. Preuve (bundle servi) : `invert()` renvoie `null` sur une
- * matrice globe singulière, et le rendu suivant lève
- * `Cannot read properties of null (reading '0')` dans `transformMat4(c, c, null)`.
+ * MAP-TRANSFORM — deux façons de casser la projection MapLibre, verrouillées ici.
  *
- * Ce n'est pas reproductible en headless (swiftshader/timing différents), donc le
- * contrat est verrouillé à la source : les deux sites qui appellent `setProjection`
- * doivent d'abord s'assurer que la caméra est immobile (`map.isMoving()`), et le
- * `zoom` — qui se déclenche pendant un flyTo — ne doit plus piloter le changement.
+ * 1. Changer de projection pendant que la caméra bouge : `invert()` renvoie `null`
+ *    sur une matrice globe singulière, et le rendu suivant lève
+ *    `transformMat4(c, c, null)`. Le `zoom` se déclenche pendant un flyTo, le
+ *    `moveend` une seule fois posé : seul `moveend` peut piloter le changement.
+ *
+ * 2. Appeler `setProjection` avant que le style soit chargé : MapLibre lève
+ *    « Style is not done loading. ». Si l'intention (`globeProjection`) est écrite
+ *    AVANT l'appel qui lève, le drapeau ment (« déjà globe ») et toutes les gardes
+ *    suivantes sautent l'application réelle — la carte reste en mercator au zoom
+ *    monde, plus de globe. L'intention ne doit bouger qu'après un appel réussi.
+ *
+ * Non reproductible en headless (timing swiftshader), donc contrat verrouillé à la source.
  */
 const source = readFileSync(new URL('./TrunkMap.tsx', import.meta.url), 'utf8');
+const lines = source.split('\n');
 
 function projectionSites(): string[] {
-  return source
-    .split('\n')
+  return lines
     .map((line, index) => ({ line, index }))
-    .filter(({ line }) => line.includes('map.setProjection('))
-    .map(({ index }) => source.split('\n').slice(Math.max(0, index - 8), index + 1).join('\n'));
+    .filter(({ line }) => line.includes('.setProjection('))
+    .map(({ index }) => lines.slice(Math.max(0, index - 8), index + 1).join('\n'));
 }
 
-describe('MAP-TRANSFORM — le changement de projection attend une caméra immobile', () => {
-  it('aucun setProjection ne s’exécute sans garde isMoving()', () => {
+describe('MAP-TRANSFORM — la projection ne change que sur une carte posée et chargée', () => {
+  it('aucun setProjection sans garde isStyleLoaded() (sinon MapLibre lève et le drapeau ment)', () => {
     const sites = projectionSites();
     expect(sites.length).toBeGreaterThan(0);
     for (const site of sites) {
-      expect(site).toContain('isMoving()');
+      expect(site).toContain('isStyleLoaded()');
     }
+  });
+
+  it('le drapeau globeProjection ne bouge qu’APRÈS l’appel setProjection (jamais avant)', () => {
+    const setIndex = lines.findIndex((line) => line.includes('.setProjection('));
+    const flagIndex = lines.findIndex((line) => line.includes('globeProjection = wantsGlobe'));
+    expect(setIndex).toBeGreaterThan(-1);
+    expect(flagIndex).toBeGreaterThan(setIndex);
   });
 
   it('syncProjection ne réagit plus au `zoom` (qui tire pendant un flyTo)', () => {
@@ -37,5 +49,12 @@ describe('MAP-TRANSFORM — le changement de projection attend une caméra immob
 
   it('syncProjection reste appliqué au `moveend` (caméra posée)', () => {
     expect(source).toContain("map.on('moveend', syncProjection)");
+  });
+
+  // GLOBE-START — le style ne déclare aucune projection, donc MapLibre défaut à
+  // mercator : le globe n'existe qu'après setProjection. Supposer l'intention
+  // `true` faisait sauter cette première application.
+  it('l’intention globe n’est jamais supposée `true` au départ', () => {
+    expect(source).not.toContain('let globeProjection = true');
   });
 });
