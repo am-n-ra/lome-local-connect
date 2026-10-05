@@ -970,3 +970,10 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Push** `903b6e6..208cf84` → Vercel → prod `index-DLbv5i8M.js` === build local. Bundles serverless `api/v2/*.js` régénérés dans le même commit (leçon `9c3f5d8`).
 - **Reste** : TF-6 **M2** (round-trip du code livré, tables `v2_field_visits`/`v2_visit_reports` vides, 1 admin + 1 operator + 1 buyer) — prochain ordre.
 
+## TF-6 M1+M2 (2026-10-04) — tournées terrain : migration 066 prouvée + round-trip du code livré
+
+- **M1 (066, `db/migrations/066_v2_field_visits.sql`, commit `33581be`)** : **déjà appliquée** sur la canonique `br-dawn-hill-am5amy22` (registre `omni_schema_migrations`, checksum sha256 `85b37ce0d243480fecfd57a7bb1e5a297141bc0f35c6b079fdc30bfdafa5cb1f`, appliquée 2026-10-04T12:29Z). Vérifié par l'objet : `v2_field_visits` (id/subject_type/subject_id/zone/assignee_account_id/state/created_at/transmitted_at) + `v2_visit_reports` (visit_id/lieu_ok/activite/contact_ok/reserve/photo_refs/latitude/longitude/reporter_account_id/reported_at) conformes ; 4 CHECKs ; **2 index** (`v2_field_visits_one_active_idx` unique partiel + `v2_field_visits_state_zone_idx`). **Idempotence prouvée** sur branche jetable `tf6-m2-proof` (registre retiré → `apply-migration.mjs` **applied** 14/14, re-run **already_applied**), branche supprimée, canonique intacte.
+- **M2 (round-trip du code livré, `scripts/prove-tf6-field-visits.mjs`)** : **14/14 PASS** sur branche jetable — CHECKs rejettent `subject` bogus + `state` bogus + `activite` vide + `reserve` 501 ; `createFieldVisit`→`claimVisit`(operator)→`submitVisitReport`(`transmis`) ; **2ᵉ visite active même sujet refusée**, **re-acceptée après `transmis`** (unique partiel) ; acheteur sans rôle refusé ; re-prise = no-op honnête ; position/photo non liée rejetées. **Résidu 0**, canonique intacte.
+- **Fingerprint canonique vérifié** : **13 744 facilités / 9 comptes / 16 produits** = celui de l'ordre.
+
+
