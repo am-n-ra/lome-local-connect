@@ -21,7 +21,7 @@ import type { TileTapPoint } from './tile-place-resolve';
 import { pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingWidthPx, PIN_CORE_COLOR, PIN_DIM_OPACITY, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR } from './map-pins';
 import { bearingForGlobeAxisDrag, centerForGlobeAxisDrag } from './globe-axis';
 import { loadBoundariesForZoom, highlightBoundaryAtTarget, clearHighlight } from '../lib/boundaries/loader';
-import { createGlyphTransformRequest } from '../lib/maplibre';
+import { createGlyphTransformRequest, hideIrrelevantShieldLayers } from '../lib/maplibre';
 import { type MapBasemap, RASTER_STYLE_URL, shouldFallbackToRaster, styleChoiceFor, STYLE_WATCHDOG_MS, VECTOR_STYLE_URL } from './map-style-fallback';
 
 type LocationState = 'idle' | 'requesting' | 'exact' | 'approximate' | 'denied' | 'unavailable' | 'timeout' | 'cancelled';
@@ -782,6 +782,7 @@ const syncCameraPadding = () => {
         map.resize();
       }
       applyCanopyPalette(map);
+      hideIrrelevantShieldLayers(map);
       map.triggerRepaint();
       syncCameraPadding();
       addLayers(map);

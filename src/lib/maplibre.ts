@@ -146,6 +146,50 @@ export const CARTO_GLYPH_HOST_PATTERN = /^https:\/\/[^/]*cartocdn\.com\/fonts\//
 export const GLYPH_HOST_WITH_BOLD = "https://fonts.openmaptiles.org/";
 
 /**
+ * OpenFreeMap's Positron style ships US highway-shield layers whose filter reads
+ * `["get", "ref_length"]` on every line feature. MapLibre 6.x validates data-driven
+ * comparisons strictly, so the worker logs, once per tile,
+ *   `layers[highway-shield-*].filter[1]: Expected value to be of type number, but
+ *    found null instead. Falling back to false.`
+ * The layers can never match a Lomé feature (they need network us-highway /
+ * us-interstate / us-state), so they draw nothing. Hiding them removes the noise
+ * without changing what is rendered.
+ */
+export const SHIELD_LAYER_PATTERN = /shield/i;
+
+/** Minimal surface both the real map and the DOM fallback expose. */
+export type ShieldLayerHost = {
+  getStyle?: () => { layers?: Array<{ id: string; layout?: { visibility?: unknown } }> } | undefined;
+  setLayoutProperty?: unknown;
+};
+
+export function shouldHideIrrelevantShieldLayer(id: string): boolean {
+  return SHIELD_LAYER_PATTERN.test(id);
+}
+
+/**
+ * Hides shield layers on a loaded style. Returns the ids it changed. Only layers
+ * currently visible are touched, so a re-run after `styledata` is a no-op.
+ */
+export function hideIrrelevantShieldLayers(map: ShieldLayerHost): string[] {
+  if (typeof map.getStyle !== 'function' || typeof map.setLayoutProperty !== 'function') {
+    return [];
+  }
+  const hidden: string[] = [];
+  for (const layer of map.getStyle()?.layers ?? []) {
+    if (!shouldHideIrrelevantShieldLayer(layer.id)) continue;
+    if (layer.layout?.visibility === 'none') continue;
+    try {
+      (map.setLayoutProperty as (id: string, name: string, value: unknown) => void)(layer.id, 'visibility', 'none');
+      hidden.push(layer.id);
+    } catch {
+      /* A fallback style may not expose layout visibility. */
+    }
+  }
+  return hidden;
+}
+
+/**
  * A MapLibre `transformRequest` that reroutes only the glyph requests the broken
  * host would fail, leaving every other resource (tiles, sprites, style JSON) and
  * every healthy glyph host — notably OpenFreeMap, which serves its own fonts —

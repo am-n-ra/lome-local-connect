@@ -113,6 +113,15 @@ await check('listOpenTransactions', () => repository.listOpenTransactions({ auth
 await check('getWalletOverview', () => repository.getWalletOverview({ authUserId: SELLER_READY }));
 await check('getBuyerCreditSummary', () => repository.getBuyerCreditSummary({ authUserId: SEED_COMPLETE }));
 await check('getBuyerProStatus', () => repository.getBuyerProStatus({ authUserId: SEED_COMPLETE }));
+// A null here is a defect, not a legitimate answer: the buyer exists and is
+// provisioned. The 2026-10-04 `cross join lateral (select * from entitlement)`
+// collapsed the whole row to zero when the buyer had never subscribed to Pro,
+// so every ordinary buyer (including the founder) got 403 ACCOUNT_UNAVAILABLE.
+await check('getBuyerProStatus (non-null for a provisioned buyer)', async () => {
+  const status = await repository.getBuyerProStatus({ authUserId: ADMIN });
+  if (status === null) throw new Error('returned null for a provisioned buyer — cross-join row collapse (empty entitlement set)');
+  return status;
+});
 await check('listFavorites', () => repository.listFavorites({ authUserId: SEED_COMPLETE }));
 await check('getBulkPacks', () => repository.getBulkPacks());
 await check('listSavedSearches', () => repository.listSavedSearches({ authUserId: SEED_COMPLETE }));

@@ -4889,9 +4889,9 @@ function createTrunkRepository(sql = database()) {
           b.balance_minor,
           coalesce(c.plan, 'free') as credit_plan
         from account a
-        cross join lateral (select * from entitlement) e
-        cross join lateral (select * from balance) b
-        cross join lateral (select * from credits) c
+        left join lateral (select * from entitlement) e on true
+        left join lateral (select * from balance) b on true
+        left join lateral (select * from credits) c on true
       `);
       const row = rows[0];
       if (!row) return null;
