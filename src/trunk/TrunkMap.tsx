@@ -769,12 +769,18 @@ const syncCameraPadding = () => {
       if (arrivalInProgressRef.current) {
         return;
       }
+      // styledata fires repeatedly while tiles stream in. Re-issuing setProjection +
+      // resize on each one churns the transform mid-flight (the null-matrix crash).
+      // Layers still re-attach every time; the projection only changes when settled
+      // and actually different.
       const initialGlobe = initialBasemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
-      globeProjection = initialGlobe;
-      map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
-      setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
-      setProjection(initialGlobe ? 'globe' : 'mercator');
-      map.resize();
+      if (!map.isMoving() && initialGlobe !== globeProjection) {
+        globeProjection = initialGlobe;
+        map.setProjection({ type: initialGlobe ? 'globe' : 'mercator' });
+        setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
+        setProjection(initialGlobe ? 'globe' : 'mercator');
+        map.resize();
+      }
       applyCanopyPalette(map);
       map.triggerRepaint();
       syncCameraPadding();
@@ -959,6 +965,11 @@ const syncCameraPadding = () => {
     let globeProjection = true;
     const syncProjection = () => {
       if (arrivalInProgressRef.current) return;
+      // Never swap the projection mid-gesture/mid-flight. Changing it while the camera
+      // is easing makes MapLibre invert a singular globe matrix (invert -> null), and the
+      // very next frame throws on transformMat4(c, c, null). Apply on `moveend` instead:
+      // the `zoom` event fires throughout a flyTo, `moveend` only once the camera settles.
+      if (map.isMoving()) return;
       const wantsGlobe = basemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         globeProjection = wantsGlobe;
@@ -971,7 +982,9 @@ const syncCameraPadding = () => {
         map.triggerRepaint();
       }
     };
-    map.on('zoom', syncProjection);
+    // `moveend` only — the projection must change once the camera is settled.
+    // `zoom` fires throughout a flyTo, so binding it here re-issued setProjection
+    // mid-flight and produced the singular-matrix crash (see MAP-TRANSFORM test).
     map.on('moveend', syncProjection);
     if (!isFallback) map.on('styledata', debouncedConfigureStyle);
     map.on('load', () => { if (isFallback) return; // map status set by P0-A fallback path
