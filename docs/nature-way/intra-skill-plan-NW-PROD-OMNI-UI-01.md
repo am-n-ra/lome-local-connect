@@ -51,7 +51,7 @@ A/B non identique sur `UI-S5`/`UI-S6` → arrêter, isoler la règle, ne pas ret
 | `UI-S4` | **PARTIEL** | contrôles carte 44×44 (vérifié) ; chips/rolepill/btn.sm **à décider** |
 | `UI-S5` | **RE-PLANIFIÉ** | détecteur « mort » non fiable (faux morts `active`/`sk-line`) ; exige mesure runtime sur **toutes** les feuilles → **déferré** |
 | `UI-S6` | **NON FAIT** | dépend de `UI-S5` |
-| `UI-S7` | **NON FAIT** | — |
+| `UI-S7` | **FERMÉ (sans action)** | le seul « Chargement… » vivant est un **statut carte** (contrainte : texte) ; le `<Suspense>` est mort (aucun `React.lazy`) |
 
 **Commits :** `c077881` (S1..S3), `bdbfc2f` (S4), `97c377d` (UI-5). A/B pré/post = **`RENDER IDENTICAL`**.
 **UI-5** fermé (4 dialogues natifs → toast + bannière inline ; garde `no-native-dialogs`).
