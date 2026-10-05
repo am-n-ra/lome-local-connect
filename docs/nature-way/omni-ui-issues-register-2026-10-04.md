@@ -72,3 +72,25 @@ pannes.
   (VoiceOver/TalkBack) : non exécutés.
 - La maquette (74 écrans) a son propre garde (`check:maquette`) ; ce registre
   ne juge que l'app.
+
+---
+
+## Traitement (slice `NW-PROD-OMNI-UI-01`, 2026-10-04)
+
+| ID | Statut | Ce qui a été fait / mesuré |
+|---|---|---|
+| `UI-4` | **FERMÉ** | **39** caractères invisibles retirés (pas 18 — le garde en a trouvé 21 de plus dans `ui-helpers.ts` + 2 tests). Tous en `src/` : 0 restant. Garde `no-invisible-chars.test.ts`. |
+| `UI-3` | **FERMÉ** | **6** boutons icône-seule nommés (`Fermer` ×5, `Rechercher` ×1) — le registre disait 12 ; les autres étaient des faux positifs (`{lang.catalogue}` = texte). Garde `button-accessible-name.test.ts` (auto-falsifié). |
+| `UI-7` | **FERMÉ** | 3 replis de jeton morts retirés (`var(--line,#e8e8e6)`, `var(--warn,#8a5a00)`) + `#2E8B6F` → `var(--accent)`. Les replis étaient **morts** (jetons toujours définis) → refactor pur, rendu inchangé (prouvé A/B). |
+| `UI-2` | **PARTIEL** | Contrôles carte (zoom/localisation) **36/38 → 44×44** (vérifié 44×44 à 360 et 1280). **Reste** : `.fchip` (26), `.chip` (27), `.rolepill` (25), `.btn.sm` retour (34). Laissés : le texte 8–10 px est **by design** (`design.md` §2) ; les agrandir est un **redesign visible**, pas de la cohérence → **à décider**. |
+| `UI-1` | **RE-PLANIFIÉ (mesuré)** | Le détecteur « mort » **n'est pas fiable ici** : il déclare morts `active`/`desktop`/`selected`/`sk-line`/`vdot` qui sont **vivants** (classes construites depuis des variables, préfixes de bibliothèque). Une suppression en masse **ne peut pas être prouvée sûre** par analyse statique. **Déferré** : exige une mesure runtime sur **toutes** les feuilles (dont authentifiées, indisponibles au sandbox) + retrait fichier par fichier avec A/B. `v3.css` porte les **polices** (`--font-body`) et `styles.css` le **preflight Tailwind** → tous deux **load-bearing** en partie. |
+| `UI-5` | **OUVERT** | `alert`/`confirm` natifs — non traités (nécessite session pour vérifier les toasts). |
+| `UI-6` | **OUVERT** | Libellés EN du chrome — **décision fondateur** requise (Buyer/Seller sont des noms de rôle produit). |
+| `UI-8`/`UI-9`/`UI-10` | **OUVERT** | Styles inline / « Chargement… » / motif maquette. |
+
+**Preuve de non-régression :** `scripts/prove-ui-ab.mjs` rend le parcours public
+à 4 largeurs et compare les empreintes (structure + style stable, géométrie
+exclue car le morph du dock bouge en rAF). **Plancher de bruit = 0** (base vs
+base `RENDER IDENTICAL`) ; pré/post `UI-S1..S4` = **`RENDER IDENTICAL`**.
+777/777 tests, `tsc` propre.
+

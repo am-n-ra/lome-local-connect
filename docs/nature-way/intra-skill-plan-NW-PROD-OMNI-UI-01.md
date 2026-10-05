@@ -37,3 +37,21 @@
 
 ## Re-plan
 A/B non identique sur `UI-S5`/`UI-S6` → arrêter, isoler la règle, ne pas retirer en bloc.
+
+---
+
+## État au 2026-10-04
+
+| ID | Statut | Preuve |
+|---|---|---|
+| `UI-S0` | **FAIT** | `scripts/prove-ui-ab.mjs` ; plancher de bruit **0** (base vs base) |
+| `UI-S1` | **FAIT** | 39 caractères invisibles retirés ; garde `no-invisible-chars.test.ts` |
+| `UI-S2` | **FAIT** | 6 boutons nommés ; garde `button-accessible-name.test.ts` |
+| `UI-S3` | **FAIT** | replis morts retirés ; `#2E8B6F` → `var(--accent)` |
+| `UI-S4` | **PARTIEL** | contrôles carte 44×44 (vérifié) ; chips/rolepill/btn.sm **à décider** |
+| `UI-S5` | **RE-PLANIFIÉ** | détecteur « mort » non fiable (faux morts `active`/`sk-line`) ; exige mesure runtime sur **toutes** les feuilles → **déferré** |
+| `UI-S6` | **NON FAIT** | dépend de `UI-S5` |
+| `UI-S7` | **NON FAIT** | — |
+
+**Commits :** `c077881` (S1..S3), `bdbfc2f` (S4). A/B pré/post = **`RENDER IDENTICAL`**.
+
