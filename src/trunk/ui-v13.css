@@ -177,7 +177,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .txstep b{font-size:8.5px}.txstep small{display:block;color:var(--ink-soft);font-size:7px}
 .txstep .go{color:var(--ink-soft)}
 .navpill{position:absolute;z-index:11;bottom:var(--safe-bottom, 14px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:2px;padding:6px;border-radius:999px;background:var(--pill);box-shadow:var(--sh-lg);transition:width .32s var(--ease)}
-.navpill button{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78);position:relative;overflow:hidden;transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
+.navpill button{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:rgba(255,255,255,.78);position:relative;overflow:hidden;transition:background .2s var(--ease),color .2s var(--ease),transform .15s var(--ease)}
 .navpill button svg{width:18px;height:18px}
 .navpill button.active{color:#fff;background:rgba(255,255,255,.14)}
 .navpill .center{width:46px;height:46px;margin:0 2px;border-radius:50%;border:1px solid rgba(255,255,255,.22);color:#fff;display:grid;place-items:center;z-index:1}
