@@ -965,7 +965,9 @@ const syncCameraPadding = () => {
         map.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
         setGlobeContextLabelVisibility(map, globeContextLabelsVisibleForZoom(map.getZoom()));
         setProjection(wantsGlobe ? 'globe' : 'mercator');
-        map.resize();
+        // No map.resize() here: the ResizeObserver owns container sizing, and
+        // resizing mid-gesture is what left the globe transform matrix null on
+        // maplibre < 6.9 (fixed upstream in #8374/#8351).
         map.triggerRepaint();
       }
     };
