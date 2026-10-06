@@ -2538,8 +2538,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           )}
           {walletState === 'idle' && wallet && (
             <>
-              <div className="cardbox" style={{ background: 'var(--ink)', color: '#fff' }}>
-                <p className="tiny" style={{ color: '#bbb' }}>Solde disponible</p>
+              <div className="cardbox" style={{ background: 'var(--ink)', color: 'var(--on-ink)' }}>
+                <p className="tiny" style={{ color: 'var(--on-ink-soft)' }}>Solde disponible</p>
                 <div className="row" style={{ marginTop: 8, justifyContent: 'space-between' }}>
                   <strong className="fs-26">{formatMoney(wallet.balanceMinor, wallet.currency)}</strong>
                   <span className="status gray">{wallet.currency}</span>

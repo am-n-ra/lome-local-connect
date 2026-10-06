@@ -26,7 +26,7 @@
 | `UI-S3` | **`UI-7`** — aligner les jetons (`var(--accent)`, `--panel-deep`, `--warn`) | nul | grep + rendu identique |
 | `UI-S4` | **`UI-2`** — cibles tactiles ≥ 44 px (dock, fiche, filtres, chips) | faible | mesure Playwright ≥ 44 |
 | `UI-S5` | **`UI-1`** — décommissionner le CSS mort (3 fichiers → 1 vocabulaire) | **fait** | **A/B rendu identique** ✅ (1 338 empreintes, 0 diff) + garde `check:dead-css` |
-| `UI-S6` | **`UI-8`** — migrer les styles inline vers classes (par lots) | élevé | diff visuel nul par lot |
+| `UI-S6` | **`UI-8`** — migrer les styles inline vers classes (par lots) | **fait (portée)** | **A/B rendu identique** ✅ (0 couleur littérale restante) + garde `no-inline-colors.test.ts` |
 | `UI-S7` | **`UI-9`** — libellé de secours du chunk aligné | nul | revue |
 
 ## Règles de la porte

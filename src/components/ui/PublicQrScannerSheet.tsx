@@ -133,7 +133,7 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
           </button>
         </div>
       </div>
-      <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: '#6b6b6b' }}>
+      <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: 'var(--ink-soft)' }}>
         QR public — découvrir les offres. ≠ QR transaction.
 
       </p>

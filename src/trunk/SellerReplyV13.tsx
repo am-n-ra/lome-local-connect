@@ -111,7 +111,7 @@ export function SellerReplyV13({ onClose }: SellerReplyV13Props) {
 <input className="field" type="number" min="0" step="0.01" placeholder="Prix (FCFA)" value={draft.price} onChange={(e) => patch(request.id, { price: e.target.value })} />
               </div>
             )}
-<textarea className="field lg" style={{ marginTop: 6, minHeight: 40, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Message au client (optionnel)…" value={draft.message} onChange={(e) => patch(request.id, { message: e.target.value })} />
+<textarea className="field lg" style={{ marginTop: 6, minHeight: 40, padding: '8px 12px', background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Message au client (optionnel)…" value={draft.message} onChange={(e) => patch(request.id, { message: e.target.value })} />
             <button className="btn ok" type="button" disabled={busy} style={{ marginTop: 8 }} onClick={() => void submit(request)}>Envoyer la réponse</button>
           </div>
         );

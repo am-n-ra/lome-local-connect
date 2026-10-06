@@ -350,7 +350,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
             <button type="button" className={deliveryMode === 'retrait' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('retrait')}>Retrait</button>
             <button type="button" className={deliveryMode === 'livraison' ? 'btn sm' : 'btn ghost sm'} style={{ flex: 1, borderRadius: 999, minHeight: 30 }} onClick={() => setDeliveryMode('livraison')}>Livraison</button>
           </div>
-          <textarea className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: '#fff', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
+          <textarea className="field lg" style={{ marginTop: 8, minHeight: 48, padding: '8px 12px', background: 'var(--white)', border: '1px solid var(--line)', borderRadius: 12, fontSize: 11, color: 'var(--ink)', resize: 'none' }} placeholder="Note (optionnel)…" value={availNote} onChange={(event) => setAvailNote(event.target.value)} />
           {creditSummary && (
             <div className="row" style={{ marginTop: 8, alignItems: 'center', gap: 6 }}>
               <span className="tiny muted">Solde bulk : {creditSummary.creditsRemaining} crédit{creditSummary.creditsRemaining > 1 ? 's' : ''}</span>
@@ -497,7 +497,7 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       )}
       {stage === 'qr' && qrToken && (
         <div className="cardbox" style={{ textAlign: 'center' }}>
-          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  1.2, background: '#0f0f0f', color: '#fff', borderRadius: 12, padding: 14, marginBottom:  8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
+          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  1.2, background: 'var(--ink)', color: 'var(--on-ink)', borderRadius: 12, padding: 14, marginBottom:  8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
           <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
           {qrExpired ? (
             <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>
