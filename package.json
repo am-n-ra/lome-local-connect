@@ -27,7 +27,8 @@
     "check:docs": "node scripts/check-docs.mjs",
     "proof:root-read-paths": "tsx scripts/prove-root-read-paths.mjs",
     "check:live-surface": "node scripts/check-live-surface.mjs",
-    "check:dead-css": "node scripts/check-dead-css.mjs"
+    "check:dead-css": "node scripts/check-dead-css.mjs",
+    "proof:ui10-skeleton": "node scripts/prove-ui10-skeleton.mjs"
   },
   "dependencies": {
     "@neondatabase/auth": "^0.5.0-beta",

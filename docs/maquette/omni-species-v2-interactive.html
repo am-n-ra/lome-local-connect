@@ -177,6 +177,18 @@
   .deskpanel{display:none}
   .empty{text-align:center;padding:18px 8px;color:var(--ink-soft);font-size:11px}
   .empty .ic{font-size:26px;display:block;margin-bottom:7px}
+  /* Motif de chargement (UI-10) : une forme de contenu, pas un mot — monochrome,
+     jamais l'accent (réservé à la confiance), shimmer coupé en reduced-motion. */
+  .skel{background:var(--panel);border-radius:6px;position:relative;overflow:hidden}
+  .skel.line{height:9px;margin-top:7px}
+  .skel.block{height:60px;border-radius:11px;margin-top:8px}
+  .skel.hcard{flex:0 0 128px;height:96px;border-radius:13px}
+  .skel.kv{height:8px;border-radius:4px;margin:6px 0}
+  .skel-rail{display:flex;gap:9px;overflow:hidden;margin-top:8px}
+  .skel-stack{display:flex;flex-direction:column;gap:8px}
+  .skel.shimmer::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(15,15,15,.045),transparent);transform:translateX(-100%);animation:skShimmer 1.3s var(--ease) infinite}
+  @keyframes skShimmer{100%{transform:translateX(100%)}}
+  @media (prefers-reduced-motion:reduce){.skel.shimmer::after{animation:none;display:none}}
 
   /* ---------- DESKTOP (>=1040px) : rail gauche, panneau de contenu, sheets = tiroirs droits ---------- */
   @media (min-width:1040px){
@@ -538,6 +550,12 @@ SHEETS['results-empty'] = () => `
 SHEETS['state-slow'] = () => `
   <div class="handle"></div><div class="eyebrow">Réseau lent</div><h1 style="margin-top:3px">Recherche en cours…</h1>
   <p class="lead">Nous cherchons encore. Vous pouvez continuer à regarder la carte.</p>
+  <div class="skel-rail" role="status" aria-busy="true" aria-label="Chargement">
+    <div class="skel hcard shimmer"></div><div class="skel hcard shimmer"></div><div class="skel hcard shimmer"></div>
+  </div>
+  <div class="skel-stack" style="margin-top:8px" role="status" aria-busy="true" aria-label="Chargement">
+    <div class="skel kv shimmer" style="width:70%"></div><div class="skel kv shimmer" style="width:52%"></div>
+  </div>
   <div class="cardbox"><div class="kv"><span>Progression</span><b>3 lieux sur 5 interrogés</b></div></div>
   <button class="btn ghost" onclick="go('results')">Voir les résultats partiels</button>`;
 

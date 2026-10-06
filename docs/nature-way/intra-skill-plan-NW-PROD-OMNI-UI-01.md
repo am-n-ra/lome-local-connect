@@ -14,7 +14,7 @@
 **IN :** `UI-1` (CSS mort), `UI-2` (cibles tactiles), `UI-3` (noms accessibles),
 `UI-4` (caractères invisibles), `UI-7` (dérive de jetons), `UI-8` (styles inline), `UI-9` (libellé).
 **OUT (décision fondateur) :** `UI-6` (libellés EN — vocabulaire produit à trancher) ;
-`UI-5` (alert/confirm) traité seulement si sûr ; `UI-10` (maquette) = Species.
+`UI-5` (alert/confirm) traité seulement si sûr ; `UI-10` (maquette) porté dans l'autorité (voir clôture).
 
 ## Slices
 
@@ -60,8 +60,15 @@ A/B non identique sur `UI-S5`/`UI-S6` → arrêter, isoler la règle, ne pas ret
 
 ## Clôture de porte — poussé et prouvé en prod (2026-10-06)
 
-- **Push** `0a84596..27ffd55` sur `origin/omni-v2-rebuild` (fast-forward, 13 commits).
+- **Push** `0a84596..27ffd55` puis `27ffd55..9223846` sur `origin/omni-v2-rebuild`.
 - **T-07d ✅** : déploiement GitHub Production pour `27ffd55` (`2026-10-06T08:38Z`) ; prod `omni.sparkafrika.online` sert `index-CdqxKwwc.js` + `index-CDJ3y-XD.css` **byte-identiques** au build local (sha256 JS `27563d3b…`, CSS `6326f399…`). Smoke prod : HTML 200, `/api/v2/public/facilities` 200.
 - **783/783 tests**, `tsc` propre, 6 gardes vertes.
+
+## UI-10 — motif de chargement porté dans la maquette (2026-10-06)
+
+- **Constat** : le Seed demande des états de chargement ; l'app avait le motif (`Skeleton.tsx`, 27 usages) mais la **maquette (autorité)** n'en avait aucun → l'autorité était muette sur une surface qu'elle exige. Décision : **porter dans la maquette** (garder l'autorité comme source unique) plutôt qu'acter l'écart.
+- **Livré** : CSS `.skel` monochrome (`--panel`, jamais l'accent) + shimmer coupé en `prefers-reduced-motion` ; surface `state-slow` affiche 3 `hcard` + 2 `kv` avec `aria-busy`. **Aucun nouvel écran** (74 inchangés).
+- **Preuve** : `scripts/prove-ui10-skeleton.mjs` **6/6** (couleur `#f7f7f7`, animation `skShimmer`, reduced-motion `none`) ; garde `check:maquette` §7 falsifié en 2 modes (retrait CSS, retrait du motif).
+- **UI-1..UI-10 toutes fermées.**
 
 

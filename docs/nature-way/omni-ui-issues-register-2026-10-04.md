@@ -47,7 +47,7 @@ pannes.
 | `UI-7` | **Basse** | **Dérive de jetons couleur** : `#2E8B6F` en dur dans `TrunkAppV13:2153` (au lieu de `var(--accent)`) ; `#e8e8e6` ×3 dans `AdminV13` (n'existe pas — `--panel-deep` = `#e6e6e6`) ; `#8a5a00` comme repli `var(--warn)` alors que le jeton `--warn` vaut `#8a6d1f`. Plus **33 littéraux hex** dans les `.tsx` hors `TrunkMap` (style de carte, tolérable). | grep + comparaison `design.md` §1 | Trunk |
 | `UI-8` | **Basse** | **506 styles inline** (`style={{…}}`) dans `src/trunk` : TrunkAppV13 **194**, SellerV13 **144**, BuyerFlowV13 50, AdminV13 42. `design.md` §6 dit « no inline colors ». Empêche le thème central, gonfle le bundle, rend le CSS mort (lien avec `UI-1`). | grep | Trunk |
 | `UI-9` | **Basse** | **« Chargement… » de secours du chunk** (`TrunkAppV13:3084`, `mapState==='loading'`) : filet `Suspense` légitime mais **non squelette** (les autres surfaces le sont). Incohérence mineure de la famille `SK-4`. | grep | Trunk |
-| `UI-10` | **Basse** | **Motif de squelette absent de la maquette** : `docs/maquette/omni-species-v2-interactive.html` n'a aucun motif squelette ; l'app en a 27. Écart app↔maquette (l'app est en avance) — à porter dans la maquette ou à acter. | grep maquette | Trunk/Species |
+| `UI-10` | **FERMÉ (porté dans la maquette)** | Le Seed demande des états de chargement ; l'app avait le motif (`Skeleton.tsx`, 27 usages), la **maquette (autorité) n'en avait aucun** → l'autorité était muette. Motif **porté dans la maquette** : CSS `.skel` (monochrome `--panel`, shimmer coupé en `prefers-reduced-motion`) + surface `state-slow` qui l'affiche (3 `hcard` + 2 `kv`, `aria-busy`). **Aucun nouvel écran** (74 inchangés). Preuve navigateur `scripts/prove-ui10-skeleton.mjs` **6/6** (couleur `#f7f7f7`, animation `skShimmer`, reduced-motion `none`). Garde `check:maquette` §7 (2 modes falsifiés). |
 
 ---
 
@@ -95,6 +95,5 @@ exclue car le morph du dock bouge en rAF). **Plancher de bruit = 0** (base vs
 base `RENDER IDENTICAL`) ; pré/post `UI-S1..S4` et `UI-1`/`UI-8` = **`RENDER IDENTICAL`**.
 **783/783 tests**, `tsc` propre, gardes `boundary/state/docs/coherence/live-surface/dead-css` vertes.
 
-**Toutes les dettes UI mesurées sont fermées** (`UI-1..UI-9`). Reste hors tranche :
-`UI-10` (maquette) = décision Species, non traitée ici.
+**Toutes les dettes UI mesurées sont fermées** (`UI-1..UI-10`). `UI-10` (motif de chargement absent de la maquette) a été **porté dans la maquette** (autorité) plutôt que « acté » : le Seed demande des états de chargement, donc l'autorité doit les montrer.
 

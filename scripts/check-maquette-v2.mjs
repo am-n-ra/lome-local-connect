@@ -226,6 +226,18 @@ if (registry) {
     'registry S-06 row no longer claims the level scale is absent');
 }
 
+// --- 7. UI-10 : le motif de chargement vit dans la maquette (autorité) ---
+// Le Seed demande des états de chargement ; l'app les a, la maquette doit les
+// montrer aussi, sinon l'autorité redevient muette. Le motif doit rester
+// MONOCHROME (--panel) et coupé en reduced-motion (jamais l'accent, réservé à
+// la confiance). Falsifiable : retirer .skel du CSS ou le motif de state-slow
+// fait échouer.
+check(/\.skel\{[^}]*background:var\(--panel\)/.test(html), 'UI-10 skeleton motif present and monochrome (--panel)');
+check(/@media \(prefers-reduced-motion:reduce\)\{\.skel\.shimmer::after\{[^}]*display:none/.test(html),
+    'UI-10 skeleton shimmer disabled under prefers-reduced-motion');
+const slowBlock = (js.match(/SHEETS\['state-slow'\]\s*=\s*\(\)\s*=>\s*`([\s\S]*?)`;/m) || [])[1] || '';
+check(/class="skel hcard/.test(slowBlock), 'UI-10 loading surface (state-slow) shows the skeleton motif');
+
 if (failures.length) {
   console.error(`\nMAQUETTE V2 CHECK FAILED (${failures.length}):`);
   for (const f of failures) console.error(`  FAIL ${f}`);
