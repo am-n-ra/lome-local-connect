@@ -18,6 +18,7 @@ const SORT = 'src/trunk/results-sort.ts';
 const CSS = 'src/trunk/ui-v13.css';
 const MAP = 'src/trunk/TrunkMap.tsx';
 const FRESH = 'src/trunk/offer-freshness.ts';
+const SELLER_FRESH = 'src/trunk/SellerFreshnessV13.tsx';
 
 // [id, description, (sources) => boolean]
 const RULES = [
@@ -80,6 +81,15 @@ const RULES = [
   ['search-desktop-clip', 'desktop: the constraint row is one clipped/scrollable line — budget/quantity can never reach the role switch', (s) =>
     /\.sheet\[data-sheet="search"\] \.constraint-zone\{[^}]*flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden\}/.test(s[CSS]) &&
     /\.sheet\[data-sheet="search"\] \.constraint-zone \.chips\{[^}]*flex-wrap:nowrap/.test(s[CSS])],
+  ['menu-01-freshness', 'the seller menu carries the maquette destination "Fraîcheur de la dispo" → sheet freshness', (s) =>
+    /setSheet\('freshness'\)[^\n]*Fraîcheur de la dispo/.test(s[APP])],
+  ['search-02-seller-write', 'the seller freshness screen RE-CONFIRMS availability through the real Pro-gated route (the write half of D-03)', (s) =>
+    /setProductAvailability\(/.test(s[SELLER_FRESH]) &&
+    /to: 'en_stock'/.test(s[SELLER_FRESH]) &&
+    /expiresInHours: windowHours/.test(s[SELLER_FRESH]) &&
+    /computeOfferFreshness\(/.test(s[SELLER_FRESH]) &&
+    /freshnessLabel\(/.test(s[SELLER_FRESH]) &&
+    !/availability_expires_at/.test(s[SELLER_FRESH])],
 ];
 
 function run(sources) {
@@ -92,7 +102,7 @@ function run(sources) {
   return failures;
 }
 
-const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH) };
+const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH), [SELLER_FRESH]: read(SELLER_FRESH) };
 
 if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
@@ -117,6 +127,9 @@ if (process.argv.includes('--selftest')) {
     [APP, 'worstFreshness(orderedResults.map', 'worstFreshness([] && orderedResults.map'],
     [CSS, '.rolepill{top:38px;right:14px;left:auto;transform:translateY(-50%);z-index:17}', '.rolepill{top:8px;left:50%}'],
     [CSS, '.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}', '.sheet[data-sheet="search"] .constraint-zone{display:flex;flex-wrap:wrap}'],
+    [APP, "setSheet('freshness')", "setSheet('seller')"],
+    [SELLER_FRESH, "to: 'en_stock'", "to: 'a_valider'"],
+    [SELLER_FRESH, 'expiresInHours: windowHours', 'expiresInHours: null'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {
