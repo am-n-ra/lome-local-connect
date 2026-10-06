@@ -58,7 +58,7 @@ Mesuré : maquette **74 écrans**, app **33 sheets**. Les absents sont surtout *
 | **Données/état** | — (aucun) |
 | **Fidélité (écrans non construits)** | `MENU-01` (8 destinations vendeur sans écran) · `op-side` · `seller-automation` · `room` |
 
-**Résolus/actés :** `SEARCH-01` (tri, DS-3) · `SEARCH-02` (fraîcheur dérivée **+ moitié vendeur**, D-03/DS-12) · `fraicheur` (DS-12) · `DOCK-02` (dock opérateur, DS-3+TF-6) · `DOCK-03` (DS-3) · `DOCK-04` (DS-6) · `DOCK-05` (DS-7) · `MENU-02` (DS-8) · `SEARCH-03` (DS-9) · `OPT-02`+`MENU-03` (DS-4) · `DOCK-01`+`OPT-01` (actés DS-4).
+**Résolus/actés :** `SEARCH-01` (tri, DS-3) · `SEARCH-02` (fraîcheur dérivée **+ moitié vendeur**, D-03/DS-12) · `fraicheur` (DS-12) · `DOCK-02` (dock opérateur + `op-side` lecture seule, DS-3+TF-6+DS-13) · `DOCK-03` (DS-3) · `DOCK-04` (DS-6) · `DOCK-05` (DS-7) · `MENU-02` (DS-8) · `SEARCH-03` (DS-9) · `OPT-02`+`MENU-03` (DS-4) · `DOCK-01`+`OPT-01` (actés DS-4).
 
 **Aucun écart de sécurité.** Aucune régression : l'app reste **en avance** sur beaucoup de surfaces (transaction, bulk, favoris, Pro, team).
 

@@ -89,8 +89,13 @@ le test **échoue** ; retirée → **4/4**.
   live-surface/dead-css/dock-search/maquette).
 - Registre `omni-dock-search-conformance-register-2026-10-06.md` : `DOCK-02`
   passe à **LIVRÉ (DS-3 + TF-6 + DS-13)**.
+- **Poussé** `fd003cb` → `origin/omni-v2-rebuild` ; Vercel a reconstruit.
+  **T-07d ✅** : prod sert **`index-Dgv8gkm8.js` === build local** (byte-identique),
+  **entrée de déploiement GitHub pour `fd003cb`** présente ; route
+  `GET /api/v2/public/facilities?reviewer=op-side&visit=…` → **401** sans session
+  en prod ; chaîne `reviewer=op-side` présente dans le bundle **servi** ;
+  **preuve navigateur rejouée contre la prod → 12/12 PASS**.
 - **Résidu honnête** : le rendu avec **session opérateur réelle** (compte
   `juniorkheir@gmail.com`) n'est pas capturé — session réelle indisponible au
-  sandbox ; la preuve navigateur stubbée + le SQL réel + le garde falsifié
-  couvrent le contrat. Spot-check fondateur = preuve visuelle finale.
-- Push prod + T-07d : sur ordre (la prod sert encore `7cfd9cd`).
+  sandbox ; la preuve navigateur stubbée (local **et** prod) + le SQL réel + le
+  garde falsifié couvrent le contrat. Spot-check fondateur = preuve visuelle finale.
