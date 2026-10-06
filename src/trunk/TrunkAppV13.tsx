@@ -1878,7 +1878,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   {/* D-CON-5 — three explicit families. A switch is checked; a threshold is set. */}
                   {CONSTRAINT_GROUPS.map((group) => (
                     <div key={group.id}>
-                      <div className="label">{group.label}</div>
+                      <div className="eyebrow">{group.label}</div>
                       {group.id === 'besoin' ? (
                         <div className="chips" style={{ alignItems: 'center' }}>
                           <label className="chip" style={{ gap: 6, cursor: 'text' }}>
@@ -1921,7 +1921,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     </div>
                   ))}
                   {/* D-CON-4 — a single distance control: the scopes. No duplicate chip. */}
-                  <div className="label">Portée de recherche</div>
+                  <div className="eyebrow">Portée de recherche</div>
                   <div className="chips">
                     {RAYON_SCOPE_LABELS.map((scope: string) => (
                       <span key={scope} className={`chip${searchConstraints.switches.has(scope) ? ' active' : ''}`} onClick={() => toggleConstraint(scope)} role="button" tabIndex={0}><span className="dot" />{scope}</span>
@@ -1930,7 +1930,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 </>
               ) : (
                 <>
-                  <div className="label">Filtres actifs</div>
+                  <div className="eyebrow">Filtres actifs</div>
                   <div className="chips">
                     {(ROLE_CONSTRAINTS[role] ?? []).map((c: string) => {
                       const soon = chipStatusFor(c) === 'soon';
@@ -2392,7 +2392,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="menu" key={role} role="dialog" aria-modal="false" aria-label="Espace" onKeyDown={trapDrawerFocus}>
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Espace</div><h1>{role === 'admin' || role === 'operator' ? 'Espace équipe Omni' : role === 'seller' ? 'Espace vendeur' : 'Espace acheteur'}</h1></div>
+            <div><div className="eyebrow">Menu · {role === 'admin' || role === 'operator' ? 'Équipe' : role === 'seller' ? 'Vendeur' : 'Acheteur'}</div><h1>Tout Omni, depuis ici</h1></div>
             <span className="status ink">{role === 'buyer' ? 'Acheteur' : role === 'seller' ? 'Vendeur' : role === 'admin' ? 'Admin' : 'Opérateur'}{role === 'admin' || role === 'operator' ? ' · équipe' : ''}</span>
           </div>
           <div className="menugrid" style={{ display: 'grid', gap: 8, marginTop: 10 }}>

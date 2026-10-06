@@ -62,8 +62,14 @@ for (const width of widths) {
     sorts: [...document.querySelectorAll('.sortbar .sortchip')].map((c) => c.textContent.trim()),
     firstPrice: document.querySelector('#hgrid .hcard .pr')?.textContent?.trim() || null,
     labels: [...document.querySelectorAll('.constraint-zone .label')].map((l) => l.textContent.trim()),
+    kickerEyebrow: document.querySelectorAll('.constraint-zone .eyebrow').length,
+    kickerLabel: document.querySelectorAll('.constraint-zone .label').length,
   }));
-  console.log(`  [${width}px] sheet=${r.sheet} hcards=${r.hcards} sortbar=${r.sortbar} sorts=${JSON.stringify(r.sorts)} price=${r.firstPrice} labels=${JSON.stringify(r.labels)}`);
+  console.log(`  [${width}px] sheet=${r.sheet} hcards=${r.hcards} sortbar=${r.sortbar} sorts=${JSON.stringify(r.sorts)} price=${r.firstPrice} kickers=${r.kickerEyebrow}eyebrow/${r.kickerLabel}label`);
+  // OPT-02 — constraint family kickers are .eyebrow (not .label), design.md §38.
+  if (r.kickerEyebrow + r.kickerLabel > 0) {
+    check(r.kickerEyebrow >= 3 && r.kickerLabel === 0, `${width}px constraint kickers use .eyebrow`, `${r.kickerEyebrow} eyebrow / ${r.kickerLabel} label`);
+  }
 
   if (STUB) {
     check(r.hcards === 3, `${width}px results render 3 cards`);
@@ -91,6 +97,19 @@ for (const width of widths) {
     if (r.hcards > 1) check(r.sortbar, `${width}px prod sortbar present`);
     check(!!r.firstPrice && /F$|FCFA/.test(r.firstPrice), `${width}px prod card shows a real price`, r.firstPrice || 'none');
   }
+
+  // MENU-03 — the menu header matches the maquette ("Menu · <Rôle>" + "Tout Omni, depuis ici").
+  await page.evaluate(() => {
+    const btn = [...document.querySelectorAll('.navpill button')].find((b) => /Menu/.test(b.getAttribute('title') || b.querySelector('.sr-only')?.textContent || ''));
+    btn?.click();
+  });
+  await page.waitForTimeout(300);
+  const menu = await page.evaluate(() => ({
+    eyebrow: document.querySelector('.sheet[data-sheet="menu"] .eyebrow')?.textContent?.trim() || null,
+    h1: document.querySelector('.sheet[data-sheet="menu"] h1')?.textContent?.trim() || null,
+  }));
+  check(/^Menu · /.test(menu.eyebrow || ''), `${width}px menu eyebrow "Menu · <Rôle>"`, menu.eyebrow || 'none');
+  check(menu.h1 === 'Tout Omni, depuis ici', `${width}px menu h1 "Tout Omni, depuis ici"`, menu.h1 || 'none');
   await page.close();
 }
 

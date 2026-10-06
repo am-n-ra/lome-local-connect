@@ -30,6 +30,12 @@ const RULES = [
     /if \(isOperator\) return \[/.test(s[APP]) && /label: 'Tournée'/.test(s[APP])],
   ['menu-01-seller', 'the seller menu offers Demandes entrantes -> seller-reply', (s) =>
     /className="menuitem"[^\n]*setSheet\('seller-reply'\)[^\n]*Demandes entrantes/.test(s[APP])],
+  ['menu-03-header', 'the menu header is "Menu · <Rôle>" + "Tout Omni, depuis ici"', (s) =>
+    /className="eyebrow">Menu · \{/.test(s[APP]) && /Tout Omni, depuis ici/.test(s[APP])],
+  ['opt-02-kicker', 'constraint families + scopes use the .eyebrow kicker (not .label)', (s) =>
+    /<div className="eyebrow">\{group\.label\}<\/div>/.test(s[APP]) &&
+    /<div className="eyebrow">Portée de recherche<\/div>/.test(s[APP]) &&
+    !/constraint-zone[\s\S]{0,4000}?className="label"/.test(s[APP].slice(s[APP].indexOf('constraint-zone')))],
 ];
 
 function run(sources) {
@@ -53,6 +59,8 @@ if (process.argv.includes('--selftest')) {
     [SORT, "if (key === 'near') {\n    if (!userPosition) return [...results];", "if (key === 'near') {\n    // mutated"],
     [APP, 'if (isOperator) return [', 'if (false) return ['],
     [APP, 'Demandes entrantes', 'Demandes recues'],
+    [APP, 'Tout Omni, depuis ici', 'Tout Omni'],
+    [APP, '<div className="eyebrow">{group.label}</div>', '<div className="label">{group.label}</div>'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

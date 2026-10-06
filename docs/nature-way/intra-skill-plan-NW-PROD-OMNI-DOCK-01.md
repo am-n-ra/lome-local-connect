@@ -16,7 +16,7 @@
 | `DS-1` inventaire mesuré | dock/rolepill/recherche/options/menus × 4 largeurs + diff écrans | Relais (fait) | **verified** | registre `omni-dock-search-conformance-register-2026-10-06.md` + `/tmp` captures |
 | `DS-2` arbitrage direction | (a) aligner / (b) acter l'avance + combler le fond / (c) geler | **Fondateur** | **verified** — **(b)** | réponse fondateur |
 | `DS-3` rattrapage fond | `SEARCH-01` tri résultats · `DOCK-02` dock opérateur terrain · `MENU-01` menu vendeur · `DOCK-03` libellé buyer | Relais (fait) | **verified** | code + preuve navigateur 28/28 + garde falsifié 6/6 + T-07d |
-| `DS-4` fidélité/acte | `DOCK-01`/`OPT-01` (acter) · `OPT-02`/`MENU-03` (vocabulaire) | Relais | **planned** | décision consignée, ou correctif token |
+| `DS-4` fidélité/acte | `DOCK-01`/`OPT-01` (acter) · `OPT-02`/`MENU-03` (vocabulaire) | Relais (fait) | **verified** | décision consignée + correctif token + garde |
 | `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 6/6 |
 
 ## Définition de fini
