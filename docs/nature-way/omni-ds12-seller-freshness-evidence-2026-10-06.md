@@ -56,11 +56,24 @@ référence **pas** la colonne SQL brute). La **preuve navigateur** a aussi ét�
 falsifiée : muter la cible en `to:'a_valider'` → **FAIL (1)**
 (`{"to":"a_valider",...}`), restauré → PASS.
 
+## 3bis. Vérification PROD (T-07d)
+
+| Preuve | Résultat |
+|---|---|
+| Push | `9c30607..aecfe47` sur `origin/omni-v2-rebuild` |
+| Déploiement Vercel | entrée `Production` pour **`aecfe477…`** (= HEAD) |
+| Hash prod === build local | `index-Ck9ht1wn.js`, **sha256 `0e19fa7f…` identique** |
+| Chaînes dans le bundle **servi** | « Fraîcheur de la dispo », « Reconfirmer maintenant », « 4 h frais » présentes |
+| Route gardée en prod (sans session) | `POST …/availability` → **401** |
+| Preuve navigateur **vs prod** (`APP_URL=https://omni.sparkafrika.online`) | **11/11 PASS**, 0 pageerror |
+
 ## 4. Résidu honnête
 
-- **Non exercé de bout en bout en prod** : la confirmation réelle exige une
-  **session vendeur Pro** (sandbox sans DB/auth). La preuve est au niveau
-  **code + garde + contrat + montage**, pas au niveau parcours authentifié.
+- **Non exercé de bout en bout avec une session vendeur réelle** : la confirmation
+  réelle exige une **session vendeur Pro** (Neon sign-in indisponible au harnais).
+  La preuve prod est **comportementale au bord auth** (session stubbée : app, menu,
+  sheet, route et **appel POST réel** sont ceux de production) + **route 401**
+  sans session ; le parcours **authentifié** reste un spot-check fondateur.
 - L'écran maquette `fraicheur` reste décrit dans la maquette comme
   **entité/Pro** (auto-dispo) ; la **bascule auto** est une autre surface
   (`seller-automation`, **sans modèle en base** → non construite, pas de bouton
