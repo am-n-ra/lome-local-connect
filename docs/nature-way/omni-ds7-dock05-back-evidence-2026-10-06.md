@@ -21,6 +21,7 @@ Prédicat `destination` élargi : `account`/`wallet`/`plans`/`saved` n'en sont p
 | **Navigateur** | `scripts/prove-dock05-back.mjs` — **8/8** @ 390/1280 : repos **sans** Retour · fiche facilité **avec** Retour · Retour **revient aux résultats** |
 | **Non-régression** | `tsc` clean · **796/796** tests · `boundary`/`live-surface`/`state` **PASS** |
 | **Bundles serverless** | **0 modifié** (correctif 100 % client) |
+| **Prod** | `index-B1zF4Ouo.js` sha256 `deff34de…` **=== build local (T-07d ✅)** ; déploiement GitHub `283ebe5` Production `2026-10-06T16:15:11Z` ; preuve navigateur **8/8 rejouée sur prod** (vraie DB) |
 
 ## D. Limite honnête
 
