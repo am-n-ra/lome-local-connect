@@ -43,6 +43,7 @@
 | **Unitaire** | `src/trunk/results-sort.test.ts` **7/7** (ordre serveur, proximité sans position, prix sans prix, devises incomparables, remise, haversine) |
 | **Garde falsifiable** | `scripts/check-dock-search.mjs` — **6 règles**, `--selftest` → **6/6 falsifiées**, source réelle clean ; `npm run check:dock-search` **PASS** |
 | **Navigateur (Playwright, 4 largeurs 390/768/1280/1920)** | `scripts/prove-ds3-dock-sort.mjs` **28/28 PASS** — dock 3×≥44px, libellé buyer, 3 cartes, sortbar 4 chips, prix « dès 126 000 F », **« Prix le plus bas » → Hub éloigné**, **« Remise Omni » → Épicerie proche** ; familles de contraintes présentes ≥1280 |
+| **Prod réelle (vraie DB, `omni.sparkafrika.online`)** | même script, sans fixture : **4 largeurs PASS** — dock « Scanner une entité », **20 résultats**, **sortbar 4 chips**, **prix réel « dès 25 500 F »** (=== l'agrégat API) ; familles de contraintes présentes ≥1280. **Hash prod `index-VHx416lL.js` sha256 `a995499e…` === build local (T-07d ✅)** ; déploiement GitHub `95f02e2` |
 | **Suite** | **790/790** (79 fichiers), `tsc` clean |
 | **Gardes repo** | boundary · state · docs · coherence · maquette · live-surface · dead-css · dock-search = **8/8 PASS** |
 | **Bundles serverless** | **12 régénérés** dans le même commit (leçon `9c3f5d8`) — l'agrégat SEARCH-01 est présent dans `api/v2/public/facilities.js` (5 occurrences) |

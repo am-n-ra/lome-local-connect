@@ -53,11 +53,7 @@ for (const width of widths) {
   await page.keyboard.type('boulangerie');
   await page.keyboard.press('Enter');
   // The search reveal is a cinematic (world→…→framing) ~6s; wait for results.
-  if (STUB) {
-    await page.waitForSelector('#hgrid .hcard', { timeout: 20000 }).catch(() => undefined);
-  } else {
-    await page.waitForTimeout(1500);
-  }
+  await page.waitForSelector('#hgrid .hcard', { timeout: 20000 }).catch(() => undefined);
 
   const r = await page.evaluate(() => ({
     sheet: document.querySelector('.omni-v13-stage')?.getAttribute('data-sheet'),
@@ -89,6 +85,11 @@ for (const width of widths) {
     await page.waitForTimeout(300);
     const discFirst = await page.evaluate(() => document.querySelector('#hgrid .hcard b')?.textContent?.trim());
     check(discFirst === 'Épicerie proche', `${width}px "Remise Omni" sorts best discount first`, discFirst || 'none');
+  } else {
+    // Real prod DB: no fixture — assert the surfaces actually render.
+    check(r.hcards >= 1, `${width}px prod results render`, String(r.hcards));
+    if (r.hcards > 1) check(r.sortbar, `${width}px prod sortbar present`);
+    check(!!r.firstPrice && /F$|FCFA/.test(r.firstPrice), `${width}px prod card shows a real price`, r.firstPrice || 'none');
   }
   await page.close();
 }
