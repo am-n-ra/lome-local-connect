@@ -1583,7 +1583,12 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       { icon: 'qr', label: 'QR', target: 'qr', center: true, active: false },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
-    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'account' && sheet !== 'wallet' && sheet !== 'plans' && sheet !== 'saved' && sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;
+    // DOCK-05 — an explicit `Retour` on every non-home screen, not only the "destination"
+    // sheets: the account family (Compte, Wallet, Plans, Recherches sauvegardées) keeps a
+    // back arrow like the maquette's `backItem`. Resting screens (map, search, menu, buyer
+    // home, onboarding) get none — a back arrow there would point nowhere. The locked
+    // transaction flow never offers a live back at all (its own dock below, FF-1 `Quitter`).
+    const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;
     if (destination) return [
       { icon: 'back', label: 'Retour', target: 'back', center: false, active: false },
       isOperator
