@@ -44,6 +44,9 @@ La classe **`.textbtn`** était utilisée **3×** dans `TrunkAppV13.tsx` mais **
 
 `SEARCH-02` (fraîcheur état-codée — **décision de modèle requise**, D-03) · `MENU-01` (menu vendeur 7→13 entrées — **Haute**, mais 13 destinations dont plusieurs écrans **non construits** → chaque entrée exigerait un écran, sinon bouton mort) · `DOCK-02` (dock opérateur terrain — **Haute**, logique, dépend de `op-queue`) · `SEARCH-01` (tri — **déjà livré**, DS-1) · écrans terrain opérateur (owner fondateur TT-1).
 
-## F. État de livraison
+## F. État de livraison — POUSSÉ + PROD VÉRIFIÉ (T-07d ✅)
 
-Commit local, **NON poussé** — `GITHUB_TOKEN` **expiré** (401 sur `api.github.com/user`, les deux formes d'auth). **T-07d non franchi.** À pousser dès un jeton `repo` valide, puis vérifier hash prod === local + entrée de déploiement GitHub.
+Push `f81f7dc..b772042` → `origin/omni-v2-rebuild`. Vercel auto-deploy. **T-07d franchi** :
+- prod bundle `assets/index-BgD2DAcG.js` === build local (hash identique) ; entrée GitHub `deployments` pour `b772042` (Production) ;
+- **`.linkbtn` présent dans le CSS servi** (`index-BAybWXNx.css`) ; chaîne « Recherches sauvegardées » présente dans le JS servi ;
+- **preuve navigateur sur prod** (`omni.sparkafrika.online`) : `prove-search03-saved-link.mjs` **4/4** (lien visible, ouvre `saved`, 0 erreur).

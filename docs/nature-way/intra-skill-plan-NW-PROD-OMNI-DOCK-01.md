@@ -20,8 +20,8 @@
 | `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 8/8 |
 | `DS-6` fond (dock vendeur) | `DOCK-04` dock vendeur = Mon espace / Scanner le code d'un acheteur / Menu | Relais (fait) | **verified** | code + garde falsifié 9/9 ; rendu vendeur = spot-check fondateur |
 | `DS-7` fond (Retour contextuel) | `DOCK-05` Retour sur tout écran non-home, **famille compte incluse** | Relais (fait) | **verified** | code + garde falsifié 13/13 + preuve navigateur 8/8 ; rendu compte = spot-check fondateur |
-| `DS-8` fidélité (menu buyer) | `MENU-02` noms/lieux du menu acheteur = maquette (8 entrées) | Relais (fait, **non poussé**) | **verified (local)** | garde falsifié 14/14 + preuve navigateur 18/18 (session stubbée au bord auth, prouve aussi DOCK-05 famille compte) ; push bloqué par jeton |
-| `DS-9` fidélité (lien saved) | `SEARCH-03` lien « Recherches sauvegardées » dans l'en-tête du sheet recherche | Relais (fait, **non poussé**) | **verified (local)** | garde falsifié 16/16 + preuve navigateur 4/4 (mobile) ; push bloqué par jeton |
+| `DS-8` fidélité (menu buyer) | `MENU-02` noms/lieux du menu acheteur = maquette (8 entrées) | Relais (fait, **poussé** `b772042`) | **verified (prod)** | garde falsifié 14/14 + preuve navigateur 18/18 (session stubbée au bord auth, prouve aussi DOCK-05 famille compte) ; prod `index-BgD2DAcG.js` === local (T-07d ✅) |
+| `DS-9` fidélité (lien saved) | `SEARCH-03` lien « Recherches sauvegardées » dans l'en-tête du sheet recherche | Relais (fait, **poussé** `b772042`) | **verified (prod)** | garde falsifié 16/16 + preuve navigateur 4/4 (mobile) ; `.linkbtn` dans le CSS prod (T-07d ✅) |
 
 ## Définition de fini
 
