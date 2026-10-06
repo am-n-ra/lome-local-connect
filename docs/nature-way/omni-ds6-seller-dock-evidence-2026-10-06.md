@@ -35,6 +35,7 @@ Nouvelle icône `shop` (`Store` de lucide) dans `dockIcon`. **Aucun nouveau `She
 | **Non-régression** | `tsc` clean · **790/790** tests · 8 gardes repo **PASS** |
 | **Navigateur (acheteur, 4 largeurs)** | `scripts/prove-ds3-dock-sort.mjs` — dock acheteur + menu + kickers **PASS** (le rôle vendeur exige une session, non disponible au sandbox — voir §D) |
 | **Bundles serverless** | **0 modifié** (correctif 100 % client) |
+| **Prod** | `index-DLRt7PiH.js` sha256 `9ccc481d…` **=== build local (T-07d ✅)** ; déploiement GitHub `861e3ac` ; chaîne « Scanner le code d'un acheteur » présente dans le bundle servi |
 
 ## D. Limite honnête
 
