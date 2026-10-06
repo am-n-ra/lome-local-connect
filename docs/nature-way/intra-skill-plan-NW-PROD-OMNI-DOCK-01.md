@@ -19,6 +19,7 @@
 | `DS-4` fidélité/acte | `DOCK-01`/`OPT-01` (acter) · `OPT-02`/`MENU-03` (vocabulaire) | Relais (fait) | **verified** | décision consignée + correctif token + garde |
 | `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 8/8 |
 | `DS-6` fond (dock vendeur) | `DOCK-04` dock vendeur = Mon espace / Scanner le code d'un acheteur / Menu | Relais (fait) | **verified** | code + garde falsifié 9/9 ; rendu vendeur = spot-check fondateur |
+| `DS-7` fond (Retour contextuel) | `DOCK-05` Retour sur tout écran non-home, **famille compte incluse** | Relais (fait) | **verified** | code + garde falsifié 13/13 + preuve navigateur 8/8 ; rendu compte = spot-check fondateur |
 
 ## Définition de fini
 
@@ -37,4 +38,4 @@ Décision fondateur (DS-2), fait contredit, garde rouge, ou stop.
 
 ## Retour à Founder HQ
 
-Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 verified (b)` · `DS-3 verified` (tri + dock opérateur + menu vendeur + libellé buyer) · `DS-4 verified` (acter `DOCK-01`/`OPT-01` ; vocabulaire `MENU-03`/`OPT-02` corrigé) · `DS-5 verified` (garde 8 règles, selftest 8/8) · gap résiduel = `DOCK-04`/`DOCK-05`/`MENU-02`/`SEARCH-02`/`SEARCH-03` + écrans terrain opérateur · owner = relais · prochaine action = prochaine tranche sur ordre (T-07d franchi : prod `index-DYPk8L3_.js` === local).
+Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 verified (b)` · `DS-3 verified` (tri + dock opérateur + menu vendeur + libellé buyer) · `DS-4 verified` (acter `DOCK-01`/`OPT-01` ; vocabulaire `MENU-03`/`OPT-02` corrigé) · `DS-5 verified` (garde 8 règles, selftest 8/8) · `DS-6 verified` (dock vendeur `DOCK-04`) · `DS-7 verified` (`DOCK-05` Retour famille compte ; garde 13 règles, selftest 13/13 ; preuve navigateur 8/8) · gap résiduel = `MENU-02`/`SEARCH-02`/`SEARCH-03` + écrans terrain opérateur · owner = relais · prochaine action = prochaine tranche sur ordre (T-07d franchi : prod `index-DYPk8L3_.js` === local).
