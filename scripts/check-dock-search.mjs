@@ -36,6 +36,9 @@ const RULES = [
     /<div className="eyebrow">\{group\.label\}<\/div>/.test(s[APP]) &&
     /<div className="eyebrow">Portée de recherche<\/div>/.test(s[APP]) &&
     !/constraint-zone[\s\S]{0,4000}?className="label"/.test(s[APP].slice(s[APP].indexOf('constraint-zone')))],
+  ['dock-04-seller', 'the seller dock is Mon espace / Scanner le code d\'un acheteur / Menu', (s) =>
+    /role === 'seller'\) return \[\s*\{ icon: 'shop', label: 'Mon espace'/.test(s[APP]) &&
+    /Scanner le code d'un acheteur/.test(s[APP])],
 ];
 
 function run(sources) {
@@ -61,6 +64,7 @@ if (process.argv.includes('--selftest')) {
     [APP, 'Demandes entrantes', 'Demandes recues'],
     [APP, 'Tout Omni, depuis ici', 'Tout Omni'],
     [APP, '<div className="eyebrow">{group.label}</div>', '<div className="label">{group.label}</div>'],
+    [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

@@ -2,6 +2,7 @@ import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, u
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
   Compass, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
+  Store,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
@@ -1605,9 +1606,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       { icon: 'check', label: 'À valider', target: 'admin', center: true, active: currentSheet === 'admin' },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
+    // DOCK-04 — le dock vendeur suit la maquette : Mon espace (dashboard) / Scanner le
+    // code d'un acheteur (vérification QR) / Menu. Avant : Recherche / Stock / Menu.
     if (role === 'seller') return [
-      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: sheet === 'search' },
-      { icon: 'box', label: 'Stock', target: 'seller', center: true, active: currentSheet === 'seller' },
+      { icon: 'shop', label: 'Mon espace', target: 'seller', center: false, active: currentSheet === 'seller' },
+      { icon: 'qr', label: "Scanner le code d'un acheteur", target: 'seller-qr', center: true, active: currentSheet === 'seller-qr' },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
     return [
@@ -1625,6 +1628,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       case 'home': return <Home size={size} />;
       case 'check': return <CheckCircle2 size={size} />;
       case 'box': return <PackageSearch size={size} />;
+      case 'shop': return <Store size={size} />;
       case 'pin': return <MapPin size={size} />;
       default: return <Search size={size} />;
     }
