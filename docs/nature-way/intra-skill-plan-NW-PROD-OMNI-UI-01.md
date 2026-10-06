@@ -48,13 +48,20 @@ A/B non identique sur `UI-S5`/`UI-S6` → arrêter, isoler la règle, ne pas ret
 | `UI-S1` | **FAIT** | 39 caractères invisibles retirés ; garde `no-invisible-chars.test.ts` |
 | `UI-S2` | **FAIT** | 6 boutons nommés ; garde `button-accessible-name.test.ts` |
 | `UI-S3` | **FAIT** | replis morts retirés ; `#2E8B6F` → `var(--accent)` |
-| `UI-S4` | **PARTIEL** | contrôles carte 44×44 (vérifié) ; chips/rolepill/btn.sm **à décider** |
-| `UI-S5` | **RE-PLANIFIÉ** | détecteur « mort » non fiable (faux morts `active`/`sk-line`) ; exige mesure runtime sur **toutes** les feuilles → **déferré** |
-| `UI-S6` | **NON FAIT** | dépend de `UI-S5` |
+| `UI-S4` | **FERMÉ (mesuré)** | contrôles carte 44×44 ; chips/rolepill/btn.sm **sans action** — la maquette (autorité) est plus petite (21/23 px) et `design.md` les fige |
+| `UI-S5` | **FAIT** | élagage règle-par-règle (méthode saine, A/B `RENDER IDENTICAL`) ; garde `check:dead-css` |
+| `UI-S6` | **FAIT (portée)** | couleurs littérales inline → jetons (A/B identique) ; garde `no-inline-colors.test.ts` |
 | `UI-S7` | **FERMÉ (sans action)** | le seul « Chargement… » vivant est un **statut carte** (contrainte : texte) ; le `<Suspense>` est mort (aucun `React.lazy`) |
 
-**Commits :** `c077881` (S1..S3), `bdbfc2f` (S4), `97c377d` (UI-5). A/B pré/post = **`RENDER IDENTICAL`**.
+**Commits :** `c077881` (S1..S3), `bdbfc2f` (S4), `97c377d` (UI-5).
 **UI-5** fermé (4 dialogues natifs → toast + bannière inline ; garde `no-native-dialogs`).
 **UI-6** fermé (lot FR appliqué ; garde `french-chrome` ; preuve navigateur avant/après).
+**UI-1** (`3d44e13`) et **UI-8** (`5ce7686`) fermés — A/B `RENDER IDENTICAL` (1 338 empreintes), gardes `check:dead-css` + `no-inline-colors`. **UI-1..UI-9 fermées.**
+
+## Clôture de porte — poussé et prouvé en prod (2026-10-06)
+
+- **Push** `0a84596..27ffd55` sur `origin/omni-v2-rebuild` (fast-forward, 13 commits).
+- **T-07d ✅** : déploiement GitHub Production pour `27ffd55` (`2026-10-06T08:38Z`) ; prod `omni.sparkafrika.online` sert `index-CdqxKwwc.js` + `index-CDJ3y-XD.css` **byte-identiques** au build local (sha256 JS `27563d3b…`, CSS `6326f399…`). Smoke prod : HTML 200, `/api/v2/public/facilities` 200.
+- **783/783 tests**, `tsc` propre, 6 gardes vertes.
 
 
