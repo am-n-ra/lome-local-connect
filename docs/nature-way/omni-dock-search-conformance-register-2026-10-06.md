@@ -1,7 +1,7 @@
 # Registre de conformité — Dock · Recherche · Options · Menus × rôles (app ↔ maquette)
 
 > **Slice :** `NW-PROD-OMNI-DOCK-01` (Trunk, porte `ROOT_CLOSED_TRUNK_OPEN`).
-> **As of :** 2026-10-06 (UTC). **HEAD :** `48225a2`. **Autorité visuelle :** `docs/maquette/omni-species-v2-interactive.html` (74 écrans, Species CLOSE `founder-confirmed`).
+> **As of :** 2026-10-06 (UTC). **HEAD :** `4148a91`. **Autorité visuelle :** `docs/maquette/omni-species-v2-interactive.html` (74 écrans, Species CLOSE `founder-confirmed`).
 > **Méthode :** mesure code + navigateur (Playwright 4 largeurs), **pas d'inférence**. Le sandbox n'a **pas** de session → parcours **public (buyer)** mesuré au rendu ; rôles authentifiés (seller/admin/operator) comparés **code ↔ maquette** (dock `dockFor`, menus).
 
 ---
@@ -23,19 +23,19 @@
 
 | ID | Élément | App (mesuré) | Maquette (autorité) | Sévérité | Source à corriger |
 |---|---|---|---|---|---|
-| `DOCK-02` | **Dock opérateur** | partage le dock **admin** (« À valider » → console admin) ; le terrain n'est que dans le menu | `op-queue` (Dossier terrain) + `op-side` (Aperçu côté entité, centre) | **Haute** | `dockFor` app (`TrunkAppV13` `dockItems`) — l'opérateur n'a pas son dock |
-| `DOCK-01` | **Rolepill = rôles** | n'affiche **que** les rôles possédés (`eligibleRoles`, capability serveur) | affiche **les 4** toujours (démo) | Moyenne | **Décision** : capability (app, honnête) vs démo (maquette). Probablement l'app a raison — à acter |
-| `DOCK-03` | **Action centrale buyer** | `QR` → `PublicQrScannerSheet` (scanner le **QR public d'un lieu**) | `scan-entity` → **scanner le QR d'une entité** | Moyenne | libellé + cible (`TrunkAppV13` dock buyer) |
-| `DOCK-04` | **Dock vendeur** | `Recherche / Stock / Menu` | `Mon espace / Scanner le code d'un acheteur / Menu` | Basse | `dockFor` seller |
-| `DOCK-05` | **Retour contextuel** | pas de « Retour » explicite (sauf états `destination`) | `backItem` sur **tout** écran non-home | Basse | `dockFor` |
-| `SEARCH-01` | **Tri des résultats** | **absent** (pas de `sortbar` sur `results`) | `sortbar` : Pertinence / Prix / Distance (`setSort`) | **Haute** | `results` sheet app |
-| `SEARCH-02` | **Fraîcheur** | texte fixe dans `bulk` (« reflète l'allocation Omni ») | `freshbar` **état-codé** (frais / `stale` / `expired`) | Moyenne | composant fraîcheur (D-03) |
-| `SEARCH-03` | **Sheet recherche** | niveau entité/offre + contraintes ; pas de lien « Recherches sauvegardées » | + lien `saved` dans l'en-tête | Basse | `search` sheet — **LIVRÉ (DS-9)** : lien `.btn.ghost.sm` dans l'en-tête, prouvé navigateur |
-| `OPT-01` | **Portées de rayon** | **6** : 1/5/10/25/100/Monde | **4** groupées : `Quartier·1 km` / `Ville·5-25 km` / `Région·100 km` / `Monde` | Basse | app plus fin (D-CON-4) — arbitrer |
-| `OPT-02` | **Libellés de famille** | classe `.label` | classe `.eyebrow` | Basse | **vocabulaire** `design.md` (drift) |
-| `MENU-01` | **Menu vendeur** | **7** entrées (espace, notifs, produits&stock, offres, compagnies, wallet, plans) | **13** : Mes offres · Demandes entrantes · Commandes · Transactions · Stock alloué · Fiche entité · Vérification · Automatisation · Fraîcheur · Pro renouvellement · Wallet · Compte | **Haute** | `menu` sheet app (seller) |
-| `MENU-02` | **Menu buyer** | Mon espace · Transactions en cours · Reprendre · Notifications · Recherches · Favoris · Wallet · Plans (8) | Accueil · Mes demandes · Historique · Favoris · Recherches · Notifications · Wallet&Plans · Compte (8) | Moyenne | noms/lieux diffèrent — **LIVRÉ (DS-8)** : noms maquette, « Reprendre » relocalisé dans Accueil |
-| `MENU-03` | **En-tête de menu** | `Espace` + h1 `Espace acheteur/vendeur/équipe` | `Menu · <Rôle>` + h1 `Tout Omni, depuis ici` | Basse | `menu` header |
+| `DOCK-02` | **Dock opérateur** | partage le dock **admin** (« À valider » → console admin) ; le terrain n'est que dans le menu | `op-queue` (Dossier terrain) + `op-side` (Aperçu côté entité, centre) | **Haute** | **LIVRÉ (DS-3 + TF-6)** : dock opérateur `Tournée` → sheet `tour` (`op-queue` + `op-visit` + `op-report` : prise, constat photo+position, transmission, reprogrammation). Reste **`op-side`** (aperçu côté entité, lecture seule) = tranche terrain séparée |
+| `DOCK-01` | **Rolepill = rôles** | n'affiche **que** les rôles possédés (`eligibleRoles`, capability serveur) | affiche **les 4** toujours (démo) | Moyenne | **ACTÉ (DS-4)** : capability (app, honnête) **retenu** vs démo — décision consignée |
+| `DOCK-03` | **Action centrale buyer** | `QR` → `PublicQrScannerSheet` (scanner le **QR public d'un lieu**) | `scan-entity` → **scanner le QR d'une entité** | Moyenne | **LIVRÉ (DS-3)** : libellé buyer → « Scanner une entité » |
+| `DOCK-04` | **Dock vendeur** | `Recherche / Stock / Menu` | `Mon espace / Scanner le code d'un acheteur / Menu` | Basse | **LIVRÉ (DS-6)** : `Mon espace / Scanner le code d'un acheteur / Menu` |
+| `DOCK-05` | **Retour contextuel** | pas de « Retour » explicite (sauf états `destination`) | `backItem` sur **tout** écran non-home | Basse | **LIVRÉ (DS-7)** : Retour sur tout écran non-home, **famille compte incluse** |
+| `SEARCH-01` | **Tri des résultats** | **absent** (pas de `sortbar` sur `results`) | `sortbar` : Pertinence / Prix / Distance (`setSort`) | **Haute** | **LIVRÉ (DS-3)** : `sortbar` (4 chips Meilleur match / Plus proche / Prix le plus bas / Remise Omni) + ordre carte/rail |
+| `SEARCH-02` | **Fraîcheur** | texte fixe dans `bulk` (« reflète l'allocation Omni ») | `freshbar` **état-codé** (frais / `stale` / `expired`) | Moyenne | **OUVERT** — donnée présente (`availability_expires_at`) mais seuil **par établissement (D-03)** : exige une **décision de modèle** (dériver vs stocker), pas un simple rendu |
+| `SEARCH-03` | **Sheet recherche** | niveau entité/offre + contraintes ; pas de lien « Recherches sauvegardées » | + lien `saved` dans l'en-tête | Basse | **LIVRÉ (DS-9)** : lien `.linkbtn` dans l'en-tête, prouvé navigateur (prod) |
+| `OPT-01` | **Portées de rayon** | **6** : 1/5/10/25/100/Monde | **4** groupées : `Quartier·1 km` / `Ville·5-25 km` / `Région·100 km` / `Monde` | Basse | **ACTÉ (DS-4)** : app plus fine, **retenue** (D-CON-4) |
+| `OPT-02` | **Libellés de famille** | classe `.label` | classe `.eyebrow` | Basse | **LIVRÉ (DS-4)** : familles + portée utilisent `.eyebrow` (vérifié `eyebrow">{group.label}`) |
+| `MENU-01` | **Menu vendeur** | **7** entrées (espace, notifs, produits&stock, offres, compagnies, wallet, plans) | **13** : Mes offres · Demandes entrantes · Commandes · Transactions · Stock alloué · Fiche entité · Vérification · Automatisation · Fraîcheur · Pro renouvellement · Wallet · Compte | **Haute** | **ACTÉ (DS-3, direction (b))** : les 7 entrées atteignables sont **conservées** ; **9 destinations maquette n'ont AUCUN écran app** (`seller-orders/txn/stock/entity-fiche/verif/automation/fraicheur/pro/account`) → les afficher serait **9 boutons morts**. Construire ces écrans = tranche dédiée (non ouverte) |
+| `MENU-02` | **Menu buyer** | Mon espace · Transactions en cours · Reprendre · Notifications · Recherches · Favoris · Wallet · Plans (8) | Accueil · Mes demandes · Historique · Favoris · Recherches · Notifications · Wallet&Plans · Compte (8) | Moyenne | **LIVRÉ (DS-8)** : noms maquette, « Reprendre » relocalisé dans Accueil |
+| `MENU-03` | **En-tête de menu** | `Espace` + h1 `Espace acheteur/vendeur/équipe` | `Menu · <Rôle>` + h1 `Tout Omni, depuis ici` | Basse | **LIVRÉ (DS-4)** : `Menu · <Rôle>` + `Tout Omni, depuis ici` (vérifié code) |
 
 ---
 
@@ -45,35 +45,31 @@ Mesuré : maquette **74 écrans**, app **33 sheets**. Les absents sont surtout *
 
 `op-queue`, `op-visit`, `op-report`, `op-side` (4 écrans opérateur) · `seller-scan`, `seller-txn`, `seller-chat`, `seller-fulfil`, `seller-pay-confirm`, `seller-entity`, `seller-entity-fiche`, `seller-automation`, `seller-account`, `fraicheur`, `remise`, `historique`, `demandes`, `recu`, `room`, `notif-centre`, `produit-multi`, `scan-entity`, `admin-verify`, `admin-claim`, `facility-apex`, `entity-from-qr`, `intent`, `pending`, `rate`, `pay`, `reply`, `state-slow`, `state-error`, `results-empty`, `entity-empty`.
 
-**Lecture :** plusieurs sont **fusionnés** dans un sheet app (ex. `avail/pending/reply/intent/qr/pay/txn-track/rate` = stages du `flow` app ; `demandes`/`historique` = `home` app) — **pas tous des manques**. Les **réellement absents** : `op-queue/op-visit/op-report/op-side` (opérateur terrain), `seller-automation`, `fraicheur` (état), `remise` (état), `room`.
+**Lecture :** plusieurs sont **fusionnés** dans un sheet app (ex. `avail/pending/reply/intent/qr/pay/txn-track/rate` = stages du `flow` app ; `demandes`/`historique` = `home` app). **TF-6 (2026-10-04, déjà en prod)** a construit `op-queue`+`op-visit`+`op-report` dans le sheet `tour` (dock opérateur `Tournée`). Les **réellement absents** restants : **`op-side`** (aperçu côté entité, lecture seule) · **`seller-automation`** · **`fraicheur`** (état) · **`room`**. Le menu vendeur (`MENU-01`) reste **acté** (direction (b)) : ses 9 destinations sans écran ne sont pas affichées pour ne pas créer de boutons morts.
 
 ---
 
 ## 3. Classification de dette (Nature Way)
 
-| Classe | Écarts |
+**Réconcilié 2026-10-06 (post DS-3…DS-9 + TF-6).** Ne restent ouverts que :
+
+| Classe | Écarts restants |
 |---|---|
-| **Logique** | `DOCK-02` (l'opérateur n'a pas le dock terrain que la maquette prescrit) |
-| **Visuelle** | `OPT-02`, `MENU-03`, `DOCK-05` |
-| **Données/état** | `SEARCH-01` (tri), `SEARCH-02` (fraîcheur état-codée) |
-| **Documentation/arbitrage** | `DOCK-01`, `OPT-01` (app plus riche/fin — à acter, pas forcément un défaut) |
+| **Données/état** | `SEARCH-02` (fraîcheur état-codée — **décision de modèle D-03**) |
+| **Fidélité (écrans non construits)** | `MENU-01` (9 destinations vendeur sans écran) · `op-side` · `seller-automation` · `fraicheur` |
+
+**Résolus/actés :** `SEARCH-01` (tri, DS-3) · `DOCK-02` (dock opérateur, DS-3+TF-6) · `DOCK-03` (DS-3) · `DOCK-04` (DS-6) · `DOCK-05` (DS-7) · `MENU-02` (DS-8) · `SEARCH-03` (DS-9) · `OPT-02`+`MENU-03` (DS-4) · `DOCK-01`+`OPT-01` (actés DS-4).
 
 **Aucun écart de sécurité.** Aucune régression : l'app reste **en avance** sur beaucoup de surfaces (transaction, bulk, favoris, Pro, team).
 
 ---
 
-## 4. Décision requise (une seule)
+## 4. Décision — RENDUE
 
-**Le fondateur choisit la direction de rattrapage**, puis une tranche est ouverte :
-
-- **(a) Aligner l'app sur la maquette** — ajouter le **tri** (SEARCH-01), le **dock opérateur terrain** (DOCK-02), les **menus vendeur complets** (MENU-01). Le plus fidèle à l'autorité Species.
-- **(b) Acter les écarts app-en-avance** (DOCK-01 capability, OPT-01 6 portées) et ne corriger que ce qui **manque au fond** (tri, dock opérateur, menus).
-- **(c) Geler** — les écarts sont cosmétiques sauf `SEARCH-01`/`DOCK-02`/`MENU-01`.
-
-**Recommandation (hypothèse réversible, à confirmer) :** **(b)**. Le tri et le dock opérateur sont des **manques de fond** ; le reste est de la fidélité.
+**Direction (b) retenue par le fondateur** (`DS-2`, `HO-OMNI-32`) : **acter les écarts app-en-avance** (DOCK-01 capability, OPT-01 6 portées) et **combler ce qui manque au fond** (tri, dock opérateur). Exécutée par `DS-3` (tri + dock opérateur + libellé buyer) et `DS-4` (actes + vocabulaire). **Clos.**
 
 ---
 
-## 5. Garde falsifiable (à écrire avec la tranche)
+## 5. Garde falsifiable — LIVRÉ
 
-Un garde `dock-search-conformance` vérifiera que : (1) `results` expose un `sortbar` ; (2) l'opérateur a un dock terrain distinct de l'admin ; (3) le menu vendeur contient les entrées maquette ; (4) les 3 familles de contraintes sont rendues. **Falsifié** dans les deux sens avant clôture.
+`scripts/check-dock-search.mjs` (`npm run check:dock-search`) — **16 règles**, `--selftest` **16/16 fired** : `sortbar` présent · dock opérateur terrain distinct · menu vendeur `seller-reply` · en-tête menu · familles `.eyebrow` · docks vendeur/buyer/Retour · lien `saved` · classes `.linkbtn`/`.textbtn` définies. **Falsifié dans les deux sens** (chaque mutation fait tomber sa règle).
