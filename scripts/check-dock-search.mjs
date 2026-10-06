@@ -44,6 +44,14 @@ const RULES = [
   ['dock-05-back', 'a contextual Retour is offered on non-home screens, account family included', (s) =>
     /label: 'Retour', target: 'back'/.test(s[APP]) &&
     !/sheet !== 'account' && sheet !== 'wallet'/.test(s[APP])],
+  ['menu-02-buyer', 'the buyer menu carries the maquette names; Reprendre is relocated, not in the menu', (s) => {
+    const menuStart = s[APP].indexOf('data-sheet="menu"');
+    const start = s[APP].indexOf("role === 'buyer' && (", menuStart);
+    const end = s[APP].indexOf("role === 'seller' && (", start);
+    const block = s[APP].slice(start, end);
+    const names = ['Accueil', 'Mes demandes', 'Historique des transactions', 'Favoris', 'Recherches sauvegardées', 'Notifications', 'Portefeuille & Plans', 'Mon compte'];
+    return start > menuStart && names.every((n) => block.includes(`<b>${n}</b>`)) && !block.includes('Reprendre où j');
+  }],
   ['search-sheet-structure', 'constraint-zone + sim-chips are SIBLINGS of searchdock, not nested inside it', (s) =>
     /<\/button>\s*<\/div>\s*<\/div>\s*\{constraintsOpen &&/.test(s[APP]) &&
     /<div className="sim-chips"[\s\S]*?<\/div>\s*<\/form>/.test(s[APP])],
@@ -78,6 +86,7 @@ if (process.argv.includes('--selftest')) {
     [APP, '<div className="eyebrow">{group.label}</div>', '<div className="label">{group.label}</div>'],
     [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
     [APP, "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;", "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && sheet !== 'account' && sheet !== 'wallet' && !homeLike;"],
+    [APP, '<span><b>Mon compte</b><small>identité & réglages</small></span>', '<span><b>Compte</b><small>identité & réglages</small></span>'],
     [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],
     [CSS, 'padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}', ''],
     [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],

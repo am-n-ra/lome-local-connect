@@ -1648,7 +1648,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'tile-place') { setSheet('none'); return; }
       if (sheet === 'receipt') { setSheet('home'); return; }
       if (sheet === 'notifs') { setSheet('menu'); return; }
-      if (sheet === 'recovery') { setSheet('menu'); return; }
+      if (sheet === 'recovery') { setSheet('home'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply') { setSheet('seller'); return; }
       setSheet('none');
@@ -2412,14 +2412,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <>
                 {role === 'buyer' && (
                   <>
-                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><RefreshCw size={15} /></span><span><b>Transactions en cours</b><small>reprendre où vous en êtes</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openRecovery()}><span className="mi"><History size={15} /></span><span><b>Reprendre où j'en étais</b><small>panier, recherche, transactions</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches enregistrées</b><small>vos alertes</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>vos établissements</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde & recharges</small></span></button>
-                    <button className="menuitem" type="button" onClick={() => { setSheet('plans'); void loadBuyerProStatus(); }}><span className="mi"><Building2 size={15} /></span><span><b>Plans</b><small>niveau de recherche</small></span></button>
+                    {/* MENU-02 — noms & lieux alignés sur la maquette (`menuItems`, ligne « Acheteur ») :
+                        Accueil · Mes demandes · Historique des transactions · Favoris · Recherches
+                        sauvegardées · Notifications · Portefeuille & Plans · Mon compte. « Reprendre »
+                        (extra app) reste atteignable depuis l'Accueil, jamais supprimé en silence. */}
+                    <button className="menuitem" type="button" onClick={() => { setSelectedId(null); setSheet('none'); }}><span className="mi"><Home size={15} /></span><span><b>Accueil</b><small>carte & compteur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Inbox size={15} /></span><span><b>Mes demandes</b><small>suivi & code validé</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Clock3 size={15} /></span><span><b>Historique des transactions</b><small>vos achats passés</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>entités & offres suivies</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches sauvegardées</b><small>vos alertes</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>tout ce qui a bougé</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille & Plans</b><small>solde, Pro, packs</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>Mon compte</b><small>identité & réglages</small></span></button>
                   </>
                 )}
                 {role === 'seller' && (
@@ -2501,6 +2505,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div><div className="eyebrow">Espace acheteur</div><h1>Vos demandes & transactions.</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
+          {/* MENU-02 — « Reprendre où j'étais » (extra app, absent des 8 entrées maquette) reste
+              atteignable depuis l'Accueil : sa fonction n'est pas supprimée avec son entrée de menu. */}
+          <button className="menuitem" type="button" onClick={() => void openRecovery()}><span className="mi"><History size={15} /></span><span><b>Reprendre où j'étais</b><small>panier, recherche, transactions</small></span></button>
           {buyerRequestsState === 'loading' && <Skeleton variant="kv" count={3} />}
           {buyerRequestsState === 'error' && (
             <div role="alert">
