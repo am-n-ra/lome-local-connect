@@ -25,7 +25,9 @@ Prédicat `destination` élargi : `account`/`wallet`/`plans`/`saved` n'en sont p
 
 ## D. Limite honnête
 
-Le rendu de la **famille compte** (Compte/Wallet/Plans/Recherches sauvegardées) exige une **session acheteur réelle**, non disponible au sandbox. Preuve disponible : **garde de source falsifiée** (même classe que DOCK-02/opérateur de DS-3 et DOCK-04/vendeur de DS-6). Preuve navigateur compte = **spot-check fondateur**.
+Le rendu de la **famille compte** (Compte/Wallet/Plans/Recherches sauvegardées) exige une **session acheteur réelle**, non disponible au sandbox. Preuve disponible : **garde de source falsifiée** (même classe que DOCK-02/opérateur de DS-3 et DOCK-04/vendeur de DS-6).
+
+**Levé partiellement (DS-8) :** `scripts/prove-menu02-buyer.mjs` (session stubbée au **bord auth**) prouve **en navigateur** que `Mon compte` ouvre le sheet, que le dock porte `Retour`, et que Retour revient au menu. `wallet`/`plans`/`saved` (même prédicat) restent prouvés par garde. Preuve navigateur compte = **faite pour `account`** ; spot-check fondateur optionnel pour le reste.
 
 ## E. Reste (post-DS-7)
 
