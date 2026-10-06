@@ -17,6 +17,7 @@ const APP = 'src/trunk/TrunkAppV13.tsx';
 const SORT = 'src/trunk/results-sort.ts';
 const CSS = 'src/trunk/ui-v13.css';
 const MAP = 'src/trunk/TrunkMap.tsx';
+const FRESH = 'src/trunk/offer-freshness.ts';
 
 // [id, description, (sources) => boolean]
 const RULES = [
@@ -63,6 +64,16 @@ const RULES = [
     /\.omni-v13-stage \.sheet\{padding-bottom:calc\(92px \+ var\(--safe-bottom, 0px\)\);padding-left:max\(15px,env\(safe-area-inset-left\)\);padding-right:max\(15px,env\(safe-area-inset-right\)\)\}/.test(s[CSS])],
   ['map-padding-clamp', 'the map bottom padding is clamped (never squeezes the globe into a singular matrix)', (s) =>
     /bottomPaddingFor\(sheetHeight, viewportHeight\)/.test(s[MAP]) && !/innerHeight - 110/.test(s[MAP])],
+  ['search-02-freshbar', 'results render a state-coded freshness bar DERIVED from the offer window (D-03)', (s) =>
+    /className=\{`freshbar\$\{fresh\.level === 'expired' \? ' expired' : fresh\.level === 'stale' \? ' stale' : ''\}`\}/.test(s[APP]) &&
+    /worstFreshness\(orderedResults\.map/.test(s[APP]) &&
+    /freshnessLabel\(fresh, freshnessTick\)/.test(s[APP]) &&
+    /availabilityExpiresAt: f\.availabilityExpiresAt/.test(s[APP])],
+  ['search-02-derived', 'freshness is DERIVED from the expiry window, never stored as a column', (s) =>
+    /FRESHNESS_STALE_WINDOW_MS/.test(s[FRESH]) &&
+    /now >= \(expiresAtMs as number\) - FRESHNESS_STALE_WINDOW_MS/.test(s[FRESH]) &&
+    !/freshness\s*=\s*'/.test(s[FRESH]) &&
+    /availability_expires_at/.test(s[APP] ?? '') === false],
 ];
 
 function run(sources) {
@@ -75,7 +86,7 @@ function run(sources) {
   return failures;
 }
 
-const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP) };
+const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH) };
 
 if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
@@ -96,6 +107,8 @@ if (process.argv.includes('--selftest')) {
     [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],
     [CSS, 'padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}', ''],
     [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],
+    [FRESH, 'now >= (expiresAtMs as number) - FRESHNESS_STALE_WINDOW_MS', 'false'],
+    [APP, 'worstFreshness(orderedResults.map', 'worstFreshness([] && orderedResults.map'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

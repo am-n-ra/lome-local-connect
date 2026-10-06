@@ -22,6 +22,7 @@
 | `DS-7` fond (Retour contextuel) | `DOCK-05` Retour sur tout écran non-home, **famille compte incluse** | Relais (fait) | **verified** | code + garde falsifié 13/13 + preuve navigateur 8/8 ; rendu compte = spot-check fondateur |
 | `DS-8` fidélité (menu buyer) | `MENU-02` noms/lieux du menu acheteur = maquette (8 entrées) | Relais (fait, **poussé** `b772042`) | **verified (prod)** | garde falsifié 14/14 + preuve navigateur 18/18 (session stubbée au bord auth, prouve aussi DOCK-05 famille compte) ; prod `index-BgD2DAcG.js` === local (T-07d ✅) |
 | `DS-9` fidélité (lien saved) | `SEARCH-03` lien « Recherches sauvegardées » dans l'en-tête du sheet recherche | Relais (fait, **poussé** `b772042`) | **verified (prod)** | garde falsifié 16/16 + preuve navigateur 4/4 (mobile) ; `.linkbtn` dans le CSS prod (T-07d ✅) |
+| `DS-10` fond (fraîcheur/D-03) | `SEARCH-02` fraîcheur **dérivée** de `availability_expires_at` (jamais stockée) ; `freshbar` rendue dans `results` ; projection SQL de la fenêtre du lieu | Relais (fait) | **verified** | module pur `offer-freshness.ts` (15 tests, **falsifié 3/3**) ; SQL exécuté sur la canonique ; garde `search-02-*` (selftest 18/18) ; 811/811 ; tsc + 6 gardes ; T-07d |
 
 ## Définition de fini
 

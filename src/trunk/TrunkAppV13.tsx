@@ -49,6 +49,7 @@ import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
+import { worstFreshness, freshnessLabel } from './offer-freshness';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
@@ -175,6 +176,13 @@ export function TrunkAppV13() {
   const [results, setResults] = useState<PublicFacility[]>([]);
   // SEARCH-01 — buyer result ordering. 'best' = the server's own order.
   const [resultsSort, setResultsSort] = useState<ResultsSortKey>('best');
+  // SEARCH-02 (D-03) — freshness is DERIVED from the offer's expiry window, not stored.
+  // A 60 s tick keeps the age honest while a sheet stays open (same spirit as useFreshnessTimer).
+  const [freshnessTick, setFreshnessTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setFreshnessTick(Date.now()), 60000);
+    return () => window.clearInterval(id);
+  }, []);
   // Plus proche needs a real position — null until the buyer shares it (never invented).
   const [buyerPosition, setBuyerPosition] = useState<{ latitude: number; longitude: number } | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -2043,6 +2051,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               </button>
             ))}
           </div>
+          {/* SEARCH-02 (D-03) — la barre de fraîcheur de la maquette (results L537), dérivée
+              de la fenêtre d'expiration des offres : vivante / vieillissante / non confirmée.
+              Elle dit ce qui est vrai — jamais un faux « vérifiée » (règle R-F). */}
+          {!resultsLoading && !error && (() => {
+            const fresh = worstFreshness(orderedResults.map((f) => ({ availabilityState: f.availabilityState, availabilityExpiresAt: f.availabilityExpiresAt ?? null })), freshnessTick);
+            return (
+              <div className={`freshbar${fresh.level === 'expired' ? ' expired' : fresh.level === 'stale' ? ' stale' : ''}`} style={{ marginTop: 8 }} role="status">
+                <span className="fdot" />{freshnessLabel(fresh, freshnessTick)}
+              </div>
+            );
+          })()}
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ghost sm" type="button" disabled={results.length < 2} title={results.length < 2 ? 'Sélectionnez au moins 2 résultats' : undefined} onClick={() => void openCompare()}>Comparer</button>
             <button className="btn sm" type="button" disabled={results.length === 0} title={results.length === 0 ? 'Aucun résultat à comparer' : undefined} onClick={() => void openBulk()}>Dispo groupée</button>

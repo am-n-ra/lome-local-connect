@@ -29,7 +29,7 @@
 | `DOCK-04` | **Dock vendeur** | `Recherche / Stock / Menu` | `Mon espace / Scanner le code d'un acheteur / Menu` | Basse | **LIVRÉ (DS-6)** : `Mon espace / Scanner le code d'un acheteur / Menu` |
 | `DOCK-05` | **Retour contextuel** | pas de « Retour » explicite (sauf états `destination`) | `backItem` sur **tout** écran non-home | Basse | **LIVRÉ (DS-7)** : Retour sur tout écran non-home, **famille compte incluse** |
 | `SEARCH-01` | **Tri des résultats** | **absent** (pas de `sortbar` sur `results`) | `sortbar` : Pertinence / Prix / Distance (`setSort`) | **Haute** | **LIVRÉ (DS-3)** : `sortbar` (4 chips Meilleur match / Plus proche / Prix le plus bas / Remise Omni) + ordre carte/rail |
-| `SEARCH-02` | **Fraîcheur** | texte fixe dans `bulk` (« reflète l'allocation Omni ») | `freshbar` **état-codé** (frais / `stale` / `expired`) | Moyenne | **OUVERT** — donnée présente (`availability_expires_at`) mais seuil **par établissement (D-03)** : exige une **décision de modèle** (dériver vs stocker), pas un simple rendu |
+| `SEARCH-02` | **Fraîcheur** | texte fixe dans `bulk` (« reflète l'allocation Omni ») | `freshbar` **état-codé** (frais / `stale` / `expired`) | Moyenne | **LIVRÉ (2026-10-06, D-03)** — `src/trunk/offer-freshness.ts` dérive l'état de `availability_expires_at` (fenêtre 4 h/24 h déjà en base, `038`), jamais stocké ; `freshbar` rendu dans `results` (vivante / vieillissante / non confirmée). Projection SQL de la fenêtre du lieu dans `listPublicFacilities` + `getFacilityDetail`. Reste `fraicheur` (l'écran vendeur dédié — §2) |
 | `SEARCH-03` | **Sheet recherche** | niveau entité/offre + contraintes ; pas de lien « Recherches sauvegardées » | + lien `saved` dans l'en-tête | Basse | **LIVRÉ (DS-9)** : lien `.linkbtn` dans l'en-tête, prouvé navigateur (prod) |
 | `OPT-01` | **Portées de rayon** | **6** : 1/5/10/25/100/Monde | **4** groupées : `Quartier·1 km` / `Ville·5-25 km` / `Région·100 km` / `Monde` | Basse | **ACTÉ (DS-4)** : app plus fine, **retenue** (D-CON-4) |
 | `OPT-02` | **Libellés de famille** | classe `.label` | classe `.eyebrow` | Basse | **LIVRÉ (DS-4)** : familles + portée utilisent `.eyebrow` (vérifié `eyebrow">{group.label}`) |
@@ -51,14 +51,14 @@ Mesuré : maquette **74 écrans**, app **33 sheets**. Les absents sont surtout *
 
 ## 3. Classification de dette (Nature Way)
 
-**Réconcilié 2026-10-06 (post DS-3…DS-9 + TF-6).** Ne restent ouverts que :
+**Réconcilié 2026-10-06 (post DS-3…DS-9 + TF-6 + SEARCH-02/D-03).** Ne restent ouverts que :
 
 | Classe | Écarts restants |
 |---|---|
-| **Données/état** | `SEARCH-02` (fraîcheur état-codée — **décision de modèle D-03**) |
-| **Fidélité (écrans non construits)** | `MENU-01` (9 destinations vendeur sans écran) · `op-side` · `seller-automation` · `fraicheur` |
+| **Données/état** | — (aucun) |
+| **Fidélité (écrans non construits)** | `MENU-01` (9 destinations vendeur sans écran) · `op-side` · `seller-automation` · `fraicheur` (écran vendeur dédié ; le **rendu acheteur** de la fraîcheur est livré) |
 
-**Résolus/actés :** `SEARCH-01` (tri, DS-3) · `DOCK-02` (dock opérateur, DS-3+TF-6) · `DOCK-03` (DS-3) · `DOCK-04` (DS-6) · `DOCK-05` (DS-7) · `MENU-02` (DS-8) · `SEARCH-03` (DS-9) · `OPT-02`+`MENU-03` (DS-4) · `DOCK-01`+`OPT-01` (actés DS-4).
+**Résolus/actés :** `SEARCH-01` (tri, DS-3) · `SEARCH-02` (fraîcheur dérivée, D-03) · `DOCK-02` (dock opérateur, DS-3+TF-6) · `DOCK-03` (DS-3) · `DOCK-04` (DS-6) · `DOCK-05` (DS-7) · `MENU-02` (DS-8) · `SEARCH-03` (DS-9) · `OPT-02`+`MENU-03` (DS-4) · `DOCK-01`+`OPT-01` (actés DS-4).
 
 **Aucun écart de sécurité.** Aucune régression : l'app reste **en avance** sur beaucoup de surfaces (transaction, bulk, favoris, Pro, team).
 

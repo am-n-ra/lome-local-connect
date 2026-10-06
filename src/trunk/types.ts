@@ -46,6 +46,10 @@ export interface PublicFacility {
   entityKind?: 'individu' | 'organisation' | null;
   /** S-06 — max existence level of this place's published offers (a projection, not a second rule). */
   existenceLevel?: ExistenceLevel;
+  /** SEARCH-02 (D-03) — soonest expiry among the place's published offers with a window; null = none. */
+  availabilityExpiresAt?: string | null;
+  /** SEARCH-02 (D-03) — worst availability state among the place's published offers; null = no fact. */
+  availabilityState?: ProductAvailabilityState | null;
 }
 
 /** R-E (S-11) — the OFFERER, as seen publicly. Never carries contact (E-2). */
@@ -94,6 +98,10 @@ export interface PublicProduct {
   conditionKind: OfferConditionKind | null;
   /** S-20 / E-03 — the offer's visual(s). Empty = no visual declared (publication blocked). */
   media: ProductMediaItem[];
+  /** SEARCH-02 (D-03) — the seller's declared availability state. Absent on read paths that don't select it. */
+  availabilityState?: ProductAvailabilityState;
+  /** SEARCH-02 (D-03) — freshness window; freshness is DERIVED from it, never stored. */
+  availabilityExpiresAt?: string | null;
   /** S-06 — derived existence level 0→4 (never stored). Absent when the surface has no facts. */
   existence?: OfferExistence;
   /** S-32 — automatic integrity, with the failed checks named. */

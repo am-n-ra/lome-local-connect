@@ -70,6 +70,16 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   // S-06: the place's level is the max of its published offers — projected in SQL, absent on
   // read paths that do not compute it (never invented).
   existenceLevel: row.existence_level === null || row.existence_level === undefined ? undefined : Number(row.existence_level) as PublicFacility['existenceLevel'],
+  // SEARCH-02 (D-03): the place's freshness is the worst of its published offers — a projection
+  // of the same rule as the offer level, absent when the read path doesn't compute it.
+  availabilityExpiresAt:
+    row.availability_expires_at === null || row.availability_expires_at === undefined
+      ? (row.availability_expires_at === undefined ? undefined : null)
+      : new Date(String(row.availability_expires_at)).toISOString(),
+  availabilityState:
+    row.availability_state === undefined
+      ? undefined
+      : (row.availability_state === null ? null : String(row.availability_state) as PublicFacility['availabilityState']),
 });
 
 const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -549,6 +559,17 @@ export const toProduct = (row: Record<string, unknown>): PublicProduct => {
     priceKind: (['fixe', 'negociable'].includes(String(row.price_kind)) ? String(row.price_kind) : null) as PublicProduct['priceKind'],
     conditionKind: (['neuf', 'occasion'].includes(String(row.condition_kind)) ? String(row.condition_kind) : null) as PublicProduct['conditionKind'],
     media: normalizeProductMedia(row.media),
+    ...(row.availability_state !== undefined
+      ? {
+          availabilityState: (['en_stock', 'verifie', 'a_valider', 'bientot'].includes(String(row.availability_state))
+            ? String(row.availability_state)
+            : 'a_valider') as PublicProduct['availabilityState'],
+          availabilityExpiresAt:
+            row.availability_expires_at === null || row.availability_expires_at === undefined
+              ? null
+              : new Date(String(row.availability_expires_at)).toISOString(),
+        }
+      : {}),
     ...(hasExistenceFacts
       ? {
           existence: existenceFor({
@@ -2280,7 +2301,22 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
                 else 2 end)
               from v2_products p2
               where p2.facility_id = f.id and p2.publication_state = 'published'
-            ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
+            ), case when f.entity_id is null then 0 else 1 end)::int as existence_level,
+            -- SEARCH-02 (D-03) : fraîcheur projetée du lieu — la fenêtre de son offre VIVANTE.
+            -- availability_state dit s'il y a de la dispo vivante (en_stock/verifie) ; sinon
+            -- a_valider quand il n'y a que des offres non vivantes ; null quand aucune offre.
+            -- availability_expires_at = l'échéance la plus proche portée par une offre vivante.
+            -- Nuls quand il n'y a pas de fenêtre : la surface se tait (elle n'invente pas, R-F).
+            (select case
+               when bool_or(p2.availability_state in ('en_stock','verifie')) then 'en_stock'
+               when bool_or(p2.availability_state in ('a_valider','bientot')) then 'a_valider'
+               else null end
+             from v2_products p2
+             where p2.facility_id = f.id and p2.publication_state = 'published') as availability_state,
+            (select min(p2.availability_expires_at) from v2_products p2
+             where p2.facility_id = f.id and p2.publication_state = 'published'
+               and p2.availability_state in ('en_stock','verifie')
+               and p2.availability_expires_at is not null) as availability_expires_at
           from v2_facilities f
           left join v2_entities e on e.id = f.entity_id
           left join v2_products p
@@ -2360,7 +2396,18 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               else 2 end)
             from v2_products p2
             where p2.facility_id = f.id and p2.publication_state = 'published'
-          ), case when f.entity_id is null then 0 else 1 end)::int as existence_level
+          ), case when f.entity_id is null then 0 else 1 end)::int as existence_level,
+          -- SEARCH-02 (D-03) : même projection de fraîcheur que la recherche (voir listPublicFacilities).
+          (select case
+             when bool_or(p2.availability_state in ('en_stock','verifie')) then 'en_stock'
+             when bool_or(p2.availability_state in ('a_valider','bientot')) then 'a_valider'
+             else null end
+           from v2_products p2
+           where p2.facility_id = f.id and p2.publication_state = 'published') as availability_state,
+          (select min(p2.availability_expires_at) from v2_products p2
+           where p2.facility_id = f.id and p2.publication_state = 'published'
+             and p2.availability_state in ('en_stock','verifie')
+             and p2.availability_expires_at is not null) as availability_expires_at
         from v2_facilities f
         left join v2_entities e on e.id = f.entity_id
         left join v2_products p
