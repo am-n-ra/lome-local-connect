@@ -25,7 +25,7 @@
 | `UI-S2` | **`UI-3`** — `aria-label` sur les boutons icône-seule | nul | probe a11y = 0 sans nom |
 | `UI-S3` | **`UI-7`** — aligner les jetons (`var(--accent)`, `--panel-deep`, `--warn`) | nul | grep + rendu identique |
 | `UI-S4` | **`UI-2`** — cibles tactiles ≥ 44 px (dock, fiche, filtres, chips) | faible | mesure Playwright ≥ 44 |
-| `UI-S5` | **`UI-1`** — décommissionner le CSS mort (3 fichiers → 1 vocabulaire) | **élevé** | **A/B rendu identique** (styles calculés + pixels) |
+| `UI-S5` | **`UI-1`** — décommissionner le CSS mort (3 fichiers → 1 vocabulaire) | **fait** | **A/B rendu identique** ✅ (1 338 empreintes, 0 diff) + garde `check:dead-css` |
 | `UI-S6` | **`UI-8`** — migrer les styles inline vers classes (par lots) | élevé | diff visuel nul par lot |
 | `UI-S7` | **`UI-9`** — libellé de secours du chunk aligné | nul | revue |
 

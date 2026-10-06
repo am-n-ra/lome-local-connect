@@ -5,13 +5,13 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f2f2f0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
 @supports(padding:env(safe-area-inset-bottom)){body{padding-bottom:env(safe-area-inset-bottom)}}
 button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
-.board{max-width:780px;text-align:center;color:var(--ink-soft);font-size:11.5px;line-height:1.5}
-.board b{color:var(--ink)}
+
+
 .board .mark{display:inline-block;width:24px;height:31px;vertical-align:middle;margin-right:5px}
-.board h1{color:var(--ink);font-size:15px;letter-spacing:-.4px;margin:4px 0 3px}
-.board .pal{display:flex;justify-content:center;gap:7px;margin-top:8px;flex-wrap:wrap}
-.board .pal span{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid var(--line);font-size:9.5px;font-weight:700;color:var(--ink)}
-.board .pal i{width:11px;height:11px;border-radius:50%;display:inline-block;border:1px solid rgba(0,0,0,.08)}
+
+
+
+
 .omni-v13-stage{position:relative;width:100%;height:100%;overflow:hidden;background:var(--bg)}
 .omni-v13-stage .map-stage{width:100%!important;height:100%!important}
 .mapbase{position:absolute;inset:0;background:var(--bg)}
@@ -20,8 +20,8 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
    les tuiles échouent — jamais un écran « Carte indisponible » mort. */
 .usermarker{width:16px;height:16px;border-radius:50%;background:#1a73e8;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.1),var(--sh-sm);position:relative}
 .usermarker::after{content:"";position:absolute;inset:-13px;border-radius:50%;background:rgba(26,115,232,.18);animation:locpulse 2.6s infinite}
-.meloc{position:absolute;z-index:3;width:14px;height:14px;border-radius:50%;background:#1a73e8;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.1),var(--sh-sm)}
-.meloc::after{content:"";position:absolute;inset:-12px;border-radius:50%;background:rgba(26,115,232,.18);animation:locpulse 2.6s infinite}
+
+
 .omni-v13-stage{--omni-vvh:100vh}
 @media (max-width:719px){.omni-v13-stage{--omni-vvh:100svh}}
 .omni-v13-stage .sheet[data-sheet="facility"],.omni-v13-stage .sheet[data-sheet="bulk"],.omni-v13-stage .sheet[data-sheet="compare"]{max-height:min(72dvh,var(--omni-vvh))}
@@ -44,7 +44,7 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .pop-hidden{transform:scale(0)!important}
 .vdot-reveal{animation:popIn .5s var(--ease)}
 .vdot.dim,.cmark.dim{opacity:.15!important}
-.mapflash{position:absolute;z-index:5;left:14px;right:14px;top:50px;text-align:center;font-size:8.5px;font-weight:800;color:var(--ink-soft);background:rgba(255,255,255,.92);border-radius:999px;padding:6px 10px;box-shadow:var(--sh-sm);opacity:0;transition:opacity .25s var(--ease);pointer-events:none}
+
 .mapflash.show{opacity:1}
 .vdot{position:absolute;z-index:4;width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px var(--accent-soft);cursor:pointer;transition:transform .15s var(--ease);animation:popIn .5s var(--ease) backwards}
 .vdot:active{transform:scale(.85)}
@@ -88,7 +88,7 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{font-size:11px}
 .sub{color:var(--ink-soft);line-height:1.35;margin-top:4px;font-size:10px}
 .tiny{font-size:8.5px}.muted{color:var(--ink-soft)}
-.fs-7{font-size:7px}.fs-9{font-size:9px}.fs-10{font-size:10px}.fs-11{font-size:11px}.fs-13{font-size:13px}.fs-17{font-size:17px}.fs-18{font-size:18px}.fs-26{font-size:26px}
+.fs-7{font-size:7px}.fs-10{font-size:10px}.fs-13{font-size:13px}.fs-17{font-size:17px}.fs-26{font-size:26px}
 .row{display:flex;align-items:center;gap:8px}
 .status{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:3px 9px;font-size:8px;font-weight:800;white-space:nowrap}
 .status.ok{color:#1f5c48;background:var(--accent-soft)}.status.ink{color:var(--ink);background:#fff;border:1px solid var(--ink)}.status.gray{color:var(--ink-soft);background:var(--panel)}.status.dash{color:var(--ink);background:#fff;border:1px dashed var(--ink)}
@@ -138,11 +138,11 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .pitem .pthumb{width:34px;height:28px;flex:none;border-radius:7px;background:linear-gradient(135deg,#ececec,#d8d8d8)}
 .pitem .chk{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--ink);display:grid;place-items:center;color:#fff;font-size:10px;flex:none}
 .pitem.sel .chk{background:var(--ink)}.pitem .pr{margin-left:auto;font-weight:800}.pitem small{display:block;color:var(--ink-soft);font-size:7px}
-.timeline{display:grid;gap:0;margin-top:8px}
-.tl{display:grid;grid-template-columns:14px 1fr;gap:8px;padding:5px 0}
+
+
 .tl .dot{width:8px;height:8px;margin-top:4px;border-radius:50%;background:var(--panel);border:2px solid #fff;box-shadow:0 0 0 1px var(--line)}
 .tl .dot.now{background:var(--ink)}.tl .dot.ok{background:var(--accent)}
-.tl small{color:var(--ink-soft);font-size:7px}.tl b{font-size:8.5px}
+
 .menugrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
 .menuitem{display:flex;align-items:center;gap:8px;padding:11px;border-radius:13px;background:var(--panel);border:1px solid var(--line);text-align:left}
 .menuitem .mi{display:grid;width:26px;height:26px;place-items:center;border-radius:8px;color:var(--ink);background:#fff;border:1px solid var(--line);flex:none}
@@ -155,7 +155,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .stat .tile small{display:block;color:var(--ink-soft);font-size:7px}
 .stat .tile strong{display:block;margin-top:3px;font-size:17px;letter-spacing:-.05em}
 .stat .tile.ok{background:var(--accent-soft)}
-.stars{font-size:16px;letter-spacing:2px;color:var(--ink);cursor:pointer}
+
 .fhero{height:74px;border-radius:13px;background:linear-gradient(135deg,#e7e7e7,#d2d2d2);margin-top:8px;position:relative;overflow:hidden}
 .fhero.unclaimed{background:repeating-linear-gradient(45deg,#efefef 0 8px,#e0e0e0 8px 16px)}
 .fhero .tag{position:absolute;bottom:7px;left:8px;font-size:7.5px;font-weight:800;background:rgba(255,255,255,.9);padding:3px 7px;border-radius:999px}
