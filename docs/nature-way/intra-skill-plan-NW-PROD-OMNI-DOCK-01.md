@@ -14,10 +14,10 @@
 | ID | Contenu | Owner | Statut | Preuve exigée |
 |---|---|---|---|---|
 | `DS-1` inventaire mesuré | dock/rolepill/recherche/options/menus × 4 largeurs + diff écrans | Relais (fait) | **verified** | registre `omni-dock-search-conformance-register-2026-10-06.md` + `/tmp` captures |
-| `DS-2` arbitrage direction | (a) aligner / (b) acter l'avance + combler le fond / (c) geler | **Fondateur** | **blocked** (décision) | réponse fondateur |
-| `DS-3` rattrapage fond | `SEARCH-01` tri résultats · `DOCK-02` dock opérateur terrain · `MENU-01` menu vendeur | Relais (après DS-2) | **planned** | code + preuve navigateur + garde falsifié + T-07d |
+| `DS-2` arbitrage direction | (a) aligner / (b) acter l'avance + combler le fond / (c) geler | **Fondateur** | **verified** — **(b)** | réponse fondateur |
+| `DS-3` rattrapage fond | `SEARCH-01` tri résultats · `DOCK-02` dock opérateur terrain · `MENU-01` menu vendeur · `DOCK-03` libellé buyer | Relais (fait) | **verified** | code + preuve navigateur 28/28 + garde falsifié 6/6 + T-07d |
 | `DS-4` fidélité/acte | `DOCK-01`/`OPT-01` (acter) · `OPT-02`/`MENU-03` (vocabulaire) | Relais | **planned** | décision consignée, ou correctif token |
-| `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais | **planned** | exit 0/1 |
+| `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 6/6 |
 
 ## Définition de fini
 
@@ -36,4 +36,4 @@ Décision fondateur (DS-2), fait contredit, garde rouge, ou stop.
 
 ## Retour à Founder HQ
 
-Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 blocked (décision)` · preuve registre + mesures · gap résiduel = arbitrage direction · owner = fondateur · prochaine action = choisir (a)/(b)/(c).
+Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 verified (b)` · `DS-3 verified` (tri + dock opérateur + menu vendeur + libellé buyer ; preuve navigateur 28/28, garde falsifié 6/6, 790/790, bundles serverless régénérés) · `DS-5 verified` · gap résiduel = `DS-4` (acter `DOCK-01`/`OPT-01`, vocabulaire `OPT-02`/`MENU-03`, fraîcheur `SEARCH-02`) · owner = relais · prochaine action = push + T-07d puis `DS-4` sur ordre.

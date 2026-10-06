@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
-  Compass, History, Home, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
+  Compass, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
 import { authClient, getAuthToken } from '../auth';
@@ -47,6 +47,7 @@ import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
+import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
@@ -171,6 +172,10 @@ export function TrunkAppV13() {
     [],
   );
   const [results, setResults] = useState<PublicFacility[]>([]);
+  // SEARCH-01 — buyer result ordering. 'best' = the server's own order.
+  const [resultsSort, setResultsSort] = useState<ResultsSortKey>('best');
+  // Plus proche needs a real position — null until the buyer shares it (never invented).
+  const [buyerPosition, setBuyerPosition] = useState<{ latitude: number; longitude: number } | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   // R-E (S-11): two levels of one index. 'offer' (default) or 'entity' (find an offerer by identity).
   const [searchLevel, setSearchLevel] = useState<'offer' | 'entity'>('offer');
@@ -1544,14 +1549,34 @@ const [compareBlocked, setCompareBlocked] = useState(0);
 
   type DockItem = { icon: string; label: string; target: Sheet | 'back'; center: boolean; active: boolean };
 
+  // SEARCH-01 — result ordering. "Plus proche" needs a real position: we ask the
+  // browser, and on denial the list simply stays in server order (never invented).
+  const requestBuyerPosition = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (position) => setBuyerPosition({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => undefined,
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300_000 },
+    );
+  }, []);
+  const chooseResultsSort = useCallback((key: ResultsSortKey) => {
+    setResultsSort(key);
+    if (key === 'near' && !buyerPosition) requestBuyerPosition();
+  }, [buyerPosition, requestBuyerPosition]);
+  const orderedResults = useMemo(
+    () => sortResults(results, resultsSort, buyerPosition),
+    [results, resultsSort, buyerPosition],
+  );
+
   // Dock contextuel — miroir réact de la fonction `dockFor()` de la maquette V1.3:
   // jamais d'icônes fixes; 5 cas (transaction, destination, menu, équipe, seller, défaut.
   // FF-1: plus de cible 'cancel' trompeuse — dans un flux verrouillé, l'action sort
   // vers la carte SANS annuler la transaction (elle se reprend depuis « En cours »).
   const dockItems = useMemo<DockItem[]>(() => {
     const team = role === 'admin' || role === 'operator';
+    const isOperator = role === 'operator';
     const currentSheet: Sheet = sheet;
-    const homeLike = sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results');
+    const homeLike = sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results') || (isOperator && sheet === 'tour');
     if (sheet === 'flow' || sheet === 'claim') return [
       { icon: 'back', label: 'Quitter', target: 'none', center: false, active: false },
       { icon: 'qr', label: 'QR', target: 'qr', center: true, active: false },
@@ -1560,12 +1585,20 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     const destination = sheet !== 'none' && sheet !== 'search' && sheet !== 'qr' && sheet !== 'menu' && sheet !== 'account' && sheet !== 'wallet' && sheet !== 'plans' && sheet !== 'saved' && sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;
     if (destination) return [
       { icon: 'back', label: 'Retour', target: 'back', center: false, active: false },
-      { icon: team ? 'check' : (role === 'seller' ? 'box' : 'search'), label: team ? 'À valider' : (role === 'seller' ? 'Stock' : 'Recherche'), target: team ? 'admin' : (role === 'seller' ? 'seller' : 'search'), center: true, active: role !== 'buyer' },
+      isOperator
+        ? { icon: 'pin', label: 'Tournée', target: 'tour', center: true, active: currentSheet === 'tour' }
+        : { icon: team ? 'check' : (role === 'seller' ? 'box' : 'search'), label: team ? 'À valider' : (role === 'seller' ? 'Stock' : 'Recherche'), target: team ? 'admin' : (role === 'seller' ? 'seller' : 'search'), center: true, active: role !== 'buyer' },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
     if (sheet === 'menu') return [
       { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
       { icon: 'home', label: 'Carte', target: 'none', center: true, active: false },
+    ];
+    // DOCK-02 — l'opérateur terrain a son propre dock (Tournée), distinct de l'admin.
+    if (isOperator) return [
+      { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
+      { icon: 'pin', label: 'Tournée', target: 'tour', center: true, active: currentSheet === 'tour' },
+      { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
     if (team) return [
       { icon: 'search', label: 'Recherche', target: 'search', center: false, active: false },
@@ -1579,7 +1612,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     ];
     return [
       { icon: 'search', label: 'Recherche', target: 'search', center: false, active: sheet === 'search' },
-      { icon: 'qr', label: 'QR', target: 'qr', center: true, active: sheet === 'qr' },
+      { icon: 'qr', label: 'Scanner une entité', target: 'qr', center: true, active: sheet === 'qr' },
       { icon: 'menu', label: 'Menu', target: 'menu', center: false, active: false },
     ];
   }, [role, sheet, desktop]);
@@ -1592,6 +1625,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       case 'home': return <Home size={size} />;
       case 'check': return <CheckCircle2 size={size} />;
       case 'box': return <PackageSearch size={size} />;
+      case 'pin': return <MapPin size={size} />;
       default: return <Search size={size} />;
     }
   };
@@ -1612,8 +1646,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       return;
     }
     if (target === 'none') { setSelectedId(null); setSheet('none'); return; }
+    if (target === 'tour') { void openTour(); return; }
     dockGo(target, sheet === 'none' || sheet === 'search' || sheet === 'qr' || sheet === 'menu' || (desktop && sheet === 'results'));
-  }, [sheet, dockGo, results]);
+  }, [sheet, dockGo, results, openTour]);
 
   const handleDockMorph = useCallback((btn: HTMLButtonElement | null) => {
     if (!btn) return;
@@ -1734,7 +1769,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     return [...sorted].sort((a2, b2) => Number(b2.id === highlightedProductId) - Number(a2.id === highlightedProductId));
   }, [selectedFacility, highlightedProductId]);
   /* S-07 — la carte est filtrée à la source : ce que le rail montre est ce que la carte dessine. */
-  const visibleFacilities = useMemo(() => filterFacilities(facilities, mapFilter), [facilities, mapFilter]);
+  const visibleFacilities = useMemo(() => filterFacilities(orderedResults, mapFilter), [orderedResults, mapFilter]);
 
   return (
     <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
@@ -1969,8 +2004,17 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={() => void saveCurrentSearch(true)}>Sauvegarder cette recherche</button>
             </div>
           )}
+          {/* SEARCH-01 — le tri des résultats (absent avant). « Plus proche » demande
+              la position ; sans position, l'ordre serveur est conservé (jamais inventé). */}
+          {!resultsLoading && !error && results.length > 1 && (
+            <div className="sortbar" style={{ marginTop: 8 }}>
+              {RESULTS_SORTS.map((option) => (
+                <button key={option.key} type="button" className={`sortchip${resultsSort === option.key ? ' active' : ''}`} onClick={() => chooseResultsSort(option.key)}>{option.label}</button>
+              ))}
+            </div>
+          )}
           <div className="hgrid" id="hgrid" onScroll={handleResultsScroll}>
-            {results.map((facility) => (
+            {orderedResults.map((facility) => (
               <button key={facility.id} data-fid={facility.id} type="button" className={`hcard${resultsFollowId === facility.id ? ' focused' : ''}`} onClick={() => void handlePinSelect(facility)}>
                 <div className={`thumb${facility.trust === 'unconfirmed' ? ' unclaimed' : ''}`}>
                   {facility.trust === 'confirmed' && <span className="vmark">✓</span>}
@@ -1978,6 +2022,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                 <div className="body">
                   <b>{facility.name}</b>
                   <small>{facility.category} · {facility.productCount} produits</small>
+                  {typeof facility.minPriceMinor === 'number' && (
+                    <span className="pr">dès {formatAmount(facility.minPriceMinor, currencyFor(facility.priceCurrency))}</span>
+                  )}
                   {facility.sponsored && <span className="status ok" style={{ display: 'inline-block', marginTop: 3, fontSize: 9 }}>Sponsorisé</span>}
                 </div>
               </button>
@@ -2371,6 +2418,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => void openHome()}><span className="mi"><Home size={15} /></span><span><b>Mon espace</b><small>demandes & transactions</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>réponses, vérifications, tours</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('seller-reply')}><span className="mi"><Inbox size={15} /></span><span><b>Demandes entrantes</b><small>à répondre</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde, Pro & recharges</small></span></button>

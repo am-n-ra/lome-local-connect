@@ -32,6 +32,11 @@ export interface PublicFacility {
   trust: PublicTrust;
   plan: 'free' | 'pro_active' | 'pro_expired';
   productCount: number;
+  /** SEARCH-01 — entry price of the cheapest published offer (discount applied), with its own currency. */
+  minPriceMinor?: number;
+  priceCurrency?: string;
+  /** SEARCH-01 — best Omni discount (%) across published offers; drives the "Remise Omni" sort. */
+  maxDiscountPercent?: number;
   source?: 'database' | 'osm';
   /** NW-13j: true when the facility has an active sponsored ad campaign (boost in buyer search). */
   sponsored?: boolean;

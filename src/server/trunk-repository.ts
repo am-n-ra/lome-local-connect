@@ -56,6 +56,11 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
   trust: PUBLIC_TRUST_STATES.has(String(row.trust_state) as PublicFacility['trust']) ? String(row.trust_state) as PublicFacility['trust'] : 'unclaimed',
   plan: String(row.commercial_plan) as PublicFacility['plan'],
   productCount: Number(row.product_count ?? 0),
+  // SEARCH-01 — real entry price of the place's cheapest published offer (discount
+  // applied), with its OWN currency. Absent on read paths that don't aggregate it.
+  minPriceMinor: row.min_price_minor === null || row.min_price_minor === undefined ? undefined : Number(row.min_price_minor),
+  priceCurrency: row.price_currency === null || row.price_currency === undefined ? undefined : String(row.price_currency),
+  maxDiscountPercent: row.max_discount_percent === null || row.max_discount_percent === undefined ? undefined : Number(row.max_discount_percent),
   // R-E (S-11): the entity behind the place. A place may exist without one (cold-start, S-05).
   entityId: row.entity_id === null || row.entity_id === undefined ? null : String(row.entity_id),
   entityName: row.entity_name === null || row.entity_name === undefined ? null : String(row.entity_name),
@@ -2244,7 +2249,25 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               else 'free'
             end as commercial_plan,
             count(p.id)::int as product_count,
+            -- SEARCH-01 : prix d'appel réel (offre publiée la moins chère, remise Omni
+            -- appliquée — même expression que le filtre budget). Alimente le tri
+            -- « Prix le plus bas » et l'affichage de la carte résultat. La devise est
+            -- prise de LA MÊME ligne (array_agg trié identiquement) pour ne jamais
+            -- étiqueter un prix avec la devise d'une autre offre.
+            (array_agg(p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+                then floor(p.price_minor * p.discount_value / 100.0) else 0 end)
+                order by (p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+                then floor(p.price_minor * p.discount_value / 100.0) else 0 end)))
+                filter (where p.id is not null))[1] as min_price_minor,
+            (array_agg(upper(coalesce(p.currency, 'XOF'))
+                order by (p.price_minor - (case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+                then floor(p.price_minor * p.discount_value / 100.0) else 0 end)))
+                filter (where p.id is not null))[1] as price_currency,
             (count(camp.id) > 0) as sponsored,
+            -- SEARCH-01 : meilleure remise Omni (%) sur les offres publiées — alimente le tri
+            -- « Remise Omni ». 0 quand aucune remise pourcentage.
+            coalesce(max(case when p.discount_kind = 'percentage' and p.discount_value between 1 and 90
+              then p.discount_value else 0 end), 0)::int as max_discount_percent,
             -- S-06 projection: the place shows the max existence level of its PUBLISHED offers.
             -- Derived in SQL from the same rule as the offer level, so the two never disagree.
             coalesce((

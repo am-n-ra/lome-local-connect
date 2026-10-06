@@ -132,6 +132,7 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .hcard .thumb.unclaimed{background:repeating-linear-gradient(45deg,#f0f0f0 0 6px,#e2e2e2 6px 12px)}
 .hcard .thumb .vmark{position:absolute;top:6px;right:6px;width:12px;height:12px;border-radius:50%;background:var(--accent)}
 .hcard .body{padding:7px}.hcard .body b{font-size:9px;display:block}.hcard .body small{font-size:7.5px;color:var(--ink-soft)}
+.hcard .body .pr{display:block;margin-top:2px;font-size:8.5px;font-weight:800;color:var(--ink)}
 .plist{display:grid;gap:6px;margin-top:8px}
 .pitem{display:flex;align-items:center;gap:8px;padding:7px;border:1px solid var(--line);border-radius:11px;background:#fff;font-size:8.5px;cursor:pointer;transition:.15s var(--ease)}
 .pitem.sel{border-color:var(--ink);background:var(--panel)}
