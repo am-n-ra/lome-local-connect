@@ -52,6 +52,10 @@ const RULES = [
     const names = ['Accueil', 'Mes demandes', 'Historique des transactions', 'Favoris', 'Recherches sauvegardées', 'Notifications', 'Portefeuille & Plans', 'Mon compte'];
     return start > menuStart && names.every((n) => block.includes(`<b>${n}</b>`)) && !block.includes('Reprendre où j');
   }],
+  ['search-03-saved-link', 'the search header offers a "Recherches sauvegardées" link (maquette L466)', (s) =>
+    /className="linkbtn"[^\n]*>Recherches sauvegardées<\/button>/.test(s[APP]) && /void openSaved\(\)/.test(s[APP])],
+  ['vocab-linkbtn-defined', 'the .linkbtn and .textbtn classes are actually defined in the stylesheet', (s) =>
+    /\.linkbtn\{/.test(s[CSS]) && /\.textbtn\{/.test(s[CSS])],
   ['search-sheet-structure', 'constraint-zone + sim-chips are SIBLINGS of searchdock, not nested inside it', (s) =>
     /<\/button>\s*<\/div>\s*<\/div>\s*\{constraintsOpen &&/.test(s[APP]) &&
     /<div className="sim-chips"[\s\S]*?<\/div>\s*<\/form>/.test(s[APP])],
@@ -87,6 +91,8 @@ if (process.argv.includes('--selftest')) {
     [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
     [APP, "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && !homeLike;", "sheet !== 'home' && sheet !== 'auth' && sheet !== 'onboard' && sheet !== 'account' && sheet !== 'wallet' && !homeLike;"],
     [APP, '<span><b>Mon compte</b><small>identité & réglages</small></span>', '<span><b>Compte</b><small>identité & réglages</small></span>'],
+    [APP, 'Recherches sauvegardées</button>', 'Recherches</button>'],
+    [CSS, '.linkbtn{', '.linkbtn-x{'],
     [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],
     [CSS, 'padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}', ''],
     [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],

@@ -116,6 +116,8 @@ h1,h2,h3,p{margin:0}h1{font-size:15px;letter-spacing:-.4px}h2{font-size:13px}h3{
 .btn.ok{background:var(--accent)}
 .btn.sm{min-height:34px;font-size:9.5px;border-radius:11px}
 .btn svg{flex:none}
+.linkbtn{font-size:9.5px;font-weight:800;color:var(--ink-soft);background:none;border:0;padding:0;flex:0 0 auto}
+.textbtn{color:var(--ink);background:none;border:0;padding:0;font:inherit;font-weight:800;text-decoration:underline;cursor:pointer}
 .btnrow{display:flex;gap:8px;margin-top:10px}.btnrow .btn{flex:1}
 .cardbox{padding:10px;border:1px solid var(--line);border-radius:14px;background:#fff;margin-top:9px;text-align:left}
 .cardbox.focused{border-color:var(--acc2,#2f6df6);box-shadow:0 0 0 1.5px color-mix(in srgb,var(--acc2,#2f6df6) 28%,transparent)}

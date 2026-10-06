@@ -30,11 +30,11 @@
 | `DOCK-05` | **Retour contextuel** | pas de « Retour » explicite (sauf états `destination`) | `backItem` sur **tout** écran non-home | Basse | `dockFor` |
 | `SEARCH-01` | **Tri des résultats** | **absent** (pas de `sortbar` sur `results`) | `sortbar` : Pertinence / Prix / Distance (`setSort`) | **Haute** | `results` sheet app |
 | `SEARCH-02` | **Fraîcheur** | texte fixe dans `bulk` (« reflète l'allocation Omni ») | `freshbar` **état-codé** (frais / `stale` / `expired`) | Moyenne | composant fraîcheur (D-03) |
-| `SEARCH-03` | **Sheet recherche** | niveau entité/offre + contraintes ; pas de lien « Recherches sauvegardées » | + lien `saved` dans l'en-tête | Basse | `search` sheet |
+| `SEARCH-03` | **Sheet recherche** | niveau entité/offre + contraintes ; pas de lien « Recherches sauvegardées » | + lien `saved` dans l'en-tête | Basse | `search` sheet — **LIVRÉ (DS-9)** : lien `.btn.ghost.sm` dans l'en-tête, prouvé navigateur |
 | `OPT-01` | **Portées de rayon** | **6** : 1/5/10/25/100/Monde | **4** groupées : `Quartier·1 km` / `Ville·5-25 km` / `Région·100 km` / `Monde` | Basse | app plus fin (D-CON-4) — arbitrer |
 | `OPT-02` | **Libellés de famille** | classe `.label` | classe `.eyebrow` | Basse | **vocabulaire** `design.md` (drift) |
 | `MENU-01` | **Menu vendeur** | **7** entrées (espace, notifs, produits&stock, offres, compagnies, wallet, plans) | **13** : Mes offres · Demandes entrantes · Commandes · Transactions · Stock alloué · Fiche entité · Vérification · Automatisation · Fraîcheur · Pro renouvellement · Wallet · Compte | **Haute** | `menu` sheet app (seller) |
-| `MENU-02` | **Menu buyer** | Mon espace · Transactions en cours · Reprendre · Notifications · Recherches · Favoris · Wallet · Plans (8) | Accueil · Mes demandes · Historique · Favoris · Recherches · Notifications · Wallet&Plans · Compte (8) | Moyenne | noms/lieux diffèrent (ex. « Mon espace » vs « Accueil ») |
+| `MENU-02` | **Menu buyer** | Mon espace · Transactions en cours · Reprendre · Notifications · Recherches · Favoris · Wallet · Plans (8) | Accueil · Mes demandes · Historique · Favoris · Recherches · Notifications · Wallet&Plans · Compte (8) | Moyenne | noms/lieux diffèrent — **LIVRÉ (DS-8)** : noms maquette, « Reprendre » relocalisé dans Accueil |
 | `MENU-03` | **En-tête de menu** | `Espace` + h1 `Espace acheteur/vendeur/équipe` | `Menu · <Rôle>` + h1 `Tout Omni, depuis ici` | Basse | `menu` header |
 
 ---

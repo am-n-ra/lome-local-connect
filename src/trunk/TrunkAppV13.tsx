@@ -1861,6 +1861,10 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           <div className="handle" />
           <div className="sheet-head">
             <div><div className="eyebrow">{SEARCH_LABEL[role][0]}</div><h1>{SEARCH_LABEL[role][1]}</h1></div>
+            {/* SEARCH-03 — lien « Recherches sauvegardées » dans l'en-tête de la recherche (maquette L466). */}
+            {role === 'buyer' && (
+              <button type="button" className="linkbtn" onClick={() => void openSaved()}>Recherches sauvegardées</button>
+            )}
           </div>
           {role === 'buyer' && (
             <div className="chiprow" style={{ marginTop: 9 }}>
