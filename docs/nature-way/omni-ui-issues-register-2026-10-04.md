@@ -92,6 +92,9 @@ pannes.
 **Preuve de non-régression :** `scripts/prove-ui-ab.mjs` rend le parcours public
 à 4 largeurs et compare les empreintes (structure + style stable, géométrie
 exclue car le morph du dock bouge en rAF). **Plancher de bruit = 0** (base vs
-base `RENDER IDENTICAL`) ; pré/post `UI-S1..S4` = **`RENDER IDENTICAL`**.
-777/777 tests, `tsc` propre.
+base `RENDER IDENTICAL`) ; pré/post `UI-S1..S4` et `UI-1`/`UI-8` = **`RENDER IDENTICAL`**.
+**783/783 tests**, `tsc` propre, gardes `boundary/state/docs/coherence/live-surface/dead-css` vertes.
+
+**Toutes les dettes UI mesurées sont fermées** (`UI-1..UI-9`). Reste hors tranche :
+`UI-10` (maquette) = décision Species, non traitée ici.
 
