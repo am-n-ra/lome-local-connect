@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { globeContextLabelsVisibleForZoom, isFiniteCameraCenter, isFiniteCameraZoom, projectionChanged, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
+import { bottomPaddingFor, cameraIsReadable, globeContextLabelsVisibleForZoom, isFiniteCameraCenter, isFiniteCameraZoom, projectionChanged, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
 
 describe('map projection contract', () => {
   it('uses globe below the local-map threshold and mercator at the threshold', () => {
@@ -61,5 +61,39 @@ describe('camera-input guard contract', () => {
     const engine = { easeTo: vi.fn(), flyTo: vi.fn() };
     expect(safeFlyTo(engine, { center: [1.22, 6.13], zoom: 8, duration: 600 })).toBe(true);
     expect(engine.flyTo).toHaveBeenCalledWith({ center: [1.22, 6.13], zoom: 8, duration: 600 });
+  });
+});
+
+describe('camera padding clamp (null-matrix guard)', () => {
+  it('never squeezes the map below a usable band while a keyboard opens', () => {
+    // An 844px phone: a sheet whose top is 120px would ask for 734px of padding — 87% of
+    // the viewport. The clamp keeps at least 45% (≥200px) visible instead.
+    const padding = bottomPaddingFor(724, 844);
+    expect(padding).toBeLessThanOrEqual(844 - 200);
+    expect(844 - padding).toBeGreaterThanOrEqual(200);
+  });
+
+  it('caps padding at 45% of the viewport for tall viewports', () => {
+    expect(bottomPaddingFor(2000, 1000)).toBe(1000 - 450);
+  });
+
+  it('keeps the sheet height + 56 when it already fits the band', () => {
+    expect(bottomPaddingFor(200, 844)).toBe(256);
+  });
+
+  it('returns no padding without a sheet or viewport', () => {
+    expect(bottomPaddingFor(0, 844)).toBe(0);
+    expect(bottomPaddingFor(300, 0)).toBe(0);
+  });
+});
+
+describe('camera readability (transform heal trigger)', () => {
+  it('accepts a finite centre and zoom', () => {
+    expect(cameraIsReadable([1.22, 6.13], 11.5)).toBe(true);
+  });
+  it('rejects a poisoned (NaN) transform', () => {
+    expect(cameraIsReadable([Number.NaN, 6.13], 11.5)).toBe(false);
+    expect(cameraIsReadable([1.22, 6.13], Number.NaN)).toBe(false);
+    expect(cameraIsReadable(null, 11.5)).toBe(false);
   });
 });

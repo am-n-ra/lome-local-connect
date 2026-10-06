@@ -15,6 +15,8 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
 const APP = 'src/trunk/TrunkAppV13.tsx';
 const SORT = 'src/trunk/results-sort.ts';
+const CSS = 'src/trunk/ui-v13.css';
+const MAP = 'src/trunk/TrunkMap.tsx';
 
 // [id, description, (sources) => boolean]
 const RULES = [
@@ -39,6 +41,13 @@ const RULES = [
   ['dock-04-seller', 'the seller dock is Mon espace / Scanner le code d\'un acheteur / Menu', (s) =>
     /role === 'seller'\) return \[\s*\{ icon: 'shop', label: 'Mon espace'/.test(s[APP]) &&
     /Scanner le code d'un acheteur/.test(s[APP])],
+  ['search-sheet-structure', 'constraint-zone + sim-chips are SIBLINGS of searchdock, not nested inside it', (s) =>
+    /<\/button>\s*<\/div>\s*<\/div>\s*\{constraintsOpen &&/.test(s[APP]) &&
+    /<div className="sim-chips"[\s\S]*?<\/div>\s*<\/form>/.test(s[APP])],
+  ['search-sheet-bleed', 'mobile sheets respect the horizontal safe areas (notch/landscape)', (s) =>
+    /\.omni-v13-stage \.sheet\{padding-bottom:calc\(92px \+ var\(--safe-bottom, 0px\)\);padding-left:max\(15px,env\(safe-area-inset-left\)\);padding-right:max\(15px,env\(safe-area-inset-right\)\)\}/.test(s[CSS])],
+  ['map-padding-clamp', 'the map bottom padding is clamped (never squeezes the globe into a singular matrix)', (s) =>
+    /bottomPaddingFor\(sheetHeight, viewportHeight\)/.test(s[MAP]) && !/innerHeight - 110/.test(s[MAP])],
 ];
 
 function run(sources) {
@@ -51,7 +60,7 @@ function run(sources) {
   return failures;
 }
 
-const sources = { [APP]: read(APP), [SORT]: read(SORT) };
+const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP) };
 
 if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
@@ -65,6 +74,9 @@ if (process.argv.includes('--selftest')) {
     [APP, 'Tout Omni, depuis ici', 'Tout Omni'],
     [APP, '<div className="eyebrow">{group.label}</div>', '<div className="label">{group.label}</div>'],
     [APP, "Scanner le code d'un acheteur", 'Scanner le code'],
+    [APP, '</div>\n          </div>\n          {constraintsOpen &&', '</div>\n          {constraintsOpen &&'],
+    [CSS, 'padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}', ''],
+    [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

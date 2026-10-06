@@ -31,7 +31,7 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
   .omni-v13-stage .navpill{translate:0 var(--omni-keyboard,0px)}
   .omni-v13-stage .dockmask{translate:0 var(--omni-keyboard,0px);transition:transform .38s var(--ease),translate .22s var(--ease)}
   .omni-v13-stage .sheet:not([data-sheet="search"]){translate:0 var(--omni-keyboard,0px);transition:transform .38s var(--ease),opacity .28s var(--ease),translate .22s var(--ease)}
-  .omni-v13-stage .sheet{padding-bottom:calc(92px + var(--safe-bottom, 0px))}
+  .omni-v13-stage .sheet{padding-bottom:calc(92px + var(--safe-bottom, 0px));padding-left:max(15px,env(safe-area-inset-left));padding-right:max(15px,env(safe-area-inset-right))}
   .omni-v13-stage .sheet .hgrid{display:grid!important;grid-template-columns:1fr;gap:9px;overflow:visible;margin-top:10px;scroll-snap-type:none;padding-bottom:0}
 }
 /* Coquille v13: les sous-composants legacy (PublicQrScannerSheet…) embarquent leur propre cadre `.omni-sheet`

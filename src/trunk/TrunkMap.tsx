@@ -13,8 +13,8 @@ import { getRoadRoute } from './api';
 import { routeReasonLabel } from './route-reason-label';
 import type { PinDimMode } from './map-pins';
 import { createFallbackMapSurface, type FallbackMapSurface, type FallbackSurfaceFacility } from './fallback-map-surface';
-import { globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, isFiniteCameraCenter, isFiniteCameraZoom, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
-import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
+import { bottomPaddingFor, cameraIsReadable, globeContextLabelsVisibleForZoom, GLOBE_TO_MERCATOR_ZOOM, isFiniteCameraCenter, isFiniteCameraZoom, projectionForZoom, safeEaseTo, safeFlyTo } from './map-camera';
+import { arrivalTargetFor, boundsOfPoints, computeSearchFlight, DEFAULT_ARRIVAL_TARGET, labelForZoom, pointsForResultFraming, type RevealPoint } from './map-reveal';
 import { isUsableViewportBounds } from './viewport-bounds';
 import { pickFrenchVoice, speakRoute, stopRouteVoice, voiceCapability } from './route-voice';
 import type { TileTapPoint } from './tile-place-resolve';
@@ -508,33 +508,60 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     mapRef.current = engine;
     const map = engine;
 
+    // Transform heal. A poisoned (degenerate/NaN) transform makes every later
+    // _calcMatrices / unproject / resize throw `null[0]` or `Invalid LngLat (NaN, NaN)`.
+    // When the camera becomes unreadable, re-anchor to a known-good centre so MapLibre
+    // rebuilds a finite matrix instead of throwing on every frame.
+    const healTransform = () => {
+      let lng = NaN, lat = NaN, zoom = NaN;
+      try { [lng, lat] = centerOf(map); zoom = map.getZoom(); } catch { /* unreadable transform */ }
+      if (cameraIsReadable([lng, lat], zoom)) return false;
+      const user = userPositionRef.current;
+      const center = user && isFiniteCameraCenter([user.longitude, user.latitude]) ? [user.longitude, user.latitude] : DEFAULT_ARRIVAL_TARGET;
+      safeEaseTo(map, { center, zoom: 11.5, bearing: 0, pitch: 0, duration: 0, essential: true });
+      return true;
+    };
+
     const fallbackTimer: number | null = initialBasemap === 'raster' ? null : window.setTimeout(() => {
       if (shouldFallbackToRaster(basemap, vectorLoadedRef.current, false, true)) {
         setBasemap('raster');
       }
     }, STYLE_WATCHDOG_MS);
     map.on('error', () => {
+      // A transform error (degenerate globe matrix) is not a style failure — heal the
+      // camera instead of falling back to raster, so the vector map keeps rendering.
+      if (healTransform()) return;
       if (shouldFallbackToRaster(basemap, vectorLoadedRef.current, true, false)) {
         setBasemap('raster');
       }
     });
 
-const syncCameraPadding = () => {
+    let lastPadding = -1;
+    const syncCameraPadding = () => {
       // Coquille V13: les sheets sont rendus conditionnellement — le `.sheet` monté
       // EST le sheet actif (ex. search permanent en desktop et le formulaire search
       // en mobile). En mobile le sheet est ancré en bas:le padding de la carte doit
       // refléter sa hauteur pour que les pins restent visibles au-dessus. En desktop,
       // le journey sheet est un panneau latéral — la carte ne masque rien en bas,
       // dont pas de padding vertical.
-      if (window.innerWidth >= 1040) {
-        map.setPadding({ top: 0, right: 0, bottom: 0, left: 0 });
-        return;
+      let bottomPadding = 0;
+      if (window.innerWidth < 1040) {
+        const stage = container.current?.closest('.omni-v13-stage');
+        const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])') ?? stage?.querySelector<HTMLElement>('.sheet');
+        const sheetHeight = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
+        // A degenerate viewport (bottom padding > viewport height) makes MapLibre's globe
+        // transform build a singular matrix and the next _calcMatrices throws `null[0]`.
+        // bottomPaddingFor caps the squeeze so a real map band stays visible.
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+        bottomPadding = bottomPaddingFor(sheetHeight, viewportHeight);
       }
-      const stage = container.current?.closest('.omni-v13-stage');
-      const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])') ?? stage?.querySelector<HTMLElement>('.sheet');
-      const sheetHeight = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
-      const bottomPadding = sheetHeight > 0 ? Math.min(sheetHeight + 56, Math.max(180, window.innerHeight - 110)) : 0;
-      map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
+      // Dedupe: re-issuing setPadding on every styledata/mutation churns the transform
+      // mid-flight. Only a real change is worth a transform update.
+      if (bottomPadding === lastPadding) return;
+      lastPadding = bottomPadding;
+      try {
+        map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
+      } catch { /* transform not ready yet — the next settled event re-applies it */ }
     };
     syncCameraPadding();
 
@@ -547,7 +574,13 @@ const syncCameraPadding = () => {
       if (isFallback) return;
       const typed = map as Map;
       if (!typed.isStyleLoaded()) return;
-      typed.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+      try {
+        typed.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
+      } catch {
+        // A degenerate transform can make setProjection throw mid-render. Skip the swap;
+        // the next settled event retries once the camera is finite again.
+        return;
+      }
       setGlobeContextLabelVisibility(typed, globeContextLabelsVisibleForZoom(typed.getZoom()));
       setProjection(wantsGlobe ? 'globe' : 'mercator');
       globeProjection = wantsGlobe;
@@ -791,7 +824,7 @@ const syncCameraPadding = () => {
       const initialGlobe = initialBasemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (!map.isMoving() && initialGlobe !== globeProjection) {
         applyProjection(initialGlobe);
-        map.resize();
+        try { map.resize(); } catch { /* transform mid-rebuild — moveend re-runs */ }
       }
       applyCanopyPalette(map);
       hideIrrelevantShieldLayers(map);
@@ -948,6 +981,7 @@ const syncCameraPadding = () => {
     map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
     map.on('move', () => { setBearing(map.getBearing()); scheduleUserPosition(); });
     map.on('moveend', () => {
+      if (healTransform()) return;
       setCenterLongitude(centerOf(map)[0]);
       if (!rotating.current) emitBounds();
       scheduleUserPosition();
@@ -959,6 +993,7 @@ const syncCameraPadding = () => {
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
       }
+      if (healTransform()) return;
       emitBounds();
       scheduleUserPosition();
       if (map.getZoom() < GLOBE_TO_MERCATOR_ZOOM) scheduleSettledResume();
@@ -969,6 +1004,7 @@ const syncCameraPadding = () => {
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
       }
+      if (healTransform()) return;
       setZoom(map.getZoom());
       emitBounds();
       scheduleUserPosition();
@@ -993,6 +1029,7 @@ const syncCameraPadding = () => {
       // very next frame throws on transformMat4(c, c, null). Apply on `moveend` instead:
       // the `zoom` event fires throughout a flyTo, `moveend` only once the camera settles.
       if (map.isMoving()) return;
+      if (!cameraIsReadable(centerOf(map), map.getZoom())) return;
       const wantsGlobe = basemap !== 'raster' && projectionForZoom(map.getZoom()) === 'globe';
       if (wantsGlobe !== globeProjection) {
         // No map.resize() here: the ResizeObserver owns container sizing, and
@@ -1026,12 +1063,27 @@ const syncCameraPadding = () => {
       });
     }
 
-    const observer = new ResizeObserver(() => { map.resize(); syncCameraPadding(); });
+    // Resize churn: `map.resize()` recomputes the transform; while a globe flyTo/easeTo is
+    // in flight (or the transform is unreadable) that rebuilds a singular matrix and throws
+    // `null[0]` on the next frame. Coalesce bursts to one rAF and skip mid-flight resizes —
+    // the settled `moveend` re-runs resize once the camera is finite again.
+    let resizeFrame: number | null = null;
+    const scheduleResize = () => {
+      if (resizeFrame !== null) return;
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = null;
+        if (map.isMoving()) return;
+        if (!cameraIsReadable(centerOf(map), map.getZoom())) return;
+        try { map.resize(); } catch { /* transform mid-rebuild — moveend re-runs */ }
+        syncCameraPadding();
+      });
+    };
+    const observer = new ResizeObserver(() => { scheduleResize(); syncCameraPadding(); });
     observer.observe(container.current);
     const stageRoot = container.current?.closest('.omni-v13-stage');
     const surfaceObserver = new MutationObserver(() => { syncCameraPadding(); scheduleUserPosition(); });
     if (stageRoot) surfaceObserver.observe(stageRoot, { childList: true }); else surfaceObserver.observe(container.current, { childList: true, subtree: false });
-    const handleWindowResize = () => { map.resize(); syncCameraPadding(); scheduleUserPosition(); };
+    const handleWindowResize = () => { scheduleResize(); syncCameraPadding(); scheduleUserPosition(); };
     window.addEventListener('resize', handleWindowResize);
     return () => {
       if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
@@ -1039,6 +1091,7 @@ const syncCameraPadding = () => {
       if (userPositionFrame.current !== null) window.cancelAnimationFrame(userPositionFrame.current);
       if (styleTimer !== null) clearTimeout(styleTimer);
       if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
       observer.disconnect();
       surfaceObserver.disconnect();
       window.removeEventListener('resize', handleWindowResize);

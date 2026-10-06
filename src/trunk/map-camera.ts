@@ -81,3 +81,23 @@ export function safeFlyTo(map: unknown, options: CameraCommandOptions): boolean 
     return false;
   }
 }
+
+/**
+ * Bottom camera padding from the active sheet height. The map must never be squeezed
+ * below a usable band: a bottom padding larger than the viewport height makes MapLibre's
+ * globe transform build a singular matrix, and the next _calcMatrices throws `null[0]`
+ * on every frame. The previous inline formula reached `innerHeight - 110` (~87% of the
+ * height) while a keyboard was opening, recomputed continuously — the exact churn that
+ * crashed. Cap the padding so at least a real band (≥45% of the viewport, and never less
+ * than 200px) stays visible.
+ */
+export function bottomPaddingFor(sheetHeight: number, viewportHeight: number): number {
+  if (!(sheetHeight > 0) || !(viewportHeight > 0)) return 0;
+  const maxBottom = Math.max(0, viewportHeight - Math.max(200, viewportHeight * 0.45));
+  return Math.min(sheetHeight + 56, maxBottom);
+}
+
+/** True when the camera can be read back as finite numbers (a poisoned transform cannot). */
+export function cameraIsReadable(center: unknown, zoom: unknown): boolean {
+  return isFiniteCameraCenter(center) && isFiniteCameraZoom(zoom);
+}

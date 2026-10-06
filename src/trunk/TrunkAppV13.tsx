@@ -1875,6 +1875,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               <input value={query} onChange={(event) => handleSearchInput(event.target.value)} placeholder={role === 'buyer' && searchLevel === 'entity' ? ENTITY_SEARCH_PLACEHOLDER : SEARCH_PLACEHOLDER[role]} aria-label="Recherche" />
               <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, padding: '0 10px' }} type="submit" aria-label="Rechercher"><ArrowRight size={15} /></button>
             </div>
+          </div>
           {constraintsOpen && !(role === 'buyer' && searchLevel === 'entity') && (
             <div className="constraint-zone">
               {role === 'buyer' ? (
@@ -1957,7 +1958,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <span className={`chip${simMode === 'vide' ? ' active' : ''}`} onClick={() => setSimMode('vide')} role="button" tabIndex={0}><span className="dot" />vide</span>
             <span className={`chip${simMode === 'lent' ? ' active' : ''}`} onClick={() => setSimMode('lent')} role="button" tabIndex={0}><span className="dot" />lent</span>
             <span className={`chip${simMode === 'erreur' ? ' active' : ''}`} onClick={() => setSimMode('erreur')} role="button" tabIndex={0}><span className="dot" />erreur</span>
-          </div>
           </div>
         </form>
       )}
