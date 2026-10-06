@@ -74,6 +74,12 @@ const RULES = [
     /now >= \(expiresAtMs as number\) - FRESHNESS_STALE_WINDOW_MS/.test(s[FRESH]) &&
     !/freshness\s*=\s*'/.test(s[FRESH]) &&
     /availability_expires_at/.test(s[APP] ?? '') === false],
+  ['search-desktop-bar', 'desktop: search is a full-width top bar and the role switch sits top-right, never centered under it', (s) =>
+    /\.sheet\[data-sheet="search"\]\{position:absolute;left:64px;right:0;top:0;bottom:auto;width:auto;height:76px/.test(s[CSS]) &&
+    /\.rolepill\{top:38px;right:14px;left:auto;transform:translateY\(-50%\);z-index:17\}/.test(s[CSS])],
+  ['search-desktop-clip', 'desktop: the constraint row is one clipped/scrollable line — budget/quantity can never reach the role switch', (s) =>
+    /\.sheet\[data-sheet="search"\] \.constraint-zone\{[^}]*flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden\}/.test(s[CSS]) &&
+    /\.sheet\[data-sheet="search"\] \.constraint-zone \.chips\{[^}]*flex-wrap:nowrap/.test(s[CSS])],
 ];
 
 function run(sources) {
@@ -109,6 +115,8 @@ if (process.argv.includes('--selftest')) {
     [MAP, 'bottomPaddingFor(sheetHeight, viewportHeight)', 'Math.min(sheetHeight + 56, window.innerHeight - 110)'],
     [FRESH, 'now >= (expiresAtMs as number) - FRESHNESS_STALE_WINDOW_MS', 'false'],
     [APP, 'worstFreshness(orderedResults.map', 'worstFreshness([] && orderedResults.map'],
+    [CSS, '.rolepill{top:38px;right:14px;left:auto;transform:translateY(-50%);z-index:17}', '.rolepill{top:8px;left:50%}'],
+    [CSS, '.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}', '.sheet[data-sheet="search"] .constraint-zone{display:flex;flex-wrap:wrap}'],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {
