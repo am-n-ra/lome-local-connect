@@ -35,10 +35,11 @@
 | Type | Résultat |
 |---|---|
 | **Garde falsifiable** | `scripts/check-dock-search.mjs` — **8 règles** (2 neuves : `menu-03-header`, `opt-02-kicker`), `--selftest` → **8/8 falsifiées**, source réelle clean ; `npm run check:dock-search` **PASS** |
-| **Navigateur (Playwright, 4 largeurs)** | `scripts/prove-ds3-dock-sort.mjs` — dock + tri **PASS** ; + vérif en-tête menu `Menu · …` / `Tout Omni, depuis ici` |
-| **Suite** | **790+/790**, `tsc` clean |
-| **Gardes repo** | boundary · state · docs · coherence · maquette · live-surface · dead-css · dock-search |
-| **Prod** | hash prod === build local (T-07d) ; déploiement GitHub du commit |
+| **Navigateur (Playwright, 4 largeurs)** | `scripts/prove-ds3-dock-sort.mjs` — dock + tri **PASS** ; en-tête menu `Menu · Acheteur` / `Tout Omni, depuis ici` **4/4** ; kickers contraintes **4 eyebrow / 0 label** (≥1280, gated) |
+| **Prod réelle (`omni.sparkafrika.online`, vraie DB)** | même script : **4 largeurs PASS** — en-tête menu conforme, kickers `4 eyebrow / 0 label`, 20 résultats, sortbar, « dès 25 500 F ». **Hash prod `index-DYPk8L3_.js` sha256 `0352a635…` === build local (T-07d ✅)** ; déploiement GitHub `8c4e163` |
+| **Suite** | **790/790**, `tsc` clean |
+| **Gardes repo** | boundary · state · docs · coherence · maquette · live-surface · dead-css · dock-search = **8/8 PASS** |
+| **Bundles serverless** | **0 modifié** (correctif 100 % client) — cohérent |
 
 ## D. Reste (post-DS-4)
 

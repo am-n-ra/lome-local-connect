@@ -17,7 +17,7 @@
 | `DS-2` arbitrage direction | (a) aligner / (b) acter l'avance + combler le fond / (c) geler | **Fondateur** | **verified** — **(b)** | réponse fondateur |
 | `DS-3` rattrapage fond | `SEARCH-01` tri résultats · `DOCK-02` dock opérateur terrain · `MENU-01` menu vendeur · `DOCK-03` libellé buyer | Relais (fait) | **verified** | code + preuve navigateur 28/28 + garde falsifié 6/6 + T-07d |
 | `DS-4` fidélité/acte | `DOCK-01`/`OPT-01` (acter) · `OPT-02`/`MENU-03` (vocabulaire) | Relais (fait) | **verified** | décision consignée + correctif token + garde |
-| `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 6/6 |
+| `DS-5` garde | `dock-search-conformance` (falsifié 2 sens) | Relais (fait) | **verified** | exit 0/1 — `scripts/check-dock-search.mjs`, selftest 8/8 |
 
 ## Définition de fini
 
@@ -36,4 +36,4 @@ Décision fondateur (DS-2), fait contredit, garde rouge, ou stop.
 
 ## Retour à Founder HQ
 
-Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 verified (b)` · `DS-3 verified` (tri + dock opérateur + menu vendeur + libellé buyer ; preuve navigateur 28/28, garde falsifié 6/6, 790/790, bundles serverless régénérés) · `DS-5 verified` · gap résiduel = `DS-4` (acter `DOCK-01`/`OPT-01`, vocabulaire `OPT-02`/`MENU-03`, fraîcheur `SEARCH-02`) · owner = relais · prochaine action = push + T-07d puis `DS-4` sur ordre.
+Plan `NW-PROD-OMNI-DOCK-01` · porte Trunk · `DS-1 verified` · `DS-2 verified (b)` · `DS-3 verified` (tri + dock opérateur + menu vendeur + libellé buyer) · `DS-4 verified` (acter `DOCK-01`/`OPT-01` ; vocabulaire `MENU-03`/`OPT-02` corrigé) · `DS-5 verified` (garde 8 règles, selftest 8/8) · gap résiduel = `DOCK-04`/`DOCK-05`/`MENU-02`/`SEARCH-02`/`SEARCH-03` + écrans terrain opérateur · owner = relais · prochaine action = prochaine tranche sur ordre (T-07d franchi : prod `index-DYPk8L3_.js` === local).
