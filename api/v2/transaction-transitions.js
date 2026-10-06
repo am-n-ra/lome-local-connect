@@ -6410,6 +6410,89 @@ function createTrunkRepository(sql = database()) {
       if (typeof key !== "string" || key === "") return null;
       return { objectKey: key };
     },
+    // TF-6 — op-side (maquette `op-side`) : aperçu LECTURE SEULE de ce que voit une
+    // entité, pour comprendre un dossier. Même garde + même scope zone que la tournée
+    // (P2-C). Aucune écriture, aucune décision (D-OPS-3) : l'opérateur regarde, il ne
+    // modifie jamais à la place de l'entité. `visitId` = le dossier ouvert.
+    async getOperatorEntitySide(input) {
+      const authorizationRows = await retryDatabase(() => sql`
+        select a.id
+        from v2_accounts a
+        join v2_account_roles ar on ar.account_id = a.id and ar.role in ('reviewer', 'admin', 'operator') and ar.status = 'active'
+        where a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+        limit 1
+      `);
+      if (!authorizationRows[0]) return { authorized: false, side: null };
+      const rows = await retryDatabase(() => sql`
+        with staff as (
+          select a.id
+          from v2_accounts a
+          where a.auth_user_id = ${input.authUserId} and a.suspended_at is null
+          limit 1
+        ), scoped as (
+          select 1 from v2_team_members tmz
+          join v2_teams tz on tz.id = tmz.team_id and tz.zone is not null
+          join staff on staff.id = tmz.account_id
+          where tmz.status = 'active'
+          limit 1
+        ), visit as (
+          select v.subject_type, v.subject_id
+          from v2_field_visits v
+          cross join staff
+          where v.id = ${input.visitId}::uuid
+            and (
+              not exists (select 1 from scoped)
+              or exists (
+                select 1 from v2_team_members tm
+                join v2_teams t on t.id = tm.team_id and t.zone is not null and t.zone = v.zone
+                join staff s2 on s2.id = tm.account_id
+                where tm.status = 'active'
+              )
+            )
+          limit 1
+        ), resolved as (
+          select
+            vt.subject_type,
+            case when vt.subject_type in ('claim', 'verification') then vt.subject_id
+                 else (select p.facility_id from v2_products p where p.id = vt.subject_id) end as facility_id,
+            case when vt.subject_type in ('claim', 'verification') then (select f.entity_id from v2_facilities f where f.id = vt.subject_id)
+                 else (select p.entity_id from v2_products p where p.id = vt.subject_id) end as entity_id
+          from visit vt
+        )
+        select
+          r.subject_type,
+          r.facility_id,
+          coalesce(r.entity_id, f.entity_id) as entity_id,
+          e.display_name as entity_name,
+          e.kind as entity_kind,
+          coalesce(e.trust_state, f.trust_state, 'unclaimed') as trust_state,
+          coalesce(e.qualifying_sales, f.qualifying_sales, 0)::int as qualifying_sales,
+          (select count(*)::int from v2_products p2 where p2.facility_id = r.facility_id and p2.publication_state = 'published') as published_offer_count,
+          (select count(*)::int from v2_availability_requests ar
+             where r.facility_id is not null and r.facility_id = any(ar.facility_scope)
+               and ar.status <> 'cancelled'
+               and ar.expires_at > now()
+               and not exists (select 1 from v2_availability_responses rr where rr.request_id = ar.id and rr.facility_id = r.facility_id)) as pending_request_count
+        from resolved r
+        left join v2_facilities f on f.id = r.facility_id
+        left join v2_entities e on e.id = coalesce(r.entity_id, f.entity_id)
+        limit 1
+      `);
+      const row = rows[0];
+      if (!row) return { authorized: true, side: null };
+      return { authorized: true, side: {
+        subjectType: String(row.subject_type),
+        facilityId: row.facility_id === null || row.facility_id === void 0 ? null : String(row.facility_id),
+        entityId: row.entity_id === null || row.entity_id === void 0 ? null : String(row.entity_id),
+        entityName: row.entity_name === null || row.entity_name === void 0 ? null : String(row.entity_name),
+        entityKind: row.entity_kind === null || row.entity_kind === void 0 ? null : String(row.entity_kind),
+        trustState: String(row.trust_state),
+        qualifyingSales: Number(row.qualifying_sales ?? 0),
+        publishedOfferCount: Number(row.published_offer_count ?? 0),
+        pendingRequestCount: Number(row.pending_request_count ?? 0)
+      } };
+    },
     async getTransaction(input) {
       const rows = await retryDatabase(() => sql`
         select
@@ -8340,6 +8423,21 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       const result = await repository.listVisitQueue({ authUserId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "GET" && pathname === "/api/v2/public/facilities" && url.searchParams.get("reviewer") === "op-side") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized Omni team member to view the entity side."));
+        return true;
+      }
+      const visitId = url.searchParams.get("visit") ?? "";
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitId)) {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "A valid visit id is required."));
+        return true;
+      }
+      const result = await repository.getOperatorEntitySide({ authUserId, visitId });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

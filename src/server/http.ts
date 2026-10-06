@@ -1092,6 +1092,23 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    // TF-6 — op-side (maquette `op-side`) : aperçu LECTURE SEULE de ce que voit une
+    // entité pour un dossier de tournée. Même garde que la tournée ; aucune écriture.
+    if (req.method === 'GET' && pathname === '/api/v2/public/facilities' && url.searchParams.get('reviewer') === 'op-side') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized Omni team member to view the entity side.'));
+        return true;
+      }
+      const visitId = url.searchParams.get('visit') ?? '';
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(visitId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'A valid visit id is required.'));
+        return true;
+      }
+      const result = await repository.getOperatorEntitySide({ authUserId, visitId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'POST' && pathname.startsWith('/api/v2/facilities/') && url.searchParams.get('action') === 'visit-claim') {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

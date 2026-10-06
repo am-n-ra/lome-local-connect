@@ -754,6 +754,25 @@ export interface FieldVisitListResult {
   visits: FieldVisit[];
 }
 
+// TF-6 — op-side : aperçu lecture seule de ce que voit une entité (maquette `op-side`).
+// L'opérateur regarde pour comprendre un dossier ; il ne modifie jamais à sa place.
+export interface OperatorEntitySide {
+  subjectType: string;
+  facilityId: string | null;
+  entityId: string | null;
+  entityName: string | null;
+  entityKind: string | null;
+  trustState: string;
+  qualifyingSales: number;
+  publishedOfferCount: number;
+  pendingRequestCount: number;
+}
+
+export interface OperatorEntitySideResult {
+  authorized: boolean;
+  side: OperatorEntitySide | null;
+}
+
 export interface FieldVisitClaimResult {
   id: string;
   state: FieldVisitState;

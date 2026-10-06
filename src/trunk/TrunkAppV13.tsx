@@ -42,6 +42,7 @@ import { SellerQrScannerSheet } from './SellerQrScannerSheet';
 import { SellerV13 } from './SellerV13';
 import { SellerReplyV13 } from './SellerReplyV13';
 import { SellerFreshnessV13 } from './SellerFreshnessV13';
+import { OperatorEntitySideV13 } from './OperatorEntitySideV13';
 import { ProductCatalogueV13 } from './ProductCatalogueV13';
 import { StockEventLedgerV13 } from './StockEventLedgerV13';
 import { OffersV13 } from './OffersV13';
@@ -57,7 +58,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' | 'op-side';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -350,6 +351,8 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [tourState, setTourState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [tourError, setTourError] = useState('');
   const [selVisitId, setSelVisitId] = useState<string | null>(null);
+  // TF-6 — op-side : le dossier dont on montre l'aperçu entité (lecture seule).
+  const [opSideVisitId, setOpSideVisitId] = useState<string | null>(null);
   const [visitBusy, setVisitBusy] = useState<string | null>(null);
   const [visitToast, setVisitToast] = useState('');
   const [findingLieu, setFindingLieu] = useState(true);
@@ -365,7 +368,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'seller', 'seller-reply', 'freshness', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1660,6 +1663,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'recovery') { setSheet('home'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
       if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness') { setSheet('seller'); return; }
+      if (sheet === 'op-side') { setOpSideVisitId(null); setSheet('tour'); return; }
       setSheet('none');
       return;
     }
@@ -2391,6 +2395,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'freshness' && (
         <SellerFreshnessV13 onClose={() => setSheet('seller')} />
       )}
+      {sheet === 'op-side' && opSideVisitId !== null && (
+        <OperatorEntitySideV13 visitId={opSideVisitId} onBack={() => { setOpSideVisitId(null); setSheet('tour'); }} />
+      )}
       {sheet === 'seller-qr' && (
         <SellerQrScannerSheet onClose={() => setSheet('seller')} onVerified={() => undefined} />
       )}
@@ -3034,6 +3041,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   <div className="kv"><span>Zone</span><b>{visit.zone ?? '—'}</b></div>
                   <div className="kv"><span>État</span><b>{visit.state === 'a_visiter' ? 'À visiter' : visit.state === 'en_cours' ? 'En cours' : visit.state === 'transmis' ? 'Transmis' : 'Reprogrammé'}</b></div>
                 </div>
+                <button className="btn ghost sm" type="button" style={{ marginTop: 10, width: 'auto', minHeight: 32 }} onClick={() => { setOpSideVisitId(visit.id); setSheet('op-side'); }}>Voir ce que voit l'entité</button>
                 {visit.state === 'a_visiter' && (
                   <button className="btn" type="button" style={{ marginTop: 10 }} disabled={visitBusy === visit.id} onClick={() => void claimDossier(visit.id)}>{visitBusy === visit.id ? 'Prise…' : 'Prendre ce dossier'}</button>
                 )}
