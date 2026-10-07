@@ -254,6 +254,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
   const [projection, setProjection] = useState<'globe' | 'mercator'>('mercator');
   const [bearing, setBearing] = useState(0);
   const [centerLongitude, setCenterLongitude] = useState(1.22);
+  const [centerLatitude, setCenterLatitude] = useState(6.13);
+  const [padBottom, setPadBottom] = useState(0);
   const [locationState, setLocationState] = useState<LocationState>('idle');
   const [userPosition, setUserPosition] = useState<RevealPoint | null>(null);
   const userPositionRef = useRef<RevealPoint | null>(null);
@@ -561,6 +563,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       // mid-flight. Only a real change is worth a transform update.
       if (bottomPadding === lastPadding) return;
       lastPadding = bottomPadding;
+      setPadBottom(bottomPadding);
       try {
         map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
       } catch { /* transform not ready yet — the next settled event re-applies it */ }
@@ -995,6 +998,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     map.on('moveend', () => {
       if (healTransform()) return;
       setCenterLongitude(centerOf(map)[0]);
+      setCenterLatitude(centerOf(map)[1]);
       if (!rotating.current) emitBounds();
       scheduleUserPosition();
       if (cameraMode.current === 'resting_globe') scheduleSettledResume();
@@ -1415,30 +1419,41 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     if (map.getLayer('omni-pins')) map.setPaintProperty('omni-pins', 'circle-color', PIN_CORE_COLOR);
     if (!selectedId) return;
     const selected = facilities.find((facility) => facility.id === selectedId);
-    if (!selected || map.isMoving()) return;
+    if (!selected) return;
     cameraMode.current = 'selected_facility';
     setCameraModeState('selected_facility');
-    // R-03a (maquette V1.3): quand on ouvre un sheet, le pin sélectionné
-    // doit rester VISIBLE dans la zone de carte restante (au-dessus du sheet(,
-    // pas caché dessous. `setPadding` ne déplace pas la caméra en MapLibre:on
-    // recentre donc explicitement sur le pin, décalé vers le HAUT du padding basal reel du sheet.
-    const pad = map.getPadding();
-    const bottomPad = pad?.bottom ?? 0;
-    // project/unproject on a sick transform throws or yields NaN: never feed that back
-    // into the camera (self-poisoning). Fall through to direct centering instead.
-    let centered = false;
-    if (bottomPad > 0) {
-      try {
-        const pt = map.project([selected.longitude, selected.latitude]);
-        const target = map.unproject([pt.x, pt.y - (bottomPad +  64) / 2]);
-        centered = safeEaseTo(map, { center: [target.lng, target.lat], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
-      } catch {
-        centered = false;
+    const apply = () => {
+      // R-03a: the selected pin must land in the band ABOVE the sheet. MapLibre centers
+      // the camera on the PADDED viewport (`centerPoint.y = (height - bottom)/2`), so the
+      // fix is to set the bottom padding from the REAL sheet height, then center on the
+      // pin — no fragile pixel offset (the old `unproject(y - (pad+64)/2)` moved the pin
+      // the wrong way and relied on padding that was never synced).
+      // Measure the sheet from the DOM: switching sheets only flips the stage's
+      // `data-sheet` attribute, which the padding sync (childList MutationObserver) never
+      // observed, so the padding stayed stale (0) and the pin sat behind the sheet
+      // (measured: pin at screen y≈422, sheet top y≈304).
+      const stage = container.current?.closest('.omni-v13-stage');
+      const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])');
+      // Mobile only: on desktop the sheet is a LEFT rail, not a bottom sheet, so padding
+      // would be wrong (the rail is full-height). Mirrors `syncCameraPadding`.
+      let bottom = 0;
+      if (window.innerWidth < 1040 && sheet) {
+        const sheetHeight = Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top);
+        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+        bottom = bottomPaddingFor(sheetHeight, viewportHeight);
       }
-    }
-    if (!centered) {
+      setPadBottom(bottom);
+      try { map.setPadding({ top: 0, right: 0, bottom, left: 0 }); } catch { /* transform not ready */ }
       safeEaseTo(map, { center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
+    };
+    if (map.isMoving()) {
+      // A camera flight is in progress (e.g. the search reveal). Re-issue the framing
+      // once it settles so the selected pin is never left hidden behind the sheet.
+      const once = () => { map.off('moveend', once); apply(); };
+      map.on('moveend', once);
+      return () => { try { map.off('moveend', once); } catch { /* map torn down */ } };
     }
+    apply();
   }, [facilities, selectedId]);
 
   // R-03 map-contextual focus (admin review selection, audit hop-to-object):
@@ -1617,7 +1632,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
               : { title: 'Localisation indisponible', detail: 'Vous pouvez continuer à explorer la carte publique.' };
 
       return (
-    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-route={routeTarget ? 'active' : 'idle'} data-rotation-owner="map-only">
+    <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-center-lat={centerLatitude.toFixed(4)} data-pad-bottom={String(padBottom)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-route={routeTarget ? 'active' : 'idle'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
       {/* Le « countmark » (bulle du nombre de résultats) a été retiré sur ordre fondateur

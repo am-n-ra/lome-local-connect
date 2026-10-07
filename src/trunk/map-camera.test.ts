@@ -97,3 +97,29 @@ describe('camera readability (transform heal trigger)', () => {
     expect(cameraIsReadable(null, 11.5)).toBe(false);
   });
 });
+
+// The selected pin must be VISIBLE above a bottom sheet. MapLibre centers the camera on
+// the PADDED viewport (`centerPoint.y = (height - bottom)/2`, verified in maplibre-gl
+// source), so a correct bottom padding lands the pin ABOVE the sheet. Measured regression:
+// the pin sat at the unpadded screen middle (y≈422) while the sheet top was y≈304.
+describe('selected-pin visibility above the sheet (padding contract)', () => {
+  const H = 844;
+  // The padded viewport middle is where the camera centers the pin.
+  const paddedCenterY = (sheetHeight: number) => (H - bottomPaddingFor(sheetHeight, H)) / 2;
+
+  it('keeps the pin above the sheet for every real sheet size', () => {
+    for (const fraction of [0.44, 0.52, 0.6, 0.64]) {
+      const sheetHeight = H * fraction;
+      const sheetTop = H - sheetHeight;
+      expect(paddedCenterY(sheetHeight)).toBeLessThan(sheetTop);
+    }
+  });
+
+  it('lands the pin roughly mid-band, never behind the sheet (full-height case)', () => {
+    const sheetHeight = H * 0.64; // .sheet.h-full
+    const sheetTop = H - sheetHeight; // 304
+    const y = paddedCenterY(sheetHeight);
+    expect(y).toBeGreaterThan(0);
+    expect(y).toBeLessThan(sheetTop / 2 + 40);
+  });
+});

@@ -1128,3 +1128,12 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Tests :** **910/910** (100 fichiers), tsc 0, 7 gardes vertes ; bundles serverless régénérés (route `account/phone` dans `api/v2/availability.js` + `api/v2/account/context.js`).
 - **Résidu honnête :** preuve navigateur du formulaire Compte/inscription non exécutée (session réelle requise) ; **aucune vérification de numéro** par conception.
 
+## MAP-RECENTER (2026-10-07, branche `omni-v2-rebuild`) — le pin sélectionné redevient visible au-dessus du sheet
+- **Signal fondateur :** cliquer une facilité (résultat, pin, ou défilement de la grille) doit recentrer la carte et rendre le pin **visible** — « on dirait que ce n'est plus en place ».
+- **Mesuré (prod, 390px) :** le recentrage *fonctionnait* (zoom 3→14.2 ; scroll→11.5) mais le pin restait au **milieu d'écran non-paddé** (y≈422) alors que le sheet commence à **y≈304** → **caché derrière le sheet**.
+- **Cause racine (2 défauts) :** (1) `syncCameraPadding` n'est réveillé que par un `MutationObserver` **`childList`** — or changer de sheet ne fait que basculer l'**attribut** `data-sheet` → padding jamais resynchronisé (**restait 0**) ; (2) l'ancien décalage `unproject(y − (pad+64)/2)` avait le **mauvais signe** (place le centre *sous* le pin) et était **sauté** quand `pad=0`.
+- **Correctif :** mesurer la **hauteur réelle du sheet** (DOM) au moment du recentrage, poser le padding bas via `bottomPaddingFor`, puis **centrer sur le pin**. MapLibre centre sur la vue **paddée** (`centerPoint.y=(height−bottom)/2`, vérifié source maplibre-gl) → pin au milieu de la bande 0…sheetTop. **Mobile uniquement** (desktop = rail gauche). Rejoue le cadrage au `moveend` si un vol est en cours.
+- **Preuve A/B décisive** (`scripts/probe-facility-recenter-ab.mjs` + `scripts/fixed-bundle-server.mjs`, même instrumentation, même padding 464) : **OLD** → pin à y=**−74** (hors écran) ; **FIXED** → pin à y=**190** (visible).
+- **Leçon :** un `MutationObserver` en `childList` **ne voit pas** un changement d'attribut — un padding dérivé d'un état porté par un attribut reste périmé. Et **vérifier le signe d'un décalage de caméra par la mesure**, pas par le commentaire (celui-ci annonçait « vers le HAUT »).
+- **État :** **916/916** tests (+6), tsc 0, gardes vertes (`state`/`live-surface`/`boundary`/`coherence`/`docs`/`dead-css`) ; garde `src/trunk/facility-recenter-lock.test.ts` (falsifié : réintroduire le décalage → 1 échec). Dossier `docs/nature-way/omni-heartwood-map-recenter-evidence-2026-10-07.md`.
+

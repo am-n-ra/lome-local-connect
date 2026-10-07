@@ -109,3 +109,30 @@ Les **5 items de fermeture** sont traités (S1/S1b, S3-a, S4 livrés ; S2 re-cla
 de preuves soumis au fondateur est `docs/founder-hq/heartwood-close-dossier-2026-10-07.md`.
 **La clôture reste une décision fondateur** — ce plan ne l'auto-prononce pas.
 
+## MAP-RECENTER — LIVRÉ (régression terrain corrigée, 2026-10-07)
+
+**Signal fondateur :** cliquer une facilité dans les résultats (et le défilement de la grille) doit
+**recentrer la carte sur le pin** et le rendre **VISIBLE**. « On dirait que ce n'est plus en place. »
+
+**Mesuré (prod, 390px) :** le recentrage *fonctionnait* (zoom 3 → 14.2) mais le pin restait au **milieu
+d'écran non-paddé** (y≈422) alors que le sheet commence à **y≈304** → **caché derrière le sheet**.
+
+**Cause racine (2 défauts) :**
+1. `syncCameraPadding` n'est resynchronisé que par un `MutationObserver` en `childList` — or changer de
+   sheet ne fait que basculer l'attribut **`data-sheet`** de la scène. Le padding restait donc **périmé
+   (0)** au moment du recentrage.
+2. L'ancien décalage `unproject(y - (pad + 64)/2)` déplaçait le pin **vers le bas** (donc derrière le
+   sheet) — **mauvais signe** — et ne s'exécutait pas quand `pad = 0` (repli sur un centrage direct).
+
+**Correctif :** mesurer la **hauteur réelle du sheet** depuis le DOM, poser le padding bas via
+`bottomPaddingFor`, puis **centrer sur le pin**. MapLibre centre la caméra sur la vue **paddée**
+(`centerPoint.y = (height − bottom)/2`, vérifié dans la source maplibre-gl), donc le pin atterrit au
+milieu de la bande visible (0…sheetTop). Mobile uniquement (desktop = rail gauche). Si un vol caméra est
+en cours (révélation de recherche), le cadrage est **rejoué au `moveend`**.
+
+**Preuve A/B décisive** (`scripts/probe-facility-recenter-ab.mjs` + `scripts/fixed-bundle-server.mjs`,
+même instrumentation, même padding 464) : **OLD** → pin à y=**−74** (hors écran haut) ; **FIXED** →
+pin à y=**190** (milieu de la bande 0…304) → **visible**. 916/916 tests (+6), tsc 0, gardes vertes.
+Garde de source `src/trunk/facility-recenter-lock.test.ts` (falsifié : réintroduire le décalage fautif
+→ 1 échec). Dossier : `docs/nature-way/omni-heartwood-map-recenter-evidence-2026-10-07.md`.
+
