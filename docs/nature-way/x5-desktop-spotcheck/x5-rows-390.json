@@ -1,0 +1,79 @@
+[
+ {
+  "viewport": "390",
+  "role": "anon",
+  "sheet": "boot",
+  "status": "PASS",
+  "detail": "0 erreur carte"
+ },
+ {
+  "viewport": "390",
+  "role": "buyer",
+  "sheet": "signin",
+  "status": "PASS",
+  "detail": "session Mon espace"
+ },
+ {
+  "viewport": "390",
+  "role": "buyer",
+  "sheet": "search",
+  "status": "PASS",
+  "detail": "occl=0 sliv=220 <44=2 <24=0 err=0 :: small=[\"Acheteur(62x25)\",\"Vendeur(58x25)\"] slivCls={\"BUTTON.\":276}"
+ },
+ {
+  "viewport": "390",
+  "role": "buyer",
+  "sheet": "results",
+  "status": "BLOCKED",
+  "detail": "0 résultat pour jus"
+ },
+ {
+  "viewport": "390",
+  "role": "buyer",
+  "sheet": "facility",
+  "status": "BLOCKED",
+  "detail": "fiche non ouverte"
+ },
+ {
+  "viewport": "390",
+  "role": "buyer",
+  "sheet": "harness",
+  "status": "FAIL",
+  "detail": "exception: TimeoutError: locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.navpill').getByRole('button', { name: 'Menu',"
+ },
+ {
+  "viewport": "390",
+  "role": "seller",
+  "sheet": "signin",
+  "status": "PASS",
+  "detail": "session vendeur"
+ },
+ {
+  "viewport": "390",
+  "role": "seller",
+  "sheet": "seller",
+  "status": "PASS",
+  "detail": "occl=0 sliv=220 <44=3 err=0"
+ },
+ {
+  "viewport": "390",
+  "role": "anon",
+  "sheet": "onboard-gated",
+  "status": "INFO",
+  "detail": "sheets après action gatée: results=1+hgridFAIL+nopitem+nobtn sheets=results"
+ },
+ {
+  "viewport": "390",
+  "role": "anon",
+  "sheet": "safe-area",
+  "status": "FAIL",
+  "detail": "règle introuvable: :root { --bg: #fff; --white: #fff; --on-ink: #fff; --on-ink-"
+ },
+ {
+  "viewport": "390",
+  "role": "admin",
+  "sheet": "admin",
+  "status": "BLOCKED",
+  "detail": "session kheirlissi@icloud.com impossible sans mot de passe (non demandé, non stocké)"
+ }
+]

@@ -1,0 +1,128 @@
+[
+ {
+  "viewport": "1040",
+  "role": "anon",
+  "sheet": "boot",
+  "status": "PASS",
+  "detail": "0 erreur carte"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "signin",
+  "status": "PASS",
+  "detail": "session Mon espace"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "search",
+  "status": "PASS",
+  "detail": "occl=0 sliv=220 <44=0 <24=10 err=0"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "results",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=0 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "facility",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=0 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "wallet",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=2 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "plans",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "account",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "notifs",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "favorites",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "saved",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "menu",
+  "status": "FAIL",
+  "detail": "occl=1 sliv=2 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false}]"
+ },
+ {
+  "viewport": "1040",
+  "role": "buyer",
+  "sheet": "console",
+  "status": "INFO",
+  "detail": "4 console.error non-carte : http404: https://omni.sparkafrika.online/api/v2/buyer/credits | console: Failed to load resource: the server responded with a status of 404 ()"
+ },
+ {
+  "viewport": "1040",
+  "role": "all",
+  "sheet": "dock-dup",
+  "status": "INFO",
+  "detail": "DOCK-DUP: 17 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
+ },
+ {
+  "viewport": "1040",
+  "role": "seller",
+  "sheet": "signin",
+  "status": "PASS",
+  "detail": "session vendeur"
+ },
+ {
+  "viewport": "1040",
+  "role": "seller",
+  "sheet": "seller",
+  "status": "PASS",
+  "detail": "occl=0 sliv=220 <44=0 err=0"
+ },
+ {
+  "viewport": "1040",
+  "role": "anon",
+  "sheet": "onboard-gated",
+  "status": "INFO",
+  "detail": "sheets après action gatée: results=1+hgrid+nopitem+nobtn sheets=facility"
+ },
+ {
+  "viewport": "1040",
+  "role": "admin",
+  "sheet": "admin",
+  "status": "BLOCKED",
+  "detail": "session kheirlissi@icloud.com impossible sans mot de passe (non demandé, non stocké)"
+ }
+]
