@@ -64,10 +64,15 @@ sur Postgres réel** :
 
 ## 5. État & résidus honnêtes
 
-**Vérifié :** `tsc` clean · **832/832 tests** (83 fichiers, +11) · build client +
+**Vérifié :** `tsc` clean · **835/835 tests** (84 fichiers) · build client +
 12 bundles serverless (route + `getSellerVerification` présents dans les bundles
 servis) · 8 gardes vertes (boundary/state/docs/coherence/live-surface/dead-css/
 dock-search/maquette).
+
+**Prod (T-07d ✅, 2026-10-07) :** push `b5ac9e8..1da8c3f` → prod
+`omni.sparkafrika.online` sert `index-AOEiTYVv.js` **byte-identique** au build local
+(sha256 `8e846352…`) ; la route `GET …/verification` répond **401** sans session ;
+la chaîne « État de votre vérification » est **dans le bundle servi**.
 
 **Résidu :** la preuve **navigateur avec session vendeur réelle** (parcours cliqué
 contre prod) n'est pas capturée dans ce sandbox (pas de session) — même classe de
