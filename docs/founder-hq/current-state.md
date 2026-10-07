@@ -89,6 +89,7 @@
 | `S2` | Argent réel E2E (FedaPay) | `candidate` — **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé.** Mesuré : webhook `POST /api/v2/fedapay/webhook` + `extractFedaPayTransaction` + `reconcileWalletRecharge` présents ; **preuve live historique** (txn `113034942` créditée, ledger `fedapay:*`). « Re-prouver » = geste fondateur optionnel, pas un manque |
 | `S3` | Téléphone gratuit (S-16) | `candidate` — méthode **gratuite** (décidée). **Mesure :** la seule vérif **gratuite** (deep link `wa.me` initié utilisateur) ne *prouve pas* le contrôle du numéro → **confiance déclarée honnête**, pas « vérifiée ». Contrat écrit `-s3-phone-free-contract-` (options A/B/C ; **S3-0 à trancher**) |
 | `S5` | OSM Togo | `done` (par décision) |
+| `MAP-1` | Pins carte tronqués (`limit 250` sur 13 744) | `measured` — diag `omni-heartwood-map-pins-diagnosis-2026-10-07.md` : **13 744** lieux en base, API rend **250** (vue Lomé = **5 992** → **4 %**), **250 au centre sur 0,019°**. Base sans cap = **624 ms / 13 744**. Frein réel = **payload** (~473 o/rec). **`D-MAP-1`** : cap par fenêtre (option 1 reco) / plein corpus (2) / garder 250 (3) / grille serveur (4, fondation neuve) |
 
 > **Re-séquencement `S3`↔`S4` (2026-10-07)** : `S3` exige une décision fondateur (fournisseur, coût,
 > possible fondation neuve — interdite en Heartwood) ; `S4` n'exige **rien** de tel. Une slice

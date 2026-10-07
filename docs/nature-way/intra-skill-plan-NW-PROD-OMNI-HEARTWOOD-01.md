@@ -43,6 +43,7 @@
 | S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `candidate` | **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** — à re-classer, pas un manque | credentials |
 | S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `verified` | contrat écrit : `omni-heartwood-s3-phone-free-contract-2026-10-07.md` (option A/B/C, **S3-0 à trancher**) | fait contredit |
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
+| MAP-1 | — | Heartwood | Les pins de la carte : cap `limit 250` tronque 13 744 lieux (250 au centre, 4 % d'une vue ville) | **décision fondateur `D-MAP-1`** (cap) | `measured` | diag `omni-heartwood-map-pins-diagnosis-2026-10-07.md` ; option 1 recommandée | décision rendue |
 
 ## Non-goals (porte Heartwood)
 
