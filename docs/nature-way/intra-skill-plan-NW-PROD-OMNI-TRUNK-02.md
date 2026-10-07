@@ -55,22 +55,25 @@
 | X2-6 | X2-5 | Heartwood | Preuve SQL réelle + falsification (garde `bientôt`) | X2-5 | `verified` | `prove-v2-auto-availability.mjs` 9/9 ; mutée 1 FAIL | faux |
 | X2-7 | X2-6 | Ring | suite + gardes + push prod T-07d | X2-6 | `done` | hash === local (index-IZJxtU8O.js) | déploiement |
 
-## X3 — Room acheteur (cadrage OUVERT 2026-10-07 — contrat rédigé)
+## X3 — Room de transaction (cadrage AMENDÉ 2026-10-07 — contrat rédigé, aucun code UI)
 
-**Contrat + cadrage :** `docs/nature-way/omni-trunk-x3-room-contract-2026-10-07.md` (**rédigé, aucun code**).
-Room = surface unique par transaction (suivi + **chat fil complet** + reçu + actions honnêtes), symétrique
-du vendeur (S-27). Backend `v2_transaction_messages` **existe déjà** ; le chat **inline** dans `BuyerFlowV13`
-n'affiche que 4 messages et il **n'existe aucune surface dédiée**. Manque aussi une lecture `listTransactions`
-(toutes, clôturées incluses) pour l'écran « Mes transactions » — `listOpenTransactions` exclut les clôturées.
+**Contrat + cadrage :** `docs/nature-way/omni-trunk-x3-room-contract-2026-10-07.md`.
+**⚠️ Amendement après mesure : la v1 surestimait l'écart acheteur.** `listClosedTransactions` +
+`/api/v2/buyer/transactions/closed` + `TransactionReceiptV13` **existent déjà** (TrunkAppV13 rend
+« En cours » ET « Terminées » + reçu). **Écart acheteur réel = le CHAT seul** (fil complet, pas 4
+messages). **Écart vendeur = TOUT** : `SellerV13` n'a aucun transaction/chat/paiement/remise (hors
+scan QR). **Sans surface vendeur, le chat acheteur est à sens unique = branche morte** → E1+E2 voyagent
+ensemble. Backend `v2_transaction_messages` **existe déjà** (membre-scopé). **Aucune migration.**
 
 | ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Re-plan trigger |
 |---|---|---|---|---|---|---|---|
-| X3-1 | X2 | Root | Contrat Room (doc `omni-trunk-x3-room-contract`) | — | `review` | doc contrat + décisions fondateur §6 | décision change |
-| X3-2 | X3-1 | Root | Lecture `listTransactions` (toutes) : repo + HTTP + client + type | X3-1 | `todo` | SQL réel jetable + filtre membre | faux |
-| X3-3 | X3-2 | Trunk | Surface Room acheteur (suivi + chat complet + reçu + actions) | X3-2 | `todo` | rendu jsdom | faux |
-| X3-4 | X3-2 | Trunk | Écran « Mes transactions » (ouvertes+clôturées → ouvre la Room) | X3-2 | `todo` | rendu jsdom | faux |
-| X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, reçu) | X3-3,X3-4 | `todo` | `prove-v2-room.mjs` + falsification | faux |
+| X3-1 | X2 | Root | Contrat Room amendé (doc) | — | `review` | doc contrat ; recommandations fondateur appliquées | décision change |
+| X3-2 | X3-1 | Root | Lecture `listSellerTransactions` (vendeur, membre-scopé) : repo + HTTP + client + type | X3-1 | `todo` | SQL réel jetable + non-membre refusé | faux |
+| X3-3 | X3-2 | Trunk | Room acheteur (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `todo` | rendu jsdom | faux |
+| X3-4 | X3-2 | Trunk | Surface vendeur (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `todo` | rendu jsdom | faux |
+| X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, chat 2 sens, reçu) | X3-3,X3-4 | `todo` | `prove-v2-room.mjs` + falsification | faux |
 | X3-6 | X3-5 | Ring | suite + gardes + push prod T-07d | X3-5 | `todo` | hash === local | déploiement |
 
-**Décisions fondateur posées (§6 du contrat) :** périmètre acheteur seul vs + vue vendeur · « Signaler un problème »
-(désactivé honnête vs canal réel) · `listTransactions` borné N=50 vs pagination.
+**Décisions fondateur RENDUES (« recommandés » 2026-10-07) :** (1) **buyer Room + seller surface ensemble** ;
+(2) « Signaler un problème » **désactivé honnête** (FF-9 = watch) ; (3) `listSellerTransactions` **N=50, sans pagination**.
+**Abandonné :** `listTransactions` acheteur « toutes » (couvert par open+closed).
