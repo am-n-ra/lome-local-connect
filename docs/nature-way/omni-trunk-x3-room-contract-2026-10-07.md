@@ -24,7 +24,7 @@
 | **HTTP messages** | `GET/POST /api/v2/transaction-messages` — **membre-scopé** (pas de rôle codé en dur). |
 | **Client messages** | `getTransactionMessages` / `sendTransactionMessage` (`api.ts`). |
 | **UI messages** | chat **inline dans `BuyerFlowV13`** : charge `.slice(-4)`, rend ≤ 4 messages. **Pas de surface dédiée.** |
-| **Liste acheteur** | `listOpenTransactions` (« En cours », non clôturées) **ET** `listClosedTransactions` (« Terminées », versions gelées) — affichées dans `TrunkAppV13`. |
+| **Liste acheteur** | `listOpenTransactions` (« En cours », non clôturées) **ET** `listClosedTransactions` (« Terminées », versions gelées) — affichées dans `TrunkAppV13`. **Les DEUX sont membre-scopées et renvoient `actorRole`** → un **vendeur** peut déjà lire SES transactions via les mêmes requêtes. |
 | **Reçu** | `TransactionReceiptV13` rendu depuis la ligne clôturée (sheet `receipt`). **Présent.** |
 | **Litige/offre signalée** | sheet `signal` (`OfferReportMotif`, TF-5) — **signaler une OFFRE**, pas un problème de transaction. |
 | **Suivi** | `BuyerFlowV13` stage `txn` : timeline d'états + timer/échéance (FF-6). |
@@ -61,13 +61,13 @@
 | ID | Phase | Objectif | Dépend de | Statut | Acceptation / preuve |
 |---|---|---|---|---|---|
 | X3-1 | Root | **Contrat** Room amendé (ce doc) — recommandations fondateur appliquées | — | `review` | ce fichier |
-| X3-2 | Root | **Lecture `listSellerTransactions`** (vendeur, membre-scopé) : repo + HTTP + client + type | X3-1 | `todo` | SQL réel jetable + non-membre refusé |
+| X3-2 | Root | **Réutiliser** les lectures membre-scopées (`listOpenTransactions`/`listClosedTransactions`, déjà `actorRole`) sous un **chemin neutre** `/api/v2/transactions` (+ `/closed`) + fn client ; **AUCUNE nouvelle requête** | X3-1 | `todo` | alias + non-membre refusé (déjà le cas) |
 | X3-3 | Trunk | **Room acheteur** (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `todo` | rendu jsdom |
 | X3-4 | Trunk | **Surface vendeur** (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `todo` | rendu jsdom |
 | X3-5 | Heartwood | **Preuve SQL réelle jetable + falsification** (non-membre refusé ; fil complet ; chat à deux sens ; reçu dérivé) | X3-3,X3-4 | `todo` | `prove-v2-room.mjs` + falsification |
 | X3-6 | Ring | suite + gardes + **push prod T-07d** | X3-5 | `todo` | hash === local |
 
-> **`listTransactions` acheteur abandonné** : `listOpenTransactions` + `listClosedTransactions` couvrent déjà le besoin. **Ne pas créer une lecture en double** (règle « un source unique par sujet »).
+| **Lecture `listSellerTransactions` abandonnée** : les lectures membre-scopées existantes (`listOpenTransactions`/`listClosedTransactions`) renvoient déjà `actorRole` → un vendeur lit SES transactions sans requête neuve. Seul ajout : un **alias neutre** `/api/v2/transactions` (+ `/closed`) — pas de logique nouvelle.
 
 ## 5. Non-goals (explicites)
 

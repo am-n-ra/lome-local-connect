@@ -68,7 +68,7 @@ ensemble. Backend `v2_transaction_messages` **existe déjà** (membre-scopé). *
 | ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Re-plan trigger |
 |---|---|---|---|---|---|---|---|
 | X3-1 | X2 | Root | Contrat Room amendé (doc) | — | `review` | doc contrat ; recommandations fondateur appliquées | décision change |
-| X3-2 | X3-1 | Root | Lecture `listSellerTransactions` (vendeur, membre-scopé) : repo + HTTP + client + type | X3-1 | `todo` | SQL réel jetable + non-membre refusé | faux |
+| X3-2 | X3-1 | Root | **Réutiliser** les lectures membre-scopées (`listOpenTransactions`/`listClosedTransactions`, déjà `actorRole`) sous chemin neutre `/api/v2/transactions` (+`/closed`) + fn client ; **aucune nouvelle requête** | X3-1 | `todo` | alias + non-membre refusé (déjà le cas) | faux |
 | X3-3 | X3-2 | Trunk | Room acheteur (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `todo` | rendu jsdom | faux |
 | X3-4 | X3-2 | Trunk | Surface vendeur (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `todo` | rendu jsdom | faux |
 | X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, chat 2 sens, reçu) | X3-3,X3-4 | `todo` | `prove-v2-room.mjs` + falsification | faux |
