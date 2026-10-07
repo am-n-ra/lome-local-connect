@@ -570,12 +570,17 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     const applyProjection = (wantsGlobe: boolean) => {
       if (isFallback) return;
       const typed = map as Map;
-      if (!typed.isStyleLoaded()) return;
+      // `isStyleLoaded()` renvoie un faux négatif sur MapLibre 6.x tant que les tuiles
+      // streament, et une fois l'arrival atterri aucun `moveend` ne rejoue la projection :
+      // la carte restait alors sur `globe` au zoom rue. Le `setProjection` lui-même lève
+      // quand le style n'est pas prêt — c'est le garde fiable ; on ne l'écarte plus par un
+      // prédicat qui peut mentir.
       try {
         typed.setProjection({ type: wantsGlobe ? 'globe' : 'mercator' });
-      } catch {
+      } catch (error) {
         // A degenerate transform can make setProjection throw mid-render. Skip the swap;
         // the next settled event retries once the camera is finite again.
+        if (import.meta.env.DEV) console.warn('setProjection skipped:', error);
         return;
       }
       setGlobeContextLabelVisibility(typed, globeContextLabelsVisibleForZoom(typed.getZoom()));
@@ -764,6 +769,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
         const source = map.getSource(SOURCE) as GeoJSONSource | undefined;
         source?.setData(pinFeatureCollection(facilitiesRef.current, ownedFacilityIdsRef.current));
         lastEmphasizedIdRef.current = applyPinEmphasis(map, selectedIdRef.current, lastEmphasizedIdRef.current);
+        // L'arrival atterrit au zoom rue (14.2) après avoir décollé depuis le globe, et aucun
+        // `moveend` ne suit la fin de l'animation : la projection restait donc sur `globe` à
+        // zoom 14.2 (matrice dégénérée → `null[0]`, pins non projetés). On applique explicitement
+        // la projection du zoom atterri.
+        syncProjection();
         scheduleUserPosition();
       };
 

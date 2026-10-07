@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 /**
- * MAP-TRANSFORM — deux façons de casser la projection MapLibre, verrouillées ici.
+ * MAP-TRANSFORM — façons de casser la projection MapLibre, verrouillées ici.
  *
  * 1. Changer de projection pendant que la caméra bouge : `invert()` renvoie `null`
  *    sur une matrice globe singulière, et le rendu suivant lève
@@ -12,8 +12,19 @@ import { describe, expect, it } from 'vitest';
  * 2. Appeler `setProjection` avant que le style soit chargé : MapLibre lève
  *    « Style is not done loading. ». Si l'intention (`globeProjection`) est écrite
  *    AVANT l'appel qui lève, le drapeau ment (« déjà globe ») et toutes les gardes
- *    suivantes sautent l'application réelle — la carte reste en mercator au zoom
- *    monde, plus de globe. L'intention ne doit bouger qu'après un appel réussi.
+ *    suivantes sautent l'application réelle. L'intention ne doit bouger qu'après un
+ *    appel réussi, et l'appel doit être entouré d'un `try/catch` (le style peut
+ *    légitimement ne pas être prêt).
+ *
+ * 3. GLOBE-REG (2026-10-07) — `isStyleLoaded()` renvoie un FAUX NÉGATIF sur
+ *    MapLibre 6.x tant que les tuiles streament. L'arrival décolle depuis le globe
+ *    et atterrit au zoom rue (14.2), mais aucun `moveend` ne suit la fin de
+ *    l'animation, et `syncProjection` est bloqué pendant l'animation
+ *    (`arrivalInProgress`). Résultat : la carte RESTAIT sur `globe` à zoom 14.2 —
+ *    matrice dégénérée (`null[0]` à chaque frame) et pins non projetés. Deux
+ *    corrections verrouillées : (a) `applyProjection` ne se fie plus à
+ *    `isStyleLoaded()` comme garde (le `try/catch` est le garde fiable) ; (b) la fin
+ *    de l'arrival applique explicitement la projection du zoom atterri.
  *
  * Non reproductible en headless (timing swiftshader), donc contrat verrouillé à la source.
  */
@@ -24,16 +35,36 @@ function projectionSites(): string[] {
   return lines
     .map((line, index) => ({ line, index }))
     .filter(({ line }) => line.includes('.setProjection('))
-    .map(({ index }) => lines.slice(Math.max(0, index - 8), index + 1).join('\n'));
+    .map(({ index }) => lines.slice(Math.max(0, index - 10), index + 8).join('\n'));
 }
 
 describe('MAP-TRANSFORM — la projection ne change que sur une carte posée et chargée', () => {
-  it('aucun setProjection sans garde isStyleLoaded() (sinon MapLibre lève et le drapeau ment)', () => {
+  it('chaque setProjection est entouré d’un try/catch (le style peut ne pas être prêt)', () => {
     const sites = projectionSites();
     expect(sites.length).toBeGreaterThan(0);
     for (const site of sites) {
-      expect(site).toContain('isStyleLoaded()');
+      expect(site).toContain('try {');
+      expect(site).toContain('catch');
     }
+  });
+
+  it('applyProjection ne se fie plus à isStyleLoaded() comme garde (faux négatif MapLibre 6)', () => {
+    const applyIndex = lines.findIndex((line) => line.includes('const applyProjection ='));
+    expect(applyIndex).toBeGreaterThan(-1);
+    const body = lines.slice(applyIndex, applyIndex + 16).join('\n');
+    expect(body).not.toContain('typed.isStyleLoaded()');
+  });
+
+  it('la fin de l’arrival applique la projection du zoom atterri (GLOBE-REG)', () => {
+    // `finishArrival` remet arrivalInProgress à false puis doit appeler syncProjection(),
+    // sinon la carte reste sur globe au zoom rue et les pins ne se projettent pas.
+    const finishIndex = lines.findIndex((line) => line.includes('const finishArrival ='));
+    expect(finishIndex).toBeGreaterThan(-1);
+    const body = lines.slice(finishIndex, finishIndex + 30).join('\n');
+    const clearIndex = body.indexOf('arrivalInProgressRef.current = false');
+    const syncIndex = body.indexOf('syncProjection()');
+    expect(clearIndex).toBeGreaterThan(-1);
+    expect(syncIndex).toBeGreaterThan(clearIndex);
   });
 
   it('le drapeau globeProjection ne bouge qu’APRÈS l’appel setProjection (jamais avant)', () => {
