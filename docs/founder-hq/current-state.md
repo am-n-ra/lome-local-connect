@@ -96,6 +96,11 @@
 > possible fondation neuve — interdite en Heartwood) ; `S4` n'exige **rien** de tel. Une slice
 > bloquée sur une décision humaine **ne bloque pas** les slices libres. Le terrain reste **en dernier**.
 
+> **Dossier de clôture Heartwood (2026-10-07)** : les **5 items de fermeture** sont traités — `S1`/`S1b`
+> (QR), `S3-a` (téléphone déclaré), `S4` (ambulants) **livrés** ; `S2` **re-classé** (FedaPay déjà prouvé) ;
+> `S5` **clos**. Paquet de preuves : `docs/founder-hq/heartwood-close-dossier-2026-10-07.md`.
+> **La clôture reste une décision fondateur** — elle n'est pas auto-prononcée ici.
+
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 
 > **Règle rappelée :** livrer ne clôt pas ; seule une décision fondateur enregistrée clôt.

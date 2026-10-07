@@ -23,7 +23,7 @@
 | S1 | **QR réel** | le QR acheteur est **scannable** par la caméra vendeur ; le panneau QR public est rendu | `qrcode.react` câblé + garde falsifié + preuve navigateur | **`verified`** — `OmniQr` partagé (BuyerFlow+Room), preuve décodage `jsqr` 3/3, garde falsifié, 866/866 | fait contredit |
 | S2 | **Argent réel E2E** | recharge → Pro seller → Pro buyer → packs bulk → bonus **exercés en prod**, preuve | script bout-en-bout + preuve prod | `blocked` (session fondateur) | S1 fait |
 | S4 | **Ambulants découvrables** | les offres `mobile` sont **découvrables** (filtre/exposition) | `facilityType` exposé + filtre + preuve | **`verified`** — `facilityType`/`rayonKm` exposés (carte+fiche), chip `Transport (mobile)` activée, puce ambre, gardes falsifiés, SQL réel 33/33. **Données 0 `mobile`** (honnête : rien déclaré) | portée |
-| S3 | **Téléphone gratuit (S-16)** | un chemin téléphone (WhatsApp initié utilisateur, ~0 coût) ; SMS payant exclu | décision fournisseur + code + preuve | `blocked` (**décision fondateur** : fournisseur + coût) | décision rendue |
+| S3 | **Téléphone gratuit (S-16)** | un chemin téléphone (WhatsApp initié utilisateur, ~0 coût) ; SMS payant exclu | décision fournisseur + code + preuve | **`verified`** (`S3-a`, `4c2d69c`+`00c954f`) — e-mail-first + **numéro Togo DÉCLARÉ** (jamais « vérifié ») + `wa.me` gratuit, à l'inscription et dans le Compte ; migration `069` (canonique, `e3c60c62…`) ; preuve Postgres réel **6/6** ; bug réel corrigé (snapshot) ; 2 gardes falsifiés | fait contredit |
 | S5 | **OSM Togo** | — | **décision close** (pas un écart) | `done` (par décision) | fait nouveau |
 
 > **Re-séquencement 2026-10-07 :** `S3` (téléphone) est **remonté après `S2`** car il exige une
@@ -42,9 +42,11 @@
 | S1-4 | S1-2 | Heartwood | Garde falsifié + preuve de décodage réelle | S1-2 | `verified` | `omni-qr.test.tsx` (5, falsifié) + `prove-heartwood-qr.mjs` 3/3 | faux négatif |
 | S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `candidate` | **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** — à re-classer, pas un manque | credentials |
 | S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `verified` | contrat écrit : `omni-heartwood-s3-phone-free-contract-2026-10-07.md` (option A/B/C) | fait contredit |
-| S3-0 | S3-1 | Heartwood | Méthode téléphone gratuit tranchée | S3-1 | `done` | **fondateur 2026-10-07 : « a et b » = A + B** — e-mail-first (A, en place) **+** numéro déclaré & `wa.me` gratuit (B) ; C (SMS/WA API payant) **écarté**. Implémentation `S3-a` = prochaine slice libre | décision rendue |
+| S3-0 | S3-1 | Heartwood | Méthode téléphone gratuit tranchée | S3-1 | `done` | **fondateur 2026-10-07 : « a et b » = A + B** — e-mail-first (A, en place) **+** numéro déclaré & `wa.me` gratuit (B) ; C (SMS/WA API payant) **écarté**. Implémentation `S3-a` **`verified`** (`4c2d69c`+`00c954f`) | décision rendue |
+| S3-a | S3-0 | Heartwood | Numéro Togo déclaré + `wa.me` (inscription + Compte) | S3-0 | `verified` | migration `069` (canonique `e3c60c62…`) ; preuve Postgres réel **6/6** ; bug réel (snapshot) corrigé ; 2 gardes falsifiés ; prod === local | fait contredit |
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
-| MAP-1 | — | Heartwood | Les pins de la carte : cap `limit 250` tronque 13 744 lieux (250 au centre, 4 % d'une vue ville) | **décision fondateur `D-MAP-1`** (cap) | `measured` | diag `omni-heartwood-map-pins-diagnosis-2026-10-07.md` ; option 1 recommandée | décision rendue |
+| MAP-1 | — | Heartwood | Les pins de la carte : cap `limit 250` tronque 13 744 lieux | **décision fondateur `D-MAP-1`** (cap) | `verified` | option 1 (fondateur « go on ») — cap par fenêtre 2 000 ; garde `public-facilities-cap` falsifié ; prod `9c5237c` | fait contredit |
+| MAP-2 | — | Heartwood | Pins carte : 2 régressions de câblage (recherche morte au globe + carte branchée sur les résultats) | MAP-1 | `verified` | correctifs + gardes `search-reveal-lock`/`map-pin-source-lock` falsifiés ; prod `e08b57e` | fait contredit |
 
 ## Non-goals (porte Heartwood)
 
@@ -90,3 +92,20 @@ fondation (l'avantage Omni S-19 existe) :
 **Preuve :** `prove-heartwood-s1b` 6/6 (décodage réel `jsqr` → `parseEntityIdFromQr` → `getPublicEntity`
 canonique → « Omni Demo Seller Hub », 5 offres, **−10 %** réel) ; 3 gardes falsifiés ; **881/881** tests,
 7 gardes vertes. Contrat + PER : `-s1b-public-entity-qr-contract-` / `-s1b-evidence-` (2026-10-07).
+
+## S3-a — LIVRÉ (décision fondateur : S3-0 = A + B, 2026-10-07)
+
+Numéro Togo **DÉCLARÉ** (jamais « vérifié ») + deep link `wa.me` gratuit, **à l'inscription** (S-16,
+téléphone-first) **et** dans la sheet Compte. Migration `069_v2_declared_phone.sql` appliquée à la
+canonique (`e3c60c62…`). Preuve Postgres réel **6/6** (branche jetable supprimée). **Bug réel corrigé** :
+l'écriture se faisait en deux sous-instructions dans la même requête — Postgres ne voit pas la ligne
+qu'une sous-instruction vient d'écrire (snapshot) → `null` ; corrigé en un seul `insert … on conflict
+do update … returning`. 2 gardes falsifiés (honnêteté + écriture mono-instruction). Dossier :
+`docs/nature-way/omni-heartwood-s3a-declared-phone-evidence-2026-10-07.md`.
+
+## Dossier de clôture Heartwood (2026-10-07)
+
+Les **5 items de fermeture** sont traités (S1/S1b, S3-a, S4 livrés ; S2 re-classé ; S5 clos). Le paquet
+de preuves soumis au fondateur est `docs/founder-hq/heartwood-close-dossier-2026-10-07.md`.
+**La clôture reste une décision fondateur** — ce plan ne l'auto-prononce pas.
+
