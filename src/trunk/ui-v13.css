@@ -236,7 +236,13 @@ body{background:#dadad7;padding:0}
 /* map fills everything right of the rail + search bar */
 .mapbase{top:0;left:64px;right:0;bottom:0}
 .omni-v13-stage[data-sheet="results"] .mapbase,.omni-v13-stage[data-sheet="facility"] .mapbase,.omni-v13-stage[data-sheet="bulk"] .mapbase,.omni-v13-stage[data-sheet="compare"] .mapbase,.omni-v13-stage[data-sheet="flow"] .mapbase,.omni-v13-stage[data-sheet="seller"] .mapbase,.omni-v13-stage[data-sheet="claim"] .mapbase{left:410px;top:76px;right:0}
-.map-legend{top:52px;left:80px}
+/* Desktop top-left of the map. Mobile puts the legend as a thin caption at the
+   very top (y0) with the filter chips below (y50); the desktop override used to
+   force top:52 — the SAME row as the filterrail (top:50), both z-index:6, so the
+   legend ("La découverte publique est temporairement indisponible") painted OVER
+   the map filter chips and swallowed their clicks. Mirror mobile instead: legend
+   on the top line, chips below it. */
+.map-legend{top:14px;left:80px}
 .omni-v13-stage[data-sheet="results"] .map-legend,.omni-v13-stage[data-sheet="facility"] .map-legend,.omni-v13-stage[data-sheet="bulk"] .map-legend,.omni-v13-stage[data-sheet="compare"] .map-legend,.omni-v13-stage[data-sheet="flow"] .map-legend,.omni-v13-stage[data-sheet="seller"] .map-legend,.omni-v13-stage[data-sheet="claim"] .map-legend{left:426px}
 /* Le sélecteur de rôle passe en haut à droite : la barre de recherche occupe
    désormais toute la largeur du contenu (maquette L238), donc une pastille
