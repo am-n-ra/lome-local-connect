@@ -14,7 +14,7 @@ import { describe, expect, it } from 'vitest';
  */
 const css = readFileSync(new URL('./ui-v13.css', import.meta.url), 'utf8');
 
-const px = (re, text) => {
+const px = (re: RegExp, text: string): number | null => {
   const m = re.exec(text);
   return m ? Number(m[1]) : null;
 };
@@ -33,6 +33,7 @@ describe('X4 — disposition desktop : la légende ne recouvre pas le rail de fi
     // dans le bloc desktop, la règle `.map-legend{top:Npx;...}` (dernière déclarée gagne)
     const legendTop = px(/\.map-legend\{top:(\d+)px;left:80px\}/, desktopBlock);
     expect(legendTop, 'la légende desktop doit déclarer un top explicite').not.toBeNull();
+    if (railTop === null || legendTop === null) throw new Error('top introuvable');
     expect(legendTop, `légende top=${legendTop} doit être < rail top=${railTop}`).toBeLessThan(railTop);
   });
 });
