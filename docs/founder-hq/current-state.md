@@ -84,7 +84,7 @@
 | Slice | Objet | Statut |
 |---|---|---|
 | `S1` | QR acheteur réel (scannable) | **`verified`** (`dbec13a` ; décodage `jsqr` 3/3, garde falsifié, prod === local) |
-| `S4` | Ambulants découvrables (exposition, pas fondation) | **`verified`** (`facilityType`+filtre+puce ; SQL réel 33/33 ; guards falsifiés) |
+| `S4` | Ambulants découvrables (exposition, pas fondation) | **`verified`** + **prod** (`db71847` ; `facilityType`+filtre+puce ; SQL réel 33/33 ; guards falsifiés ; prod sert `facilityType` dans l'API) |
 | `S2` | Argent réel E2E (FedaPay) | `blocked` — session fondateur |
 | `S3` | Téléphone gratuit (S-16) | `blocked` — **décision fondateur** (fournisseur + coût) |
 | `S5` | OSM Togo | `done` (par décision) |
