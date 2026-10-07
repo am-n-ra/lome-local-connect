@@ -8,6 +8,7 @@ import { useFreshnessTimer } from './useFreshnessTimer';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import type { PendingAction } from './ui-helpers';
 import { formatMoney } from '../domain/currency';
+import { OmniQr } from './OmniQr';
 
 type FlowProduct = { id: string; name: string; priceKind?: string | null; listedPriceMinor?: number | null };
 type FlowFacility = { id: string; name: string; latitude?: number | null; longitude?: number | null };
@@ -39,10 +40,6 @@ const TXN_STAGES = [
   { label: 'Exécution', sub: 'retrait / remise / livraison' },
   { label: 'Complétée', sub: 'notez le vendeur' },
 ];
-
-function qrStyle(token: string): string {
-  return token.split('').reduce((acc, ch) => acc + (ch.charCodeAt(0) % 2 ===  0 ? '█' : '▓'), '');
-}
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
 
@@ -504,7 +501,9 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
       )}
       {stage === 'qr' && qrToken && (
         <div className="cardbox" style={{ textAlign: 'center' }}>
-          <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.1em', wordBreak: 'break-all', lineHeight:  1.2, background: 'var(--ink)', color: 'var(--on-ink)', borderRadius: 12, padding: 14, marginBottom:  8 }}>{qrStyle(qrPayload(txnId!, qrToken).slice(0, 48))}</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <OmniQr value={qrPayload(txnId!, qrToken)} />
+          </div>
           <p className="tiny muted" style={{ wordBreak: 'break-all' }}>{qrPayload(txnId!, qrToken)}</p>
           {qrExpired ? (
             <p className="tiny" style={{ color: 'var(--warn)' }}>QR expiré — ré-émettez-en un nouveau pour continuer.</p>

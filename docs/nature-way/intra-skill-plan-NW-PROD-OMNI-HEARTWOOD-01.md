@@ -20,7 +20,7 @@
 
 | Order | Workstream | Gate condition | Evidence required | Status | Re-plan trigger |
 |---|---|---|---|---|---|
-| S1 | **QR réel** | le QR acheteur est **scannable** par la caméra vendeur ; le panneau QR public est rendu | `qrcode.react` câblé + garde falsifié + preuve navigateur | `ready` | ordre fondateur |
+| S1 | **QR réel** | le QR acheteur est **scannable** par la caméra vendeur ; le panneau QR public est rendu | `qrcode.react` câblé + garde falsifié + preuve navigateur | **`verified`** — `OmniQr` partagé (BuyerFlow+Room), preuve décodage `jsqr` 3/3, garde falsifié, 866/866 | fait contredit |
 | S2 | **Argent réel E2E** | recharge → Pro seller → Pro buyer → packs bulk → bonus **exercés en prod**, preuve | script bout-en-bout + preuve prod | `blocked` (session fondateur) | S1 fait |
 | S3 | **Téléphone gratuit (S-16)** | un chemin téléphone (WhatsApp initié utilisateur, ~0 coût) ; SMS payant exclu | décision UI + code + preuve | `planned` | S2 fait |
 | S4 | **Ambulants découvrables** | les offres `mobile` sont **découvrables** (filtre/exposition) | `facilityType` exposé + filtre + preuve | `planned` | S3 fait ou ordre fondateur |
@@ -31,9 +31,9 @@
 | ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Re-plan trigger |
 |---|---|---|---|---|---|---|---|
 | S1-1 | — | Root | Mesurer le QR actuel : `qrStyle()` = blocs `█/▓`, pas un QR | mesure | `done` | `BuyerFlowV13.tsx:43` | fait contredit |
-| S1-2 | S1-1 | Root | Câbler `qrcode.react` (`QRCodeSVG`) sur le payload réel `txn:token` | S1-1 | `todo` | rendu SVG scannable | lib manquante |
-| S1-3 | S1-2 | Trunk | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `todo` | bouton réel, pas un placeholder | portée |
-| S1-4 | S1-3 | Heartwood | Garde falsifié (le rendu n'est plus des blocs) + preuve navigateur | S1-3 | `todo` | garde + capture | faux négatif |
+| S1-2 | S1-1 | Root | Câbler `qrcode.react` (`QRCodeSVG`) sur le payload réel `txn:token`, les DEUX surfaces | S1-1 | `verified` | `OmniQr.tsx` + BuyerFlow + Room ; 866/866 | lib manquante |
+| S1-3 | S1-2 | Trunk (S1b) | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `planned` | capacité NEUVE, hors S1 | portée |
+| S1-4 | S1-2 | Heartwood | Garde falsifié + preuve de décodage réelle | S1-2 | `verified` | `omni-qr.test.tsx` (5, falsifié) + `prove-heartwood-qr.mjs` 3/3 | faux négatif |
 | S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `blocked` | session fondateur requise | credentials |
 | S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | S2 | `todo` | contrat | décision change |
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3 | `todo` | SQL + UI | portée |

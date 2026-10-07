@@ -73,7 +73,7 @@
 
 | # | Item | Mesure | Verdict |
 |---|---|---|---|
-| 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel** — Heartwood S1 (risque max) |
+| 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel — CORRIGÉ (`OmniQr` partagé, 2026-10-07, preuve décodage `jsqr` 3/3)** ; reste S1b (QR public S-21) |
 | 2 | **Argent réel E2E** | logique complète + tests `bounded`/`unit`, **aucun parcours prod réel** | **Preuve manquante** — Heartwood S2 |
 | 3 | **Téléphone gratuit** | S-16 tranché (OTP e-mail / WhatsApp ; SMS exclu) ; code = e-mail+mdp | **Décision close, slice manquante** — Heartwood S3 |
 | 4 | **Ambulants** | type `mobile` existe ; filtre Transport `soon` ; `facilityType` non exposé | **Slice manquante** — Heartwood S4 |

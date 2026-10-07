@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, QrCode, Smartphon
 import { confirmExternalPayment, declareExternalPayment, getTransaction, getTransactionMessages, issueBuyerQrToken, qrPayload, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction } from './api';
 import { deadlineLabel, deadlineState, transactionStateLabel, transactionStateResponsible } from './transaction-time';
 import { Skeleton } from './Skeleton';
+import { OmniQr } from './OmniQr';
 import type { ExternalPaymentMethod, TransactionMessage, TransactionSnapshotResult, TransactionState } from './types';
 
 /** S-27 — la Room réunit suivi + chat (fil complet) + reçu dans une surface, symétrique
@@ -187,7 +188,10 @@ export function TransactionRoom({ transactionId, token, actorRole, counterparty,
               <div className="eyebrow">Votre QR de transaction</div>
               {qrToken ? (
                 <>
-                  <div aria-label="QR Omni" style={{ fontFamily: 'monospace', fontSize: 16, letterSpacing: '0.08em', wordBreak: 'break-all', lineHeight: 1.2, background: 'var(--ink)', color: 'var(--on-ink)', borderRadius: 12, padding: 12, marginTop: 8 }}>{qrPayload(transactionId, qrToken)}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: 8 }}>
+                    <OmniQr value={qrPayload(transactionId, qrToken)} size={156} />
+                  </div>
+                  <p className="tiny muted" style={{ wordBreak: 'break-all', marginTop: 6 }}>{qrPayload(transactionId, qrToken)}</p>
                   <div className="btnrow" style={{ marginTop: 8 }}>
                     <button className="btn ghost sm" type="button" onClick={() => void copyQr()}><Copy size={14} /> {copied ? 'Copié' : 'Copier'}</button>
                     <button className="btn ghost sm" type="button" disabled={busy} onClick={() => void revokeQr()}>Révoquer</button>
