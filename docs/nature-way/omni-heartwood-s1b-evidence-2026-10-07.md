@@ -1,6 +1,6 @@
 # Heartwood S1b — Preuve d'exécution (PER) : QR public d'entité (S-21)
 
-> **Porte :** Heartwood OPEN · **Commit :** _(à remplir au push)_ · **Prod :** hash à vérifier (T-07d)
+> **Porte :** Heartwood OPEN · **Commit :** `d9c6e13` · **Prod :** `index-BfblRaqO.js` === local (**T-07d ✅**)
 > **Contrat :** `omni-heartwood-s1b-public-entity-qr-contract-2026-10-07.md`
 
 ## 1. Ce qui a été livré
@@ -60,3 +60,12 @@ entité — les deux paramètres ne se confondent pas.
   `prixReduit`/`pourcentageReduction`). S1b expose l'avantage et route vers l'offre remisée.
 - **QR par lieu** : non modélisé (le Seed nomme le QR **de l'entité**).
 - **Impression PDF** : geste navigateur, hors app.
+
+## 6. Prod (T-07d)
+
+- Déploiement GitHub **`d9c6e13`** (Production) ; prod sert **`index-BfblRaqO.js` === build local**.
+- Chaînes S1b vérifiées **dans le bundle servi** : `QR public` (×2), `Scanner une entité`,
+  `Vos avantages Omni`, `entity=`.
+- **Résidu honnête :** `getPublicEntity` est prouvé sur la **base canonique** (via `jsqr` réel) ; la
+  capture navigateur **avec session vendeur réelle** (voir le QR dans `CompanyV13`) n'a pas été
+  exécutée — le rendu est prouvé par jsdom + décodage réel.
