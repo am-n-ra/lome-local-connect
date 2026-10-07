@@ -127,7 +127,23 @@ async function measureOcclusions(page) {
           const sheetEl = el.closest ? el.closest('section[data-sheet],form[data-sheet]') : null;
           if (sheetEl && sheetEl.scrollHeight > sheetEl.clientHeight + 2) dockEdge = true;
         }
-        out.push({ el: `${el.tagName}.${cls(el)}:${(el.textContent || '').trim().slice(0, 30)}`, hit: `${hit.tagName}.${cls(hit)}`, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], twin: Boolean(twinHit), dockEdge });
+        // Bord de dock / clip-scroll : élément qui déborde d'un ancêtre
+        // scrollable (zone contraintes) — clippé donc invisible au repos,
+        // atteignable au scroll/clavier (fade X5-ZONE). INFO, pas FAIL.
+        // Seul un élément entièrement peint ET recouvert reste un FAIL.
+        let clippedScroll = false;
+        if (el.closest) {
+          let a = el.parentElement, depth = 0;
+          while (a && depth < 8 && !clippedScroll) {
+            const sw = a.scrollWidth, cw = a.clientWidth, sh = a.scrollHeight, ch = a.clientHeight;
+            if (sw > cw + 2 || sh > ch + 2) {
+              const ar = a.getBoundingClientRect();
+              if (r.right > ar.right + 1 || r.left < ar.left - 1 || r.bottom > ar.bottom + 1 || r.top < ar.top - 1) clippedScroll = true;
+            }
+            a = a.parentElement; depth++;
+          }
+        }
+        out.push({ el: `${el.tagName}.${cls(el)}:${(el.textContent || '').trim().slice(0, 30)}`, hit: `${hit.tagName}.${cls(hit)}`, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], twin: Boolean(twinHit), dockEdge, clippedScroll });
         break;
       }
     }
@@ -142,8 +158,8 @@ async function measureOcclusions(page) {
   // DOCK-DUP : jumeaux .navpill empilés (handlers identiques) — une seule
   // dette nommée avec le compte de jumeaux, pas N occlusions.
   const pillCount = await page.evaluate(() => document.querySelectorAll('.omni-v13-stage .navpill').length);
-  const real = stable.filter((o) => !o.twin && !o.dockEdge);
-  const edge = stable.filter((o) => o.dockEdge && !o.twin);
+  const real = stable.filter((o) => !o.twin && !o.dockEdge && !o.clippedScroll);
+  const edge = stable.filter((o) => (o.dockEdge || o.clippedScroll) && !o.twin);
   const dups = stable.filter((o) => o.twin);
   return { out: real, dups: dups.slice(0, 3), edge: edge.length, pillCount, slivers: a.slivers, rpRect: await page.evaluate(() => {
     const rp = document.querySelector('.rolepill');

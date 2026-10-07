@@ -24,64 +24,64 @@
   "viewport": "1040",
   "role": "buyer",
   "sheet": "results",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=0 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=0"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "facility",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=0 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=0"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "wallet",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=2 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=2"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "plans",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=4"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "account",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=4"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "notifs",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=4"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "favorites",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=4"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "saved",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 <44=0 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 <44=0 err=4"
  },
  {
   "viewport": "1040",
   "role": "buyer",
   "sheet": "menu",
-  "status": "FAIL",
-  "detail": "occl=1 edge=0 sliv=2 err=4 :: [{\"el\":\"INPUT.INPUT:\",\"hit\":\"BUTTON.BUTTON\",\"rect\":[942,21,44,33],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=1 sliv=2 err=4"
  },
  {
   "viewport": "1040",
@@ -95,7 +95,7 @@
   "role": "all",
   "sheet": "dock-dup",
   "status": "INFO",
-  "detail": "DOCK-DUP: 14 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
+  "detail": "DOCK-DUP: 13 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
  },
  {
   "viewport": "1040",

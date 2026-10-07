@@ -18,70 +18,70 @@
   "role": "buyer",
   "sheet": "search",
   "status": "PASS",
-  "detail": "occl=0 sliv=220 <44=0 <24=10 err=0"
+  "detail": "occl=0 edge=0 sliv=220 <44=0 <24=0 err=0 slivCls={\"BUTTON.\":1429}"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "results",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=0"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=0"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "facility",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=0"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=0"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "wallet",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=2"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=2"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "plans",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=4"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=4"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "account",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=4"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=4"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "notifs",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=4"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=4"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "favorites",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=4"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=4"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "saved",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 <44=0 err=4"
+  "detail": "occl=0 edge=0 sliv=4 <44=0 err=4"
  },
  {
   "viewport": "1920",
   "role": "buyer",
   "sheet": "menu",
   "status": "PASS",
-  "detail": "occl=0 sliv=4 err=4"
+  "detail": "occl=0 edge=0 sliv=4 err=4"
  },
  {
   "viewport": "1920",
@@ -95,21 +95,28 @@
   "role": "all",
   "sheet": "dock-dup",
   "status": "INFO",
-  "detail": "DOCK-DUP: 21 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
+  "detail": "DOCK-DUP: 15 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
  },
  {
   "viewport": "1920",
   "role": "seller",
-  "sheet": "harness",
-  "status": "FAIL",
-  "detail": "exception: Error: page.goto: net::ERR_NETWORK_CHANGED at https://omni.sparkafrika.online/\nCall log:\n\u001b[2m  - navigating to \"https://omni.sparkafrika.onl"
+  "sheet": "signin",
+  "status": "PASS",
+  "detail": "session vendeur"
+ },
+ {
+  "viewport": "1920",
+  "role": "seller",
+  "sheet": "seller",
+  "status": "PASS",
+  "detail": "occl=0 edge=0 sliv=220 <44=0 err=0"
  },
  {
   "viewport": "1920",
   "role": "anon",
   "sheet": "onboard-gated",
   "status": "INFO",
-  "detail": "sheets après action gatée: results=1+hgrid+nopitem+nobtn sheets=facility"
+  "detail": "sheets après action gatée: results=1+hgrid+nopitem+nobtn sheets=results"
  },
  {
   "viewport": "1920",

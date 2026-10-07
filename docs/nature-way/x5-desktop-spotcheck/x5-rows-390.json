@@ -18,7 +18,7 @@
   "role": "buyer",
   "sheet": "search",
   "status": "PASS",
-  "detail": "occl=0 edge=0 sliv=220 <44=3 <24=0 err=0 :: small=[\"Recherches sauvegardées(32x32)\",\"Recherche(267x42)\",\"Rechercher(37x28)\"] slivCls={\"BUTTON.\":363}"
+  "detail": "occl=0 edge=0 sliv=220 <44=3 <24=0 err=0 :: small=[\"Recherches sauvegardées(32x32)\",\"Recherche(267x42)\",\"Rechercher(37x28)\"] slivCls={\"BUTTON.\":440}"
  },
  {
   "viewport": "390",
@@ -38,15 +38,15 @@
   "viewport": "390",
   "role": "buyer",
   "sheet": "wallet",
-  "status": "FAIL",
-  "detail": "occl=1 edge=1 sliv=2 <44=6 err=2 :: [{\"el\":\"BUTTON.btn:Préparer la recharge\",\"hit\":\"BUTTON.\\n.\",\"rect\":[26,792,338,42],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=2 sliv=2 <44=6 err=2"
  },
  {
   "viewport": "390",
   "role": "buyer",
   "sheet": "plans",
-  "status": "FAIL",
-  "detail": "occl=1 edge=1 sliv=2 <44=6 err=4 :: [{\"el\":\"BUTTON.btn:Préparer la recharge\",\"hit\":\"BUTTON.\\n.\",\"rect\":[26,792,338,42],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=2 sliv=2 <44=6 err=4"
  },
  {
   "viewport": "390",
@@ -80,8 +80,8 @@
   "viewport": "390",
   "role": "buyer",
   "sheet": "menu",
-  "status": "FAIL",
-  "detail": "occl=2 edge=0 sliv=2 err=4 :: [{\"el\":\"BUTTON.menuitem:Mon compteidentité & réglages\",\"hit\":\"BUTTON.\\n.\",\"rect\":[15,774,176,63],\"twin\":false,\"dockEdge\":false},{\"el\":\"BUTTON.menuitem:Compteprofil & rôles\",\"hit\":\"BUTTON.\\n.\",\"rect\":[199,774,176,63],\"twin\":false,\"dockEdge\":false}]"
+  "status": "PASS",
+  "detail": "occl=0 edge=2 sliv=2 err=4"
  },
  {
   "viewport": "390",
@@ -95,7 +95,7 @@
   "role": "all",
   "sheet": "dock-dup",
   "status": "INFO",
-  "detail": "DOCK-DUP: 12 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
+  "detail": "DOCK-DUP: 13 jumeaux .navpill empilés même rect (handlers identiques, interception mesurée) — dette nommée, excluir des verdicts sheet"
  },
  {
   "viewport": "390",
