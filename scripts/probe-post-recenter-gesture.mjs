@@ -3,7 +3,7 @@ import { chromium } from 'playwright';
 // still return cameraMode to manual_navigation (the transient guard must have cleared).
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-await page.goto('http://localhost:4199', { waitUntil: 'networkidle' });
+await page.goto(process.env.URL || 'http://localhost:4199', { waitUntil: 'networkidle' });
 await page.waitForTimeout(5500);
 await page.evaluate(() => { const b=[...document.querySelectorAll('.navpill button')].find((x)=>/Recherche/.test((x.getAttribute('title')||'')+(x.querySelector('.sr-only')?.textContent||''))); b?.click(); });
 await page.waitForTimeout(400);
