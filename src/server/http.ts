@@ -2129,6 +2129,22 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    if (req.method === 'GET' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/verification')) {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as the owning seller to view your verification state.'));
+        return true;
+      }
+      const facilityId = pathname.slice('/api/v2/seller/facilities/'.length, -'/verification'.length);
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(facilityId)) {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a valid facility.'));
+        return true;
+      }
+      const result = await repository.getSellerVerification({ authUserId, facilityId });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     if (req.method === 'GET' && pathname.startsWith('/api/v2/seller/facilities/') && pathname.endsWith('/analytics')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {

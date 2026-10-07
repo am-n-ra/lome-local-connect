@@ -19,6 +19,7 @@ const CSS = 'src/trunk/ui-v13.css';
 const MAP = 'src/trunk/TrunkMap.tsx';
 const FRESH = 'src/trunk/offer-freshness.ts';
 const SELLER_FRESH = 'src/trunk/SellerFreshnessV13.tsx';
+const SELLER_VERIF = 'src/trunk/SellerVerificationV13.tsx';
 
 // [id, description, (sources) => boolean]
 const RULES = [
@@ -90,6 +91,13 @@ const RULES = [
     /computeOfferFreshness\(/.test(s[SELLER_FRESH]) &&
     /freshnessLabel\(/.test(s[SELLER_FRESH]) &&
     !/availability_expires_at/.test(s[SELLER_FRESH])],
+  ['menu-01-verification', 'the seller menu carries "Vérification" → sheet verification (DS-14)', (s) =>
+    /setSheet\('verification'\)[^\n]*Vérification/.test(s[APP]) && /sheet === 'verification' &&/.test(s[APP])],
+  ['seller-verif-derived', 'the seller verification badge/step are DERIVED (no stored level), and certified is never a stronger public badge', (s) =>
+    /sellerVerificationBadge\(data\.trustState\)/.test(s[SELLER_VERIF]) &&
+    /sellerVerificationStep\(\{ trustState: data\.trustState/.test(s[SELLER_VERIF]) &&
+    !/trustState = /.test(s[SELLER_VERIF]) &&
+    /case 'certified':/.test(read('src/trunk/verification-status.ts'))],
 ];
 
 function run(sources) {
@@ -102,7 +110,7 @@ function run(sources) {
   return failures;
 }
 
-const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH), [SELLER_FRESH]: read(SELLER_FRESH) };
+const sources = { [APP]: read(APP), [SORT]: read(SORT), [CSS]: read(CSS), [MAP]: read(MAP), [FRESH]: read(FRESH), [SELLER_FRESH]: read(SELLER_FRESH), [SELLER_VERIF]: read(SELLER_VERIF) };
 
 if (process.argv.includes('--selftest')) {
   // Each mutation should make at least its rule fire.
@@ -130,6 +138,8 @@ if (process.argv.includes('--selftest')) {
     [APP, "setSheet('freshness')", "setSheet('seller')"],
     [SELLER_FRESH, "to: 'en_stock'", "to: 'a_valider'"],
     [SELLER_FRESH, 'expiresInHours: windowHours', 'expiresInHours: null'],
+    [APP, "setSheet('verification')", "setSheet('seller')"],
+    [SELLER_VERIF, 'sellerVerificationBadge(data.trustState)', "sellerVerificationBadge('confirmed')"],
   ];
   let fired = 0;
   for (const [file, from, to] of mutations) {

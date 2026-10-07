@@ -6866,6 +6866,78 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         pendingRequestCount: Number(row.pending_request_count ?? 0),
       } };
     },
+    // DS-14 — `seller-verif` (maquette « État de votre vérification ») : la surface
+    // côté VENDEUR de l'état de vérification de son entité. LECTURE SEULE (D-OPS-5) :
+    // badge, étape, ventes qualifiantes, zone/date de visite — jamais un contact
+    // acheteur, jamais un message, jamais une écriture de badge.
+    async getSellerVerification(input: { authUserId: string; facilityId: string }): Promise<{
+      facilityId: string;
+      facilityName: string;
+      subjectType: string;
+      trustState: string;
+      qualifyingSales: number;
+      requiredCount: number;
+      requestState: string | null;
+      visitState: string | null;
+      visitZone: string | null;
+      visitDate: string | null;
+    }> {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select f.id, f.name, coalesce(e.trust_state, f.trust_state) as trust_state,
+            coalesce(e.qualifying_sales, f.qualifying_sales, 0) as qualifying_sales,
+            coalesce(e.kind, 'organisation') as kind
+          from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
+          join v2_accounts a on a.id = f.account_id
+          where f.id = ${input.facilityId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+          limit 1
+        ), request as (
+          select vr.state
+          from v2_verification_requests vr
+          where vr.facility_id = (select id from owned)
+            and vr.state in ('draft', 'submitted', 'admin_review', 'needs_more_evidence')
+          order by case vr.state when 'admin_review' then 0 when 'submitted' then 1 when 'needs_more_evidence' then 2 else 3 end,
+            vr.created_at desc
+          limit 1
+        ), visit as (
+          select v.state, v.zone, v.created_at
+          from v2_field_visits v
+          where v.subject_type = 'verification'
+            and v.subject_id = (select id from owned)
+            and v.state in ('a_visiter', 'en_cours')
+          order by v.created_at desc
+          limit 1
+        )
+        select
+          o.id as facility_id,
+          o.name as facility_name,
+          o.trust_state,
+          o.qualifying_sales::int as qualifying_sales,
+          case when o.kind = 'individu' then ${INDIVIDUAL_CONFIRMED_SALES_THRESHOLD}::int else ${CONFIRMED_SALES_THRESHOLD}::int end as required_count,
+          (select state from request) as request_state,
+          (select state from visit) as visit_state,
+          (select zone from visit) as visit_zone,
+          (select created_at from visit) as visit_date
+        from owned o
+        limit 1
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerAuthorizationPolicyError('Facility not found or not owned by the current user.');
+      return {
+        facilityId: String(row.facility_id),
+        facilityName: String(row.facility_name ?? ''),
+        subjectType: 'verification',
+        trustState: String(row.trust_state ?? 'unclaimed'),
+        qualifyingSales: Number(row.qualifying_sales ?? 0),
+        requiredCount: Number(row.required_count ?? CONFIRMED_SALES_THRESHOLD),
+        requestState: row.request_state === null || row.request_state === undefined ? null : String(row.request_state),
+        visitState: row.visit_state === null || row.visit_state === undefined ? null : String(row.visit_state),
+        visitZone: row.visit_zone === null || row.visit_zone === undefined ? null : String(row.visit_zone),
+        visitDate: row.visit_date === null || row.visit_date === undefined ? null : new Date(String(row.visit_date)).toISOString(),
+      };
+    },
     async getTransaction(input: { authUserId: string; transactionId: string }): Promise<TransactionSnapshotResult | null> {
       const rows = await retryDatabase(() => sql`
         select

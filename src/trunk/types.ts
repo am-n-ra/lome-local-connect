@@ -990,6 +990,20 @@ export interface SellerFacilityAnalytics {
   billingCurrency: string;
   scanToVerifyAvgMs: number | null;
 }
+
+/** DS-14 `seller-verif` — état de vérification côté vendeur (lecture seule, D-OPS-5). */
+export interface SellerVerification {
+  facilityId: string;
+  facilityName: string;
+  subjectType: string;
+  trustState: string;
+  qualifyingSales: number;
+  requiredCount: number;
+  requestState: string | null;
+  visitState: string | null;
+  visitZone: string | null;
+  visitDate: string | null;
+}
 export type AdCampaignStatus = 'planifiee' | 'active' | 'terminee' | 'pausee';
 export interface SellerAdCampaign {
   id: string;

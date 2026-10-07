@@ -42,6 +42,7 @@ import { SellerQrScannerSheet } from './SellerQrScannerSheet';
 import { SellerV13 } from './SellerV13';
 import { SellerReplyV13 } from './SellerReplyV13';
 import { SellerFreshnessV13 } from './SellerFreshnessV13';
+import { SellerVerificationV13 } from './SellerVerificationV13';
 import { OperatorEntitySideV13 } from './OperatorEntitySideV13';
 import { ProductCatalogueV13 } from './ProductCatalogueV13';
 import { StockEventLedgerV13 } from './StockEventLedgerV13';
@@ -58,7 +59,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' | 'op-side';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' | 'op-side' | 'verification';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -368,7 +369,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -1662,7 +1663,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       if (sheet === 'notifs') { setSheet('menu'); return; }
       if (sheet === 'recovery') { setSheet('home'); return; }
       if (sheet === 'account' || sheet === 'wallet' || sheet === 'plans' || sheet === 'saved' || sheet === 'auth' || sheet === 'onboard') { setSheet('menu'); return; }
-      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness') { setSheet('seller'); return; }
+      if (sheet === 'products' || sheet === 'stockevent' || sheet === 'offers' || sheet === 'company' || sheet === 'seller-reply' || sheet === 'freshness' || sheet === 'verification') { setSheet('seller'); return; }
       if (sheet === 'op-side') { setOpSideVisitId(null); setSheet('tour'); return; }
       setSheet('none');
       return;
@@ -2395,6 +2396,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       {sheet === 'freshness' && (
         <SellerFreshnessV13 onClose={() => setSheet('seller')} />
       )}
+      {sheet === 'verification' && (
+        <SellerVerificationV13 onClose={() => setSheet('seller')} />
+      )}
       {sheet === 'op-side' && opSideVisitId !== null && (
         <OperatorEntitySideV13 visitId={opSideVisitId} onBack={() => { setOpSideVisitId(null); setSheet('tour'); }} />
       )}
@@ -2467,6 +2471,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => setSheet('seller')}><span className="mi"><PackageSearch size={15} /></span><span><b>Produits & stock</b><small>catalogue vendeur</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('seller-reply')}><span className="mi"><Inbox size={15} /></span><span><b>Demandes entrantes</b><small>à répondre</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('freshness')}><span className="mi"><Clock3 size={15} /></span><span><b>Fraîcheur de la dispo</b><small>4 h frais · 24 h expiré</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => setSheet('verification')}><span className="mi"><ShieldCheck size={15} /></span><span><b>Vérification</b><small>où en est mon badge</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('offers')}><span className="mi"><PackageSearch size={15} /></span><span><b>Offres</b><small>prix & remise Omni</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('company')}><span className="mi"><Building2 size={15} /></span><span><b>Compagnies</b><small>mes facilités</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Wallet</b><small>solde, Pro & recharges</small></span></button>
