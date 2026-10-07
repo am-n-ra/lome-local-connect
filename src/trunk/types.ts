@@ -22,6 +22,13 @@ export interface SearchOptions {
   operationalState?: 'ouvert' | null;
 }
 
+/** X5 — compte public honnête affiché dans la preuve sociale de l'onboarding.
+ *  Dérivé de la même porte de visibilité que la carte : jamais un total interne. */
+export interface PublicStats {
+  facilities: number;
+  offers: number;
+}
+
 export interface PublicFacility {
   id: string;
   name: string;

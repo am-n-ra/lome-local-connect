@@ -1539,6 +1539,11 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       else json(res, 200, { ok: true, correlationId, data: entity });
       return true;
     }
+    if (req.method === 'GET' && pathname === '/api/v2/public/stats') {
+      const stats = await repository.getPublicStats();
+      json(res, 200, { ok: true, correlationId, data: stats });
+      return true;
+    }
     if (req.method === 'GET' && pathname === '/api/v2/public/facilities') {
       const hasBounds = ['west', 'south', 'east', 'north'].every((key) => url.searchParams.has(key));
       const bounds = hasBounds

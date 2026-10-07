@@ -2436,7 +2436,29 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <CompanyV13 onClose={() => setSheet('seller')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} catalogue={sellerCatalogue} />
       )}
       {sheet === 'onboard' && (
-        <OnboardV13 pendingSearch={pendingSearch} onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => {
+        <OnboardV13
+          pendingSearch={pendingSearch}
+          hasSession={Boolean(sessionUser)}
+          onAuthenticated={async (user) => {
+            // X5 — compte réel créé/connecté depuis l'onboarding : on adopte la
+            // session en place (comme le fait le login de l'écran Auth).
+            setSessionUser(user);
+            const token = await getAuthToken();
+            if (token) {
+              setAuthToken(token);
+              const caps = await getAccountCapabilities({ token });
+              if (caps.ok && caps.data) {
+                setAccountRoles(caps.data.roles ?? []);
+                setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
+                setAdminTools(Boolean(caps.data.capabilities?.adminTools));
+                setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
+                if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
+              }
+              void loadFavorites();
+              void loadBuyerProStatus();
+            }
+          }}
+          onClose={() => { setPendingAction(null); setSheet('menu'); }} onComplete={() => {
           const act = pendingAction;
           const resume = pendingActionResume(act);
           setPendingAction(null);

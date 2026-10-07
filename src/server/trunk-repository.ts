@@ -2377,6 +2377,30 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       });
     },
 
+    /**
+     * X5 — compte public honnête pour la preuve sociale de l'onboarding.
+     * Réutilise EXACTEMENT la porte de visibilité de `listPublicFacilities`
+     * (états de confiance publics), sans filtre géo (la recherche publique n'en a
+     * pas par défaut). Le chiffre affiché = « ce que la carte montre », jamais un
+     * total interne trompeur. Aucun frais (S-15).
+     */
+    async getPublicStats(): Promise<{ facilities: number; offers: number }> {
+      const rows = await retryDatabase(() => sql`
+        with visible as (
+          select f.id
+          from v2_facilities f
+          left join v2_entities e on e.id = f.entity_id
+          where coalesce(e.trust_state, f.trust_state) in ('unclaimed', 'unconfirmed', 'confirmed')
+        )
+        select
+          (select count(*)::int from visible) as facilities,
+          (select count(*)::int from v2_products p where p.publication_state = 'published'
+             and (p.facility_id is null or p.facility_id in (select id from visible))) as offers
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      return { facilities: Number(row?.facilities ?? 0), offers: Number(row?.offers ?? 0) };
+    },
+
     async getFacilityDetail(id: string): Promise<FacilityDetail | null> {
       const facilities = await retryDatabase(() => sql`
         select
