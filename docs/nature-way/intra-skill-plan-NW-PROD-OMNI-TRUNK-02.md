@@ -35,7 +35,7 @@
 | X1-3 | X1-2 | Root | `sweepExpiredIntents` écrit `expired` ; lectures excluent l'expiration pré-verrou | X1-2 | `verified` | SQL réel | faux |
 | X1-4 | X1-3 | Trunk | `TransactionState` + `transaction-time` + carte terminale UI | X1-3 | `verified` | rendu jsdom | faux |
 | X1-5 | X1-4 | Heartwood | Preuve SQL réelle jetable + falsification | X1-4 | `verified` | `prove-v2-intent-expiry.mjs` 7/7 | faux |
-| X1-6 | X1-5 | Ring | suite + gardes + push prod T-07d | X1-5 | `in_progress` | hash === local | déploiement |
+| X1-6 | X1-5 | Ring | suite + gardes + push prod T-07d | X1-5 | `done` | hash === local (index-het4xWEB.js) | déploiement |
 
 ## Non-goals (hors X1)
 
