@@ -209,6 +209,20 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
+// The bottom padding the map needs so content above the mobile sheet stays visible.
+// Measured from the DOM at call time: switching sheets only flips the stage's `data-sheet`
+// attribute, which the padding sync (childList MutationObserver) never observes, so a
+// recenter effect must not trust a previously-applied padding. Desktop sheets are a left
+// rail (full height) — no bottom padding there. Mirrors `syncCameraPadding`.
+function measureSheetBottomPadding(stage: Element | null | undefined): number {
+  if (typeof window === 'undefined' || window.innerWidth >= 1040) return 0;
+  const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])') ?? stage?.querySelector<HTMLElement>('.sheet');
+  if (!sheet) return 0;
+  const sheetHeight = Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top);
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  return bottomPaddingFor(sheetHeight, viewportHeight);
+}
+
 export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onTileTap, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapEngine | null>(null);
@@ -548,17 +562,10 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       // refléter sa hauteur pour que les pins restent visibles au-dessus. En desktop,
       // le journey sheet est un panneau latéral — la carte ne masque rien en bas,
       // dont pas de padding vertical.
-      let bottomPadding = 0;
-      if (window.innerWidth < 1040) {
-        const stage = container.current?.closest('.omni-v13-stage');
-        const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])') ?? stage?.querySelector<HTMLElement>('.sheet');
-        const sheetHeight = sheet ? Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top) : 0;
-        // A degenerate viewport (bottom padding > viewport height) makes MapLibre's globe
-        // transform build a singular matrix and the next _calcMatrices throws `null[0]`.
-        // bottomPaddingFor caps the squeeze so a real map band stays visible.
-        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-        bottomPadding = bottomPaddingFor(sheetHeight, viewportHeight);
-      }
+      // A degenerate viewport (bottom padding > viewport height) makes MapLibre's globe
+      // transform build a singular matrix and the next _calcMatrices throws `null[0]`.
+      // bottomPaddingFor caps the squeeze so a real map band stays visible.
+      const bottomPadding = measureSheetBottomPadding(container.current?.closest('.omni-v13-stage'));
       // Dedupe: re-issuing setPadding on every styledata/mutation churns the transform
       // mid-flight. Only a real change is worth a transform update.
       if (bottomPadding === lastPadding) return;
@@ -1424,24 +1431,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     setCameraModeState('selected_facility');
     const apply = () => {
       // R-03a: the selected pin must land in the band ABOVE the sheet. MapLibre centers
-      // the camera on the PADDED viewport (`centerPoint.y = (height - bottom)/2`), so the
-      // fix is to set the bottom padding from the REAL sheet height, then center on the
-      // pin — no fragile pixel offset (the old `unproject(y - (pad+64)/2)` moved the pin
-      // the wrong way and relied on padding that was never synced).
-      // Measure the sheet from the DOM: switching sheets only flips the stage's
-      // `data-sheet` attribute, which the padding sync (childList MutationObserver) never
-      // observed, so the padding stayed stale (0) and the pin sat behind the sheet
-      // (measured: pin at screen y≈422, sheet top y≈304).
-      const stage = container.current?.closest('.omni-v13-stage');
-      const sheet = stage?.querySelector<HTMLElement>('.sheet[data-sheet]:not([data-sheet="search"])');
-      // Mobile only: on desktop the sheet is a LEFT rail, not a bottom sheet, so padding
-      // would be wrong (the rail is full-height). Mirrors `syncCameraPadding`.
-      let bottom = 0;
-      if (window.innerWidth < 1040 && sheet) {
-        const sheetHeight = Math.max(0, window.innerHeight - sheet.getBoundingClientRect().top);
-        const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
-        bottom = bottomPaddingFor(sheetHeight, viewportHeight);
-      }
+      // the camera on the PADDED viewport (`centerPoint.y = (height - bottom)/2`), so we
+      // set the bottom padding from the sheet's measured height, then center on the pin —
+      // no fragile pixel offset. (`measureSheetBottomPadding` reads the DOM; see its note
+      // on why the padding sync can't be trusted at recenter time.)
+      const bottom = measureSheetBottomPadding(container.current?.closest('.omni-v13-stage'));
       setPadBottom(bottom);
       try { map.setPadding({ top: 0, right: 0, bottom, left: 0 }); } catch { /* transform not ready */ }
       safeEaseTo(map, { center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
@@ -1485,6 +1479,11 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
 
     if (revealRunningRef.current || cameraMode.current === 'search_reveal') return;
     rotating.current = false;
+    // Grid-scroll follow: keep the followed pin in the band above the sheet. Re-measure the
+    // sheet here too — the padding sync may not have run since the results sheet appeared.
+    const bottom = measureSheetBottomPadding(container.current?.closest('.omni-v13-stage'));
+    setPadBottom(bottom);
+    try { map.setPadding({ top: 0, right: 0, bottom, left: 0 }); } catch { /* transform not ready */ }
     const followZoom = Math.max(map.getZoom(),11.5);
     safeEaseTo(map, { center: [followTarget.longitude, followTarget.latitude], zoom: followZoom, duration:500, essential: true });
   }, [followTarget]);

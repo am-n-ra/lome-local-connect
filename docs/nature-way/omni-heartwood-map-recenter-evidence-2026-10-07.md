@@ -57,6 +57,13 @@ sheet bas — poser un padding bas y serait faux (le rail est pleine hauteur). M
 **Vol en cours** : si `map.isMoving()` (ex. la révélation de recherche), l'effet **rejoue le cadrage au
 `moveend`** au lieu de l'abandonner — le pin n'est jamais laissé caché.
 
+**Trois chemins, une seule mesure.** Le clic d'une carte résultat, le clic d'un pin et le **défilement de
+la grille** (`followTarget`) recentrent tous les trois la caméra. Les trois passent désormais par le
+**même helper** `measureSheetBottomPadding(stage)` : il mesure la hauteur réelle du sheet depuis le DOM et
+applique le padding avant de centrer. Un seul point de vérité → impossible qu'un chemin diverge
+silencieusement (c'est exactement ce qui s'était produit : le clic gardait un padding périmé, le défilement
+non).
+
 ## 4. Preuve A/B décisive
 
 `scripts/probe-facility-recenter-ab.mjs` charge deux bundles identiques **sauf** la formule de
@@ -86,11 +93,12 @@ GitHub pour `c4e4d2b` ⇒ **T-07d ✅**.
 
 - `src/trunk/map-camera.test.ts` — contrat : pour **chaque** taille de sheet réelle (h-low 44 %, h-mid
   52 %, h-auto 60 %, h-full 64 %), le milieu paddé reste **au-dessus** du sheetTop.
-- `src/trunk/facility-recenter-lock.test.ts` (garde de source) — l'effet doit mesurer le sheet depuis le
-  DOM, poser le padding via `bottomPaddingFor`, centrer sur le pin, rejouer au `moveend` ; et **ne pas**
-  réintroduire le décalage fautif. **Falsifié** : réinjecter `bottomPad + 64` → **1 échec** ; restauré →
-  4/4.
-- **916/916** tests (101 fichiers, +6), `tsc` 0, `check:state` / `check:live-surface` / `check:boundary`
+- `src/trunk/facility-recenter-lock.test.ts` (garde de source, 5 tests) — le **helper** mesure le sheet
+  depuis le DOM et pose le padding via `bottomPaddingFor` ; l'effet de **sélection** et l'effet de
+  **suivi grille** (`followTarget`) y passent tous deux ; et **ne pas** réintroduire le décalage fautif.
+  **Falsifié 2 fois** : réinjecter `bottomPad + 64` → **1 échec** ; retirer la resynchro du suivi →
+  **1 échec** ; restauré → **5/5**.
+- **917/917** tests (101 fichiers, +7), `tsc` 0, `check:state` / `check:live-surface` / `check:boundary`
   / `check:coherence` / `check:docs` / `check:dead-css` verts.
 
 ## 6. Résidus honnêtes

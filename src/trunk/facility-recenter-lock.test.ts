@@ -20,18 +20,24 @@ import { describe, expect, it } from 'vitest';
 
 const MAP = readFileSync(resolve(__dirname, 'TrunkMap.tsx'), 'utf8');
 
+// Le helper partagé mesure la hauteur RÉELLE du sheet depuis le DOM (pas le padding,
+// qui peut être périmé) — c'est lui qui porte la vérité de mesure.
+const helperStart = MAP.indexOf('function measureSheetBottomPadding');
+const helper = MAP.slice(helperStart, helperStart + 700);
+
 describe('le pin sélectionné reste visible au-dessus du sheet', () => {
   const start = MAP.indexOf('cameraMode.current = \'selected_facility\'');
   const end = MAP.indexOf('// R-03 map-contextual focus', start);
   const effect = MAP.slice(start, end > start ? end : start + 2600);
 
   it('mesure la hauteur du sheet depuis le DOM (pas depuis le padding)', () => {
-    expect(effect).toMatch(/getBoundingClientRect\(\)\.top/);
-    expect(effect).toContain('.sheet[data-sheet]');
+    expect(helper).toMatch(/getBoundingClientRect\(\)\.top/);
+    expect(helper).toContain('.sheet[data-sheet]');
   });
 
   it('pose le padding bas depuis `bottomPaddingFor` puis centre sur le pin', () => {
-    expect(effect).toContain('bottomPaddingFor(');
+    expect(helper).toContain('bottomPaddingFor(');
+    expect(effect).toContain('measureSheetBottomPadding(');
     expect(effect).toMatch(/setPadding\(\{ top: 0, right: 0, bottom/);
     expect(effect).toMatch(/center: \[selected\.longitude, selected\.latitude\]/);
   });
@@ -44,5 +50,12 @@ describe('le pin sélectionné reste visible au-dessus du sheet', () => {
   it('rejoue le cadrage après un vol en cours (moveend)', () => {
     expect(effect).toMatch(/isMoving\(\)/);
     expect(effect).toContain("map.on('moveend'");
+  });
+
+  it('le suivi de la grille (followTarget) resynchronise le padding avant de centrer', () => {
+    const fs = MAP.indexOf('if (!map || !followTarget) return;');
+    const follow = MAP.slice(fs, fs + 1100);
+    expect(follow).toContain('measureSheetBottomPadding(');
+    expect(follow).toMatch(/center: \[followTarget\.longitude, followTarget\.latitude\]/);
   });
 });

@@ -47,6 +47,7 @@
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
 | MAP-1 | — | Heartwood | Les pins de la carte : cap `limit 250` tronque 13 744 lieux | **décision fondateur `D-MAP-1`** (cap) | `verified` | option 1 (fondateur « go on ») — cap par fenêtre 2 000 ; garde `public-facilities-cap` falsifié ; prod `9c5237c` | fait contredit |
 | MAP-2 | — | Heartwood | Pins carte : 2 régressions de câblage (recherche morte au globe + carte branchée sur les résultats) | MAP-1 | `verified` | correctifs + gardes `search-reveal-lock`/`map-pin-source-lock` falsifiés ; prod `e08b57e` | fait contredit |
+| MAP-3 | — | Heartwood | Recentrage : le pin sélectionné doit rester VISIBLE au-dessus du sheet (clic résultat / pin / défilement grille) | MAP-2 | `verified` | helper unique `measureSheetBottomPadding` (3 chemins) ; garde `facility-recenter-lock` falsifié 2× ; A/B prod vs local (OLD pin y=−74, FIXED y=190) ; prod `c4e4d2b`+ | fait contredit |
 
 ## Non-goals (porte Heartwood)
 
