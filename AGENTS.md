@@ -1105,6 +1105,7 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Preuve navigateur locale :** arrival → **1 165 pins rendus** (avant : 250 serrés au centre) ; pan → refetch propre, **0 erreur**.
 - **Garde :** `src/server/public-facilities-cap.test.ts` (2) — la requête doit citer la constante, jamais un `limit 250` en dur. **Falsifié** : remettre `limit 250` → **1 échec**.
 - **Tests :** **889/889**, tsc clean, 5 gardes vertes, build `index-BuHBYbl6.js` (client inchangé — changement serveur).
+- **Prod (2026-10-07, commit `9c5237c`) :** changement **serveur seul** (hash client inchangé) → T-07d vérifié **par comportement**, pas par hash. Déploiement GitHub `9c5237c` (14:5xZ) ; **`GET /api/v2/public/facilities` → 2 000 lignes (avant : 250)**. Capture prod arrival → **446 amas de pins** (avant : 217), zoom 14.2, **0 pageerror**.
 
 ## HEARTWOOD MAP — `visibleFacilities` branché sur les résultats, pas la découverte (2026-10-07) : 0 pin au repos
 - **Signal fondateur (précis) :** *« avant on voit les pins sur la carte les 13000+ maintenant ce n'est plus le cas ; ensuite recherche boulangerie → sheet résultats mais pas de pin sur la carte ».* Le countmark (X6) est **innocent** (aucune ligne de câblage pins).
