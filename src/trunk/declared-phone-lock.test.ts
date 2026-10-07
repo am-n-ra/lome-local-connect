@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 const PHONE = readFileSync(resolve(__dirname, '../domain/phone.ts'), 'utf8');
 const APP = readFileSync(resolve(__dirname, 'TrunkAppV13.tsx'), 'utf8');
+const ONBOARD = readFileSync(resolve(__dirname, 'OnboardV13.tsx'), 'utf8');
 
 describe('le numéro déclaré n’est jamais présenté comme vérifié (S-16)', () => {
   it('le libellé public ne dit pas « vérifié »', () => {
@@ -20,6 +21,12 @@ describe('le numéro déclaré n’est jamais présenté comme vérifié (S-16)'
   it('la carte Compte étiquette la déclaration comme non confirmée', () => {
     expect(APP).toContain('phoneDeclarationLabel()');
     expect(APP).toMatch(/Omni ne vérifie pas ce numéro/);
+  });
+
+  it('l’inscription porte le numéro déclaré, jamais présenté comme vérifié (S-16)', () => {
+    expect(ONBOARD).toContain('phoneDeclarationLabel()');
+    expect(ONBOARD).toMatch(/Omni ne vérifie pas ce numéro/);
+    expect(ONBOARD).not.toMatch(/v[ée]rifier (le|votre) num[ée]ro/i);
   });
 
   it('le lien WhatsApp n’est jamais décrit comme une vérification', () => {

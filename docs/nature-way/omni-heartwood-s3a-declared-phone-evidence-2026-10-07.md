@@ -16,7 +16,12 @@ un **numéro Togo déclaré** — jamais « vérifié » — et un **deep link `
 | Lecture (`getAccountContext`) + écriture (`setDeclaredPhone`) | `src/server/trunk-repository.ts` |
 | Validateur + route `POST /api/v2/account/phone` | `src/server/http.ts` |
 | Client `setDeclaredPhone` + type `phoneDeclared` | `src/trunk/api.ts`, `src/trunk/types.ts` |
+| Champ **Téléphone (optionnel)** à l'inscription (S-16) | `src/trunk/OnboardV13.tsx` |
 | Carte « Numéro de téléphone » dans la sheet Compte | `src/trunk/TrunkAppV13.tsx` |
+
+Le numéro est déclarable **à deux moments** : **à l'inscription** (S-16, téléphone-first — champ optionnel,
+enregistré best-effort après la création du compte) et depuis la **sheet Compte** (déclarer / remplacer /
+retirer + deep link `wa.me`).
 
 ## 2. Le fait central : « Déclaré », jamais « Vérifié »
 
@@ -47,10 +52,10 @@ courant transaction : ne jamais relire dans la même instruction ce qu'on vient 
   T6 compte inconnu provisionné à la volée. **0 résidu**.
 - **Migration `069`** : colonnes + CHECK présents sur la canonique `br-dawn-hill-am5amy22` ; registre
   `omni_schema_migrations` (checksum `e3c60c62…`, 2026-10-07T14:47Z).
-- **Suite** : **908/908** (100 fichiers), `tsc` 0, 7 gardes vertes (`state`/`docs`/`coherence`/
+- **Suite** : **910/910** (100 fichiers), `tsc` 0, 7 gardes vertes (`state`/`docs`/`coherence`/
   `live-surface`/`boundary`/`dead-css`/`maquette`).
 - **Falsifications** : libellé « Vérifié » → **2 tests échouent** ; écriture en deux instructions →
-  **garde échoue** ; restaurés → verts.
+  **garde échoue** ; libellé d'inscription « va vérifier » → **2 tests échouent** ; restaurés → verts.
 - **Bundles serverless régénérés** dans le même commit (route `account/phone` présente dans
   `api/v2/availability.js` et `api/v2/account/context.js`).
 

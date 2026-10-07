@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { authClient } from '../auth';
+import { authClient, getAuthToken } from '../auth';
 import { resolveUserCurrency } from '../domain/currency';
+import { normalizeTogoPhone, phoneDeclarationLabel } from '../domain/phone';
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
-import { getPublicStats } from './api';
+import { getPublicStats, setDeclaredPhone } from './api';
 import { sessionUserFromAuthResult, type SessionUser } from './auth-session';
 import type { PublicStats } from './types';
 
@@ -30,6 +31,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
   const [firstName, setFirstName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
   const [mode, setMode] = useState<'signup' | 'signin'>('signup');
   const [busy, setBusy] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -47,6 +49,12 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
 
   const submitAccount = useCallback(async () => {
     if (busy || !email.trim() || password.length < 6) return;
+    // S-16 : le numéro est optionnel ; s'il est saisi, il doit être un vrai format Togo.
+    const phoneTrimmed = phone.trim();
+    if (mode === 'signup' && phoneTrimmed !== '' && normalizeTogoPhone(phoneTrimmed) === null) {
+      setAuthError('Numéro invalide — attendu +228 puis 8 chiffres (ou laissez vide).');
+      return;
+    }
     setBusy(true);
     setAuthError(null);
     setNotice(null);
@@ -69,6 +77,17 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
         setMode('signin');
         return;
       }
+      // S-16 / S3-a : enregistre le numéro DÉCLARÉ (best-effort, jamais bloquant).
+      // Le compte vient d'être créé — on ne fait pas échouer l'inscription si l'écriture
+      // du numéro rate ; il reste déclarable depuis la sheet Compte.
+      if (mode === 'signup' && phoneTrimmed !== '') {
+        try {
+          const token = await getAuthToken();
+          if (token) await setDeclaredPhone({ token, phone: phoneTrimmed });
+        } catch {
+          /* best-effort : le numéro reste déclarable depuis le Compte */
+        }
+      }
       onAuthenticated?.(user);
       setStep(3);
     } catch {
@@ -76,7 +95,7 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
     } finally {
       setBusy(false);
     }
-  }, [busy, email, password, firstName, mode, onAuthenticated]);
+  }, [busy, email, password, phone, firstName, mode, onAuthenticated]);
 
   const greeting = firstName.trim() ? `${firstName.trim()}, ` : '';
   const currencyInput = { locale: typeof navigator === 'undefined' ? null : navigator.language };
@@ -124,6 +143,13 @@ export function OnboardV13({ pendingSearch, hasSession, onClose, onComplete, onA
           <input className="field lg" type="email" autoComplete="email" placeholder="vous@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="label" style={{ marginTop: 8 }}>Mot de passe</div>
           <input className="field lg" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} placeholder="6 caractères minimum" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submitAccount(); }} />
+          {mode === 'signup' && (
+            <>
+              <div className="label" style={{ marginTop: 8 }}>Téléphone (optionnel)</div>
+              <input className="field lg" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phone} onChange={(e) => setPhone(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void submitAccount(); }} />
+              <p className="tiny muted" style={{ marginTop: 5 }}>Au Togo le numéro est plus courant que l'email. Statut : {phoneDeclarationLabel()} — Omni ne vérifie pas ce numéro.</p>
+            </>
+          )}
           <button className="btn ok" style={{ marginTop: 10 }} type="button" disabled={busy || !email.trim() || password.length < 6} onClick={() => void submitAccount()}>
             {busy ? 'Un instant…' : mode === 'signup' ? 'Créer mon compte' : 'Se connecter'}
           </button>

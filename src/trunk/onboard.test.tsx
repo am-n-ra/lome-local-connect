@@ -72,4 +72,13 @@ describe('X5 honest onboarding (replaces the simulated OTP)', () => {
     expect(text()).toContain('Ce que Pro débloque.');
     expect(container.querySelector<HTMLInputElement>('input[type="password"]')).toBeNull();
   });
+
+  it('S-16 : collects an optional declared phone on signup, labelled non vérifié', () => {
+    renderUi();
+    act(() => container.querySelector<HTMLButtonElement>('.btn.ok')!.click());
+    expect(text()).toContain('Téléphone (optionnel)');
+    expect(text()).toContain('Déclaré · non confirmé');
+    expect(text()).toContain('Omni ne vérifie pas ce numéro');
+    expect(container.querySelector<HTMLInputElement>('input[autocomplete="tel"]')).toBeTruthy();
+  });
 });
