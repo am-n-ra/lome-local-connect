@@ -24,7 +24,7 @@
 | 1 | `TRUNK-X1` corriger l'état | intention expirée = événement canonique `expired` écrit par le sweep, lu par les lectures ; 0 zombie | migration + repo + UI + preuve SQL réelle falsifiée | **`verified`** — `067` appliquée canonical, preuve jetable 7/7 (falsifiée 4 FAIL), 836/836 | fait contredit |
 | 2 | `TRUNK-X4` mémoire | `COH-V2` re-classé ; `DS-1…14` au SDM | registre + garde | **`done`** — 7 lignes périmées re-classées, SDM amendé | divergence |
 | 3 | `TRUNK-X2` seller-automation | modèle auto-dispo + slice | décision modèle → contrat → code | **`done`** — `068` appliquée canonical, preuve jetable 9/9 + falsification, 843/843, prod `index-IZJxtU8O.js` === local (`3d19a50`) | fait contredit |
-| 4 | `TRUNK-X3` room | surface chat acheteur + vendeur | contrat + code + preuve | **`in_progress`** (code livré, preuve jetable 5/5 + falsification ; push Ring en attente) | fondateur |
+| 4 | `TRUNK-X3` room | surface chat acheteur **+ vendeur** | contrat + code + preuve | **`verified`** — code livré, preuve jetable 5/5 + falsification (3 FAIL), 849/849, prod `index-C6M5nYgT.js` === local (`bda68e0`) | fondateur |
 
 ## Dependency-aware task tree
 
@@ -72,7 +72,7 @@ ensemble. Backend `v2_transaction_messages` **existe déjà** (membre-scopé). *
 | X3-3 | X3-2 | Trunk | Room acheteur (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `done` | rendu jsdom 6/6 (`TransactionRoom.test.tsx`) | faux |
 | X3-4 | X3-2 | Trunk | Surface vendeur (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `done` | liste dans `SellerV13` + `onOpenTransaction` → Room rôle vendeur | faux |
 | X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, chat 2 sens, liste partagée, clôture) | X3-3,X3-4 | `done` | `prove-v2-room.mjs` 5/5 ; falsifiée 3 FAIL (garde retirée) | faux |
-| X3-6 | X3-5 | Ring | suite + gardes + push prod T-07d | X3-5 | `todo` | hash === local | déploiement |
+| X3-6 | X3-5 | Ring | suite + gardes + push prod T-07d | X3-5 | `done` | prod `index-C6M5nYgT.js` === local (`bda68e0`) ; déploiement GitHub `bda68e0210` ; `/api/v2/transactions` + `/closed` → 401 ; chaînes Room dans le bundle servi | déploiement |
 
 **Décisions fondateur RENDUES (« recommandés » 2026-10-07) :** (1) **buyer Room + seller surface ensemble** ;
 (2) « Signaler un problème » **désactivé honnête** (FF-9 = watch) ; (3) `listSellerTransactions` **N=50, sans pagination**.
