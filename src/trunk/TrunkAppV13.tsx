@@ -52,6 +52,7 @@ import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
+import { facilityFormLabel } from './facility-form';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { worstFreshness, freshnessLabel } from './offer-freshness';
 import { compareFacilities } from './v13-compare';
@@ -2294,6 +2295,9 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                   )}
                 <div className="cardbox" style={{ marginTop: 8 }}>
                   <div className="kv"><span>Adresse</span><b>{selectedFacility.address ?? 'Non renseignée'}</b></div>
+                  {facilityFormLabel(selectedFacility) && (
+                    <div className="kv"><span>Forme</span><b>{facilityFormLabel(selectedFacility)}</b></div>
+                  )}
                 </div>
                 </>
               )}

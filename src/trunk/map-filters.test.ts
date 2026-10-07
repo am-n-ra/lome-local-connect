@@ -7,12 +7,11 @@ import { MAP_FILTERS, facilityMatchesFilter, filterFacilities } from './map-filt
  */
 
 describe('S-07 map filters — rail', () => {
-  it('exposes the four chips the founder described, with Transport as an honest "soon"', () => {
-    expect(MAP_FILTERS.map((f) => f.label)).toEqual(['Tout', 'Commerces', 'Particuliers', 'Transport']);
+  it('exposes the four chips; Transport (mobile) is active (S4 Heartwood)', () => {
+    expect(MAP_FILTERS.map((f) => f.label)).toEqual(['Tout', 'Commerces', 'Particuliers', 'Transport (mobile)']);
     const transport = MAP_FILTERS.find((f) => f.id === 'transport');
-    expect(transport?.soon).toBe(true);
-    // V1+ (S-08/S-12) : la chip doit porter une raison, pas un silence.
-    expect(transport?.soonReason).toBeTruthy();
+    // S4 — la chip n'est plus « soon » : elle filtre la FORME du lieu (mobile = ambulant).
+    expect(transport?.soon).toBe(false);
   });
 
   it('classifies by entity kind, not by product attribute', () => {
@@ -35,9 +34,14 @@ describe('S-07 map filters — rail', () => {
     expect(facilityMatchesFilter(unclaimed, 'particuliers')).toBe(false);
   });
 
-  it('never silently claims Transport when no transport offer is modelled', () => {
-    const anyFacility = { entityKind: 'organisation' as const };
-    expect(facilityMatchesFilter(anyFacility, 'transport')).toBe(false);
+  it('Transport (mobile) matches only `mobile` places, never fixe/digital/undeclared (S4)', () => {
+    // S4 — le filtre porte sur la FORME du lieu, pas sur une catégorie d'offre. Un lieu de
+    // forme non déclarée (`null`, fond de carte) ne matche pas : on n'invente pas une forme.
+    expect(facilityMatchesFilter({ facilityType: 'mobile' }, 'transport')).toBe(true);
+    expect(facilityMatchesFilter({ facilityType: 'fixe' }, 'transport')).toBe(false);
+    expect(facilityMatchesFilter({ facilityType: 'digital' }, 'transport')).toBe(false);
+    expect(facilityMatchesFilter({ facilityType: null }, 'transport')).toBe(false);
+    expect(facilityMatchesFilter({}, 'transport')).toBe(false);
   });
 
   it('filterFacilities keeps `tout` intact and returns a fresh array (no aliasing)', () => {
@@ -58,5 +62,14 @@ describe('S-07 map filters — rail', () => {
     ];
     const found = filterFacilities(quartier, 'particuliers');
     expect(found.map((f) => f.name)).toEqual(['Particulier — ordinateur']);
+  });
+
+  it('renders the mobile-vendor case: an ambulant is discoverable under Transport (mobile) (S4)', () => {
+    const marche = [
+      { entityKind: 'organisation' as const, facilityType: 'fixe' as const, name: 'Boutique fixe' },
+      { entityKind: 'individu' as const, facilityType: 'mobile' as const, name: 'Vendeur ambulant' },
+      { entityKind: 'organisation' as const, facilityType: 'digital' as const, name: 'Boutique en ligne' },
+    ];
+    expect(filterFacilities(marche, 'transport').map((f) => f.name)).toEqual(['Vendeur ambulant']);
   });
 });

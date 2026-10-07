@@ -39,7 +39,9 @@ function toFallbackFacilities(facilities: readonly PublicFacility[]): FallbackSu
     name: facility.name,
     latitude: facility.latitude,
     longitude: facility.longitude,
-    kind: facility.trust === 'confirmed' ? 'standard' : 'claimed',
+    // S4 (Heartwood) — un ambulant se marque (`.vdot.mobile`, ambre + pulse). La forme prime :
+    // un lieu mobile reste mobile, qu'il soit revendiqué ou non.
+    kind: facility.facilityType === 'mobile' ? 'mobile' : facility.trust === 'confirmed' ? 'standard' : 'claimed',
   }));
 }
 
@@ -99,6 +101,9 @@ const EMPTY_ROUTE = { type: 'FeatureCollection' as const, features: [] };
 // layer revealed only through the `selected` feature-state.
 const PIN_SHADOW_COLOR = '#1A1A1A';
 const PIN_SHADOW_OPACITY = 0.12;
+// S4 (Heartwood) — un lieu `mobile` (ambulant) porte l'ambre `--warn` `#8a6d1f`, jamais
+// l'accent (réservé à la confiance, design.md §30). Miroir de `.vdot.mobile` de la maquette.
+const PIN_MOBILE_CORE_COLOR = '#8a6d1f';
 const SELECTED_STATE: ['boolean', unknown, ...unknown[]] = ['boolean', ['feature-state', 'selected'], false];
 const MAPLIBRE_WORKER_URL = maplibreWorkerUrl;
 const GLOBE_SUPPRESSED_LABEL_LAYERS = [
@@ -1137,7 +1142,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       // selected pin is emphasised in place (scale 1.3 + soft 12% shadow)
       // through the `selected` feature-state — never a layer re-creation.
       target.addLayer({ id: 'omni-pin-shadow', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_SHADOW_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-blur': 0.8, 'circle-translate': [0, 2], 'circle-opacity': ['case', SELECTED_STATE, PIN_SHADOW_OPACITY, 0] } });
-      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': PIN_CORE_COLOR, 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-stroke-color': ['case', ['boolean', ['get', 'owned'], false], PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR], 'circle-stroke-width': ['case', SELECTED_STATE, pinRingWidthPx(true), pinRingWidthPx(false)], 'circle-opacity': 1 } });
+      // S4 (Heartwood) — un lieu `mobile` (ambulant) porte l'ambre ; les autres gardent
+      // l'encre + l'anneau selon la propriété. L'accent reste réservé à la confiance.
+      target.addLayer({ id: 'omni-pins', type: 'circle', source: SOURCE, filter: ['!', ['has', 'point_count']], paint: { 'circle-color': ['case', ['==', ['get', 'facilityType'], 'mobile'], PIN_MOBILE_CORE_COLOR, PIN_CORE_COLOR], 'circle-radius': ['case', SELECTED_STATE, pinRadiusPx(true), pinRadiusPx(false)], 'circle-stroke-color': ['case', SELECTED_STATE, PIN_RING_THIRD_PARTY_COLOR, ['case', ['==', ['get', 'facilityType'], 'mobile'], PIN_MOBILE_CORE_COLOR, ['case', ['boolean', ['get', 'owned'], false], PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR]]], 'circle-stroke-width': ['case', SELECTED_STATE, pinRingWidthPx(true), pinRingWidthPx(false)], 'circle-opacity': 1 } } as never);
       (target as Map).on('click', 'omni-clusters', (event: MapLayerMouseEvent) => {
         // En fallback les couches sont vides: pas de clics synthétiques.
         if (!(target instanceof Map)) return;

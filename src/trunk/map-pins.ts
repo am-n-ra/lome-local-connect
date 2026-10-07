@@ -61,6 +61,8 @@ export function pinRingWidthPx(selected: boolean): number {
 // GeoJSON source data for the map pins. Ownership is a plain per-feature
 // property so the ring color stays a data-driven paint expression: updating
 // ownership is a setData, never a map remount or a layer re-creation.
+// S4 (Heartwood) — `facilityType` rides along too, so a `mobile` place (ambulant)
+// can wear a distinct pin (dashed amber ring) without a second data source.
 export function pinFeatureCollection(facilities: PublicFacility[], ownedFacilityIds?: string[] | null) {
   const owned = new Set(ownedFacilityIds ?? []);
   return {
@@ -68,9 +70,21 @@ export function pinFeatureCollection(facilities: PublicFacility[], ownedFacility
     features: facilities.map((facility) => ({
       type: 'Feature' as const,
       geometry: { type: 'Point' as const, coordinates: [facility.longitude, facility.latitude] },
-      properties: { id: facility.id, name: facility.name, trust: facility.trust, productCount: facility.productCount, owned: owned.has(facility.id) },
+      properties: {
+        id: facility.id,
+        name: facility.name,
+        trust: facility.trust,
+        productCount: facility.productCount,
+        owned: owned.has(facility.id),
+        facilityType: facility.facilityType ?? null,
+      },
     })),
   };
+}
+
+/** S4 — une puce représente-t-elle un lieu `mobile` (ambulant) ? */
+export function isMobileFacility(facilityType: PublicFacility['facilityType']): boolean {
+  return facilityType === 'mobile';
 }
 
 export function groupProjectedFacilities(projected: ProjectedFacility[], radius = 48): ScreenPin[] {

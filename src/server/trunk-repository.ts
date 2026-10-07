@@ -80,6 +80,15 @@ const toFacility = (row: Record<string, unknown>): PublicFacility => ({
     row.availability_state === undefined
       ? undefined
       : (row.availability_state === null ? null : String(row.availability_state) as PublicFacility['availabilityState']),
+  // S4 (Heartwood) — la FORME du lieu, telle que déclarée. `null` = non déclarée (fond de
+  // carte, S-05) : jamais inventée. `rayonKm` n'a de sens que pour `mobile`.
+  facilityType:
+    row.facility_type === null || row.facility_type === undefined
+      ? (row.facility_type === undefined ? undefined : null)
+      : (row.facility_type === 'fixe' || row.facility_type === 'mobile' || row.facility_type === 'digital'
+        ? String(row.facility_type) as NonNullable<PublicFacility['facilityType']>
+        : null),
+  rayonKm: row.rayon_km === null || row.rayon_km === undefined ? null : Number(row.rayon_km),
 });
 
 const retryDatabase = async <T>(operation: () => Promise<T>): Promise<T> => {
@@ -2250,6 +2259,9 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         const rows = await sql`
           select
             f.id, f.name, f.category, f.address, f.latitude, f.longitude,
+            -- S4 (Heartwood) : la FORME du lieu (fixe/mobile/digital) — c'est ce qui rend
+            -- un ambulant découvrable. NULL = non déclarée (fond de carte) → la surface se tait.
+            f.facility_type, f.rayon_km,
             coalesce(e.trust_state, f.trust_state) as trust_state,
             -- R-E (S-11) : l'entite derriere le lieu, pour que l'offre mene a son offreur.
             f.entity_id,
@@ -2405,6 +2417,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const facilities = await retryDatabase(() => sql`
         select
           f.id, f.name, f.category, f.address, f.latitude, f.longitude,
+          f.facility_type, f.rayon_km,
           coalesce(e.trust_state, f.trust_state) as trust_state, f.commercial_plan,
           f.entity_id,
           coalesce(e.display_name, f.name) as entity_name,

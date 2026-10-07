@@ -57,6 +57,12 @@ export interface PublicFacility {
   availabilityExpiresAt?: string | null;
   /** SEARCH-02 (D-03) — worst availability state among the place's published offers; null = no fact. */
   availabilityState?: ProductAvailabilityState | null;
+  /** S4 (Heartwood) — la FORME du lieu : fixe / mobile (ambulant) / digital (immatériel).
+   *  Absent sur les chemins de lecture qui ne le sélectionnent pas ; `null` = non déclarée
+   *  (fond de carte `public_import`, S-05) — jamais inventée. */
+  facilityType?: FacilityType | null;
+  /** S4 — rayon d'action d'un lieu `mobile` (km). Nul ailleurs. */
+  rayonKm?: number | null;
 }
 
 /** R-E (S-11) — the OFFERER, as seen publicly. Never carries contact (E-2). */

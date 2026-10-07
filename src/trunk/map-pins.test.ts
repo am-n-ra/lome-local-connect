@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupProjectedFacilities, pinFeatureCollection, pinIdSetForMode, pinRadiusPx, pinRingColor, pinRingWidthPx, PIN_DIM_OPACITY, PIN_RADIUS_PX, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR, PIN_RING_WIDTH_PX, PIN_SELECTED_SCALE, type PinDimMode, type ProjectedFacility } from './map-pins';
+import { groupProjectedFacilities, pinFeatureCollection, isMobileFacility, pinIdSetForMode, pinRadiusPx, pinRingColor, pinRingWidthPx, PIN_DIM_OPACITY, PIN_RADIUS_PX, PIN_RING_OWNED_COLOR, PIN_RING_THIRD_PARTY_COLOR, PIN_RING_WIDTH_PX, PIN_SELECTED_SCALE, type PinDimMode, type ProjectedFacility } from './map-pins';
 import type { PublicFacility } from './types';
 
 function facility(id: string, longitude: number, latitude: number): PublicFacility {
@@ -86,6 +86,23 @@ describe('rule 7 pin anatomy (owned ring + selected emphasis)', () => {
     expect(pinFeatureCollection(facilities, null).features[0].properties.owned).toBe(false);
     expect(pinFeatureCollection(facilities, []).features[0].properties.owned).toBe(false);
 
+  });
+
+  it('carries the place FORM so a `mobile` ambulant can wear a distinct pin (S4 Heartwood)', () => {
+    // S4 — sans `facilityType` sur la feature, le rendu MapLibre ne peut pas distinguer un
+    // ambulant d'un lieu fixe : le marqueur `.vdot.mobile` existe mais n'est jamais alimenté.
+    const mobile = { ...facility('m', 1.2, 6.1), facilityType: 'mobile' as const };
+    const fixe = { ...facility('f', 1.3, 6.2), facilityType: 'fixe' as const };
+    const undeclared = facility('u', 1.4, 6.3); // forme non déclarée (fond de carte)
+    const collection = pinFeatureCollection([mobile, fixe, undeclared], []);
+    expect(collection.features[0].properties.facilityType).toBe('mobile');
+    expect(collection.features[1].properties.facilityType).toBe('fixe');
+    // Une forme non déclarée NE DOIT PAS être transformée en 'mobile' par accident.
+    expect(collection.features[2].properties.facilityType).toBeNull();
+    expect(isMobileFacility('mobile')).toBe(true);
+    expect(isMobileFacility('fixe')).toBe(false);
+    expect(isMobileFacility(null)).toBe(false);
+    expect(isMobileFacility(undefined)).toBe(false);
   });
 
   describe('rule 7 pin dim modes (résultats, sélection, itinéraire)', () => {

@@ -76,8 +76,22 @@
 | 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel — CORRIGÉ (`OmniQr` partagé, 2026-10-07, preuve décodage `jsqr` 3/3)** ; reste S1b (QR public S-21) |
 | 2 | **Argent réel E2E** | logique complète + tests `bounded`/`unit`, **aucun parcours prod réel** | **Preuve manquante** — Heartwood S2 |
 | 3 | **Téléphone gratuit** | S-16 tranché (OTP e-mail / WhatsApp ; SMS exclu) ; code = e-mail+mdp | **Décision close, slice manquante** — Heartwood S3 |
-| 4 | **Ambulants** | type `mobile` existe ; filtre Transport `soon` ; `facilityType` non exposé | **Slice manquante** — Heartwood S4 |
+| 4 | **Ambulants** | type `mobile` existe ; filtre Transport `soon` ; `facilityType` non exposé | **Écart réel — CORRIGÉ (S4, 2026-10-07)** : `facilityType`/`rayonKm` exposés (carte+fiche), chip `Transport (mobile)` activée, ambulant marqué ambre. Données 13744 = 0 `mobile` (honnête : rien déclaré) |
 | 5 | **OSM Togo** | `PILOT_ZONE_BOUNDS` borne Lomé (`west > 0`) ; décision fondateur Neon free | **Décision close** — pas un écart |
+
+### Heartwood — progression des slices (2026-10-07)
+
+| Slice | Objet | Statut |
+|---|---|---|
+| `S1` | QR acheteur réel (scannable) | **`verified`** (`dbec13a` ; décodage `jsqr` 3/3, garde falsifié, prod === local) |
+| `S4` | Ambulants découvrables (exposition, pas fondation) | **`verified`** (`facilityType`+filtre+puce ; SQL réel 33/33 ; guards falsifiés) |
+| `S2` | Argent réel E2E (FedaPay) | `blocked` — session fondateur |
+| `S3` | Téléphone gratuit (S-16) | `blocked` — **décision fondateur** (fournisseur + coût) |
+| `S5` | OSM Togo | `done` (par décision) |
+
+> **Re-séquencement `S3`↔`S4` (2026-10-07)** : `S3` exige une décision fondateur (fournisseur, coût,
+> possible fondation neuve — interdite en Heartwood) ; `S4` n'exige **rien** de tel. Une slice
+> bloquée sur une décision humaine **ne bloque pas** les slices libres. Le terrain reste **en dernier**.
 
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 

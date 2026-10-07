@@ -19,9 +19,9 @@ export type MapFilter = 'tout' | 'commerces' | 'particuliers' | 'transport';
 export interface MapFilterOption {
   id: MapFilter;
   label: string;
-  /** `Transport` est V1+ (S-08/S-12) : la chip est visible mais désactivée, avec une raison honnête. */
+  /** Toutes les chips sont actives (S4) : `Transport (mobile)` filtre la FORME du lieu. */
   soon: boolean;
-  /** Raison affichée quand la chip est `soon`. */
+  /** Raison affichée quand la chip est `soon` (aucune aujourd'hui). */
   soonReason?: string;
 }
 
@@ -29,12 +29,16 @@ export const MAP_FILTERS: readonly MapFilterOption[] = [
   { id: 'tout', label: 'Tout', soon: false },
   { id: 'commerces', label: 'Commerces', soon: false },
   { id: 'particuliers', label: 'Particuliers', soon: false },
-  { id: 'transport', label: 'Transport', soon: true, soonReason: 'Transport — bientôt (V1+)' },
+  // S4 (Heartwood) — la chip existait mais était désactivée. Elle filtre la FORME du lieu
+  // (`mobile` = ambulant), pas une catégorie d'offre. Le libellé est explicité (« mobile »)
+  // pour ne pas laisser croire à des services de livraison (S-08/S-12, hors Heartwood).
+  { id: 'transport', label: 'Transport (mobile)', soon: false },
 ];
 
-/** Le seul champ dont ce filtre dépend — un sous-ensemble de `PublicFacility` pour rester testable sans DOM. */
+/** Le sous-ensemble de `PublicFacility` dont ce filtre dépend — testable sans DOM. */
 export interface FilterableFacility {
   entityKind?: 'individu' | 'organisation' | null;
+  facilityType?: 'fixe' | 'mobile' | 'digital' | null;
 }
 
 export function facilityMatchesFilter(facility: FilterableFacility, filter: MapFilter): boolean {
@@ -46,10 +50,9 @@ export function facilityMatchesFilter(facility: FilterableFacility, filter: MapF
     case 'particuliers':
       return facility.entityKind === 'individu';
     case 'transport':
-      // V1+ : aucune offre de transport n'est modélisée (S-12). Filtrer ici viderait
-      // la carte sans raison ; le filtre est désactivé en amont, donc ce cas est
-      // inatteignable — il renvoie `false` plutôt que de mentir par un « tout ».
-      return false;
+      // S4 — « Transport (mobile) » = le lieu SE DÉPLACE (forme `mobile`). Un lieu digital ou
+      // fixe, ou de forme non déclarée (`null`), ne matche pas. On n'invente pas une forme.
+      return facility.facilityType === 'mobile';
   }
 }
 

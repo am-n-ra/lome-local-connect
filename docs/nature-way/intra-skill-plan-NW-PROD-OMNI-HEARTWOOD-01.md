@@ -22,9 +22,15 @@
 |---|---|---|---|---|---|
 | S1 | **QR réel** | le QR acheteur est **scannable** par la caméra vendeur ; le panneau QR public est rendu | `qrcode.react` câblé + garde falsifié + preuve navigateur | **`verified`** — `OmniQr` partagé (BuyerFlow+Room), preuve décodage `jsqr` 3/3, garde falsifié, 866/866 | fait contredit |
 | S2 | **Argent réel E2E** | recharge → Pro seller → Pro buyer → packs bulk → bonus **exercés en prod**, preuve | script bout-en-bout + preuve prod | `blocked` (session fondateur) | S1 fait |
-| S3 | **Téléphone gratuit (S-16)** | un chemin téléphone (WhatsApp initié utilisateur, ~0 coût) ; SMS payant exclu | décision UI + code + preuve | `planned` | S2 fait |
-| S4 | **Ambulants découvrables** | les offres `mobile` sont **découvrables** (filtre/exposition) | `facilityType` exposé + filtre + preuve | `planned` | S3 fait ou ordre fondateur |
+| S4 | **Ambulants découvrables** | les offres `mobile` sont **découvrables** (filtre/exposition) | `facilityType` exposé + filtre + preuve | **`verified`** — `facilityType`/`rayonKm` exposés (carte+fiche), chip `Transport (mobile)` activée, puce ambre, gardes falsifiés, SQL réel 33/33. **Données 0 `mobile`** (honnête : rien déclaré) | portée |
+| S3 | **Téléphone gratuit (S-16)** | un chemin téléphone (WhatsApp initié utilisateur, ~0 coût) ; SMS payant exclu | décision fournisseur + code + preuve | `blocked` (**décision fondateur** : fournisseur + coût) | décision rendue |
 | S5 | **OSM Togo** | — | **décision close** (pas un écart) | `done` (par décision) | fait nouveau |
+
+> **Re-séquencement 2026-10-07 :** `S3` (téléphone) est **remonté après `S2`** car il exige une
+> **décision fondateur** (fournisseur SMS/WhatsApp, coût, possiblement une fondation neuve —
+> interdite en Heartwood). `S4` (exposition d'une donnée déjà écrite) n'exige **aucune** décision
+> et **aucune** fondation → il passe devant. « Le terrain vient en dernier », mais **une slice
+> bloquée sur une décision humaine ne bloque pas les slices libres.**
 
 ## Dependency-aware task tree
 
@@ -35,8 +41,8 @@
 | S1-3 | S1-2 | Trunk (S1b) | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `planned` | capacité NEUVE, hors S1 | portée |
 | S1-4 | S1-2 | Heartwood | Garde falsifié + preuve de décodage réelle | S1-2 | `verified` | `omni-qr.test.tsx` (5, falsifié) + `prove-heartwood-qr.mjs` 3/3 | faux négatif |
 | S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `blocked` | session fondateur requise | credentials |
-| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | S2 | `todo` | contrat | décision change |
-| S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3 | `todo` | SQL + UI | portée |
+| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `blocked` | contrat | décision rendue |
+| S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
 
 ## Non-goals (porte Heartwood)
 
