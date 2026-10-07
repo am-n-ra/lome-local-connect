@@ -1059,6 +1059,7 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Contrôle négatif initial FAUX, corrigé :** j'avais supposé qu'un QR **inversé** ne se décode pas — `jsqr` **le décode quand même** (le finder pattern reste localisable). Le contrôle honnête est l'**ancien rendu** (blocs) qui ne décode rien. *Un contrôle négatif doit reproduire le défaut réel, pas une intuition.*
 - **Preuve :** `scripts/prove-heartwood-qr.mjs` (`npm run proof:heartwood-qr`) — **3/3** : le QR rendu se décode (`transactionId:token`), le parseur vendeur (`extractTransactionPayload`) en sort le bon txn, l'ancien rendu ne décode rien. Garde `omni-qr.test.tsx` (5) **falsifié** (réintroduire `qrStyle` → 1 échec). **866/866 tests**, tsc clean, 6 gardes vertes. Bundle contient `shape-rendering` (QR) et **0** `▓`.
 - **Hors S1 (slice S1b) :** le **QR public de l'entité** (S-21) est une capacité neuve, pas une surface cassée — non livré ici.
+- **Prod (2026-10-07, commit `dbec13a`) :** déploiement GitHub `dbec13a` === HEAD, prod sert `index-DxSZ8b4h.js` + `index-SbBrOfwv.css` === build local (**T-07d ✅**) ; `shape-rendering` (renderer QR) présent dans le **JS prod**, `.omni-qr` présent dans le **CSS prod**. Résidu honnête : le QR **acheteur affiché** dans une vraie session (acheteur → intention → écrаn QR) n'a pas été capturé au navigateur (session requise) — le décodage est prouvé unitairement/navigateur-local (`prove-heartwood-qr.mjs`).
 
 
 
