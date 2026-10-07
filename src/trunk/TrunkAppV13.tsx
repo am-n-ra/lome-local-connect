@@ -1822,8 +1822,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (!highlightedProductId) return sorted;
     return [...sorted].sort((a2, b2) => Number(b2.id === highlightedProductId) - Number(a2.id === highlightedProductId));
   }, [selectedFacility, highlightedProductId]);
-  /* S-07 — la carte est filtrée à la source : ce que le rail montre est ce que la carte dessine. */
-  const visibleFacilities = useMemo(() => filterFacilities(orderedResults, mapFilter), [orderedResults, mapFilter]);
+  /* S-07 — la carte est filtrée à la source : ce que le rail montre est ce que la carte dessine.
+   * Régression réelle (2026-10-07) : `visibleFacilities` dérivait de `orderedResults` (les
+   * RÉSULTATS de recherche) et ignorait `facilities` (la DÉCOUVERTE du viewport). Au repos,
+   * `results` est vide → la carte ne recevait AUCUN pin alors que 250 lieux étaient chargés ;
+   * après une recherche, elle n'affichait que les 3 résultats. La découverte n'atteignait
+   * jamais le `SOURCE` MapLibre. Règle : recherche active ⇒ résultats ; sinon ⇒ découverte. */
+  const visibleFacilities = useMemo(
+    () => filterFacilities(results.length > 0 ? orderedResults : facilities, mapFilter),
+    [results.length, orderedResults, facilities, mapFilter],
+  );
 
   return (
     <div className="omni-v13-stage" data-role={role} data-map-state={mapState} data-sheet={sheet} ref={stageRef}>
