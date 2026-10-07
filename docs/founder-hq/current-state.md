@@ -86,8 +86,8 @@
 | `S1` | QR acheteur réel (scannable) | **`verified`** (`dbec13a` ; décodage `jsqr` 3/3, garde falsifié, prod === local) |
 | `S4` | Ambulants découvrables (exposition, pas fondation) | **`verified`** + **prod** (`db71847` ; `facilityType`+filtre+puce ; SQL réel 33/33 ; guards falsifiés ; prod sert `facilityType` dans l'API) |
 | `S1b` | QR public d'entité (S-21), périmètre **(a)** | **`verified`** (option a, 2026-10-07 ; `entity-qr`+`entity-benefits` partagés ; QR vendeur `CompanyV13` ; scan acheteur `target:entity` → page entité + avantage réel ; preuve `jsqr`→`getPublicEntity` « Omni Demo Seller Hub » **−10 %** ; 3 gardes falsifiés ; **881/881**) |
-| `S2` | Argent réel E2E (FedaPay) | `candidate` — **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** (à re-classer, pas un manque) |
-| `S3` | Téléphone gratuit (S-16) | `candidate` — **fondateur 2026-10-07 : méthode = GRATUITE (décidée)** ; reste à écrire le contrat S3-1 |
+| `S2` | Argent réel E2E (FedaPay) | `candidate` — **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé.** Mesuré : webhook `POST /api/v2/fedapay/webhook` + `extractFedaPayTransaction` + `reconcileWalletRecharge` présents ; **preuve live historique** (txn `113034942` créditée, ledger `fedapay:*`). « Re-prouver » = geste fondateur optionnel, pas un manque |
+| `S3` | Téléphone gratuit (S-16) | `candidate` — méthode **gratuite** (décidée). **Mesure :** la seule vérif **gratuite** (deep link `wa.me` initié utilisateur) ne *prouve pas* le contrôle du numéro → **confiance déclarée honnête**, pas « vérifiée ». Contrat écrit `-s3-phone-free-contract-` (options A/B/C ; **S3-0 à trancher**) |
 | `S5` | OSM Togo | `done` (par décision) |
 
 > **Re-séquencement `S3`↔`S4` (2026-10-07)** : `S3` exige une décision fondateur (fournisseur, coût,
