@@ -1919,7 +1919,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
           ))}
         </div>
       </div>
-      <div className="navpill" key={role} role="navigation" aria-label="Actions principales">
+      {/* DOCK-DUP — no key here. A role-dependent key (`key={role}`) made React leak the
+          previous dock node on every role/sheet change, stacking identical `.navpill`
+          siblings (2 then 3, same rect, duplicate a11y landmarks). A stable dock just
+          reconciles its buttons (`key={item.icon}`); measured 1 node across all paths. */}
+      <div className="navpill" role="navigation" aria-label="Actions principales">
         {dockItems.map((item) => (
           <button
             key={item.icon}
