@@ -17,6 +17,16 @@
 **Aucun des 5 items ne reste ouvert comme dette de code.** Les deux « decisions » (2 et 5) sont closes ;
 les trois écarts réels (1, 3, 4) sont corrigés et prouvés.
 
+### 1 bis. Dette trouvée par le spot-check occlusion X5 — `DOCK-DUP` : **CLOS**
+
+Le spot-check `f5f9749` avait nommé `DOCK-DUP` (jumeaux `.navpill` empilés) en laissant la **cause à
+localiser en code**. Localisée et corrigée (`fb9dc2d`) : la div du dock portait `key={role}`, or c'est
+un **enfant unique non keyé** de la scène — changer sa clé fait **fuir** le nœud DOM au lieu de le
+réconcilier (1 → 2 → 3 jumeaux, labels a11y dupliqués). **Preuve A/B** (`scripts/probe-dock-dup.mjs`,
+1280px) : `key={role}` → `menu=2 role-buyer=3` ; clé **constante** ou **absente** → 1 partout. Correctif :
+clé retirée + garde `dock-dup-guard.test.ts` (falsifié). Probe **FAIL** sur build buggé / **PASS** sur
+corrigé, **local et prod** ; prod `index-BVdehrpJ.js` === local (T-07d ✅). Détail : `handoff-receipt-HO-OMNI-35.md`.
+
 ## 2. Ce qui est prouvé (prod, T-07d)
 
 - **`S1`** (`dbec13a`), **`S1b`** (`d9c6e13`), **`S4`** (`db71847`) : prod === build local, routes en
