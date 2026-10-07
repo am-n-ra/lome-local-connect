@@ -41,7 +41,8 @@
 | S1-3 | S1-2 | Trunk (S1b) | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `verified` | `CompanyV13` QR par entité + garde falsifié + preuve décodage réelle | portée |
 | S1-4 | S1-2 | Heartwood | Garde falsifié + preuve de décodage réelle | S1-2 | `verified` | `omni-qr.test.tsx` (5, falsifié) + `prove-heartwood-qr.mjs` 3/3 | faux négatif |
 | S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `candidate` | **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** — à re-classer, pas un manque | credentials |
-| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `verified` | contrat écrit : `omni-heartwood-s3-phone-free-contract-2026-10-07.md` (option A/B/C, **S3-0 à trancher**) | fait contredit |
+| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `verified` | contrat écrit : `omni-heartwood-s3-phone-free-contract-2026-10-07.md` (option A/B/C) | fait contredit |
+| S3-0 | S3-1 | Heartwood | Méthode téléphone gratuit tranchée | S3-1 | `done` | **fondateur 2026-10-07 : « a et b » = A + B** — e-mail-first (A, en place) **+** numéro déclaré & `wa.me` gratuit (B) ; C (SMS/WA API payant) **écarté**. Implémentation `S3-a` = prochaine slice libre | décision rendue |
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
 | MAP-1 | — | Heartwood | Les pins de la carte : cap `limit 250` tronque 13 744 lieux (250 au centre, 4 % d'une vue ville) | **décision fondateur `D-MAP-1`** (cap) | `measured` | diag `omni-heartwood-map-pins-diagnosis-2026-10-07.md` ; option 1 recommandée | décision rendue |
 
