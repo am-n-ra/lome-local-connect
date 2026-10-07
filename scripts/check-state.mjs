@@ -115,6 +115,13 @@ const deliveredSlices = [
   // open. I made that exact error once already by reading the decision table without reading
   // the resolution below it. What must NOT be asserted is the counting artefact range.
   ['docs/nature-way/omni-intent-brief-v2-2026-09-23.md', 'proposé — accord fondateur requis** ; la fourchette', 'must not re-assert S-02 as open — it is confirmed définitivement (brief line 134)'],
+  // TRUNK-X1 (honest intent expiry) and TRUNK-X2 (seller automation) shipped 2026-10-07 in
+  // `3d19a50` — migrations 067 + 068, throwaway proofs, prod. The continuation inventory
+  // described both as still-to-do the same day (the hour-staleness class, third repeat).
+  // Narrow: fire only if the inventory reverts to the stale "unwritten" phrasing.
+  ['docs/nature-way/omni-trunk-continuation-inventory-2026-10-07.md', "n'écrit aucun événement de transaction", 'must not describe X1 as unwritten — it shipped 2026-10-07 (3d19a50, migration 067)'],
+  ['docs/nature-way/omni-trunk-continuation-inventory-2026-10-07.md', '**sans modèle de données** → **décision fondateur**', 'must not describe X2 as undecided — it shipped 2026-10-07 (3d19a50, migration 068)'],
+  ['docs/nature-way/omni-trunk-continuation-inventory-2026-10-07.md', '`TRUNK-X1` — « une intention expirée ne ment pas sur son état »** (Heartwood/correctif)', 'must not recommend starting X1 — it shipped 2026-10-07 (3d19a50)'],
 ];
 
 // TRUNK-X3 (Room, S-27) shipped and was prod-verified 2026-10-07 (bda68e0). The same
