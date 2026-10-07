@@ -34,7 +34,7 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-1 usage réel (owner fondateur, première slice), TT-2 données, TT-3 conformité tile-place close · Branches/Canopy non ouvertes |
+| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-1 usage réel (owner fondateur, première slice), TT-2 données, TT-3 conformité tile-place close · **tranches Trunk livrées depuis** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`, 835/835) puis **`X2` automatisation vendeur** (`3d19a50`, 843/843, prod `index-IZJxtU8O.js` === local) · Branches/Canopy non ouvertes |
 
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 
