@@ -13,6 +13,7 @@ export function transactionStateLabel(state: TransactionState): string {
     case 'received': return 'Réception à confirmer';
     case 'rated': return 'Avis donné';
     case 'closed': return 'Clôturée';
+    case 'expired': return 'Expirée';
     default: return 'En cours';
   }
 }
@@ -29,7 +30,8 @@ export function transactionStateResponsible(state: TransactionState): 'buyer' | 
     case 'fulfilled': return 'buyer';
     case 'received': return 'buyer';
     case 'rated':
-    case 'closed': return 'system';
+    case 'closed':
+    case 'expired': return 'system';
     default: return 'system';
   }
 }

@@ -8,6 +8,12 @@ describe('transaction-time', () => {
     expect(transactionStateLabel('closed')).toBe('Clôturée');
   });
 
+  // TRUNK-X1 : une intention non verrouillée expirée ne doit PAS lire « En cours ».
+  it('TRUNK-X1: expired is a labelled terminal state, not "En cours"', () => {
+    expect(transactionStateLabel('expired')).toBe('Expirée');
+    expect(transactionStateResponsible('expired')).toBe('system');
+  });
+
   it('assigns responsibility per state', () => {
     expect(transactionStateResponsible('qr_ready')).toBe('buyer');
     expect(transactionStateResponsible('qr_verified')).toBe('seller');

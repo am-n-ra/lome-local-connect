@@ -405,7 +405,18 @@ export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, wall
           </div>
         </div>
       )}
-      {stage === 'txn' && (
+      {stage === 'txn' && txn?.state === 'expired' && (
+        <div>
+          <div className="cardbox" style={{ marginTop: 8 }} role="status">
+            <div className="kv"><span>Étape</span><b>Expirée</b></div>
+            <p className="tiny muted" style={{ marginTop: 6 }}>
+              Cette intention n'a pas été vérifiée à temps. <b>Rien n'a été débité</b> — la réservation de stock a été libérée.
+            </p>
+            <button className="btn ok" style={{ marginTop: 8 }} type="button" onClick={() => setStage('avail')}>Nouvelle demande de disponibilité</button>
+          </div>
+        </div>
+      )}
+      {stage === 'txn' && txn?.state !== 'expired' && (
         <div>
           {(() => {
             const currentState = txn?.state ?? 'intent_created';

@@ -6568,6 +6568,16 @@ function createTrunkRepository(sql = database()) {
           f.contact_phone as seller_contact_phone,
           f.contact_whatsapp as seller_contact_whatsapp,
           m.role as actor_role,
+          -- TRUNK-X1 : le verrou scanné (qr_verified) rend l'état de l'intention non
+          -- pertinent ; sinon un pi.state='expired' DOIT primer sur le défaut retombé
+          -- 'intent_created' (zombies écrits avant la migration 067).
+          case
+            when exists (
+              select 1 from v2_transaction_events e2
+              where e2.transaction_id = s.transaction_id and e2.state = 'qr_verified'
+            ) then null
+            else coalesce(pi.state, null)
+          end as intent_state,
           coalesce((
             select e.state
             from v2_transaction_events e
@@ -6578,6 +6588,7 @@ function createTrunkRepository(sql = database()) {
         from v2_transaction_snapshots s
         join v2_transaction_members m on m.transaction_id = s.transaction_id
         join v2_accounts a on a.id = m.account_id
+        left join v2_purchase_intents pi on pi.id = s.intent_id
         left join v2_facilities f on f.id = s.facility_id
         where s.transaction_id = ${input.transactionId}::uuid
           and a.auth_user_id = ${input.authUserId}
@@ -6586,9 +6597,10 @@ function createTrunkRepository(sql = database()) {
       `);
       const row = rows[0];
       if (!row) return null;
+      const currentState = row.intent_state === "expired" && row.current_state === "intent_created" ? "expired" : String(row.current_state);
       return {
         transactionId: String(row.transaction_id),
-        state: String(row.current_state),
+        state: currentState,
         actorRole: String(row.actor_role),
         productId: String(row.product_id),
         facilityId: String(row.facility_id),
@@ -6654,7 +6666,18 @@ function createTrunkRepository(sql = database()) {
         from mine mi
         left join v2_products p on p.id = mi.product_id
         left join v2_facilities f on f.id = mi.facility_id
+        -- TRUNK-X1 : une intention non verrouillée expirée n'est PAS « en cours ». Le
+        -- sweep écrit désormais l'événement 'expired' (fix principal) ; cette exclusion
+        -- couvre les zombies DÉJÀ écrits avant la migration (aucun événement, donc état
+        -- lu 'intent_created') en lisant l'état réel de l'intention. Le verrou (qr_verified)
+        -- fait que pi.state n'est jamais 'expired' après verrou : on n'exclut rien d'engagé.
         where mi.current_state <> 'closed'
+          and not exists (
+            select 1 from v2_transaction_snapshots s2
+            join v2_purchase_intents pi2 on pi2.id = s2.intent_id
+            where s2.transaction_id = mi.transaction_id
+              and pi2.state = 'expired'
+          )
         order by mi.last_event_at desc
         limit 50
       `);
@@ -6800,6 +6823,19 @@ function createTrunkRepository(sql = database()) {
           join v2_transaction_snapshots s on s.intent_id = ie.id
           where p.id = s.product_id
           returning p.id
+        ),
+        -- TRUNK-X1 : l'expiration est un ÉTAT canonique de la timeline, pas seulement un
+        -- statut de demande. Sans cet événement, une intention jamais scannée n'a AUCUN
+        -- événement → son état retombait sur 'intent_created' et restait « en cours » pour
+        -- toujours (zombie). La timeline devient la vérité unique de l'état.
+        event_expired as (
+          insert into v2_transaction_events (transaction_id, actor_account_id, state, metadata, created_at)
+          select st.transaction_id, st.buyer_account_id, 'expired',
+                 jsonb_build_object('reason', 'stalled_before_lock'), ${input.now}::timestamptz
+          from stale st
+          join intent_expired ie on ie.id = st.intent_id
+          on conflict (transaction_id, state) do nothing
+          returning transaction_id
         ),
         audited as (
           insert into v2_audit_events (actor_account_id, event_type, entity_type, entity_id, correlation_id, reason, created_at)

@@ -221,7 +221,7 @@ export interface CancelAvailabilityRequestResult {
   cancelled: boolean;
 }
 
-export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed';
+export type TransactionState = 'intent_created' | 'qr_ready' | 'qr_verified' | 'payment_declared' | 'payment_confirmed' | 'fulfilment_pending' | 'fulfilled' | 'received' | 'rated' | 'closed' | 'expired';
 export type ExternalPaymentMethod = 'cash' | 'mobile_money';
 
 export interface PurchaseIntentResult {

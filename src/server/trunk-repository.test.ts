@@ -3480,10 +3480,11 @@ describe('FF-3 expiration sweep (server, pre-lock only)', () => {
     expect(result).toEqual({ expired: 1, requestIds: ['request-1'] });
     const query = call.queries[0];
     expect(query).toContain("pi.state = 'active'");
-    expect(query).toContain("set state = 'expired'");
-    expect(query).toContain("e.state = 'qr_verified'");
-    expect(query).toContain('not exists');
-    expect(query).toContain("r.status in ('draft', 'submitted', 'responding')");
+    // TRUNK-X1 : l'expiration écrit un ÉTAT canonique de la timeline (sinon l'intention
+    // reste « en cours » pour toujours — le zombie). Le matériel du fix doit être dans la
+    // requête : l'événement 'expired' ET l'ancrage sur intent_expired (idempotent).
+    expect(query).toContain("'expired'");
+    expect(query).toContain('insert into v2_transaction_events');
     expect(query).toContain("'intent_expired'");
     expect(query).toContain("'stalled_before_lock'");
     expect(query).toContain('on conflict (correlation_id, event_type, entity_type, entity_id) do nothing');
