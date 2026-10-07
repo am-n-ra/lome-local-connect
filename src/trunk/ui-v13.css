@@ -258,7 +258,11 @@ body{background:#dadad7;padding:0}
 .sheet[data-sheet="search"] .searchdock .tiny{display:none}
 .sheet[data-sheet="search"] .chiprow{margin-top:0;flex:0 0 auto;flex-wrap:nowrap}
 .sheet[data-sheet="search"] .searchdock{margin-top:0;flex:0 0 300px}
-.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden}
+.sheet[data-sheet="search"] .constraint-zone{flex:1 1 auto;margin-top:0;display:flex;align-items:center;gap:14px;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent 100%);mask-image:linear-gradient(to right,#000 calc(100% - 30px),transparent 100%)}
+/* X5-ZONE — le contenu déborde en scroll horizontal sans affordance (mesuré :
+   chips à x≥1140 + input seuil à x=942 sous le rolepill z17, hors viewport
+   jusqu'à x=1552). Le fondu signale le scroll ; le contenu reste atteignable
+   au scroll/clavier. Trade-off assumé : fondu statique même en bout de scroll. */
 .sheet[data-sheet="search"] .constraint-zone>div{display:flex;align-items:center;gap:6px;flex:0 0 auto}
 .sheet[data-sheet="search"] .constraint-zone .eyebrow{display:none}
 .sheet[data-sheet="search"] .constraint-zone .tiny{display:none}

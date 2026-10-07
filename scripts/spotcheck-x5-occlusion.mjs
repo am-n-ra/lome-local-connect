@@ -58,16 +58,18 @@ function hasMapError(errors) {
 async function signIn(page, creds) {
   for (let i = 0; i < 2; i++) {
     try {
-      await page.locator('.navpill').getByRole('button', { name: 'Menu', exact: true }).first().click({ timeout: 15000, force: True });
+      await page.locator('.navpill').getByRole('button', { name: 'Menu', exact: true }).first().click({ timeout: 15000, force: true });
       await page.waitForTimeout(800);
       const authEntry = page.getByRole('button', { name: /Créer un compte/i }).first();
       if ((await authEntry.count()) > 0) {
-        await authEntry.click({ timeout: 15000, force: True });
+        await authEntry.click({ timeout: 15000, force: true });
         await page.waitForTimeout(800);
         await page.locator('#v13-email').fill(creds.email, { timeout: 15000 });
         await page.locator('#v13-password').fill(creds.password, { timeout: 15000 });
-        await page.getByRole('button', { name: 'Se connecter', exact: true }).click({ timeout: 15000, force: True });
-        await page.waitForTimeout(3500);
+        await page.getByRole('button', { name: 'Se connecter', exact: true }).click({ timeout: 15000, force: true });
+        try {
+          await page.getByRole('button', { name: /Se déconnecter/i }).first().waitFor({ timeout: 12000 });
+        } catch { /* timeout = on vérifie quand même */ }
       }
       if ((await page.getByRole('button', { name: /Se déconnecter/i }).count()) > 0) return true;
     } catch { await page.waitForTimeout(2000); }
@@ -94,6 +96,8 @@ async function measureOcclusions(page) {
   const once = () => page.evaluate(() => {
     const out = [];
     let slivers = 0;
+    const dock = document.querySelector('.omni-v13-stage .navpill');
+    const dockR = dock ? dock.getBoundingClientRect() : null;
     const els = Array.from(document.querySelectorAll('.omni-v13-stage button, .omni-v13-stage a[href], .omni-v13-stage input, .omni-v13-stage select, .omni-v13-stage textarea, .omni-v13-stage [role="button"]')).slice(0, 220);
     const vw = window.innerWidth, vh = window.innerHeight;
     for (const el of els) {
@@ -115,7 +119,15 @@ async function measureOcclusions(page) {
         if (/canvas/i.test(hitSel)) continue;
         const cls = (s) => (s && s.className && typeof s.className === 'string' ? s.className.split(' ').slice(0, 2).join('.') : (s ? s.tagName : '?'));
         const twinHit = hit.closest && el.closest && hit.closest('.navpill') && el.closest('.navpill') && hit.closest('.navpill') !== el.closest('.navpill');
-        out.push({ el: `${el.tagName}.${cls(el)}:${(el.textContent || '').trim().slice(0, 30)}`, hit: `${hit.tagName}.${cls(hit)}`, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], twin: Boolean(twinHit) });
+        // Bord de dock : élément dans une sheet scrollable, recouvert par le
+        // dock — atteignable au scroll (vérifié : wallet scroll 873>438).
+        // INFO, pas FAIL. Le non-scrollable reste un FAIL.
+        let dockEdge = false;
+        if (hit.closest && hit.closest('.navpill') && !(el.closest && el.closest('.navpill'))) {
+          const sheetEl = el.closest ? el.closest('section[data-sheet],form[data-sheet]') : null;
+          if (sheetEl && sheetEl.scrollHeight > sheetEl.clientHeight + 2) dockEdge = true;
+        }
+        out.push({ el: `${el.tagName}.${cls(el)}:${(el.textContent || '').trim().slice(0, 30)}`, hit: `${hit.tagName}.${cls(hit)}`, rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], twin: Boolean(twinHit), dockEdge });
         break;
       }
     }
@@ -130,9 +142,10 @@ async function measureOcclusions(page) {
   // DOCK-DUP : jumeaux .navpill empilés (handlers identiques) — une seule
   // dette nommée avec le compte de jumeaux, pas N occlusions.
   const pillCount = await page.evaluate(() => document.querySelectorAll('.omni-v13-stage .navpill').length);
-  const real = stable.filter((o) => !o.twin);
+  const real = stable.filter((o) => !o.twin && !o.dockEdge);
+  const edge = stable.filter((o) => o.dockEdge && !o.twin);
   const dups = stable.filter((o) => o.twin);
-  return { out: real, dups: dups.slice(0, 3), pillCount, slivers: a.slivers, rpRect: await page.evaluate(() => {
+  return { out: real, dups: dups.slice(0, 3), edge: edge.length, pillCount, slivers: a.slivers, rpRect: await page.evaluate(() => {
     const rp = document.querySelector('.rolepill');
     if (!rp) return null;
     const r = rp.getBoundingClientRect();
@@ -194,49 +207,49 @@ for (const vp of VIEWPORTS) {
       if (!ok) { await context.close(); continue; }
 
       // search
-      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: True }));
+      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: true }));
       await page.waitForTimeout(1200);
       await shot(page, vp.name, 'search', 'buyer');
       let m = await measureOcclusions(page);
       let t = await measureTargets(page, vp.desktop);
       const slivInfo = ` slivCls=${JSON.stringify(t.sliverCls).slice(0, 160)}`;
-      record(vp.name, 'buyer', 'search', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} <24=${t.tiny.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}${t.small.length ? ' :: small=' + JSON.stringify(t.small.slice(0, 6)) : ''}${slivInfo}`);
+      record(vp.name, 'buyer', 'search', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} <44=${t.small.length} <24=${t.tiny.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}${t.small.length ? ' :: small=' + JSON.stringify(t.small.slice(0, 6)) : ''}${slivInfo}`);
 
       // results (q=jus)
       const hasResults = await searchResults(page, 'jus');
       await shot(page, vp.name, 'results', 'buyer');
       m = await measureOcclusions(page);
       t = await measureTargets(page, vp.desktop);
-      record(vp.name, 'buyer', 'results', !hasResults ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !hasResults ? '0 résultat pour jus' : `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+      record(vp.name, 'buyer', 'results', !hasResults ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !hasResults ? '0 résultat pour jus' : `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
 
       // facility (1er résultat)
       let hasFacility = false;
       if (hasResults) {
-        await attempt(() => page.locator('#hgrid button').first().click({ timeout: 15000, force: True }));
+        await attempt(() => page.locator('#hgrid button').first().click({ timeout: 15000, force: true }));
         await page.waitForTimeout(2000);
         hasFacility = (await page.locator('[data-sheet="facility"]').count()) > 0;
       }
       await shot(page, vp.name, 'facility', 'buyer');
       m = await measureOcclusions(page);
       t = await measureTargets(page, vp.desktop);
-      record(vp.name, 'buyer', 'facility', !hasFacility ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !hasFacility ? 'fiche non ouverte' : `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+      record(vp.name, 'buyer', 'facility', !hasFacility ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !hasFacility ? 'fiche non ouverte' : `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
 
       // sheets menu : libellés FR réels (cf. capture menu). Fermer toute sheet
       // ouverte d'abord (sur mobile elle couvre le dock).
-      await attempt(() => page.locator('.sheet-close').first().click({ timeout: 8000, force: True }));
+      await attempt(() => page.locator('.sheet-close').first().click({ timeout: 8000, force: true }));
       await page.waitForTimeout(800);
       for (const item of [['Portefeuille', 'wallet'], ['Plans', 'plans'], ['Mon compte', 'account'], ['Notifications', 'notifs'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved']]) {
         const opened = await openMenuItem(page, item[0]);
         if (opened && (item[1] === 'wallet' || item[1] === 'account')) await shot(page, vp.name, item[1], 'buyer');
         m = await measureOcclusions(page);
         t = await measureTargets(page, vp.desktop);
-        record(vp.name, 'buyer', item[1], !opened ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !opened ? `entrée ${item[0]} introuvable` : `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+        record(vp.name, 'buyer', item[1], !opened ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !opened ? `entrée ${item[0]} introuvable` : `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
       }
       // menu lui-même
       await page.locator('.navpill').getByRole('button', { name: 'Menu', exact: true }).first().click();
       await page.waitForTimeout(1000);
       m = await measureOcclusions(page);
-      record(vp.name, 'buyer', 'menu', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} sliv=${m.slivers} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+      record(vp.name, 'buyer', 'menu', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
       const remaining = hasMapError(errors);
       if (remaining.length) record(vp.name, 'buyer', 'console', 'FAIL', remaining.join(' | '));
       else if (errors.length) record(vp.name, 'buyer', 'console', 'INFO', `${errors.length} console.error non-carte : ${errors.slice(0, 2).join(' | ')}`);
@@ -262,13 +275,13 @@ for (const vp of VIEWPORTS) {
         const tab = page.locator('.rolepill').getByRole('tab', { name: /Vendeur|Seller/i }).first();
         const tabCount = await tab.count();
         let tabClicked = false;
-        if (tabCount > 0) tabClicked = await attempt(() => tab.click({ timeout: 15000, force: True }));
+        if (tabCount > 0) tabClicked = await attempt(() => tab.click({ timeout: 15000, force: true }));
         if (tabClicked) await page.waitForTimeout(2500);
         const open = (await page.locator('[data-sheet="seller"]').count()) > 0;
         await shot(page, vp.name, 'seller', 'seller');
         const m = await measureOcclusions(page);
         const t = await measureTargets(page, vp.desktop);
-        record(vp.name, 'seller', 'seller', !open ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !open ? (tabCount === 0 ? 'onglet Seller absent du rolepill' : 'sheet seller non ouverte après clic') : `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+        record(vp.name, 'seller', 'seller', !open ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !open ? (tabCount === 0 ? 'onglet Seller absent du rolepill' : 'sheet seller non ouverte après clic') : `occl=${m.out.length} edge=${m.edge} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
       }
       const remaining = hasMapError(errors);
       if (remaining.length) record(vp.name, 'seller', 'console', 'FAIL', remaining.join(' | '));
@@ -286,7 +299,7 @@ for (const vp of VIEWPORTS) {
       await page.goto(PROD, { waitUntil: 'load', timeout: 60000 });
       await settle(page);
       let gated = 'none';
-      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: True }));
+      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: true }));
       await page.waitForTimeout(1200);
       gated += searchOpened ? '+search-open' : '+search-closed';
       const hasResults = searchOpened && await searchResults(page, 'jus');
@@ -306,7 +319,7 @@ for (const vp of VIEWPORTS) {
           for (let i = 0; i < 3; i++) {
             const hbtn = page.locator('#hgrid button').nth(i);
             if ((await hbtn.count()) === 0) break;
-            if (!await attempt(() => hbtn.click({ timeout: 15000, force: True }))) continue;
+            if (!await attempt(() => hbtn.click({ timeout: 15000, force: true }))) continue;
             hgridOk = true;
             await page.waitForTimeout(2000);
             pickedCount = await page.locator('[data-sheet="facility"] .pitem').count();
@@ -315,11 +328,11 @@ for (const vp of VIEWPORTS) {
         }
         gated += hgridOk ? '+hgrid' : '+hgridFAIL';
         gated += pickedCount ? '+pitem' : '+nopitem';
-        if (pickedCount) { await attempt(() => page.locator('[data-sheet="facility"] .pitem').first().click({ timeout: 10000, force: True })); await page.waitForTimeout(800); }
+        if (pickedCount) { await attempt(() => page.locator('[data-sheet="facility"] .pitem').first().click({ timeout: 10000, force: true })); await page.waitForTimeout(800); }
         const btn = page.locator('[data-sheet="facility"] button').filter({ hasText: /Demander la disponibilité/ }).first();
         const btnCount = await btn.count();
         gated += btnCount ? '+btn' : '+nobtn';
-        if (btnCount) { await attempt(() => btn.click({ timeout: 10000, force: True })); await page.waitForTimeout(2000); }
+        if (btnCount) { await attempt(() => btn.click({ timeout: 10000, force: true })); await page.waitForTimeout(2000); }
         const sheets = await page.evaluate(() => Array.from(document.querySelectorAll('section[data-sheet]')).map((s) => s.getAttribute('data-sheet')));
         gated += ` sheets=${sheets.join(',') || 'none'}`;
       }
