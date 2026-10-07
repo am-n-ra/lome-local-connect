@@ -1238,6 +1238,14 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     if (rotationFrame.current !== null) window.cancelAnimationFrame(rotationFrame.current);
     if (rotationResumeTimer.current !== null) window.clearTimeout(rotationResumeTimer.current);
     clearHighlight(map);
+    // Le vol de révélation DOIT s'annoncer sous `search_reveal` : sinon ses propres
+    // `zoomstart`/`dragstart` (déclenchés par la caméra du vol lui-même) passent le
+    // garde `cameraMode.current !== 'search_reveal'`, appellent `pauseMotion` →
+    // `cancelActiveReveal`, et le vol meurt au globe — les pins ne s'affichent jamais.
+    // Le mode est l'identité de l'animation, pas un ornement : il est posé ici, au
+    // seul endroit qui démarre un vol, et rendu par `finish`/`cancelActiveReveal`.
+    cameraMode.current = 'search_reveal';
+    setCameraModeState('search_reveal');
 
     const isStale = () => token !== revealToken.current;
 

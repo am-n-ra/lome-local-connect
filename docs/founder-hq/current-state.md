@@ -90,6 +90,7 @@
 | `S3` | Téléphone gratuit (S-16) | `candidate` — méthode **gratuite** (décidée). **Mesure :** la seule vérif **gratuite** (deep link `wa.me` initié utilisateur) ne *prouve pas* le contrôle du numéro → **confiance déclarée honnête**, pas « vérifiée ». Contrat écrit `-s3-phone-free-contract-` (options A/B/C ; **S3-0 à trancher**) |
 | `S5` | OSM Togo | `done` (par décision) |
 | `MAP-1` | Pins carte tronqués (`limit 250` sur 13 744) | `measured` — diag `omni-heartwood-map-pins-diagnosis-2026-10-07.md` : **13 744** lieux en base, API rend **250** (vue Lomé = **5 992** → **4 %**), **250 au centre sur 0,019°**. Base sans cap = **624 ms / 13 744**. Frein réel = **payload** (~473 o/rec). **`D-MAP-1`** : cap par fenêtre (option 1 reco) / plein corpus (2) / garder 250 (3) / grille serveur (4, fondation neuve) |
+| `MAP-2` | Vol de révélation : `search_reveal` **jamais assigné** → la recherche mourait au globe | **`verified`** — régression réelle (0 occurrence en historique) ; le vol déclenchait ses propres `zoomstart` → `cancelActiveReveal` → mort au globe, **0 pin**. Correctif : le vol s'annonce `search_reveal`. Garde `search-reveal-lock` falsifié. Preuve navigateur : globe→Togo→Région→Lomé→zoom 14.2 / 3 hcards |
 
 > **Re-séquencement `S3`↔`S4` (2026-10-07)** : `S3` exige une décision fondateur (fournisseur, coût,
 > possible fondation neuve — interdite en Heartwood) ; `S4` n'exige **rien** de tel. Une slice
