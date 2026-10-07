@@ -38,10 +38,10 @@
 |---|---|---|---|---|---|---|---|
 | S1-1 | — | Root | Mesurer le QR actuel : `qrStyle()` = blocs `█/▓`, pas un QR | mesure | `done` | `BuyerFlowV13.tsx:43` | fait contredit |
 | S1-2 | S1-1 | Root | Câbler `qrcode.react` (`QRCodeSVG`) sur le payload réel `txn:token`, les DEUX surfaces | S1-1 | `verified` | `OmniQr.tsx` + BuyerFlow + Room ; 866/866 | lib manquante |
-| S1-3 | S1-2 | Trunk (S1b) | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `measured — scoping` | **capacité NEUVE + surface absente de la maquette** ; voir mesure ci-dessous | portée |
+| S1-3 | S1-2 | Trunk (S1b) | Surface vendeur : « afficher mon QR public » (S-21) | S1-2 | `verified` | `CompanyV13` QR par entité + garde falsifié + preuve décodage réelle | portée |
 | S1-4 | S1-2 | Heartwood | Garde falsifié + preuve de décodage réelle | S1-2 | `verified` | `omni-qr.test.tsx` (5, falsifié) + `prove-heartwood-qr.mjs` 3/3 | faux négatif |
-| S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `blocked` | session fondateur requise | credentials |
-| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `blocked` | contrat | décision rendue |
+| S2-1 | — | Heartwood | Script E2E argent réel (FedaPay sandbox/contrat) | S1 | `candidate` | **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** — à re-classer, pas un manque | credentials |
+| S3-1 | — | Seed/Root | Extraire les exigences S-16 → contrat téléphone gratuit | décision fondateur | `candidate` | **fondateur 2026-10-07 : méthode téléphone = GRATUITE (décidée)** — contrat à écrire | décision rendue |
 | S4-1 | — | Root | Exposer `facilityType` sur `PublicFacility` + filtre ambulants | S3→débloqué par décision (S4 libre) | `verified` | SQL + UI + gardes falsifiés | portée |
 
 ## Non-goals (porte Heartwood)
@@ -72,3 +72,19 @@ surface cassée.
   surface acheteur seule, vérifiable, réversible.
 **Décision fondateur requise sur le périmètre** (a/b) avant implémentation. En attendant, `S4` est
 la slice libre qui a été livrée.
+
+## S1b — LIVRÉ (décision fondateur : option « a », 2026-10-07)
+
+Le fondateur a choisi **(a) — périmètre complet**, en notant que **FedaPay était déjà prouvé** et que
+la **méthode téléphone est gratuite** (donc ni l'un ni l'autre n'est un manque). Livré sans nouvelle
+fondation (l'avantage Omni S-19 existe) :
+
+- **`entity-qr.ts`** — payload/décodeur partagés (rendu vendeur = scanner acheteur).
+- **`entity-benefits.ts`** — « Vos avantages Omni ici » lit la **remise réelle**, **se tait** sinon.
+- **`PublicQrScannerSheet`** — `target: 'facility' | 'entity'` ; dock/menu acheteur `Scanner une entité`.
+- **`CompanyV13`** — QR public **par entité** (« affichez-le en boutique »).
+- **`TrunkAppV13`** — page d'entité porte le bloc avantage ; menu « Scanner un QR ».
+
+**Preuve :** `prove-heartwood-s1b` 6/6 (décodage réel `jsqr` → `parseEntityIdFromQr` → `getPublicEntity`
+canonique → « Omni Demo Seller Hub », 5 offres, **−10 %** réel) ; 3 gardes falsifiés ; **881/881** tests,
+7 gardes vertes. Contrat + PER : `-s1b-public-entity-qr-contract-` / `-s1b-evidence-` (2026-10-07).

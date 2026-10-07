@@ -73,9 +73,9 @@
 
 | # | Item | Mesure | Verdict |
 |---|---|---|---|
-| 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel — CORRIGÉ (`OmniQr` partagé, 2026-10-07, preuve décodage `jsqr` 3/3)** ; reste S1b (QR public S-21) |
-| 2 | **Argent réel E2E** | logique complète + tests `bounded`/`unit`, **aucun parcours prod réel** | **Preuve manquante** — Heartwood S2 |
-| 3 | **Téléphone gratuit** | S-16 tranché (OTP e-mail / WhatsApp ; SMS exclu) ; code = e-mail+mdp | **Décision close, slice manquante** — Heartwood S3 |
+| 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel — CORRIGÉ (`OmniQr` partagé, 2026-10-07, preuve décodage `jsqr` 3/3)** ; **S1b (QR public S-21) LIVRÉ** (option a, 2026-10-07) |
+| 2 | **Argent réel E2E** | logique complète + tests `bounded`/`unit`, **aucun parcours prod réel** | **Re-classé `candidate`** — fondateur 2026-10-07 : **FedaPay déjà prouvé par le passé** (pas un manque) |
+| 3 | **Téléphone gratuit** | S-16 tranché (OTP e-mail / WhatsApp ; SMS exclu) ; code = e-mail+mdp | **Décision close** — fondateur 2026-10-07 : **méthode = GRATUITE** ; reste à écrire le contrat S3-1 |
 | 4 | **Ambulants** | type `mobile` existe ; filtre Transport `soon` ; `facilityType` non exposé | **Écart réel — CORRIGÉ (S4, 2026-10-07)** : `facilityType`/`rayonKm` exposés (carte+fiche), chip `Transport (mobile)` activée, ambulant marqué ambre. Données 13744 = 0 `mobile` (honnête : rien déclaré) |
 | 5 | **OSM Togo** | `PILOT_ZONE_BOUNDS` borne Lomé (`west > 0`) ; décision fondateur Neon free | **Décision close** — pas un écart |
 
@@ -85,9 +85,9 @@
 |---|---|---|
 | `S1` | QR acheteur réel (scannable) | **`verified`** (`dbec13a` ; décodage `jsqr` 3/3, garde falsifié, prod === local) |
 | `S4` | Ambulants découvrables (exposition, pas fondation) | **`verified`** + **prod** (`db71847` ; `facilityType`+filtre+puce ; SQL réel 33/33 ; guards falsifiés ; prod sert `facilityType` dans l'API) |
-| `S2` | Argent réel E2E (FedaPay) | `blocked` — session fondateur |
-| `S1b` | QR public d'entité (S-21) | `measured — scoping` — capacité **neuve** (app: 0 occurrence) ; maquette a le **scan** acheteur mais **aucune surface vendeur** ; périmètre (a complète / b scan-seul) = **décision fondateur** |
-| `S3` | Téléphone gratuit (S-16) | `blocked` — **décision fondateur** (fournisseur + coût) |
+| `S1b` | QR public d'entité (S-21), périmètre **(a)** | **`verified`** (option a, 2026-10-07 ; `entity-qr`+`entity-benefits` partagés ; QR vendeur `CompanyV13` ; scan acheteur `target:entity` → page entité + avantage réel ; preuve `jsqr`→`getPublicEntity` « Omni Demo Seller Hub » **−10 %** ; 3 gardes falsifiés ; **881/881**) |
+| `S2` | Argent réel E2E (FedaPay) | `candidate` — **fondateur 2026-10-07 : FedaPay déjà prouvé par le passé** (à re-classer, pas un manque) |
+| `S3` | Téléphone gratuit (S-16) | `candidate` — **fondateur 2026-10-07 : méthode = GRATUITE (décidée)** ; reste à écrire le contrat S3-1 |
 | `S5` | OSM Togo | `done` (par décision) |
 
 > **Re-séquencement `S3`↔`S4` (2026-10-07)** : `S3` exige une décision fondateur (fournisseur, coût,

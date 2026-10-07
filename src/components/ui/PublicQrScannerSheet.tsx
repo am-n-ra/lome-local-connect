@@ -2,13 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { X, Camera, CameraOff, RefreshCw, ScanLine } from 'lucide-react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { cameraStatusLabel } from '../../lib/camera-scanner';
+import { parseEntityIdFromQr } from '../../trunk/entity-qr';
 
 interface Props {
-  onDetected: (facilityId: string) => void;
+  // S1b (S-21): the public QR now has two targets — a facility (historic) or an entity (in-store).
+  target?: 'facility' | 'entity';
+  onDetected: (id: string) => void;
   onClose: () => void;
 }
 
 const SCANNER_ID = 'omni-public-qr-reader';
+
+export function extractEntityId(raw: string): string | null {
+  return parseEntityIdFromQr(raw);
+}
 
 // Extract an Omni facility id from a scanned payload: raw uuid, ?facility=<id>, or a URL ending in /<id>.
 export function extractFacilityId(raw: string): string | null {
@@ -30,7 +37,7 @@ export function extractFacilityId(raw: string): string | null {
 }
 
 // Maquette QR sheet: real camera scan of a facility public QR -> opens the facility card.
-export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
+export function PublicQrScannerSheet({ target = 'facility', onDetected, onClose }: Props) {
   const [state, setState] = useState<'starting' | 'scanning' | 'error'>('starting');
   const [error, setError] = useState('');
   const [manual, setManual] = useState('');
@@ -38,6 +45,8 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
   const detectedRef = useRef(false);
   const onDetectedRef = useRef(onDetected);
   onDetectedRef.current = onDetected;
+  const decodeRef = useRef(target === 'entity' ? extractEntityId : extractFacilityId);
+  decodeRef.current = target === 'entity' ? extractEntityId : extractFacilityId;
 
   useEffect(() => {
     if (state !== 'scanning') return;
@@ -69,10 +78,10 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
             { fps: 10, qrbox: { width: 220, height: 220 } },
             (decoded) => {
               if (cancelled || detectedRef.current) return;
-              const facilityId = extractFacilityId(decoded);
-              if (!facilityId) return;
+              const id = decodeRef.current(decoded);
+              if (!id) return;
               detectedRef.current = true;
-              onDetectedRef.current(facilityId);
+              onDetectedRef.current(id);
             },
             () => undefined,
           );
@@ -127,14 +136,14 @@ export function PublicQrScannerSheet({ onDetected, onClose }: Props) {
       <div className="maquette-cardbox" style={{ marginTop: 8 }}>
         <label className="tiny muted" htmlFor="omni-public-qr-manual" style={{ display: 'block', marginBottom: 4 }}>Saisir le code</label>
         <div className="row" style={{ gap: 6 }}>
-          <input id="omni-public-qr-manual" value={manual} onChange={(event) => setManual(event.target.value)} placeholder="ID de la facilité" aria-label="Code QR facilité" style={{ flex: 1, minWidth: 0 }} />
-          <button className="btn sm" type="button" disabled={!extractFacilityId(manual)} onClick={() => { const id = extractFacilityId(manual); if (id) onDetected(id); }}>
+          <input id="omni-public-qr-manual" value={manual} onChange={(event) => setManual(event.target.value)} placeholder={target === 'entity' ? "ID de l'entité" : 'ID de la facilité'} aria-label={target === 'entity' ? "Code QR entité" : 'Code QR facilité'} style={{ flex: 1, minWidth: 0 }} />
+          <button className="btn sm" type="button" disabled={!decodeRef.current(manual)} onClick={() => { const id = decodeRef.current(manual); if (id) onDetected(id); }}>
             <ScanLine size={14} /> Ouvrir
           </button>
         </div>
       </div>
       <p className="sub" style={{ textAlign: 'center', marginTop: 8, fontSize: 10, color: 'var(--ink-soft)' }}>
-        QR public — découvrir les offres. ≠ QR transaction.
+        {target === 'entity' ? 'QR public d’une entité — affiché en boutique, il applique la remise Omni.' : 'QR public — découvrir les offres.'} ≠ QR transaction.
 
       </p>
     </section>

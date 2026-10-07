@@ -17,6 +17,7 @@
     "proof:transaction-lifecycle": "tsx scripts/prove-v2-transaction-lifecycle.mjs",
     "proof:room": "tsx scripts/prove-v2-room.mjs",
     "proof:heartwood-qr": "tsx scripts/prove-heartwood-qr.mjs",
+    "proof:heartwood-s1b": "tsx scripts/prove-heartwood-s1b.mjs",
     "seed:demo": "node scripts/seed-demo-lome.mjs",
     "seed:demo:emit": "node scripts/seed-demo-lome.mjs --emit-json",
     "server": "tsx server/index.ts",

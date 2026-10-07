@@ -1,5 +1,7 @@
 import { ArrowLeft, Package, Boxes } from 'lucide-react';
 import { Skeleton } from './Skeleton';
+import { OmniQr } from './OmniQr';
+import { entityQrPayload } from './entity-qr';
 import type { SellerCatalogueProduct, SellerCatalogueResult } from './types';
 
 type CompanyV13Props = { onClose: () => void; onProducts: () => void; onOffers: () => void; catalogue: SellerCatalogueResult | null };
@@ -52,6 +54,10 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
         const entityName = products[0]?.entityName ?? 'Entité';
         const placeNames = [...new Set(products.map((p) => p.facilityName).filter((n): n is string => Boolean(n)))];
         const placeSummary = placeNames.length > 0 ? placeNames.join(', ') : 'sans lieu (offre mobile / immatérielle)';
+        // S1b (S-21) — le QR public de l'entité, à afficher en boutique. Encodé seulement si l'on
+        // connaît une vraie entité (uuid) ; un produit sans entité ne produit pas de faux QR.
+        const entityUuid = /^[0-9a-fA-F-]{36}$/.test(entityId) ? entityId : null;
+        const qrPayload = entityUuid ? entityQrPayload(entityUuid, window.location.origin) : null;
         return (
           <div className="cardbox" key={entityId}>
             <div className="row" style={{ justifyContent: 'space-between' }}>
@@ -60,6 +66,12 @@ export function CompanyV13({ onClose, onProducts, onOffers, catalogue }: Company
             </div>
             <div className="kv" style={{ marginTop: 6 }}><span>Stock Omni</span><b>{totalStock(products)} unités</b></div>
             <div className="kv" style={{ marginTop: 2 }}><span>Disponibilité</span><b>{counts.enStock > 0 ? `${counts.enStock} En stock` : '0 En stock'}{counts.aValider > 0 ? ` · ${counts.aValider} à valider` : ''}</b></div>
+            {qrPayload && (
+              <div style={{ marginTop: 8, display: 'grid', placeItems: 'center', textAlign: 'center', gap: 6 }}>
+                <OmniQr value={qrPayload} size={132} />
+                <span className="tiny muted" style={{ fontSize: 9 }}>QR public — affichez-le en boutique : votre client le scanne, la remise Omni s’applique.</span>
+              </div>
+            )}
             <div className="btnrow" style={{ marginTop: 8 }}>
               <button className="btn ghost sm" type="button" onClick={onProducts}><Package size={13} /> Offres & produits</button>
               <button className="btn ghost sm" type="button" onClick={onOffers}><Boxes size={13} /> Dispo auto</button>

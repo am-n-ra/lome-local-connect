@@ -1,7 +1,7 @@
 import { FormEvent, type ReactNode, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Banknote, Bell, BellOff, Building2, CheckCircle2, ChevronRight, Clock3,
-  Compass, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, Search, ShieldCheck,
+  Compass, History, Home, Inbox, LogOut, MapPin, Menu, Navigation, PackageSearch, QrCode, RefreshCw, ScanLine, Search, ShieldCheck,
   Store,
   Star, Trash2, User, Wallet, X,
 } from 'lucide-react';
@@ -52,6 +52,8 @@ import { CompanyV13 } from './CompanyV13';
 import { OnboardV13 } from './OnboardV13';
 import { chipHintFor, chipStatusFor, chipsToSearchOptions, CONSTRAINT_GROUPS, emptyConstraints, activeConstraintCount, QUANTITY_DEFAULT, BUDGET_DEFAULT_LOCAL_MINOR, budgetFieldToMinor, RAYON_SCOPE_LABELS, summarizeActiveChips, type SearchConstraints } from './search-constraints';
 import { MAP_FILTERS, filterFacilities, type MapFilter } from './map-filters';
+import { parseEntityIdFromQr } from './entity-qr';
+import { entityBenefitLabel } from './entity-benefits';
 import { facilityFormLabel } from './facility-form';
 import { RESULTS_SORTS, sortResults, type ResultsSortKey } from './results-sort';
 import { worstFreshness, freshnessLabel } from './offer-freshness';
@@ -206,6 +208,8 @@ export function TrunkAppV13() {
   const [qrError, setQrError] = useState<string | null>(null);
   const [qrScanKey, setQrScanKey] = useState(0);
   const [qrManualCode, setQrManualCode] = useState('');
+  // S1b: which public QR the 'qr' sheet targets — the historic facility one, or the in-store entity one.
+  const [qrTarget, setQrTarget] = useState<'facility' | 'entity'>('facility');
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
@@ -1575,7 +1579,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     if (target === 'none') { setSheet('none'); return; }
     if (target === 'search') { setSheet(sheet === 'search' ? 'none' : 'search'); return; }
     if (target === 'results') { setRevealKey(`v13-${Date.now()}`); return; }
-    if (target === 'qr' && sheet === 'menu' && !desktop) { setSheet('qr'); return; }
+    if (target === 'qr') { setQrTarget('entity'); setSheet('qr'); return; }
     if (!homeLike) setSelectedId(null);
     setSheet(target);
   }, [sheet]);
@@ -1785,6 +1789,14 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const openEntityOfFacility = useCallback((facility: PublicFacility) => {
     if (!facility.entityId) return;
     void openEntity(facility.entityId);
+  }, [openEntity]);
+
+  // S1b (S-21) — le QR public d'entité : scan in-store → page de l'entité (ses offres, son avantage).
+  const handleEntityQrDetected = useCallback(async (entityId: string) => {
+    if (!parseEntityIdFromQr(entityId)) { setQrError('QR non reconnu — visez le QR public d’une entité.'); return; }
+    setQrError(null);
+    setSheet('none');
+    await openEntity(entityId);
   }, [openEntity]);
 
   // Pins contextuels: les pins hors-contexte s'estompent quand un sheet
@@ -2230,11 +2242,11 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         <section className="sheet h-mid" data-sheet="qr" role="dialog" aria-modal="true" aria-label="Scanner un QR">
           <div className="handle" />
           <div className="sheet-head">
-            <div><div className="eyebrow">Scanner un QR</div><h1>Facilité publique</h1></div>
+            <div><div className="eyebrow">Scanner un QR</div><h1>{qrTarget === 'entity' ? 'Entité publique' : 'Facilité publique'}</h1></div>
             <button type="button" className="sheet-close" onClick={() => setSheet('menu')} aria-label="Fermer"><X size={15} /></button>
           </div>
           {qrError && <p className="sub" role="alert" style={{ marginTop: 8 }}>{qrError}</p>}
-          <PublicQrScannerSheet key={qrScanKey} onDetected={(facilityId: string) => void handleQrDetected(facilityId)} onClose={() => setSheet('menu')} />
+          <PublicQrScannerSheet key={`${qrTarget}-${qrScanKey}`} target={qrTarget} onDetected={(id: string) => void (qrTarget === 'entity' ? handleEntityQrDetected(id) : handleQrDetected(id))} onClose={() => setSheet('menu')} />
           <label className="tiny muted" style={{ display: 'block', marginTop: 10 }}>Caméra indisponible ? Saisissez le code</label>
           <div className="row" style={{ gap: 6, marginTop: 4 }}>
             <input className="input" type="text" value={qrManualCode} maxLength={200} onChange={(event) => setQrManualCode(event.currentTarget.value)} placeholder="Code du QR" aria-label="Code du QR" style={{ flex: 1 }} />
@@ -2243,7 +2255,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
               type="button"
               style={{ width: 'auto', minHeight: 28 }}
               disabled={qrManualCode.trim().length === 0}
-              onClick={() => { const code = qrManualCode.trim(); setQrManualCode(''); void handleQrDetected(code); }}
+              onClick={() => { const code = qrManualCode.trim(); setQrManualCode(''); void (qrTarget === 'entity' ? handleEntityQrDetected(code) : handleQrDetected(code)); }}
             >
               Saisir le code
             </button>
@@ -2393,6 +2405,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className="kv"><span>Offres publiées</span><b>{selectedEntity.offerCount}</b></div>
           </div>
           <p className="lead">Le contact du vendeur <b>et</b> l’itinéraire routier apparaissent <b>après</b> une intention d’achat — jamais avant.</p>
+          {(() => {
+            // S1b (S-21) — « Vos avantages Omni ici » : la remise réelle (Seed S-19). On se tait si
+            // l'entité n'a aucun avantage — jamais un faux « −15 % ».
+            const benefit = entityBenefitLabel(selectedEntity.offers);
+            if (!benefit) return null;
+            return (
+              <div className="cardbox" style={{ marginTop: 8 }} data-testid="entity-benefit">
+                <div className="kv"><span>Vos avantages Omni ici</span><b className="status ok">{benefit}</b></div>
+                <p className="tiny muted" style={{ marginTop: 4 }}>Payer via Omni applique la remise et trace la transaction : l’entité gagne une vente traçable, vous payez moins.</p>
+              </div>
+            );
+          })()}
           {selectedEntity.offers.length === 0 && <p className="sub">Cette entité n’a pas encore d’offre publiée.</p>}
           {selectedEntity.offers.length > 0 && <div className="label" style={{ marginTop: 8 }}>Ses offres</div>}
           {selectedEntity.offers.map((offer) => {
@@ -2503,6 +2527,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
                     <button className="menuitem" type="button" onClick={() => void openFavorites()}><span className="mi"><Star size={15} /></span><span><b>Favoris</b><small>entités & offres suivies</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openSaved()}><span className="mi"><Compass size={15} /></span><span><b>Recherches sauvegardées</b><small>vos alertes</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openNotifs()}><span className="mi"><Bell size={15} /></span><span><b>Notifications</b><small>tout ce qui a bougé</small></span></button>
+                    <button className="menuitem" type="button" onClick={() => { setQrTarget('entity'); setSheet('qr'); }}><span className="mi"><ScanLine size={15} /></span><span><b>Scanner un QR</b><small>QR public d’une entité</small></span></button>
                     <button className="menuitem" type="button" onClick={() => void openWallet()}><span className="mi"><Wallet size={15} /></span><span><b>Portefeuille & Plans</b><small>solde, Pro, packs</small></span></button>
                     <button className="menuitem" type="button" onClick={() => setSheet('account')}><span className="mi"><User size={15} /></span><span><b>Mon compte</b><small>identité & réglages</small></span></button>
                   </>
