@@ -72,6 +72,16 @@ mercY(pin))`, avec `visH = 844 − padding`.
 Même padding dans les deux cas (donc la comparaison isole bien la formule) : l'ancienne place le pin
 **hors écran haut**, la nouvelle le place **au milieu de la bande visible**.
 
+**Le défaut d'origine était intermittent.** L'ancien code sortait tôt (`if (!selected || map.isMoving())
+return;`) : quand le clic arrivait pendant un vol caméra (souvent, juste après la révélation), le
+recentrage était **abandonné** et le pin restait au centrage brut du clic — parfois visible, parfois
+caché selon le timing. Le correctif **rejoue le cadrage au `moveend`**, donc le résultat est désormais
+**déterministe** (le pin est toujours au milieu de la bande).
+
+**Confirmation live sur prod après déploiement** (`c4e4d2b`) : `centerLat == pinLat` (6.1319), padding
+464, pin à y=190 → **visible**. Hash prod `index-BjDmLUP0.js` === build local, entrée de déploiement
+GitHub pour `c4e4d2b` ⇒ **T-07d ✅**.
+
 ## 5. Gardes et non-régression
 
 - `src/trunk/map-camera.test.ts` — contrat : pour **chaque** taille de sheet réelle (h-low 44 %, h-mid
