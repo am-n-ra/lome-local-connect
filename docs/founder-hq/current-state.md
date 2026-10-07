@@ -34,7 +34,8 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-1 usage réel (owner fondateur, première slice), TT-2 données, TT-3 conformité tile-place close · **tranches Trunk livrées depuis** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`, 835/835) puis **`X2` automatisation vendeur** (`3d19a50`, 843/843, prod `index-IZJxtU8O.js` === local) · Branches/Canopy non ouvertes |
+| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-2 données, TT-3 conformité tile-place close · **tranches Trunk livrées depuis** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`, 835/835) puis **`X2` automatisation vendeur** (`3d19a50`, 843/843, prod `index-IZJxtU8O.js` === local) · Branches/Canopy non ouvertes |
+| **Séquencement terrain — décision fondateur 2026-10-07** | **Le terrain (`TT-1` usage réel / `TT-2` données / Gate 7 Venture Lifecycle) vient EN DERNIER — après clôture de TOUTES les portes Nature Way** (Seed → Species → Root → Trunk → Heartwood → Branches → Canopy → Ring). Mot du fondateur : *« terrain doit venir après qu'on ait fini complètement avec toutes les gates nature way »*. Le lot terrain n'est **jamais une slice Trunk** : il ne démarre pas tant qu'une porte Nature Way aval reste ouverte. Owner terrain = fondateur (hors sandbox). |
 
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 

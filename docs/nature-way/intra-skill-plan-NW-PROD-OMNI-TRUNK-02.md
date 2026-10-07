@@ -41,7 +41,7 @@
 
 - `SCOUT-01` (couverture mondiale) — en cours via `POP`.
 - `room`, `seller-automation` — tranches X3/X2, après X1.
-- Terrain `TT-1`/`TT-2` — owner fondateur.
+- **Terrain `TT-1`/`TT-2` — owner fondateur, et par décision fondateur 2026-10-07 : `vient EN DERNIER`, après clôture de TOUTES les portes Nature Way (Seed → Species → Root → Trunk → Heartwood → Branches → Canopy → Ring). Le terrain n'est jamais une slice Trunk.**
 
 ## X2 — Automatisation vendeur (décision fondateur « construire »)
 
