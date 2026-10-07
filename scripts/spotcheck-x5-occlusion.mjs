@@ -58,15 +58,15 @@ function hasMapError(errors) {
 async function signIn(page, creds) {
   for (let i = 0; i < 2; i++) {
     try {
-      await page.locator('.navpill').getByRole('button', { name: 'Menu', exact: true }).first().click({ timeout: 15000 });
+      await page.locator('.navpill').getByRole('button', { name: 'Menu', exact: true }).first().click({ timeout: 15000, force: True });
       await page.waitForTimeout(800);
       const authEntry = page.getByRole('button', { name: /Créer un compte/i }).first();
       if ((await authEntry.count()) > 0) {
-        await authEntry.click({ timeout: 15000 });
+        await authEntry.click({ timeout: 15000, force: True });
         await page.waitForTimeout(800);
         await page.locator('#v13-email').fill(creds.email, { timeout: 15000 });
         await page.locator('#v13-password').fill(creds.password, { timeout: 15000 });
-        await page.getByRole('button', { name: 'Se connecter', exact: true }).click({ timeout: 15000 });
+        await page.getByRole('button', { name: 'Se connecter', exact: true }).click({ timeout: 15000, force: True });
         await page.waitForTimeout(3500);
       }
       if ((await page.getByRole('button', { name: /Se déconnecter/i }).count()) > 0) return true;
@@ -143,15 +143,21 @@ async function measureOcclusions(page) {
 async function measureTargets(page, desktop) {
   return page.evaluate((isDesktop) => {
     const small = [], tiny = [];
+    const sliverCls = {};
     const els = Array.from(document.querySelectorAll('.omni-v13-stage button, .omni-v13-stage a[href], .omni-v13-stage input'));
     for (const el of els) {
       const r = el.getBoundingClientRect();
       if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > window.innerHeight) continue;
+      if (Math.max(r.width, r.height) < 8) {
+        const k = `${el.tagName}.${typeof el.className === 'string' ? el.className.split(' ').slice(0, 2).join('.') : '?'}`;
+        sliverCls[k] = (sliverCls[k] || 0) + 1;
+        continue;
+      }
       const label = (el.getAttribute('aria-label') || el.textContent || el.tagName).trim().slice(0, 30);
       if (!isDesktop && (r.width < 44 || r.height < 44)) small.push(`${label}(${Math.round(r.width)}x${Math.round(r.height)})`);
       if (isDesktop && (r.width < 24 || r.height < 24)) tiny.push(`${label}(${Math.round(r.width)}x${Math.round(r.height)})`);
     }
-    return { small: small.slice(0, 10), tiny: tiny.slice(0, 10) };
+    return { small: small.slice(0, 12), tiny: tiny.slice(0, 12), sliverCls };
   }, desktop);
 }
 
@@ -188,12 +194,13 @@ for (const vp of VIEWPORTS) {
       if (!ok) { await context.close(); continue; }
 
       // search
-      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000 }));
+      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: True }));
       await page.waitForTimeout(1200);
       await shot(page, vp.name, 'search', 'buyer');
       let m = await measureOcclusions(page);
       let t = await measureTargets(page, vp.desktop);
-      record(vp.name, 'buyer', 'search', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} <24=${t.tiny.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
+      const slivInfo = ` slivCls=${JSON.stringify(t.sliverCls).slice(0, 160)}`;
+      record(vp.name, 'buyer', 'search', m.out.length ? 'FAIL' : 'PASS', `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} <24=${t.tiny.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}${t.small.length ? ' :: small=' + JSON.stringify(t.small.slice(0, 6)) : ''}${slivInfo}`);
 
       // results (q=jus)
       const hasResults = await searchResults(page, 'jus');
@@ -205,7 +212,7 @@ for (const vp of VIEWPORTS) {
       // facility (1er résultat)
       let hasFacility = false;
       if (hasResults) {
-        await attempt(() => page.locator('#hgrid button').first().click({ timeout: 15000 }));
+        await attempt(() => page.locator('#hgrid button').first().click({ timeout: 15000, force: True }));
         await page.waitForTimeout(2000);
         hasFacility = (await page.locator('[data-sheet="facility"]').count()) > 0;
       }
@@ -214,7 +221,10 @@ for (const vp of VIEWPORTS) {
       t = await measureTargets(page, vp.desktop);
       record(vp.name, 'buyer', 'facility', !hasFacility ? 'BLOCKED' : (m.out.length ? 'FAIL' : 'PASS'), !hasFacility ? 'fiche non ouverte' : `occl=${m.out.length} sliv=${m.slivers} <44=${t.small.length} err=${errors.length}${m.out.length ? ' :: ' + JSON.stringify(m.out.slice(0, 3)) : ''}`);
 
-      // sheets menu : libellés FR réels (cf. capture menu).
+      // sheets menu : libellés FR réels (cf. capture menu). Fermer toute sheet
+      // ouverte d'abord (sur mobile elle couvre le dock).
+      await attempt(() => page.locator('.sheet-close').first().click({ timeout: 8000, force: True }));
+      await page.waitForTimeout(800);
       for (const item of [['Portefeuille', 'wallet'], ['Plans', 'plans'], ['Mon compte', 'account'], ['Notifications', 'notifs'], ['Favoris', 'favorites'], ['Recherches sauvegardées', 'saved']]) {
         const opened = await openMenuItem(page, item[0]);
         if (opened && (item[1] === 'wallet' || item[1] === 'account')) await shot(page, vp.name, item[1], 'buyer');
@@ -252,7 +262,7 @@ for (const vp of VIEWPORTS) {
         const tab = page.locator('.rolepill').getByRole('tab', { name: /Vendeur|Seller/i }).first();
         const tabCount = await tab.count();
         let tabClicked = false;
-        if (tabCount > 0) tabClicked = await attempt(() => tab.click({ timeout: 15000 }));
+        if (tabCount > 0) tabClicked = await attempt(() => tab.click({ timeout: 15000, force: True }));
         if (tabClicked) await page.waitForTimeout(2500);
         const open = (await page.locator('[data-sheet="seller"]').count()) > 0;
         await shot(page, vp.name, 'seller', 'seller');
@@ -276,33 +286,58 @@ for (const vp of VIEWPORTS) {
       await page.goto(PROD, { waitUntil: 'load', timeout: 60000 });
       await settle(page);
       let gated = 'none';
-      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000 }));
+      const searchOpened = await attempt(() => page.locator('.navpill').getByRole('button', { name: 'Recherche', exact: true }).first().click({ timeout: 15000, force: True }));
       await page.waitForTimeout(1200);
       gated += searchOpened ? '+search-open' : '+search-closed';
       const hasResults = searchOpened && await searchResults(page, 'jus');
       if (hasResults) {
         gated = 'results=1';
-        const hgridOk = await attempt(() => page.locator('#hgrid button').first().click({ timeout: 15000 }));
+        // Essayer jusqu'à 3 résultats puis d'autres requêtes : il faut une
+        // facilité AVEC produits (les q=jus sont vides).
+        let hgridOk = false, pickedCount = 0;
+        for (const q of ['jus', 'box', 'demo']) {
+          if (pickedCount > 0) break;
+          const input2 = page.locator('input[placeholder="Produit, service, propriété…"]').first();
+          if ((await input2.count()) === 0) break;
+          await input2.fill(q);
+          await page.waitForTimeout(1200);
+          await input2.press('Enter');
+          try { await page.waitForSelector('#hgrid button', { timeout: 15000 }); } catch { continue; }
+          for (let i = 0; i < 3; i++) {
+            const hbtn = page.locator('#hgrid button').nth(i);
+            if ((await hbtn.count()) === 0) break;
+            if (!await attempt(() => hbtn.click({ timeout: 15000, force: True }))) continue;
+            hgridOk = true;
+            await page.waitForTimeout(2000);
+            pickedCount = await page.locator('[data-sheet="facility"] .pitem').count();
+            if (pickedCount > 0) break;
+          }
+        }
         gated += hgridOk ? '+hgrid' : '+hgridFAIL';
-        await page.waitForTimeout(2000);
-        // Cocher un produit d'abord (la demande exige une sélection réelle).
-        const picked = page.locator('[data-sheet="facility"] .pitem').first();
-        const pickedCount = await picked.count();
         gated += pickedCount ? '+pitem' : '+nopitem';
-        if (pickedCount) { await attempt(() => picked.click({ timeout: 10000 })); await page.waitForTimeout(800); }
+        if (pickedCount) { await attempt(() => page.locator('[data-sheet="facility"] .pitem').first().click({ timeout: 10000, force: True })); await page.waitForTimeout(800); }
         const btn = page.locator('[data-sheet="facility"] button').filter({ hasText: /Demander la disponibilité/ }).first();
         const btnCount = await btn.count();
         gated += btnCount ? '+btn' : '+nobtn';
-        if (btnCount) { await attempt(() => btn.click({ timeout: 10000 })); await page.waitForTimeout(2000); }
+        if (btnCount) { await attempt(() => btn.click({ timeout: 10000, force: True })); await page.waitForTimeout(2000); }
         const sheets = await page.evaluate(() => Array.from(document.querySelectorAll('section[data-sheet]')).map((s) => s.getAttribute('data-sheet')));
         gated += ` sheets=${sheets.join(',') || 'none'}`;
       }
       record(vp.name, 'anon', 'onboard-gated', 'INFO', `sheets après action gatée: ${gated}`);
       if (!vp.desktop) {
-        // Safe-area : la règle max(14px, env()) est présente ; env()=0 en
-        // émulation donc la géométrie ne peut pas accuser. Preuve device = Phase D.
-        const safeRule = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--safe-bottom'));
-        record(vp.name, 'anon', 'safe-area', /env\(safe-area-inset-bottom\)/.test(safeRule) ? 'PASS' : 'FAIL', /env\(safe-area-inset-bottom\)/.test(safeRule) ? 'règle max(14px, env()) présente (env()=0 en émulation, device Phase D)' : `--safe-bottom sans env(): ${safeRule.trim().slice(0, 60)}`);
+        // Safe-area : getComputedStyle résout env() (0 en émulation) — on lit
+        // la RÈGLE source (même origine, lisible) au lieu du calculé.
+        const safeRule = await page.evaluate(() => {
+          for (const sheet of document.styleSheets) {
+            let rules = [];
+            try { rules = Array.from(sheet.cssRules); } catch { continue; }
+            for (const r of rules) {
+              if (r.selectorText === ':root' && /--safe-bottom/.test(r.cssText)) return r.cssText;
+            }
+          }
+          return '';
+        });
+        record(vp.name, 'anon', 'safe-area', /env\(safe-area-inset-bottom\)/.test(safeRule) ? 'PASS' : 'FAIL', /env\(safe-area-inset-bottom\)/.test(safeRule) ? 'règle --safe-bottom: max(14px, env()) présente (device Phase D)' : `règle introuvable: ${safeRule.slice(0, 60)}`);
       }
     } catch (e) {
       record(vp.name, 'anon', 'harness', 'FAIL', `exception: ${String(e).slice(0, 140)}`);

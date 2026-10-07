@@ -61,7 +61,8 @@ button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
 .rolepill{position:absolute;z-index:7;top:var(--safe-top, 14px);left:50%;transform:translateX(-50%);display:flex;gap:0;padding:3px;border-radius:999px;background:rgba(255,255,255,.9);border:1px solid var(--line);backdrop-filter:blur(10px);box-shadow:var(--sh-md);white-space:nowrap}
 .roleswitch{position:relative;display:flex}
 .roleswitch .ind{position:absolute;top:0;bottom:0;border-radius:999px;background:var(--ink);transition:transform .28s var(--ease),width .28s var(--ease);z-index:0}
-.roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 11px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease),transform .18s var(--ease)}
+.roleswitch button{position:relative;z-index:1;border-radius:999px;padding:5px 11px;min-height:44px;font-size:10px;font-weight:800;color:var(--ink-soft);transition:color .2s var(--ease),transform .18s var(--ease)}
+/* X5-RSP1 — cible tactile 44px (mandat RSP-1 mobile) : l'indicateur .ind (top:0;bottom:0) suit la hauteur. */
 .roleswitch button:active{transform:scale(.96)}
 @keyframes sheetIn{0%{transform:translateY(28px);opacity:.25}100%{transform:translateY(0);opacity:1}}
 .roleswitch button.on{color:#fff}
