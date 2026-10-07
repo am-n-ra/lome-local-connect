@@ -75,9 +75,6 @@ type Props = {
   // Pins contextuels — dim mode: dès qu'une surface (résultats, sélection,
   // itinéraire) est ouverte, les pins hors-contexte s'estompent (opacité basse.
   dimMode?: { mode: PinDimMode | null; active: boolean } | null;
-  // Countmark V1.3: nombre de résultats de la recherche courante affiché sur la
-  // carte (maquette « 206 »). Rendu uniquement si non null — parent le borne.
-  resultCount?: number | null;
 };
 
 // Primary vector basemap: self-hosted monochrome globe style.
@@ -207,7 +204,7 @@ function waitForMapMove(map: Map, timeout = 1500) {
   });
 }
 
-export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onTileTap, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null, resultCount = null }: Props) {
+export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onTileTap, onRevealStateChange, revealKey = null, routeTarget = null, onRouteClose, authToken = null, focusTarget = null, followTarget = null, ownedFacilityIds = null, dimMode = null }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapEngine | null>(null);
   // Hold the latest callback identities in refs so the map-creation effect below
@@ -1598,7 +1595,9 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     <div className="map-stage omni-stage-viewport" data-motion={prefersReducedMotion ? 'reduced' : 'full'} data-map-status={mapStatus} data-basemap={basemap} data-projection={projection} data-camera-mode={cameraModeState} data-reveal-stage={revealLabel ?? 'idle'} data-zoom-enabled="true" data-zoom={zoom.toFixed(2)} data-bearing={bearing.toFixed(2)} data-center-lng={centerLongitude.toFixed(4)} data-rotation={rotationState} data-location={locationState} data-user-position={userPosition ? 'visible' : 'hidden'} data-route={routeTarget ? 'active' : 'idle'} data-rotation-owner="map-only">
       <div ref={container} className="map-canvas" aria-label="Carte de découverte Omni" />
       {mapStatus === 'ready' && screenUserPosition && <div className="user-position-overlay" style={{ left: screenUserPosition.left, top: screenUserPosition.top }} role="img" aria-label={locationState === 'approximate' ? 'Votre zone approximative sur la carte' : 'Votre position sur la carte'}><span className="user-position-marker omni-user-marker-ring" /></div>}
-      {resultCount !== null && resultCount > 0 && <div className="countmark" role="status">{(resultCount > 999 ? '999+' : resultCount)}</div>}
+      {/* Le « countmark » (bulle du nombre de résultats) a été retiré sur ordre fondateur
+          (2026-10-07) : « une bulle s'affiche à côté de la carte avec le nombre de résultats,
+          ce n'est pas nécessaire ». Le nombre de résultats se lit dans la feuille résultats. */}
       {revealRunning && revealLabel && <div className="map-reveal-status" role="status" aria-live="polite"><span className="sr-only">{revealLabel}</span><div className="omni-progress-track" aria-hidden="true"><span /></div></div>}
       {routeTarget && <div className="route-status-chip" role="status" aria-live="polite" data-state={routeStatus?.startsWith('Position indisponible') || routeStatus?.includes('tracé direct') ? 'unavailable' : 'active'}><span>{routeStatus ?? `Itinéraire vers ${routeTarget.name}`}</span>{roadRoute && roadRoute.steps.length > 0 && <button type="button" onClick={toggleRouteVoice} aria-label={voiceSpeaking ? 'Arrêter la lecture' : 'Écouter l’itinéraire'} title={voiceSpeaking ? 'Arrêter la lecture' : 'Écouter l’itinéraire'}>{voiceSpeaking ? <Square size={14} /> : <Volume2 size={14} />}</button>}<button type="button" onClick={() => onRouteClose?.()} aria-label="Fermer l’itinéraire"><X size={14} /></button></div>}
       {voiceNote && routeTarget && <div className="map-legend" role="status"><span>{voiceNote}</span></div>}

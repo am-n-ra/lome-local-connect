@@ -1032,3 +1032,13 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Preuves** : `onboard.test.tsx` (4) + `public-stats.test.ts` (3) ; **falsifiés** (réintro « Recevoir le code » + porte visibilité neutralisée → **2 échecs**, restauré → 7/7). **856/856 tests**, `tsc -b` propre, 5 gardes vertes, 24 bundles serverless régénérés (source + artefacts dans le **même** commit — leçon `9c3f5d8`). Chaîne « code à 4 chiffres » **absente** du bundle servi.
 - **Résidu honnête** : le parcours **authentifié réel** (créer un compte → reprise) n'est pas exerçable au sandbox (prouvé unitairement + route prod) ; création réelle de compte = acte fondateur. Dossier `docs/nature-way/omni-x5-onboarding-desktop-evidence-2026-10-07.md`.
 
+## X6 (2026-10-07) — retrait de la bulle « nombre de résultats » (ordre fondateur)
+- **Signal fondateur :** « quand je fais une recherche, une sorte de bulle s'affiche à côté de la carte avec le nombre de résultats, ce n'est pas nécessaire ».
+- **Mesuré :** c'était le **`.countmark`** (cercle `54px` « 206 », maquette V1.3) rendu par `TrunkMap` dès `resultCount > 0` — donc il **restait affiché sur la carte** après la recherche. Or la **maquette d'autorité** (`omni-species-v2-interactive.html:401`) ne le montre QUE sur la feuille recherche (`display = sheet==='search'`). L'app divergeait **et** le fondateur le juge inutile. **Le nombre de résultats se lit déjà dans la feuille résultats.**
+- **Retiré à la source :** rendu + prop `resultCount` (déclaration, destructuration, call-site) + CSS `.countmark{…}`/`::after`/override desktop. Le repère de coupe du garde `desktop-layout-guard.test.ts` (qui pointait `/* V1.3 countmark`) est re-ancré sur `/* S-06`.
+- **Dette révélée en chemin :** `.fs-10` devenait morte (déjà sans usage depuis la réécriture X5) — le garde `check:dead-css` l'a signalée ; retirée. **Leçon : `check:dead-css` fait partie des gardes pré-push (je l'avais omis).**
+- **Garde `map-countmark-removal.test.ts`** (3 checks) : échoue si `.countmark`/`resultCount` réapparaissent dans le rendu ou le CSS. **Falsifié** : réintroduire le rendu → **2 échouent** ; restauré → 3/3.
+- **Divergence assumée :** la maquette (autorité, close) affiche encore le countmark ; la décision fondateur le supplante pour l'app, **la maquette n'est pas modifiée** (Species close).
+- **Preuve :** **859/859 tests**, tsc, **8 gardes** vertes, bundle construit `countmark` = **0** (JS + CSS).
+
+

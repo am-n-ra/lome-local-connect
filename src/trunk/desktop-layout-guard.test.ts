@@ -21,7 +21,11 @@ const px = (re: RegExp, text: string): number | null => {
 
 describe('X4 — disposition desktop : la légende ne recouvre pas le rail de filtres', () => {
   const desktopStart = css.indexOf('@media (min-width:1040px){');
-  const desktopBlock = css.slice(desktopStart, css.indexOf('/* V1.3 countmark', desktopStart));
+  // Le bloc desktop se termine au premier repère CSS COMMENTÉ qui suit. C'était
+  // l'ancien `/* V1.3 countmark` (retiré 2026-10-07 sur ordre fondateur — la bulle
+  // du nombre de résultats n'est plus affichée) ; on ancre désormais sur `/* S-06`,
+  // qui suit le bloc desktop.
+  const desktopBlock = css.slice(desktopStart, css.indexOf('/* S-06', desktopStart));
 
   it('le rail de filtres a un top connu (base)', () => {
     const railTop = px(/\.filterrail\{[^}]*\btop:(\d+)px/, css);

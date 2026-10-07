@@ -1831,7 +1831,6 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             authToken={authToken}
             ownedFacilityIds={ownedFacilityIds.length ? ownedFacilityIds : null}
             dimMode={dimMode}
-            resultCount={results.length > 0 ? results.length : null}
           />
         </Suspense>
         {role === 'buyer' && sheet === 'none' && (
