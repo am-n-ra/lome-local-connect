@@ -56,7 +56,7 @@ Seed↔code ; il **ne couvre pas** `COH-V2-*`.)
 | ID | Manque | État |
 |---|---|---|
 | `seller-automation` | bascule « disponibilité auto » (Pro) | **sans modèle de données** → **décision fondateur** (règle H1) |
-| `room` | chat transactionnel buyer↔seller | serveur existe (`v2_transaction_messages`), surface acheteur absente → tranche dédiée |
+| `room` | chat transactionnel buyer↔seller | **LIVRÉ 2026-10-07** (`TRUNK-X3`, `bda68e0`) : `TransactionRoom` acheteur **+** surface vendeur ; fil complet, transitions acteur, reçu dérivé ; chemin neutre `/api/v2/transactions` ; preuve jetable 5/5 falsifiée |
 | Destinations menu vendeur (`MENU-01`) | 7–8 entrées maquette | **acté** : ne pas afficher = pas de boutons morts |
 
 ## 4. Terrain — dépend de vous, pas du code
@@ -86,6 +86,6 @@ Seed↔code ; il **ne couvre pas** `COH-V2-*`.)
 1. **Valider la direction :** Trunk = suite ; je pars sur `TRUNK-X1` ? (recommandé)
 2. **`seller-automation`** : on construit (il faut un modèle — auto-dispo par stock alloué) ou
    on acte l'absence (comme `DS-4`) ?
-3. **`room`** : tranche dédiée maintenant, ou `deferred` jusqu'au terrain ?
+3. **`room`** : ~~tranche dédiée maintenant, ou `deferred` jusqu'au terrain ?~~ **RÉPONDU + EXÉCUTÉ** — fondateur « ok room » (option A, périmètre complet) → `TRUNK-X3` livré + prod (`bda68e0`).
 4. **Réconciliation mémoire :** j'ajoute la série `DS-1…DS-14` au SDM + je re-classe `COH-V2`
    (corrige les 5 lignes périmées + il reste `COH-V2-02`/`-06`/`-07`/`-08`/`-09` à statuer) ?

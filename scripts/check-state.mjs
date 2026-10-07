@@ -117,6 +117,17 @@ const deliveredSlices = [
   ['docs/nature-way/omni-intent-brief-v2-2026-09-23.md', 'proposé — accord fondateur requis** ; la fourchette', 'must not re-assert S-02 as open — it is confirmed définitivement (brief line 134)'],
 ];
 
+// TRUNK-X3 (Room, S-27) shipped and was prod-verified 2026-10-07 (bda68e0). The same
+// hour-staleness class as above: several artifacts still described the Room as pending after
+// the code was already in prod. These narrow forbids fire only if a doc reverts to the stale
+// phrasing — they cannot false-positive on prose that merely names `room` historically.
+const resolvedRoom = [
+  ['docs/nature-way/omni-system-dependency-map-2026-09-23.md', 'maquette seule pour la Room', 'must not call the Room maquette-only — X3 shipped 2026-10-07 (bda68e0)'],
+  ['docs/nature-way/omni-trunk-continuation-inventory-2026-10-07.md', 'surface acheteur absente → tranche dédiée', 'must not list the Room as an absent surface — X3 shipped 2026-10-07'],
+  ['docs/nature-way/omni-v2-coherence-and-debt-2026-09-23.md', '`planned` → **X3 confirmé fondateur', 'must not leave COH-V2-08 planned — X3 shipped 2026-10-07'],
+  ['docs/nature-way/omni-dock-search-conformance-register-2026-10-06.md', 'sans modèle) · **`room`**', 'must not list the Room as unbuilt — X3 shipped 2026-10-07'],
+];
+
 let failed = 0;
 const check = (file, needle, label) => {
   let text;
@@ -159,6 +170,7 @@ for (const [f, n, l] of forbidden) check(f, n, l);
 for (const [f, n, l] of incident) check(f, n, l);
 for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
 for (const [f, n, l] of deliveredSlices) forbid(f, n, l);
+for (const [f, n, l] of resolvedRoom) forbid(f, n, l);
 
 if (failed > 0) {
   console.error(`\nSTATE DIVERGENCE: ${failed} problem(s). Reconcile before claiming a gate.\n`);

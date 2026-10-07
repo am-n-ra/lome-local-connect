@@ -8,8 +8,9 @@
 > `open`/`planned` étaient DÉJÀ fermées en code** : `COH-V2-01` (`design.md`→V2), `-02` (héritage déclaré),
 > `-03` (migration `058` entité), `-04`/`-05` (gates de publication RH-01/02), `-06` (R-F intégrité/réputation),
 > `-07` (TF-6 + DS-3 + DS-13), `-18` (audit corrigé). **Cause = la même que l'incident du 29 : un diagnostic
-> est périmé dès qu'un commit passe.** Ne restent que `COH-V2-08` (`room`, X3 confirmé), `COH-V2-09`
-> (`watch`, faible) et le rappel historique `COH-V2-17`.
+> est périmé dès qu'un commit passe.** Ne restent ouverts que `COH-V2-09` (`watch`, faible) et le rappel
+> historique `COH-V2-17`. **`COH-V2-08` (`room`) est FERMÉ** : `TRUNK-X3` livré + poussé + prod-vérifié
+> (`bda68e0`, prod `index-C6M5nYgT.js` === local) — Room acheteur **ET** surface vendeur (S-27).
 
 ## 1. Verdict court
 
@@ -28,7 +29,7 @@ L'app réelle est **plus juste sur les comportements** (accessibilité, cinémat
 | COH-V2-05 | Logique | Moyenne | Maquette : **visuel obligatoire** ; app : aucune contrainte | SDM E-03 | offres sans image publiables | contrainte + refus serveur | Nature Way | | Nature Way | **FERMÉ 2026-10-07** — `publication_block` (RH-01) → refus `MEDIA_REQUIRED` | |
 | COH-V2-06 | Logique | Moyenne | Maquette : **intégrité + réputation par offre** ; app : inexistant | SDM E-05 | décision d'achat sans signal | table réputation d'offre | Nature Way | | Nature Way | **FERMÉ 2026-10-07** — `R-F` (`ecdb398`) : `computeIntegrity`/`computeReputation` dérivés (aucune table neuve, S-26), exposés fiche + cartes | |
 | COH-V2-07 | Logique | Moyenne | Maquette : **opérateur terrain** distinct ; app : `operator` = capability admin | SDM E-09 | vérification terrain non modélisée | décision Root rôle opérateur | Fondateur | | Fondateur | **FERMÉ 2026-10-07** — TF-6 (visites `066`) + `DS-3` (dock opérateur) + `DS-13` (`op-side` lecture seule) | |
-| COH-V2-08 | Logique | Faible | Maquette : **Room acheteur** ; app : chat serveur seulement | SDM E-08 | asymétrie acheteur/vendeur | tranche dédiée | Nature Way | | Nature Way | `planned` → **X3 confirmé fondateur 2026-10-07** (« ok room ») | |
+| COH-V2-08 | Logique | Faible | Maquette : **Room acheteur** ; app : chat serveur seulement | SDM E-08 | asymétrie acheteur/vendeur | tranche dédiée | Nature Way | | Nature Way | **FERMÉ 2026-10-07** — `TRUNK-X3` (S-27) : `TransactionRoom` acheteur **+** surface vendeur, `/api/v2/transactions` neutre, fil complet, preuve jetable 5/5 falsifiée ; `bda68e0`, prod `index-C6M5nYgT.js` === local (T-07d ✅) | |
 | COH-V2-13 | Visuelle/logique | Moyenne | **Résultats** pauvres : aucun **tri** (app : Meilleur match / Plus proche / Prix / Remise), aucune **barre de fraîcheur** (app : vert/vieilli/expiré), **sponsorisé** réduit à une ligne de texte, **produit recherché** absent du DOM | grep : sort=0, freshbar=0 dans la maquette ; app 25 hits tri + 192 .freshbar | l'écran de résultats ne permettait pas de décider | tri + fraîcheur + badges hérités de l'app, testés navigateur | Nature Way | **résolu** |
 | COH-V2-14 | Visuelle/logique | Moyenne | **Fiche d'offre** : pas de **panier** (app COR-7c), itinéraire libellé sans honnêteté | grep : panier app 7 / maquette 5 ; tracé direct app | panier et itinéraire incohérents avec l'app | « Ajouter au panier » + « Dans votre panier · vider » + libellé « (tracé direct) » | Nature Way | **résolu** |
 | COH-V2-15 | Visuelle | Faible | **Résolus** : `entite-publique`/`facility-apex` (itinéraire honnête), `room`/`seller-chat` (timer par étape FF-6), `produit-multi` (panier par entité conforme) | audit 2026-09-23 | — | fait | Nature Way | **résolu** |

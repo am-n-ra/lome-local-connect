@@ -12,7 +12,7 @@
 > TF-6 + DS-3 + DS-13). Le registre `omni-v2-coherence-and-debt-2026-09-23.md` a été **re-classé** en
 > conséquence. **Série Trunk « conformité dock/recherche/menus »** (`DS-1…DS-14`, plan
 > `NW-PROD-OMNI-DOCK-01`) : livrée + prod, surfacée ici. Suite Trunk : plan `NW-PROD-OMNI-TRUNK-02`
-> (`TRUNK-X1` corrigé, `X2`/`X3` en cours).
+> (`TRUNK-X1` corrigé, `X2` automatisation vendeur livré, **`X3` Room livré + prod** `bda68e0`).
 
 
 ## 0. Phase diagnosis (pourquoi cette carte existe)
@@ -40,7 +40,7 @@
 | E-05 | Intégrité automatique + réputation d'offre | Affichage fiche offre (S-32) | Système | à créer | — | recalcul continu | **`missing`** | aucune table réputation d'offre | décision Root |
 | E-06 | Espace vendeur progressif (entité d'abord, S-29) | Accès outils vendeur | Vendeur | UI `SellerV13` | compte connecté | — | **`real`** | `471ef98`, `SellerV13.test.tsx` | — |
 | E-07 | QR émis **à l'intention** | Scan vendeur → verrou | Vendeur | `v2_qr_tokens` | intention vivante | TTL 10 min | **`verified`** | `e4948a5`, preuve E2E cycle | — |
-| E-08 | Room transactionnelle acheteur (suivi+chat+reçu) | Symétrie vendeur/acheteur | Acheteur | `v2_transaction_*` | membres | — | **`partial`** | chat serveur existe ; maquette seule pour la Room | tranche dédiée |
+| E-08 | Room transactionnelle acheteur (suivi+chat+reçu) | Symétrie vendeur/acheteur | Acheteur | `v2_transaction_*` | membres | — | **`partial`** → **FERMÉ 2026-10-07** | `TRUNK-X3` (S-27) : `TransactionRoom` acheteur **+** surface vendeur ; fil complet, transitions acteur, reçu dérivé | livré |
 | E-09 | Rôle **opérateur terrain** distinct de l'admin | Vérification terrain | Opérateur | DB rôles | admin nomme | — | **`partial`** | `role-management` grant operator existe ; pas de flux terrain | décision Root |
 | E-10 | Réservation stock (alloué − réservé) | Disponibilité réelle | Système | `v2_products.quantity_reserved_omni` | serveur | — | **`verified`** | migration 055, preuve FF-8 | — |
 | E-11 | Cycle V1 navigateur (4 largeurs) | Evidence de cohérence | — | prod | — | — | **`verified`** | PRE-1 80/80 | — |
@@ -58,7 +58,7 @@
 | Supply | **Entité** (E-01) puis fiche/édition | l'offre doit appartenir à une entité, pas à un lieu | offre, badge, réputation | `missing` | 1 entité + 1 offre rattachée |
 | Données canoniques | Visuel obligatoire (E-03) + avantage >0 (E-04) | une offre sans visuel/avantage n'est pas publiable | publication honnête | `partial` | contrainte DB + refus |
 | Demande | Découverte + contraintes réelles | — | résultats → intention | `verified` | NW-12, P0-C |
-| Transaction | QR à l'intention (E-07) + Room (E-08) | verrou + symétrie | clôture + avis | `partial` | Room acheteur |
+| Transaction | QR à l'intention (E-07) + Room (E-08) | verrou + symétrie | clôture + avis | **`verified`** (room `X3`, `bda68e0`) | Room acheteur + vendeur |
 | Confiance/offre | Intégrité + réputation par offre (E-05) | la réputation vit sur l'offre **et** l'entité (S-32) | décision d'achat | `missing` | 1 offre avec réputation calculée |
 | Support/mesure | Stock réservé (E-10) + preuves | — | fiabilité | `verified` | FF-8 |
 
@@ -89,7 +89,8 @@
 
 > **Chaîne véridique choisie d'abord :** `E-01 entité → E-02 badge sur entité → E-03 visuel obligatoire → E-04 avantage >0 → publication honnête`
 > **Pourquoi celle-ci d'abord :** elle débloque **le plus de vérités en aval** (offre, badge, réputation, intention, QR) et lève l'incertitude la plus risquée — **le modèle de données**. Aujourd'hui l'offre est rattachée à un **lieu** alors que le fondateur a confirmé qu'elle appartient à une **entité** (S-25) : c'est la racine la plus fausse.
-> **Non actif encore :** Room acheteur (E-08), opérateur terrain (E-09), réputation d'offre (E-05) — **dépendants** de E-01.
+> **Non actif encore (au 2026-09-23) :** Room acheteur (E-08), opérateur terrain (E-09), réputation d'offre (E-05) — **dépendants** de E-01.
+> **⚠️ Depuis : E-08 (Room) est LIVRÉ (`X3`, `bda68e0`, prod)** et E-05/E-09 sont fermés — voir l'amendement en tête.
 > **Porte à franchir ensuite :** preuve Root — migration additif + contrat d'API + refus serveur d'une offre sans visuel/avantage.
 
 ---
@@ -98,7 +99,8 @@
 
 Un enfant ne passe en implémentation que lorsque ses parents sont `verified`, ou explicitement `bounded` avec propriétaire, déclencheur de revue, comportement d'échec sûr et plan de preuve.
 
-**Conséquence immédiate :** tant que **E-01 (entité)** est `missing`, **E-05 (réputation d'offre)**, **E-08 (Room)** et **E-09 (opérateur terrain)** restent `planned`. On ne code pas un écran dont la racine n'existe pas — c'est exactement l'*orphaned leaf* que le fondateur reproche.
+**Conséquence immédiate (au 2026-09-23) :** tant que **E-01 (entité)** est `missing`, **E-05 (réputation d'offre)**, **E-08 (Room)** et **E-09 (opérateur terrain)** restent `planned`. On ne code pas un écran dont la racine n'existe pas — c'est exactement l'*orphaned leaf* que le fondateur reproche.
+**⚠️ Depuis (2026-10-07) :** E-01 fermé (`058`), E-05 fermé (`R-F`), E-09 fermé (`TF-6`+`DS-3`+`DS-13`), **E-08 fermé (`X3`)**.
 
 ---
 
