@@ -25,6 +25,16 @@ export async function getAccountCapabilities(input: { token: string }): Promise<
   return parse<AccountCapabilitiesResult>(response);
 }
 
+// S3-a — déclare (ou efface avec null) un numéro Togo. DÉCLARÉ, jamais vérifié.
+export async function setDeclaredPhone(input: { token: string; phone: string | null }): Promise<ApiResult<{ phoneDeclared: string | null; declaration: string }>> {
+  const response = await fetchWithRecovery('/api/v2/account/phone', {
+    method: 'POST',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` },
+    body: JSON.stringify({ phone: input.phone }),
+  });
+  return parse(response);
+}
+
 export async function getRoleManagementAccounts(input: { token: string }): Promise<ApiResult<{ authorized: boolean; accounts: RoleManagementAccount[] }>> {
   const response = await fetchWithRecovery('/api/v2/admin/role-management', {
     headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },

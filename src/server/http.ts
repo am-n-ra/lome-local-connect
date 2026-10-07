@@ -241,6 +241,17 @@ export function validateFacilityZoneAssignment(body: Record<string, unknown>, fa
   return { facilityId, zone };
 }
 
+// S3-a — déclaration d'un numéro Togo (S-16, décision S3-0 = A + B). Le format est validé
+// ici (400) ; le repo re-normalise et re-vérifie (garde en profondeur). null efface.
+export function validateDeclaredPhone(body: Record<string, unknown>): { phone: string | null } {
+  const raw = body.phone;
+  if (raw === null || raw === undefined || raw === '') return { phone: null };
+  if (typeof raw !== 'string') throw new ApiInputError('A phone number string or null is required.');
+  const trimmed = raw.trim();
+  if (trimmed.length > 40) throw new ApiInputError('The phone number is too long.');
+  return { phone: trimmed };
+}
+
 // TF-5 — signaler une offre (D-SIG-3 : re-clic = no-op, jamais une erreur de saisie).
 export function validateOfferReportCreate(body: Record<string, unknown>): { productId: string; motif: 'prix_trompeur' | 'visuel_non_conforme' | 'indisponible'; detail: string | null } {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -558,6 +569,37 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
         return true;
       }
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === 'POST' && pathname === '/api/v2/account/phone') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to declare a phone number.'));
+        return true;
+      }
+      let payload: Record<string, unknown>;
+      try {
+        payload = await parseRequestBody(req);
+      } catch {
+        json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Provide a JSON body with an optional phone.'));
+        return true;
+      }
+      const { phone } = validateDeclaredPhone(payload);
+      let result: { phoneDeclared: string | null } | null;
+      try {
+        result = await repository.setDeclaredPhone({ authUserId, phone });
+      } catch (error) {
+        if (error instanceof SellerCataloguePolicyError) {
+          json(res, 400, errorBody(correlationId, 'INVALID_INPUT', 'Numéro Togo invalide — attendu +228 puis 8 chiffres.'));
+          return true;
+        }
+        throw error;
+      }
+      if (!result) {
+        json(res, 403, errorBody(correlationId, 'ACCOUNT_UNAVAILABLE', 'Your Omni account context is not available yet.'));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { phoneDeclared: result.phoneDeclared, declaration: 'declared_unverified' } });
       return true;
     }
     if (req.method === 'GET' && pathname === '/api/v2/admin/role-management') {

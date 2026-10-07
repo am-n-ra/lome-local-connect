@@ -445,6 +445,15 @@ function proposedPriceRejection(input) {
   return null;
 }
 
+// src/domain/phone.ts
+function normalizeTogoPhone(input) {
+  const digits = (input ?? "").replace(/[^\d+]/g, "").replace(/^\+/, "");
+  if (!/^\d+$/.test(digits)) return null;
+  if (/^228\d{8}$/.test(digits)) return `+${digits}`;
+  if (/^\d{8}$/.test(digits)) return `+228${digits}`;
+  return null;
+}
+
 // src/server/trunk-repository.ts
 function database() {
   const url = process.env.V2_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -667,7 +676,7 @@ function createTrunkRepository(sql = database()) {
   return {
     async getAccountContext(input) {
       const rows = await retryDatabase(() => sql`
-        select a.id, a.onboarding_state, a.suspended_at,
+        select a.id, a.onboarding_state, a.suspended_at, a.phone_declared,
           count(distinct f.id)::int as facility_count,
           coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
           coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
@@ -675,7 +684,7 @@ function createTrunkRepository(sql = database()) {
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
         left join v2_facilities f on f.account_id = a.id
         where a.auth_user_id = ${input.authUserId}
-        group by a.id, a.onboarding_state, a.suspended_at
+        group by a.id, a.onboarding_state, a.suspended_at, a.phone_declared
         limit 1
       `);
       const row = rows[0];
@@ -694,8 +703,38 @@ function createTrunkRepository(sql = database()) {
           operatorTools: !suspended && roles.includes("operator"),
           reviewerWorkspace: !suspended && roles.includes("reviewer"),
           adminTools: !suspended && roles.includes("admin")
-        }
+        },
+        phoneDeclared: row.phone_declared === null || row.phone_declared === void 0 ? null : String(row.phone_declared)
       };
+    },
+    /**
+     * S3-a — déclaration d'un numéro Togo (+228XXXXXXXX). CONFIANCE DÉCLARÉE, jamais vérifiée :
+     * aucun code n'est envoyé, aucun retour WhatsApp n'est attendu (S3-0 = A + B, contrat
+     * `omni-heartwood-s3-phone-free-contract-2026-10-07.md`). Un numéro invalide est REJETÉ
+     * (jamais stocké) ; `null` efface la déclaration. La contrainte SQL est la garde en profondeur.
+     */
+    async setDeclaredPhone(input) {
+      const normalized = input.phone === null || input.phone.trim() === "" ? null : normalizeTogoPhone(input.phone);
+      if (input.phone !== null && input.phone.trim() !== "" && normalized === null) {
+        throw new SellerCataloguePolicyError("INVALID_PHONE");
+      }
+      const rows = await retryDatabase(() => sql`
+        insert into v2_accounts (auth_user_id, onboarding_state, phone_declared, phone_declared_at)
+        values (
+          ${input.authUserId},
+          'new',
+          ${normalized},
+          case when ${normalized}::text is null then null else now() end
+        )
+        on conflict (auth_user_id) do update
+          set phone_declared = excluded.phone_declared,
+              phone_declared_at = excluded.phone_declared_at,
+              updated_at = now()
+        returning phone_declared
+      `);
+      const row = rows[0];
+      if (!row) return null;
+      return { phoneDeclared: row.phone_declared === null ? null : String(row.phone_declared) };
     },
     async listRoleManagementAccounts(input) {
       const rows = await retryDatabase(() => sql`
@@ -7855,6 +7894,14 @@ function validateFacilityZoneAssignment(body, facilityId) {
   }
   return { facilityId, zone };
 }
+function validateDeclaredPhone(body) {
+  const raw = body.phone;
+  if (raw === null || raw === void 0 || raw === "") return { phone: null };
+  if (typeof raw !== "string") throw new ApiInputError("A phone number string or null is required.");
+  const trimmed = raw.trim();
+  if (trimmed.length > 40) throw new ApiInputError("The phone number is too long.");
+  return { phone: trimmed };
+}
 function validateOfferReportCreate(body) {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const productId = typeof body.productId === "string" ? body.productId : "";
@@ -8114,6 +8161,37 @@ async function handleApi(req, res, pathname, url) {
         return true;
       }
       json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    if (req.method === "POST" && pathname === "/api/v2/account/phone") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to declare a phone number."));
+        return true;
+      }
+      let payload;
+      try {
+        payload = await parseRequestBody(req);
+      } catch {
+        json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Provide a JSON body with an optional phone."));
+        return true;
+      }
+      const { phone } = validateDeclaredPhone(payload);
+      let result;
+      try {
+        result = await repository.setDeclaredPhone({ authUserId, phone });
+      } catch (error) {
+        if (error instanceof SellerCataloguePolicyError) {
+          json(res, 400, errorBody(correlationId, "INVALID_INPUT", "Num\xE9ro Togo invalide \u2014 attendu +228 puis 8 chiffres."));
+          return true;
+        }
+        throw error;
+      }
+      if (!result) {
+        json(res, 403, errorBody(correlationId, "ACCOUNT_UNAVAILABLE", "Your Omni account context is not available yet."));
+        return true;
+      }
+      json(res, 200, { ok: true, correlationId, data: { phoneDeclared: result.phoneDeclared, declaration: "declared_unverified" } });
       return true;
     }
     if (req.method === "GET" && pathname === "/api/v2/admin/role-management") {

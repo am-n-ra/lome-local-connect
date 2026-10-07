@@ -9,7 +9,7 @@ import { authClient, getAuthToken } from '../auth';
 import {
   cancelFacilityClaim, createFacilityClaimDraft, createSavedSearch, createWalletRecharge, deleteSavedSearch,
   claimFacilityByOsmRef, listClosedTransactions,
-  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail,
+  getAccountCapabilities, getAvailabilityResponses, getBuyerAvailabilityRequests, getBuyerCreditSummary, getBulkPacks, getBuyerProStatus, getClaimStorageStatus, getFacilityDetail, setDeclaredPhone,
   cancelAvailabilityRequest,
   getSellerAvailabilityQueue, getSellerCatalogue, getWalletOverview, listPublicFacilities, listSavedSearches, requestAvailability, requestBulkAvailability, submitFacilityClaim, uploadFacilityEvidence,
   addFavorite, removeFavorite, listFavorites, activateBuyerPro, setBuyerProRenewalOptIn, renewBuyerPro, purchaseBulkPack,
@@ -61,6 +61,7 @@ import { compareFacilities } from './v13-compare';
 import { OMNI_BASE_CURRENCY, OMNI_PLAN_PRICES_USD_MINOR, convertUsdMinorToLocal } from '../domain/pricing';
 import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type ResolvedCurrency } from '../domain/currency';
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
+import { normalizeTogoPhone, phoneDeclarationLabel, whatsappDeclareLink } from '../domain/phone';
 import './ui-v13.css';
 
 type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room';
@@ -213,7 +214,7 @@ export function TrunkAppV13() {
   const [sheet, setSheet] = useState<Sheet>('none');
   const [role, setRole] = useState<Role>('buyer');
   const [sessionUser, setSessionUser] = useState<SessionUser | null>(null);
-  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
+  const [accountRoles, setAccountRoles] = useState<string[]>([]);const [ownedFacilityIds, setOwnedFacilityIds] = useState<string[]>([]);const [phoneDeclared, setPhoneDeclared] = useState<string | null>(null);const [phoneDraft, setPhoneDraft] = useState('');const [phoneBusy, setPhoneBusy] = useState(false);const [phoneMsg, setPhoneMsg] = useState<string | null>(null);const [sellerCatalogue, setSellerCatalogue] = useState<SellerCatalogueResult | null>(null);const [sellerQueue, setSellerQueue] = useState<SellerAvailabilityRequest[]>([]);const [sellerWorkspaceState, setSellerWorkspaceState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');const [sellerAvailable, setSellerAvailable] = useState(false);const [adminTools, setAdminTools] = useState(false);const [focusTarget, setFocusTarget] = useState<{ latitude: number; longitude: number; key: string } | null>(null);
   // Entrée vendeur directe dans le formulaire de création (depuis la fiche d'une
   // facilité « pas sur la carte »). Consommée une fois, pour ne pas rouvrir le
   // formulaire à chaque retour sur l'espace vendeur.
@@ -490,6 +491,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             setOwnedFacilityIds(caps.data.ownedFacilityIds ?? []);
             setAdminTools(Boolean(caps.data.capabilities?.adminTools));
             setSellerAvailable(Boolean(caps.data.capabilities?.sellerWorkspace));
+            setPhoneDeclared(caps.data.phoneDeclared ?? null);
             if (caps.data.capabilities?.sellerWorkspace) void loadSellerWorkspace();
           }
           void loadFavorites();
@@ -978,6 +980,33 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       setMyTeamInviteBusy(null);
     }
   }, [requireAuth]);
+
+  // S3-a — déclaration d'un numéro Togo. DÉCLARÉ, jamais « vérifié » (S3-0 = A + B).
+  const declarePhone = useCallback(async () => {
+    const token = await requireAuth();
+    if (!token) return;
+    const trimmed = phoneDraft.trim();
+    if (trimmed !== '' && normalizeTogoPhone(trimmed) === null) {
+      setPhoneMsg('Numéro invalide — attendu +228 puis 8 chiffres.');
+      return;
+    }
+    setPhoneBusy(true);
+    setPhoneMsg(null);
+    try {
+      const result = await setDeclaredPhone({ token, phone: trimmed === '' ? null : trimmed });
+      if (result.ok && result.data) {
+        setPhoneDeclared(result.data.phoneDeclared);
+        setPhoneMsg(result.data.phoneDeclared ? 'Numéro déclaré enregistré — non confirmé.' : 'Numéro retiré.');
+        setPhoneDraft('');
+      } else {
+        setPhoneMsg(result.error?.message ?? 'Impossible d’enregistrer le numéro.');
+      }
+    } catch (caught) {
+      setPhoneMsg(caught instanceof Error ? caught.message : 'Impossible d’enregistrer le numéro.');
+    } finally {
+      setPhoneBusy(false);
+    }
+  }, [requireAuth, phoneDraft]);
 
   const accountOpenedRef = useRef(false);
   useEffect(() => {
@@ -2584,6 +2613,18 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <div className="kv"><span>Rôles</span><b>{eligibleRoles.join(' · ')}</b></div>
             <div className="kv"><span>Facilité affiliée</span><b>{sellerAvailable ? 'Accès vendeur' : 'Aucune'}</b></div>
             <div className="kv"><span>Compte</span><b>{sessionUser.email}</b></div>
+          </div>
+          <div className="cardbox" style={{ marginTop: 8 }}>
+            <div className="kv"><span>Numéro de téléphone</span><b>{phoneDeclared ?? 'Aucun'}</b></div>
+            {phoneDeclared && <p className="tiny muted" style={{ marginTop: 4 }}>{phoneDeclarationLabel()} — Omni ne vérifie pas ce numéro ; c'est un contact que vous déclarez.</p>}
+            <div className="label" style={{ marginTop: 6 }}>Déclarer un numéro Togo</div>
+            <input className="field" inputMode="tel" autoComplete="tel" placeholder="+228 90 12 34 56" value={phoneDraft} onChange={(e) => setPhoneDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void declarePhone(); }} />
+            <div className="row" style={{ gap: 6, marginTop: 6 }}>
+              <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" disabled={phoneBusy || phoneDraft.trim() === ''} onClick={() => void declarePhone()}>{phoneBusy ? '…' : phoneDeclared ? 'Remplacer' : 'Déclarer'}</button>
+              {phoneDeclared && <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" disabled={phoneBusy} onClick={() => { setPhoneDraft(''); void setDeclaredPhone({ token: authToken ?? '', phone: null }).then((r) => { if (r.ok) { setPhoneDeclared(null); setPhoneMsg('Numéro retiré.'); } }); }}>Retirer</button>}
+              <a className="btn ghost sm" style={{ width: 'auto', minHeight: 28, textDecoration: 'none' }} href={whatsappDeclareLink(phoneDraft.trim() || phoneDeclared, sessionUser.email)} target="_blank" rel="noopener noreferrer">Confirmer sur WhatsApp</a>
+            </div>
+            {phoneMsg && <p className="tiny muted" style={{ marginTop: 6 }} role="status">{phoneMsg}</p>}
           </div>
           {groupInvites.length > 0 && (
             <div className="cardbox" style={{ marginTop: 8 }}>

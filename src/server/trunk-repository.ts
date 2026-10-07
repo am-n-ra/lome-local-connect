@@ -12,6 +12,7 @@ import { qrExpiryFrom, resolveQrTtlMinutes } from '../trunk/transaction-time';
 import { computeIntegrity, computeReputation, existenceFor, normalizeProductMedia } from '../trunk/offer-existence';
 import { normalizeStockForUniqueness, uniquenessStockRejection } from '../trunk/offer-uniqueness';
 import { proposedPriceRejection } from '../trunk/offer-price';
+import { normalizeTogoPhone } from '../domain/phone';
 
 export interface DatabaseClient {
   query(strings: TemplateStringsArray, ...values: unknown[]): Promise<unknown[]>;
@@ -423,6 +424,8 @@ export interface AccountContextResult {
     reviewerWorkspace: boolean;
     adminTools: boolean;
   };
+  // S3-a : numéro DÉCLARÉ (+228XXXXXXXX) ou null. Jamais « vérifié » — confiance déclarée.
+  phoneDeclared: string | null;
 }
 
 export type ManagedStaffRole = 'operator' | 'reviewer';
@@ -687,7 +690,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
   return {
     async getAccountContext(input: { authUserId: string }): Promise<AccountContextResult | null> {
       const rows = await retryDatabase(() => sql`
-        select a.id, a.onboarding_state, a.suspended_at,
+        select a.id, a.onboarding_state, a.suspended_at, a.phone_declared,
           count(distinct f.id)::int as facility_count,
           coalesce(array_agg(distinct f.id) filter (where f.id is not null), '{}') as facility_ids,
           coalesce(array_agg(distinct ar.role) filter (where ar.role is not null and ar.status = 'active'), '{}') as roles
@@ -695,7 +698,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         left join v2_account_roles ar on ar.account_id = a.id and ar.status = 'active'
         left join v2_facilities f on f.account_id = a.id
         where a.auth_user_id = ${input.authUserId}
-        group by a.id, a.onboarding_state, a.suspended_at
+        group by a.id, a.onboarding_state, a.suspended_at, a.phone_declared
         limit 1
       `);
       const row = (rows as Record<string, unknown>[])[0];
@@ -715,7 +718,38 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           reviewerWorkspace: !suspended && roles.includes('reviewer'),
           adminTools: !suspended && roles.includes('admin'),
         },
+        phoneDeclared: row.phone_declared === null || row.phone_declared === undefined ? null : String(row.phone_declared),
       };
+    },
+
+    /**
+     * S3-a — déclaration d'un numéro Togo (+228XXXXXXXX). CONFIANCE DÉCLARÉE, jamais vérifiée :
+     * aucun code n'est envoyé, aucun retour WhatsApp n'est attendu (S3-0 = A + B, contrat
+     * `omni-heartwood-s3-phone-free-contract-2026-10-07.md`). Un numéro invalide est REJETÉ
+     * (jamais stocké) ; `null` efface la déclaration. La contrainte SQL est la garde en profondeur.
+     */
+    async setDeclaredPhone(input: { authUserId: string; phone: string | null }): Promise<{ phoneDeclared: string | null } | null> {
+      const normalized = input.phone === null || input.phone.trim() === '' ? null : normalizeTogoPhone(input.phone);
+      if (input.phone !== null && input.phone.trim() !== '' && normalized === null) {
+        throw new SellerCataloguePolicyError('INVALID_PHONE');
+      }
+      const rows = await retryDatabase(() => sql`
+        insert into v2_accounts (auth_user_id, onboarding_state, phone_declared, phone_declared_at)
+        values (
+          ${input.authUserId},
+          'new',
+          ${normalized},
+          case when ${normalized}::text is null then null else now() end
+        )
+        on conflict (auth_user_id) do update
+          set phone_declared = excluded.phone_declared,
+              phone_declared_at = excluded.phone_declared_at,
+              updated_at = now()
+        returning phone_declared
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) return null;
+      return { phoneDeclared: row.phone_declared === null ? null : String(row.phone_declared) };
     },
     async listRoleManagementAccounts(input: { authUserId: string }): Promise<{ authorized: boolean; accounts: RoleManagementAccount[] }> {
       const rows = await retryDatabase(() => sql`

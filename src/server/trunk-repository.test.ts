@@ -91,15 +91,49 @@ describe('account context Root seam', () => {
       facilityCount: 2,
       ownedFacilityIds: ['facility-1', 'facility-2'],
       capabilities: { sellerWorkspace: true, operatorTools: false, reviewerWorkspace: true, adminTools: false },
+      phoneDeclared: null,
     });
     expect(call.queries[0]).toContain("ar.status = 'active'");
     expect(call.queries[0]).not.toContain('select a.auth_user_id');
+  });
+
+  it('exposes a declared phone number (S3-a) without ever calling it verified', async () => {
+    const call = stubSql([{ id: 'account-1', onboarding_state: 'buyer_ready', suspended_at: null, phone_declared: '+22890123456', facility_count: 0, facility_ids: [], roles: ['buyer'] }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.getAccountContext({ authUserId: 'auth-user-1' });
+    expect(result?.phoneDeclared).toBe('+22890123456');
+    expect(call.queries[0]).toContain('a.phone_declared');
   });
 
   it('returns null when Auth is not linked to an Omni account', async () => {
     const call = stubSql([]);
     const repository = createTrunkRepository(call.sql);
     await expect(repository.getAccountContext({ authUserId: 'unknown-auth-user' })).resolves.toBeNull();
+  });
+
+  it('setDeclaredPhone normalise un numéro local Togo et l’écrit (S3-a)', async () => {
+    const call = stubSql([{ phone_declared: '+22890123456' }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setDeclaredPhone({ authUserId: 'auth-user-1', phone: '90 12 34 56' });
+    expect(result).toEqual({ phoneDeclared: '+22890123456' });
+    expect(call.queries[0]).toContain('phone_declared');
+    expect(call.values[0]).toContain('+22890123456');
+  });
+
+  it('setDeclaredPhone REJETTE un numéro invalide (jamais stocké)', async () => {
+    const call = stubSql([{ phone_declared: '+22890123456' }]);
+    const repository = createTrunkRepository(call.sql);
+    await expect(repository.setDeclaredPhone({ authUserId: 'auth-user-1', phone: '12345' })).rejects.toThrow('INVALID_PHONE');
+    // aucune requête émise : le refus est local, pas un UPDATE qui échouerait en base
+    expect(call.queries).toHaveLength(0);
+  });
+
+  it('setDeclaredPhone efface la déclaration avec null', async () => {
+    const call = stubSql([{ phone_declared: null }]);
+    const repository = createTrunkRepository(call.sql);
+    const result = await repository.setDeclaredPhone({ authUserId: 'auth-user-1', phone: null });
+    expect(result).toEqual({ phoneDeclared: null });
+    expect(call.values[0]).toContain(null);
   });
 });
 

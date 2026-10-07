@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateFacilityZoneAssignment, validateFieldVisitCreate, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept, validateVisitClaim, validateVisitReprogram, validateVisitReportSubmit } from './http';
+import { ApiInputError, extractFedaPayTransaction, isTransactionState, parseRequestBody, toApiErrorResponse, validateAcquisitionObjectiveCreate, validateAcquisitionObjectiveState, validateAdCampaignCreate, validateAvailabilityRequestCreate, validateBulkAvailabilityRequestCreate, validateClaimByOsmRef, validateDeclaredPhone, validateFacilityZoneAssignment, validateFieldVisitCreate, validateOfferReportCreate, validateOfferReportDecision, validateSellerFacilityCreate, validateTeamInviteAccept, validateVisitClaim, validateVisitReprogram, validateVisitReportSubmit } from './http';
 import { AvailabilityPolicyError, BuyerSearchPolicyError, EvidenceStoragePolicyError, InsufficientCreditsError, PurchaseIntentPolicyError, SellerAuthorizationPolicyError, TransactionPolicyError, WalletPolicyError } from './trunk-repository';
 import { ClaimEvidenceNotFoundError } from './evidence-storage';
 
@@ -368,6 +368,19 @@ describe('team invite / facility zone validators (NW-15 P2-C)', () => {
   it('rejects a malformed facility id or an over-long zone', () => {
     expect(() => validateFacilityZoneAssignment({ zone: 'A' }, 'not-a-uuid')).toThrow(ApiInputError);
     expect(() => validateFacilityZoneAssignment({ zone: 'x'.repeat(121) }, facilityId)).toThrow(ApiInputError);
+  });
+});
+
+describe('declared phone validator (S3-a, S-16)', () => {
+  it('accepts a Togo number, trims it, and treats null/empty as an erase', () => {
+    expect(validateDeclaredPhone({ phone: ' +228 90 12 34 56 ' })).toEqual({ phone: '+228 90 12 34 56' });
+    expect(validateDeclaredPhone({ phone: null })).toEqual({ phone: null });
+    expect(validateDeclaredPhone({ phone: '' })).toEqual({ phone: null });
+    expect(validateDeclaredPhone({})).toEqual({ phone: null });
+  });
+  it('rejects a non-string or an over-long number', () => {
+    expect(() => validateDeclaredPhone({ phone: 22890123456 })).toThrow(ApiInputError);
+    expect(() => validateDeclaredPhone({ phone: 'x'.repeat(41) })).toThrow(ApiInputError);
   });
 });
 

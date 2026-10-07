@@ -974,6 +974,9 @@ export interface AccountCapabilitiesResult {
     reviewerWorkspace: boolean;
     adminTools: boolean;
   };
+  // S3-a : numéro DÉCLARÉ (+228XXXXXXXX) ou null. Jamais « vérifié ». Optional pour les
+  // réponses mises en cache avant l'ajout du champ.
+  phoneDeclared?: string | null;
 }
 
 export type WalletLedgerKind = 'recharge' | 'slot_spend' | 'facility_pro_spend' | 'ad_spend' | 'coupon_credit' | 'bonus_grant' | 'bonus_spend' | 'buyer_pro_spend' | 'reversal';
