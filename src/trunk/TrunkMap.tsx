@@ -245,6 +245,22 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
   const facilitiesKeyRef = useRef('');
   const rotating = useRef(true);
   const cameraMode = useRef<CameraMode>('manual_navigation');
+  // True while a programmatic easeTo/flyTo is in flight. MapLibre fires the SAME
+  // zoomstart/zoomend/dragend events for a programmatic camera command as for a user
+  // gesture, so the interaction handlers below would otherwise treat Omni's own
+  // selected-facility recenter as a manual gesture and clobber `cameraMode` back to
+  // `manual_navigation` mid-flight. That intermittently dropped the recenter (the pin
+  // ended behind the sheet / at the search zoom instead of the focused pin), which read
+  // as "clicking a card did not highlight its pin". Cleared on the next `moveend`.
+  const programmaticMoveRef = useRef(false);
+  // Last bottom padding actually applied to the map. Shared between the padding-sync
+  // effect and the selected-facility recenter: MapLibre's `setPadding` recomputes the
+  // transform, and issuing it while a programmatic easeTo is in flight ABORTS that
+  // animation. The recenter applies the sheet padding itself just before its easeTo, so
+  // the sync effect must see that value as already-applied — otherwise the sheet-open
+  // MutationObserver re-issues setPadding in the same tick and kills the zoom (the map
+  // snapped back to the search zoom, pin no longer framed). See R-03a / TT recenter.
+  const lastPaddingRef = useRef(-1);
   const rotationFrame = useRef<number | null>(null);
   const rotationResumeTimer = useRef<number | null>(null);
   const revealToken = useRef(0);
@@ -554,7 +570,6 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       }
     });
 
-    let lastPadding = -1;
     const syncCameraPadding = () => {
       // Coquille V13: les sheets sont rendus conditionnellement — le `.sheet` monté
       // EST le sheet actif (ex. search permanent en desktop et le formulaire search
@@ -568,8 +583,8 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       const bottomPadding = measureSheetBottomPadding(container.current?.closest('.omni-v13-stage'));
       // Dedupe: re-issuing setPadding on every styledata/mutation churns the transform
       // mid-flight. Only a real change is worth a transform update.
-      if (bottomPadding === lastPadding) return;
-      lastPadding = bottomPadding;
+      if (bottomPadding === lastPaddingRef.current) return;
+      lastPaddingRef.current = bottomPadding;
       setPadBottom(bottomPadding);
       try {
         map.setPadding({ top: 0, right: 0, bottom: bottomPadding, left: 0 });
@@ -1000,7 +1015,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     map.on('wheel', () => pauseMotion('interaction', false));
     map.on('dragstart', () => pauseMotion('interaction', false));
     map.on('rotatestart', () => pauseMotion('interaction', false));
-    map.on('zoomstart', () => { if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
+    map.on('zoomstart', () => { if (programmaticMoveRef.current) return; if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') pauseMotion('interaction', false); });
     map.on('move', () => { setBearing(map.getBearing()); scheduleUserPosition(); });
     map.on('moveend', () => {
       if (healTransform()) return;
@@ -1012,7 +1027,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     });
     map.on('dragend', () => {
       rotating.current = false;
-      if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
+      if (!programmaticMoveRef.current && cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
       }
@@ -1023,7 +1038,7 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
     });
     map.on('zoomend', () => {
       rotating.current = false;
-      if (cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
+      if (!programmaticMoveRef.current && cameraMode.current !== 'search_reveal' && cameraMode.current !== 'result_framing') {
         cameraMode.current = 'manual_navigation';
         setCameraModeState('manual_navigation');
       }
@@ -1437,7 +1452,12 @@ export function TrunkMap({ facilities, selectedId, onSelect, onBoundsChange, onT
       // on why the padding sync can't be trusted at recenter time.)
       const bottom = measureSheetBottomPadding(container.current?.closest('.omni-v13-stage'));
       setPadBottom(bottom);
+      lastPaddingRef.current = bottom;
       try { map.setPadding({ top: 0, right: 0, bottom, left: 0 }); } catch { /* transform not ready */ }
+      programmaticMoveRef.current = true;
+      const clearProgrammatic = () => { programmaticMoveRef.current = false; };
+      map.once('moveend', clearProgrammatic);
+      window.setTimeout(clearProgrammatic, 900);
       safeEaseTo(map, { center: [selected.longitude, selected.latitude], zoom: FACILITY_FOCUS_ZOOM, duration: 650, essential: true });
     };
     if (map.isMoving()) {

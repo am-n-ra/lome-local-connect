@@ -58,4 +58,29 @@ describe('le pin sélectionné reste visible au-dessus du sheet', () => {
     expect(follow).toContain('measureSheetBottomPadding(');
     expect(follow).toMatch(/center: \[followTarget\.longitude, followTarget\.latitude\]/);
   });
+
+  // Régression réelle (2026-10-07, suite) : le recentrage était INTERMITTENT. Le sheet
+  // s'ouvre au même tick que l'easeTo ; son MutationObserver appelle `syncCameraPadding`,
+  // qui ré-émet `setPadding` — or `setPadding` RECALCULE la transform et INTERROMPT un
+  // easeTo en vol (le zoom retombait à 12.8 au lieu de 14.2). Deux gardes :
+  // (1) le recentrage écrit le padding dans le MÊME dédup que la sync partagée, donc la
+  //     sync le voit comme déjà appliqué et ne le ré-émet pas ;
+  // (2) les handlers de geste ignorent les événements d'un mouvement programmatique.
+  it('le recentrage partage le dédup de padding avec la sync (sinon le setPadding tue l\'easeTo)', () => {
+    expect(effect).toContain('lastPaddingRef.current = bottom');
+    expect(effect.indexOf('lastPaddingRef.current = bottom')).toBeLessThan(effect.indexOf('safeEaseTo('));
+  });
+
+  it('la sync de padding lit le dédup partagé, pas une variable locale', () => {
+    const syncStart = MAP.indexOf('const syncCameraPadding = () => {');
+    const sync = MAP.slice(syncStart, syncStart + 1200);
+    expect(sync).toContain('lastPaddingRef.current');
+    expect(sync).not.toMatch(/let lastPadding\b/);
+  });
+
+  it('les handlers de geste ignorent un mouvement programmatique (ne clobber pas cameraMode)', () => {
+    expect(MAP).toMatch(/map\.on\('zoomstart', \(\) => \{ if \(programmaticMoveRef\.current\) return;/);
+    expect(MAP).toMatch(/map\.on\('dragend',[\s\S]{0,200}programmaticMoveRef\.current/);
+    expect(MAP).toMatch(/map\.on\('zoomend',[\s\S]{0,200}programmaticMoveRef\.current/);
+  });
 });
