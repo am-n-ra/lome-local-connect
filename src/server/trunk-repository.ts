@@ -26,6 +26,14 @@ function database(): ReturnType<typeof neon> {
 
 const PUBLIC_TRUST_STATES = new Set<PublicFacility['trust']>(['unclaimed', 'unconfirmed', 'confirmed']);
 
+// D-MAP-1 (fondateur 2026-10-07) : la découverte est plafonnée PAR FENÊTRE de viewport.
+// Le monde compte 13 744 lieux ; l'ancien `limit 250` absolu n'en montrait que 250 au
+// centre d'une vue ville (Lomé : 5 992 réels → 4 %). On relève le plafond à 2 000 par
+// fenêtre : une ville entière (5 992) reste bornée à 2 000, mais la carte est peuplée
+// dans TOUTE la fenêtre au lieu d'un amas central, et la charge utile reste ≈ 1 Mo.
+// Un plafond global (13 744) coûterait ~6,5 Mo par requête sans bénéfice de découverte.
+const PUBLIC_FACILITIES_WINDOW_LIMIT = 2000;
+
 const toEntity = (row: Record<string, unknown>): PublicEntity => ({
   id: String(row.id),
   name: String(row.name),
@@ -2383,7 +2391,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
               least(1, cos(radians(${centerLat})) * cos(radians(f.latitude)) * cos(radians(f.longitude) - radians(${centerLng})) + sin(radians(${centerLat})) * sin(radians(f.latitude)))
             )`},
             coalesce(e.trust_state, f.trust_state) = 'unclaimed', f.name
-          limit 250
+          limit ${PUBLIC_FACILITIES_WINDOW_LIMIT}
         `;
         return (rows as Record<string, unknown>[]).map(toFacility);
       });

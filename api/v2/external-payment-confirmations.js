@@ -452,6 +452,7 @@ function database() {
   return neon2(url);
 }
 var PUBLIC_TRUST_STATES = /* @__PURE__ */ new Set(["unclaimed", "unconfirmed", "confirmed"]);
+var PUBLIC_FACILITIES_WINDOW_LIMIT = 2e3;
 var toEntity = (row) => ({
   id: String(row.id),
   name: String(row.name),
@@ -2310,7 +2311,7 @@ function createTrunkRepository(sql = database()) {
               least(1, cos(radians(${centerLat})) * cos(radians(f.latitude)) * cos(radians(f.longitude) - radians(${centerLng})) + sin(radians(${centerLat})) * sin(radians(f.latitude)))
             )`},
             coalesce(e.trust_state, f.trust_state) = 'unclaimed', f.name
-          limit 250
+          limit ${PUBLIC_FACILITIES_WINDOW_LIMIT}
         `;
         return rows.map(toFacility);
       });

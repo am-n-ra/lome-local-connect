@@ -1098,6 +1098,14 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Tests :** **884/884**, tsc clean, 5 gardes vertes, build `index-CiFJLIwt.js`.
 - **Prod (2026-10-07, commit `a3cbe21`) :** déploiement GitHub `a3cbe21` (13:57:42Z) Production === HEAD, prod sert **`index-CiFJLIwt.js` === build local (T-07d ✅)**. Preuve navigateur prod : recherche `boulangerie` → `search_reveal` tient `globe → Togo → Région Maritime → Lomé → zoom 14.2`, **3 hcards**, **0 pageerror** (avant : mort au globe à 1.8).
 
+## HEARTWOOD MAP — `D-MAP-1` : plafond de découverte PAR FENÊTRE, 250 → 2 000 (2026-10-07, ordre « go on »)
+- **Décision fondateur :** option 1 (ma reco) — plafond **par fenêtre de viewport**, pas absolu.
+- **Mesure canonique (`br-dawn-hill-am5amy22`)** : fenêtre ville de Lomé → **2 000 lignes / 348 ms / 0,83 Mo**, **toutes dans la vue** (`inView == rows`). Le monde reste borné à 2 000 (~0,84 Mo) — l'option 2 (13 744 partout) coûterait ~6,5 Mo/requête sans bénéfice de découverte.
+- **Correctif :** `const PUBLIC_FACILITIES_WINDOW_LIMIT = 2000` + `limit ${PUBLIC_FACILITIES_WINDOW_LIMIT}` dans `listPublicFacilities` (l'ancien `limit 250` absolu est supprimé). 12 bundles serverless régénérés (`npm run build`).
+- **Preuve navigateur locale :** arrival → **1 165 pins rendus** (avant : 250 serrés au centre) ; pan → refetch propre, **0 erreur**.
+- **Garde :** `src/server/public-facilities-cap.test.ts` (2) — la requête doit citer la constante, jamais un `limit 250` en dur. **Falsifié** : remettre `limit 250` → **1 échec**.
+- **Tests :** **889/889**, tsc clean, 5 gardes vertes, build `index-BuHBYbl6.js` (client inchangé — changement serveur).
+
 ## HEARTWOOD MAP — `visibleFacilities` branché sur les résultats, pas la découverte (2026-10-07) : 0 pin au repos
 - **Signal fondateur (précis) :** *« avant on voit les pins sur la carte les 13000+ maintenant ce n'est plus le cas ; ensuite recherche boulangerie → sheet résultats mais pas de pin sur la carte ».* Le countmark (X6) est **innocent** (aucune ligne de câblage pins).
 - **Cause racine MESURÉE (hook DEV sur la carte réelle) :** la carte reçoit `facilities={visibleFacilities}`, or `visibleFacilities = filterFacilities(orderedResults, …)` et `orderedResults` dérive de **`results`** (les **résultats de recherche**). La **découverte** du viewport vit dans un état **séparé `facilities`** (`loadPublic` → `setFacilities`). Donc : **au repos `results=[]` → la carte reçoit 0 feature** (250 chargés côté `facilities`, **jamais** passés à MapLibre) ; après recherche, elle ne montre que les 3 résultats.
