@@ -7,8 +7,8 @@
 > **Trigger:** fondateur — « on a raté tout le process depuis Species » + « des éléments visuels et comportements de l'app actuelle qu'on risque de perdre »
 
 > **⚠️ AMENDEMENT 2026-10-07 (TRUNK-X4)** — les edges `missing`/`partial` ci-dessous (E-01…E-09) décrivent
-> l'état **au 2026-09-23**, avant Root/Species clos. Depuis : **E-01/E-02/E-03/E-04/E-05/E-09 sont fermés**
-> (migration `058` entité ; gates de publication RH-01/02 ; intégrité/réputation `R-F` ; opérateur terrain
+> l'état **au 2026-09-23**, avant Root/Species clos. Depuis : **E-01/E-02/E-03/E-04/E-05/E-08/E-09 sont fermés**
+> (migration `058` entité ; gates de publication RH-01/02 ; intégrité/réputation `R-F` ; Room `X3` ; opérateur terrain
 > TF-6 + DS-3 + DS-13). Le registre `omni-v2-coherence-and-debt-2026-09-23.md` a été **re-classé** en
 > conséquence. **Série Trunk « conformité dock/recherche/menus »** (`DS-1…DS-14`, plan
 > `NW-PROD-OMNI-DOCK-01`) : livrée + prod, surfacée ici. Suite Trunk : plan `NW-PROD-OMNI-TRUNK-02`
