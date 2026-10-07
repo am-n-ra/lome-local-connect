@@ -602,6 +602,21 @@ export async function listOpenTransactions(input: { token: string }): Promise<Ap
   return parse<import('./types').OpenTransactionsResult>(response);
 }
 
+// X3 — chemin NEUTRE (acheteur ET vendeur) : la lecture renvoie `actorRole`, donc le même
+// appel sert les deux rôles. `/buyer/transactions` reste l'alias historique.
+export async function listTransactions(input: { token: string }): Promise<ApiResult<import('./types').OpenTransactionsResult>> {
+  const response = await fetchWithRecovery('/api/v2/transactions', {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` },
+  });
+  return parse<import('./types').OpenTransactionsResult>(response);
+}
+
+// Payload scannable par le vendeur (le QR du bac à sable) : `transactionId:token`.
+// Défini ici une seule fois — BuyerFlowV13 et la Room le réutilisent.
+export function qrPayload(transactionId: string, token: string): string {
+  return `${transactionId}:${token}`;
+}
+
 // S-26 / B18 : l'historique des closes (versions gelées). Même garde que l'ouvert.
 export async function listClosedTransactions(input: { token: string }): Promise<ApiResult<import('./types').ClosedTransactionsResult>> {
   const response = await fetchWithRecovery('/api/v2/buyer/transactions/closed', {

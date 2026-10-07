@@ -9827,7 +9827,7 @@ async function handleApi(req, res, pathname, url) {
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === "GET" && pathname === "/api/v2/buyer/transactions") {
+    if (req.method === "GET" && (pathname === "/api/v2/transactions" || pathname === "/api/v2/buyer/transactions")) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your transactions."));
@@ -9838,7 +9838,7 @@ async function handleApi(req, res, pathname, url) {
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === "GET" && pathname === "/api/v2/buyer/transactions/closed") {
+    if (req.method === "GET" && (pathname === "/api/v2/transactions/closed" || pathname === "/api/v2/buyer/transactions/closed")) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in to view your transaction history."));

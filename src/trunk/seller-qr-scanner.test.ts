@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { extractTransactionPayload, teardownScanner } from './SellerQrScannerSheet';
-import { qrPayload } from './BuyerFlowV13';
+import { qrPayload } from './api';
 
 const TXN = '11111111-2222-3333-4444-555555555555';
 const TOKEN = 'abc-12345-secret-token';

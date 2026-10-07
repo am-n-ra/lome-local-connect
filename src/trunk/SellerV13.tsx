@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listClosedTransactions, listFacilityAdCampaigns, listTransactions, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
 import { Skeleton, SkeletonDetail } from './Skeleton';
-import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OpenTransactionSummary, ClosedTransactionSummary, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
+import { relativeAge, transactionStateLabel } from './transaction-time';
 import { formatMoney, formatUsdSticker } from '../domain/currency';
 import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
 
@@ -23,6 +24,8 @@ type SellerV13Props = {
   onMap?: () => void;
   /** Entrée vendeur : ouvre le brouillon de revendication sur une facilité publique. */
   onClaim?: (facility: PublicFacility) => void;
+  /** X3 (S-27) — ouvrir la Room d'une transaction vendeur (liste + chat + paiement + remise). */
+  onOpenTransaction?: (transaction: { transactionId: string; counterparty: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => void;
   /** Entrée directe dans le formulaire de création (ex. depuis « la facilité n'est pas sur la carte »). */
   startInCreate?: boolean;
   /** Signale que l'intention de création a été consommée (le formulaire est ouvert). */
@@ -37,7 +40,7 @@ type SellerV13Props = {
 // canonique. Une seule verite, du catalogue jusqu'au libelle.
 const BONUS_LABEL = formatUsdSticker(SELLER_BONUS_USD_MINOR);
 
-export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
+export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, onRefresh, onScan, onMap, onClaim, onOpenTransaction, startInCreate = false, onConsumeCreateIntent, catalogue: propsCatalogue, queue: propsQueue = [], publicFacilities = [], ownedIds = [] }: SellerV13Props) {
   const [error, setError] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(startInCreate);
   const [busy, setBusy] = useState(false);
@@ -72,6 +75,9 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   const [offerHandover, setOfferHandover] = useState<OfferHandoverKind>('retrait');
   const [offerPriceKind, setOfferPriceKind] = useState<OfferPriceKind>('fixe');
   const [offerCondition, setOfferCondition] = useState<OfferConditionKind>('neuf');
+  // X3 (S-27) — transactions vendeur : lectures membre-scopées partagées avec l'acheteur.
+  const [sellerTxn, setSellerTxn] = useState<{ open: OpenTransactionSummary[]; closed: ClosedTransactionSummary[] }>({ open: [], closed: [] });
+  const [sellerTxnState, setSellerTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
 
   const load = useCallback(async () => {
     setError('');
@@ -92,6 +98,25 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   }, []);
 
   useEffect(() => { if (!propsCatalogue && !catalogue) void load(); }, [load, propsCatalogue, catalogue]);
+
+  // X3 — charge les transactions DU VENDEUR (même lecture membre-scopée que l'acheteur,
+  // `actorRole='seller'` renvoyé par le serveur). Aucune requête neuve.
+  const loadSellerTransactions = useCallback(async () => {
+    setSellerTxnState('loading');
+    try {
+      const token = await getAuthToken();
+      if (!token) { setSellerTxnState('idle'); return; }
+      const [openRes, closedRes] = await Promise.all([
+        listTransactions({ token }).catch(() => null),
+        listClosedTransactions({ token }).catch(() => null),
+      ]);
+      setSellerTxn({
+        open: openRes?.ok && openRes.data ? (openRes.data.transactions ?? []) : [],
+        closed: closedRes?.ok && closedRes.data ? (closedRes.data.transactions ?? []) : [],
+      });
+      setSellerTxnState('idle');
+    } catch { setSellerTxnState('error'); }
+  }, []);
 
   // L'intention de création ne vaut que pour la montée qui l'a reçue : on la
   // consomme aussitôt, sinon le formulaire se rouvrirait à chaque retour sur
@@ -398,6 +423,8 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
   // « ce compte a quelque chose à gérer ». Sans facilité, on montre l'entrée vendeur.
   const hasData = (propsCatalogue ?? catalogue) !== null;
   const hasFacility = ws.hasFacility;
+
+  useEffect(() => { if (hasFacility) void loadSellerTransactions(); }, [hasFacility, loadSellerTransactions]);
 
   const renderStrip = () => (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9, marginTop: 9 }}>
@@ -746,6 +773,48 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
                 <strong className="fs-17" style={{ display: 'block', marginTop: 2 }}>{analytics.qrScansVerified}</strong>
               </div>
             </div>
+          )}
+        </div>
+      )}
+      {hasFacility && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Transactions</b>
+              <span className="tiny muted">Vos ventes Omni — conversation, paiement et remise par transaction.</span>
+            </div>
+            <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28 }} type="button" onClick={() => void loadSellerTransactions()}>Actualiser</button>
+          </div>
+          {sellerTxnState === 'loading' && <div style={{ marginTop: 9 }}><Skeleton variant="kv" count={2} /></div>}
+          {sellerTxnState === 'error' && <p className="tiny muted" style={{ marginTop: 6 }}>Vos transactions ne peuvent pas être chargées pour le moment.</p>}
+          {sellerTxnState === 'idle' && (
+            <>
+              {sellerTxn.open.length === 0 && sellerTxn.closed.length === 0 && (
+                <p className="tiny muted" style={{ marginTop: 6 }}>Aucune transaction pour l'instant. Elle apparaît ici dès qu'un acheteur vérifie votre QR.</p>
+              )}
+              {sellerTxn.open.map((transaction) => (
+                <div key={transaction.transactionId} style={{ marginTop: 6 }}>
+                  <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => onOpenTransaction?.({ transactionId: transaction.transactionId, counterparty: 'Acheteur', actorRole: 'seller', lastEventAt: transaction.lastEventAt })}>
+                    <div className="row" style={{ justifyContent: 'space-between' }}>
+                      <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                      <span className="status gray">{transactionStateLabel(transaction.state)}</span>
+                    </div>
+                    <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Ouvrir la Room · {relativeAge(transaction.lastEventAt)}</span>
+                  </button>
+                </div>
+              ))}
+              {sellerTxn.closed.map((transaction) => (
+                <div key={transaction.transactionId} style={{ marginTop: 6 }}>
+                  <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => onOpenTransaction?.({ transactionId: transaction.transactionId, counterparty: 'Acheteur', actorRole: 'seller', lastEventAt: transaction.lastEventAt })}>
+                    <div className="row" style={{ justifyContent: 'space-between' }}>
+                      <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                      <span className="status ok">Clôturée</span>
+                    </div>
+                    <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Conversation · {relativeAge(transaction.lastEventAt)}</span>
+                  </button>
+                </div>
+              ))}
+            </>
           )}
         </div>
       )}

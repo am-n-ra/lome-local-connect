@@ -20,6 +20,7 @@ import {
 } from './api';
 import { parseFacilityIdFromQr, describePendingAction, pendingActionResume, sortProductsStockFirst, highlightSearchedProduct, offerCharacteristics, offerTrustLabel, trapDrawerFocus, walletBucketTotals, type PendingAction } from './ui-helpers';
 import { Skeleton, SkeletonDetail } from './Skeleton';
+import { TransactionRoom } from './TransactionRoom';
 import { cartProductsFor, cartProductCount, clearFacilityCart, parseCarts, pruneCart, serializeCarts, toggleCartProduct, FACILITY_CARTS_STORAGE_KEY, type FacilityCarts } from './facility-cart';
 import type {
   AvailabilityResponseStatus, AvailabilityResponsesResult, BulkPack, BuyerAvailabilityRequestSummary, BuyerCreditSummary, ClaimDraftResult, ClaimEvidenceItem, ClosedTransactionSummary, EvidenceKind,
@@ -59,7 +60,7 @@ import { resolveUserCurrency, currencyFor, formatAmount, formatMoney, type Resol
 import { planPriceLabel, localPlanPriceLabel } from '../domain/plan-labels';
 import './ui-v13.css';
 
-type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' | 'op-side' | 'verification';
+type Sheet = 'none' | 'search' | 'results' | 'facility' | 'bulk' | 'compare' | 'menu' | 'account' | 'auth' | 'admin' | 'flow' | 'seller' | 'seller-reply' | 'seller-qr' | 'home' | 'wallet' | 'plans' | 'saved' | 'favorites' | 'claim' | 'qr' | 'products' | 'stockevent' | 'offers' | 'company' | 'onboard' | 'entity' | 'tile-place' | 'receipt' | 'notifs' | 'recovery' | 'signal' | 'tour' | 'freshness' |   'op-side' | 'verification' | 'room';
 type Role = 'buyer' | 'seller' | 'admin' | 'operator';
 type MapState = 'loading' | 'ready' | 'error' | 'empty';
 
@@ -295,6 +296,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   const [closedTxn, setClosedTxn] = useState<ClosedTransactionSummary[]>([]);
   const [closedTxnState, setClosedTxnState] = useState<'idle' | 'loading' | 'error'>('idle');
   const [receiptTx, setReceiptTx] = useState<ClosedTransactionSummary | null>(null);
+  const [roomTxn, setRoomTxn] = useState<{ transactionId: string; token: string; counterparty: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null; returnTo: Sheet } | null>(null);
 // MV1 X03 — le centre liste des événements, chacun avec sa cible.
   const [notifs, setNotifs] = useState<NotificationSummary[]>([]);
   const [notifsState, setNotifsState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -369,7 +371,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
   // Le rail gauche n'apparaît que pendant une session « parcours » (results/facility/bulk/compare/flow/claim/seller —
   // exactement la règle du tiroir gauche de la maquette : destination ≠ étape du parcours actuel.
 
-  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity']), []);
+  const journeySheets = useMemo<Set<Sheet>>(() => new Set(['results', 'facility', 'bulk', 'compare', 'flow', 'claim', 'tile-place', 'receipt', 'notifs', 'recovery', 'signal', 'tour', 'op-side', 'seller', 'seller-reply', 'freshness', 'verification', 'menu', 'account', 'home', 'wallet', 'plans', 'saved', 'favorites', 'auth', 'entity', 'room']), []);
   const isJourney = journeySheets.has(sheet);
   useEffect(() => {
     const mq = window.matchMedia?.('(min-width:1040px)');
@@ -824,6 +826,22 @@ const [compareBlocked, setCompareBlocked] = useState(0);
     setFlowProduct({ id: result.data.productId, name: transaction.productName ?? '' });
     setPendingResumeTxnId(transaction.transactionId);
     setSheet('flow');
+  }, [requireAuth]);
+
+  // X3 — ouvrir la Room dédiée d'une transaction (S-27) : suivi + chat complet + actions.
+  // Réutilise le token de session et la ligne de liste ; aucune lecture neuve.
+  const openRoom = useCallback(async (transaction: { transactionId: string; facilityName?: string | null; productName?: string | null; actorRole: 'buyer' | 'seller'; lastEventAt?: string | null }) => {
+    const token = await requireAuth();
+    if (!token) return;
+    setRoomTxn({
+      transactionId: transaction.transactionId,
+      token,
+      counterparty: transaction.facilityName ?? transaction.productName ?? null,
+      actorRole: transaction.actorRole,
+      lastEventAt: transaction.lastEventAt ?? null,
+      returnTo: transaction.actorRole === 'seller' ? 'seller' : 'home',
+    });
+    setSheet('room');
   }, [requireAuth]);
 
   // TF-8 recovery (maquette `recovery`) : après une panne, rien n'est perdu —
@@ -2388,7 +2406,7 @@ const [compareBlocked, setCompareBlocked] = useState(0);
         </section>
       )}
       {sheet === 'seller' && (
-        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
+        <SellerV13 onClose={() => setSheet('menu')} onProducts={() => setSheet('products')} onOffers={() => setSheet('offers')} onCompany={() => setSheet('company')} onReply={() => setSheet('seller-reply')} onScan={() => setSheet('seller-qr')} onMap={() => { setSelectedId(null); setSheet('none'); }} onClaim={(facility) => { void startClaim(facility); }} onOpenTransaction={(transaction) => void openRoom(transaction)} startInCreate={sellerCreateIntent} onConsumeCreateIntent={() => setSellerCreateIntent(false)} catalogue={sellerCatalogue} queue={sellerQueue} publicFacilities={facilities} ownedIds={ownedFacilityIds} onRefresh={loadSellerWorkspace} />
       )}
       {sheet === 'seller-reply' && (
         <SellerReplyV13 onClose={() => setSheet('seller')} />
@@ -2595,13 +2613,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <p className="sub" style={{ marginTop: 6 }}>Aucune transaction en cours. Une intention d’achat reste verrouillée jusqu’à la clôture — vous pouvez quitter et revenir ici à tout moment.</p>
           )}
           {openTxn.map((transaction) => (
-            <button key={transaction.transactionId} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => void resumeTransaction(transaction)}>
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
-                <span className="status gray">{transactionStateLabel(transaction.state)}</span>
-              </div>
-              <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
-            </button>
+            <div key={transaction.transactionId} style={{ marginTop: 6 }}>
+              <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => void resumeTransaction(transaction)}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                  <span className="status gray">{transactionStateLabel(transaction.state)}</span>
+                </div>
+                <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reprendre · {relativeAge(transaction.lastEventAt)}</span>
+              </button>
+              <button className="btn ghost sm" type="button" style={{ marginTop: 4 }} onClick={() => void openRoom(transaction)}>Ouvrir la Room · chat</button>
+            </div>
           ))}
           <div className="eyebrow" style={{ marginTop: 14 }}>Terminées</div>
           {closedTxnState === 'loading' && <Skeleton variant="kv" count={3} />}
@@ -2612,13 +2633,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
             <p className="sub" style={{ marginTop: 6 }}>Aucune transaction clôturée. Vos versions gelées apparaîtront ici.</p>
           )}
           {closedTxn.map((transaction) => (
-            <button key={transaction.transactionId} type="button" className="cardbox" style={{ textAlign: 'left', width: '100%', marginTop: 6 }} onClick={() => { setReceiptTx(transaction); setSheet('receipt'); }}>
-              <div className="row" style={{ justifyContent: 'space-between' }}>
-                <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
-                <span className="status ok">Clôturée</span>
-              </div>
-              <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reçu · {relativeAge(transaction.lastEventAt)}</span>
-            </button>
+            <div key={transaction.transactionId} style={{ marginTop: 6 }}>
+              <button type="button" className="cardbox" style={{ textAlign: 'left', width: '100%' }} onClick={() => { setReceiptTx(transaction); setSheet('receipt'); }}>
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div><b>{transaction.productName ?? 'Transaction'}</b><br /><span className="tiny muted">{transaction.facilityName ?? '—'} · {transaction.quantity} unité{transaction.quantity === 1 ? '' : 's'}</span></div>
+                  <span className="status ok">Clôturée</span>
+                </div>
+                <span className="tiny muted" style={{ marginTop: 4, display: 'block' }}>Reçu · {relativeAge(transaction.lastEventAt)}</span>
+              </button>
+              <button className="btn ghost sm" type="button" style={{ marginTop: 4 }} onClick={() => void openRoom(transaction)}>Ouvrir la Room · conversation</button>
+            </div>
           ))}
           <div className="btnrow" style={{ marginTop: 10 }}>
             <button className="btn ghost" type="button" onClick={() => void openWallet()}><Wallet size={15} /> Wallet</button>
@@ -2945,6 +2969,16 @@ const [compareBlocked, setCompareBlocked] = useState(0);
       )}
       {sheet === 'receipt' && receiptTx && (
         <TransactionReceiptV13 summary={receiptTx} onClose={() => setSheet('home')} />
+      )}
+      {sheet === 'room' && roomTxn && (
+        <TransactionRoom
+          transactionId={roomTxn.transactionId}
+          token={roomTxn.token}
+          actorRole={roomTxn.actorRole}
+          counterparty={roomTxn.counterparty}
+          lastEventAt={roomTxn.lastEventAt}
+          onClose={() => { const back = roomTxn.returnTo; if (back === 'home') { void openHome(); } else { setSheet(back); void loadSellerWorkspace?.(); } }}
+        />
       )}
       {sheet === 'notifs' && (
         <NotificationCenterV13 notifications={notifs} state={notifsState} error={notifsError} onOpen={(notification, target) => void openNotification(notification, target)} onClose={() => setSheet('menu')} />

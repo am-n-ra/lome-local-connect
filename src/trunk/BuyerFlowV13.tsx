@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, BadgeCheck, Banknote, CheckCircle2, Copy, Navigation, QrCode, Smartphone, Star, Wallet, X } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
+import { confirmExternalPayment, createPurchaseIntent, declareExternalPayment, getAvailabilityResponses, getBuyerCreditSummary, getTransaction, getTransactionMessages, issueBuyerQrToken, qrPayload, requestAvailability, revokeQrToken, sendTransactionMessage, submitTransactionRating, transitionTransaction, verifyQrToken } from './api';
 import type { BuyerCreditSummary, ExternalPaymentMethod, TransactionSnapshotResult, TransactionState } from './types';
 import { canProposePrice, isNegotiable } from './offer-price';
 import { useFreshnessTimer } from './useFreshnessTimer';
@@ -45,10 +45,6 @@ function qrStyle(token: string): string {
 }
 
 // Payload scannable par le vendeur: transactionId + jeton brut.
-
-export function qrPayload(transactionId: string, token: string): string {
-  return `${transactionId}:${token}`;
-}
 
 export function BuyerFlowV13({ facility, product, onClose, onGate, onRoute, walletBalanceMinor, resumeTxnId }: BuyerFlowV13Props) {
   const [stage, setStage] = useState<Stage>('avail');

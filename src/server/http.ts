@@ -2344,7 +2344,10 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 201, { ok: true, correlationId, data: result });
       return true;
     }
-    if (req.method === 'GET' && pathname === '/api/v2/buyer/transactions') {
+    // X3 : chemin NEUTRE (acheteur ET vendeur) — la lecture est membre-scopée et renvoie
+    // `actorRole`, donc le même appel sert les deux rôles. `/buyer/transactions` reste un
+    // alias de compatibilité ; aucune requête nouvelle n'est introduite.
+    if (req.method === 'GET' && (pathname === '/api/v2/transactions' || pathname === '/api/v2/buyer/transactions')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your transactions.'));
@@ -2360,7 +2363,8 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
     }
     // S-26 / B18 : l'historique des closes (versions gelées). Même garde que l'ouvert :
     // identité exigée, lecture membre-scopée, jamais de ligne d'autrui.
-    if (req.method === 'GET' && pathname === '/api/v2/buyer/transactions/closed') {
+    // X3 : chemin neutre `/api/v2/transactions/closed` (acheteur ET vendeur) ; `/buyer/...` = alias.
+    if (req.method === 'GET' && (pathname === '/api/v2/transactions/closed' || pathname === '/api/v2/buyer/transactions/closed')) {
       const authUserId = await getAuthUserId(req.headers);
       if (!authUserId) {
         json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in to view your transaction history.'));

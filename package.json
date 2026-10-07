@@ -15,6 +15,7 @@
     "proof:live-seller": "node scripts/prove-v2-live-seller.mjs",
     "proof:stock-reservation": "tsx scripts/prove-v2-stock-reservation.mjs",
     "proof:transaction-lifecycle": "tsx scripts/prove-v2-transaction-lifecycle.mjs",
+    "proof:room": "tsx scripts/prove-v2-room.mjs",
     "seed:demo": "node scripts/seed-demo-lome.mjs",
     "seed:demo:emit": "node scripts/seed-demo-lome.mjs --emit-json",
     "server": "tsx server/index.ts",

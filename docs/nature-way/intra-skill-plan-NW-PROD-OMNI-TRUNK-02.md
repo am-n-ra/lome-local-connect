@@ -24,7 +24,7 @@
 | 1 | `TRUNK-X1` corriger l'état | intention expirée = événement canonique `expired` écrit par le sweep, lu par les lectures ; 0 zombie | migration + repo + UI + preuve SQL réelle falsifiée | **`verified`** — `067` appliquée canonical, preuve jetable 7/7 (falsifiée 4 FAIL), 836/836 | fait contredit |
 | 2 | `TRUNK-X4` mémoire | `COH-V2` re-classé ; `DS-1…14` au SDM | registre + garde | **`done`** — 7 lignes périmées re-classées, SDM amendé | divergence |
 | 3 | `TRUNK-X2` seller-automation | modèle auto-dispo + slice | décision modèle → contrat → code | **`done`** — `068` appliquée canonical, preuve jetable 9/9 + falsification, 843/843, prod `index-IZJxtU8O.js` === local (`3d19a50`) | fait contredit |
-| 4 | `TRUNK-X3` room | surface chat acheteur | contrat + code + preuve | `in_progress` (contrat rédigé 2026-10-07) | fondateur |
+| 4 | `TRUNK-X3` room | surface chat acheteur + vendeur | contrat + code + preuve | **`in_progress`** (code livré, preuve jetable 5/5 + falsification ; push Ring en attente) | fondateur |
 
 ## Dependency-aware task tree
 
@@ -67,11 +67,11 @@ ensemble. Backend `v2_transaction_messages` **existe déjà** (membre-scopé). *
 
 | ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Re-plan trigger |
 |---|---|---|---|---|---|---|---|
-| X3-1 | X2 | Root | Contrat Room amendé (doc) | — | `review` | doc contrat ; recommandations fondateur appliquées | décision change |
-| X3-2 | X3-1 | Root | **Réutiliser** les lectures membre-scopées (`listOpenTransactions`/`listClosedTransactions`, déjà `actorRole`) sous chemin neutre `/api/v2/transactions` (+`/closed`) + fn client ; **aucune nouvelle requête** | X3-1 | `todo` | alias + non-membre refusé (déjà le cas) | faux |
-| X3-3 | X3-2 | Trunk | Room acheteur (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `todo` | rendu jsdom | faux |
-| X3-4 | X3-2 | Trunk | Surface vendeur (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `todo` | rendu jsdom | faux |
-| X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, chat 2 sens, reçu) | X3-3,X3-4 | `todo` | `prove-v2-room.mjs` + falsification | faux |
+| X3-1 | X2 | Root | Contrat Room amendé (doc) | — | `done` | doc contrat ; recommandations fondateur appliquées | décision change |
+| X3-2 | X3-1 | Root | **Réutiliser** les lectures membre-scopées (`listOpenTransactions`/`listClosedTransactions`, déjà `actorRole`) sous chemin neutre `/api/v2/transactions` (+`/closed`) + fn client ; **aucune nouvelle requête** | X3-1 | `done` | alias neutre dans `http.ts` + `api.ts` ; non-membre refusé (prouvé) | faux |
+| X3-3 | X3-2 | Trunk | Room acheteur (suivi + **fil complet** + reçu) — intègre l'existant | X3-2 | `done` | rendu jsdom 6/6 (`TransactionRoom.test.tsx`) | faux |
+| X3-4 | X3-2 | Trunk | Surface vendeur (liste + fil + **confirmer paiement** + **remise**) | X3-2 | `done` | liste dans `SellerV13` + `onOpenTransaction` → Room rôle vendeur | faux |
+| X3-5 | X3-3,X3-4 | Heartwood | Preuve SQL réelle jetable + falsification (non-membre, fil complet, chat 2 sens, liste partagée, clôture) | X3-3,X3-4 | `done` | `prove-v2-room.mjs` 5/5 ; falsifiée 3 FAIL (garde retirée) | faux |
 | X3-6 | X3-5 | Ring | suite + gardes + push prod T-07d | X3-5 | `todo` | hash === local | déploiement |
 
 **Décisions fondateur RENDUES (« recommandés » 2026-10-07) :** (1) **buyer Room + seller surface ensemble** ;
