@@ -17,7 +17,7 @@ Omni: a map-first, constraint-based search engine for local supply (Lomé field 
 
 ## ⚠️ CURRENT GATE — read this first (as of 2026-09-23, TURNED 2026-09-25 then 2026-09-29 — read current-state.md, never this header alone)
 **Seed reconciliation + Species reconciliation — RÉOUVERTE 2026-09-23** (par le fondateur).
-**Root CLOSE `founder-confirmed` 2026-09-29** — verdict fondateur (preuves : 664/664, 7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). **Trunk OPEN 2026-10-02** — porte suivante désignée par HQ (ordre « next gate ») ; cadrage et définition de fini à valider, première slice TT-1 usage. Ne rouvrir Root que sur fait nouveau.
+**Root CLOSE `founder-confirmed` 2026-09-29** — verdict fondateur (preuves : 664/664, 7 gardes, MCP-1 ALL PASS, MCP-2 32/32, MCP-3 T-07d, PRE-1 76/76). **Trunk CLOSE `founder-confirmed` 2026-10-07** — os du tronc complets (DS-1…DS-14, X1–X6, GLOBE-REG `43a3785`). **Heartwood OPEN 2026-10-07** — durcissement/fermeture (QR réel, argent réel E2E, téléphone gratuit, ambulants) ; pas de nouvelles fondations. Ne rouvrir Root/Trunk que sur fait nouveau.
 > Source de vérité : `docs/founder-hq/current-state.md`.
 Founder: « on a assez tourne en rond… je pense qu'on a rate tout le process depuis Species » and
 « j'ai moi-même assez oublié tout ce que je veux qu'Omni fasse » → asked to **restart from Seed**.
@@ -1040,5 +1040,16 @@ Le fondateur a demandé « est-ce qu'on a fini avec seed et species ? tu ne saut
 - **Garde `map-countmark-removal.test.ts`** (3 checks) : échoue si `.countmark`/`resultCount` réapparaissent dans le rendu ou le CSS. **Falsifié** : réintroduire le rendu → **2 échouent** ; restauré → 3/3.
 - **Divergence assumée :** la maquette (autorité, close) affiche encore le countmark ; la décision fondateur le supplante pour l'app, **la maquette n'est pas modifiée** (Species close).
 - **Preuve :** **859/859 tests**, tsc, **8 gardes** vertes, bundle construit `countmark` = **0** (JS + CSS).
+
+## GLOBE-REG (2026-10-07, commit `43a3785`, prod `index-DJ2PbCjJ.js` === local) — le globe restait bloqué au zoom rue : pins jamais projetés
+- **Signal fondateur** : « pourquoi les pins des facilités s'affichent plus », avec une tempête console `Cannot read properties of null (reading '0')` dans `_calcMatrices` de MapLibre + `Invalid LngLat object: (NaN, NaN)`.
+- **Cause racine, mesurée (prod ET local)** : `data-projection` restait **`globe` à zoom 14.2** après l'arrival, pendant 20 s. Une projection globe à zoom rue rend la matrice **dégénérée** → `_calcMatrices` lit `null[0]` à chaque frame, et les pins (WebGL) ne se projettent pas. **Deux** causes se cumulaient :
+  1. **`applyProjection` se fiait à `isStyleLoaded()`** comme garde. Sur **MapLibre 6.x**, ce prédicat renvoie un **FAUX NÉGATIF** tant que les tuiles streament (mesuré : `styleLoaded === false` à la fin de l'arrival, 20 s après) → tout `setProjection` était **silencieusement avalé**. Le garde fiable est le **`try/catch`** — `setProjection` lève lui-même « Style is not done loading. » quand c'est trop tôt.
+  2. **Aucun `moveend` ne suit la fin de l'animation.** `syncProjection` est bloqué pendant l'arrival (`arrivalInProgressRef`), et l'arrival se termine par `finishArrival()` — qui ne rejouait la projection **jamais**. La carte restait donc sur le globe de décollage.
+  - **Pourquoi c'était une régression non vue :** la session GLOBE-START (2026-10-04) avait vérifié « globe puis mercator » **pendant** l'arrival (le `moveend` intermédiaire à zoom 2.4 basculait). Le X6 (retrait du countmark) n'a pas touché la projection ; c'est le durcissement `903b6e6` qui a introduit le goto `isStyleLoaded()`, masqué ensuite par le `moveend` des étapes d'arrival **quand l'arrival est joué en entier** — sauf que `finishArrival` ne le rejoue pas.
+- **Correctif** : (a) `applyProjection` ne teste plus `isStyleLoaded()`, seul le `try/catch` garde ; (b) `finishArrival` appelle explicitement `syncProjection()` une fois `arrivalInProgress=false`, pour poser la projection du zoom atterri.
+- **Leçon à ne pas réapprendre :** *un garde « déjà fait » bâti sur un prédicat qui peut mentir (`isStyleLoaded`) transforme un correctif en silence.* Vérifier une projection par le **`setProjection` réussi** (le throw est le contrat), jamais par un état de style supposé. Et : *la fin d'une animation qui franchit une frontière de zoom doit rejouer l'effet de frontière* — ne pas compter sur un `moveend` qui n'existe pas.
+- **Preuve** : navigateur **local ET prod** : `globe` (zoom 9) → **`mercator` (zoom 14.2)**, stable, **0 pageerror**. Garde `map-transform-lock.test.ts` **renforcé** (7 tests) : `try/catch` obligatoire autour de chaque `setProjection`, `applyProjection` sans `isStyleLoaded()`, `finishArrival` appelle `syncProjection` **après** avoir retombé le drapeau. **Falsifié dans les deux sens** (retrait du call → 1 échec ; réintroduction de la garde `isStyleLoaded` → 1 échec). **861/861 tests**, tsc clean, 6 gardes vertes. Prod `index-DJ2PbCjJ.js` === local (T-07d ✅).
+
 
 

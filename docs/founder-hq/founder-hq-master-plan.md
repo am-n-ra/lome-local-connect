@@ -28,8 +28,8 @@ These supersede the product framing in `OMNI-V3-MASTER-PLAN.md §2–3` where th
 
 ## Ordered gate plan
 
-> ⚠️ **PORTE COURANTE : TRUNK (ouverte 2026-10-02, cadrage à valider). Root CLOSE `founder-confirmed` 2026-09-29.**
-> Marker de contrôle : **Species V2 CLOSE** (toujours valide) + **Root CLOSE** (2026-09-29) + **Trunk OPEN** (2026-10-02). Historique ci-dessous : Root alors ouverte.
+> ⚠️ **PORTE COURANTE : HEARTWOOD (ouverte 2026-10-07 — Trunk CLOSE `founder-confirmed` 2026-10-07). Root CLOSE `founder-confirmed` 2026-09-29.**
+> Marker de contrôle : **Species V2 CLOSE** (toujours valide) + **Root CLOSE** (2026-09-29) + **Trunk CLOSE** (2026-10-07) + **Heartwood OPEN** (2026-10-07). Historique ci-dessous : Trunk alors ouverte.
 > Historique : Seed reconciliation + Species reconciliation (RÉOUVERTE 2026-09-23 → CLOSE 2026-09-25).
 > Les statuts `done` des lignes 1–2 ci-dessous décrivent l'état **V1 du 2026-09-02**, **superseded** :
 > le fondateur a rouvert Seed puis Species le **2026-09-23** (voir §« HQ RECONCILIATION — 2026-09-23 »

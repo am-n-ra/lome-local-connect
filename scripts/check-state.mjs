@@ -20,17 +20,18 @@ if (!gate) {
   console.error(`FAIL  ${SOR}: could not read the Gate value`);
   process.exit(1);
 }
-if (gate !== 'ROOT_CLOSED_TRUNK_OPEN') {
+if (gate !== 'TRUNK_CLOSED_HEARTWOOD_OPEN') {
   console.error(`FAIL  ${SOR}: unexpected gate "${gate}"`);
   process.exit(1);
 }
 
-// TURNED 2026-10-02 : le fondateur a désigné Trunk (« next gate »). Le marqueur Root
-// CLOSE reste exigé (la clôture ne s'efface pas), plus le nouveau marqueur Trunk OPEN.
-// L'ancien code seul est interdit dans la source de vérité.
+// TURNED 2026-10-07 : le fondateur a clos Trunk (« Ok on va clore »). Les marqueurs Root CLOSE et
+// Trunk CLOSE restent exigés (une clôture ne s'efface pas), plus le nouveau marqueur Heartwood OPEN.
+// L'ancien `Trunk OPEN` seul est désormais une revendication périmée (voir forbiddenClaims).
 const MARKER = 'Species V2 CLOSE';
 const ROOT_MARKER = 'Root CLOSE';
-const TRUNK_MARKER = 'Trunk OPEN';
+const TRUNK_CLOSED_MARKER = 'Trunk CLOSE';
+const HEARTWOOD_MARKER = 'Heartwood OPEN';
 
 const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', MARKER],
@@ -39,9 +40,12 @@ const mustAgree = [
   ['docs/founder-hq/founder-hq-board.md', ROOT_MARKER],
   ['docs/founder-hq/founder-hq-master-plan.md', ROOT_MARKER],
   ['AGENTS.md', ROOT_MARKER],
-  ['docs/founder-hq/founder-hq-board.md', TRUNK_MARKER],
-  ['docs/founder-hq/founder-hq-master-plan.md', TRUNK_MARKER],
-  ['AGENTS.md', TRUNK_MARKER],
+  ['docs/founder-hq/founder-hq-board.md', TRUNK_CLOSED_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', TRUNK_CLOSED_MARKER],
+  ['AGENTS.md', TRUNK_CLOSED_MARKER],
+  ['docs/founder-hq/founder-hq-board.md', HEARTWOOD_MARKER],
+  ['docs/founder-hq/founder-hq-master-plan.md', HEARTWOOD_MARKER],
+  ['AGENTS.md', HEARTWOOD_MARKER],
 ];
 
 const mustPointToV2 = [
@@ -79,6 +83,18 @@ const forbiddenClaims = [
 const forbidden = [
   // The stale claim that must never reappear as a CURRENT state.
   ['docs/founder-hq/founder-hq-board.md', 'Gates 1-6 `closed`', 'must be marked SUPERSEDED, not asserted'],
+];
+
+// INVERTED 2026-10-07: the founder closed Trunk (« Ok on va clore »). While the gate was
+// ROOT_CLOSED_TRUNK_OPEN, the risk was claiming Trunk closed prematurely. Now the risk is the
+// reverse — a document still presenting Trunk as the CURRENT OPEN gate after closure. Narrow:
+// each fires only on the exact stale phrasing, so it cannot false-positive on the historical
+// "Trunk alors ouverte" markers that legitimately survive.
+const trunkClosedStale = [
+  ['docs/founder-hq/current-state.md', 'ROOT_CLOSED_TRUNK_OPEN', 'must not re-assert the superseded gate code after Trunk closure 2026-10-07'],
+  ['docs/founder-hq/founder-hq-board.md', 'PORTE COURANTE = TRUNK (ouverte', 'must not call Trunk the current open gate after closure 2026-10-07'],
+  ['docs/founder-hq/founder-hq-master-plan.md', 'PORTE COURANTE : TRUNK', 'must not call Trunk the current open gate after closure 2026-10-07'],
+  ['AGENTS.md', 'Trunk OPEN 2026-10-02', 'must not present Trunk as open — it closed 2026-10-07 (Heartwood open)'],
 ];
 
 // A recommendation must not present a DELIVERED slice as still-to-do. This is the staleness
@@ -174,6 +190,7 @@ console.log(`\nstate of record gate = ${gate}\n`);
 for (const [f, n] of mustAgree) check(f, n, 'reopen marker');
 for (const [f, n] of mustPointToV2) check(f, n, 'points to Intent Brief V2');
 for (const [f, n, l] of forbidden) check(f, n, l);
+for (const [f, n, l] of trunkClosedStale) forbid(f, n, l);
 for (const [f, n, l] of incident) check(f, n, l);
 for (const [f, n, l] of forbiddenClaims) forbid(f, n, l);
 for (const [f, n, l] of deliveredSlices) forbid(f, n, l);

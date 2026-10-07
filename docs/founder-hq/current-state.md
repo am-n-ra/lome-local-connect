@@ -14,12 +14,13 @@
 
 | Field | Value |
 |---|---|
-| **Gate** | `ROOT_CLOSED_TRUNK_OPEN` |
-| **As of** | 2026-10-02 |
-| **Decided by** | Fondateur (ordre « next gate » ; cadrage Trunk proposé par le relais, validation du périmètre pendante) |
+| **Gate** | `TRUNK_CLOSED_HEARTWOOD_OPEN` |
+| **As of** | 2026-10-07 |
+| **Decided by** | Fondateur (« Ok on va clore »). Clôture **Trunk CLOSE** 2026-10-07 ; porte suivante **Heartwood OPEN** = durcissement/fermeture du tronc (voir §Verdict Trunk). |
 | **Seed** | **CLOS `founder-confirmed`** — `docs/nature-way/omni-intent-brief-v2-2026-09-23.md` (32 décisions `S-01…S-32`) |
 | **Species** | **CLOSE `founder-confirmed` 2026-09-25** — maquette `docs/maquette/omni-species-v2-interactive.html` (74 écrans). Validation fondateur de **`SP-1…SP-10`** reçue (« Validé »). |
 | **Root** | **CLOS `founder-confirmed` 2026-09-29** — voir §Verdict Root. 4 caractéristiques vivantes (R-G/R-H/R-I), claim Root+UI, viewport, tap-claim, caméra durcie, preuves MCP réconciliées, revue relais 76/76. |
+| **Trunk** | **CLOSE `founder-confirmed` 2026-10-07** — voir §Verdict Trunk. Os du tronc complets : `DS-1…DS-14`, `X1/X2` (`3d19a50`), `X3` Room (`bda68e0`), `X4` desktop/PWA, `X5` onboarding, `UI-1…UI-10`, `X6` countmark (`5dc5275`), **GLOBE-REG** (`43a3785`, globe bloqué au zoom rue corrigé). Aucune slice de code restante *au titre du périmètre Trunk*. |
 
 > **⚠️ La validation fondateur est arrivée le 2026-09-25** (« Ok Validé »). Elle porte sur **`SP-1…SP-10`**.
 > **Un audit conforme ne vaut pas acceptation** — la règle reste ; ici l'acceptation est **explicite et
@@ -34,8 +35,49 @@
 >
 > **Mesure au moment de la clôture** : `check:species-t12` → **26 décisions rendues / 32**, `NON MESURÉ = 0`,
 > **0 non conforme** ; `check:maquette` 74 écrans, 5 niveaux, registre honnête ; **600/600 tests**.
-| **Downstream gates** | **Trunk OUVERTE 2026-10-02** (Root CLOSE le 2026-09-29, §Verdict Root) · périmètre : TT-0 argent CLOS, TT-2 données, TT-3 conformité tile-place close · **tranches Trunk livrées depuis** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`) · **`X1` expiration d'intention honnête** (`067`, `3d19a50`) · **`X2` automatisation vendeur** (`3d19a50`, prod `index-IZJxtU8O.js` === local) · **`X3` Room de transaction** (`bda68e0`, prod `index-C6M5nYgT.js` === local) · **`X4` desktop/PWA** (`91bfa63`, prod `index-haLH4C6K.js`) · **`X5` onboarding honnête + preuve sociale** (`6ccbfd9`, prod `index-BE7cQW_D.js` === local) · **`UI-1…UI-10` cohérence UI** (`3d44e13`/`5ce7686`) · **Trunk : aucune slice de code restante** ; suite de porte à décider (Heartwood/Branches/Canopy/Ring) · Branches/Canopy non ouvertes |
+| **Downstream gates** | **Heartwood OUVERTE 2026-10-07** (Trunk CLOSE 2026-10-07, §Verdict Trunk) · **tranches Trunk livrées** : conformité dock/recherche/menus `DS-1…DS-14` (`1da8c3f`) · `X1` expiration d'intention honnête (migration `067`) · `X2` automatisation vendeur (`3d19a50`) · `X3` Room de transaction (`bda68e0`) · `X4` desktop/PWA (`91bfa63`) · `X5` onboarding honnête (`6ccbfd9`) · `UI-1…UI-10` cohérence UI (`3d44e13`/`5ce7686`) · `X6` retrait countmark (`5dc5275`) · `GLOBE-REG` globe bloqué au zoom rue (`43a3785`) · **Branches/Canopy/Ring non ouvertes** |
 | **Séquencement terrain — décision fondateur 2026-10-07** | **Le terrain (`TT-1` usage réel / `TT-2` données / Gate 7 Venture Lifecycle) vient EN DERNIER — après clôture de TOUTES les portes Nature Way** (Seed → Species → Root → Trunk → Heartwood → Branches → Canopy → Ring). Mot du fondateur : *« terrain doit venir après qu'on ait fini complètement avec toutes les gates nature way »*. Le lot terrain n'est **jamais une slice Trunk** : il ne démarre pas tant qu'une porte Nature Way aval reste ouverte. Owner terrain = fondateur (hors sandbox). |
+
+## Verdict Trunk — CLOSE `founder-confirmed` 2026-10-07
+
+> **Décision fondateur :** *« Ok on va clore »* — la porte **Trunk** ferme ; la porte suivante
+> **Heartwood** ouvre. Même règle que Root : livrer ne clôt pas, seule une décision enregistrée clôt.
+>
+> **Ce qui est clos (périmètre Trunk) :** le **tronc** — un parcours central complet de bout en
+> bout (découverte → offre → disponibilité → intention → QR → transaction → clôture) plus la
+> coquille (dock, recherche, menus, carte réelle, sheets contextuels). Os complets et **prouvés en
+> prod** : `DS-1…DS-14`, `X1/X2` (`3d19a50`), `X3` Room (`bda68e0`), `X4` desktop/PWA, `X5`
+> onboarding, `UI-1…UI-10`, `X6` countmark (`5dc5275`), **GLOBE-REG** (`43a3785`, le globe restait
+> bloqué au zoom rue → pins non projetés : corrigé, prod `index-DJ2PbCjJ.js` === local).
+>
+> **Ce qui N'EST PAS clos et passe en Heartwood** (durcissement/fermeture — pas de nouvelles
+> fondations) : les **5 items de fermeture** mesurés le 2026-10-07 (voir §Fermeture —
+> items) :
+> 1. **QR réel** — le « QR Omni » acheteur est **faux** (`qrStyle()` dessine des blocs `█/▓`, pas un
+>    QR scannable) → le vendeur ne peut que **coller le code à la main**. `qrcode.react` est déjà
+>    une dépendance. **Risque le plus élevé** (casse le cœur transactionnel + S-21 panneau QR public).
+> 2. **Argent réel E2E** — recharge → Pro seller → Pro buyer → packs bulk → bonus : logique testée
+>    mais **aucun parcours d'argent réel exercé de bout en bout en prod**. Préoccupation fondateur.
+> 3. **Téléphone (méthode gratuite S-16)** — le Seed a tranché **gratuit** (e-mail OTP Neon Auth /
+>    WhatsApp initié par l'utilisateur, SMS payant exclu) mais le code ne bâtit qu'e-mail+mot de passe.
+> 4. **Ambulants découvrables** — le type `mobile` existe (création + pin déplaçable) mais la
+>    découverte dédiée manque (filtre « Transport » désactivé ; `facilityType` non exposé). V1.
+> 5. **OSM borné au Togo** — **pas un écart** : décision déjà écrite (`PILOT_ZONE_BOUNDS.west > 0`,
+>    garde-fou import) + confirmée fondateur (plan Neon free, croissance par création).
+>
+> **Réserves actées (suivies hors Trunk) :** décisions ouvertes (UM-6, D-LOC-6/8, D-C5, RT-4,
+> H1–H4), spot-checks terrain (session réelle), dette de données (adresses 2,9 %, 17 fantômes
+> Ghana). **Ne rouvrir Trunk que sur fait nouveau** (régression prouvée ou décision fondateur).
+
+## Fermeture — items (mesurés 2026-10-07, entrants Heartwood)
+
+| # | Item | Mesure | Verdict |
+|---|---|---|---|
+| 1 | **QR réel** | `BuyerFlowV13.qrStyle()` = blocs `█/▓` (décor), **pas** un QR ; `qrcode.react` en dépendance | **Écart réel** — Heartwood S1 (risque max) |
+| 2 | **Argent réel E2E** | logique complète + tests `bounded`/`unit`, **aucun parcours prod réel** | **Preuve manquante** — Heartwood S2 |
+| 3 | **Téléphone gratuit** | S-16 tranché (OTP e-mail / WhatsApp ; SMS exclu) ; code = e-mail+mdp | **Décision close, slice manquante** — Heartwood S3 |
+| 4 | **Ambulants** | type `mobile` existe ; filtre Transport `soon` ; `facilityType` non exposé | **Slice manquante** — Heartwood S4 |
+| 5 | **OSM Togo** | `PILOT_ZONE_BOUNDS` borne Lomé (`west > 0`) ; décision fondateur Neon free | **Décision close** — pas un écart |
 
 ## Verdict Root — CLOSE `founder-confirmed` 2026-09-29
 
