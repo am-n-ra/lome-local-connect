@@ -2553,6 +2553,7 @@ function createTrunkRepository(sql = database()) {
     },
     async listSellerCatalogue(input) {
       await retryDatabase(() => sql`select v2_expire_stale_availability()`).catch(() => []);
+      await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => []);
       const authorizationRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
@@ -2632,6 +2633,7 @@ function createTrunkRepository(sql = database()) {
           p.price_kind,
           p.condition_kind,
           p.media,
+          p.auto_availability,
           (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
@@ -2668,6 +2670,7 @@ function createTrunkRepository(sql = database()) {
         availabilityState: ["en_stock", "verifie", "a_valider", "bientot"].includes(String(row.availability_state)) ? String(row.availability_state) : "a_valider",
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === void 0 ? null : new Date(String(row.availability_expires_at)).toISOString(),
         availabilityProEligible: row.availability_pro_eligible === true,
+        autoAvailability: row.auto_availability === true,
         positionKind: OFFER_POSITION_KINDS.includes(String(row.position_kind)) ? String(row.position_kind) : null,
         uniquenessKind: OFFER_UNIQUENESS_KINDS.includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) : null,
         handoverKind: OFFER_HANDOVER_KINDS.includes(String(row.handover_kind)) ? String(row.handover_kind) : null,
@@ -2958,6 +2961,78 @@ function createTrunkRepository(sql = database()) {
       const row = rows[0];
       if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_PRO_REQUIRED");
       return { productId: String(row.id), availabilityState: input.to, previousState: row.from_state === null ? null : String(row.from_state) };
+    },
+    // TRUNK-X2 : bascule Pro de la disponibilité automatique. Décision fondateur 2026-10-07
+    // (« construire »). La dispo auto DÉRIVE le badge du stock alloué ; activer réconcilie
+    // immédiatement. Le garde Pro se juge sur l'entitlement VIVANT (lieu OU entité, R-4b),
+    // jamais sur la colonne commercial_plan.
+    async setProductAutoAvailability(input) {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select p.id, a.id as account_id
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
+          where p.id = ${input.productId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state in ('seller_ready', 'complete')
+            and p.publication_state in ('draft', 'published')
+            and exists (
+              select 1 from v2_facility_entitlements fe
+              where f.id is not null and fe.entitlement_kind = 'facility_pro'
+                and fe.state = 'active' and fe.ends_at > now()
+                and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+            )
+        ), updated as (
+          update v2_products p
+          set auto_availability = ${input.enabled}
+          from owned
+          where p.id = owned.id
+          returning p.id, p.availability_state
+        )
+        select id, availability_state from updated
+      `);
+      const row = rows[0];
+      if (!row) throw new SellerCataloguePolicyError("FORBIDDEN_OR_PRO_REQUIRED");
+      if (input.enabled) await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => []);
+      const refreshed = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const state = refreshed[0]?.availability_state;
+      return { productId: input.productId, autoAvailability: input.enabled, availabilityState: state === void 0 || state === null ? null : String(state) };
+    },
+    // TRUNK-X2 : « mettre à jour maintenant » — réconcilie le badge de stock (Pro + auto).
+    async refreshProductAvailability(input) {
+      const before = await retryDatabase(() => sql`
+        select p.id
+        from v2_products p
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
+        where p.id = ${input.productId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and p.publication_state in ('draft', 'published')
+          and p.auto_availability = true
+          and exists (
+            select 1 from v2_facility_entitlements fe
+            where f.id is not null and fe.entitlement_kind = 'facility_pro'
+              and fe.state = 'active' and fe.ends_at > now()
+              and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+          )
+        limit 1
+      `);
+      if (!before[0]) throw new SellerCataloguePolicyError("FORBIDDEN_OR_PRO_REQUIRED");
+      const stateRows = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const prev = stateRows[0]?.availability_state;
+      const changedCount = await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => [{ count: 0 }]);
+      const after = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const now = after[0]?.availability_state;
+      return {
+        productId: input.productId,
+        availabilityState: now === void 0 || now === null ? null : String(now),
+        changed: String(prev ?? "") !== String(now ?? "") || Number(changedCount[0]?.v2_reconcile_auto_availability ?? 0) > 0
+      };
     },
     async listProductStockEvents(input) {
       const rows = await retryDatabase(() => sql`
@@ -9365,6 +9440,30 @@ async function handleApi(req, res, pathname, url) {
         throw new ApiInputError("A valid availability state and optional expiry (1-720h) are required.");
       }
       const result = await repository.setProductAvailability({ authUserId, productId: sellerAvailabilityMatch[1], to, expiresInHours });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerAutoAvailabilityMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/auto-availability$/i);
+    if (sellerAutoAvailabilityMatch && req.method === "POST") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to change availability automation."));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      if (typeof input.enabled !== "boolean") throw new ApiInputError("`enabled` (boolean) is required.");
+      const result = await repository.setProductAutoAvailability({ authUserId, productId: sellerAutoAvailabilityMatch[1], enabled: input.enabled });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerAvailabilityRefreshMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/availability\/refresh$/i);
+    if (sellerAvailabilityRefreshMatch && req.method === "POST") {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, "AUTH_REQUIRED", "Sign in as an authorized seller to refresh availability."));
+        return true;
+      }
+      const result = await repository.refreshProductAvailability({ authUserId, productId: sellerAvailabilityRefreshMatch[1] });
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }

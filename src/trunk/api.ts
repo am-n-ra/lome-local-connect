@@ -541,6 +541,17 @@ export async function setProductAvailability(input: { token: string; productId: 
   return parse(response);
 }
 
+// TRUNK-X2 : disponibilité automatique (Pro) — bascule + « mettre à jour maintenant ».
+export async function setProductAutoAvailability(input: { token: string; productId: string; enabled: boolean }): Promise<ApiResult<import('./types').AutoAvailabilityResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/auto-availability`, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${input.token}` }, body: JSON.stringify({ enabled: input.enabled }) });
+  return parse(response);
+}
+
+export async function refreshProductAvailability(input: { token: string; productId: string }): Promise<ApiResult<import('./types').AutoAvailabilityRefreshResult>> {
+  const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/availability/refresh`, { method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
+  return parse(response);
+}
+
 export async function getProductStockEvents(input: { token: string; productId: string }): Promise<ApiResult<{ authorized: boolean; events: import('./types').ProductStockEvent[] }>> {
   const response = await fetchWithRecovery(`/api/v2/seller/catalogue/${input.productId}/stock-events`, { headers: { Accept: 'application/json', Authorization: `Bearer ${input.token}` } });
   return parse(response);

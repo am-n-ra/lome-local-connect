@@ -42,3 +42,21 @@
 - `SCOUT-01` (couverture mondiale) — en cours via `POP`.
 - `room`, `seller-automation` — tranches X3/X2, après X1.
 - Terrain `TT-1`/`TT-2` — owner fondateur.
+
+## X2 — Automatisation vendeur (décision fondateur « construire »)
+
+| ID | Parent | Phase | Objective | Depends on | Status | Acceptance / proof | Re-plan trigger |
+|---|---|---|---|---|---|---|---|
+| X2-1 | X1 | Root | Contrat `omni-trunk-x2-auto-availability-contract` | décision | `verified` | doc contrat | décision change |
+| X2-2 | X2-1 | Root | Migration `068` : colonne `auto_availability` + `v2_reconcile_auto_availability()` | X2-1 | `verified` | jetable 9/9 + canonique + registre `da5b2e63…` | régression |
+| X2-3 | X2-2 | Root | Repo `setProductAutoAvailability` / `refreshProductAvailability` + réconcile opportuniste | X2-2 | `verified` | tsc + tests | faux |
+| X2-4 | X2-3 | Root | HTTP + client + types | X2-3 | `verified` | tests | faux |
+| X2-5 | X2-4 | Trunk | Carte « Automatisation · disponibilité » (`SellerV13`) | X2-4 | `verified` | rendu (tests compilent le JSX) | faux |
+| X2-6 | X2-5 | Heartwood | Preuve SQL réelle + falsification (garde `bientôt`) | X2-5 | `verified` | `prove-v2-auto-availability.mjs` 9/9 ; mutée 1 FAIL | faux |
+| X2-7 | X2-6 | Ring | suite + gardes + push prod T-07d | X2-6 | `in_progress` | hash === local | déploiement |
+
+## X3 — Room acheteur (à cadrer ; réponse fondateur : surface dédiée)
+
+Room = surface unique par transaction (suivi + chat scopé + reçu + actions). Serveur
+`v2_transaction_messages` déjà présent ; chat présent dans `BuyerFlowV13`. Manque : la Room
+dédiée atteignable depuis « Transactions en cours ». Cadrage à ouvrir après X2.

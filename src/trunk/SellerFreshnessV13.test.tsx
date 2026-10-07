@@ -13,7 +13,7 @@ function product(over: Partial<SellerCatalogueProduct>): SellerCatalogueProduct 
     name: 'Riz 5 kg', description: null, unit: 'sac', currency: 'XOF',
     stockLoueOmni: 10, prixOriginal: 5000, prixReduit: 4500, pourcentageReduction: 10,
     publicationState: 'published', availabilityState: 'en_stock',
-    availabilityExpiresAt: null, availabilityProEligible: true,
+    availabilityExpiresAt: null, availabilityProEligible: true, autoAvailability: false,
     positionKind: null, uniquenessKind: null, handoverKind: null, priceKind: null, conditionKind: null,
     media: [],
     ...over,

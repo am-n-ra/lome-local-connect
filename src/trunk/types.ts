@@ -414,6 +414,20 @@ export interface CreateSellerFacilityResult {
 
 export type ProductAvailabilityState = 'en_stock' | 'verifie' | 'a_valider' | 'bientot';
 
+// TRUNK-X2 : disponibilité automatique (Pro).
+export interface AutoAvailabilityResult {
+  productId: string;
+  autoAvailability: boolean;
+  availabilityState: ProductAvailabilityState | null;
+}
+
+export interface AutoAvailabilityRefreshResult {
+  productId: string;
+  availabilityState: ProductAvailabilityState | null;
+  changed: boolean;
+}
+
+
 export interface SavedSearch {
   id: string;
   query: string;
@@ -445,6 +459,8 @@ export interface SellerCatalogueProduct {
   availabilityState: ProductAvailabilityState;
   availabilityExpiresAt: string | null;
   availabilityProEligible: boolean;
+  /** TRUNK-X2 : l'offre participe à la disponibilité automatique (Pro). */
+  autoAvailability: boolean;
   /** S-01 — the offer's characteristics. Day-1 model: seven characteristics, no separate "types". */
   positionKind: OfferPositionKind | null;
   uniquenessKind: OfferUniquenessKind | null;

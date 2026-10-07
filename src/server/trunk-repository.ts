@@ -2627,6 +2627,8 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
     async listSellerCatalogue(input: { authUserId: string }): Promise<{ authorized: boolean; catalogReady: boolean; facilities: SellerCatalogueFacility[]; products: SellerCatalogueProduct[] }> {
       // D-03: opportunistic freshness expiry (deterministic auto-transition, facility_pro only)
       await retryDatabase(() => sql`select v2_expire_stale_availability()`).catch(() => [] as unknown[]);
+      // TRUNK-X2: opportunistic auto-availability reconciliation (Pro, auto_availability only).
+      await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => [] as unknown[]);
       const authorizationRows = await retryDatabase(() => sql`
         select a.id
         from v2_accounts a
@@ -2706,6 +2708,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
           p.price_kind,
           p.condition_kind,
           p.media,
+          p.auto_availability,
           (coalesce(e.commercial_plan, 'free') = 'pro_active' or coalesce(f.commercial_plan, 'free') = 'pro_active' or exists (
             select 1 from v2_facility_entitlements fe
             where f.id is not null
@@ -2742,6 +2745,7 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
         availabilityState: (['en_stock', 'verifie', 'a_valider', 'bientot'].includes(String(row.availability_state)) ? String(row.availability_state) : 'a_valider') as SellerCatalogueProduct['availabilityState'],
         availabilityExpiresAt: row.availability_expires_at === null || row.availability_expires_at === undefined ? null : new Date(String(row.availability_expires_at)).toISOString(),
         availabilityProEligible: row.availability_pro_eligible === true,
+        autoAvailability: row.auto_availability === true,
         positionKind: (OFFER_POSITION_KINDS as readonly string[]).includes(String(row.position_kind)) ? String(row.position_kind) as SellerCatalogueProduct['positionKind'] : null,
         uniquenessKind: (OFFER_UNIQUENESS_KINDS as readonly string[]).includes(String(row.uniqueness_kind)) ? String(row.uniqueness_kind) as SellerCatalogueProduct['uniquenessKind'] : null,
         handoverKind: (OFFER_HANDOVER_KINDS as readonly string[]).includes(String(row.handover_kind)) ? String(row.handover_kind) as SellerCatalogueProduct['handoverKind'] : null,
@@ -3083,6 +3087,80 @@ export function createTrunkRepository(sql: ReturnType<typeof neon> = database())
       const row = (rows as Record<string, unknown>[])[0];
       if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_PRO_REQUIRED');
       return { productId: String(row.id), availabilityState: input.to, previousState: row.from_state === null ? null : String(row.from_state) };
+    },
+
+    // TRUNK-X2 : bascule Pro de la disponibilité automatique. Décision fondateur 2026-10-07
+    // (« construire »). La dispo auto DÉRIVE le badge du stock alloué ; activer réconcilie
+    // immédiatement. Le garde Pro se juge sur l'entitlement VIVANT (lieu OU entité, R-4b),
+    // jamais sur la colonne commercial_plan.
+    async setProductAutoAvailability(input: { authUserId: string; productId: string; enabled: boolean }): Promise<{ productId: string; autoAvailability: boolean; availabilityState: string | null }> {
+      const rows = await retryDatabase(() => sql`
+        with owned as (
+          select p.id, a.id as account_id
+          from v2_products p
+          left join v2_facilities f on f.id = p.facility_id
+          join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+          join v2_accounts a on a.id = e.account_id
+          where p.id = ${input.productId}::uuid
+            and a.auth_user_id = ${input.authUserId}
+            and a.suspended_at is null
+            and a.onboarding_state in ('seller_ready', 'complete')
+            and p.publication_state in ('draft', 'published')
+            and exists (
+              select 1 from v2_facility_entitlements fe
+              where f.id is not null and fe.entitlement_kind = 'facility_pro'
+                and fe.state = 'active' and fe.ends_at > now()
+                and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+            )
+        ), updated as (
+          update v2_products p
+          set auto_availability = ${input.enabled}
+          from owned
+          where p.id = owned.id
+          returning p.id, p.availability_state
+        )
+        select id, availability_state from updated
+      `);
+      const row = (rows as Record<string, unknown>[])[0];
+      if (!row) throw new SellerCataloguePolicyError('FORBIDDEN_OR_PRO_REQUIRED');
+      if (input.enabled) await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => [] as unknown[]);
+      const refreshed = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const state = (refreshed as Record<string, unknown>[])[0]?.availability_state;
+      return { productId: input.productId, autoAvailability: input.enabled, availabilityState: state === undefined || state === null ? null : String(state) };
+    },
+
+    // TRUNK-X2 : « mettre à jour maintenant » — réconcilie le badge de stock (Pro + auto).
+    async refreshProductAvailability(input: { authUserId: string; productId: string }): Promise<{ productId: string; availabilityState: string | null; changed: boolean }> {
+      const before = await retryDatabase(() => sql`
+        select p.id
+        from v2_products p
+        left join v2_facilities f on f.id = p.facility_id
+        join v2_entities e on e.id = coalesce(p.entity_id, f.entity_id)
+        join v2_accounts a on a.id = e.account_id
+        where p.id = ${input.productId}::uuid
+          and a.auth_user_id = ${input.authUserId}
+          and a.suspended_at is null
+          and p.publication_state in ('draft', 'published')
+          and p.auto_availability = true
+          and exists (
+            select 1 from v2_facility_entitlements fe
+            where f.id is not null and fe.entitlement_kind = 'facility_pro'
+              and fe.state = 'active' and fe.ends_at > now()
+              and (fe.facility_id = f.id or (fe.entity_id is not null and fe.entity_id = e.id))
+          )
+        limit 1
+      `);
+      if (!(before as Record<string, unknown>[])[0]) throw new SellerCataloguePolicyError('FORBIDDEN_OR_PRO_REQUIRED');
+      const stateRows = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const prev = (stateRows as Record<string, unknown>[])[0]?.availability_state;
+      const changedCount = await retryDatabase(() => sql`select v2_reconcile_auto_availability()`).catch(() => [{ count: 0 }] as unknown[]);
+      const after = await retryDatabase(() => sql`select availability_state from v2_products where id = ${input.productId}::uuid limit 1`);
+      const now = (after as Record<string, unknown>[])[0]?.availability_state;
+      return {
+        productId: input.productId,
+        availabilityState: now === undefined || now === null ? null : String(now),
+        changed: String(prev ?? '') !== String(now ?? '') || Number((changedCount as Record<string, unknown>[])[0]?.v2_reconcile_auto_availability ?? 0) > 0,
+      };
     },
 
     async listProductStockEvents(input: { authUserId: string; productId: string }): Promise<{ authorized: boolean; events: Array<{ id: string; fromState: string | null; toState: string; source: 'auto' | 'manual'; reason: string | null; createdAt: string }> }> {

@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { LocateFixed, RefreshCw, ScanLine } from 'lucide-react';
 import { getAuthToken } from '../auth';
-import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, renewFacilityPro, setFacilityRenewalOptIn, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
+import { createSellerProductDraft, createSellerFacility, createFacilityAdCampaign, getFacilityAnalytics, getFacilityBonusStatus, getFacilityRenewalStatus, getSellerCatalogue, getSellerAvailabilityQueue, listFacilityAdCampaigns, refreshProductAvailability, renewFacilityPro, setFacilityRenewalOptIn, setProductAutoAvailability, setSellerFacilityOperationalState, unlockFacilityBonus, updateSellerFacilityContact } from './api';
 import { buildSellerWorkspace, sellerRouteLabels } from './seller-workspace';
 import { isSinglePiece } from './offer-uniqueness';
 import { Skeleton, SkeletonDetail } from './Skeleton';
 import type { AdCampaignListResult, FacilityBonusStatus, FacilityOperationalState, FacilityRenewalStatus, FacilityType, PublicFacility, SellerAdCampaign, SellerAvailabilityRequest, SellerCatalogueResult, SellerFacilityAnalytics, OfferPositionKind, OfferUniquenessKind, OfferHandoverKind, OfferPriceKind, OfferConditionKind, OfferOwnerKind } from './types';
 import { formatMoney, formatUsdSticker } from '../domain/currency';
 import { SELLER_BONUS_USD_MINOR } from '../domain/pricing';
+
+const SELLER_AVAILABILITY_LABELS: Record<string, string> = { en_stock: 'En stock', verifie: 'Vérifié', a_valider: 'À valider', bientot: 'Bientôt' };
+const availabilityLabel = (state: string): string => SELLER_AVAILABILITY_LABELS[state] ?? state;
 
 type SellerV13Props = {
   onClose: () => void;
@@ -309,6 +312,41 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
     } catch { setError('Contact non enregistré.'); }
     finally { setContactBusy(false); }
   }, [ws.selFacilityId, contactPhoneDraft, contactWhatsappDraft, onRefresh, load]);
+
+  // TRUNK-X2 : automatisation (Pro) — offres de la facilité sélectionnée.
+  const facilityProducts = (propsCatalogue ?? catalogue)?.products?.filter((p) => p.facilityId === ws.selFacilityId) ?? [];
+  const autoEligible = facilityProducts.some((p) => p.availabilityProEligible);
+  const [autoBusyId, setAutoBusyId] = useState<string | null>(null);
+  const toggleAuto = useCallback(async (productId: string, enabled: boolean) => {
+    const token = await getAuthToken();
+    if (!token) return;
+    setAutoBusyId(productId); setError('');
+    try {
+      const result = await setProductAutoAvailability({ token, productId, enabled });
+      if (result.ok && result.data) {
+        setToast(enabled ? 'Disponibilité automatique activée — le badge suit votre stock alloué.' : 'Disponibilité automatique désactivée.');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setError(result.error?.message ?? 'Impossible de changer la disponibilité automatique.');
+      }
+    } catch { setError('Impossible de changer la disponibilité automatique.'); }
+    finally { setAutoBusyId(null); }
+  }, [onRefresh, load]);
+  const refreshAuto = useCallback(async (productId: string) => {
+    const token = await getAuthToken();
+    if (!token) return;
+    setAutoBusyId(productId); setError('');
+    try {
+      const result = await refreshProductAvailability({ token, productId });
+      if (result.ok && result.data) {
+        setToast(result.data.changed ? 'Disponibilité mise à jour depuis votre stock.' : 'Déjà à jour.');
+        if (onRefresh) onRefresh(); else void load();
+      } else {
+        setError(result.error?.message ?? 'Mise à jour impossible (Pro + auto requis).');
+      }
+    } catch { setError('Mise à jour impossible (Pro + auto requis).'); }
+    finally { setAutoBusyId(null); }
+  }, [onRefresh, load]);
 
   const [renewalStatus, setRenewalStatus] = useState<FacilityRenewalStatus | null>(null);
   const [renewalBusy, setRenewalBusy] = useState(false);
@@ -647,6 +685,35 @@ export function SellerV13({ onClose, onProducts, onOffers, onCompany, onReply, o
           {renewalStatus.plan === 'pro_expired' && (
             <button className="btn ghost sm" style={{ width: 'auto', minHeight: 28, marginTop: 6 }} type="button" disabled={renewalBusy} onClick={() => void runRenewNow()}>{renewalBusy ? '…' : 'Renouveler Pro maintenant'}</button>
           )}
+        </div>
+      )}
+      {hasFacility && ws.selFacilityCatalogue?.name && (
+        <div className="cardbox" style={{ marginTop: 9 }}>
+          <div className="row" style={{ justifyContent: 'space-between', gap: 8 }}>
+            <div>
+              <b className="tiny" style={{ display: 'block' }}>Automatisation · disponibilité (Pro)</b>
+              <span className="tiny muted">Le badge suit votre stock alloué — jamais l'acheteur à sa place.</span>
+            </div>
+          </div>
+          {!autoEligible ? (
+            <p className="tiny muted" style={{ marginTop: 6 }}>Réservé aux facilités Pro actives. « Bientôt » reste toujours manuel.</p>
+          ) : facilityProducts.length === 0 ? (
+            <p className="tiny muted" style={{ marginTop: 6 }}>Aucune offre publiée sur cette facilité.</p>
+          ) : (
+            <div style={{ marginTop: 6 }}>
+              {facilityProducts.map((p) => (
+                <div key={p.id} className="row" style={{ justifyContent: 'space-between', gap: 8, padding: '4px 0' }}>
+                  <span className="tiny" style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name} · {availabilityLabel(String(p.availabilityState))}</span>
+                  <span className="tiny muted">{p.autoAvailability ? 'Auto ON' : 'Auto OFF'}</span>
+                  <button className={`btn sm ${p.autoAvailability ? '' : 'ghost'}`} style={{ width: 'auto', minHeight: 26 }} type="button" disabled={autoBusyId === p.id} onClick={() => void toggleAuto(p.id, !p.autoAvailability)}>{autoBusyId === p.id ? '…' : p.autoAvailability ? 'Désactiver' : 'Activer'}</button>
+                  {p.autoAvailability && (
+                    <button className="btn ghost sm" style={{ width: 'auto', minHeight: 26 }} type="button" disabled={autoBusyId === p.id} onClick={() => void refreshAuto(p.id)}>Actualiser</button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="tiny muted" style={{ marginTop: 6 }}>« À valider / En stock » dérivent du stock (alloué − réservé). « Vérifié » reste un palier de confiance, jamais automatique.</p>
         </div>
       )}
       {hasFacility && ws.selFacilityCatalogue?.name && (

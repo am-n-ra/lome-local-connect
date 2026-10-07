@@ -2811,7 +2811,8 @@ describe('Product availability Root seam (G-04 trunk)', () => {
     expect(result.products[0].availabilityExpiresAt).toBe('2026-09-02T16:00:00.000Z');
     expect(result.catalogReady).toBe(true);
     expect(queries[0]).toContain('v2_expire_stale_availability');
-    expect(queries[3]).toContain('availability_state');
+    expect(queries.some((q) => q.includes('v2_reconcile_auto_availability'))).toBe(true);
+    expect(queries[queries.length - 1]).toContain('availability_state');
   });
 
   it('lets an owning seller flip its facility operational state (V-7d)', async () => {

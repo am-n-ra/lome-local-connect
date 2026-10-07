@@ -1954,6 +1954,30 @@ export async function handleApi(req: IncomingMessage, res: ServerResponse, pathn
       json(res, 200, { ok: true, correlationId, data: result });
       return true;
     }
+    const sellerAutoAvailabilityMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/auto-availability$/i);
+    if (sellerAutoAvailabilityMatch && req.method === 'POST') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to change availability automation.'));
+        return true;
+      }
+      const input = await parseRequestBody(req);
+      if (typeof input.enabled !== 'boolean') throw new ApiInputError('`enabled` (boolean) is required.');
+      const result = await repository.setProductAutoAvailability({ authUserId, productId: sellerAutoAvailabilityMatch[1], enabled: input.enabled });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
+    const sellerAvailabilityRefreshMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/availability\/refresh$/i);
+    if (sellerAvailabilityRefreshMatch && req.method === 'POST') {
+      const authUserId = await getAuthUserId(req.headers);
+      if (!authUserId) {
+        json(res, 401, errorBody(correlationId, 'AUTH_REQUIRED', 'Sign in as an authorized seller to refresh availability.'));
+        return true;
+      }
+      const result = await repository.refreshProductAvailability({ authUserId, productId: sellerAvailabilityRefreshMatch[1] });
+      json(res, 200, { ok: true, correlationId, data: result });
+      return true;
+    }
     const sellerMediaUploadMatch = pathname.match(/^\/api\/v2\/seller\/catalogue\/([0-9a-f-]{36})\/media-upload$/i);
     if (sellerMediaUploadMatch && req.method === 'POST') {
       const body = await parseRequestBody(req);
